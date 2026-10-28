@@ -78,7 +78,8 @@ func TestTheSchemasVerdictsAreTheOnesTheValidatorAdmits(t *testing.T) {
 func TestAStillOwedVerdictMustNameWhatIsOwed(t *testing.T) {
 	t.Parallel()
 	requestID := ids.NewV7()
-	batch := []settleCandidate{{Request: activities.RepliedRequest{RequestID: requestID}}}
+	batch := []settleCandidate{{Request: activities.RepliedRequest{RequestID: requestID},
+		Messages: []threadMessage{{ID: requestID, Direction: "inbound", Body: "Please send the quote."}}}}
 	id := requestID.String()
 
 	for name, tc := range map[string]struct {
@@ -86,7 +87,7 @@ func TestAStillOwedVerdictMustNameWhatIsOwed(t *testing.T) {
 		refused bool
 	}{
 		"still_owed naming it": {
-			settleResult{ID: id, Verdict: activities.RequestStillOwed, Remaining: "Send the quote", Confidence: 1}, false,
+			settleResult{ID: id, Verdict: activities.RequestStillOwed, Remaining: "send the quote", Confidence: 1}, false,
 		},
 		"still_owed naming nothing": {
 			settleResult{ID: id, Verdict: activities.RequestStillOwed, Remaining: "", Confidence: 1}, true,

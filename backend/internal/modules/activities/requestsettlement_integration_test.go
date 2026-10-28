@@ -162,7 +162,7 @@ func TestAJudgedThreadReturnsOnlyWhenSomebodyWritesAgain(t *testing.T) {
 		t.Fatal("the answered request was not offered at all")
 	}
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
@@ -229,14 +229,14 @@ func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
 	}
 	due := requestInstant.Add(96 * time.Hour)
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		DueAt: &due, Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	_, subject, done, dueAt := taskFor(t, e, request)
-	if subject != "Send the quote" {
+	if subject != "send the report" {
 		t.Errorf("the reminder is titled %q, want the thing actually owed", subject)
 	}
 	if done {
@@ -277,7 +277,7 @@ func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
 		t.Fatal("a reminder somebody dated still reads as the machine's to retitle")
 	}
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "send the report",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
