@@ -84,6 +84,11 @@ them. Data about the action itself goes in `evidence`, such as a retention polic
 inbound email that started a `promote`. If `before`/`after` held that data, field history would
 show field changes that never happened on the record.
 
+The effect of an approved, server-proposed change runs under `storekit.WithReleasingApproval`. So
+each audit row it writes on another record carries `released_by_approval_id` in `evidence`; the
+approval's own rows are the decision and carry no link. That link is how a receipt finds the values
+its approval moved.
+
 **Safe updates.** A by-id UPDATE of a row with a version never uses an `UPDATE` alone; it goes
 through `storekit.Patch`:
 

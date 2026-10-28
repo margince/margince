@@ -55,10 +55,12 @@ func TestAnExhaustedQuietScanWithNoSurvivorsIsNotComplete(t *testing.T) {
 	more := true
 	day := crmcontracts.Attention{AsOf: rankInstant, RelationshipDecay: &[]crmcontracts.AttentionItem{}, RelationshipDecayMoreAvailable: &more}
 	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
+	if out.OptionalRelationshipsMoreAvailable == nil || !*out.OptionalRelationshipsMoreAvailable {
+		t.Fatalf("optional scan hid its bound: %+v", out)
+	}
 	for _, count := range out.Counts {
-		if string(count.Category) == string(categoryRelationships) && count.MoreAvailable {
-			return
+		if string(count.Category) == string(categoryRelationships) && count.Considered != 0 {
+			t.Fatalf("optional relationship became responsible work: %+v", count)
 		}
 	}
-	t.Fatalf("counts = %+v, want relationships marked as possibly more", out.Counts)
 }

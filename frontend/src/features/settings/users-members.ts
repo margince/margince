@@ -3,9 +3,20 @@
 
 import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 import { readMemberPage } from "../../lib/memberpages";
 
 export type User = components["schemas"]["User"];
+export function matchingMembers(
+  members: readonly User[],
+  search: string,
+): User[] {
+  const words = searchWords(search);
+  return members.filter((member) =>
+    holdsEveryWord(words, [member.display_name, member.email]),
+  );
+}
+
 type MemberAction = NonNullable<User["allowed_actions"]>[number];
 
 const MEMBERS_KEY = ["users-admin", "all"] as const;
