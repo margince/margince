@@ -789,6 +789,14 @@
           "maximum": 10080,
           "default": 240
         },
+        "shared_merge_reviews": {
+          "description": "Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
         "signature_template": {
           "description": "The email signature of the workspace, used in place of the own signature of each sender; empty means none.",
           "type": [

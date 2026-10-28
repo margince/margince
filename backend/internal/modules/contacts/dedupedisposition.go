@@ -80,6 +80,10 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 	}
 
 	switch disposition {
+	case "merge":
+		if err := s.disposeMerge(ctx, id, row, winnerID, actor.UserID); err != nil {
+			return DedupeCandidateRow{}, err
+		}
 	case dispositionNotDuplicate:
 		// Per arm, not before the switch. The merge arm takes its own
 		// write-authority probe through mergePair, with an asymmetry this one
@@ -90,10 +94,6 @@ func (s *Store) DisposeDedupeCandidate(ctx context.Context, id ids.UUID, disposi
 		if err := s.writePairDecision(ctx, row, func(ctx context.Context, tx pgx.Tx) error {
 			return setDedupeDispositionTx(ctx, tx, row.ID, dispositionNotDuplicate, actor.UserID)
 		}); err != nil {
-			return DedupeCandidateRow{}, err
-		}
-	case "merge":
-		if err := s.disposeMerge(ctx, id, row, winnerID, actor.UserID); err != nil {
 			return DedupeCandidateRow{}, err
 		}
 	default:
@@ -149,6 +149,13 @@ func (s *Store) disposeMerge(ctx context.Context, id ids.UUID, row DedupeCandida
 				return err
 			}
 		}
+		// A contact merge takes the stops and then both rows before the pair
+		// row, the order a case merge and a direct merge keep.
+		if row.EntityType == entityContact {
+			if err := s.lockMergingContacts(ctx, tx, sortedUUIDs(row.LeftID, row.RightID)); err != nil {
+				return err
+			}
+		}
 		if err := setDedupeDispositionTx(ctx, tx, id, dispositionMerged, by); err != nil {
 			return err
 		}
@@ -185,9 +192,8 @@ func (s *Store) executeDedupeMergeTx(
 }
 
 // writePairDecision commits a human's verdict on a pair under the authority
-// that verdict needs: ensurePairWritable and the write share ONE transaction,
-// so a grant revoked between them cannot leave the write standing on authority
-// that is already gone.
+// that verdict needs. admitPairDecision and the write share one transaction.
+// So a grant revoked between them cannot leave the write standing.
 //
 // The WRITE is the parameter and the probe is not, which is the direction that
 // matters. A caller cannot reach this and skip the guard; it can only choose
@@ -198,10 +204,11 @@ func (s *Store) writePairDecision(ctx context.Context, row DedupeCandidateRow,
 	write func(context.Context, pgx.Tx) error,
 ) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensurePairWritable(ctx, tx, row.EntityType, row.LeftID, row.RightID); err != nil {
+		admitted, err := s.admitPairDecision(ctx, tx, row)
+		if err != nil {
 			return err
 		}
-		return write(ctx, tx)
+		return write(admitted, tx)
 	})
 }
 

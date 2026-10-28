@@ -1843,6 +1843,30 @@ func (stubs) UndoDedupeDisposition(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UndoDedupeDisposition")
 }
 
+func (stubs) ListContactCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListContactCasesParams) {
+	httperr.NotImplemented(w, r, "ListContactCases")
+}
+
+func (stubs) GetContactCase(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetContactCase")
+}
+
+func (stubs) MergeContactCase(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "MergeContactCase")
+}
+
+func (stubs) PreviewContactCaseMerge(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewContactCaseMerge")
+}
+
+func (stubs) GetContactCaseSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetContactCaseSettings")
+}
+
+func (stubs) UpdateContactCaseSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateContactCaseSettings")
+}
+
 func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMorningDigestParams) {
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }

@@ -155,7 +155,8 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 			// The filter is a local calendar date; t.period_start is its zoned instant.
 			where += " AND r.definition->>'period_start'=" + b.add(filter.PeriodStart.Format("2006-01-02"))
 		}
-		rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where+" ORDER BY t.id LIMIT "+b.add(limit+1), b.values...)
+		query := "SELECT " + targetColumns + targetFrom + " WHERE " + where + " ORDER BY t.id LIMIT " + b.add(limit+1)
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}

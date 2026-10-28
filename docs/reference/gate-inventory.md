@@ -520,6 +520,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has one spelling, and it is draftfloor.AIProvenanceNotice. |
 | `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has one spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | The boundary rules between packages hold as a plain `go test`, with the package list derived from the tree so a new package is enrolled the moment it exists. |
+| `argspread_test.go` | H2 | A call never grows the slice it also spreads. |
 | `artifactuploadretry_test.go` | H2 | Every artifact upload goes through the wrapper that retries it. |
 | `audiencelockorder_test.go` | H2 | Several activity audiences are recomputed in one agreed order, or two transactions deadlock. |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |

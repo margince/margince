@@ -95,7 +95,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 11 |
 | … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 4668 |
+| Prompt tokens spent on tools no case requires | 4675 |
 | Use cases | 34 |
 | Acceptance criteria the cases declare, each with a statement | 73 |
 
@@ -322,13 +322,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
+| `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
-| `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
@@ -348,13 +348,13 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
+| `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `read_workspace` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
-| `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
@@ -432,7 +432,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1010 | - | - | - |
+| `read_view` | 1017 | - | - | - |
 | `change_reports` | 643 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

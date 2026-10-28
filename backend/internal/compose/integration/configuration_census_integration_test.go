@@ -73,6 +73,9 @@ func lockedSurfaces() []lockedSurface {
 		{"/legal-reviews/settings", "/v1/legal-reviews/settings", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/legal-reviews/settings", body: map[string]any{"enabled": false}},
 		}},
+		{"/dedupe/settings", "/v1/dedupe/settings", []lockedWrite{
+			{method: http.MethodPut, path: "/v1/dedupe/settings", body: map[string]any{"enabled": true}},
+		}},
 		{"/privacy/controller-particulars", "/v1/privacy/controller-particulars", []lockedWrite{
 			{method: http.MethodPut, path: "/v1/privacy/controller-particulars", body: map[string]any{"legal_name": "Other GmbH"}},
 		}},

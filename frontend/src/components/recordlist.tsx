@@ -176,9 +176,9 @@ export function standardViews(
  * right one: "no deals owned by you" over a search that matched nothing names a
  * cause that is not the cause, and its Show all would leave the search standing.
  *
- * "Show all" drops the owner filter and nothing else, which is what makes it
- * worth having beside the table's own "clear filters": one undoes the tab, the
- * other undoes every dial the reader has turned.
+ * "Show all" drops the view's own filter and nothing else. That is why it is
+ * worth having beside the table's own "clear filters". One undoes the tab, and
+ * the other undoes every dial the reader has turned.
  */
 export function mineEmptyNote<Row>({
   t,
@@ -192,8 +192,43 @@ export function mineEmptyNote<Row>({
   /** The plural noun for these rows, so the sentence names them. */
   unit: MessageKey;
 }>): ReactNode | undefined {
-  const { owner_id: owner, ...others } = state.query.filters;
-  if (!viewerId || owner !== viewerId) {
+  if (!viewerId) return undefined;
+  return viewEmptyNote(state, "owner_id", viewerId, t, {
+    sentence: t("list.emptyMine", { unit: t(unit) }),
+  });
+}
+
+/** The contacts list's "Shared with me" view, beside Mine. */
+export function sharedWithMeView(sort = "-created_at"): ViewSpec {
+  return {
+    label: "list.viewSharedWithMe",
+    sort,
+    filters: { shared_with_me: "true" },
+  };
+}
+
+/** What an empty "Shared with me" view says, on the terms of `mineEmptyNote`. */
+export function sharedEmptyNote<Row>({
+  t,
+  state,
+  unit,
+}: Readonly<{ t: Translate; state: ListState<Row>; unit: MessageKey }>):
+  | ReactNode
+  | undefined {
+  return viewEmptyNote(state, "shared_with_me", "true", t, {
+    sentence: t("list.emptyShared", { unit: t(unit) }),
+  });
+}
+
+function viewEmptyNote<Row>(
+  state: ListState<Row>,
+  key: string,
+  value: string,
+  t: Translate,
+  { sentence }: Readonly<{ sentence: string }>,
+): ReactNode | undefined {
+  const { [key]: narrowed, ...others } = state.query.filters;
+  if (narrowed !== value) {
     return undefined;
   }
   if (state.query.q || Object.values(others).some(Boolean)) {
@@ -201,16 +236,21 @@ export function mineEmptyNote<Row>({
   }
   return (
     <span>
-      {t("list.emptyMine", { unit: t(unit) })}{" "}
-      <ShowAll setQuery={state.setQuery} label={t("list.showAll")} />
+      {sentence}{" "}
+      <ShowAll setQuery={state.setQuery} drop={key} label={t("list.showAll")} />
     </span>
   );
 }
 
 function ShowAll({
   setQuery,
+  drop,
   label,
-}: Readonly<{ setQuery: ListState<unknown>["setQuery"]; label: string }>) {
+}: Readonly<{
+  setQuery: ListState<unknown>["setQuery"];
+  drop: string;
+  label: string;
+}>) {
   const button = useRef<HTMLButtonElement>(null);
   useListFocusHandoff(button);
   return (
@@ -218,7 +258,7 @@ function ShowAll({
       ref={button}
       onClick={() =>
         setQuery((query) => {
-          const { owner_id: _mine, ...rest } = query.filters;
+          const { [drop]: _narrowed, ...rest } = query.filters;
           return { ...query, filters: rest };
         })
       }

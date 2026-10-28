@@ -2467,6 +2467,27 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 	}
 }
 
+// Defines values for AttentionContactCaseMergeMode.
+const (
+	AttentionContactCaseMergeModeDelegated AttentionContactCaseMergeMode = "delegated"
+	AttentionContactCaseMergeModeNone      AttentionContactCaseMergeMode = "none"
+	AttentionContactCaseMergeModeOrdinary  AttentionContactCaseMergeMode = "ordinary"
+)
+
+// Valid indicates whether the value is a known member of the AttentionContactCaseMergeMode enum.
+func (e AttentionContactCaseMergeMode) Valid() bool {
+	switch e {
+	case AttentionContactCaseMergeModeDelegated:
+		return true
+	case AttentionContactCaseMergeModeNone:
+		return true
+	case AttentionContactCaseMergeModeOrdinary:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
@@ -2568,6 +2589,7 @@ const (
 	AttentionItemSourceBounce              AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem           AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth       AttentionItemSource = "capture_health"
+	AttentionItemSourceContactCase         AttentionItemSource = "contact_case"
 	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
@@ -2602,6 +2624,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceBriefItem:
 		return true
 	case AttentionItemSourceCaptureHealth:
+		return true
+	case AttentionItemSourceContactCase:
 		return true
 	case AttentionItemSourceConversationClaim:
 		return true
@@ -6985,6 +7009,159 @@ func (e Contact360EmploymentStartedPrecision) Valid() bool {
 	case Contact360EmploymentStartedPrecisionDay:
 		return true
 	case Contact360EmploymentStartedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseMergeMode.
+const (
+	ContactCaseMergeModeDelegated ContactCaseMergeMode = "delegated"
+	ContactCaseMergeModeNone      ContactCaseMergeMode = "none"
+	ContactCaseMergeModeOrdinary  ContactCaseMergeMode = "ordinary"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseMergeMode enum.
+func (e ContactCaseMergeMode) Valid() bool {
+	switch e {
+	case ContactCaseMergeModeDelegated:
+		return true
+	case ContactCaseMergeModeNone:
+		return true
+	case ContactCaseMergeModeOrdinary:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseReason.
+const (
+	ContactCaseReasonNoWriteAuthority ContactCaseReason = "no_write_authority"
+	ContactCaseReasonResolved         ContactCaseReason = "resolved"
+	ContactCaseReasonTooLarge         ContactCaseReason = "too_large"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseReason enum.
+func (e ContactCaseReason) Valid() bool {
+	switch e {
+	case ContactCaseReasonNoWriteAuthority:
+		return true
+	case ContactCaseReasonResolved:
+		return true
+	case ContactCaseReasonTooLarge:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseStatus.
+const (
+	ContactCaseStatusOpen     ContactCaseStatus = "open"
+	ContactCaseStatusResolved ContactCaseStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseStatus enum.
+func (e ContactCaseStatus) Valid() bool {
+	switch e {
+	case ContactCaseStatusOpen:
+		return true
+	case ContactCaseStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseEdgeStatus.
+const (
+	ContactCaseEdgeStatusNotADuplicate ContactCaseEdgeStatus = "not_a_duplicate"
+	ContactCaseEdgeStatusOpen          ContactCaseEdgeStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseEdgeStatus enum.
+func (e ContactCaseEdgeStatus) Valid() bool {
+	switch e {
+	case ContactCaseEdgeStatusNotADuplicate:
+		return true
+	case ContactCaseEdgeStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseOutcomeMode.
+const (
+	ContactCaseOutcomeModeDelegated ContactCaseOutcomeMode = "delegated"
+	ContactCaseOutcomeModeOrdinary  ContactCaseOutcomeMode = "ordinary"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOutcomeMode enum.
+func (e ContactCaseOutcomeMode) Valid() bool {
+	switch e {
+	case ContactCaseOutcomeModeDelegated:
+		return true
+	case ContactCaseOutcomeModeOrdinary:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseOwnerSeat.
+const (
+	ContactCaseOwnerSeatFull ContactCaseOwnerSeat = "full"
+	ContactCaseOwnerSeatRead ContactCaseOwnerSeat = "read"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOwnerSeat enum.
+func (e ContactCaseOwnerSeat) Valid() bool {
+	switch e {
+	case ContactCaseOwnerSeatFull:
+		return true
+	case ContactCaseOwnerSeatRead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseShareAccess.
+const (
+	ContactCaseShareAccessRead  ContactCaseShareAccess = "read"
+	ContactCaseShareAccessWrite ContactCaseShareAccess = "write"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseShareAccess enum.
+func (e ContactCaseShareAccess) Valid() bool {
+	switch e {
+	case ContactCaseShareAccessRead:
+		return true
+	case ContactCaseShareAccessWrite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseSkippedOwnerReason.
+const (
+	ContactCaseSkippedOwnerReasonAlreadyGranted ContactCaseSkippedOwnerReason = "already_granted"
+	ContactCaseSkippedOwnerReasonAlreadyOwner   ContactCaseSkippedOwnerReason = "already_owner"
+	ContactCaseSkippedOwnerReasonInactive       ContactCaseSkippedOwnerReason = "inactive"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseSkippedOwnerReason enum.
+func (e ContactCaseSkippedOwnerReason) Valid() bool {
+	switch e {
+	case ContactCaseSkippedOwnerReasonAlreadyGranted:
+		return true
+	case ContactCaseSkippedOwnerReasonAlreadyOwner:
+		return true
+	case ContactCaseSkippedOwnerReasonInactive:
 		return true
 	default:
 		return false
@@ -22175,6 +22352,7 @@ const (
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth       WorklistItemSource = "capture_health"
+	WorklistItemSourceContactCase         WorklistItemSource = "contact_case"
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
@@ -22215,6 +22393,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceBriefItem:
 		return true
 	case WorklistItemSourceCaptureHealth:
+		return true
+	case WorklistItemSourceContactCase:
 		return true
 	case WorklistItemSourceConversationClaim:
 		return true
@@ -22346,6 +22526,7 @@ const (
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
 	WorklistReachSourceCaptureHealth       WorklistReachSource = "capture_health"
+	WorklistReachSourceContactCase         WorklistReachSource = "contact_case"
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
@@ -22386,6 +22567,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceBriefItem:
 		return true
 	case WorklistReachSourceCaptureHealth:
+		return true
+	case WorklistReachSourceContactCase:
 		return true
 	case WorklistReachSourceConversationClaim:
 		return true
@@ -24439,6 +24622,27 @@ func (e ListDedupeCandidatesParamsEntityType) Valid() bool {
 	case ListDedupeCandidatesParamsEntityTypeContact:
 		return true
 	case ListDedupeCandidatesParamsEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListContactCasesParamsScope.
+const (
+	ListContactCasesParamsScopeAll        ListContactCasesParamsScope = "all"
+	ListContactCasesParamsScopeMine       ListContactCasesParamsScope = "mine"
+	ListContactCasesParamsScopeUnassigned ListContactCasesParamsScope = "unassigned"
+)
+
+// Valid indicates whether the value is a known member of the ListContactCasesParamsScope enum.
+func (e ListContactCasesParamsScope) Valid() bool {
+	switch e {
+	case ListContactCasesParamsScopeAll:
+		return true
+	case ListContactCasesParamsScopeMine:
+		return true
+	case ListContactCasesParamsScopeUnassigned:
 		return true
 	default:
 		return false
@@ -29474,6 +29678,24 @@ type AttentionConnectionFacts struct {
 // AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
 type AttentionConnectionFactsMedium string
 
+// AttentionContactCase A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
+// only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+// with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+type AttentionContactCase struct {
+	AnchorId  openapi_types.UUID            `json:"anchor_id"`
+	CanMerge  bool                          `json:"can_merge"`
+	Members   []AttentionPairSide           `json:"members"`
+	MergeMode AttentionContactCaseMergeMode `json:"merge_mode"`
+
+	// Owners The names of the members' live owners. Each of them sees this row in their own Worklist.
+	Owners   []string `json:"owners"`
+	Revision string   `json:"revision"`
+	TooLarge *bool    `json:"too_large,omitempty"`
+}
+
+// AttentionContactCaseMergeMode defines model for AttentionContactCase.MergeMode.
+type AttentionContactCaseMergeMode string
+
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
@@ -29684,6 +29906,11 @@ type AttentionItem struct {
 	// the account label when the connector reported one, and are absent when it did not:
 	// neither ever carries a provider id.
 	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
+
+	// ContactCase A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
+	// only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+	// with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+	ContactCase *AttentionContactCase `json:"contact_case,omitempty"`
 
 	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
 	// draws value and ownership without a second read per row. Sent only for
@@ -36180,6 +36407,189 @@ type ContactCaptureGap struct {
 	UserId                openapi_types.UUID `json:"user_id"`
 }
 
+// ContactCase One group of contacts that may be duplicates of one another: every live contact reachable from the
+// addressed contact over open duplicate pairs the caller can see. A case is read off the
+// pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
+// `anchor_id` is the lowest member id; every member id addresses the same case. A case of
+// more than 25 contacts is `too_large` and shows the 25 nearest the addressed contact over
+// its pairs, the addressed contact among them.
+type ContactCase struct {
+	AnchorId openapi_types.UUID `json:"anchor_id"`
+
+	// CanMerge Whether this caller may merge at least two members of this case.
+	CanMerge bool `json:"can_merge"`
+
+	// Confidence The strongest open pair in the case.
+	Confidence float32             `json:"confidence"`
+	Edges      []ContactCaseEdge   `json:"edges"`
+	Members    []ContactCaseMember `json:"members"`
+
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+	MergeMode ContactCaseMergeMode `json:"merge_mode"`
+
+	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
+	Owners []ContactCaseOwner `json:"owners"`
+
+	// PolicyEnabled Whether the workspace lets any owner of a member merge the case (`contacts.shared_merge_reviews`).
+	PolicyEnabled bool `json:"policy_enabled"`
+
+	// Reason Why `can_merge` is false.
+	Reason *ContactCaseReason `json:"reason,omitempty"`
+
+	// Resolution Present when `status` is `resolved` and the caller can see the surviving contact.
+	// A caller who cannot see it reads `resolved` with no `resolution`.
+	Resolution *ContactCaseResolution `json:"resolution,omitempty"`
+
+	// Revision Changes whenever a member, its version, its owner or that owner's seat, a pair, a share on a member or the policy changes. Preview and merge refuse a stale one with 409 case_changed.
+	Revision string `json:"revision"`
+
+	// Status `resolved` when the addressed contact was merged away; `resolution` says into which contact.
+	Status ContactCaseStatus `json:"status"`
+
+	// TooLarge The case has more members than one review may merge (25). The pairs still decide one by one.
+	TooLarge bool `json:"too_large"`
+}
+
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+type ContactCaseMergeMode string
+
+// ContactCaseReason Why `can_merge` is false.
+type ContactCaseReason string
+
+// ContactCaseStatus `resolved` when the addressed contact was merged away; `resolution` says into which contact.
+type ContactCaseStatus string
+
+// ContactCaseDecisionRequest defines model for ContactCaseDecisionRequest.
+type ContactCaseDecisionRequest struct {
+	// MemberIds The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
+	MemberIds []openapi_types.UUID `json:"member_ids"`
+
+	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
+	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// Revision The case revision the reviewer looked at.
+	Revision string `json:"revision"`
+
+	// SurvivorId The record that remains. Its values win where two members disagree.
+	SurvivorId openapi_types.UUID `json:"survivor_id"`
+}
+
+// ContactCaseEdge One duplicate pair between two members, with the evidence it was filed on.
+type ContactCaseEdge struct {
+	// CanDismiss Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
+	// through the pair's own decision route. True with write access to both ends, and,
+	// when the case's `policy_enabled` is on, for a full-seat owner of either end.
+	CanDismiss bool `json:"can_dismiss"`
+
+	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
+	// route. True only with write access to both ends. `policy_enabled` does not widen it:
+	// the policy admits a merge of the whole case, never of a single pair.
+	CanMerge   bool               `json:"can_merge"`
+	Confidence float32            `json:"confidence"`
+	Evidence   []DedupeEvidence   `json:"evidence"`
+	LeftId     openapi_types.UUID `json:"left_id"`
+	PairId     openapi_types.UUID `json:"pair_id"`
+	RightId    openapi_types.UUID `json:"right_id"`
+
+	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
+	Status ContactCaseEdgeStatus `json:"status"`
+}
+
+// ContactCaseEdgeStatus `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
+type ContactCaseEdgeStatus string
+
+// ContactCaseListResponse defines model for ContactCaseListResponse.
+type ContactCaseListResponse struct {
+	Data []ContactCase `json:"data"`
+	Page PageInfo      `json:"page"`
+}
+
+// ContactCaseMember defines model for ContactCaseMember.
+type ContactCaseMember struct {
+	// CompanyName The current employer.
+	CompanyName *string   `json:"company_name,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+
+	// Email The primary email address.
+	Email     *string             `json:"email,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
+	Name      string              `json:"name"`
+	OwnerId   *openapi_types.UUID `json:"owner_id"`
+	OwnerName *string             `json:"owner_name"`
+	Title     *string             `json:"title,omitempty"`
+	Version   int64               `json:"version"`
+}
+
+// ContactCaseOutcome What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
+type ContactCaseOutcome struct {
+	// Committed `false` for a preview: nothing was written.
+	Committed bool                   `json:"committed"`
+	MergedIds []openapi_types.UUID   `json:"merged_ids"`
+	Mode      ContactCaseOutcomeMode `json:"mode"`
+	OwnerId   openapi_types.UUID     `json:"owner_id"`
+
+	// Shares The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
+	Shares []ContactCaseShare `json:"shares"`
+
+	// Skipped Owners who get no new grant, and why.
+	Skipped []ContactCaseSkippedOwner `json:"skipped"`
+
+	// Survivor A contact. Mirrors the `contact` table.
+	Survivor   *Contact           `json:"survivor,omitempty"`
+	SurvivorId openapi_types.UUID `json:"survivor_id"`
+}
+
+// ContactCaseOutcomeMode defines model for ContactCaseOutcome.Mode.
+type ContactCaseOutcomeMode string
+
+// ContactCaseOwner defines model for ContactCaseOwner.
+type ContactCaseOwner struct {
+	MemberIds []openapi_types.UUID `json:"member_ids"`
+	Name      string               `json:"name"`
+	Seat      ContactCaseOwnerSeat `json:"seat"`
+	UserId    openapi_types.UUID   `json:"user_id"`
+}
+
+// ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
+type ContactCaseOwnerSeat string
+
+// ContactCaseResolution defines model for ContactCaseResolution.
+type ContactCaseResolution struct {
+	ResolvedAt     time.Time           `json:"resolved_at"`
+	ResolvedBy     *openapi_types.UUID `json:"resolved_by,omitempty"`
+	ResolvedByName *string             `json:"resolved_by_name,omitempty"`
+	SurvivorId     openapi_types.UUID  `json:"survivor_id"`
+}
+
+// ContactCaseSettings defines model for ContactCaseSettings.
+type ContactCaseSettings struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
+// ContactCaseShare defines model for ContactCaseShare.
+type ContactCaseShare struct {
+	Access ContactCaseShareAccess `json:"access"`
+	Name   string                 `json:"name"`
+	UserId openapi_types.UUID     `json:"user_id"`
+}
+
+// ContactCaseShareAccess defines model for ContactCaseShare.Access.
+type ContactCaseShareAccess string
+
+// ContactCaseSkippedOwner defines model for ContactCaseSkippedOwner.
+type ContactCaseSkippedOwner struct {
+	Name   string                        `json:"name"`
+	Reason ContactCaseSkippedOwnerReason `json:"reason"`
+	UserId openapi_types.UUID            `json:"user_id"`
+}
+
+// ContactCaseSkippedOwnerReason defines model for ContactCaseSkippedOwner.Reason.
+type ContactCaseSkippedOwnerReason string
+
 // ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
 // channel, WITH the reason (ADR-0098 D6).
 //
@@ -39665,6 +40075,10 @@ type DedupeCandidate struct {
 	// who can see a duplicate is the contact best placed to notice it; this
 	// says whether the buttons will work, which the client should gate on
 	// rather than discovering through a 403 after the POST.
+	//
+	// With `contacts.shared_merge_reviews` on, an owner of one end of a
+	// contact pair may dismiss it and undo that, though not merge it. That
+	// answer is the pair's `can_dismiss` in its contact case.
 	CanDecide bool `json:"can_decide"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
@@ -39677,19 +40091,8 @@ type DedupeCandidate struct {
 	EntityType DedupeCandidateEntityType `json:"entity_type"`
 
 	// Evidence Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.
-	Evidence []struct {
-		// Field full_name, company, domain, …
-		Field      string  `json:"field"`
-		LeftValue  *string `json:"left_value"`
-		RightValue *string `json:"right_value"`
-
-		// Score The field's contribution where scored (e.g. name_sim).
-		Score *float32 `json:"score,omitempty"`
-
-		// Signal agree | collide | one_sided
-		Signal string `json:"signal"`
-	} `json:"evidence"`
-	Id openapi_types.UUID `json:"id"`
+	Evidence []DedupeEvidence   `json:"evidence"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// LeftId Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.
 	LeftId  openapi_types.UUID    `json:"left_id"`
@@ -39719,6 +40122,20 @@ type DedupeDispositionRequest struct {
 
 // DedupeDispositionRequestDisposition defines model for DedupeDispositionRequest.Disposition.
 type DedupeDispositionRequestDisposition string
+
+// DedupeEvidence One field of a pair's detection-time evidence.
+type DedupeEvidence struct {
+	// Field full_name, company, domain, …
+	Field      string  `json:"field"`
+	LeftValue  *string `json:"left_value"`
+	RightValue *string `json:"right_value"`
+
+	// Score The field's contribution where scored (e.g. name_sim).
+	Score *float32 `json:"score,omitempty"`
+
+	// Signal agree | collide | one_sided
+	Signal string `json:"signal"`
+}
 
 // DemoteLeadRequest defines model for DemoteLeadRequest.
 type DemoteLeadRequest struct {
@@ -46328,7 +46745,7 @@ type MorningDigest struct {
 			Noise       *int `json:"noise,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.
+		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -57292,6 +57709,9 @@ type WorklistItem struct {
 	// where the reader may not have it, which is not the same as unnamed or never.
 	Contact *WorklistContactFacts `json:"contact,omitempty"`
 
+	// ContactCase The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source.
+	ContactCase *AttentionContactCase `json:"contact_case,omitempty"`
+
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by
 	// which two deals in different currencies may be compared. It is not weighted by
@@ -60601,6 +61021,12 @@ type ListContactsParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
+	// SharedWithMe `true` returns only contacts someone else owns that the caller holds a live record grant
+	// on, directly or through one of their teams. A merge that kept a former owner's access
+	// puts the remaining contact here. Mutually exclusive with `owner_id`, `owner_team_id` and
+	// `unassigned`; combining them is `422`.
+	SharedWithMe *bool `form:"shared_with_me,omitempty" json:"shared_with_me,omitempty"`
+
 	// Q Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, a company's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 
@@ -61866,6 +62292,19 @@ type ListDedupeCandidatesParamsStatus string
 
 // ListDedupeCandidatesParamsEntityType defines parameters for ListDedupeCandidates.
 type ListDedupeCandidatesParamsEntityType string
+
+// ListContactCasesParams defines parameters for ListContactCases.
+type ListContactCasesParams struct {
+	// Scope `mine`: cases with a member the caller owns. `unassigned`: cases where no member has a live owner. `all`: every case the caller can see.
+	Scope *ListContactCasesParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// Cursor Opaque keyset cursor.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListContactCasesParamsScope defines parameters for ListContactCases.
+type ListContactCasesParamsScope string
 
 // GetMorningDigestParams defines parameters for GetMorningDigest.
 type GetMorningDigestParams struct {
@@ -66033,6 +66472,15 @@ type ProgressDealJSONRequestBody = ProgressDealRequest
 
 // DisposeDedupeCandidateJSONRequestBody defines body for DisposeDedupeCandidate for application/json ContentType.
 type DisposeDedupeCandidateJSONRequestBody = DedupeDispositionRequest
+
+// MergeContactCaseJSONRequestBody defines body for MergeContactCase for application/json ContentType.
+type MergeContactCaseJSONRequestBody = ContactCaseDecisionRequest
+
+// PreviewContactCaseMergeJSONRequestBody defines body for PreviewContactCaseMerge for application/json ContentType.
+type PreviewContactCaseMergeJSONRequestBody = ContactCaseDecisionRequest
+
+// UpdateContactCaseSettingsJSONRequestBody defines body for UpdateContactCaseSettings for application/json ContentType.
+type UpdateContactCaseSettingsJSONRequestBody = ContactCaseSettings
 
 // SaveEmailSignatureTemplateJSONRequestBody defines body for SaveEmailSignatureTemplate for application/json ContentType.
 type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
@@ -79069,6 +79517,24 @@ type ServerInterface interface {
 	// Re-open a disposed pair.
 	// (POST /dedupe/candidates/{id}/undo)
 	UndoDedupeDisposition(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The open contact duplicate cases, strongest first.
+	// (GET /dedupe/contact-cases)
+	ListContactCases(w http.ResponseWriter, r *http.Request, params ListContactCasesParams)
+	// The duplicate case this contact belongs to.
+	// (GET /dedupe/contact-cases/{contact_id})
+	GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
+	// Merge the selected members of a case into one contact. Not reversible.
+	// (POST /dedupe/contact-cases/{contact_id}/merge)
+	MergeContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
+	// What merging these members would do, without writing anything.
+	// (POST /dedupe/contact-cases/{contact_id}/preview)
+	PreviewContactCaseMerge(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
+	// Whether any owner of a duplicate may merge the whole case.
+	// (GET /dedupe/settings)
+	GetContactCaseSettings(w http.ResponseWriter, r *http.Request)
+	// Let any owner of a duplicate merge the whole case, or not.
+	// (PUT /dedupe/settings)
+	UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request)
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
 	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
@@ -83215,6 +83681,42 @@ func (_ Unimplemented) DisposeDedupeCandidate(w http.ResponseWriter, r *http.Req
 // Re-open a disposed pair.
 // (POST /dedupe/candidates/{id}/undo)
 func (_ Unimplemented) UndoDedupeDisposition(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open contact duplicate cases, strongest first.
+// (GET /dedupe/contact-cases)
+func (_ Unimplemented) ListContactCases(w http.ResponseWriter, r *http.Request, params ListContactCasesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The duplicate case this contact belongs to.
+// (GET /dedupe/contact-cases/{contact_id})
+func (_ Unimplemented) GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Merge the selected members of a case into one contact. Not reversible.
+// (POST /dedupe/contact-cases/{contact_id}/merge)
+func (_ Unimplemented) MergeContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What merging these members would do, without writing anything.
+// (POST /dedupe/contact-cases/{contact_id}/preview)
+func (_ Unimplemented) PreviewContactCaseMerge(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether any owner of a duplicate may merge the whole case.
+// (GET /dedupe/settings)
+func (_ Unimplemented) GetContactCaseSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Let any owner of a duplicate merge the whole case, or not.
+// (PUT /dedupe/settings)
+func (_ Unimplemented) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99750,6 +100252,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "shared_with_me" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "shared_with_me", r.URL.Query(), &params.SharedWithMe, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "shared_with_me"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "shared_with_me", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "q" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -106157,6 +106672,215 @@ func (siw *ServerInterfaceWrapper) UndoDedupeDisposition(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoDedupeDisposition(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListContactCases operation middleware
+func (siw *ServerInterfaceWrapper) ListContactCases(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListContactCasesParams
+
+	// ------------- Optional query parameter "scope" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope", r.URL.Query(), &params.Scope, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContactCases(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContactCase operation middleware
+func (siw *ServerInterfaceWrapper) GetContactCase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "contact_id" -------------
+	var contactId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contact_id", chi.URLParam(r, "contact_id"), &contactId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContactCase(w, r, contactId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MergeContactCase operation middleware
+func (siw *ServerInterfaceWrapper) MergeContactCase(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "contact_id" -------------
+	var contactId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contact_id", chi.URLParam(r, "contact_id"), &contactId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MergeContactCase(w, r, contactId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewContactCaseMerge operation middleware
+func (siw *ServerInterfaceWrapper) PreviewContactCaseMerge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "contact_id" -------------
+	var contactId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "contact_id", chi.URLParam(r, "contact_id"), &contactId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewContactCaseMerge(w, r, contactId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetContactCaseSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetContactCaseSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateContactCaseSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateContactCaseSettings(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126677,6 +127401,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/dedupe/candidates/{id}/undo", wrapper.UndoDedupeDisposition)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/dedupe/contact-cases", wrapper.ListContactCases)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/dedupe/contact-cases/{contact_id}", wrapper.GetContactCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/dedupe/contact-cases/{contact_id}/merge", wrapper.MergeContactCase)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/dedupe/contact-cases/{contact_id}/preview", wrapper.PreviewContactCaseMerge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/dedupe/settings", wrapper.GetContactCaseSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/dedupe/settings", wrapper.UpdateContactCaseSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/digest", wrapper.GetMorningDigest)

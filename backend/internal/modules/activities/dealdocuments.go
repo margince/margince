@@ -263,9 +263,10 @@ func ensureInDealDocuments(ctx context.Context, tx pgx.Tx, dealID, attachmentID 
 		return err
 	}
 	var found bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM attachment at WHERE at.id = $%d AND %s AND %s)`,
-		arg(attachmentID), dealDocumentMembership(deal), visible), args...).Scan(&found)
+		arg(attachmentID), dealDocumentMembership(deal), visible)
+	err = tx.QueryRow(ctx, query, args...).Scan(&found)
 	if err != nil {
 		return fmt.Errorf("activities: checking a deal document: %w", err)
 	}

@@ -120,7 +120,11 @@ export const SETTINGS_SECTIONS = {
   ],
   members: [],
   teams: [],
-  roles: ["roles.title"],
+  roles: [
+    "roles.title",
+    "sharedMergeReviews.title",
+    "sharedMergeReviews.switch",
+  ],
   seats: ["license.seats.title", "license.seats.inUse"],
   pipelines: [
     "pipeline.catalog",

@@ -131,9 +131,10 @@ func base(
 		// carrying the payload keeps the verb and the records it acts on
 		// travelling together: a row offering merge with no pair beneath it
 		// would be a button over records the client cannot name.
-		Pair:    item.Pair,
-		DueAt:   item.DueAt,
-		Overdue: item.Overdue,
+		Pair:        item.Pair,
+		ContactCase: item.ContactCase,
+		DueAt:       item.DueAt,
+		Overdue:     item.Overdue,
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and
 		// zone, and a second derivation here would need both again.

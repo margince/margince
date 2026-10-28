@@ -66,6 +66,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"RecordCommunicationContextRequest": true,
 	"IssueDoubleOptInJSONBody":          true,
 	"SetProjectStakeholderRequest":      true,
+	"ContactCaseDecisionRequest":        true,
 	"DraftIntroRequestJSONBody":         true,
 	"DraftIntroNoteJSONBody":            true,
 	"SetProjectCompanyRequest":          true,

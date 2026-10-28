@@ -197,6 +197,9 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"advanceDeal":             advanceDealCommand,
 	"mergeContact":            mergeCommand,
 	"mergeCompany":            mergeCommand,
+	// A contact case decision is merge_records too (agentcommandcontactcase.go).
+	"mergeContactCase":        contactCaseMergeCommand,
+	"previewContactCaseMerge": contactCasePreviewCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.

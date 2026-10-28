@@ -26,7 +26,8 @@ type executionAudit struct {
 func executionState(ctx context.Context, tx pgx.Tx, id ids.UUID) (executionAudit, error) {
 	var out executionAudit
 	var b bindings
-	err := tx.QueryRow(ctx, "SELECT status,attempt,fence,edition_id,reason,lease_until,retry_at,retry_base_attempt FROM report_execution WHERE id="+b.add(id)+" FOR UPDATE", b.values...).Scan(&out.Status, &out.Attempt, &out.Fence, &out.EditionID, &out.Reason, &out.LeaseUntil, &out.RetryAt, &out.RetryBase)
+	query := "SELECT status,attempt,fence,edition_id,reason,lease_until,retry_at,retry_base_attempt FROM report_execution WHERE id=" + b.add(id) + " FOR UPDATE"
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&out.Status, &out.Attempt, &out.Fence, &out.EditionID, &out.Reason, &out.LeaseUntil, &out.RetryAt, &out.RetryBase)
 	return out, storedError(err)
 }
 

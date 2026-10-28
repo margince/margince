@@ -122,6 +122,8 @@ type Service struct {
 	// noticeCases is OPTIONAL and withheld-by-grant exactly as dsrs is — the
 	// same privacy_request object gates both reads.
 	noticeCases NoticeCases
+	// contactCases is optional; unbound, no contact case reaches the lane.
+	contactCases ContactCases
 	// captureHealth is OPTIONAL like the lanes above it, and per-user on top:
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
@@ -409,6 +411,10 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
+	cases, openCases, err := s.openContactCases(ctx, depth)
+	if err != nil {
+		return nil, laneCount{}, err
+	}
 	query := s.approvalQuery(depth)
 	staged, err := s.approvals.ListWire(ctx, query)
 	if err != nil {
@@ -448,9 +454,11 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	count := laneCount{items: openCases + openPairs + openStaged, duplicates: openCases + openPairs}
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
-	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
+	// Cases lead each round, so a reader's own case is never behind a pile of
+	// other pairs.
+	return interleave(depth, cases, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and

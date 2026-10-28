@@ -6,6 +6,7 @@ package agents
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -62,7 +63,8 @@ func (resolveDuplicates) Spec() mcp.ToolSpec {
 		Instead:     resolveDuplicatesCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"candidate_id":{"description":"A flagged pair's candidate_id, to dismiss or reopen it; leave out when merging"},
-			"source_id":{"description":"The record merged away (archived, redirected to the survivor); leave out with candidate_id"}}}`),
+			"source_id":{"description":"The record merged away (archived, redirected to the survivor); leave out with candidate_id"},
+			"member_ids":{"description":"The contacts of one case to merge into one; leave out with candidate_id"}}}`),
 	}
 }
 
@@ -76,17 +78,22 @@ func (resolveDuplicates) routeTargets() map[string]string {
 }
 
 var errResolveNamesOneWay = &BadArgsError{Cause: errors.New(
-	"name candidate_id to settle a flagged pair, or source_id and target_id to merge, not both")}
+	"name candidate_id to settle a flagged pair, source_id and target_id to merge, " +
+		"or contact_id and member_ids to merge a contact case, one of them")}
 
+// chooseTarget sends a pair dismissal to decide_duplicate, and both merges, of
+// two records or of a contact case, to merge_records.
 func (resolveDuplicates) chooseTarget(members map[string]json.RawMessage) (string, error) {
-	dropNullMembers(members, "candidate_id", "source_id", "target_id")
+	dropNullMembers(members, "candidate_id", "source_id", "target_id", "contact_id", "member_ids")
 	_, pair := members["candidate_id"]
-	_, source := members["source_id"]
-	_, target := members["target_id"]
+	named := func(keys ...string) bool {
+		return slices.ContainsFunc(keys, func(key string) bool { _, ok := members[key]; return ok })
+	}
+	merge := named("source_id", "target_id", "contact_id", "member_ids")
 	switch {
-	case pair && !source && !target:
+	case pair && !merge:
 		return settleFlaggedPair, nil
-	case !pair && (source || target):
+	case !pair && merge:
 		return mergeTwoRecords, nil
 	}
 	return "", errResolveNamesOneWay

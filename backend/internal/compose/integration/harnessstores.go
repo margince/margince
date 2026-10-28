@@ -39,6 +39,8 @@ func (e *Env) bindStores(db *database.DB) {
 		WithMergeContentReader(e.Activities).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+		// As production wires it: a merge keeps the former owner's access.
+		WithGrantCarrier(identity.NewServiceFor(db)).
 		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)

@@ -13,22 +13,18 @@ package contacts
 // together has to answer which one survives, and the answer differs by what the
 // row IS.
 //
-// Three answers appear below, and the difference between them is worth stating
-// once: a DERIVED row (a geocode position, an enrichment backoff) is dropped
-// when the survivor has its own, because recomputing costs a job; an EVIDENCE
-// row (the VIES receipt) is never destroyed, because no later work can
-// reproduce it; and a JUDGED row (a dedupe disposition) outranks an undecided
-// one, because a human answered it.
+// A DERIVED row (a geocode position, an enrichment backoff) is dropped when the
+// survivor has its own, because recomputing costs a job. An EVIDENCE row (the
+// VIES receipt) is never destroyed, because no later work can reproduce it.
+// Duplicate pairs move through moveDedupeCandidates.
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // moveCompanySingletons re-homes the at-most-one-per-company rows.
@@ -154,127 +150,4 @@ func moveCompanyScans(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Com
 		return fmt.Errorf("retire the merged-away account scans: %w", err)
 	}
 	return nil
-}
-
-// moveCompanyDedupeCandidates re-homes the duplicate pairs that name the
-// merged-away company.
-//
-// Three things make this the hardest table here, and all three are constraints
-// rather than preferences:
-//
-//   - dedupe_candidate_ordered requires left < right, so repointing a column
-//     can break the ordering even when no duplicate exists. The rows are
-//     therefore re-normalized rather than repointed in place.
-//   - uq_dedupe_candidate_pair spans EVERY disposition, not just open ones, so
-//     a merged or dismissed pair collides exactly like a live one.
-//   - the pair being merged RIGHT NOW is marked 'merged' by the dedupe queue in
-//     this same transaction, one statement before the merge runs (#1970). That
-//     row must survive: deleting it leaves a queue entry claiming a merge with
-//     no record of it.
-//
-// A pair naming both endpoints would become a self-pair and is dropped; a pair
-// whose normalized form the survivor already holds is dropped as the duplicate
-// it now is. Everything else re-normalizes onto the survivor.
-func moveCompanyDedupeCandidates(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	if err := settleOpenPairBetween(ctx, tx, sourceID, targetID); err != nil {
-		return err
-	}
-	// A pair the survivor already has, in either orientation, once the source
-	// end is read as the survivor. One of the two has to go — the pair is
-	// unique across every disposition — and the one that goes is the one
-	// carrying NO human judgement.
-	//
-	// Dropping the source's row unconditionally was wrong: a colleague who
-	// marked source–third "not a duplicate" had that decision deleted while an
-	// untouched `open` row on target–third survived, so the pair came back to
-	// the queue as if nobody had ever ruled on it. A disposition is a human
-	// answer and outlives an open row every time; between two rows that both
-	// carry one, the survivor's own stands.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM dedupe_candidate a
-		 WHERE a.entity_type = 'company'
-		   AND (a.left_company_id = $1 OR a.right_company_id = $1)
-		   AND EXISTS (
-		     SELECT 1 FROM dedupe_candidate b
-		      WHERE b.entity_type = 'company' AND b.id <> a.id
-		        AND LEAST(b.left_company_id, b.right_company_id) =
-		            LEAST($2::uuid, CASE WHEN a.left_company_id = $1
-		                                 THEN a.right_company_id ELSE a.left_company_id END)
-		        AND GREATEST(b.left_company_id, b.right_company_id) =
-		            GREATEST($2::uuid, CASE WHEN a.left_company_id = $1
-		                                    THEN a.right_company_id ELSE a.left_company_id END)
-		        AND (b.disposition <> 'open' OR a.disposition = 'open'))`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("drop the duplicated pairs: %w", err)
-	}
-	// The mirror of the rule above: where the source's row carries the only
-	// judgement, the survivor's undecided row is the one that goes, so the
-	// re-normalise below can move the judged one into its place.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM dedupe_candidate b
-		 WHERE b.entity_type = 'company' AND b.disposition = 'open'
-		   AND EXISTS (
-		     SELECT 1 FROM dedupe_candidate a
-		      WHERE a.entity_type = 'company' AND a.id <> b.id
-		        AND a.disposition <> 'open'
-		        AND (a.left_company_id = $1 OR a.right_company_id = $1)
-		        AND LEAST(b.left_company_id, b.right_company_id) =
-		            LEAST($2::uuid, CASE WHEN a.left_company_id = $1
-		                                 THEN a.right_company_id ELSE a.left_company_id END)
-		        AND GREATEST(b.left_company_id, b.right_company_id) =
-		            GREATEST($2::uuid, CASE WHEN a.left_company_id = $1
-		                                    THEN a.right_company_id ELSE a.left_company_id END))`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("drop the survivor's undecided duplicates: %w", err)
-	}
-	// What remains re-normalizes: the survivor takes the source's place, and
-	// the two ends are re-sorted so left < right still holds.
-	//
-	// The pair BETWEEN the two merging companies is excluded, at every
-	// disposition. Re-normalizing it would name the survivor at both ends —
-	// a self-pair, which dedupe_candidate_ordered refuses outright because it
-	// requires a strict left < right. It stays as it is, still naming the
-	// retired company, because that is precisely what it records: the merge
-	// that retired it. A row saying "these two were judged the same" is not
-	// made truer by rewriting both ends to one id.
-	//
-	// Both SET expressions read the row as it was BEFORE the update, so the
-	// same CASE in each picks the same "other end" — the column the retired
-	// company does NOT occupy — and LEAST/GREATEST then order the new pair.
-	if _, err := tx.Exec(ctx, `
-		UPDATE dedupe_candidate SET
-		  left_company_id  = LEAST($2::uuid, CASE WHEN left_company_id = $1
-		                                          THEN right_company_id ELSE left_company_id END),
-		  right_company_id = GREATEST($2::uuid, CASE WHEN left_company_id = $1
-		                                             THEN right_company_id ELSE left_company_id END)
-		 WHERE entity_type = 'company'
-		   AND (left_company_id = $1 OR right_company_id = $1)
-		   AND CASE WHEN left_company_id = $1
-		            THEN right_company_id ELSE left_company_id END <> $2`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("re-normalize the remaining pairs: %w", err)
-	}
-	return nil
-}
-
-// settleOpenPairBetween marks the open pair of the two merging companies as
-// merged, by the user behind this call. The dedupe queue marks its own pair
-// before it merges, so only a merge made from a company page finds one open.
-// Without this, that merge left no row for the queue's merged list to show.
-func settleOpenPairBetween(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	var pairID ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT id FROM dedupe_candidate
-		 WHERE entity_type = 'company' AND disposition = 'open'
-		   AND ((left_company_id = $1 AND right_company_id = $2)
-		     OR (left_company_id = $2 AND right_company_id = $1))`,
-		sourceID, targetID).Scan(&pairID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("read the open pair of the merging companies: %w", err)
-	}
-	actor, _ := principal.Actor(ctx)
-	return setDedupeDispositionTx(ctx, tx, pairID, dispositionMerged, actor.UserID)
 }

@@ -67,18 +67,17 @@ func (e *Eraser) eraseCommitmentDerivative(ctx context.Context, tx pgx.Tx, item 
 }
 
 func commitmentDerivatives(ctx context.Context, tx pgx.Tx, sources []ids.UUID, locking bool) ([]commitmentErasure, error) {
-	var args []any
-	arg := func(value any) int { args = append(args, value); return len(args) }
 	lock := ""
 	if locking {
 		lock = " FOR UPDATE OF d"
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT d.source_activity_id, d.locator, a.id
+	rows, err := tx.Query(ctx, `SELECT d.source_activity_id, d.locator, a.id
  FROM activity_commitment_admission d
  LEFT JOIN activity a ON a.source_activity_id = d.source_activity_id
- AND a.source_id = d.locator AND a.source_system = $%[1]d
- WHERE d.source_activity_id = ANY($%[2]d::uuid[]) OR d.renewed_by = ANY($%[2]d::uuid[])
- ORDER BY a.id, d.source_activity_id, d.locator%[3]s`, arg(provenance.CommitmentTaskSource), arg(sources), lock), args...)
+ AND a.source_id = d.locator AND a.source_system = @task_source
+ WHERE d.source_activity_id = ANY(@sources::uuid[]) OR d.renewed_by = ANY(@sources::uuid[])
+ ORDER BY a.id, d.source_activity_id, d.locator`+lock,
+		pgx.NamedArgs{"task_source": provenance.CommitmentTaskSource, "sources": sources})
 	if err != nil {
 		return nil, fmt.Errorf("privacy: finding work derived from erased evidence: %w", err)
 	}
@@ -128,10 +127,10 @@ func lockCommitmentDerivatives(ctx context.Context, tx pgx.Tx, sources []ids.UUI
 }
 
 func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UUID, act erasureAct) (bool, error) {
-	var args []any
-	arg := func(value any) int { args = append(args, value); return len(args) }
 	var held, alreadyWithheld bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT a.restricted_at IS NOT NULL OR %s, NOT (%s) FROM activity a WHERE a.id = $%d`, retentionscope.HeldThroughAnyLink("a.id"), auth.CommitmentContentRetainedClause("a"), arg(task)), args...).Scan(&held, &alreadyWithheld); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT a.restricted_at IS NOT NULL OR `+retentionscope.HeldThroughAnyLink("a.id")+
+		`, NOT (`+auth.CommitmentContentRetainedClause("a")+`) FROM activity a WHERE a.id = @task`,
+		pgx.NamedArgs{"task": task}).Scan(&held, &alreadyWithheld); err != nil {
 		return false, err
 	}
 	if held {
@@ -164,11 +163,15 @@ func (e *Eraser) eraseCommitmentTask(ctx context.Context, tx pgx.Tx, task ids.UU
 	return true, storekit.EmitEventForEntity(ctx, tx, auditID, "activity", task, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &act.collateralReason))
 }
 
+// The activity and evidence locator the erasure statements name.
+const (
+	commitmentSourceArg  = "source"
+	commitmentLocatorArg = "locator"
+)
+
 func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
-	var args []any
-	arg := func(value any) int { args = append(args, value); return len(args) }
-	rows, err := tx.Query(ctx, fmt.Sprintf(`DELETE FROM conversation_claim WHERE source_activity_id = $%d
- AND evidence_fingerprint = $%d RETURNING id, contact_id`, arg(item.source), arg(item.locator)), args...)
+	rows, err := tx.Query(ctx, `DELETE FROM conversation_claim WHERE source_activity_id = @source
+ AND evidence_fingerprint = @locator RETURNING id, contact_id`, pgx.NamedArgs{commitmentSourceArg: item.source, commitmentLocatorArg: item.locator})
 	if err != nil {
 		return err
 	}
@@ -197,10 +200,8 @@ func eraseCommitmentClaims(ctx context.Context, tx pgx.Tx, item commitmentErasur
 }
 
 func eraseCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentErasure) error {
-	var args []any
-	arg := func(value any) int { args = append(args, value); return len(args) }
-	tag, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM activity_commitment_admission
- WHERE source_activity_id = $%d AND locator = $%d`, arg(item.source), arg(item.locator)), args...)
+	tag, err := tx.Exec(ctx, `DELETE FROM activity_commitment_admission
+ WHERE source_activity_id = @source AND locator = @locator`, pgx.NamedArgs{commitmentSourceArg: item.source, commitmentLocatorArg: item.locator})
 	if err != nil {
 		return err
 	}
@@ -232,7 +233,7 @@ func redactCommitmentDecision(ctx context.Context, tx pgx.Tx, item commitmentEra
  current_work = prior.current_work AND NOT @unavailable
  WHERE prior.summary <> '' OR prior.source_quote <> '' OR prior.meaning IS NOT NULL
  OR (@unavailable AND (prior.outcome <> @reason OR prior.current_work))`, pgx.StrictNamedArgs{
-		"unavailable": unavailable, evidenceKeyReason: auth.CommitmentEvidenceUnavailable, "evidence_source": item.source, "locator": item.locator, "by": by,
+		"unavailable": unavailable, evidenceKeyReason: auth.CommitmentEvidenceUnavailable, "evidence_source": item.source, commitmentLocatorArg: item.locator, "by": by,
 	})
 	if err != nil {
 		return err

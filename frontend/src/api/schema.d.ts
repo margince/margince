@@ -14199,6 +14199,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dedupe/contact-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The open contact duplicate cases, strongest first. */
+        get: operations["listContactCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dedupe/contact-cases/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Any member of the case. */
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The duplicate case this contact belongs to.
+         * @description `404` when the contact is in no open case and was not merged away. A contact that was merged
+         *     away answers `status: resolved` with the contact it went into, so a reviewer holding an old
+         *     tab sees who settled it.
+         */
+        get: operations["getContactCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dedupe/contact-cases/{contact_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What merging these members would do, without writing anything.
+         * @description Runs the merge itself in a transaction that is rolled back, so the answer is the one the
+         *     merge would give. Refuses exactly as the merge refuses. An agent asks it through
+         *     `merge_records` with `preview: true`, so the merge's tier holds for the preview too.
+         */
+        post: operations["previewContactCaseMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dedupe/contact-cases/{contact_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge the selected members of a case into one contact. Not reversible.
+         * @description In one transaction: every selected member merges into `survivor_id`, the pairs between them
+         *     are marked merged, `owner_id` becomes the owner, and every other live owner of a selected
+         *     member keeps access through a record grant (write for a full seat, read for a read seat).
+         *     Pairs a merged-away member had with an unselected contact move onto the survivor and stay
+         *     open. Either all of it commits or none of it does.
+         *
+         *     Authority: the caller may change every selected member, or the workspace has
+         *     `contacts.shared_merge_reviews` on and the caller is a live full-seat owner of a selected
+         *     member. `409 case_changed` when the revision is stale; `422 dismissed_pair_selected`,
+         *     `not_connected`, `owner_not_eligible` or `too_large` for a selection the case cannot take.
+         */
+        post: operations["mergeContactCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dedupe/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether any owner of a duplicate may merge the whole case.
+         * @description Off by default (`contacts.shared_merge_reviews`). Read by every seat, because the review
+         *     shows who may settle a case by it. Needs `installation_settings.read`.
+         */
+        get: operations["getContactCaseSettings"];
+        /**
+         * Let any owner of a duplicate merge the whole case, or not.
+         * @description Admin only. On: a live full-seat owner of one member of a case may merge the other members
+         *     of that case even when they belong to colleagues, and the colleagues keep access to the
+         *     remaining contact through a record grant. It widens nothing else: no other contact, no
+         *     mail, no files. Off: a merge needs write authority over every member, as before. Merges
+         *     already made and the grants they made stay when the switch is turned off.
+         */
+        put: operations["updateContactCaseSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/autonomy": {
         parameters: {
             query?: never;
@@ -25349,7 +25475,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Every open duplicate candidate pair the reader can see, not only the pairs filed overnight. */
+                /** @description Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;
@@ -25747,16 +25873,7 @@ export interface components {
             /** @description The PO-F-1/PO-F-2 fuzzy score at detection. */
             confidence: number;
             /** @description Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows. */
-            evidence: {
-                /** @description full_name, company, domain, … */
-                field: string;
-                left_value: string | null;
-                right_value: string | null;
-                /** @description agree | collide | one_sided */
-                signal: string;
-                /** @description The field's contribution where scored (e.g. name_sim). */
-                score?: number | null;
-            }[];
+            evidence: components["schemas"]["DedupeEvidence"][];
             /** @enum {string} */
             status: "open" | "merged" | "not_a_duplicate";
             /**
@@ -25772,6 +25889,10 @@ export interface components {
              *     who can see a duplicate is the contact best placed to notice it; this
              *     says whether the buttons will work, which the client should gate on
              *     rather than discovering through a 403 after the POST.
+             *
+             *     With `contacts.shared_merge_reviews` on, an owner of one end of a
+             *     contact pair may dismiss it and undo that, though not merge it. That
+             *     answer is the pair's `can_dismiss` in its contact case.
              */
             can_decide: boolean;
             /** Format: uuid */
@@ -25793,6 +25914,180 @@ export interface components {
              * @description Required for merge: the surviving record — must be one of the pair.
              */
             winner_id?: string | null;
+        };
+        /** @description One field of a pair's detection-time evidence. */
+        DedupeEvidence: {
+            /** @description full_name, company, domain, … */
+            field: string;
+            left_value: string | null;
+            right_value: string | null;
+            /** @description agree | collide | one_sided */
+            signal: string;
+            /** @description The field's contribution where scored (e.g. name_sim). */
+            score?: number | null;
+        };
+        /**
+         * @description One group of contacts that may be duplicates of one another: every live contact reachable from the
+         *     addressed contact over open duplicate pairs the caller can see. A case is read off the
+         *     pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
+         *     `anchor_id` is the lowest member id; every member id addresses the same case. A case of
+         *     more than 25 contacts is `too_large` and shows the 25 nearest the addressed contact over
+         *     its pairs, the addressed contact among them.
+         */
+        ContactCase: {
+            /** Format: uuid */
+            anchor_id: string;
+            /** @description Changes whenever a member, its version, its owner or that owner's seat, a pair, a share on a member or the policy changes. Preview and merge refuse a stale one with 409 case_changed. */
+            revision: string;
+            /**
+             * @description `resolved` when the addressed contact was merged away; `resolution` says into which contact.
+             * @enum {string}
+             */
+            status: "open" | "resolved";
+            members: components["schemas"]["ContactCaseMember"][];
+            edges: components["schemas"]["ContactCaseEdge"][];
+            /** @description The live owners of the members. Each of them sees the case in their own Worklist. */
+            owners: components["schemas"]["ContactCaseOwner"][];
+            /** @description The strongest open pair in the case. */
+            confidence: number;
+            /** @description The case has more members than one review may merge (25). The pairs still decide one by one. */
+            too_large: boolean;
+            /** @description Whether the workspace lets any owner of a member merge the case (`contacts.shared_merge_reviews`). */
+            policy_enabled: boolean;
+            /** @description Whether this caller may merge at least two members of this case. */
+            can_merge: boolean;
+            /**
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+             * @enum {string}
+             */
+            merge_mode: "ordinary" | "delegated" | "none";
+            /**
+             * @description Why `can_merge` is false.
+             * @enum {string|null}
+             */
+            reason?: "no_write_authority" | "too_large" | "resolved" | null;
+            /**
+             * @description Present when `status` is `resolved` and the caller can see the surviving contact.
+             *     A caller who cannot see it reads `resolved` with no `resolution`.
+             */
+            resolution?: components["schemas"]["ContactCaseResolution"];
+        };
+        ContactCaseMember: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The primary email address. */
+            email?: string | null;
+            title?: string | null;
+            /** @description The current employer. */
+            company_name?: string | null;
+            /** Format: uuid */
+            owner_id: string | null;
+            owner_name: string | null;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description One duplicate pair between two members, with the evidence it was filed on. */
+        ContactCaseEdge: {
+            /** Format: uuid */
+            pair_id: string;
+            /** Format: uuid */
+            left_id: string;
+            /** Format: uuid */
+            right_id: string;
+            confidence: number;
+            /**
+             * @description `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
+             * @enum {string}
+             */
+            status: "open" | "not_a_duplicate";
+            evidence: components["schemas"]["DedupeEvidence"][];
+            /**
+             * @description Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
+             *     through the pair's own decision route. True with write access to both ends, and,
+             *     when the case's `policy_enabled` is on, for a full-seat owner of either end.
+             */
+            can_dismiss: boolean;
+            /**
+             * @description Whether this caller may merge this one open pair through the pair's own decision
+             *     route. True only with write access to both ends. `policy_enabled` does not widen it:
+             *     the policy admits a merge of the whole case, never of a single pair.
+             */
+            can_merge: boolean;
+        };
+        ContactCaseOwner: {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+            /** @enum {string} */
+            seat: "full" | "read";
+            member_ids: string[];
+        };
+        ContactCaseResolution: {
+            /** Format: uuid */
+            survivor_id: string;
+            /** Format: uuid */
+            resolved_by?: string | null;
+            resolved_by_name?: string | null;
+            /** Format: date-time */
+            resolved_at: string;
+        };
+        ContactCaseListResponse: {
+            data: components["schemas"]["ContactCase"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        ContactCaseDecisionRequest: {
+            /** @description The case revision the reviewer looked at. */
+            revision: string;
+            /** @description The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair. */
+            member_ids: string[];
+            /**
+             * Format: uuid
+             * @description The record that remains. Its values win where two members disagree.
+             */
+            survivor_id: string;
+            /**
+             * Format: uuid
+             * @description Who owns the remaining contact: the live owner of one of the selected members.
+             */
+            owner_id: string;
+        };
+        /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
+        ContactCaseOutcome: {
+            /** @description `false` for a preview: nothing was written. */
+            committed: boolean;
+            /** Format: uuid */
+            survivor_id: string;
+            merged_ids: string[];
+            /** Format: uuid */
+            owner_id: string;
+            /** @enum {string} */
+            mode: "ordinary" | "delegated";
+            /** @description The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access. */
+            shares: components["schemas"]["ContactCaseShare"][];
+            /** @description Owners who get no new grant, and why. */
+            skipped: components["schemas"]["ContactCaseSkippedOwner"][];
+            survivor?: components["schemas"]["Contact"];
+        };
+        ContactCaseShare: {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+            /** @enum {string} */
+            access: "read" | "write";
+        };
+        ContactCaseSkippedOwner: {
+            /** Format: uuid */
+            user_id: string;
+            name: string;
+            /** @enum {string} */
+            reason: "inactive" | "already_owner" | "already_granted";
+        };
+        ContactCaseSettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
+            enabled: boolean;
         };
         AiHealth: {
             /** @description How far back the counts reach, so a reader knows what "no calls" covers. */
@@ -48361,7 +48656,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -48476,6 +48771,7 @@ export interface components {
             subject?: components["schemas"]["AttentionSubject"];
             acquisition?: components["schemas"]["NoticeAcquisition"];
             pair?: components["schemas"]["AttentionPair"];
+            contact_case?: components["schemas"]["AttentionContactCase"];
             deal?: components["schemas"]["AttentionDealFacts"];
             /**
              * Format: uuid
@@ -48711,6 +49007,23 @@ export interface components {
              * @enum {string}
              */
             signal: "collide" | "one_sided" | "exact_conflict" | "lane_split";
+        };
+        /**
+         * @description A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
+         *     only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+         *     with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+         */
+        AttentionContactCase: {
+            /** Format: uuid */
+            anchor_id: string;
+            revision: string;
+            members: components["schemas"]["AttentionPairSide"][];
+            /** @description The names of the members' live owners. Each of them sees this row in their own Worklist. */
+            owners: string[];
+            can_merge: boolean;
+            /** @enum {string} */
+            merge_mode: "ordinary" | "delegated" | "none";
+            too_large?: boolean;
         };
         /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */
         AttentionPairSide: {
@@ -48984,7 +49297,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
@@ -49921,7 +50234,7 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -50019,6 +50332,8 @@ export interface components {
              *     look, which is the hand-off this queue exists to remove.
              */
             pair?: components["schemas"]["AttentionPair"];
+            /** @description The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source. */
+            contact_case?: components["schemas"]["AttentionContactCase"];
             move?: components["schemas"]["WorklistMove"];
             /**
              * Format: uuid
@@ -52526,6 +52841,13 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
+                /**
+                 * @description `true` returns only contacts someone else owns that the caller holds a live record grant
+                 *     on, directly or through one of their teams. A merge that kept a former owner's access
+                 *     puts the remaining contact here. Mutually exclusive with `owner_id`, `owner_team_id` and
+                 *     `unassigned`; combining them is `422`.
+                 */
+                shared_with_me?: boolean;
                 /** @description Full-text query over name/title (tsvector), plus an exact match on the record's own identifier: a contact's email address, a company's domain. A query containing "@" also tries the part after it against the domain, so pasting a sender finds their company. Identifier matching is exact, never a prefix. */
                 q?: string;
                 /**
@@ -73227,6 +73549,174 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listContactCases: {
+        parameters: {
+            query?: {
+                /** @description `mine`: cases with a member the caller owns. `unassigned`: cases where no member has a live owner. `all`: every case the caller can see. */
+                scope?: "mine" | "unassigned" | "all";
+                /** @description Opaque keyset cursor. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of cases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCaseListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getContactCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Any member of the case. */
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCase"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewContactCaseMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactCaseDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The outcome the merge would have, with `committed` false. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCaseOutcome"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    mergeContactCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactCaseDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The committed outcome. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCaseOutcome"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getContactCaseSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The switch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCaseSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateContactCaseSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactCaseSettings"];
+            };
+        };
+        responses: {
+            /** @description The switch as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCaseSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };

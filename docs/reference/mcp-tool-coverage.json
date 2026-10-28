@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 11,
     "permitted_but_never_required": 5,
-    "tokens_served_but_never_driven": 4668,
+    "tokens_served_but_never_driven": 4675,
     "use_case_cases": 34,
     "acceptance_criteria_named": 73,
     "tools_added_by_shipped_units": 0,
@@ -1675,7 +1675,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1010,
+      "tokens": 1017,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1908,7 +1908,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1782,
+      "tokens": 1791,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2261,6 +2261,34 @@
       }
     },
     {
+      "name": "resolve_duplicates",
+      "tokens": 613,
+      "agents": [],
+      "required_by_cases": [
+        "case33_two_cards_for_one_company",
+        "case56_not_the_same"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "update_record",
       "tokens": 593,
       "agents": [],
@@ -2452,34 +2480,6 @@
         "gpt-5.6-sol@codex-cli": {
           "runs": 2,
           "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "resolve_duplicates",
-      "tokens": 393,
-      "agents": [],
-      "required_by_cases": [
-        "case33_two_cards_for_one_company",
-        "case56_not_the_same"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         }

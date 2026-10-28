@@ -7506,6 +7506,90 @@
       "data": {
         "type": "object",
         "properties": {
+          "case": {
+            "type": "object",
+            "properties": {
+              "committed": {
+                "type": "boolean"
+              },
+              "merged_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "mode": {
+                "type": "string"
+              },
+              "owner_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "shares": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "access": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "access",
+                    "name",
+                    "user_id"
+                  ]
+                }
+              },
+              "skipped": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "reason",
+                    "user_id"
+                  ]
+                }
+              },
+              "survivor": {
+                "type": "string"
+              },
+              "survivor_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "committed",
+              "merged_ids",
+              "mode",
+              "owner_id",
+              "shares",
+              "skipped",
+              "survivor_id"
+            ]
+          },
           "merged": {
             "type": "boolean"
           },

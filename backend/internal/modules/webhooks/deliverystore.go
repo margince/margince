@@ -102,9 +102,10 @@ func (s *Store) ListDeliveries(
 		}
 		// Fetch one past the page so a full page is distinguishable from a
 		// truncated one without a second count query.
-		rows, err := tx.Query(ctx, "SELECT "+deliveryColumns+
-			" FROM webhook_delivery WHERE subscription_id = $1"+where+
-			" ORDER BY created_at DESC, id DESC LIMIT "+storekit.SQLf("$%d", arg(limit+1)), args...)
+		query := "SELECT " + deliveryColumns +
+			" FROM webhook_delivery WHERE subscription_id = $1" + where +
+			" ORDER BY created_at DESC, id DESC LIMIT " + storekit.SQLf("$%d", arg(limit+1))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
