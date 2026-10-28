@@ -6,6 +6,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Fragment, useEffect, useId, useRef, useState } from "react";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useT } from "../i18n";
 import { Button, Radio } from "./atoms";
 import { ChipValueList } from "./listfiltervalues";
@@ -98,8 +99,9 @@ export function FilterMenu({
   // menu that no longer names the attribute it belongs to.
   const addable = chips.filter((chip) => !chosen[chip.key]);
   const attribute = addable.find((chip) => chip.key === attributeKey);
+  const words = searchWords(query);
   const narrowed = addable.filter((chip) =>
-    chip.label.toLowerCase().includes(query.toLowerCase()),
+    holdsEveryWord(words, [chip.label]),
   );
 
   return (

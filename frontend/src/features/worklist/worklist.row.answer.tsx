@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useRef, useState } from "react";
+import { MeetingOutcome } from "../../components/meetingoutcome";
 import {
   useAutomationRetry,
   useClaimSettle,
@@ -24,7 +25,6 @@ import {
   BriefSetAsides,
 } from "./worklist.briefverbs";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
-import { MeetingOutcome } from "./worklist.meetingoutcome";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
@@ -121,6 +121,8 @@ const ANSWER_BY_SOURCE: Partial<
           // always has one: the meeting's subject, written by whoever booked
           // it. The dialog falls back to its own heading when a row has none.
           title={item.title}
+          invalidateKeys={[worklistKey]}
+          cancellable={item.actions.includes("cancel")}
         />
       ),
     }),
@@ -376,7 +378,7 @@ function refusalMessage(
 }
 
 // How a meeting went is recorded by `MeetingOutcome` in
-// worklist.meetingoutcome.tsx. "Cancelled" writes that one word from the card;
+// components/meetingoutcome.tsx. "Cancelled" writes that one word from the card;
 // "Update" opens the composer bound to this meeting, where the outcome is typed.
 // Its dialog reads and patches the meeting: a form, a query and a mutation. That
 // is a screen's worth of code, not one row verb, so it has its own file.

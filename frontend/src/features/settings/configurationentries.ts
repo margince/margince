@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { holdsEveryWord, searchWords } from "../../format/collate";
 import { unwrap } from "../../lib/problem";
 
 export type ConfigurationEntry = components["schemas"]["ConfigurationEntry"];
@@ -36,8 +37,5 @@ export function matchesConfigurationFilter(
   setting: SettingName,
   filter: string,
 ): boolean {
-  const needle = filter.trim().toLowerCase();
-  return [setting.key, setting.env].some((name) =>
-    name.toLowerCase().includes(needle),
-  );
+  return holdsEveryWord(searchWords(filter), [setting.key, setting.env]);
 }

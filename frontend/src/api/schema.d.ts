@@ -5398,7 +5398,11 @@ export interface paths {
          *     a task needs its `subject`. An activity may link to >1 entity
          *     (contact and deal). A link that names a record the caller cannot read answers 422
          *     naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is 🟢
-         *     (reversible).
+         *     (reversible). `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+         *     on a meeting whose start has not passed yet (a date-only meeting until its date is over in
+         *     the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
+         *     `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
+         *     `source_id` that moves the meeting's status is judged the same way, at its stored start.
          */
         post: operations["logActivity"];
         delete?: never;
@@ -5425,7 +5429,18 @@ export interface paths {
         delete: operations["archiveActivity"];
         options?: never;
         head?: never;
-        /** Update an activity (e.g. complete a task). */
+        /**
+         * Update an activity (e.g. complete a task).
+         * @description `meeting_status` `held` or `no_show` describes a meeting that took place, so it is refused
+         *     on a meeting whose start has not passed yet (a date-only meeting until its date is over in
+         *     the installation's timezone), judged at the start the patch leaves the row with:
+         *     `422 code: in_future` on `meeting_status`. A patch that moves the start of a `held` or
+         *     `no_show` meeting is judged the same way with the status it keeps. `canceled` and `booked`
+         *     are accepted at any time. On a meeting with a live calendar invitation, a patch that sets
+         *     `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than
+         *     `held` or `no_show` answers `422 code: calendar_managed` on `meeting`; that change goes
+         *     through the invitation.
+         */
         patch: operations["updateActivity"];
         trace?: never;
     };
@@ -12189,6 +12204,7 @@ export interface paths {
          *
          *     Read under the caller's own visibility and bounded, with `truncated` saying when
          *     the read stopped short. Nothing here is a claim about work the caller may not see.
+         *     A truncated page carries `next_cursor`, and the next page continues the same window.
          */
         get: operations["getHandledForYou"];
         put?: never;
@@ -26473,7 +26489,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -35271,6 +35287,10 @@ export interface components {
         Activity: {
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            readonly awaiting_outcome?: boolean;
+            /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
+            readonly calendar_managed?: boolean;
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */
@@ -41407,6 +41427,8 @@ export interface components {
             next_after?: string;
         };
         HomeRepairReview: {
+            /** @description The client must acknowledge the actions it displayed when activating this page. */
+            requires_action_review?: boolean;
             tasks: components["schemas"]["HomeRepairTask"][];
             counts: components["schemas"]["HomeRepairCounts"];
             /** @description Reader-bound classification review token; expires after fifteen minutes and is consumed on activation. */
@@ -41430,7 +41452,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
+            action: "archive_automatic_reminder" | "normalize_automatic_task" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -41442,6 +41464,8 @@ export interface components {
             keep: number;
             /** @description Older settled request verdicts the email-request settlement pass judges again. */
             revalidate?: number;
+            /** @description Pristine automatic tasks with a proved source reference or generated notification date to correct. */
+            normalize?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -48437,6 +48461,13 @@ export interface components {
              *     contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
              *     the read-only fallback for a receipt.
              *
+             *     `take` is offered on a task nobody holds that the caller may change. It sets
+             *     `assignee_id` to the caller through `PATCH /activities/{id}`, pinned with `If-Match`.
+             *
+             *     `cancel` is offered on a meeting owed an outcome that no live calendar invitation
+             *     holds. It sets `meeting_status` to `canceled` through `PATCH /activities/{id}`, pinned
+             *     with `If-Match`. A meeting an invitation holds is canceled through the invitation.
+             *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
              *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
@@ -48451,7 +48482,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -48648,7 +48679,8 @@ export interface components {
         /**
          * @description Up to six actionable priorities from the scoped day, selected before filtering
          *     or pagination and ordered by the queue's server ranking. Routine maintenance
-         *     and future tasks do not fill spare places. Pins remain explicit choices.
+         *     and future tasks do not fill spare places. Ordinary pins only order the queue;
+         *     pinning an optional reconnection explicitly chooses it for Focus.
          *     Source coverage and failures are reported on the enclosing worklist; these
          *     counts describe the candidates actually read, not an exhaustive installation.
          */
@@ -48739,6 +48771,14 @@ export interface components {
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
+            /**
+             * @description Optional reconnections, outside the work queue, counts and Focus. An open
+             *     deal or relationship score does not establish an obligation. A reader may
+             *     pin a suggestion into their personal queue or create an explicit task.
+             */
+            optional_relationships?: components["schemas"]["WorklistItem"][];
+            /** @description More optional contacts exist beyond the existing relationship read bound. */
+            optional_relationships_more_available?: boolean;
             focus?: components["schemas"]["WorklistFocus"];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
@@ -48982,6 +49022,27 @@ export interface components {
             receipts: components["schemas"]["Receipt"][];
             /** @description True when more was done than was read. The list is a floor, not a total. */
             truncated: boolean;
+            /** @description Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue. */
+            next_cursor?: string;
+        };
+        /**
+         * @description Who did the act, and on whose behalf.
+         *
+         *     `label` is the name a reader reads, from the same owner that names the actor on
+         *     `/magic`: a background job by what it is, a member by their name. A colleague whose
+         *     seat the reader cannot name reads `magic.by.colleague`, never an id.
+         */
+        ReceiptActor: {
+            /** @enum {string} */
+            type: "human" | "agent" | "system" | "connector";
+            /** @description The actor as the audit trail records it. For the record, not for display. */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The seat whose authority the act was taken under, where it bound one.
+             */
+            on_behalf_of?: string;
+            label: components["schemas"]["MagicSentence"];
         };
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
@@ -49037,6 +49098,12 @@ export interface components {
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
             review?: components["schemas"]["AppliedDealChangeReview"];
+            /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
+            actor?: components["schemas"]["ReceiptActor"];
+            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
+            source_record?: components["schemas"]["AttentionSubject"];
+            /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
+            changes?: components["schemas"]["MagicFieldChange"][];
             /**
              * @description The way back, on a receipt for work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -49952,7 +50019,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -51812,6 +51879,8 @@ export interface operations {
                     /** Format: int64 */
                     version: number;
                     review: components["schemas"]["HomeRepairReview"];
+                    /** @description Supported action names in the displayed review's row order, required when requires_action_review is true. */
+                    reviewed_actions?: string[];
                 };
             };
         };
@@ -70946,7 +71015,10 @@ export interface operations {
     };
     getHandledForYou: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The `next_cursor` of the page before. It pins that page's window and instant, so a receipt landing between two reads does not shift the list under the reader. A token this server did not mint is refused with 422. */
+                cursor?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -70964,6 +71036,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getTeamExceptions: {

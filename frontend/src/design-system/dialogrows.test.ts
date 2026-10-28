@@ -277,6 +277,22 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /><S2 /><S3 /
     expect(textCensus([trailing]).dialogs).toBe(9);
   });
 
+  it("reads a tag in its own scope, not a same-named one beside it", () => {
+    const text = `function A() { const Icon = Sun; return <Icon />; }
+function B({ Icon }) { return <Icon />; }
+function C() { const Icon = Moon; return <Icon />; }
+function Sun() { return null; }
+function Moon() { return null; }`;
+    const tags = descendants(parseSource(AT, text)).filter(
+      ts.isJsxSelfClosingElement,
+    );
+    const named = tags.map((tag) => {
+      const def = defOf(tag);
+      return def && ts.isFunctionDeclaration(def) ? def.name?.text : undefined;
+    });
+    expect(named).toEqual(["Sun", undefined, "Moon"]);
+  });
+
   it("follows a guest's guest into a third file", () => {
     expect(plantedAcross()).toEqual({ verdicts: "flush", depth: 2 });
   });

@@ -36,6 +36,7 @@ import {
 import { usePageReadOnly } from "./settingsnav";
 import { InviteUserForm } from "./users-invite-form";
 import {
+  matchingMembers,
   memberAnchorId,
   type User,
   useMemberRefresh,
@@ -189,16 +190,6 @@ function MembersCard({
         )}
       </Panel>
     </>
-  );
-}
-
-function matchingMembers(members: readonly User[], search: string): User[] {
-  const term = search.trim().normalize("NFKC").toLowerCase();
-  return members.filter((member) =>
-    `${member.display_name} ${member.email}`
-      .normalize("NFKC")
-      .toLowerCase()
-      .includes(term),
   );
 }
 

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -32,17 +32,23 @@ Also called: resend invite, invitation failed, calendar refused.
 ### How do I move a meeting to another time?
 To move a Margince meeting, open it from its line on the timeline and choose **Reschedule**. Pick the new time and choose **Confirm new time**.
 Your current time stays held until the calendar accepts the change. The meeting moves in Margince only once the calendar provider takes the new time. A meeting you move keeps the video call it already has.
+
+A move to a new start clears **Held** or **No-show**, so the meeting asks how it went again once the new time has passed.
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row.
+To record what came of a meeting, press **Update** on its Worklist row. A customer meeting that has
+started with no outcome also shows **Update** on the contact's **Meetings** tab and on the timeline.
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
 The meeting keeps its start time. A meeting moved to another day keeps its time of day there. One
-moved to today at an hour still to come is filed at the moment you save. Press **Canceled** on the
-row for a meeting that did not happen. Also called: mark a meeting held, meeting outcome, no-show,
-meeting happened.
+moved to today at an hour still to come is filed a minute before you save. **Held** and **No-show**
+wait for the meeting to start. A meeting with a date but no time waits until that day is over.
+
+Press **Mark as canceled** on the row for a meeting that did not happen. A meeting with a Margince
+invitation takes only **Held** or **No-show**, because its notes and date follow the invitation.
+Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
 ### How do I cancel a meeting?
 To cancel a Margince meeting, open it from its line on the timeline and choose **Cancel meeting**. Confirm "Cancel this meeting and notify the attendee?".

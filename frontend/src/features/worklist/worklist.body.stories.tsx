@@ -144,3 +144,36 @@ export const EmptyPageVietnamese: Story = {
   parameters: { locale: "vi" },
   play: undefined,
 };
+
+export const OptionalReconnections: Story = {
+  args: {
+    day: {
+      ...day,
+      optional_relationships: [
+        row({
+          id: "01930000-0000-7000-8000-000000000031",
+          source: "relationship_decay",
+          category: "relationships",
+          level: 6,
+          title: "Demo contact",
+          because: [{ kind: "quiet_days", value: { kind: "days", days: 180 } }],
+          actions: ["open", "dismiss"],
+          move: { action: "draft_email" },
+        }),
+      ],
+      optional_relationships_more_available: true,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Optional reconnections")).toBeVisible();
+    await expect(canvas.getByText("Demo contact")).toBeVisible();
+    await expect(
+      canvas.getByText("More optional contacts are outside this view."),
+    ).toBeVisible();
+  },
+};
+export const OptionalReconnectionsDark: Story = {
+  ...OptionalReconnections,
+  globals: { theme: "dark" },
+};

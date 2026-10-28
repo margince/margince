@@ -162,6 +162,17 @@ export function ProjectLinks({
   // second, because that is what the write does.
   const moving = !adapter.allowsMany && adapter.linked.length > 0;
 
+  // The two dialogs share one refusal, so each opens with none. A refused
+  // attach says nothing about the detach the reader asks for next.
+  function startAttach() {
+    setRefusal(null);
+    setPicking(true);
+  }
+  function startDetach(project: LinkedProject) {
+    setRefusal(null);
+    setDetaching(project);
+  }
+
   async function run(work: () => Promise<void>, done: () => void) {
     setBusy(true);
     setRefusal(null);
@@ -181,7 +192,7 @@ export function ProjectLinks({
     <div className="pl-verbs">
       {adapter.create}
       {canAdd || moving ? (
-        <Button variant="ghost" onClick={() => setPicking(true)}>
+        <Button variant="ghost" onClick={startAttach}>
           {moving ? said.move : said.attach}
         </Button>
       ) : null}
@@ -205,7 +216,7 @@ export function ProjectLinks({
         )}
       </PanelBody>
     ) : (
-      <LinkedRows adapter={adapter} onDetach={setDetaching} />
+      <LinkedRows adapter={adapter} onDetach={startDetach} />
     );
   const dialogs = (
     <>

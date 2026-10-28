@@ -168,7 +168,9 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 		t.Fatalf("the contact's last activity before the repair = %s, want the noon of the save", got)
 	}
 
-	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+	task, previous := meetingNoonStartsDataTask(), meetingNoonStartsDataTask()
+	previous.Version--
+	runMachineAddressTask(ctx, t, e, previous)
 
 	if got, want := f.start(damaged), "2026-07-15T07:00:00.123Z"; got != want {
 		t.Errorf("the damaged meeting starts at %s, want %s", got, want)
@@ -203,9 +205,13 @@ func TestTheNoonTaskRestoresOnlyStartsAnOutcomeSaveMovedBeforeTheCutoff(t *testi
 	}
 
 	versions := f.version(damaged)
-	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+	runMachineAddressTask(ctx, t, e, task)
 	if got := f.version(damaged); got != versions {
 		t.Errorf("a second run changed the restored meeting to version %d", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM data_task_run WHERE task_id = $1
+		AND task_version = $2 AND status = 'done' AND scanned = 0`, task.ID, task.Version); n != 1 {
+		t.Errorf("finished runs at version %d that inspected nothing = %d, want 1", task.Version, n)
 	}
 }
 
@@ -360,5 +366,74 @@ func TestTheNoonRepairOfAnArchivedMeetingRollsBackWithItsBatch(t *testing.T) {
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND actor_type = 'system'`, archived.UUID); got != 0 {
 		t.Errorf("restore audit rows escaped the rollback: %d", got)
+	}
+}
+
+// An erased invitation no longer holds its meeting. The noon save landed while
+// the invitation was canceled. Erasing the guest then archived the meeting and
+// erased the invitation, and the task still restores the start.
+func TestTheNoonTaskRestoresAMeetingWhoseInvitationWasErased(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	invitedAt := time.Date(2026, 7, 15, 9, 0, 0, 0, time.UTC)
+	inviting := newInvitingStore(memberSeat(e, e.Rep1, principal.SeatFull), t, e, invitedAt.AddDate(0, 0, -2))
+	guest := e.SeedContact(t, "Erased guest", nil)
+	meeting := inviting.invite(t, guest, invitedAt)
+	inviting.cancel(t, meeting)
+	f.save(ids.From[ids.ActivityKind](meeting), berlinNoon)
+	inviting.eraseGuest(t, e, guest, meeting)
+	f.cutoffNow()
+
+	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+
+	if got, want := f.start(ids.From[ids.ActivityKind](meeting)), "2026-07-15T09:00:00.000Z"; got != want {
+		t.Errorf("the meeting whose invitation was erased starts at %s, want %s", got, want)
+	}
+}
+
+// An outcome save from before outcomes waited for the start held a meeting at
+// noon whose original start comes later. Restoring that start books it again,
+// live or archived, so the task finishes and leaves no outcome ahead of a start.
+func TestTheNoonTaskBooksAMeetingWhoseRestoredStartHasNotCome(t *testing.T) {
+	afternoon := time.Date(2099, 7, 15, 13, 0, 0, 0, time.UTC)
+	noon := time.Date(2099, 7, 15, 10, 0, 0, 0, time.UTC)
+	for name, archive := range map[string]bool{"live": false, "archived": true} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+			e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+			f := noonFixture{t: t, e: e}
+			meeting := f.book(afternoon, f.contact("Later Contact"))
+			afterNoon := e.Activities.WithClock(func() time.Time { return noon.Add(30 * time.Minute) })
+			held := string(crmcontracts.ActivityMeetingStatusHeld)
+			if _, err := afterNoon.UpdateActivity(e.Admin(), meeting, activities.UpdateActivityInput{MeetingStatus: &held, OccurredAt: &noon}); err != nil {
+				t.Fatalf("saving the outcome at noon: %v", err)
+			}
+			if archive {
+				if _, err := e.Activities.ArchiveActivity(e.Admin(), meeting, nil); err != nil {
+					t.Fatalf("archiving the meeting: %v", err)
+				}
+			}
+			f.cutoffNow()
+
+			runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+
+			if got, want := f.start(meeting), "2099-07-15T13:00:00.000Z"; got != want {
+				t.Errorf("the meeting starts at %s, want %s", got, want)
+			}
+			if got := e.WsScalar(t, `SELECT meeting_status FROM activity WHERE id = $1`, meeting.UUID); got != "booked" {
+				t.Errorf("the restored meeting reads %q, want booked", got)
+			}
+			if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND actor_type = 'system'
+				AND after ->> 'meeting_status' = 'booked' AND (after ->> 'occurred_at')::timestamptz = $2`, meeting.UUID, afternoon); got != 1 {
+				t.Errorf("system restore audit rows naming the booking = %d, want 1", got)
+			}
+			if got := e.WsCount(t, `SELECT count(*) FROM activity_meeting_history WHERE activity_id = $1 AND status = 'booked'
+				AND scheduled_start = $2`, meeting.UUID, afternoon); got != 2 {
+				t.Errorf("booked transitions at the restored start = %d, want the booking's and the restore's", got)
+			}
+		})
 	}
 }

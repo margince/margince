@@ -95,49 +95,12 @@
   margin-top: var(--space-6);
   align-items: flex-start;
 }
-.readfail .rfi {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-sm);
-  display: grid;
-  place-items: center;
-  flex: none;
-  margin-top: 1px; /* ds:ignore optical: sets the tile on the title's cap line */
-}
-.readfail.warning .rfi {
-  background: var(--warningBg);
-  color: var(--warningText);
-}
-
-.readfail .rfi svg {
-  width: 18px;
-  height: 18px;
-}
-.readfail .rft {
-  color: var(--textPrimary);
-}
-.readfail .rfp {
-  margin-top: var(--space-1);
-}
 
 /* The company form rides the design-system atoms (.form-stack/.field/.input —
    atoms.css owns their look); the only onboarding-specific rule is where the
    form starts relative to the notices above it. */
 .ob-companyform {
   margin-top: var(--space-6);
-}
-/* The saved note's tick, sized to the note's text; the failure card overrides
-   `.readfail`'s own margin, so it chains that class. */
-.ob-companyform-savedmark {
-  width: 14px;
-  height: 14px;
-  vertical-align: -2px;
-}
-.ob-companyform-saved {
-  margin: var(--space-3) 0 0;
-}
-.readfail.ob-companyform-savefail {
-  margin-top: var(--space-3);
 }
 /* The trust adornments ride the field label (a .t-label): read-from-site tag
    right-aligned, everything vertically centered with the label text. */
@@ -343,9 +306,8 @@
      form scrolls behind — and this bar is how the review is confirmed. */
   z-index: 1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-3);
   margin-top: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
@@ -353,14 +315,20 @@
   background: color-mix(in srgb, var(--bgElevated) 94%, transparent);
   backdrop-filter: blur(10px);
 }
-.mw-confirm-company p {
+.mw-confirm-company-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.mw-confirm-company-row p {
   margin: 0;
 }
 @media (max-width: 640px) {
   .ob-company-review .ob-companyform {
     grid-template-columns: 1fr;
   }
-  .mw-confirm-company {
+  .mw-confirm-company-row {
     align-items: stretch;
     flex-direction: column;
   }

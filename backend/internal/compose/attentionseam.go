@@ -260,6 +260,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
 		}).
+		WithReceiptDetails(attentionReceiptDetails{magic: newMagicService(pool, svc, now), names: newAttentionNames(db)}).
 		// The whole page as ONE unit of work. Every lane reader below opens its
 		// own transaction by default, which cost this surface ~40 of them and
 		// as many instants per assembled day; bound, they join one read-only

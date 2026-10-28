@@ -37,19 +37,26 @@ export function useWorklist(
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<Worklist> => {
-      const dials = owner ? { owner, filter } : { scope, filter };
-      return unwrap(
-        await api.GET("/worklist", {
-          params: {
-            query: pageParam ? { ...dials, cursor: pageParam } : dials,
-          },
-        }),
-      );
-    },
+    queryFn: ({ pageParam }) =>
+      readWorklistPage(scope, filter, owner, pageParam),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
+}
+
+/** One page of the day at those dials, the request `useWorklist` makes. */
+export async function readWorklistPage(
+  scope: WorklistScope,
+  filter: WorklistFilter,
+  owner: string | undefined,
+  cursor: string | undefined,
+): Promise<Worklist> {
+  const dials = owner ? { owner, filter } : { scope, filter };
+  return unwrap(
+    await api.GET("/worklist", {
+      params: { query: cursor ? { ...dials, cursor } : dials },
+    }),
+  );
 }
 
 /**

@@ -3,6 +3,26 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "homeRepair.reason.taskChanged":
+    "The task changed while the preview was being built. Preview it again.",
+  "homeRepair.normalize": "Correct source or generated date",
+  "homeRepair.normalizeSummary_one":
+    "{count} automatic task has a source or date correction.",
+  "homeRepair.normalizeSummary_other":
+    "{count} automatic tasks have source or date corrections.",
+  "homeRepair.taskCorrectionPermission":
+    "You can review these tasks, but your role cannot apply all listed corrections.",
+  "homeRepair.reason.noLongerCurrent":
+    "Its source no longer establishes current work.",
+  "homeRepair.reason.restoreSource": "Restore the recorded source link.",
+  "homeRepair.reason.generatedDate": "Remove the generated notification date.",
+  "homeRepair.reason.restoreSourceAndDate":
+    "Restore the source link and remove the generated notification date.",
+  "worklist.relationships.optional": "Optional reconnections",
+  "worklist.relationships.optionalDetail":
+    "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
+  "worklist.relationships.more":
+    "More optional contacts are outside this view.",
   "webhooks.event.signal.updated.label": "Alert owner changed",
   "webhooks.event.signal.updated.when":
     "When an alert moves to the surviving member during a duplicate merge.",
@@ -179,7 +199,7 @@ export const en = {
   "homeRepair.inspect": "Inspect",
   "dataTasks.blocked.review_required":
     "Review the proposed changes before starting.",
-  "homeRepair.archive": "Archive automatic reminder",
+  "homeRepair.archive": "Archive automatic task",
   "homeRepair.keepReview": "Keep for human review",
   "homeRepair.keepCurrent": "Keep current work",
   "homeRepair.reason.adopted":
@@ -187,7 +207,7 @@ export const en = {
   "homeRepair.reason.unverified":
     "The available evidence does not justify an automatic change.",
   "homeRepair.reason.unavailable":
-    "The source cannot be checked with your current access.",
+    "The source is missing or cannot be checked with your current access.",
   "homeRepair.reason.historical":
     "Historical source without a current deadline.",
   "homeRepair.reason.lateProposed":
@@ -212,11 +232,11 @@ export const en = {
     "The current admission rules still allow this work.",
   "homeRepair.unnamed": "Details unavailable",
   "homeRepair.explain":
-    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic reminders can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
+    "Only work you can currently inspect is included. Review up to 25 items at a time. Obsolete automatic tasks can be archived and duplicate or obsolete proposals withdrawn. Human work is preserved; nothing is marked completed.",
   "homeRepair.preview": "Preview items",
   "homeRepair.next": "Review next page",
   "homeRepair.summary":
-    "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
+    "Results to change: {reclassify}. Automatic tasks to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
   "homeRepair.settlements": "Answered requests",
@@ -1628,6 +1648,8 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
+  "brief.queue.next": "Next task",
+  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -2260,7 +2282,6 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.poweredByPrefix": "Powered by",
   "shell.beta": "Beta",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -8328,6 +8349,8 @@ export const en = {
     "“{value}” is not a meeting status. The statuses are: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Only a meeting has a meeting status. Remove it from this row.",
+  "import.reason.meeting_not_taken_place":
+    "By the date or time on this row, the meeting has not started yet, so it cannot be held or no_show. Leave the status empty, or use booked or canceled. If it started today, add the time it started.",
   "import.reason.direction_unknown":
     "“{value}” is not a direction. The directions are: {allowed}.",
   "import.reason.activity_unlinked":
@@ -9349,9 +9372,6 @@ export const en = {
   "ob.s1.fieldRequired": "Required",
   "ob.s1.requiredMissing": "Complete these fields to continue: {fields}",
   "ob.s1.saving": "Saving…",
-  "ob.s1.saveFailed": "Company not saved",
-  "ob.s1.savedNote":
-    "Saved to the company. Changes here are saved again when you continue.",
   "ob.readFromSite": "read from site",
 
   "ob.manualChapterLegal": "Legal company",
@@ -14099,14 +14119,16 @@ export const en = {
   "webForms.field.nameHint":
     "Shown on each lead’s note, for example Contact page.",
   "webForms.field.sender": "Where is your form?",
+  "webForms.senderGroup.noDeveloper": "No developer needed",
+  "webForms.senderGroup.developer": "For developers",
   "webForms.field.senderFixed":
     "Fixed once the form exists. Create a new form to change it.",
   "webForms.senderHint.browser":
-    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to.",
   "webForms.senderHint.server":
-    "For developers: your website’s server forwards each enquiry, signed with a secret.",
+    "Your website’s server forwards each enquiry, signed with a secret.",
   "webForms.senderHint.webflow":
-    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
+    "A webhook made with Webflow’s API. For a Webflow form, choose Your website.",
   "webForms.senderHint.typeform":
     "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
   "webForms.senderHint.tally":
@@ -16543,6 +16565,11 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
+  "worklist.scope.unassignedHint":
+    "Open work you can see that nobody is responsible for.",
+  "worklist.take.action": "Take it",
+  "worklist.take.done": "Assigned to you",
+  "worklist.take.failed": "Task was not assigned to you. Retry.",
   "worklist.owner.shared": "Shared responsibility: {names}",
   "worklist.owner.left": "{name} left. This needs a new owner.",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
@@ -16604,6 +16631,11 @@ export const en = {
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.truncated": "List truncated. More items exist.",
+  "receipt.detail.summary": "Details",
+  "receipt.detail.by": "Done by",
+  "receipt.detail.when": "When",
+  "receipt.detail.source": "Source",
+  "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
   "worklist.exceptions.count": "{count} need attention",
@@ -16882,6 +16914,12 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
+  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "The calendar invitation keeps this meeting. Cancel it through the invitation.",
+  "worklist.verb.meetingCalendarManaged":
+    "The calendar invitation keeps the subject, notes and date. Only the outcome is saved here.",
   "worklist.verb.retry": "Run again",
   "worklist.verb.retryStarted": "Rerunning rule…",
   "worklist.verb.retryFailed": "Rule was not rerun. Retry.",
@@ -17457,7 +17495,7 @@ export const en = {
   // The machinery's receipt on Home: what ran while the reader was away, in
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
-  // the contract (src/features/sign-in/magic.keys.ts), not one screen's copy.
+  // the contract (src/lib/magickeys.ts), not one screen's copy.
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
@@ -17525,6 +17563,8 @@ export const en = {
   "magic.by.agent": "An agent",
   "magic.by.system": "Margince",
   "magic.by.data_correction": "Data correction",
+  "magic.by.member": "{name}",
+  "magic.by.colleague": "A colleague",
   "magic.failingSince": "Failing since {when}",
   "magic.noRecord": "No record named",
   "magic.undo.action": "Undo",

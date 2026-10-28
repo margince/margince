@@ -15,7 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -318,16 +317,14 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	}
 	host := meetingHost(ctx, in)
 
-	replay, err := replayedActivity(ctx, tx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	if replay != nil {
-		moved, err := replayMovedTheMeeting(ctx, tx, *replay, in)
-		return moved, false, err
+	if replayed, found, err := replayLanding(ctx, tx, in); err != nil || found {
+		return replayed, false, err
 	}
 	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
 		return bound, false, err
+	}
+	if err := refuseLoggedOutcomeBeforeStart(ctx, tx, in); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 
 	id := ids.New[ids.ActivityKind]()
@@ -339,15 +336,8 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// Attested outbound is the one write that turns "does this workspace
-	// correspond with them" from no to yes, and the verdict engine acts on that
-	// answer inside its own transaction. The two serialize on one key; capture's
-	// sink takes it for the same reason on the rows a connector files.
-	if in.CounterpartyOutboundAttested && counterparty != "" {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			correspondence.LockIdentity(counterparty)); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
+	if err := lockCorrespondenceForAttestedSend(ctx, tx, in, counterparty); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -386,7 +376,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt.UTC(), by); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
+	out, err := readActivityAt(ctx, tx, id, storekit.LiveOnly, orWallClock(in.recordedAt))
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -471,10 +461,10 @@ func replayedActivity(ctx context.Context, tx pgx.Tx, in LogActivityInput) (*crm
 	if in.SourceSystem == nil || in.SourceID == nil {
 		return nil, nil
 	}
-	return replayedSourceActivity(ctx, tx, *in.SourceSystem, *in.SourceID)
+	return replayedSourceActivity(ctx, tx, *in.SourceSystem, *in.SourceID, orWallClock(in.recordedAt))
 }
 
-func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string) (*crmcontracts.Activity, error) {
+func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string, asOf time.Time) (*crmcontracts.Activity, error) {
 	var existing ids.ActivityID
 	err := tx.QueryRow(ctx,
 		`SELECT id FROM activity
@@ -489,7 +479,7 @@ func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string) 
 	// The row exists — the SELECT above just found it — so the only way
 	// readActivity's own row-scope gate can answer ErrNotFound here is that
 	// the key belongs to someone out of scope.
-	out, err := readActivity(ctx, tx, existing, storekit.IncludeArchived)
+	out, err := readActivityAt(ctx, tx, existing, storekit.IncludeArchived, asOf)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil, apperrors.ErrConflict
 	}

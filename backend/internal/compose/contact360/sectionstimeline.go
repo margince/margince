@@ -311,7 +311,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
-	if err := activities.StampActivitiesWritable(ctx, tx, out); err != nil {
+	if err := activities.StampActivityAffordances(ctx, tx, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil

@@ -67,6 +67,23 @@ export const ReadyToQualify: Story = {
   },
 };
 
+/** The way on to another record's task, last among the verbs, and still
+ *  drawn when nothing is next here. */
+export const OnwardWithNothingNext: Story = {
+  args: {
+    onward: (
+      <Button variant="ghost" onClick={noop}>
+        Next task
+      </Button>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Next task" }),
+    ).toBeVisible();
+  },
+};
+
 /** Nothing dated next: one quiet sentence rather than an empty bar. */
 export const NothingNext: Story = {
   args: {},

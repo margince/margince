@@ -301,6 +301,11 @@ export function WorklistHeader({
           )}
         </div>
       </div>
+      {scope === "unassigned" && owner === "" && (
+        <p className="worklist-completeness">
+          {t("worklist.scope.unassignedHint")}
+        </p>
+      )}
       {/* The cuts, and the sentence about what they left out, as one block: the
           caption qualifies the pills, so it sits a step under them rather than
           at the header's own interval, where it read as a third control in the
