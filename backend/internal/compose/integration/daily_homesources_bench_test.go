@@ -51,6 +51,14 @@ func (s dailySeeder) interactionEdges() {
 			s.t.Fatalf("seeding the daily corpus (interaction edges): %v", err)
 		}
 	}
+	var edges int
+	if err := s.owner.QueryRow(ctx, `SELECT count(*) FROM graph_interaction_edge`).Scan(&edges); err != nil {
+		s.t.Fatalf("seeding the daily corpus (interaction edges): %v", err)
+	}
+	if edges == 0 {
+		s.t.Fatalf("the fold of %d emails wrote no interaction edge, so the relationship-decay lane would read nothing", len(activityIDs))
+	}
+	s.t.Logf("seed: %d interaction edges", edges)
 }
 
 func (s dailySeeder) foldEdges(ctx context.Context, activityIDs []ids.UUID) (err error) {
@@ -69,10 +77,21 @@ func (s dailySeeder) foldEdges(ctx context.Context, activityIDs []ids.UUID) (err
 	return tx.Commit(ctx)
 }
 
+// dailyAIModel is the model a tier's calls are recorded and priced under.
+func dailyAIModel(tier ai.Tier) string { return "bench-" + string(tier) }
+
 // seedDailyAICalls records the month's model calls through the meters the
 // router itself writes with: one ai_call row and one ai_usage fold per call.
+// Both models are priced first, through the admin's rate form, so the spend
+// report sums a priced month.
 func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
 	t.Helper()
+	for _, tier := range []ai.Tier{ai.TierCheapCloud, ai.TierPremium} {
+		mustCall(t, e, "POST", "/v1/ai-model-rates", AnyMap{
+			"provider": "anthropic", "model_id": dailyAIModel(tier), "input_per_mtok": "3", "output_per_mtok": "15",
+			"cache_read_per_mtok": "0.3", "cache_write_per_mtok": "3.75",
+		}, http.StatusCreated, nil)
+	}
 	ctx := principal.WithWorkspaceID(context.Background(), apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool))
 	calls, usage := ai.NewCallMeter(e.DB()), ai.NewMeter(e.DB())
 	n := max(len(dailyAITasks), int(float64(dailyAICallsAtTier)*scale))
@@ -84,8 +103,8 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
 		tokensIn, tokensOut := 800+i%1200, 150+i%400
 		if err := calls.Record(ctx, []ai.Call{{
 			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
-			Task: task, Tier: tier, Provider: "anthropic", ModelID: "bench-" + string(tier),
-			ServedIdentitySource: "response", RequestFingerprint: fmt.Sprintf("bench-%d", i),
+			Task: task, Tier: tier, Provider: "anthropic", ModelID: dailyAIModel(tier),
+			ServedModel: dailyAIModel(tier), ServedIdentitySource: "response", RequestFingerprint: fmt.Sprintf("bench-%d", i),
 			TokensIn: tokensIn, TokensOut: tokensOut,
 		}}); err != nil {
 			t.Fatalf("recording AI call %d: %v", i, err)
@@ -97,11 +116,13 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
 	t.Logf("seed: %d AI calls recorded", n)
 }
 
-// makeDailyBriefs assembles today's brief for every seat through the endpoint
-// a rep's first morning visit takes, so Home reads a brief with items.
+// makeDailyBriefs assembles today's brief for every seat, the admin included,
+// through the endpoint a rep's first morning visit takes. The morning load
+// sends the admin through Home too.
 func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 	t.Helper()
-	for _, seat := range slices.Concat(seats.Managers, seats.Reps) {
+	admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
+	for _, seat := range slices.Concat(seats.Managers, seats.Reps, []Seat{admin}) {
 		var run struct {
 			Items []struct{} `json:"items"`
 		}

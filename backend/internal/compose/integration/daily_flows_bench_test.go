@@ -115,8 +115,8 @@ var dailyFlows = []dailyFlow{
 	{Name: "analytics", ID: "PERF-9", Budget: Perf9Budget, PerCall: true, Calls: analyticsCalls},
 }
 
-// appShellCalls are the reads App.tsx, the shell, its top bar and its agent rail
-// send on load for a rep or a manager, as a browser recorded them; the
+// appShellCalls are the reads a rep's or a manager's browser sends on load.
+// They come from App.tsx, the shell, its top bar and its agent rail. The
 // admin-only reads are adminRailCalls.
 func appShellCalls(dailyInput) []dailyCall {
 	return []dailyCall{
@@ -136,9 +136,9 @@ func appShellCalls(dailyInput) []dailyCall {
 	}
 }
 
-// adminRailCalls are the shell reads only an admin's session sends: the
-// installation card, the license strip, the rail's model line, its month's
-// spend and the economy banner, and the reindex banner's status.
+// adminRailCalls are the shell reads only an admin's session sends. They feed
+// the installation card, the license strip, the rail's model line and spend,
+// the economy banner and the reindex banner.
 func adminRailCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "company", Path: "/v1/company"},
@@ -327,8 +327,9 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 }
 
 // dailyUnwiredRoutes are the routes this composition does not serve, each with
-// the note its no-data row carries: the harness configures no mail connector,
-// binds no embedding model and serves no license. Any other 501 is a server fault and fails the run.
+// the note its no-data row carries. The harness configures no mail connector,
+// binds no embedding model and serves no license. Any other 501 is a server
+// fault and fails the run.
 var dailyUnwiredRoutes = map[string]string{
 	"/v1/digest":                    "answers 501 until a mail connector is configured",
 	"/v1/connectors":                "answers 501 until a mail connector is configured",
