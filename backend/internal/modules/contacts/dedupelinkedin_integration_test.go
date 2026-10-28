@@ -23,12 +23,18 @@ import (
 func TestTheLinkedInProfileKeyAgreesInGoAndSQL(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	for _, handle := range []string{
+	for _, raw := range []string{
 		"https://www.linkedin.com/in/sam-example", "https://de.linkedin.com/in/Sam-Example/",
 		"https://www.linkedin.com/in/sam-example/details/experience", "http://LinkedIn.com/in/sam?trk=x",
-		"https://www.linkedin.com/company/acme", "https://example.com/in/sam",
-		"https://linkedin.com.example.com/in/sam",
+		"https://www.linkedin.com/in/jörg-müller", "https://www.linkedin.com/company/acme",
+		"https://example.com/in/sam", "https://linkedin.com.example.com/in/sam",
 	} {
+		// The SQL reads handles as the slot stores them. A value the slot
+		// refuses is asked as written, and must name no profile either way.
+		handle := raw
+		if stored, err := NormalizeContactLinkedInURL(raw); err == nil {
+			handle = stored
+		}
 		want, ok := linkedInProfileKey(handle)
 		var got *string
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -59,7 +65,8 @@ func (e *dedupeEnv) createWithLinkedIn(ctx context.Context, t *testing.T, name, 
 	return ids.From[ids.ContactKind](ids.UUID(created.Id))
 }
 
-// openLinkedInPairs counts the open pairs this lane filed between the two.
+// openLinkedInPairs counts the open pairs between the two that name the
+// LinkedIn profile as their evidence, whichever detector filed them.
 func (e *dedupeEnv) openLinkedInPairs(ctx context.Context, t *testing.T, a, b ids.ContactID) int {
 	t.Helper()
 	var n int
@@ -67,8 +74,9 @@ func (e *dedupeEnv) openLinkedInPairs(ctx context.Context, t *testing.T, a, b id
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM dedupe_candidate
 			 WHERE entity_type = 'contact' AND disposition = 'open' AND archived_at IS NULL
-			   AND source = $3 AND $1 IN (left_contact_id, right_contact_id)
-			   AND $2 IN (left_contact_id, right_contact_id)`, a, b, linkedInLaneSource).Scan(&n)
+			   AND evidence @> jsonb_build_array(jsonb_build_object($3::text, $4::text))
+			   AND $1 IN (left_contact_id, right_contact_id)
+			   AND $2 IN (left_contact_id, right_contact_id)`, a, b, evidenceFieldKey, fieldLinkedin).Scan(&n)
 	}); err != nil {
 		t.Fatalf("count the pair: %v", err)
 	}
@@ -111,5 +119,29 @@ func TestTwoContactsHoldingOneLinkedInProfileAreAReviewPair(t *testing.T) {
 	}
 	if n := e.openLinkedInPairs(ctx, t, sam, later); n != 1 {
 		t.Errorf("the re-check retired a pair whose profiles still match: %d open", n)
+	}
+}
+
+// Two contacts that already shared a profile before the lane existed reach the
+// queue through the duplicate scan, which writes no handle of its own.
+func TestTheDuplicateScanPairsContactsAlreadySharingALinkedInProfile(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	first := e.createWithLinkedIn(ctx, t, "Kim Example", "kim@example.com", "")
+	second := e.createWithLinkedIn(ctx, t, "Kimberly Example", "kim@example.org", "")
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO contact_social (contact_id, platform, handle)
+			VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/kim-example'),
+			       ($2, 'linkedin', 'https://www.linkedin.com/in/Kim-Example')`, first, second)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the handles a writer filed before the lane existed: %v", err)
+	}
+	if n := e.openLinkedInPairs(ctx, t, first, second); n != 0 {
+		t.Fatalf("the seed filed %d pairs, so the scan would prove nothing", n)
+	}
+	e.scanEverything(t, 10)
+	if n := e.openLinkedInPairs(ctx, t, first, second); n != 1 {
+		t.Errorf("open LinkedIn pairs after the scan = %d, want 1", n)
 	}
 }

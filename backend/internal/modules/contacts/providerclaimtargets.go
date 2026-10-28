@@ -52,7 +52,7 @@ func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, plat
 		return ids.UUID{}, false, fmt.Errorf("contacts: writing a contact's %s handle: %w", platform, err)
 	}
 	if platform == SocialLinkedIn {
-		if err := fileLinkedInTwins(ctx, tx, ids.From[ids.ContactKind](contactID), handle); err != nil {
+		if err := fileLinkedInTwinsAtWrite(ctx, tx, ids.From[ids.ContactKind](contactID), handle); err != nil {
 			return ids.UUID{}, false, err
 		}
 	}

@@ -109,10 +109,11 @@ func recheckContactForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactI
 // contactSubject is what the review lanes and the phone lane read about an
 // existing contact.
 type contactSubject struct {
-	id     ids.ContactID
-	name   string
-	emails []string
-	phones []string
+	id       ids.ContactID
+	name     string
+	emails   []string
+	phones   []string
+	linkedIn string
 }
 
 // readContactSubject reads a live contact's name, live addresses and live
@@ -124,9 +125,11 @@ func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (conta
 		       coalesce((SELECT array_agg(e.email ORDER BY e.email) FROM contact_email e
 		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}'),
 		       coalesce((SELECT array_agg(n.phone ORDER BY n.phone) FROM contact_phone n
-		                  WHERE n.contact_id = p.id AND n.archived_at IS NULL), '{}')
+		                  WHERE n.contact_id = p.id AND n.archived_at IS NULL), '{}'),
+		       coalesce((SELECT s.handle FROM contact_social s
+		                  WHERE s.contact_id = p.id AND s.platform = '`+SocialLinkedIn+`'), '')
 		  FROM contact p
-		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails, &subject.phones)
+		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails, &subject.phones, &subject.linkedIn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return contactSubject{}, false, nil
 	}
@@ -169,5 +172,6 @@ func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerM
 		}
 		filed += count
 	}
-	return filed, nil
+	twins, err := fileLinkedInTwins(ctx, tx, s.id, s.linkedIn, source, by)
+	return filed + twins, err
 }
