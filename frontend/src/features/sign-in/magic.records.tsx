@@ -25,9 +25,9 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
+import { type MagicLine, magicKey } from "../../lib/magic.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
-import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
