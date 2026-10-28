@@ -711,7 +711,7 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Kind` | The short name: a lower-case letter, then lower-case letters, digits or `_`, up to 32 characters. The stored name is `ext:<unit>:<kind>`. |
 | `DisplayName` | What a screen calls one record. Required, in English. |
 | `Table` | Your own table, `ext_<unit>_<name>`. It needs an `id uuid` primary key and an `archived_at timestamptz` column. Give `margince_app` the same four rights as on any unit table (see the table rules above), because core reads it with that role. |
-| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. A field may list `Options`, a short list of allowed values. A filter then offers them as a choice and refuses any other value, and the boot and `make gen` refuse a blank or repeated option. |
+| `Fields` | The columns that make up a record, each with a label. Every one must exist in the table. A field may list `Options`, a short list of allowed values. A filter then offers them as a list of values and refuses any other value, and the boot and `make gen` refuse a blank option or one that is listed twice. |
 | `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
@@ -760,17 +760,17 @@ A declared kind needs no extra code to show up in search or to be listed and fil
 
 | Where | What core does with the kind |
 |---|---|
-| `GET /v1/search` | Takes `ext:<unit>:<kind>` in `types`, and returns hits of that `type`. The title is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. A seat with no `read` right on the kind gets no hit of it. An archived row is never a hit. |
-| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. A declared field is a text field, or a choice when it lists `Options`. A preview shows `id` and the declared fields as columns. |
+| `GET /v1/search` | Takes `ext:<unit>:<kind>` in `types`, and returns matches of that `type`. The title is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. A match carries no text from the record. A seat with no `read` right on the kind gets no match of it. An archived row is never a match. |
+| `GET /v1/filters/vocabulary` and `POST /v1/filters/preview` | Take the kind as `resource`. A declared field is a text field, or a list of values when it lists `Options`. A preview shows `id` and the declared fields as columns. |
 | Lists | A Shortlist or a Live List takes the kind as its `entity_type`. A member of another type is refused with `entity_type_mismatch`. |
 | Saved views | Take the kind as `resource`. A kind no unit declares is refused. |
 | Filters screen | Offers each kind the seat may read after the four core record types. |
 
-`GET /v1/search` without `types` searches every kind the seat may read, yours included. Retrieval and the agent
-search tool keep to core's types.
+`GET /v1/search` without `types` searches every kind the seat may read, yours included. The agent
+search tool and the AI lookups keep to core's types.
 
 Search takes an optional `exclude_ids` list of record ids, of any type. Those records are dropped before ranking, so a
-page stays full and `types_with_more` counts only what remains. The agent tool `search_records` takes the same
+page stays full and `types_with_more` counts only what is left. The agent tool `search_records` takes the same
 argument. The list members endpoint has no such parameter. It takes `entity_id`, which keeps only the ids named.
 
 ## Declare a report count or breakdown
