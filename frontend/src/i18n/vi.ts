@@ -14960,6 +14960,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.memory.channelTask": "Việc cần làm",
   "contact.memory.replied": "Đã trả lời",
   "contact.memory.unanswered": "Chưa trả lời",
+  "contact.memory.view": "Xem",
+  "contact.memory.viewEntry": "Xem {title}",
 
   "contact.mayBeDone.notYet": "Chưa xong",
   "contact.rail.blocked": "Bị chặn",

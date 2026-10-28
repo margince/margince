@@ -15293,6 +15293,8 @@ export const en = {
   "contact.memory.channelTask": "Task",
   "contact.memory.replied": "Replied",
   "contact.memory.unanswered": "Unanswered",
+  "contact.memory.view": "View",
+  "contact.memory.viewEntry": "View {title}",
 
   "contact.mayBeDone.notYet": "Not yet",
   "contact.rail.blocked": "Blocked",

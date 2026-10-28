@@ -32797,7 +32797,12 @@ type Company360NextStep struct {
 	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
 	// assignee or the name cannot be given, so a reader says nothing about who holds it
 	// instead of printing an id.
-	AssigneeName    *string             `json:"assignee_name,omitempty"`
+	AssigneeName *string `json:"assignee_name,omitempty"`
+
+	// Body The task's own words, as written. Only a task whose content this reader may read is
+	// listed here, so a task read out of a message the reader may not open never reaches
+	// this field.
+	Body            *string             `json:"body,omitempty"`
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`

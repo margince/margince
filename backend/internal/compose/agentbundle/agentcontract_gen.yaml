@@ -11039,6 +11039,12 @@ components:
       properties:
         activity_id: {type: string, format: uuid}
         subject: {type: string}
+        body:
+          type: [string, 'null']
+          description: |-
+            The task's own words, as written. Only a task whose content this reader may read is
+            listed here, so a task read out of a message the reader may not open never reaches
+            this field.
         due_at: {type: [string, 'null'], format: date-time}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}

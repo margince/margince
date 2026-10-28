@@ -26,7 +26,6 @@ reach features/automations/agentallowances.tsx features/sign-in/installation-set
 reach features/automations/agentusage.tsx features/settings/settings-agents.css
 reach features/automations/approvaldrawer.tsx features/worklist/worklist.bundle.tsx
 reach features/automations/approvaldrawer.tsx features/worklist/worklist.queries.ts
-reach features/automations/approvalevidence.tsx features/voice-knowledge/activitydrawer.tsx
 reach features/automations/approvalsend.ts features/mail/compose.tsx
 reach features/automations/automations.recipe.ts features/settings/audit.tsx
 reach features/automations/connected-agents.test.tsx features/settings/settings.tsx

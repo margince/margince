@@ -29441,6 +29441,12 @@ export interface components {
             /** Format: uuid */
             activity_id: string;
             subject: string;
+            /**
+             * @description The task's own words, as written. Only a task whose content this reader may read is
+             *     listed here, so a task read out of a message the reader may not open never reaches
+             *     this field.
+             */
+            body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
             overdue: boolean;

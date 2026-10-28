@@ -228,3 +228,6 @@ how do I record that a customer did not show up to a meeting
 what happens after I press Call on a contact
 how do I open a WhatsApp chat with a contact
 how do I turn off the Telegram or Zalo links on phone numbers
+how do I read a whole note from a contact's overview
+where is the email a task came from
+can I open the full call notes from the contact page
