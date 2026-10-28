@@ -11,6 +11,7 @@ import {
 import { useT } from "../../i18n";
 import { keepReturnRoute } from "../../lib/returnroute";
 import "./auth.css";
+import { foldForSearch } from "../../format/collate";
 
 // The federated half of the sign-in surface: the provider block, the divider
 // that labels what is under it, and the whole card for an installation whose
@@ -172,7 +173,7 @@ function ProviderLabel({
   // visible text, and an installation is free to label its `google` provider
   // "Firmen-Login" — showing "Google" there would both break that and put a
   // brand claim on screen that the operator never made.
-  if (!brand || !label.toLowerCase().includes(brand.toLowerCase())) {
+  if (!brand || !foldForSearch(label).includes(foldForSearch(brand))) {
     return <span>{label}</span>;
   }
   return (
