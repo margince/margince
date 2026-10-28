@@ -81,7 +81,7 @@ function MemberDetail({ member }: Readonly<{ member: ContactCaseMember }>) {
   );
 }
 
-/** The decision itself: who is the same person, what stays, who owns it. */
+/** The decision itself: which contacts are duplicates, what stays, who owns it. */
 export function CaseForm({
   contactCase,
   startId,
@@ -203,7 +203,7 @@ export function CaseForm({
           )}
         </Field>
         {!locked && problem && <p className="t-caption">{t(problem)}</p>}
-        <CaseEvidence contactCase={contactCase} />
+        <CaseEvidence contactCase={contactCase} onStale={onStale} />
         {previewed && preview.data && (
           <CasePreview contactCase={contactCase} outcome={preview.data} />
         )}

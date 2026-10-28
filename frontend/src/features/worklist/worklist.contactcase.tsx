@@ -28,7 +28,7 @@ function refusalKey(contactCase: AttentionContactCase): MessageKey | null {
 }
 
 /**
- * A group of contacts that may be one person, on its Worklist row. The row
+ * A group of contacts that may be duplicates, on its Worklist row. The row
  * names the members and their owners; the decision is made in the review.
  */
 export function ContactCaseDecision({

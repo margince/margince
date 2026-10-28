@@ -7,7 +7,7 @@ import type {
   ContactCaseOutcome,
 } from "../components/contactcase.queries";
 
-// Four contacts that may be one person. Ana's and Dana's records were marked
+// Four contacts that may be duplicates. Ana's and Dana's records were marked
 // as different people, so a review opened on Ana's ticks the first three only.
 export const ANA = "01a05500-0000-7000-8000-00000000c0a1";
 export const BEN = "01a05500-0000-7000-8000-00000000c0a2";
@@ -112,8 +112,8 @@ function owner(
 }
 
 /**
- * The merge of Ana, Ben and Cleo into Ana, as the preview answers it: Cleo's
- * read seat keeps read access, and Ben's deactivated account gets nothing.
+ * The merge of Ana, Ben and Cleo into Ana, as the preview answers it. Cleo's
+ * read seat keeps read access. Ben's deactivated account gets nothing.
  */
 export function previewOutcome(
   over: Partial<ContactCaseOutcome> = {},

@@ -18074,7 +18074,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.member.dismissedWith":
     "Đã được đánh dấu là người khác với {names}.",
   "contactCase.notAllowed.tooLarge":
-    "Nhóm này quá lớn để gộp một lần. Xử lý từng cặp trong Danh sách công việc.",
+    "Nhóm này quá lớn để gộp một lần. Xử lý từng cặp ở bên dưới.",
+  "contactCase.pair.notSame": "Không phải cùng một người",
+  "contactCase.pair.mergeTwo": "Gộp hai liên hệ này",
+  "contactCase.pair.keep": "Giữ {name}",
+  "contactCase.pair.refused":
+    "Bạn không thể quyết định cặp này. Hãy hỏi người chịu trách nhiệm các liên hệ hoặc quản trị viên.",
+  "contactCase.pair.failed": "Chưa lưu được cặp này. Thử lại.",
   "contactCase.notAllowed.ownersOnly":
     "Chỉ người chịu trách nhiệm một trong các liên hệ này, hoặc người sửa được tất cả, mới gộp được.",
   "contactCase.notAllowed.noAuthority":

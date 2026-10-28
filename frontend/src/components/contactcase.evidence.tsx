@@ -8,6 +8,7 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { formatPercent } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { mayDecidePairs, PairActions } from "./contactcase.pair";
 import type { ContactCase, ContactCaseOutcome } from "./contactcase.queries";
 
 type Evidence = components["schemas"]["DedupeEvidence"];
@@ -39,12 +40,14 @@ function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
   );
 }
 
-/** Each pair in the case, with what made it look like one person. */
+/** Each pair in the case, with what made the two look like duplicates. */
 export function CaseEvidence({
   contactCase,
-}: Readonly<{ contactCase: ContactCase }>) {
+  onStale,
+}: Readonly<{ contactCase: ContactCase; onStale: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
+  const decides = mayDecidePairs(contactCase);
   return (
     <section className="contactcase-section">
       <Eyebrow as="h3">{t("contactCase.evidence.title")}</Eyebrow>
@@ -77,6 +80,13 @@ export function CaseEvidence({
                   />
                 ))}
               </ul>
+            )}
+            {decides && (
+              <PairActions
+                contactCase={contactCase}
+                edge={edge}
+                onStale={onStale}
+              />
             )}
           </li>
         ))}

@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import {
   ANA,
   BEN,
@@ -44,6 +45,19 @@ function mount() {
   );
 }
 
+function mountWithToasts() {
+  return render(
+    <StoryProviders>
+      <ToastProvider>
+        <ContactCaseReview contactId={ANA} open onClose={() => undefined} />
+        <ToastRegion />
+      </ToastProvider>
+    </StoryProviders>,
+  );
+}
+
+const noContent = () => new Response(null, { status: 204 });
+
 function member(name: RegExp) {
   return screen.getByRole("checkbox", { name });
 }
@@ -71,7 +85,7 @@ describe("which members the review ticks", () => {
   it("walks open pairs only, and keeps the walk connected", () => {
     const one = contactCase();
     expect(defaultSelection(one, ANA)).toEqual([ANA, BEN, CLEO]);
-    // From Dana, Cleo and Ben come in; Ana was marked as a different person.
+    // From Dana, Cleo and Ben come in; Ana was marked as different from Dana.
     expect(defaultSelection(one, DANA)).toEqual([DANA, CLEO, BEN]);
     expect(isConnected(one, [ANA, CLEO])).toBe(false);
     expect(isConnected(one, [ANA, BEN, CLEO])).toBe(true);
@@ -206,5 +220,138 @@ describe("a case already settled", () => {
     ).toBeVisible();
     expect(member(/Mira Kovač/)).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Preview merge" })).toBeNull();
+  });
+});
+
+describe("deciding one pair inside the review", () => {
+  it("posts not_a_duplicate for that pair and reads the case again", async () => {
+    let reads = 0;
+    const posted: unknown[] = [];
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => {
+          reads += 1;
+          return jsonResponse(contactCase({ revision: `rev-${reads}` }));
+        },
+        "POST /dedupe/candidates/p1/disposition": (body) => {
+          posted.push(body);
+          return noContent();
+        },
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mountWithToasts();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Not the same person: Mira Kovac and Mira Kovač",
+      }),
+    );
+    await waitFor(() => expect(reads).toBe(2));
+    expect(posted).toEqual([{ disposition: "not_a_duplicate" }]);
+  });
+
+  it("offers a too-large case's pairs a merge that names the kept contact", async () => {
+    const posted: unknown[] = [];
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse(
+            contactCase({
+              too_large: true,
+              can_merge: false,
+              merge_mode: "none",
+              reason: "too_large",
+            }),
+          ),
+        "POST /dedupe/candidates/p1/disposition": (body) => {
+          posted.push(body);
+          return noContent();
+        },
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mountWithToasts();
+    expect(
+      await screen.findByText(/Decide its pairs one at a time below\./),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Merge these two: Mira Kovac and Mira Kovač",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
+    await waitFor(() =>
+      expect(posted).toEqual([{ disposition: "merge", winner_id: BEN }]),
+    );
+  });
+
+  it("re-opens a pair marked as different people", async () => {
+    const undone = vi.fn(noContent);
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()),
+        "POST /dedupe/candidates/p4/undo": undone,
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mountWithToasts();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Undo: Mira Kovac and Mira Kovacs",
+      }),
+    );
+    await waitFor(() => expect(undone).toHaveBeenCalledTimes(1));
+  });
+
+  it("says who can decide when the server refuses the reader", async () => {
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => jsonResponse(contactCase()),
+        "POST /dedupe/candidates/p2/disposition": () =>
+          jsonResponse(
+            { title: "Forbidden", status: 403, code: "permission_denied" },
+            403,
+          ),
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mountWithToasts();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Not the same person: Mira Kovač and M. Kovac",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "You cannot decide this pair. Ask an owner of these contacts or an administrator.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/Retry\./)).toBeNull();
+  });
+
+  it("offers no pair verbs to a reader who may not merge", async () => {
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse(
+            contactCase({
+              can_merge: false,
+              merge_mode: "none",
+              reason: "no_write_authority",
+            }),
+          ),
+      },
+      {},
+    );
+    mountWithToasts();
+    await screen.findByText(/an administrator can turn on shared merge/);
+    expect(
+      screen.queryByRole("button", { name: /Not the same person/ }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Undo/ })).toBeNull();
   });
 });

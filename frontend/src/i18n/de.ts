@@ -18562,7 +18562,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.member.keepNamed": "Angaben von {name} behalten",
   "contactCase.member.dismissedWith": "Als andere Person als {names} markiert.",
   "contactCase.notAllowed.tooLarge":
-    "Diese Gruppe ist zu groß, um sie auf einmal zusammenzuführen. Entscheide die Paare einzeln in der Worklist.",
+    "Diese Gruppe ist zu groß, um sie auf einmal zusammenzuführen. Entscheide die Paare unten einzeln.",
+  "contactCase.pair.notSame": "Nicht dieselbe Person",
+  "contactCase.pair.mergeTwo": "Diese zwei zusammenführen",
+  "contactCase.pair.keep": "{name} behalten",
+  "contactCase.pair.refused":
+    "Du kannst dieses Paar nicht entscheiden. Frage die Verantwortlichen der Kontakte oder einen Admin.",
+  "contactCase.pair.failed":
+    "Das Paar wurde nicht gespeichert. Bitte versuche es erneut.",
   "contactCase.notAllowed.ownersOnly":
     "Zusammenführen kann nur, wer für einen dieser Kontakte verantwortlich ist oder alle bearbeiten kann.",
   "contactCase.notAllowed.noAuthority":

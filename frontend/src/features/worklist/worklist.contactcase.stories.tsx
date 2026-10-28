@@ -17,7 +17,7 @@ import {
 } from "../../testing/story-utils";
 import { ContactCaseDecision } from "./worklist.contactcase";
 
-// A group of contacts that may be one person, on its Worklist row. Framed in a
+// A group of contacts that may be duplicates, on its Worklist row. Framed in a
 // Panel row, which is where the Worklist draws it.
 
 type WorklistItem = components["schemas"]["WorklistItem"];
