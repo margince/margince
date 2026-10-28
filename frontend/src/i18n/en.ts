@@ -14115,14 +14115,16 @@ export const en = {
   "webForms.field.nameHint":
     "Shown on each lead’s note, for example Contact page.",
   "webForms.field.sender": "Where is your form?",
+  "webForms.senderGroup.noDeveloper": "No developer needed",
+  "webForms.senderGroup.developer": "For developers",
   "webForms.field.senderFixed":
     "Fixed once the form exists. Create a new form to change it.",
   "webForms.senderHint.browser":
-    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to. No developer needed.",
+    "A form on your own pages, or in WordPress, Webflow or another site builder that lets you set where a form sends to.",
   "webForms.senderHint.server":
-    "For developers: your website’s server forwards each enquiry, signed with a secret.",
+    "Your website’s server forwards each enquiry, signed with a secret.",
   "webForms.senderHint.webflow":
-    "For developers: a webhook made with Webflow’s API. For a Webflow form, choose Your website.",
+    "A webhook made with Webflow’s API. For a Webflow form, choose Your website.",
   "webForms.senderHint.typeform":
     "Each Typeform response comes in through a webhook. Margince makes the secret for you.",
   "webForms.senderHint.tally":
