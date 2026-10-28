@@ -11433,6 +11433,7 @@ const (
 	HomeRepairTaskActionArchiveAutomaticReminder HomeRepairTaskAction = "archive_automatic_reminder"
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
+	HomeRepairTaskActionNormalizeAutomaticTask   HomeRepairTaskAction = "normalize_automatic_task"
 	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
 	HomeRepairTaskActionRevalidateSettlement     HomeRepairTaskAction = "revalidate_settlement"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
@@ -11447,6 +11448,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionHumanReview:
 		return true
 	case HomeRepairTaskActionLeaveCurrent:
+		return true
+	case HomeRepairTaskActionNormalizeAutomaticTask:
 		return true
 	case HomeRepairTaskActionReclassifyMessage:
 		return true
@@ -41287,9 +41290,12 @@ type HistoryEdgeOtherEntityType string
 
 // HomeRepairCounts defines model for HomeRepairCounts.
 type HomeRepairCounts struct {
-	Archive    int `json:"archive"`
-	Keep       int `json:"keep"`
-	Reclassify int `json:"reclassify"`
+	Archive int `json:"archive"`
+	Keep    int `json:"keep"`
+
+	// Normalize Pristine automatic tasks with a proved source reference or generated notification date to correct.
+	Normalize  *int `json:"normalize,omitempty"`
+	Reclassify int  `json:"reclassify"`
 
 	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
 	Revalidate *int `json:"revalidate,omitempty"`
@@ -41306,9 +41312,12 @@ type HomeRepairReview struct {
 	Limit  int              `json:"limit"`
 
 	// PreviewToken Reader-bound classification review token; expires after fifteen minutes and is consumed on activation.
-	PreviewToken *string          `json:"preview_token,omitempty"`
-	RuleVersion  string           `json:"rule_version"`
-	Tasks        []HomeRepairTask `json:"tasks"`
+	PreviewToken *string `json:"preview_token,omitempty"`
+
+	// RequiresActionReview The client must acknowledge the actions it displayed when activating this page.
+	RequiresActionReview *bool            `json:"requires_action_review,omitempty"`
+	RuleVersion          string           `json:"rule_version"`
+	Tasks                []HomeRepairTask `json:"tasks"`
 }
 
 // HomeRepairTask defines model for HomeRepairTask.
@@ -58157,8 +58166,11 @@ type GetAutomaticWorkHealthParams struct {
 
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
 type ActivateHomeRepairJSONBody struct {
-	Review  HomeRepairReview `json:"review"`
-	Version int64            `json:"version"`
+	Review HomeRepairReview `json:"review"`
+
+	// ReviewedActions Supported action names in the displayed review's row order, required when requires_action_review is true.
+	ReviewedActions *[]string `json:"reviewed_actions,omitempty"`
+	Version         int64     `json:"version"`
 }
 
 // PreviewHomeRepairJSONBody defines parameters for PreviewHomeRepair.
