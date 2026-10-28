@@ -10,7 +10,7 @@
 // caller can refuse it.
 //
 // engine.go is the pure core, with no database handle and no HTTP, so its DDL
-// can be tested without a database. service.go runs it in a schema-pool
+// can be tested without a database. create.go runs it in a schema-pool
 // transaction: the ALTER TABLE, the custom_field catalog insert and one
 // audit_log row commit together.
 //

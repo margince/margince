@@ -80,10 +80,10 @@ export function useSetAgentGrant() {
         );
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
-      toast.show(t("settings.saved"));
-    },
+    // Refreshed after a failure too: the first agent's write may have landed
+    // before the second failed, and the card must show the grants as they stand.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: GRANTS_KEY }),
+    onSuccess: () => toast.show(t("settings.saved")),
   });
 }
 

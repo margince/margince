@@ -331,3 +331,36 @@ it("shows the question open to a rep who granted only the morning brief", async 
   // "on": turning it on once grants both.
   expect(toggle.getAttribute("aria-checked")).toBe("false");
 });
+
+it("reads the grants again when the second agent's write fails", async () => {
+  let reads = 0;
+  installFetchStub({
+    "GET /me/agent-grants": () => {
+      reads += 1;
+      return jsonResponse({
+        data: bothAgents([
+          { spec: "morning_brief", state: "granted", credential_usable: true },
+        ]),
+      });
+    },
+    "PUT /me/agent-grants/morning_brief": () =>
+      jsonResponse({
+        spec: "morning_brief",
+        state: "declined",
+        credential_usable: false,
+      }),
+    "PUT /me/agent-grants/overnight_at_risk_sweep": () =>
+      jsonResponse(
+        { title: "Unprocessable", detail: "the credential store refused" },
+        422,
+      ),
+  });
+  render(<OvernightGrantCard />);
+
+  const toggle = await screen.findByTestId("overnight-grant-toggle");
+  await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+  await userEvent.click(toggle);
+  // The first write landed and the second did not, so the card must ask the
+  // server how the grants stand instead of showing what it cached.
+  await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
+});
