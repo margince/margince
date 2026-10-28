@@ -2467,6 +2467,27 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 	}
 }
 
+// Defines values for AttentionContactCaseMergeMode.
+const (
+	AttentionContactCaseMergeModeDelegated AttentionContactCaseMergeMode = "delegated"
+	AttentionContactCaseMergeModeNone      AttentionContactCaseMergeMode = "none"
+	AttentionContactCaseMergeModeOrdinary  AttentionContactCaseMergeMode = "ordinary"
+)
+
+// Valid indicates whether the value is a known member of the AttentionContactCaseMergeMode enum.
+func (e AttentionContactCaseMergeMode) Valid() bool {
+	switch e {
+	case AttentionContactCaseMergeModeDelegated:
+		return true
+	case AttentionContactCaseMergeModeNone:
+		return true
+	case AttentionContactCaseMergeModeOrdinary:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
@@ -2568,6 +2589,7 @@ const (
 	AttentionItemSourceBounce              AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem           AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth       AttentionItemSource = "capture_health"
+	AttentionItemSourceContactCase         AttentionItemSource = "contact_case"
 	AttentionItemSourceConversationClaim   AttentionItemSource = "conversation_claim"
 	AttentionItemSourceCustomerWaiting     AttentionItemSource = "customer_waiting"
 	AttentionItemSourceDealAtRisk          AttentionItemSource = "deal_at_risk"
@@ -2602,6 +2624,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceBriefItem:
 		return true
 	case AttentionItemSourceCaptureHealth:
+		return true
+	case AttentionItemSourceContactCase:
 		return true
 	case AttentionItemSourceConversationClaim:
 		return true
@@ -22328,6 +22352,7 @@ const (
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth       WorklistItemSource = "capture_health"
+	WorklistItemSourceContactCase         WorklistItemSource = "contact_case"
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
@@ -22368,6 +22393,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceBriefItem:
 		return true
 	case WorklistItemSourceCaptureHealth:
+		return true
+	case WorklistItemSourceContactCase:
 		return true
 	case WorklistItemSourceConversationClaim:
 		return true
@@ -22499,6 +22526,7 @@ const (
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
 	WorklistReachSourceCaptureHealth       WorklistReachSource = "capture_health"
+	WorklistReachSourceContactCase         WorklistReachSource = "contact_case"
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
@@ -22539,6 +22567,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceBriefItem:
 		return true
 	case WorklistReachSourceCaptureHealth:
+		return true
+	case WorklistReachSourceContactCase:
 		return true
 	case WorklistReachSourceConversationClaim:
 		return true
@@ -29648,6 +29678,24 @@ type AttentionConnectionFacts struct {
 // AttentionConnectionFactsMedium Whether the connection carries mail or a calendar, so a broken calendar is never called a mailbox.
 type AttentionConnectionFactsMedium string
 
+// AttentionContactCase A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+// only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+// with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+type AttentionContactCase struct {
+	AnchorId  openapi_types.UUID            `json:"anchor_id"`
+	CanMerge  bool                          `json:"can_merge"`
+	Members   []AttentionPairSide           `json:"members"`
+	MergeMode AttentionContactCaseMergeMode `json:"merge_mode"`
+
+	// Owners The names of the members' live owners. Each of them sees this row in their own Worklist.
+	Owners   []string `json:"owners"`
+	Revision string   `json:"revision"`
+	TooLarge *bool    `json:"too_large,omitempty"`
+}
+
+// AttentionContactCaseMergeMode defines model for AttentionContactCase.MergeMode.
+type AttentionContactCaseMergeMode string
+
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
@@ -29858,6 +29906,11 @@ type AttentionItem struct {
 	// the account label when the connector reported one, and are absent when it did not:
 	// neither ever carries a provider id.
 	Connection *AttentionConnectionFacts `json:"connection,omitempty"`
+
+	// ContactCase A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+	// only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+	// with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+	ContactCase *AttentionContactCase `json:"contact_case,omitempty"`
 
 	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
 	// draws value and ownership without a second read per row. Sent only for
@@ -57627,6 +57680,9 @@ type WorklistItem struct {
 	// moments are the READER's, filled under their own grants; each is absent
 	// where the reader may not have it, which is not the same as unnamed or never.
 	Contact *WorklistContactFacts `json:"contact,omitempty"`
+
+	// ContactCase The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source.
+	ContactCase *AttentionContactCase `json:"contact_case,omitempty"`
 
 	// Deal The deal behind an item, with the facts its card states. `expected_minor_base` is
 	// `amount_minor` converted to the installation's base currency — the only figure by

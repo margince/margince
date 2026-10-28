@@ -65584,7 +65584,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -65708,6 +65708,8 @@ components:
           $ref: '#/components/schemas/NoticeAcquisition'
         pair:
           $ref: '#/components/schemas/AttentionPair'
+        contact_case:
+          $ref: '#/components/schemas/AttentionContactCase'
         deal:
           $ref: '#/components/schemas/AttentionDealFacts'
         assignee_id:
@@ -65952,6 +65954,24 @@ components:
           type: string
           enum: [collide, one_sided, exact_conflict, lane_split]
           description: 'What the detector made of the comparison. Mirrors the detector''s own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.'
+    AttentionContactCase:
+      type: object
+      description: |
+        A group of contacts that may be the same person, as a `contact_case` row shows it. Sent
+        only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+        with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+      required: [anchor_id, revision, members, owners, can_merge, merge_mode]
+      properties:
+        anchor_id: { type: string, format: uuid }
+        revision: { type: string }
+        members: { type: array, items: { $ref: '#/components/schemas/AttentionPairSide' } }
+        owners:
+          type: array
+          description: The names of the members' live owners. Each of them sees this row in their own Worklist.
+          items: { type: string }
+        can_merge: { type: boolean }
+        merge_mode: { type: string, enum: [ordinary, delegated, none] }
+        too_large: { type: boolean }
     AttentionPairSide:
       type: object
       description: "One side of a proposed merge, named and weighed so a reader can tell which record to keep."
@@ -66236,7 +66256,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -67251,7 +67271,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -67370,6 +67390,9 @@ components:
             both-sides-visible rule decides that, and an item arriving without it offers
             no merge. A row that named neither record could only ask a reader to go and
             look, which is the hand-off this queue exists to remove.
+        contact_case:
+          allOf: [{ $ref: '#/components/schemas/AttentionContactCase' }]
+          description: The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source.
         move: { $ref: '#/components/schemas/WorklistMove' }
         with_contact:
           type: string
