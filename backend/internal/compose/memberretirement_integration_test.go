@@ -236,9 +236,9 @@ func TestARetiredMembersCompletedTaskCannotBeReopenedOntoTheHiddenAccount(t *tes
 	}
 }
 
-// A retired seat cannot be given work. The refusal is not found on purpose:
-// seatHoldingWork answers an inactive seat as it answers a guessed id, so a
-// caller learns nothing about the account that used to hold it.
+// A retired seat cannot be given work. The refusal is not found, not a
+// permission error: seatHoldingWork answers an inactive seat as it answers a
+// guessed id. A caller therefore learns nothing about the account.
 //
 // The test above covers the other door, reopening a task the retired member
 // already held, which the member_work_reference_retired check refuses.
