@@ -26,9 +26,9 @@ export function dismissedWith(
 
 /**
  * The members ticked when the review opens: a walk over open pairs from
- * `startId`, which takes a member only while no member already taken was
- * marked as a different person from it. So the default never crosses a
- * dismissed pair, and it is always connected, which the server requires.
+ * `startId`. It skips a member that someone marked as a different person from
+ * a member already taken. So the default never crosses a dismissed pair. It is
+ * always connected, which the server requires.
  */
 export function defaultSelection(
   contactCase: ContactCase,
@@ -83,7 +83,7 @@ export function ownerChoices(
 
 /**
  * The owner the review starts on: the kept record's own owner when that owner
- * may own the result, and no one otherwise, so the reviewer picks.
+ * may own the result. Otherwise no one, so the reviewer picks.
  */
 export function defaultOwner(
   contactCase: ContactCase,

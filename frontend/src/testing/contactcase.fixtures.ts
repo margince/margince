@@ -112,8 +112,8 @@ function owner(
 }
 
 /**
- * The merge of Ana, Ben and Cleo into Ana, as the preview answers it: Cleo's
- * read seat keeps read access, and Ben's deactivated account gets nothing.
+ * The merge of Ana, Ben and Cleo into Ana, as the preview answers it. Cleo's
+ * read seat keeps read access. Ben's deactivated account gets nothing.
  */
 export function previewOutcome(
   over: Partial<ContactCaseOutcome> = {},

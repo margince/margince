@@ -176,7 +176,7 @@ export function standardViews(
  * right one: "no deals owned by you" over a search that matched nothing names a
  * cause that is not the cause, and its Show all would leave the search standing.
  *
- * "Show all" drops the view's own filter and nothing else, which is what makes it
+ * "Show all" drops the view's own filter and nothing else. That is why it is
  * worth having beside the table's own "clear filters": one undoes the tab, the
  * other undoes every dial the reader has turned.
  */
