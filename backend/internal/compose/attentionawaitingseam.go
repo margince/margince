@@ -10,11 +10,16 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // attentionAwaiting binds the follow-up lane to the activities module's own
 // gated read, and names each row's message so the composer can draft from it.
+//
+// Both scans reuse their generic plans (database.ReuseGenericPlans). Each spells
+// its kind, direction and meeting status as literals, so its partial indexes
+// hold without the bound values. Each caps with a literal LIMIT.
 type attentionAwaiting struct {
 	store *activities.Store
 }
@@ -22,7 +27,12 @@ type attentionAwaiting struct {
 func (w attentionAwaiting) AwaitingReplies(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.AwaitedReply, bool, error) {
-	rows, _, err := w.store.AwaitingReplies(ctx, asOf)
+	var rows []activities.AwaitingReply
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, _, err = w.store.AwaitingReplies(ctx, asOf)
+		return err
+	})
 	if err != nil {
 		return nil, false, err
 	}
@@ -54,7 +64,12 @@ func (w attentionAwaiting) AwaitingReplies(
 func (w attentionAwaiting) MeetingFollowUps(
 	ctx context.Context, asOf time.Time,
 ) ([]attention.AwaitedReply, bool, error) {
-	rows, err := w.store.MeetingsAwaitingFollowUp(ctx, asOf)
+	var rows []activities.AwaitingReply
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, err = w.store.MeetingsAwaitingFollowUp(ctx, asOf)
+		return err
+	})
 	if err != nil {
 		return nil, false, err
 	}
