@@ -146,7 +146,7 @@ func adminRailCalls(dailyInput) []dailyCall {
 		{Name: "ai_calls", Path: "/v1/ai/calls?limit=10"},
 		{Name: "ai_usage", Path: "/v1/ai/usage"},
 		{Name: "ai_budget", Path: "/v1/ai/budget"},
-		{Name: "embed_reindex_status", Path: "/v1/embeddings/reindex/status"},
+		{Name: "embed_reindex_identities", Path: "/v1/embeddings/reindex/identities"},
 	}
 }
 
@@ -333,10 +333,10 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 //
 // gatekit:fixture the unwired routes and the note each prints on its no-data row
 var dailyUnwiredRoutes = map[string]string{
-	"/v1/digest":                    "answers 501 until a mail connector is configured",
-	"/v1/connectors":                "answers 501 until a mail connector is configured",
-	"/v1/embeddings/reindex/status": "answers 501 until an embedding model is bound",
-	"/v1/installation/license":      "answers 501: this composition serves no license entitlement",
+	"/v1/digest":                        "answers 501 until a mail connector is configured",
+	"/v1/connectors":                    "answers 501 until a mail connector is configured",
+	"/v1/embeddings/reindex/identities": "answers 501 until an embedding model is bound",
+	"/v1/installation/license":          "answers 501: this composition serves no license entitlement",
 }
 
 // dailyAdminFlow is the admin's own shell, measured for the admin seat alone.
