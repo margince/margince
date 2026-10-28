@@ -25,11 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RecomputeRequestReminderReachTx re-derives the open request reminder's
-// audience from the mail named by source.
+// RecomputeRequestReminderReachTx re-derives the audience of every open
+// request reminder of the mail named by source.
 //
 // Called by the consumer that already answers an audience change, so a
-// derivation and a member's own narrowing reach it the same way.
+// derivation and a member's own narrowing reach it the same way. An accepted
+// request can leave a second open task on one mail, so it moves them all.
 //
 // Idempotent, and silent where there is no open reminder: the pass that calls
 // it retries, and most messages have no reminder at all.
@@ -41,25 +42,52 @@ func RecomputeRequestReminderReachTx(ctx context.Context, tx pgx.Tx, source ids.
 	if err != nil {
 		return err
 	}
-	var reminder ids.UUID
-	var stored string
-	var assignee *ids.UUID
-	err = tx.QueryRow(ctx, `
+	reminders, err := openRemindersOf(ctx, tx, source)
+	if err != nil {
+		return err
+	}
+	for _, r := range reminders {
+		want, move := reminderMove(shared, r.audience, r.assignee)
+		if !move {
+			continue
+		}
+		if err := writeReminderReachTx(ctx, tx, r.id, r.audience, want, r.assignee); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// reminderRow is one open reminder as the recompute reads it.
+type reminderRow struct {
+	id       ids.UUID
+	audience string
+	assignee *ids.UUID
+}
+
+// openRemindersOf locks the open reminders of one mail in id order. A
+// reminder a human set the audience of carries ReasonManual, which no
+// derivation moves.
+func openRemindersOf(ctx context.Context, tx pgx.Tx, source ids.ActivityID) ([]reminderRow, error) {
+	rows, err := tx.Query(ctx, `
 		SELECT t.id, t.audience, t.assignee_id FROM activity t
 		 WHERE t.source_system = $1 AND t.source_activity_id = $2
+		   AND t.audience_reason IS DISTINCT FROM $3
 		   AND `+openReminderClause("t")+`
-		 FOR UPDATE OF t`, EmailRequestTaskSource, source.UUID).Scan(&reminder, &stored, &assignee)
+		 ORDER BY t.id
+		 FOR UPDATE OF t`, EmailRequestTaskSource, source.UUID, ReasonManual)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil
-		}
-		return fmt.Errorf("activities: reading the reminder of %s: %w", source, err)
+		return nil, fmt.Errorf("activities: reading the reminders of %s: %w", source, err)
 	}
-	want, move := reminderMove(shared, stored)
-	if !move {
-		return nil
+	reminders, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reminderRow, error) {
+		var r reminderRow
+		err := row.Scan(&r.id, &r.audience, &r.assignee)
+		return r, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the reminders of %s: %w", source, err)
 	}
-	return writeReminderReachTx(ctx, tx, reminder, stored, want, assignee)
+	return reminders, nil
 }
 
 // writeReminderReachTx moves the reminder to want, with the membership that
@@ -77,7 +105,7 @@ func writeReminderReachTx(
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity SET audience = $2
 		 WHERE id = $1 AND audience = $3 AND restricted_at IS NULL
-		   AND archived_at IS NULL`, reminder, want, stored)
+		   AND archived_at IS NULL AND audience_reason IS DISTINCT FROM $4`, reminder, want, stored, ReasonManual)
 	if err != nil {
 		return fmt.Errorf("activities: moving the reminder %s to %s: %w", reminder, want, err)
 	}
@@ -103,13 +131,17 @@ func writeReminderReachTx(
 }
 
 // reminderMove is the reach a reminder should carry for its mail, and whether
-// that differs from the reach it carries now.
+// to move it there.
 //
 // A reminder already agreeing with its mail is left alone, so a recompute that
-// changes nothing writes no audit row. The consumer runs on every audience
-// event, and most of them concern a mail whose reminder already agrees.
-func reminderMove(mailShared bool, stored string) (string, bool) {
+// changes nothing writes no audit row. An unassigned reminder is not narrowed:
+// a narrowed reach names its assignee as the one reader, and with none it
+// would reach nobody. The source's own gate still decides its content.
+func reminderMove(mailShared bool, stored string, assignee *ids.UUID) (string, bool) {
 	want := reminderReach(mailShared)
+	if want == string(crmcontracts.ActivityAudienceSelected) && assignee == nil {
+		return stored, false
+	}
 	return want, want != stored
 }
 
@@ -126,10 +158,8 @@ func reminderReach(mailShared bool) string {
 }
 
 // reminderMembers is the membership that reach implies: the assignee alone for
-// a narrowed reminder, nobody for the workspace's.
-//
-// An unassigned reminder yields no member rather than a narrowed row nobody is
-// named on, which would reach no reader at all.
+// a narrowed reminder, nobody for the workspace's. reminderMove never narrows
+// an unassigned reminder, so a narrowed one always names its reader.
 func reminderMembers(reach string, assignee *ids.UUID) []AudienceMember {
 	members := []AudienceMember{}
 	if reach == string(crmcontracts.ActivityAudienceSelected) && assignee != nil {

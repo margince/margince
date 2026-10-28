@@ -49,32 +49,38 @@ func TestAReminderNamesItsAssigneeOnlyWhereThatIsTheReach(t *testing.T) {
 	}
 }
 
-// A reminder already agreeing with its mail is left alone.
+// A reminder already agreeing with its mail is left alone, and an unassigned
+// one is not narrowed.
 //
 // The consumer runs on every audience event, so most calls concern a mail
 // whose reminder already agrees. Moving it anyway would write an audit row
-// for a change that did not happen.
+// for a change that did not happen. A narrowed reach names the assignee as
+// its one reader, so with no assignee it would reach nobody.
 func TestAReminderAgreeingWithItsMailIsLeftAlone(t *testing.T) {
 	selected := string(crmcontracts.ActivityAudienceSelected)
 	workspace := string(crmcontracts.ActivityAudienceWorkspace)
+	assignee := ids.NewV7()
 
 	for _, c := range []struct {
-		name   string
-		shared bool
-		stored string
-		want   string
-		move   bool
+		name     string
+		shared   bool
+		stored   string
+		assignee *ids.UUID
+		want     string
+		move     bool
 	}{
-		{"workspace mail, workspace reminder", true, workspace, workspace, false},
-		{"limited mail, narrowed reminder", false, selected, selected, false},
-		{"mail opened since filing", true, selected, workspace, true},
-		{"mail narrowed since filing", false, workspace, selected, true},
+		{"workspace mail, workspace reminder", true, workspace, &assignee, workspace, false},
+		{"limited mail, narrowed reminder", false, selected, &assignee, selected, false},
+		{"mail opened since filing", true, selected, &assignee, workspace, true},
+		{"mail narrowed since filing", false, workspace, &assignee, selected, true},
+		{"mail narrowed, nobody assigned", false, workspace, nil, workspace, false},
+		{"mail opened, nobody assigned", true, selected, nil, workspace, true},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			want, move := reminderMove(c.shared, c.stored)
+			want, move := reminderMove(c.shared, c.stored, c.assignee)
 			if want != c.want || move != c.move {
-				t.Errorf("reminderMove(%t, %q) = %q, %t; want %q, %t",
-					c.shared, c.stored, want, move, c.want, c.move)
+				t.Errorf("reminderMove(%t, %q, assigned %t) = %q, %t; want %q, %t",
+					c.shared, c.stored, c.assignee != nil, want, move, c.want, c.move)
 			}
 		})
 	}

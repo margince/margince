@@ -103,3 +103,39 @@ func TestAMailWithNoReminderIsLeftAlone(t *testing.T) {
 		t.Errorf("the pass invented %d reminders for a mail that had none", reminders)
 	}
 }
+
+// A reminder a human set the audience of keeps it. ReasonManual is a lock no
+// derivation moves, so a later change to the mail leaves the human's choice.
+func TestAReminderAHumanNarrowedKeepsItsAudience(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Buyer", "buyer@customer.example")
+	mail := o.capture(t, owedMail{
+		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
+		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
+		messageID: ids.NewV7().String() + "@customer.example",
+	})
+	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), mail, "commitment"); err != nil {
+		t.Fatal(err)
+	}
+	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
+	reminder, _ := reminderOf(t, o, mail)
+	if _, err := o.e.Activities.SetAudience(o.reader(), ids.From[ids.ActivityKind](ids.MustParse(reminder)),
+		activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{
+			{SubjectType: "user", SubjectID: o.owner},
+		}}); err != nil {
+		t.Fatalf("narrowing the reminder by hand: %v", err)
+	}
+
+	// The mail is narrowed and opened again. Neither move reaches the reminder.
+	for _, audience := range []string{"participants", "workspace"} {
+		o.e.WsExec(t, `UPDATE activity SET audience = $2 WHERE id = $1`, mail, audience)
+		if err := NewAudienceRescopeGen(o.e.Pool).HandleEvent(
+			context.Background(), narrowedEvent(t, mail)); err != nil {
+			t.Fatal(err)
+		}
+		if got := o.e.WsScalar(t, `SELECT audience FROM activity WHERE id = $1`,
+			ids.MustParse(reminder)); got != "selected" {
+			t.Errorf("after the mail moved to %s, the reminder reads %q, want the human's selected", audience, got)
+		}
+	}
+}
