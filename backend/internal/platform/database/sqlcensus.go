@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/maphash"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,6 +23,11 @@ import (
 // records each distinct statement it sends, with the Go call chain that sent it.
 const SQLCensusDirEnv = "MARGINCE_SQL_CENSUS_DIR"
 
+// censusMinBytes skips the statements too small to plan expensively. Measured
+// over the integration lane, every statement whose planning grew a backend by
+// 64 MB or more was over 20 KB, and the median statement is under 200 bytes.
+const censusMinBytes = 8 << 10
+
 type censusRecord struct {
 	Hash   string   `json:"hash"`
 	SQL    string   `json:"sql"`
@@ -32,8 +38,16 @@ type censusRecord struct {
 // not seen before in this process.
 type sqlCensus struct {
 	mu   sync.Mutex
-	seen map[string]bool
+	seed maphash.Seed
+	seen map[censusKey]bool
 	out  *os.File
+}
+
+// censusKey is a statement and the first frames that sent it, cheap to build on
+// every call.
+type censusKey struct {
+	sql uint64
+	pcs [6]uintptr
 }
 
 var (
@@ -58,7 +72,7 @@ func newSQLCensus(dir string) (*sqlCensus, error) {
 	if err != nil {
 		return nil, fmt.Errorf("sql census: %w", err)
 	}
-	return &sqlCensus{seen: map[string]bool{}, out: out}, nil
+	return &sqlCensus{seed: maphash.MakeSeed(), seen: map[censusKey]bool{}, out: out}, nil
 }
 
 func (c *sqlCensus) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -79,23 +93,29 @@ func (c *sqlCensus) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.Tra
 func (c *sqlCensus) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
 
 func (c *sqlCensus) record(sql string) {
-	frames := productFrames()
-	sum := sha256.Sum256([]byte(sql))
-	hash := hex.EncodeToString(sum[:8])
-	key := hash
-	if len(frames) > 0 {
-		key += frames[0]
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.seen[key] {
+	if len(sql) < censusMinBytes {
 		return
 	}
+	var pcs [64]uintptr
+	n := runtime.Callers(3, pcs[:])
+	// Raw program counters and an in-memory hash key the pair; resolving frames
+	// and a stable hash cost far more, so only a pair not yet seen pays for them.
+	key := censusKey{sql: maphash.String(c.seed, sql)}
+	copy(key.pcs[:], pcs[:n])
+	c.mu.Lock()
+	seen := c.seen[key]
 	c.seen[key] = true
-	line, err := json.Marshal(censusRecord{Hash: hash, SQL: sql, Frames: frames})
+	c.mu.Unlock()
+	if seen {
+		return
+	}
+	sum := sha256.Sum256([]byte(sql))
+	line, err := json.Marshal(censusRecord{Hash: hex.EncodeToString(sum[:8]), SQL: sql, Frames: productFrames(pcs[:n])})
 	if err != nil {
 		return
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if _, err := c.out.Write(append(line, '\n')); err != nil {
 		fmt.Fprintf(os.Stderr, "sql census: %v\n", err)
 	}
@@ -103,10 +123,8 @@ func (c *sqlCensus) record(sql string) {
 
 // productFrames is the call chain inside this repository, nearest first, with
 // the pool plumbing and pgx itself left out.
-func productFrames() []string {
-	pcs := make([]uintptr, 64)
-	n := runtime.Callers(4, pcs)
-	iter := runtime.CallersFrames(pcs[:n])
+func productFrames(pcs []uintptr) []string {
+	iter := runtime.CallersFrames(pcs)
 	var frames []string
 	for {
 		f, more := iter.Next()
