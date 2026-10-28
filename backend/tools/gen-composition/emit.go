@@ -314,8 +314,13 @@ func composedWork(root string, units []extensionUnit) ([]byte, string, error) {
 	for _, use := range rootWork.Use {
 		members = append(members, path.Join("../..", use.Path))
 	}
+	workDir := filepath.Join(root, "build", "composition")
 	for _, u := range units {
-		members = append(members, "../../extensions/"+u.Name)
+		rel, err := filepath.Rel(workDir, u.Dir)
+		if err != nil {
+			return nil, "", err
+		}
+		members = append(members, filepath.ToSlash(rel))
 	}
 	sort.Strings(members)
 
