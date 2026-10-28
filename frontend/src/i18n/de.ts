@@ -1712,6 +1712,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
   "brief.queue.back": "Zurück zur Worklist",
+  "brief.queue.next": "Nächste Aufgabe",
+  "brief.queue.nextNone": "Keine weiteren Datensätze",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Worklist einblenden",
   "brief.queue.hide": "Worklist ausblenden",
@@ -8283,6 +8285,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist kein Terminstatus. Es gibt: {allowed}.",
   "import.reason.meeting_status_not_valid_for_kind":
     "Nur ein Termin hat einen Terminstatus. Entferne ihn aus dieser Zeile.",
+  "import.reason.meeting_not_taken_place":
+    "Nach dem Datum oder der Uhrzeit in dieser Zeile hat der Termin noch nicht begonnen und kann daher weder held noch no_show sein. Lass den Status leer oder nimm booked oder canceled. Hat er heute begonnen, ergänze die Uhrzeit des Beginns.",
   "import.reason.direction_unknown":
     "„{value}“ ist keine Richtung. Es gibt: {allowed}.",
   "import.reason.activity_unlinked":
@@ -16666,6 +16670,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.scope.unassigned": "Nicht zugewiesen",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
+  "worklist.scope.unassignedHint":
+    "Offene Arbeit, die du sehen kannst und für die niemand zuständig ist.",
+  "worklist.take.action": "Übernehmen",
+  "worklist.take.done": "Dir zugewiesen",
+  "worklist.take.failed":
+    "Die Aufgabe konnte dir nicht zugewiesen werden. Bitte versuche es erneut.",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
   "worklist.owner.left":
     "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
@@ -17017,6 +17027,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
+  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
+  "worklist.verb.meetingCancelInCalendar":
+    "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
+  "worklist.verb.meetingCalendarManaged":
+    "Betreff, Notizen und Datum folgen der Kalendereinladung. Hier wird nur das Ergebnis gespeichert.",
   "worklist.verb.retry": "Erneut ausf\u00fchren",
   "worklist.verb.retryStarted": "Regel wird erneut ausgeführt…",
   "worklist.verb.retryFailed":

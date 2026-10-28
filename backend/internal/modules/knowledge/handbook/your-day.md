@@ -13,14 +13,12 @@ items to check. It lives on **Home**. Press **Show Worklist** to open it as a pa
 ## Daily tasks
 
 ### How do I open my worklist?
-To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The
-Worklist opens as a panel headed **Worklist**, with the day's count on the button.
+To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The Worklist opens as a panel headed **Worklist**, with the day's count on the button.
 1. Click **Home** in the sidebar.
 2. Press **Show Worklist**. Press **Hide Worklist** to close it.
-3. A team lead can switch **Whose work** between **Mine**, **Unassigned**, **Team** and **All**.
+3. Switch **Whose work** to **Unassigned** for open work nobody holds. **Team** and **All** show when your role sees them.
 
-There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks,
-work queue, inbox, today list.
+There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks, work queue, inbox, today list.
 
 ### How do I make my worklist fill the window?
 To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
@@ -30,6 +28,9 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
    always fills the screen.
 
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
+
+### How do I go to the next record on my worklist?
+To go to the next record in Margince, press **Next task** on the **Next** bar of a contact, company, lead or deal. It opens the next record on your Worklist, in list order. A record you opened from the Worklist follows that list, with its **Whose work** and filters; any other record follows your own list. After the last record it starts again at the top. With no other record on the list, the button says "No more records". Also called: next record, work through my list, go through the queue.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
@@ -48,9 +49,7 @@ To pin a Worklist item in Margince, press **More actions** on its row and choose
 2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
    it back in its ranked place.
 
-A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Also called: star, flag, keep on top.
-
-Quiet contacts under **Optional reconnections** stay outside work counts. An open deal alone does not make them work. Pin a contact to choose them for your day, or create a task on their record.
+A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
 ### Why is a task at the top of my worklist?
 A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With browser notifications allowed, the browser also shows the task once while Margince is open in a tab. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
@@ -58,7 +57,7 @@ A task leads your Worklist and the **First** card on **Home** when you hold it a
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** beside it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -66,8 +65,9 @@ To hand a task on in Margince, press **More actions** on its Worklist row and ch
 2. Press **More actions** at the end of the row and choose **Reassign**.
 3. Pick a colleague under **Reassign to** and press **Reassign**. **Cancel** keeps the task yours.
 
-The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on. If
-it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on, and only a task you may change offers **Reassign**. If it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+
+A task nobody holds shows **Take it** on its row when you may change it. Switch **Whose work** to **Unassigned**, press **Take it**, and the task moves to **Mine** ("Assigned to you"). If it fails: "Task was not assigned to you. Retry." Also called: take a task, claim a task, assign to me.
 
 ### How do I remove something from my worklist?
 To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not
@@ -291,8 +291,7 @@ Suggested deal steps are checked against current records before the list is cut.
 
 A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
 
-The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work
-keep their order without a sentence comparing each item with the one below it.
+The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work keep their order without a sentence comparing each item with the one below it.
 
 ### Pinning
 

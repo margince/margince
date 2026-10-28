@@ -14,6 +14,7 @@
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../../api/schema";
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -106,6 +107,10 @@ export function TimelineActions({
           {t(`scheduling.${activity.invitation_status}`)}
         </Button>
       )}
+      <RecordMeetingOutcome
+        activity={activity}
+        invalidateKeys={entityTimelineKeys(entityType, entityId)}
+      />
       {extra?.(activity)}
       <ActivityFilesAction activity={activity} />
       <Button

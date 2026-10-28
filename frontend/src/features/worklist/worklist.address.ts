@@ -22,7 +22,24 @@ import {
 export function drawerScope(
   params: ReadonlyMap<string, string>,
 ): WorklistScope {
-  return requestedScope(params.get("queue_scope"));
+  return drawerQueue(params).scope;
+}
+
+/**
+ * The queue a drawer's dials name: the same read the drawer makes from them,
+ * for a record continuing that queue after the drawer has closed.
+ */
+export function drawerQueue(params: ReadonlyMap<string, string>): Readonly<{
+  scope: WorklistScope;
+  filter: WorklistFilter;
+  owner: string;
+}> {
+  const owner = params.get("owner") ?? "";
+  return {
+    scope: requestedScope(params.get("queue_scope")),
+    filter: worklistFilterFrom(params),
+    owner,
+  };
 }
 
 function requestedScope(
@@ -50,9 +67,13 @@ export function useWorklistAddress(
   );
   const [localSelected, setLocalSelected] = useState("");
   const scopeParam = embedded ? "queue_scope" : "scope";
-  const scope = requestedScope(params.get(scopeParam), opensOn);
-  const filter = worklistFilterFrom(params);
-  const owner = embedded ? (params.get("owner") ?? "") : localOwner;
+  const { scope, filter, owner } = embedded
+    ? drawerQueue(params)
+    : {
+        scope: requestedScope(params.get(scopeParam), opensOn),
+        filter: worklistFilterFrom(params),
+        owner: localOwner,
+      };
   const selectedId = embedded ? (params.get("selected") ?? "") : localSelected;
   const change = (key: string, value: string) => {
     const next = new Map(currentParams());

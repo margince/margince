@@ -462,6 +462,11 @@
 .pe-meeting:has(> .pe-meeting-verbs:empty) {
   grid-template-columns: auto minmax(0, 1fr);
 }
+/* Folded, a held row's verbs may shrink to the line, so three German labels
+   wrap inside it instead of running past the panel's edge. */
+.pe-meetings .table-scroll-fold [data-fold="end"] {
+  flex-shrink: 1;
+}
 
 /* An invitation still waiting on the contact has no date to hang a page on (a
    personal link offers no times at all), so it is the meeting row without

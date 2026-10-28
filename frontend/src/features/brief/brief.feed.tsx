@@ -19,6 +19,7 @@ import {
   worklistKey,
 } from "../worklist/worklist.queries";
 import { identity, Triage } from "./brief.focus";
+import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
 
@@ -107,14 +108,16 @@ export function BriefFeed({
       >
         {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
         {lead && (
-          <Triage
-            rows={rows}
-            at={at}
-            lead={lead}
-            onChoose={(item) => setChosen(identity(item))}
-            onOpenEmail={setOpenEmail}
-            onContext={onContext}
-          />
+          <HomeListReturnScope>
+            <Triage
+              rows={rows}
+              at={at}
+              lead={lead}
+              onChoose={(item) => setChosen(identity(item))}
+              onOpenEmail={setOpenEmail}
+              onContext={onContext}
+            />
+          </HomeListReturnScope>
         )}
       </SurfaceState>
       {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}

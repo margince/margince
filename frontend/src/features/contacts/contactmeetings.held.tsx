@@ -20,8 +20,7 @@ type Activity = components["schemas"]["Activity"];
 
 /**
  * The meetings already behind the read, one row each. A row shows what it was
- * and what became of it, the day, the colleague who hosted it, and the brief
- * verb.
+ * and what became of it, the day, the colleague who hosted it, and its verbs.
  * The host column shows only once a row names a host, so a list logged
  * without one carries no column of blanks.
  */
@@ -87,11 +86,13 @@ export function HeldMeetingsTable({
       : []),
     {
       key: "verbs",
-      header: t("contact.meeting.brief"),
+      header: t("table.actions"),
       headerHidden: true,
       align: "end",
       fold: "end",
-      render: verbs,
+      render: (meeting) => (
+        <div className="pe-meeting-verbs">{verbs(meeting)}</div>
+      ),
     },
   ];
   return (
