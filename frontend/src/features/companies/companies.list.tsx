@@ -43,6 +43,7 @@ import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import type { Company } from "./companies";
+import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
 
 async function fetchCompaniesPage(
@@ -140,6 +141,7 @@ export function CompaniesScreen() {
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
+              onCreated={offerDomainContacts}
               fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>

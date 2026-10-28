@@ -4123,6 +4123,33 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.neverInTouch": "Chưa có trao đổi",
   "co.contacts.theyWrote": "Họ đã viết",
   "co.contacts.weWrote": "Nhóm của bạn đã viết",
+  "co.domainContacts.dialogTitle": "Gắn liên hệ trên tên miền này",
+  "co.domainContacts.intro":
+    "Các liên hệ này có địa chỉ email công việc trên tên miền của công ty nhưng chưa gắn với công ty. Chọn các liên hệ làm việc tại đây.",
+  "co.domainContacts.worksAt": "Làm việc tại {company}",
+  "co.domainContacts.truncated_one": "Chỉ hiển thị {count} liên hệ đầu tiên.",
+  "co.domainContacts.truncated_other": "Chỉ hiển thị {count} liên hệ đầu tiên.",
+  "co.domainContacts.loading": "Đang tải liên hệ…",
+  "co.domainContacts.none": "Không còn liên hệ nào trên tên miền này để gắn.",
+  "co.domainContacts.changed":
+    "Danh sách đã thay đổi khi đang mở. Kiểm tra lại lựa chọn rồi gắn lại.",
+  "co.domainContacts.dismiss": "Để sau",
+  "co.domainContacts.link_one": "Gắn {count} liên hệ",
+  "co.domainContacts.link_other": "Gắn {count} liên hệ",
+  "co.domainContacts.linkNone": "Gắn liên hệ",
+  "co.domainContacts.linked_one": "Đã gắn {count} liên hệ",
+  "co.domainContacts.linked_other": "Đã gắn {count} liên hệ",
+  "co.domainContacts.callout_one":
+    "{count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.callout_other":
+    "{count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.calloutMore_one":
+    "Hơn {count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.calloutMore_other":
+    "Hơn {count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.review": "Xem lại liên hệ",
+  "co.domainContacts.denied":
+    "Vai trò của bạn không thể gắn liên hệ với công ty. Liên hệ quản trị viên.",
   "co.contacts.filter.status": "Mức tương tác",
   "co.contacts.filter.statusAll": "Mọi mức tương tác",
   "co.contacts.band.wayIn": "Hướng tiếp cận tốt nhất",

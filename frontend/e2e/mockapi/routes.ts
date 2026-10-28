@@ -160,6 +160,16 @@ export const routes: readonly MockRoute[] = [
   { path: "/contacts/p-new", handle: reply(records.newContact) },
   { path: "/contacts/p-jonas", handle: reply(records.jonas) },
   { method: "POST", path: "/companies", handle: records.createCompany },
+  {
+    method: "GET",
+    path: "/companies/o-new/link-candidates",
+    handle: reply(records.newCompanyCandidates),
+  },
+  {
+    method: "POST",
+    path: "/companies/o-new/link-contacts",
+    handle: reply({ data: [] }, 201),
+  },
   { path: "/companies/o-new", handle: reply(records.newCompany) },
   { method: "POST", path: "/leads", handle: records.createLead },
   { path: "/leads/l-new", handle: reply(records.createdLead) },

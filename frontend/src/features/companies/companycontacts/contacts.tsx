@@ -18,6 +18,8 @@ import { bucketLabel } from "../../../lib/bucketlabel";
 import { throwProblem } from "../../../lib/problem";
 import { useRecordZone } from "../../../lib/recordzone";
 import { CoverageExplorer } from "../../contacts/coverageexplorer";
+import { companyContactsListKey } from "./contacts.keys";
+import { DomainContactsCallout } from "./domaincontacts";
 
 // The company's contacts, as a list a rep works from rather than a roster they
 // read.
@@ -82,10 +84,6 @@ export const ENGAGEMENT_LABELS: Record<
   lapsed: "co.reach.lapsed",
   untried: "co.reach.untried",
 };
-
-function companyContactsListKey(companyId: string): string {
-  return `company-contacts:${companyId}`;
-}
 
 export function CompanyContactsList({
   companyId,
@@ -164,6 +162,7 @@ export function CompanyContactsList({
 
   return (
     <>
+      <DomainContactsCallout companyId={companyId} />
       {bandSlot?.(narrow)}
       <ListTable
         state={state}

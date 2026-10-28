@@ -4223,6 +4223,35 @@ export const en = {
   "co.contacts.neverInTouch": "No exchange yet",
   "co.contacts.theyWrote": "They wrote",
   "co.contacts.weWrote": "Your team wrote",
+  "co.domainContacts.dialogTitle": "Link contacts on this domain",
+  "co.domainContacts.intro":
+    "These contacts have a work address on the company’s domain and are not linked to it. Tick the ones who work here.",
+  "co.domainContacts.worksAt": "Works at {company}",
+  "co.domainContacts.truncated_one":
+    "Only the first {count} contact is listed.",
+  "co.domainContacts.truncated_other":
+    "Only the first {count} contacts are listed.",
+  "co.domainContacts.loading": "Loading contacts…",
+  "co.domainContacts.none": "No contacts on this domain are left to link.",
+  "co.domainContacts.changed":
+    "The list changed while it was open. Check the ticks and link again.",
+  "co.domainContacts.dismiss": "Not now",
+  "co.domainContacts.link_one": "Link {count} contact",
+  "co.domainContacts.link_other": "Link {count} contacts",
+  "co.domainContacts.linkNone": "Link contacts",
+  "co.domainContacts.linked_one": "{count} contact linked",
+  "co.domainContacts.linked_other": "{count} contacts linked",
+  "co.domainContacts.callout_one":
+    "{count} contact on this domain is not linked",
+  "co.domainContacts.callout_other":
+    "{count} contacts on this domain are not linked",
+  "co.domainContacts.calloutMore_one":
+    "More than {count} contact on this domain is not linked",
+  "co.domainContacts.calloutMore_other":
+    "More than {count} contacts on this domain are not linked",
+  "co.domainContacts.review": "Review contacts",
+  "co.domainContacts.denied":
+    "Your role cannot link contacts to companies. Ask an admin.",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Any engagement",
   "co.contacts.band.wayIn": "Best route",

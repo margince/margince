@@ -133,6 +133,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
 If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
+A new company with a domain lists the unlinked contacts whose work email is on it, none ticked. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later.
 Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?

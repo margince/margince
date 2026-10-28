@@ -4235,6 +4235,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.neverInTouch": "Noch kein Austausch",
   "co.contacts.theyWrote": "Der Kontakt hat geschrieben",
   "co.contacts.weWrote": "Dein Team hat geschrieben",
+  "co.domainContacts.dialogTitle": "Kontakte dieser Domain verknüpfen",
+  "co.domainContacts.intro":
+    "Diese Kontakte haben eine geschäftliche Adresse auf der Domain des Unternehmens und sind nicht mit dem Unternehmen verknüpft. Wähle aus, wer hier arbeitet.",
+  "co.domainContacts.worksAt": "Arbeitet bei {company}",
+  "co.domainContacts.truncated_one":
+    "Nur der erste {count} Kontakt wird angezeigt.",
+  "co.domainContacts.truncated_other":
+    "Nur die ersten {count} Kontakte werden angezeigt.",
+  "co.domainContacts.loading": "Kontakte werden geladen…",
+  "co.domainContacts.none":
+    "Es sind keine Kontakte dieser Domain mehr zu verknüpfen.",
+  "co.domainContacts.changed":
+    "Die Liste hat sich geändert, während sie offen war. Prüfe die Auswahl und verknüpfe erneut.",
+  "co.domainContacts.dismiss": "Nicht jetzt",
+  "co.domainContacts.link_one": "{count} Kontakt verknüpfen",
+  "co.domainContacts.link_other": "{count} Kontakte verknüpfen",
+  "co.domainContacts.linkNone": "Kontakte verknüpfen",
+  "co.domainContacts.linked_one": "{count} Kontakt verknüpft",
+  "co.domainContacts.linked_other": "{count} Kontakte verknüpft",
+  "co.domainContacts.callout_one":
+    "{count} Kontakt dieser Domain ist nicht verknüpft",
+  "co.domainContacts.callout_other":
+    "{count} Kontakte dieser Domain sind nicht verknüpft",
+  "co.domainContacts.calloutMore_one":
+    "Mehr als {count} Kontakt dieser Domain ist nicht verknüpft",
+  "co.domainContacts.calloutMore_other":
+    "Mehr als {count} Kontakte dieser Domain sind nicht verknüpft",
+  "co.domainContacts.review": "Kontakte prüfen",
+  "co.domainContacts.denied":
+    "Deine Rolle darf keine Kontakte mit Unternehmen verknüpfen. Frage einen Admin.",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Beliebiges Engagement",
   "co.contacts.band.wayIn": "Bester Zugang",

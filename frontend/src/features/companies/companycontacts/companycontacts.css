@@ -56,3 +56,15 @@
 .cp-intro-why {
   margin: 0 0 var(--space-1);
 }
+
+/* The tick stays level with the name, and the label column may shrink so a
+ * long name or address wraps inside the dialog. */
+.cp-candidate.checkfield {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.cp-candidate-line {
+  display: block;
+  overflow-wrap: anywhere;
+}
