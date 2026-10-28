@@ -15,9 +15,9 @@ package compose
 // to this producer, dismissible. It changes no lifecycle and opens no deal;
 // those are structural claims about the record and they stage for a human
 // (the proposal reconciler). A promise it reads goes to the commitment
-// dispatch, which writes a colleague's task at once above the confidence
-// floor. A wrong signal is a card somebody clears; a wrong structural write
-// is a record somebody has to find.
+// dispatch. That writes a colleague's task at once only at its own higher
+// confidence and proposes it below that. A wrong signal is a card somebody
+// clears; a wrong structural write is a record somebody has to find.
 //
 // Every message reaches the model inside its own fence span (ADR-0075), and
 // every cited id is checked against the ids this call supplied. A sender who

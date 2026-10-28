@@ -16174,7 +16174,7 @@ paths:
       operationId: putAnchorCompany
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # This save IS the 🟡 confirmation of a read-back: an agent may PROPOSE the company
-      # (POST /coldstart/preview) but never make it true: this save takes a human session.
+      # (POST /coldstart/preview) and confirm it here: this save takes a human session.
       x-agent-access: human-only
       summary: Save the installation's own company — the human's confirm-first write.
       description: |

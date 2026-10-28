@@ -4,13 +4,13 @@
 An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
-Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Four
-tools still wait for a human then: `enrich`, `set_up_partner` and `merge_member_accounts` on `change_state`, and the relink
-actions on `change_activities`.
+Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Some
+still wait for a human then. These are the `enrich` tool and these actions: `set_up_partner` and `merge_member_accounts` on
+`change_state`, and `relink` and `relink_many` on `change_activities`.
 
 Automatic work with no passport behind it waits on every 🟡 tool in the catalog below, such as `merge` on `change_tags` and
-`invite` on `schedule_meeting`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These are
-`update_record` and `move_deal` on `change_state`.
+`invite` on `schedule_meeting`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These are the
+`update_record` tool and these actions: `move_deal` on `change_state`, and `relink` and `relink_many` on `change_activities`.
 
 A waiting call changes nothing until a human approves it in the CRM. The agent then repeats the call with the approval's ID.
 
