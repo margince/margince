@@ -6,15 +6,18 @@
 package integration
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -128,5 +131,18 @@ func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 		}
 		mustCall(t, seat.env(e), "POST", "/v1/brief", nil, http.StatusCreated, &run)
 		t.Logf("brief: %s holds %d items", seat.Name, len(run.Items))
+	}
+}
+
+// logWorklistStages prints each worklist stage's mean over the latency step,
+// slowest first, so a slow worklist row names the lane it spent its time in.
+func logWorklistStages(t *testing.T) {
+	t.Helper()
+	stages := attention.StageTimings()
+	names := slices.Collect(maps.Keys(stages))
+	mean := func(stage string) float64 { return stages[stage].Sum() / float64(max(1, stages[stage].Count())) }
+	slices.SortFunc(names, func(a, b string) int { return cmp.Compare(mean(b), mean(a)) })
+	for _, stage := range names {
+		t.Logf("worklist stage %-28s mean %8.1f ms over %d", stage, mean(stage)*1000, stages[stage].Count())
 	}
 }

@@ -83,6 +83,7 @@ func TestDailyUseBudgets(t *testing.T) {
 		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
 		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
 		assertDailyReviewFocus(t, rows)
+		logWorklistStages(t)
 	})
 
 	step("load", func(t *testing.T) {

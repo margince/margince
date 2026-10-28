@@ -122,6 +122,7 @@ func (s *Service) worklistIn(
 	// Filled here, before the projection, so the money is on the row when the
 	// ordering reads it — enriching afterwards would rank the deal as unpriced
 	// and then print its price, which is the page disagreeing with itself.
+	priced := timeStage("price_day")
 	if err := reader.nameTheMoney(ctx, &day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -130,6 +131,8 @@ func (s *Service) worklistIn(
 	if err := reader.priceDayOnto(ctx, day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	priced()
+	besideReads := timeStage("beside_reads")
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
@@ -172,15 +175,19 @@ func (s *Service) worklistIn(
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
+	besideReads()
 	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
+	ranked := timeStage("rank")
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
+	ranked()
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	teamWeek := teamWeekFor(ctx)
 	out.TeamWeek = &teamWeek
+	defer timeStage("row_names")()
 	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}

@@ -288,7 +288,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	// The day's end, resolved ONCE for the whole assembly: every due-dated lane
 	// is judged against the same instant, and the installation is asked for its
 	// timezone once rather than per lane.
+	done := timeStage("end_of_day")
 	until, loc, err := s.endOfDay(ctx, asOf)
+	done()
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -305,7 +307,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
+	done = timeStage("this_morning")
 	night, err := s.thisMorning(ctx)
+	done()
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = night.items
 		out.Counts.ThisMorning = len(night.items)
@@ -315,7 +319,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
+	done = timeStage("needs_you")
 	needsYou, count, err := s.decisionsToDepth(ctx, s.decisionsDepth())
+	done()
 	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
@@ -331,7 +337,9 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
 
+	done = timeStage("planned")
 	planned, plannedTotal, err := s.planned(ctx, asOf, until, loc, s.taskScope)
+	done()
 	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = plannedTotal
@@ -348,8 +356,10 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	omitted = roll.omitted
 
-	done, err := s.done(ctx, asOf)
-	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
+	done = timeStage("done_for_you")
+	receipts, err := s.done(ctx, asOf)
+	done()
+	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = receipts })
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -362,7 +372,10 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	// Last, over the assembled lanes: every card that names a record gets its
 	// display name under this reader's own grants (labels.go).
-	if err := s.fillSubjectLabels(ctx, &out); err != nil {
+	done = timeStage("subject_labels")
+	err = s.fillSubjectLabels(ctx, &out)
+	done()
+	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
 	beside.night = night
