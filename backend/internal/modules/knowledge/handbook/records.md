@@ -56,7 +56,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
 
-The **Company** box lists the companies that match what you type: pick one to link it, or type a name to create one. Until you use the box, a work email fills it with the company that already has that domain. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
+The **Company** box lists the companies that match what you type: pick one to link it, or type a name to create one. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
 If the contact is already in Margince, **View existing record** opens it instead. If a live lead holds the email or LinkedIn profile, Margince offers **Convert the lead**. It does not create another contact. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 
@@ -88,8 +88,7 @@ To link a contact to a company in Margince, open the contact's page and choose *
 4. Choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
 
-A company Margince read from the contact's email signature shows in the **Companies** panel while the contact has no current job. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates the company, with the domain of the contact's work email, and links it. If another company already has that domain, nothing is created: Margince names that company and offers **Link that company**. **Link** and **Create and link** also confirm the read company, as **Confirm value** does.
-Also called: set a contact's company, assign to an account, employer, company from a signature.
+A company name Margince read for a contact with no current job shows in the **Companies** panel and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates the company with the domain of the contact's work email, unless another company has it, and links it. If you can open that other company, nothing is created: Margince names it and offers **Link that company**. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature.
 
 ### How do I match a purchased job history entry to a company?
 Purchased job history can name an employer Margince cannot match. Then the contact's **Companies** part shows **Company match needed.**; choose **Match company**. Pick a company that is already there, or enter its **Confirmed company website** to create it, then choose **Save company link**. Your choice counts for every role at that employer that has no match yet. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company.
@@ -133,7 +132,8 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
 If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
-A new company with a domain lists the unlinked contacts whose work email is on it, none ticked. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later.
+
+A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later.
 Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?

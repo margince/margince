@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
@@ -76,6 +77,7 @@ async function fetchCompaniesPage(
 
 export function CompaniesScreen() {
   const t = useT();
+  const queryClient = useQueryClient();
   const pageName = usePageName("companies");
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -141,7 +143,7 @@ export function CompaniesScreen() {
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              onCreated={offerDomainContacts}
+              onCreated={(company) => offerDomainContacts(queryClient, company)}
               fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { workEmailDomain } from "./contactformfields";
+import { workEmailAddress } from "./contactformfields";
 import type { CreateField, FormRows } from "./create.fields";
 import { RecordFormBody } from "./create.form";
 import type { NameOffer } from "./create.offered";
@@ -32,7 +32,7 @@ const fields: CreateField[] = [
       pickedHint: "create.companyPicked",
       newHint: "create.companyNew",
       prefill: {
-        from: workEmailDomain,
+        from: workEmailAddress,
         find: offersFor,
         hint: "create.companyPrefilled",
       },

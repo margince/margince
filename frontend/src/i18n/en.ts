@@ -4228,7 +4228,8 @@ export const en = {
   "co.contacts.weWrote": "Your team wrote",
   "co.domainContacts.dialogTitle": "Link contacts on this domain",
   "co.domainContacts.intro":
-    "These contacts have a work address on the company’s domain and are not linked to it. Tick the ones who work here.",
+    "These contacts have an email address on this company’s domain. Contacts with no current employer are linked each day anyway; tick those who work here to link them now.",
+  "co.domainContacts.legend": "Who works here?",
   "co.domainContacts.worksAt": "Works at {company}",
   "co.domainContacts.truncated_one":
     "Only the first {count} contact is listed.",

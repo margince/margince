@@ -4240,7 +4240,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.weWrote": "Dein Team hat geschrieben",
   "co.domainContacts.dialogTitle": "Kontakte dieser Domain verknüpfen",
   "co.domainContacts.intro":
-    "Diese Kontakte haben eine geschäftliche Adresse auf der Domain des Unternehmens und sind nicht mit dem Unternehmen verknüpft. Wähle aus, wer hier arbeitet.",
+    "Diese Kontakte haben eine E-Mail-Adresse auf der Domain dieses Unternehmens. Kontakte ohne aktuellen Arbeitgeber werden ohnehin täglich verknüpft; wähle aus, wer hier arbeitet, um sie jetzt zu verknüpfen.",
+  "co.domainContacts.legend": "Wer arbeitet hier?",
   "co.domainContacts.worksAt": "Arbeitet bei {company}",
   "co.domainContacts.truncated_one":
     "Nur der erste {count} Kontakt wird angezeigt.",

@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useToast } from "../design-system/toast";
@@ -8,6 +9,7 @@ import {
   companyChoice,
   contactCompanyField,
   type HomeCompany,
+  refreshCompaniesAfterContact,
 } from "./contactformfields";
 import { CreateAction, type CreateField } from "./create";
 import { leadHeldNoticeFor } from "./leadheldnotice";
@@ -82,6 +84,7 @@ export function QuickCaptureAction({
   // The form stays open and gives no other feedback, so without this six
   // saved contacts look the same as six that failed silently.
   const toast = useToast();
+  const queryClient = useQueryClient();
   return (
     <CreateAction
       label={t("create.quickCapture")}
@@ -97,9 +100,10 @@ export function QuickCaptureAction({
         )
       }
       refusalNotice={leadHeldNoticeFor}
-      onCreated={(contact) =>
-        toast.show(t("create.quickCaptureSaved", { name: contact.full_name }))
-      }
+      onCreated={(contact) => {
+        toast.show(t("create.quickCaptureSaved", { name: contact.full_name }));
+        void refreshCompaniesAfterContact(queryClient);
+      }}
       resolveExisting={(_code, id) => ({ screen: "contacts", id })}
       fields={quickCaptureFields(company === undefined)}
     />

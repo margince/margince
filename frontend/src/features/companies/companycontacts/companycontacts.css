@@ -57,14 +57,10 @@
   margin: 0 0 var(--space-1);
 }
 
-/* The tick stays level with the name, and the label column may shrink so a
- * long name or address wraps inside the dialog. */
-.cp-candidate.checkfield {
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-}
-
-.cp-candidate-line {
-  display: block;
+/* A domain contact's title, address and employer, one per line. An address
+ * has no space to break at, so it may break anywhere. */
+.cp-candidate {
+  display: flex;
+  flex-direction: column;
   overflow-wrap: anywhere;
 }

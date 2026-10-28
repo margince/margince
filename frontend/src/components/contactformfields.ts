@@ -2,6 +2,7 @@ import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { QueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
@@ -59,29 +60,26 @@ function contactPhoneInputs(rows: FormRows) {
     }));
 }
 
-// The domain of the first work address typed, the primary one first. Which
-// domains name a company is the server's answer, so free mail is not judged here.
-export function workEmailDomain(rows: FormRows): string | undefined {
+// The first work address typed, the primary one first, once it reads as a whole
+// address.
+export function workEmailAddress(rows: FormRows): string | undefined {
   const work = (rows.emails ?? []).filter(
     (row) => asEmailType(row.email_type) === "work",
   );
   const [first] = [...work].sort(
     (a, b) => Number(b.is_primary === "true") - Number(a.is_primary === "true"),
   );
-  const domain = /^[^@\s]+@([^@\s]+\.[^@\s]+)$/.exec(
-    (first?.email ?? "").trim(),
-  )?.[1];
-  return domain?.toLowerCase();
+  const address = (first?.email ?? "").trim();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address) ? address : undefined;
 }
 
-async function companyOnDomain(domain: string): Promise<readonly NameOffer[]> {
-  const data = unwrap(
-    await api.GET("/companies", { params: { query: { domain, limit: 1 } } }),
+async function companyForAddress(email: string): Promise<readonly NameOffer[]> {
+  const { company } = unwrap(
+    await api.GET("/companies/for-address", { params: { query: { email } } }),
   );
-  return data.data.map((company) => ({
-    value: company.id,
-    label: company.display_name,
-  }));
+  return company
+    ? [{ value: company.company_id, label: company.company_name }]
+    : [];
 }
 
 // The employer box of every contact create: a pick sends `company_id`, a typed
@@ -95,8 +93,8 @@ export const contactCompanyField: CreateField = {
     pickedHint: "create.companyPicked",
     newHint: "create.companyNew",
     prefill: {
-      from: workEmailDomain,
-      find: companyOnDomain,
+      from: workEmailAddress,
+      find: companyForAddress,
       hint: "create.companyPrefilled",
     },
   },
@@ -108,6 +106,14 @@ export type HomeCompany = Readonly<{
   // The list on the company page that shows the new contact.
   listKey: string;
 }>;
+
+// A new contact changes the companies list: the contact count of the company it
+// joins, or a company the create made from a typed name.
+export function refreshCompaniesAfterContact(
+  client: QueryClient,
+): Promise<void> {
+  return client.invalidateQueries({ queryKey: ["companies"] });
+}
 
 // The contract refuses both together, so the request says what the reader chose.
 export function companyChoice(values: Record<string, string>) {

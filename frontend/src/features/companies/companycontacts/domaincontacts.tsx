@@ -13,12 +13,12 @@ import { useIdempotencyKey } from "../../../api/idempotencykey";
 import type { components } from "../../../api/schema";
 import {
   Button,
-  Checkbox,
   EmptyState,
   Modal,
   PendingBody,
 } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
+import { ChoiceList } from "../../../design-system/choicelist";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Heading } from "../../../design-system/heading";
 import { useToast } from "../../../design-system/toast";
@@ -112,7 +112,7 @@ export function DomainContactsDialog({
   const queryClient = useQueryClient();
   const headingId = useId();
   const candidates = useLinkCandidates(companyId, open);
-  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  const [ticked, setTicked] = useState<readonly string[]>([]);
   const { key, renew } = useIdempotencyKey();
   const link = useMutation({
     mutationFn: async ({
@@ -139,7 +139,7 @@ export function DomainContactsDialog({
           count: formatNumber(contactIds.length, locale),
         }),
       );
-      setTicked(new Set());
+      setTicked([]);
       onClose();
       await refreshAfterLink(queryClient, companyId, contactIds);
     },
@@ -152,22 +152,13 @@ export function DomainContactsDialog({
   });
   const rows = candidates.data?.data ?? [];
   const chosen = rows
-    .filter((candidate) => ticked.has(candidate.contact_id))
+    .filter((candidate) => ticked.includes(candidate.contact_id))
     .map((candidate) => candidate.contact_id);
   const changed = isNotACandidate(link.error);
   const close = () => {
-    setTicked(new Set());
+    setTicked([]);
     link.reset();
     onClose();
-  };
-  const toggle = (id: string, on: boolean) => {
-    const next = new Set(ticked);
-    if (on) {
-      next.add(id);
-    } else {
-      next.delete(id);
-    }
-    setTicked(next);
   };
 
   return (
@@ -192,8 +183,8 @@ export function DomainContactsDialog({
         <CandidateRows
           query={candidates}
           rows={rows}
-          ticked={ticked}
-          onToggle={toggle}
+          ticked={chosen}
+          onTick={setTicked}
         />
         {!changed && <ErrorLine error={link.error} />}
       </div>
@@ -224,12 +215,12 @@ function CandidateRows({
   query,
   rows,
   ticked,
-  onToggle,
+  onTick,
 }: Readonly<{
   query: ReturnType<typeof useLinkCandidates>;
   rows: readonly Candidate[];
-  ticked: ReadonlySet<string>;
-  onToggle: (id: string, on: boolean) => void;
+  ticked: readonly string[];
+  onTick: (ids: string[]) => void;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -246,36 +237,18 @@ function CandidateRows({
   return (
     <>
       <p>{t("co.domainContacts.intro")}</p>
-      {rows.map((candidate) => (
-        <Checkbox
-          key={candidate.contact_id}
-          className="cp-candidate"
-          checked={ticked.has(candidate.contact_id)}
-          onChange={(event) =>
-            onToggle(candidate.contact_id, event.currentTarget.checked)
-          }
-          label={
-            <>
-              <span className="cp-candidate-line">
-                <strong>{candidate.full_name}</strong>
-                {candidate.title && (
-                  <span className="t-caption"> · {candidate.title}</span>
-                )}
-              </span>
-              <span className="cp-candidate-line t-caption">
-                {candidate.email}
-              </span>
-              {candidate.employer && (
-                <span className="cp-candidate-line t-caption">
-                  {t("co.domainContacts.worksAt", {
-                    company: candidate.employer.company_name,
-                  })}
-                </span>
-              )}
-            </>
-          }
-        />
-      ))}
+      <ChoiceList
+        legend={t("co.domainContacts.legend")}
+        hideLegend
+        multiple
+        value={ticked}
+        onChange={onTick}
+        choices={rows.map((candidate) => ({
+          value: candidate.contact_id,
+          label: candidate.full_name,
+          description: <CandidateFacts candidate={candidate} />,
+        }))}
+      />
       {query.data.truncated && (
         <Callout
           kind="standing"
@@ -285,6 +258,23 @@ function CandidateRows({
         />
       )}
     </>
+  );
+}
+
+function CandidateFacts({ candidate }: Readonly<{ candidate: Candidate }>) {
+  const t = useT();
+  return (
+    <span className="cp-candidate t-caption">
+      {candidate.title && <span>{candidate.title}</span>}
+      <span>{candidate.email}</span>
+      {candidate.employer && (
+        <span>
+          {t("co.domainContacts.worksAt", {
+            company: candidate.employer.company_name,
+          })}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -337,41 +327,39 @@ export function DomainContactsCallout({
   );
 }
 
-// A company created from the list has its domain contacts offered once, on
-// the record page the create opens next.
-const offers = new Set<string>();
-const offerListeners = new Set<() => void>();
-
-function announceOffers() {
-  for (const listener of offerListeners) listener();
+// A company created from the list has its domain contacts offered once, on the
+// record page the create opens next. The offer is kept in the query cache, so
+// a sign-out, which empties the cache, withdraws it.
+function offerKey(companyId: string) {
+  return ["domain-contacts-offer", companyId] as const;
 }
 
-function subscribeOffers(listener: () => void) {
-  offerListeners.add(listener);
-  return () => {
-    offerListeners.delete(listener);
-  };
+function useOffered(client: QueryClient, companyId: string): boolean {
+  return useSyncExternalStore(
+    (listener) => client.getQueryCache().subscribe(listener),
+    () => client.getQueryData(offerKey(companyId)) === true,
+  );
 }
 
-function settleOffer(companyId: string) {
-  if (offers.delete(companyId)) announceOffers();
+function settleOffer(client: QueryClient, companyId: string) {
+  client.removeQueries({ queryKey: offerKey(companyId), exact: true });
 }
 
 export function offerDomainContacts(
+  client: QueryClient,
   company: Readonly<{ id: string; domains?: readonly unknown[] }>,
 ): void {
   if ((company.domains ?? []).length === 0) return;
-  offers.add(company.id);
-  announceOffers();
+  client.setQueryData(offerKey(company.id), true);
 }
 
 export function DomainContactsArrival({
   companyId,
 }: Readonly<{ companyId: string }>) {
-  const offered = useSyncExternalStore(subscribeOffers, () =>
-    offers.has(companyId),
-  );
+  const client = useQueryClient();
+  const offered = useOffered(client, companyId);
   const mayLink = useMayLink();
+  const refused = useLinkRefused();
   const candidates = useLinkCandidates(companyId, offered && mayLink);
   const [shown, setShown] = useState(false);
   const found = (candidates.data?.data.length ?? 0) > 0;
@@ -379,17 +367,22 @@ export function DomainContactsArrival({
     setShown(true);
   }
   const nothingToOffer =
-    candidates.isError || candidates.data?.data.length === 0;
+    refused || candidates.isError || candidates.data?.data.length === 0;
   useEffect(() => {
-    if (offered && nothingToOffer && !shown) settleOffer(companyId);
-  }, [offered, nothingToOffer, shown, companyId]);
+    if (offered && nothingToOffer && !shown) settleOffer(client, companyId);
+  }, [offered, nothingToOffer, shown, client, companyId]);
+  // Leaving the page with the dialog open spends the offer, as closing it does.
+  useEffect(() => {
+    if (!shown) return undefined;
+    return () => settleOffer(client, companyId);
+  }, [shown, client, companyId]);
   return (
     <DomainContactsDialog
       companyId={companyId}
       open={shown}
       onClose={() => {
+        settleOffer(client, companyId);
         setShown(false);
-        settleOffer(companyId);
       }}
     />
   );

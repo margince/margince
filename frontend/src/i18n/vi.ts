@@ -4128,7 +4128,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.weWrote": "Nhóm của bạn đã viết",
   "co.domainContacts.dialogTitle": "Gắn liên hệ trên tên miền này",
   "co.domainContacts.intro":
-    "Các liên hệ này có địa chỉ email công việc trên tên miền của công ty nhưng chưa gắn với công ty. Chọn các liên hệ làm việc tại đây.",
+    "Các liên hệ này có địa chỉ email trên tên miền của công ty này. Liên hệ chưa có nơi làm việc hiện tại vẫn sẽ được gắn mỗi ngày; chọn các liên hệ làm việc tại đây để gắn ngay.",
+  "co.domainContacts.legend": "Ai làm việc tại đây?",
   "co.domainContacts.worksAt": "Làm việc tại {company}",
   "co.domainContacts.truncated_one": "Chỉ hiển thị {count} liên hệ đầu tiên.",
   "co.domainContacts.truncated_other": "Chỉ hiển thị {count} liên hệ đầu tiên.",

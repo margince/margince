@@ -139,10 +139,13 @@ function AboutRail({ view }: Readonly<{ view: Contact360 }>) {
   return <RecordDetails sections={useContactAboutSections(view)} />;
 }
 
+const COMPANIES_LIST = ["companies", {}];
+
 function mount(view: Contact360, place: "card" | "rail" = "card") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(COMPANIES_LIST, { data: [], page: { has_more: false } });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -157,6 +160,7 @@ function mount(view: Contact360, place: "card" | "rail" = "card") {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 const PROPOSAL = "From their email signature: Nordlicht Logistik GmbH";
@@ -184,7 +188,7 @@ describe("The signature’s company on the Company card", () => {
 
   it("creates and links the company, then confirms the fact", async () => {
     const sent = stubApi();
-    mount(contactView());
+    const client = mount(contactView());
     const user = userEvent.setup();
 
     await user.click(
@@ -215,6 +219,9 @@ describe("The signature’s company on the Company card", () => {
         "Nordlicht Logistik GmbH created with nordlicht-logistik.de and linked",
       ),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(client.getQueryState(COMPANIES_LIST)?.isInvalidated).toBe(true),
+    );
   });
 
   it("names the company that holds the domain and records nothing", async () => {

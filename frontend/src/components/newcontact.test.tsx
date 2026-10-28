@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+import { workEmailAddress } from "./contactformfields";
 import { NewContactAction } from "./newcontact";
 
 const NORDLICHT = {
@@ -31,11 +32,15 @@ function json(body: unknown, status = 200) {
 
 const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
 
-// Nordlicht holds nordlicht-logistik.de; no company holds any other domain.
-// `createAnswer` answers the contact write.
-function stubApi(createAnswer = () => json({ id: "p-new" }, 201)) {
+// The address read answers as the server does: Nordlicht's domain covers its
+// subdomains, and consumer mail never answers. `createAnswer` answers the
+// contact write; `addressAnswer` replaces the address read.
+function stubApi(
+  createAnswer = () => json({ id: "p-new" }, 201),
+  addressAnswer?: () => Response,
+) {
   const posted: unknown[] = [];
-  const domainLookups: string[] = [];
+  const addressLookups: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
@@ -47,16 +52,22 @@ function stubApi(createAnswer = () => json({ id: "p-new" }, 201)) {
       if (url.pathname.endsWith("/me")) {
         return json(meFixture({ allow: { contact: ["read", "create"] } }));
       }
+      if (url.pathname.endsWith("/companies/for-address")) {
+        const email = url.searchParams.get("email") ?? "";
+        addressLookups.push(email);
+        if (addressAnswer) return addressAnswer();
+        return json(
+          /@(.+\.)?nordlicht-logistik\.de$/.test(email)
+            ? {
+                company: {
+                  company_id: NORDLICHT.id,
+                  company_name: NORDLICHT.display_name,
+                },
+              }
+            : {},
+        );
+      }
       if (url.pathname.endsWith("/companies")) {
-        const domain = url.searchParams.get("domain");
-        if (domain !== null) {
-          domainLookups.push(domain);
-          return json(
-            domain === "nordlicht-logistik.de"
-              ? { ...emptyPage, data: [NORDLICHT] }
-              : emptyPage,
-          );
-        }
         const q = (url.searchParams.get("q") ?? "").toLowerCase();
         return json({
           ...emptyPage,
@@ -68,17 +79,15 @@ function stubApi(createAnswer = () => json({ id: "p-new" }, 201)) {
       return json(emptyPage);
     }),
   );
-  return { posted, domainLookups };
+  return { posted, addressLookups };
 }
 
-async function openNewContact() {
+async function openNewContact(
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   const user = userEvent.setup();
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <NewContactAction />
       </LocaleProvider>
@@ -135,6 +144,27 @@ describe("New contact’s Company field", () => {
     expect(posted[0]).not.toHaveProperty("company_id");
   });
 
+  it("marks the companies list stale once the contact is created", async () => {
+    const { posted } = stubApi();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const companiesList = ["companies", {}];
+    client.setQueryData(companiesList, emptyPage);
+    const user = await openNewContact(client);
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Company" }),
+      "Brandt Automotive GmbH",
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    await waitFor(() =>
+      expect(client.getQueryState(companiesList)?.isInvalidated).toBe(true),
+    );
+  });
+
   it("picks the company that holds a typed work email’s domain", async () => {
     const { posted } = stubApi();
     const user = await openNewContact();
@@ -157,12 +187,32 @@ describe("New contact’s Company field", () => {
     expect(posted[0]).toMatchObject({ company_id: NORDLICHT.id });
   });
 
-  it("leaves the box empty for a domain no company holds", async () => {
-    const { posted, domainLookups } = stubApi();
+  it("sends the typed address and prefills the company that covers its subdomain", async () => {
+    const { posted, addressLookups } = stubApi();
+    const user = await openNewContact();
+
+    await typeWorkEmail(user, "dana.buyer@eu.nordlicht-logistik.de");
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Company" })).toHaveValue(
+        "Nordlicht Logistik AG",
+      ),
+    );
+    expect(addressLookups.at(-1)).toBe("dana.buyer@eu.nordlicht-logistik.de");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ company_id: NORDLICHT.id });
+  });
+
+  it("never prefills from consumer mail", async () => {
+    const { posted, addressLookups } = stubApi();
     const user = await openNewContact();
 
     await typeWorkEmail(user, "dana.buyer@gmail.com");
-    await waitFor(() => expect(domainLookups).toContain("gmail.com"));
+    await waitFor(() =>
+      expect(addressLookups).toContain("dana.buyer@gmail.com"),
+    );
     expect(screen.getByRole("combobox", { name: "Company" })).toHaveValue("");
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -171,8 +221,37 @@ describe("New contact’s Company field", () => {
     expect(posted[0]).not.toHaveProperty("company_name");
   });
 
+  it("asks nothing for an address still being typed", () => {
+    const typed = (email: string) =>
+      workEmailAddress({ emails: [{ email, email_type: "work" }] });
+
+    expect(typed("dana@")).toBeUndefined();
+    expect(typed("dana@nordlicht-logistik")).toBeUndefined();
+    expect(typed(" dana@nordlicht-logistik.de ")).toBe(
+      "dana@nordlicht-logistik.de",
+    );
+  });
+
+  it("prefills nothing and shows no error when the read is refused", async () => {
+    const { posted, addressLookups } = stubApi(undefined, () =>
+      json({ type: "about:blank", title: "Forbidden", status: 403 }, 403),
+    );
+    const user = await openNewContact();
+
+    await typeWorkEmail(user, "dana.buyer@nordlicht-logistik.de");
+    await waitFor(() => expect(addressLookups).toHaveLength(1));
+    const box = screen.getByRole("combobox", { name: "Company" });
+    expect(box).toHaveValue("");
+    expect(screen.queryByRole("alert")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).not.toHaveProperty("company_id");
+    expect(screen.queryByText("Forbidden")).toBeNull();
+  });
+
   it("never replaces a company the reader typed", async () => {
-    const { posted, domainLookups } = stubApi();
+    const { posted, addressLookups } = stubApi();
     const user = await openNewContact();
 
     await user.type(
@@ -183,7 +262,7 @@ describe("New contact’s Company field", () => {
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
-    expect(domainLookups).toEqual([]);
+    expect(addressLookups).toEqual([]);
     expect(posted[0]).toMatchObject({ company_name: "Brandt Automotive GmbH" });
     expect(posted[0]).not.toHaveProperty("company_id");
   });

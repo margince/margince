@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { ToastProvider, ToastRegion } from "../../../design-system/toast";
 import { LocaleProvider } from "../../../i18n";
+import { resetToSignedOut } from "../../../lib/session";
 import { type GrantSpec, meFixture } from "../../../testing/mefixture";
 import { CompaniesScreen } from "../companies";
 import { CompanyContactsList } from "./contacts";
@@ -110,10 +111,17 @@ function stubApi({
   return { sent, reads, seen };
 }
 
-function mount(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function testClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function offerStanding(client: QueryClient): boolean {
+  return (
+    client.getQueryData(["domain-contacts-offer", COMPANY_ID]) !== undefined
+  );
+}
+
+function mount(ui: ReactNode, client = testClient()) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -124,6 +132,7 @@ function mount(ui: ReactNode) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 async function createFromList(domain?: string) {
@@ -206,23 +215,47 @@ describe("Contacts on a new company’s domain", () => {
 
   it("opens no dialog when the domain matches nobody", async () => {
     const { reads } = stubApi({ lists: [{ data: [], truncated: false }] });
-    offerDomainContacts({ id: COMPANY_ID, domains: [{}] });
-    mount(<DomainContactsArrival companyId={COMPANY_ID} />);
+    const client = testClient();
+    offerDomainContacts(client, { id: COMPANY_ID, domains: [{}] });
+    mount(<DomainContactsArrival companyId={COMPANY_ID} />, client);
 
     await waitFor(() => expect(reads).toHaveLength(1));
     expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(offerStanding(client)).toBe(false));
   });
 
-  it("does not offer a link the role may not make", async () => {
-    const { reads, seen } = stubApi({
+  it("withdraws the offer from a role that may not link", async () => {
+    const { reads } = stubApi({
       grants: { company: ["read"], contact: ["read"], relationship: ["read"] },
     });
-    offerDomainContacts({ id: COMPANY_ID, domains: [{}] });
-    mount(<DomainContactsArrival companyId={COMPANY_ID} />);
+    const client = testClient();
+    offerDomainContacts(client, { id: COMPANY_ID, domains: [{}] });
+    mount(<DomainContactsArrival companyId={COMPANY_ID} />, client);
 
-    await waitFor(() => expect(seen).toContain("/me"));
+    await waitFor(() => expect(offerStanding(client)).toBe(false));
     expect(reads).toHaveLength(0);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("spends the offer when the page closes with the dialog open", async () => {
+    stubApi();
+    const client = testClient();
+    offerDomainContacts(client, { id: COMPANY_ID, domains: [{}] });
+    mount(<DomainContactsArrival companyId={COMPANY_ID} />, client);
+    await screen.findByRole("dialog");
+
+    cleanup();
+
+    expect(offerStanding(client)).toBe(false);
+  });
+
+  it("withdraws the offer at sign-out", async () => {
+    const client = testClient();
+    offerDomainContacts(client, { id: COMPANY_ID, domains: [{}] });
+
+    await resetToSignedOut(client);
+
+    expect(offerStanding(client)).toBe(false);
   });
 });
 
@@ -241,6 +274,39 @@ describe("The Contacts tab’s domain callout", () => {
     expect(within(dialog).getAllByRole("checkbox")).toHaveLength(3);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("ticks from the keyboard and returns focus on Escape", async () => {
+    stubApi();
+    mount(<CompanyContactsList companyId={COMPANY_ID} />);
+    const user = userEvent.setup();
+    const review = await screen.findByRole("button", {
+      name: "Review contacts",
+    });
+    await user.click(review);
+
+    const dialog = await screen.findByRole("dialog");
+    const group = within(dialog).getByRole("group", {
+      name: "Who works here?",
+    });
+    const anja = within(group).getByRole("checkbox", { name: /Anja/ });
+    for (
+      let press = 0;
+      press < 10 && document.activeElement !== anja;
+      press++
+    ) {
+      await user.tab();
+    }
+    expect(anja).toHaveFocus();
+    await user.keyboard(" ");
+    expect(anja).toBeChecked();
+    expect(
+      within(dialog).getByRole("button", { name: "Link 1 contact" }),
+    ).toBeEnabled();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(review).toHaveFocus();
   });
 
   it("says only the first 50 are listed when the server cut the list", async () => {

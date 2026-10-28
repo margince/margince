@@ -16,19 +16,20 @@ import { NewContactAction } from "./newcontact";
 // The full contact form, opened the way a reader opens it. The stub answers
 // every company read with one company, so any work email prefills it.
 
+const HOLDER_ID = "01930000-0000-7000-8000-0000000000o2";
+
 function form(company?: HomeCompany, holder = "Nordlicht Logistik AG") {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "create"] }),
+      "GET /companies/for-address": () =>
+        jsonResponse({
+          company: { company_id: HOLDER_ID, company_name: holder },
+        }),
       "GET /companies": () =>
         jsonResponse({
           ...emptyPage,
-          data: [
-            {
-              id: "01930000-0000-7000-8000-0000000000o2",
-              display_name: holder,
-            },
-          ],
+          data: [{ id: HOLDER_ID, display_name: holder }],
         }),
     });
     return (

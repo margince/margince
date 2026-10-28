@@ -10,6 +10,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../../testing/story-utils";
 import {
   DomainContactsArrival,
@@ -63,9 +64,10 @@ function stub({
 function arrival(options: Parameters<typeof stub>[0] = {}) {
   return () => {
     stub(options);
-    offerDomainContacts({ id: COMPANY_ID, domains: [{}] });
+    const client = storyQueryClient();
+    offerDomainContacts(client, { id: COMPANY_ID, domains: [{}] });
     return (
-      <StoryProviders>
+      <StoryProviders client={client}>
         <DomainContactsArrival companyId={COMPANY_ID} />
       </StoryProviders>
     );
@@ -118,6 +120,28 @@ export const CandidatesPhoneDark: Story = {
   ...Candidates,
   ...phone,
   globals: { ...phone.globals, theme: "dark" },
+};
+
+// The keyboard path: Tab reaches a tick, Space sets it, and the count verb follows.
+export const TickByKeyboard: Story = {
+  render: arrival(),
+  play: async () => {
+    const user = userEvent.setup();
+    const dialog = await screen.findByRole("dialog");
+    const anja = await within(dialog).findByRole("checkbox", { name: /Anja/ });
+    for (
+      let press = 0;
+      press < 10 && document.activeElement !== anja;
+      press++
+    ) {
+      await user.tab();
+    }
+    await user.keyboard(" ");
+    await expect(anja).toBeChecked();
+    await expect(
+      within(dialog).getByRole("button", { name: "Link 1 contact" }),
+    ).toBeEnabled();
+  },
 };
 
 export const LongContent: Story = {

@@ -55,7 +55,8 @@ export async function searchCompanyCandidates(
 }
 
 // Refresh the record, paginated roles and brief together after any employment
-// edit so the saved value and employer summary agree.
+// edit so the saved value and employer summary agree. The companies list
+// counts each company's contacts, and a create and link adds a company to it.
 export function useEmploymentActions(contactId: string) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -69,6 +70,7 @@ export function useEmploymentActions(contactId: string) {
     await queryClient.invalidateQueries({
       queryKey: ["contactBrief", contactId],
     });
+    await queryClient.invalidateQueries({ queryKey: ["companies"] });
   };
   const create = useMutation({
     mutationFn: async (body: CreateRelationshipRequest) => {

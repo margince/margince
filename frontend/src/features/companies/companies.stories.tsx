@@ -8,6 +8,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
@@ -430,9 +431,10 @@ export const CompanyAfterCreate: Story = {
       "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
       "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
     });
-    offerDomainContacts(company);
+    const client = storyQueryClient();
+    offerDomainContacts(client, company);
     return (
-      <StoryProviders>
+      <StoryProviders client={client}>
         <CompanyScreen id="o-1" />
       </StoryProviders>
     );

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
@@ -11,6 +12,7 @@ import {
   contactCreateFields,
   type HomeCompany,
   mapContactBody,
+  refreshCompaniesAfterContact,
 } from "./contactformfields";
 import { CreateAction, type FormRows } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -45,6 +47,7 @@ export function NewContactAction({
   company,
 }: Readonly<{ company?: HomeCompany }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const cf = useObjectCustomFields("contact", "create");
   const fields = contactCreateFields(t).filter(
     (field) => company === undefined || field.key !== contactCompanyField.key,
@@ -64,6 +67,7 @@ export function NewContactAction({
           extra,
         )
       }
+      onCreated={() => void refreshCompaniesAfterContact(queryClient)}
       resolveExisting={(_code, id) => ({ screen: "contacts", id })}
       refusalNotice={leadHeldNoticeFor}
       fields={[...fields, ...cf.formFields]}
