@@ -183,11 +183,11 @@ check-static: composition ## The static half of check (STATIC_LEGS), which CI ru
 # build/composition/ before it writes it again, so a run in one `make check`
 # lane would take the tree away from the other lanes that read it.
 # `make check` composes once, before the lanes start.
-composition: ## Materialize build/composition/ from the extensions instance/go.mod requires [MARGINCE_INSTANCE=<dir> composes a client instance's go.mod instead] (every build lane depends on this)
+composition: ## Materialize build/composition/ from the extensions instance/go.mod requires (every build lane depends on this)
 ifdef CHECK_WRITERS_RAN
 	@echo "composition: written by make check's writers phase, so this lane only reads it"
 else
-	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(if $(MARGINCE_INSTANCE),-instance $(abspath $(MARGINCE_INSTANCE)))
+	@$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
 endif
 
 check-composition: composition ## Reproducibility gate: a clean regeneration must reproduce composition.json byte-for-byte
