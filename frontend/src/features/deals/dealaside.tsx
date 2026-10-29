@@ -10,6 +10,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef, useEntityName } from "../../components/entityref";
 import { type RailEdit, RailField } from "../../components/railfield";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
@@ -362,13 +363,13 @@ function DealPartner({ deal }: Readonly<{ deal: Deal }>) {
         ? t("deal.attributionInfluenced")
         : undefined;
   return (
-    <a
+    <AppLink
       className="deal-aside-link"
       href={routeHash({ screen: "companies", id: deal.partner_company_id })}
       title={role}
     >
       {[name ?? t("field.unset"), role].filter(Boolean).join(" · ")}
-    </a>
+    </AppLink>
   );
 }
 
@@ -400,13 +401,13 @@ function listSection(
       children: (
         <span className="deal-aside-chips">
           {lists.map((list) => (
-            <a
+            <AppLink
               key={list.id}
               className="deal-aside-chip"
               href={routeHash({ screen: "lists", id: list.id })}
             >
               {list.name}
-            </a>
+            </AppLink>
           ))}
         </span>
       ),

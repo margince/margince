@@ -173,7 +173,7 @@ describe("ProviderRecentCalls", () => {
 
     const host = await screen.findByRole("link", { name: "Cerebras" });
     expect(host.getAttribute("href")).toBe(
-      "#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras",
+      "/#/settings/model-calls?provider=openai_compatible&served_provider=Cerebras",
     );
     expect(screen.getByText("No host answered").closest("a")).toBeNull();
     expect(screen.getAllByText(/0\.02/)).toHaveLength(2);
@@ -208,7 +208,7 @@ describe("TierRecentCalls", () => {
     expect(figuresAsked(asked).searchParams.get("tier")).toBe("local_small");
     expect(
       screen.getByRole("link", { name: "View calls" }).getAttribute("href"),
-    ).toBe("#/settings/model-calls?tier=local_small");
+    ).toBe("/#/settings/model-calls?tier=local_small");
   });
 
   it("lists models off the broker, where the vendor is the host", async () => {
@@ -218,7 +218,7 @@ describe("TierRecentCalls", () => {
       name: "gemini-3.1-flash-lite",
     });
     expect(link.getAttribute("href")).toBe(
-      "#/settings/model-calls?served_model=gemini-3.1-flash-lite&tier=premium",
+      "/#/settings/model-calls?served_model=gemini-3.1-flash-lite&tier=premium",
     );
     expect(figuresAsked(asked).searchParams.get("group")).toBe("served_model");
   });
@@ -248,7 +248,9 @@ describe("TierRecentCalls", () => {
       within(line)
         .getByRole("link", { name: "View calls" })
         .getAttribute("href"),
-    ).toBe("#/settings/model-calls?served_model=gemini-3.6-flash&tier=premium");
+    ).toBe(
+      "/#/settings/model-calls?served_model=gemini-3.6-flash&tier=premium",
+    );
   });
 
   it("floors a partly priced cost, so the figure stays a lower bound", async () => {

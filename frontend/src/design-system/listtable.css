@@ -312,7 +312,7 @@
   flex: none;
 }
 .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
-  flex: 1 1 0;
+  flex: 1 0 auto;
   max-inline-size: calc(100% - var(--controlHeight));
   margin-inline-end: var(--controlHeight);
 }

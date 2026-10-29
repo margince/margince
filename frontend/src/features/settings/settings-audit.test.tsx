@@ -261,7 +261,7 @@ describe("AuditLogCard", () => {
     );
     render(<AuditLogCard />);
     const link = await screen.findByRole("link", { name: "Priya Shah" });
-    expect(link).toHaveAttribute("href", "#/contacts/p-1");
+    expect(link).toHaveAttribute("href", "/#/contacts/p-1");
   });
 
   it("names a record without a label by its kind and its id's random tail, and asks the server nothing else", async () => {

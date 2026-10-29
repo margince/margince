@@ -3,6 +3,7 @@
 
 import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelRow } from "../../design-system/panel";
@@ -162,9 +163,12 @@ function CalendarRow({
   return (
     <PanelRow>
       {sentence}{" "}
-      <a className="link-button" href={routeHash(settingsHref("connections"))}>
+      <AppLink
+        className="link-button"
+        href={routeHash(settingsHref("connections"))}
+      >
         {verb}
-      </a>
+      </AppLink>
     </PanelRow>
   );
 }
@@ -221,9 +225,9 @@ function Title({ item }: Readonly<{ item: WorklistItem }>) {
   const title = itemTitle(item, t, locale);
   const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
-    <a className="entity-link t-body" href={href}>
+    <AppLink className="entity-link t-body" href={href}>
       {title}
-    </a>
+    </AppLink>
   ) : (
     <span className="t-body">{title}</span>
   );

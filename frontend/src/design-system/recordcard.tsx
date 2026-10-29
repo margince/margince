@@ -25,6 +25,7 @@
  */
 
 import type { ReactNode } from "react";
+import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
 import { ContactLink } from "./contactlink";
 import "./recordcard.css";
@@ -86,9 +87,9 @@ export function RecordCard({
       {/* Labelled with the name alone: the monogram inside is TEXT, so it
           would otherwise lead the computed name and a screen reader would
           announce two initials before the contact they stand for. */}
-      <a className="record-card-open" href={href} aria-label={name}>
+      <AppLink className="record-card-open" href={href} aria-label={name}>
         {mark}
-      </a>
+      </AppLink>
       {(position || email) && (
         <div className="record-card-facts">
           {position && <p className="record-card-position">{position}</p>}

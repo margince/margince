@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/avatar";
 import { useT } from "../i18n";
 import { ENTITY, type EntityKind } from "../lib/entity";
@@ -289,25 +290,9 @@ function RecordRef({
   if (asText) {
     return <span title={id}>{resolved}</span>;
   }
-  // A real anchor, so the record can be opened the ways a link can: a new tab,
-  // a new window, a bookmark, the keyboard. A button carried the same route and
-  // offered none of them — a reader who middle-clicked a company in a list got
-  // nothing, and one who wanted it beside the page they were on had to lose
-  // that page to get there.
-  //
-  // Only the default click is stopped from reaching an enclosing row's own
-  // handler. `navigate` is NOT called beside it: the anchor already performs
-  // the navigation, so doing both would dispatch the same route twice, and
-  // preventing the anchor instead would navigate the current page while the
-  // new tab opens too. This is the identity cell's own arrangement
-  // (design-system/listtable.tsx), which is where a row and a link inside it
-  // were first made to agree.
-  //
-  // `newTab` carries `rel` with it, never alone: `target="_blank"` without
-  // `noopener` hands the opened page a live `window.opener` handle back into
-  // this tab. `OffsiteLink` spells the same pair for the same reason.
+  // Native destinations support copying and new tabs; ordinary clicks use the router.
   return (
-    <a
+    <AppLink
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
@@ -315,7 +300,7 @@ function RecordRef({
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}
-    </a>
+    </AppLink>
   );
 }
 

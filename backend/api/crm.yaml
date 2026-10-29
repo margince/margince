@@ -9521,6 +9521,33 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /public/record-previews/{record_type}/{id}:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { type: string, enum: [deals, companies, contacts] } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Public]
+      operationId: getPublicRecordPreview
+      security: []
+      summary: Read the limited public link card for a record.
+      description: |
+        Anyone with the record URL may read its name, type, company and brief context.
+        This HTML contains Open Graph metadata and opens the signed-in app. It exposes no
+        notes, activity, files, addresses, amounts or access grant. Full record reads still
+        require the recipient's own session and permissions. Archived records answer 404.
+      responses:
+        '200':
+          description: Public record card and link to the protected app.
+          content:
+            text/html:
+              schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        default:
+          description: The preview is unavailable; the HTML still opens the protected app.
+          content:
+            text/html:
+              schema: { type: string }
+
   /public/booking/company-logo:
     get:
       tags: [Public]

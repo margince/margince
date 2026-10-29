@@ -369,7 +369,12 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
           const handRolled = fragments.some((fragment) =>
             fragment.split(/\s+/).includes("btn"),
           );
-          if (handRolled && tag !== "a" && tag !== "OffsiteLink") {
+          if (
+            handRolled &&
+            tag !== "a" &&
+            tag !== "OffsiteLink" &&
+            tag !== "AppLink"
+          ) {
             const { line } = source.getLineAndCharacterOfPosition(
               node.getStart(),
             );

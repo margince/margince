@@ -302,7 +302,15 @@ describe("robots.txt lets link previews through and nothing else", () => {
     expect(allowed(agent, "/assets/app.js")).toBe(false);
   });
 
-  it("asks every other crawler not to fetch at all", () => {
+  it("allows an unlisted preview fetcher to read only public record cards", () => {
+    expect(allowed("UnlistedPreviewFetcher", "/r/deals/example")).toBe(true);
+    expect(
+      allowed(
+        "UnlistedPreviewFetcher",
+        "/v1/public/record-previews/deals/example",
+      ),
+    ).toBe(true);
     expect(allowed("Googlebot", "/")).toBe(false);
+    expect(allowed("UnlistedPreviewFetcher", "/v1/deals/example")).toBe(false);
   });
 });

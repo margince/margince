@@ -26,15 +26,15 @@ it("opens a record from Home's own list with the way back to the Worklist", asyn
   const href =
     (await screen.findByRole("link", { name: "Weber" })).getAttribute("href") ??
     "";
-  expect(href).toBe("#/contacts/c-1?from=worklist");
+  expect(href).toBe("/#/contacts/c-1?from=worklist");
   cleanup();
 
-  window.location.hash = href;
+  window.location.hash = new URL(href, location.href).hash;
   render(<WorklistReturnLink />);
 
   expect(
     screen
       .getByRole("link", { name: en["brief.queue.back"] })
       .getAttribute("href"),
-  ).toBe("#/home?queue=1");
+  ).toBe("/#/home?queue=1");
 });

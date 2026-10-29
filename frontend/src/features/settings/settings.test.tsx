@@ -557,7 +557,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const back = await screen.findByRole("link", {
       name: translate("en", "settings.home"),
     });
-    expect(back.getAttribute("href")).toBe("#/settings");
+    expect(back.getAttribute("href")).toBe("/#/settings");
   });
 });
 

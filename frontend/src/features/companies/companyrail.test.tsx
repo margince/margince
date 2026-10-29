@@ -85,7 +85,7 @@ describe("the Overview's Contacts card", () => {
     const contacts = within(card("Contacts"));
     expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
@@ -259,7 +259,7 @@ describe("the details' Way in row", () => {
     expect(screen.getByText("Way in")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
   });
 });

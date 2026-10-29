@@ -245,7 +245,7 @@ describe("SearchScreen", () => {
     // A contact is a record card, named straight from the search result (no
     // per-hit record fetch), whose name links to the record's 360.
     const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
-    expect(hitLink.getAttribute("href")).toBe("#/contacts/p1");
+    expect(hitLink.getAttribute("href")).toBe("/#/contacts/p1");
     expect(hitLink.className).toContain("record-card-open");
   });
 
@@ -475,7 +475,7 @@ describe("SearchScreen", () => {
       name: "Open partner record for Brandt GmbH",
     });
     expect(open.getAttribute("href")).toBe(
-      "#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
+      "/r/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419#/companies/01a05ebd-b03d-7183-b2fb-c00bcb58b419/partner",
     );
   });
 
@@ -845,7 +845,7 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     const { container } = render(<SearchScreen q="acme" />);
 
     const open = await screen.findByRole("link", { name: "Acme GmbH" });
-    expect(open.getAttribute("href")).toBe("#/companies/o1");
+    expect(open.getAttribute("href")).toBe("/#/companies/o1");
     expect(open.closest(".record-card")).toBeTruthy();
     expect(
       hitRow(container).querySelector(".avatar-img")?.getAttribute("src"),
@@ -882,7 +882,7 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     render(<SearchScreen q="acme" />);
 
     const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
-    expect(jonas.getAttribute("href")).toBe("#/contacts/p1");
+    expect(jonas.getAttribute("href")).toBe("/#/contacts/p1");
     const card = jonas.closest(".record-card");
     expect(card?.querySelector(".record-card-position")?.textContent).toBe(
       "Works at Acme GmbH",

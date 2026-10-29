@@ -395,7 +395,7 @@ describe("ExtensionAccessCard", () => {
     // blocks sit on this one page, so a link found by name alone has to be
     // unambiguous.
     const link = screen.getByRole("link", { name: "Go to Notes" });
-    expect(link.getAttribute("href")).toBe("#/ext/notes");
+    expect(link.getAttribute("href")).toBe("/#/ext/notes");
   });
 
   it("says a unit is composed but unlinkable when this build's registry has never heard of it", async () => {
