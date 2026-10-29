@@ -6,26 +6,30 @@
      on one line instead of a ragged edge. */
   align-items: stretch;
 }
-/* A panel stretched to its row's height hands the extra room to the chart, so
-   the "view as table" fold sits on the panel's floor in both halves of a row.
-   Whatever stands right above the fold keeps the interval the fold's own top
-   margin used to give it. */
+/* A panel stands as tall as its row, and its body takes the extra room, so
+   the foot lines up with the neighbour's. */
 .reporting-panel {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.reporting-panel > .panel-body,
-.reporting-panel > .panel-body > .report-chart {
+.reporting-panel > .panel-body {
   flex: 1;
-  display: flex;
-  flex-direction: column;
 }
+/* The "view as table" fold stays right under the chart it opens, with no rule
+   of its own: the foot's rule is the only line the card needs. */
 .reporting-panel .report-chart-data {
-  margin-top: auto;
+  margin-top: var(--space-3);
+  border-top: 0;
+  padding-top: 0;
 }
-.reporting-panel :has(+ .report-chart-data) {
-  margin-bottom: var(--space-5);
+/* The foot is one line: what the chart covers gives way, and the door to its
+   records keeps its words whole at the line's end. */
+.reporting-panel > .panel-foot {
+  flex-wrap: nowrap;
+}
+.reporting-panel > .panel-foot > .btn {
+  flex: none;
 }
 .reporting-headline {
   font: var(--fontHeadingLarge);
@@ -144,6 +148,14 @@
 
 /* The chart's foot: what it covers takes the free width, so the door to its
  * records lands at the band's end. */
+.reporting-details {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.reporting-details-trigger {
+  color: var(--textSecondary);
+}
 .reporting-context {
   display: flex;
   flex: 1 1 auto;

@@ -38,6 +38,8 @@ export function TargetProgress({
 // what is open now. Each view shows the ones it read.
 const HEADLINE_METRICS = [
   "bookings_won",
+  "closed_win_rate",
+  "qualified_pipeline_created",
   "forecast_landing",
   "open_pipeline",
   "meetings_held",

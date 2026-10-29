@@ -10,6 +10,8 @@ Sales won follows the close time span you picked and the deal owner of today. If
 
 Above the figures, a few sentences sum up the position. They say what was won against the target, where the quarter should end, and what is still open. They are written from the figures below them, and a figure that was not measured is left out.
 
+The row of figures under them shows sales won, the closed win rate, qualified pipeline created and open pipeline. The round **i** button beside a chart's title opens its reporting details.
+
 The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click sales won or open pipeline to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.

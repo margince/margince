@@ -161,3 +161,48 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
   expect(onEvidence).not.toHaveBeenCalled();
   expect(window.location.hash).toMatch(/^#\/analytics\/forecast/);
 });
+
+it("heads the sales figures with the win rate and new qualified pipeline beside sales won", () => {
+  const evaluation: typeof reportingStoryEvaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      ...reportingStoryEvaluation.metrics,
+      {
+        id: "closed_win_rate",
+        version: "1",
+        unit: "percent",
+        value: 42,
+        coverage: { status: "ok", withheld: false },
+        evidence: { metric: "closed_win_rate", context_id: "period" },
+      },
+      {
+        id: "qualified_pipeline_created",
+        version: "1",
+        unit: "EUR",
+        value: 12000000,
+        coverage: { status: "ok", withheld: false },
+        evidence: {
+          metric: "qualified_pipeline_created",
+          context_id: "period",
+        },
+      },
+    ],
+  };
+  render(
+    <StoryProviders>
+      <ResultsSummary evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  const labels = screen
+    .getAllByText(
+      /^(Sales won|Closed win rate|Qualified pipeline created|Open pipeline)$/,
+    )
+    .map((node) => node.textContent);
+  expect(labels).toEqual([
+    "Sales won",
+    "Closed win rate",
+    "Qualified pipeline created",
+    "Open pipeline",
+  ]);
+  expect(screen.getByText("42%")).toBeVisible();
+});

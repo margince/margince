@@ -7,6 +7,14 @@
   gap: var(--gapActions);
 }
 
+/* Reports and Setup at the tab row's far end: two verbs of one weight, a
+   control's gap apart. */
+.analytics-tab-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
 /* A section's body as ONE stack. The shell spaces the panels that stand
    directly in `.wrap`, but a section also stacks a period control, a readings
    row and a toolbar between its panels, and those met the panels with nothing

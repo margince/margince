@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -119,7 +120,7 @@ export function AnalyticsScreen({
         label={t("analytics.sections")}
         trailing={
           library || setup.length > 0 ? (
-            <>
+            <div className="analytics-tab-verbs">
               {library && (
                 <Button
                   variant="ghost"
@@ -133,7 +134,15 @@ export function AnalyticsScreen({
                 </Button>
               )}
               {setup.length > 0 && (
-                <Popover label={t("analytics.setup")}>
+                <Popover
+                  variant="ghost"
+                  label={
+                    <>
+                      {t("analytics.setup")}
+                      <ChevronDown aria-hidden="true" />
+                    </>
+                  }
+                >
                   {setup.map((candidate) => (
                     <Button
                       key={candidate}
@@ -145,7 +154,7 @@ export function AnalyticsScreen({
                   ))}
                 </Popover>
               )}
-            </>
+            </div>
           ) : undefined
         }
       />
