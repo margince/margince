@@ -38,11 +38,11 @@ screen against it. The sources are listed at the end of the section.
 
 1. **Depth comes from a ladder of surfaces**. Linear and Raycast draw no drop shadow at all.
 
-   A card is one step lighter than the page, and a row under the pointer is one step lighter again.
-   That order is the whole system of height.
+   A pane sits one step off the page, and a pane inside it one step off that pane. Its ground
+   comes from how deep it sits, not from what it is, so one card reads the same on every screen.
 
    Vercel puts the border first. A 1px hairline marks
-   every element that does not move, and a real shadow is kept for something above the page. Rule: paper → surface → raised is the ladder, and it keeps the parts apart.
+   every element that does not move, and a real shadow is kept for something above the page. Rule: the page, then one level for each pane inside a pane, is the ladder, and it keeps the parts apart.
 
    A surface at
    rest adds one tight layer on top (`--shadow-rest`, 1px down and 2px of blur at 5%). That gives it
@@ -131,11 +131,11 @@ Sources for this section:
 
 ## 2. The language in five sentences
 
-1. **A flat ground, and one pane per zone**. The page is light teal paper, one flat colour with no
+1. **A flat ground, and panes by depth**. The page is light teal paper, one flat colour with no
    light painted into it.
 
-   Each zone of a record is one white pane on it, with a hairline edge and a 20px corner. Inside a pane there
-   is only a title, a rule and rows. Dark is the same room with the lights down.
+   Each zone of a record is one white pane on it, with a hairline edge and a 20px corner. A pane
+   inside it sits one level down. Dark is the same room with the lights down.
 2. **Everything is a list**. The fields of a record are a list of label and value, in a panel on the
    left that folds.
 
@@ -162,8 +162,8 @@ Gates already hold rules 1 and 5; this file adds 2, 3 and 4.
 The meaning of each colour stays as it is. `--accent` (deep teal) is the brand and the primary
 action. `--ai*` (indigo) says an agent made something. The five state hues report how something
 turned out. These names are the ones `tokens.test.ts` pins, together with `--ai`, `--aiLight`, `--aiMed`
-and `--aiText`. What changes is the ground, which is one flat light teal, and the surface, which is
-one pane per zone.
+and `--aiText`. What changes is the ground, which is one flat light teal, and the surfaces, which
+step one level down for each pane inside a pane.
 
 **Five states, and never one more**. A screen may not make up a new one.
 
@@ -208,7 +208,9 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 | Token | Value | Role |
 |---|---|---|
 | `--bgPage` | `#eff6f3` | The paper the page is read on: one flat colour, with no light painted into it. |
-| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone, the details panel, a board card, a control at rest. The sidebar and the top bar are the same pane, with `blur(20px)` behind it. |
+| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. The sidebar is the same pane, painted solid. The top bar is the same pane, with `blur(20px)` behind it. |
+| `--ladder1` … `--ladder4` | [`tokens.css`](frontend/src/design-system/tokens.css) | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
+| `--ladder1Edge` … `--ladder4Edge` | [`tokens.css`](frontend/src/design-system/tokens.css) | The hairline of a pane and of its head, by the same depth. A pane reads its own as `--groundEdge`. |
 | `--bgHover` / `--bgStrip` | `#d7ede5` / `#e3f1ec` | A pointer resting on a row; a toolbar or footer band on the ground. |
 | `--bgChip` | `rgba(16,23,20,.03)` | The shipped name of the `--bg3` pill and keycap fill: the fill under a badge, a keycap, a segmented strip, the floor of a meter. It is see-through, so a chip reads one step deeper than any ground it lands on, an inset plate included. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; the outline of a control, the axis of the spine. |
@@ -220,9 +222,12 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 
 ### Dark
 
-The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and the hover
-step is the lightest. Each pane is
+The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and only
+`--ladder4` lifts past the hover step. A pane on the page (level 1) is
 `rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
+
+A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is
+as light as a state chip's ground can go and still clear AA.
 
 The accent goes up to `#3aae94` with dark ink (`#07221d`) on it, its text to `#66d5ba`, and the
 indigo text to `#9ba0f0`. The chip turns around instead of copying the light theme: `--bgChip` becomes
@@ -326,8 +331,10 @@ target for that new build. The shipped sheet may not match it.
 
   Nothing at rest glows, the monogram mesh is the only gradient, and nothing stacks a shadow under a
   shadow.
-- **No pane inside a pane**. A zone is one pane; the things in it are a title, a rule and rows. The
-  only closed shapes inside a pane are the agent's tinted row and a staged row's dashed edge.
+- A pane in a pane is one level down. A zone is a pane on the page, and a card in it sits on the
+  next level's ground. Level 4 holds for anything deeper. `surfaces.css` gives each level its ground,
+  so no component picks one. A dialog, popover, menu or side sheet keeps its own surface, and a card
+  in it starts again at level 2.
 
 ### More, and less
 
@@ -380,7 +387,7 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar is light, never green**. It is the `--pane` with `blur(20px)` over the flat ground,
+- **The sidebar is light, never green**. It is the `--pane`, painted solid over the flat ground,
   one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour open and
   folded, and in dark it is the same pane with the lights down. No screen or mock paints its ground
   dark green or in the accent. The dark green `--bgInkField` is only for what passes over the page,
@@ -883,8 +890,8 @@ The primitives in the catalog keep their names and `props`; this is how each one
 | `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (12px) radius; focus is a 2px accent ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never in upper case. `soft` by default: the tint of the tone behind the word, in the ink of the tone, with a hairline of the same tone as its edge (the record's standing badges beside its name, a status in a row). `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the `Sparkles` glyph. |
 | `Chip` | A fact a reader can use: a pill on the raised ground with a neutral hairline and a glyph, a link when the fact has a place to go, and a hover that says so. A badge is a tinted status, with an edge in its tone, that nobody presses. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
+| `Panel` | Becomes a **zone pane**: the ground and edge of its level (`--pane` and `--paneEdge` on the page) and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` is a row one level down from the pane. |
+| `StatCard` | The **reading card**: the ground of its level with its hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The field row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, and the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures aligned right; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`. |
@@ -923,7 +930,7 @@ where motion is *spent*:
 
 ## 10. Restraint: what a screen in this language does not do
 
-- Does not put a pane inside a pane. A zone is one pane; inside it a title, a hairline and rows.
+- Does not pick a pane's ground by hand. How deep the pane sits picks it (section 5).
 - Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram, section 3, is the
   one gradient). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
   its own. The only tinted thing inside a pane is the agent's row.

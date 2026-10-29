@@ -4,8 +4,7 @@
  * side, and it is the same one layer every resting surface in the product
  * wears. */
 .panel {
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   overflow: hidden;
@@ -25,7 +24,7 @@
   gap: var(--space-2) var(--space-3);
   min-height: var(--panel-head-h);
   padding: var(--space-2) var(--padPanel);
-  border-bottom: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--groundEdge);
 }
 /* A touch target is 44px, which a one-line head holds only on this padding. */
 @media (pointer: coarse) {
@@ -133,7 +132,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  background: var(--borderSubtle);
+  background: var(--groundSeam);
 }
 /* No seam between a group's head and the body under it: the head names that
    body, and a rule between the two cut a label from what it labels. The head is
@@ -150,7 +149,7 @@
    inside the table's scroll box would scroll away with the table. */
 .panel > .settinglist-bleed + .table-scroll-bleed,
 .panel > .table-scroll-bleed + .settinglist-bleed {
-  border-top: 1px solid var(--borderSubtle);
+  border-top: 1px solid var(--groundSeam);
 }
 
 /* An empty state inside a card is a SENTENCE, not a stage.
@@ -176,7 +175,7 @@
 .panel-body > .empty-plate {
   padding: var(--space-5) var(--space-4);
   text-align: center;
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* A state arm standing where full-bleed rows will stand pays the PANE's inset,
@@ -234,7 +233,7 @@
 }
 /* With an `action` the wrap draws the line, so it runs over the action too. */
 .panel > .panel-body > .disclosure-wrap {
-  border-top: 1px solid var(--borderSubtle);
+  border-top: 1px solid var(--groundSeam);
   margin-bottom: var(--space-4);
 }
 .panel > .panel-body > .disclosure-wrap > .disclosure {
@@ -295,7 +294,7 @@
   position: absolute;
   inset: 0 var(--padPanel) auto;
   height: 1px;
-  background: var(--borderSubtle);
+  background: var(--groundSeam);
 }
 /* interactive: the whole row is one press target, so the fill is honest about
  * what pointing at the row would hit. The transition belongs here too — an
@@ -304,7 +303,7 @@
   transition: background var(--dur-state);
 }
 .panel-row-interactive:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .panel-row:first-child::before,
 .panel-head + .panel-row::before {
@@ -315,7 +314,7 @@
   transition: background-color var(--dur-state) var(--ease-out);
 }
 .panel-row-record:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .panel-row-record::before,
 .panel > :not(.panel-row) + .panel-row::before {
@@ -332,7 +331,7 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   padding: var(--space-3) var(--padPanel);
-  border-top: 1px solid var(--borderSubtle);
+  border-top: 1px solid var(--groundEdge);
 }
 
 /* Verbs under the content they change: spaced off it so they read as an action
@@ -359,14 +358,12 @@
   padding-top: var(--space-4);
 }
 
-/* The plate is a ROW on the recessed ground, not a well inside the pane: a
- * box inside a pane is the one thing the language refuses. It runs the pane's
- * width like every other row and is told apart by its ground alone. */
+/* The plate is a ROW one level down from the pane: it runs the pane's width
+ * like every other row and is told apart by its ground alone. */
 .panel-plate {
   margin: 0;
   padding: var(--space-3) var(--padPanel);
   border-radius: 0;
-  background: var(--bgInset);
 }
 
 /* The lead panel — the one card on a page asking for a move rather than
@@ -527,7 +524,7 @@
 .filter-clause[data-proposed] {
   border-width: 1.5px;
   border-style: dashed;
-  background: var(--aiLight);
+  background-image: linear-gradient(var(--aiLight), var(--aiLight));
 }
 .staging-card {
   border-radius: var(--r-md);

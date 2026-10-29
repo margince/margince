@@ -9,6 +9,7 @@ import {
   composite,
   contrastOf,
   luminance,
+  luminanceOf,
   normalize,
   parseBlock,
   states,
@@ -63,24 +64,24 @@ const canonical: Record<string, string> = {
   // down rather than repeated here — this table is the pin that says a value
   // moved at all.
   "--info": "#0485f7",
-  "--infoText": "#005fb6",
+  "--infoText": "#005eb5",
   "--infoSurface": "color-mix(in srgb, var(--info) 12%, var(--bgElevated))",
   "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
   "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
   "--success": "#17c964",
-  "--successText": "#007334",
+  "--successText": "#007132",
   "--successSurface":
     "color-mix(in srgb, var(--success) 12%, var(--bgElevated))",
   "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
   "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
   "--warning": "#f5a524",
-  "--warningText": "#895800",
+  "--warningText": "#885700",
   "--warningSurface":
     "color-mix(in srgb, var(--warning) 16%, var(--bgElevated))",
   "--warningBg": "color-mix(in srgb, var(--warning) 16%, transparent)",
   "--warningBorder": "color-mix(in srgb, var(--warning) 45%, transparent)",
   "--danger": "#ff383c",
-  "--dangerText": "#c3001b",
+  "--dangerText": "#c2001a",
   "--dangerSurface": "color-mix(in srgb, var(--danger) 10%, var(--bgElevated))",
   "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
   "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
@@ -215,24 +216,37 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // the page lowest and lifts every other ground above it.
     const ladders = {
       light: [
+        "--ladder4",
         "--bgHover",
         "--bgInset",
         "--bgStrip",
+        "--ladder3",
         "--bgPage",
+        "--bgWell",
+        "--ladder2",
         "--bgElevated",
+        "--ladder1Solid",
       ],
-      dark: ["--bgPage", "--bgStrip", "--bgElevated", "--bgInset", "--bgHover"],
-    };
+      dark: [
+        "--bgPage",
+        "--bgStrip",
+        "--bgWell",
+        "--bgElevated",
+        "--ladder1Solid",
+        "--ladder2",
+        "--bgInset",
+        "--ladder3",
+        "--bgHover",
+        "--ladder4",
+      ],
+    } as const;
 
     for (const [theme, rungs] of Object.entries(ladders)) {
       it(`${theme}: each rung is strictly lighter than the one below it`, () => {
-        const block =
-          theme === "light"
-            ? light
-            : { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') };
+        const block = themes[theme as keyof typeof ladders];
         const measured = rungs.map((name) => {
           expect(block[name], `${name} missing`).toBeDefined();
-          return { name, l: luminance(block[name]) };
+          return { name, l: luminanceOf(block[name]) };
         });
         for (let i = 1; i < measured.length; i += 1) {
           const below = measured[i - 1];
@@ -245,6 +259,124 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         }
       });
     }
+
+    // Light deepens and dark lifts at every level; dark stops where the state
+    // chips' AA below still holds.
+    it("steps each level of the nesting ladder off the one it lies in", () => {
+      const levels = ["--ladder1Solid", "--ladder2", "--ladder3", "--ladder4"];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (let at = 1; at < levels.length; at += 1) {
+          const ratio = contrastOf(pal[levels[at]], pal[levels[at - 1]]);
+          expect(
+            ratio,
+            `${theme}: ${levels[at]} on ${levels[at - 1]}`,
+          ).toBeGreaterThanOrEqual(1.03);
+        }
+      }
+      const dark = levels.map((name) => luminance(themes.dark[name]));
+      expect([...dark].sort((a, b) => a - b)).toEqual(dark);
+      const lit = levels.map((name) => luminance(themes.light[name]));
+      expect([...lit].sort((a, b) => b - a)).toEqual(lit);
+    });
+
+    it("draws each level's edge off its ground, firmer below level 1", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        const ratios = [1, 2, 3, 4].map((level) => {
+          const ground =
+            pal[level === 1 ? "--ladder1Solid" : `--ladder${level}`];
+          const edge = composite(pal[`--ladder${level}Edge`], ground);
+          return contrastOf(edge, ground);
+        });
+        for (const [at, ratio] of ratios.entries()) {
+          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(1.15);
+        }
+        const deep = ratios.slice(1);
+        expect(
+          [...deep].sort((a, b) => a - b),
+          theme,
+        ).toEqual(deep);
+      }
+    });
+
+    // surfaces.css mixes each level's hover and strip from these shades; level 1
+    // must land where the page tokens stand.
+    it("shades hover and strip off every level's ground, both themes", () => {
+      const wash = (hex: string, share: string) => {
+        const [r, g, b] = [1, 3, 5].map((at) =>
+          Number.parseInt(hex.slice(at, at + 2), 16),
+        );
+        return `rgba(${r}, ${g}, ${b}, ${Number.parseFloat(share) / 100})`;
+      };
+      const grounds = [
+        "--bgElevated",
+        "--ladder1Solid",
+        "--ladder2",
+        "--ladder3",
+        "--ladder4",
+      ];
+      const failures: string[] = [];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const kind of ["hover", "strip"]) {
+          const tint = wash(pal[`--${kind}Shade`], pal[`--${kind}Share`]);
+          const token = pal[`--bg${kind[0].toUpperCase()}${kind.slice(1)}`];
+          const level1 = composite(tint, pal["--ladder1Solid"]);
+          expect(contrastOf(level1, token), `${theme} ${kind}`).toBeLessThan(
+            1.01,
+          );
+          const lifts = theme === "dark" && kind === "hover";
+          for (const ground of grounds) {
+            const shaded = composite(tint, pal[ground]);
+            const step = contrastOf(shaded, pal[ground]);
+            const lighter = luminanceOf(shaded) > luminanceOf(pal[ground]);
+            if (lighter !== lifts || step < 1.06) {
+              failures.push(
+                `${theme} ${kind} over ${ground}: ${step.toFixed(3)}`,
+              );
+            }
+            for (const role of [
+              "--textPrimary",
+              "--textSecondary",
+              "--accentText",
+            ]) {
+              const ratio = contrastOf(pal[role], shaded);
+              if (ratio < 4.5) {
+                failures.push(
+                  `${theme} ${role} on ${kind} over ${ground}: ${ratio.toFixed(2)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+      expect(failures.join("\n")).toBe("");
+    });
+
+    it("lifts a pressed segment above its chip track on every level", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const ground of [
+          "--bgPage",
+          "--bgElevated",
+          "--ladder1Solid",
+          "--ladder2",
+          "--ladder3",
+          "--ladder4",
+        ]) {
+          const track = composite(pal["--bgChip"], pal[ground]);
+          expect(
+            luminanceOf(pal["--segmentPressed"]),
+            `${theme} on ${ground}`,
+          ).toBeGreaterThan(luminanceOf(track));
+        }
+      }
+    });
+
+    it("makes level 1 opaque without moving it", () => {
+      for (const pal of Object.values(themes)) {
+        expect(composite(pal["--ladder1Solid"], pal["--bgPage"])).toBe(
+          composite(pal["--pane"], pal["--bgPage"]),
+        );
+      }
+    });
 
     // The grounds a callout's words sit on, read from the sheet that paints them.
     const calloutWashes = rulesOf([join(here, "callout.css")])
@@ -289,6 +421,11 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgInset": prose,
         "--bgHover": prose,
         "--bgStrip": prose,
+        "--bgWell": prose,
+        "--ladder1Solid": prose,
+        "--ladder2": prose,
+        "--ladder3": prose,
+        "--ladder4": prose,
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill, and so is the opaque Surface a soft badge letters on.
         // A state's fill is its TEXT token, never its base: no one ink sits on
@@ -305,6 +442,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ...Object.fromEntries(
           calloutWashes.map((ground) => [ground, ["--textPrimary"]]),
         ),
+        "--segmentPressed": ["--textPrimary"],
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
         "--textPrimary": ["--bgPage"],
@@ -348,6 +486,11 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgInset",
         "--bgHover",
         "--bgStrip",
+        "--bgWell",
+        "--ladder1Solid",
+        "--ladder2",
+        "--ladder3",
+        "--ladder4",
       ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {

@@ -517,8 +517,8 @@ const fullRowPress = {
 // three that report a reading stay put. Held together as one hover on every
 // row, a panel of readings claimed all five were targets.
 //
-// Check it in both themes: `--bgHover` sits a different distance from the row's
-// ground in each.
+// Check it in both themes: `--groundHover` sits a different distance from the
+// row's ground in each.
 export const InteractiveRows: Story = {
   args: {
     title: "Quarterly target",

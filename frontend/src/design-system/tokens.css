@@ -10,23 +10,16 @@
   /*
    * The GROUNDS are the design's paper (DESIGN.md §3).
    *
-   * A ladder, darkest first, from the hover step up to the surface a card
-   * floats on. The ORDER carries the meaning — tokens.test.ts asserts it in
-   * both themes rather than trusting five plausible values to stay in sequence:
+   * Darkest first, as tokens.test.ts asserts the order in both themes:
    *
-   *   --bgHover        #d7ede5  a pointer resting on a row on the page
-   *   --bgInset        #eaedeb  a well inside a card: an inset row, a plate
+   *   --bgHover        #d7ede5  a pointer resting on a row
+   *   --bgInset        #eaedeb  a pressed control, a disabled field
    *   --bgStrip        #e3f1ec  a toolbar or footer band on the ground
    *   --bgPage         #eff6f3  the reading ground, flat under the shell
-   *   --bgElevated     #fbfcfb  a card, a panel, a menu
+   *   --bgElevated     #fbfcfb  an overlay, a control's face
    *
-   * The dark theme is NOT this list mirrored. On a dark ground every surface
-   * lifts toward the light, so the ladder runs the other way and only the
-   * DIRECTION of each step is shared; the dark block states its own order.
-   *
-   * --bgElevated, not the page, is the brightest ground, so a card stands off
-   * by its own lightness rather than by the shadow alone. That is what lets
-   * --shadow-rest be as slight as it is.
+   * A pane's ground follows its depth, not its kind: the --ladder* tokens below
+   * and surfaces.css. The dark theme states its own order.
    */
   --bgPage: #eff6f3;
   --bgElevated: #fbfcfb;
@@ -36,17 +29,34 @@
    * segmented strip, the trough of a meter. Translucent, so it reads one step
    * deeper than any rung it lands on, an inset plate included. */
   --bgChip: rgba(16, 23, 20, 0.03);
+  /* A pressed segment's raised face: the brightest face on its chip track, at
+   * any depth. */
+  --segmentPressed: #fcfffe;
   --bgHover: #d7ede5;
   /* A band that lies on the ground, so it stays visible against the page. */
   --bgStrip: #e3f1ec;
-  /* A RECESS in an elevated surface — the well a board's stage is drawn as.
-   * One hair under --bgElevated (1.03:1), which is what lets the panes inside
-   * it be the lifted thing: --bgInset is a card's own ground, and five of them
-   * side by side read as five cards with cards inside them. */
+  /* Hover and strip on a nested ground: a teal shade mixed into that ground
+   * (surfaces.css), at shares that land level 1 on --bgHover and --bgStrip. */
+  --hoverShade: #b2dbcc;
+  --hoverShare: 50%;
+  --stripShade: #98c7b6;
+  --stripShare: 25%;
+  /* A recess one hair under --bgElevated: the head row of a table in prose. */
   --bgWell: #f6f8f7;
-  /* One pane per zone (DESIGN.md §5), and a hairline for its edge. */
+  /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
+  /* Grounds and hairlines by nesting depth (surfaces.css). Solid is level 1 made
+   * opaque, for a band or mark that hides what passes under it. */
+  --ladder1: var(--pane);
+  --ladder1Solid: var(--pane);
+  --ladder2: #f9fbfb;
+  --ladder3: #f1f3f3;
+  --ladder4: #e3e7e8;
+  --ladder1Edge: var(--paneEdge);
+  --ladder2Edge: #e3e7e8;
+  --ladder3Edge: #d0d6d8;
+  --ladder4Edge: #b6bfc1;
 
   --accent: #045647;
   /* The accent as TEXT, split from the accent as a FILL: equal in light; in
@@ -78,8 +88,8 @@
    * Text token, which was chosen to carry ink, and this one flips with the
    * theme because the ground under it does: a Text red is deep in light, where
    * a near-white reads on it, and bright in dark, where near-black does. This
-   * gives 6.00:1 on --infoText, 5.67:1 on --successText, 5.74:1 on
-   * --warningText, 5.95:1 on --dangerText and 11.78:1 on --discoveryText; the
+   * gives 6.08:1 on --infoText, 5.83:1 on --successText, 5.82:1 on
+   * --warningText, 6.00:1 on --dangerText and 11.78:1 on --discoveryText; the
    * dark block states the other half. Kept a token of its own rather than
    * folded into --textOnAccentControl: the accent and the state hues are
    * different fills that retune independently. */
@@ -237,25 +247,25 @@
    * tint, in both themes, holds each Text token to its base's OKLCh hue, and
    * fails when a state is missing from either theme. */
   --info: #0485f7;
-  --infoText: #005fb6;
+  --infoText: #005eb5;
   --infoSurface: color-mix(in srgb, var(--info) 12%, var(--bgElevated));
   --infoBg: color-mix(in srgb, var(--info) 12%, transparent);
   --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
 
   --success: #17c964;
-  --successText: #007334;
+  --successText: #007132;
   --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
   --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
 
   --warning: #f5a524;
-  --warningText: #895800;
+  --warningText: #885700;
   --warningSurface: color-mix(in srgb, var(--warning) 16%, var(--bgElevated));
   --warningBg: color-mix(in srgb, var(--warning) 16%, transparent);
   --warningBorder: color-mix(in srgb, var(--warning) 45%, transparent);
 
   --danger: #ff383c;
-  --dangerText: #c3001b;
+  --dangerText: #c2001a;
   --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
   --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
@@ -761,13 +771,27 @@
   --bgElevated: #161d1a;
   --bgInset: #1a211e;
   --bgChip: rgba(239, 247, 244, 0.09);
+  --segmentPressed: #3d4441;
   --bgHover: #172823;
   --bgStrip: #0a1713;
+  --hoverShade: #1a493b;
+  --hoverShare: 25%;
+  --stripShade: #02130e;
+  --stripShare: 60%;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
   --bgWell: #111815;
   --pane: rgba(239, 247, 244, 0.045);
   --paneEdge: rgba(239, 247, 244, 0.09);
+  /* Each level lifts toward the light on its light rung's hue, and each edge
+     keeps its light contrast. Level 4 stops where a state chip still clears AA. */
+  --ladder1Solid: #161d1b;
+  --ladder2: #1c2020;
+  --ladder3: #1f2323;
+  --ladder4: #212628;
+  --ladder2Edge: #292f30;
+  --ladder3Edge: #31383a;
+  --ladder4Edge: #3b4345;
 
   --accent: #3aae94;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
@@ -910,13 +934,25 @@
     --bgElevated: #161d1a;
     --bgInset: #1a211e;
     --bgChip: rgba(239, 247, 244, 0.09);
+    --segmentPressed: #3d4441;
     --bgHover: #172823;
     --bgStrip: #0a1713;
+    --hoverShade: #1a493b;
+    --hoverShare: 25%;
+    --stripShade: #02130e;
+    --stripShare: 60%;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
     --bgWell: #111815;
     --pane: rgba(239, 247, 244, 0.045);
     --paneEdge: rgba(239, 247, 244, 0.09);
+    --ladder1Solid: #161d1b;
+    --ladder2: #1c2020;
+    --ladder3: #1f2323;
+    --ladder4: #212628;
+    --ladder2Edge: #292f30;
+    --ladder3Edge: #31383a;
+    --ladder4Edge: #3b4345;
 
     --accent: #3aae94;
 

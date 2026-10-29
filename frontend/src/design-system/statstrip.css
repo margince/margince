@@ -137,6 +137,10 @@
     border: 0;
     border-radius: 0;
     background: none;
+    /* A row is no pane, so it hands on its host's ground and edge. */
+    --ground: inherit;
+    --groundEdge: inherit;
+    --groundSeam: inherit;
     padding: var(--space-3) 0;
     min-block-size: 0;
     display: grid;
@@ -184,7 +188,7 @@
     min-block-size: 0;
   }
   .stat-strip:has(.stat-card-narrow-row) > * + * {
-    border-block-start: 1px solid var(--paneEdge);
+    border-block-start: 1px solid var(--groundEdge);
   }
   /* A wrapper's own corner goes with its box: a radius on a full-bleed row
      clips the hairline it sits against. */
@@ -211,8 +215,7 @@
 .stat-strip[data-density="plate"] {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0;
-  border-block-start: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
+  border-block-start: 1px solid var(--groundEdge);
   --stat-strip-tail: 1;
 }
 .stat-strip[data-density="plate"] > .stat-card,
@@ -282,5 +285,5 @@
   color: var(--accentText);
 }
 .stat-strip[data-density="plate"] .stat-card:has(.stat-card-open):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }

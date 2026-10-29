@@ -49,7 +49,7 @@
 }
 
 .tagresult-row:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .tagresult-row:focus-visible {

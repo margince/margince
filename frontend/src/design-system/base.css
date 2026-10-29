@@ -561,7 +561,7 @@ a:not([class]):focus-visible {
 }
 .iconbtn:hover,
 .btn.btn-bare:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .iconbtn:focus-visible,
@@ -665,9 +665,8 @@ kbd {
   max-height: 300px;
   overflow: auto;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   font-family: var(--fontFamilyMono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

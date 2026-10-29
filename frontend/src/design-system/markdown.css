@@ -77,9 +77,8 @@
    very line a citation points at. */
 .md-code {
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
   font: var(--fontBodySmall);
   white-space: pre-wrap;
 }
