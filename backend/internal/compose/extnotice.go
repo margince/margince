@@ -11,6 +11,8 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -34,10 +36,6 @@ const extensionNoticesPerMinute = 60
 // spam, and an outage of the shared counter must not lift it.
 var extensionNotices = ratelimit.New("extension-notice", ratelimit.FailClosed, extensionNoticesPerMinute, time.Minute)
 
-// noticeRecords are the record types a notice may be about: the identity tables
-// a reader opens by id.
-var noticeRecords = map[string]bool{string(recordTypeContact): true, string(recordTypeCompany): true, string(recordTypeDeal): true}
-
 //nolint:ireturn // returning the published repo IS the seam: a unit holds extension.NoticeRepo, never a core type.
 func (c extensionCore) Notices() extension.NoticeRepo { return extensionNoticeDoor{core: c} }
 
@@ -53,8 +51,8 @@ func validateNotice(in extension.NoticeRequest) error {
 			return fmt.Errorf("%w: member is not an id", extension.ErrInvalid)
 		}
 	}
-	if !noticeRecords[in.Record.Type] {
-		return fmt.Errorf("%w: record type must be contact, company or deal", extension.ErrInvalid)
+	if types := extension.NoticeRecordTypes(); !slices.Contains(types, in.Record.Type) {
+		return fmt.Errorf("%w: record type must be %s", extension.ErrInvalid, strings.Join(types, ", "))
 	}
 	if _, err := ids.Parse(in.Record.ID); err != nil {
 		return fmt.Errorf("%w: record id is not an id", extension.ErrInvalid)

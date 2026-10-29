@@ -189,6 +189,9 @@ var erasureCascadeFiles = []string{
 	// its own.
 	"internal/modules/privacy/subjectcolumns.go",
 	"internal/modules/privacy/erasurestrings.go",
+	// The audit history of the signals about the subject, which keeps the old
+	// kind and evidence of a corrected signal. Same Art. 17 transaction.
+	"internal/modules/privacy/erasure_signals.go",
 }
 
 // reachedButNotCascade are files EraseContact's call graph reaches which are NOT

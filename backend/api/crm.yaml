@@ -52705,13 +52705,21 @@ components:
     UpdateSignalRequest:
       type: object
       description: |
-        Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+        Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
         `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
         resolved ids are resolver-owned and not writable here.
       properties:
         status: { type: string, enum: [open, acknowledged, resolved, dismissed] }
         note: { type: [string, 'null'], description: Optional outcome note recorded with a status change. }
         severity: { type: string, enum: [info, warn, urgent] }
+        kind:
+          type: string
+          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
+          description: Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/SignalEvidence' }
+          description: Replaces the signal's evidence. The audit row keeps the old evidence.
 
     SignalListResponse:
       type: object

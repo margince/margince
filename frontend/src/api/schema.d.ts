@@ -38574,7 +38574,7 @@ export interface components {
             source: string;
         };
         /**
-         * @description Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+         * @description Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
          *     `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
          *     resolved ids are resolver-owned and not writable here.
          */
@@ -38585,6 +38585,13 @@ export interface components {
             note?: string | null;
             /** @enum {string} */
             severity?: "info" | "warn" | "urgent";
+            /**
+             * @description Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+             * @enum {string}
+             */
+            kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other";
+            /** @description Replaces the signal's evidence. The audit row keeps the old evidence. */
+            evidence?: components["schemas"]["SignalEvidence"][];
         };
         SignalListResponse: {
             data: components["schemas"]["Signal"][];

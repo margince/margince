@@ -111,7 +111,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen extdoc-gen extdoc-check help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -698,6 +698,15 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 # gates/configgenerated_test.go fails a stale one, and drift diffs them below.
 config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
+
+# The tables of docs/explanation/extensions-at-a-glance.md, written from the
+# source of pkg/extension. Nothing in `check`, `gen` or CI runs it: run it when
+# the extension surface changes.
+extdoc-gen: ## Regenerate the extensions page tables from the extension package
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-extdoc
+
+extdoc-check: ## Fail when the extensions page tables differ from the extension package
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-extdoc -check
 
 drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
 	# gen regenerates the committed per-unit manifests too (via composition);
