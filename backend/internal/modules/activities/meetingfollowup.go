@@ -200,8 +200,8 @@ func meetingHeldSQL(alias, now string) string {
 func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	instant := arg(asOf)
-	g, err := followUpGatesFor(ctx, arg)
+	instant, reader, window := arg(asOf), arg(readerOrNobody(ctx)), arg(windowDays)
+	g, err := followUpGatesFor(ctx, arg, meetingNeedSQL())
 	if err != nil {
 		return "", nil, err
 	}
@@ -214,12 +214,44 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 		return "", nil, err
 	}
 	at := fmt.Sprintf("$%d", instant)
-	return fmt.Sprintf(meetingFollowUpsSQL,
-		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
+	held := meetingHeldSQL("a", at)
+	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held, narrowed)
+	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
+		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
+		g.later, relstrength.InteractionCountsSQL("later"), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
-		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
-	), args, nil
+		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
+	)), args, nil
+}
+
+// meetingCandidatesSQL is the meetings the lane may report: held, inside the
+// window, and the reader took part. Its terms are ones meetingFollowUpsSQL also
+// tests. follow_from is where a later contact starts to count.
+func meetingCandidatesSQL(asOf, window, reader, held, narrowed string) string {
+	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, ` + followUpFromSQL + ` AS follow_from
+	  FROM activity a
+	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND NOT ` + ImportedHistorySQL + `
+	   AND ` + held + ` AND ` + narrowed + `
+	   AND ` + meetingEndSQL + ` <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
+	   AND ` + meetingEndSQL + fmt.Sprintf(` >= %s::timestamptz - make_interval(days => %s::int + %d)`, asOf, window, AwaitingReplyLookbackDays) + `
+	   AND ` + storekit.MeetingResponsibilitySQL("a", reader)
+}
+
+// meetingNeedSQL names the activities the meeting statement reads: each
+// candidate, its thread, and what reached a contact it was with after it. A
+// contact merged away counts as its survivor, as the statement's recipients do.
+// Each arm keeps only terms the statement's own test also holds.
+func meetingNeedSQL() string {
+	return threadNeedSQL(followUpCandidates) + `
+	 UNION SELECT later.id FROM ` + followUpCandidates + ` c
+	   JOIN (SELECT l.activity_id, l.contact_id FROM activity_link l WHERE l.contact_id IS NOT NULL
+	         UNION ALL SELECT p.activity_id, p.contact_id FROM activity_participant p
+	          WHERE p.contact_id IS NOT NULL AND p.user_id IS NULL) met ON met.activity_id = c.id
+	   JOIN contact named ON named.id = met.contact_id
+	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
+	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
+	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = COALESCE(named.merged_into_id, named.id)
+	   JOIN activity later ON later.id = touched.activity_id AND later.occurred_at >= c.follow_from`
 }
 
 func collectMeetingFollowUps(rows pgx.Rows) ([]AwaitingReply, error) {

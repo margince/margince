@@ -224,19 +224,22 @@ func overdueTasksBy(
 	if err != nil {
 		return nil, false, err
 	}
+	// The scope is computed once, in the inner select. The window and the order
+	// read it as a column, because Postgres plans every copy of the gate.
 	query := fmt.Sprintf(`
-		SELECT DISTINCT ON (l.%[1]s)
-		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), `+storekit.TaskDueSQL("a")+`,
-		       coalesce((%[5]s), false) AS visible,
-		       bool_or(NOT coalesce((%[5]s), false)) OVER (PARTITION BY l.%[1]s) AS dropped
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
-		  LEFT JOIN app_user u ON u.id = a.assignee_id
-		         AND `+identity.LiveMemberSQL("u")+`
-		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
-		   AND %[6]s AND %[7]s
-		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, `+storekit.TaskDueSQL("a")+`, a.id`,
+		SELECT DISTINCT ON (t.key) t.key, t.subject, t.assignee, t.due, t.visible,
+		       bool_or(NOT t.visible) OVER (PARTITION BY t.key) AS dropped
+		  FROM (SELECT l.%[1]s AS key, coalesce(a.subject, '') AS subject,
+		               coalesce(u.display_name, '') AS assignee, `+storekit.TaskDueSQL("a")+` AS due,
+		               a.id, coalesce((%[5]s), false) AS visible
+		          FROM activity a
+		          JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
+		          LEFT JOIN app_user u ON u.id = a.assignee_id
+		                 AND `+identity.LiveMemberSQL("u")+`
+		         WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
+		           AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
+		           AND %[6]s AND %[7]s) t
+		 ORDER BY t.key, t.visible DESC, t.due, t.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
 	rows, err := tx.Query(ctx, query, args...)

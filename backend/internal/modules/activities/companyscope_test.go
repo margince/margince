@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -259,12 +260,20 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
+	var args []any
+	with, err := waitingWithSQL(teamScopedCtx(), "SELECT 1", func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		t.Fatalf("rendering the waiting read's gated set: %v", err)
+	}
+	if auth.ContentGateCopies(with) != 1 {
+		t.Fatal("the waiting read's gated set carries no content gate, so it admits rows through a weaker one")
+	}
 	source, err := os.ReadFile("waiting.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
 	}
-	if !strings.Contains(string(source), "auth.ActivityContentClause") {
-		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
+	if !strings.Contains(string(source), "waitingWithSQL(") {
+		t.Fatal("the waiting read no longer reads through the gated set")
 	}
 	if !strings.Contains(string(source), "auth.LinkTargetVisibleClause") {
 		t.Fatal("the waiting read returns links without checking the reader may see what they point at")

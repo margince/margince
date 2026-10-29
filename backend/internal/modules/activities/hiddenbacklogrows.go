@@ -133,18 +133,23 @@ func (s *Store) HiddenWaitingRows(
 		// the other.
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		relaxed, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
+		relaxedFrom, relaxed, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
 		if err != nil {
 			return err
 		}
-		strict, err := s.waitingStatement(
+		strictFrom, strict, err := s.waitingStatement(
 			ctx, tx, asOf, waitingRelaxation{reader: reader}, measured, arg,
 		)
 		if err != nil {
 			return err
 		}
+		// Both halves read one gated set, so the difference carries one gate.
+		with, err := waitingWithSQL(ctx, relaxedFrom+" UNION "+strictFrom, arg)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
-			`SELECT r.* FROM (`+relaxed+`) r
+			with+`SELECT r.* FROM (`+relaxed+`) r
 			 WHERE r.id NOT IN (SELECT s.id FROM (`+strict+`) s)`, args...)
 		if err != nil {
 			return err
