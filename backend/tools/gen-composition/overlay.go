@@ -51,6 +51,7 @@ type decoration struct {
 	unit    string
 	pkg     string // relative to the backend module, slash-separated
 	funcKey string // "(*Store).CreateDeal" or "Name"
+	file    string // the core file that declares it
 }
 
 func (d decoration) id() string { return d.pkg + "." + d.funcKey }
@@ -176,13 +177,16 @@ func composeUnitOverlays(u extensionUnit, backend, out string, replace, owners m
 		if err := unitOverlayFile(u, path, pkg, backend, out, replace); err != nil {
 			return err
 		}
+		if err := checkOverlayContent(u, path, pkg, file, backend); err != nil {
+			return err
+		}
 		for _, key := range decoratedFuncs(file) {
 			d := decoration{unit: u.Name, pkg: pkg, funcKey: key}
 			if other, taken := owners[d.id()]; taken {
 				return fmt.Errorf("%s and %s both decorate %s — one function has one decorator", other, u.Name, d.id())
 			}
 			owners[d.id()] = u.Name
-			warning, err := checkFunctionLock(lock, backend, d)
+			warning, err := checkFunctionLock(lock, backend, &d)
 			if err != nil {
 				return fmt.Errorf("extensions/%s: %w", u.Name, err)
 			}
@@ -245,6 +249,66 @@ func withoutBuildTag(raw []byte) ([]byte, bool) {
 	return raw, false
 }
 
+// checkOverlayContent keeps an overlay to functions and types over what its
+// core package already reaches. It refuses init, a package-level var, a //go:
+// directive past the build tag, unsafe and cgo. Past the standard library, it
+// refuses an import the core package does not make.
+func checkOverlayContent(u extensionUnit, path, pkg string, file *ast.File, backend string) error {
+	refuse := func(what string) error {
+		return fmt.Errorf("extensions/%s: %s %s — an overlay holds functions and types over what core's %s already imports", u.Name, path, what, pkg)
+	}
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && fn.Name.Name == "init" {
+			return refuse("declares init")
+		}
+		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.VAR {
+			return refuse("declares a package-level var")
+		}
+	}
+	for _, group := range file.Comments {
+		for _, c := range group.List {
+			if strings.HasPrefix(c.Text, "//go:") && strings.TrimSpace(c.Text) != overlayBuildTag {
+				return refuse("carries " + strings.Fields(c.Text)[0])
+			}
+		}
+	}
+	allowed, err := coreImports(backend, pkg)
+	if err != nil {
+		return err
+	}
+	for _, imp := range file.Imports {
+		target := strings.Trim(imp.Path.Value, `"`)
+		std := !strings.Contains(strings.Split(target, "/")[0], ".")
+		if target == "unsafe" || target == "C" || (!std && !allowed[target]) {
+			return refuse("imports " + target)
+		}
+	}
+	return nil
+}
+
+// coreImports lists the imports the non-test files of a core package make.
+func coreImports(backend, pkg string) (map[string]bool, error) {
+	dir := filepath.Join(backend, filepath.FromSlash(pkg))
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	imports := map[string]bool{}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") || strings.HasSuffix(e.Name(), "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(dir, e.Name()), nil, parser.ImportsOnly)
+		if err != nil {
+			return nil, err
+		}
+		for _, imp := range file.Imports {
+			imports[strings.Trim(imp.Path.Value, `"`)] = true
+		}
+	}
+	return imports, nil
+}
+
 // funcKey names a function the way a lock line and an error do.
 func funcKey(fn *ast.FuncDecl) string {
 	if fn.Recv == nil || len(fn.Recv.List) == 0 {
@@ -264,11 +328,12 @@ func funcKey(fn *ast.FuncDecl) string {
 // checkFunctionLock compares a decorated function's source with the hash the
 // unit's lock pins, and returns a warning naming the line to write when they
 // disagree.
-func checkFunctionLock(lock map[string]string, backend string, d decoration) (string, error) {
-	_, src, err := findCoreFunc(backend, d.pkg, d.funcKey)
+func checkFunctionLock(lock map[string]string, backend string, d *decoration) (string, error) {
+	file, src, err := findCoreFunc(backend, d.pkg, d.funcKey)
 	if err != nil {
 		return "", err
 	}
+	d.file = file
 	got := bytesSHA256(src)
 	want, locked := lock[d.id()]
 	switch {
@@ -318,11 +383,7 @@ func findCoreFunc(backend, pkg, key string) (string, []byte, error) {
 func rewriteDecoratedCore(decorations []decoration, backend, out string, replace map[string]string) error {
 	byFile := map[string][]string{}
 	for _, d := range decorations {
-		path, _, err := findCoreFunc(backend, d.pkg, d.funcKey)
-		if err != nil {
-			return err
-		}
-		byFile[path] = append(byFile[path], d.funcKey)
+		byFile[d.file] = append(byFile[d.file], d.funcKey)
 	}
 	for _, path := range slices.Sorted(maps.Keys(byFile)) {
 		fset := token.NewFileSet()
@@ -356,5 +417,5 @@ func writeBuildFile(path string, content []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
 		return err
 	}
-	return os.WriteFile(path, content, 0o644) // #nosec G306 -- build output
+	return os.WriteFile(path, content, 0o644) // #nosec G306 G703 -- build output under build/overlay, at a path derived from the tree
 }

@@ -14,9 +14,12 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -59,8 +62,8 @@ func TestAWriteHookRefusalFailsTheWrite(t *testing.T) {
 		},
 	}}})
 	err := dispatchWriteHooks(context.Background(), nil, storekit.AuditedWrite{EntityType: "deal", Action: "create"})
-	if err == nil {
-		t.Fatal("a refusing hook let the write through")
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("err = %v, want the unit's refusal mapped to permission denied", err)
 	}
 }
 
@@ -144,7 +147,27 @@ func TestPreflightRefusesAHookThatCouldNeverRun(t *testing.T) {
 		},
 		"an operation the contract does not have": {
 			ext:  extension.Extension{Name: "acme", OperationHooks: []extension.OperationHook{{Operations: []string{"createDael"}, Handle: noop}}},
-			want: `hooks operation "createDael"`,
+			want: `hooks operation "createDael", which is not a record operation`,
+		},
+		"a sign-in operation": {
+			ext:  extension.Extension{Name: "acme", OperationHooks: []extension.OperationHook{{Operations: []string{"login"}, Handle: noop}}},
+			want: `hooks operation "login", which is not a record operation agents can reach`,
+		},
+		"a credential operation": {
+			ext:  extension.Extension{Name: "acme", OperationHooks: []extension.OperationHook{{Operations: []string{"changePassword"}, Handle: noop}}},
+			want: `hooks operation "changePassword"`,
+		},
+		"writes to a seat": {
+			ext: extension.Extension{Name: "acme", WriteHooks: []extension.WriteHook{{
+				Entity: "app_user", Actions: []string{"update"}, Handle: func(context.Context, extension.Runtime, extension.Write) error { return nil },
+			}}},
+			want: `hooks writes to "app_user"`,
+		},
+		"writes to the unit's own rows": {
+			ext: extension.Extension{Name: "acme", WriteHooks: []extension.WriteHook{{
+				Entity: "ext_acme_note", Actions: []string{"create"}, Handle: func(context.Context, extension.Runtime, extension.Write) error { return nil },
+			}}},
+			want: `hooks writes to "ext_acme_note"`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -154,7 +177,53 @@ func TestPreflightRefusesAHookThatCouldNeverRun(t *testing.T) {
 			}
 		})
 	}
-	if err := preflightHooks(extension.Extension{Name: "acme", OperationHooks: []extension.OperationHook{{Operations: []string{"createDeal"}, Handle: noop}}}); err != nil {
-		t.Fatalf("a hook on a real operation was refused: %v", err)
+	if err := preflightHooks(extension.Extension{
+		Name:           "acme",
+		OperationHooks: []extension.OperationHook{{Operations: []string{"createDeal"}, Handle: noop}},
+		WriteHooks: []extension.WriteHook{{
+			Entity: "deal", Actions: []string{"create"}, Handle: func(context.Context, extension.Runtime, extension.Write) error { return nil },
+		}},
+	}); err != nil {
+		t.Fatalf("hooks on a deal were refused: %v", err)
+	}
+}
+
+// A hook that opens its Tx on a fresh context still carries the write-hook
+// mark, so a core write it makes runs no hook again.
+func TestTheWriteHookMarkTravelsIntoAHooksOwnContext(t *testing.T) {
+	invocation := principal.WithWorkspaceID(storekit.WithinWriteHook(context.Background()), ids.NewV7())
+	rt := runtimeFor(invocation, "acme", "0.1.0", "hook/write/deal.create", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+	bound, err := rt.scoped(context.Background())
+	if err != nil {
+		t.Fatalf("scoped: %v", err)
+	}
+	if !storekit.InWriteHook(bound) {
+		t.Fatal("a hook's fresh context lost the mark, so its own core write would run the hooks again")
+	}
+}
+
+// A write may run as the system principal, which every RBAC check passes. So a
+// hook's runtime is unattended, and it cannot ingest under the write's locks.
+func TestAWriteHookRunsUnattendedAndCannotIngest(t *testing.T) {
+	var ingestErr error
+	unattended := false
+	withComposed(t, extension.Extension{Name: "acme", WriteHooks: []extension.WriteHook{{
+		Entity: "deal", Actions: []string{"create"},
+		Handle: func(ctx context.Context, rt extension.Runtime, _ extension.Write) error {
+			if joined, ok := rt.(joinedRuntime); ok {
+				unattended = joined.unattended
+			}
+			_, ingestErr = rt.Ingest(ctx, "", extension.Record{})
+			return nil
+		},
+	}}})
+	if err := dispatchWriteHooks(context.Background(), nil, storekit.AuditedWrite{EntityType: "deal", Action: "create"}); err != nil {
+		t.Fatal(err)
+	}
+	if !unattended {
+		t.Error("the hook's runtime is attended, so a system-principal write would hand it an unchecked Core()")
+	}
+	if !errors.Is(ingestErr, extension.ErrForbidden) {
+		t.Errorf("Ingest = %v, want it refused inside a write", ingestErr)
 	}
 }

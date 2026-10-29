@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -298,6 +299,11 @@ func (r *callRuntime) scoped(ctx context.Context) (context.Context, error) {
 	// than at the write, for the same reason as the three above — this is the
 	// one place that knows the invocation, and a value a handler could supply
 	// would be a unit able to sign another unit's name.
+	// A write hook's mark travels the same way. A hook that opens its Tx on a
+	// fresh context then cannot set the hooks off again with a core write.
+	if storekit.InWriteHook(r.callCtx) {
+		ctx = storekit.WithinWriteHook(ctx)
+	}
 	return provenance.WithExtension(ctx, provenance.Extension{
 		Unit: r.unit, Version: r.version, Via: r.via,
 	}), nil

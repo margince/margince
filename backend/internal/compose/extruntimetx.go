@@ -95,28 +95,9 @@ func (r *callRuntime) endIngest() {
 // application role can name. The boundary that holds is the published seam
 // itself — the grant surface extmigrategate polices and the `ext` schema a unit
 // owns.
-func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) error {
-	return r.runTx(ctx, func(ctx context.Context, body func(pgx.Tx) error) error {
-		return database.WithWorkspaceTx(ctx, r.deps.pool, body)
-	}, fn)
-}
-
-// runTx runs fn on the transaction open hands it: the unit's own, or the core
-// write a hook runs inside.
-func (r *callRuntime) runTx(ctx context.Context, open func(context.Context, func(pgx.Tx) error) error, fn func(ctx context.Context, tx extension.Tx) error) (err error) {
-	ctx, err = r.scoped(ctx)
+func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) (err error) {
+	ctx, namespace, err := r.enterUnitTx(ctx)
 	if err != nil {
-		return err
-	}
-	// Derived BEFORE the transaction opens. The unit name was validated at
-	// registration, so an invalid one here is a composition that should never
-	// have booted — and learning that inside a transaction would only make the
-	// report harder to read than it needs to be.
-	namespace, err := extension.Name(r.unit).Namespace()
-	if err != nil {
-		return fmt.Errorf("compose: the invoking unit's name has no SQL namespace: %w", err)
-	}
-	if err := r.enterTx(); err != nil {
 		return err
 	}
 	defer r.leaveTx()
@@ -130,21 +111,42 @@ func (r *callRuntime) runTx(ctx context.Context, open func(context.Context, func
 		defer cancel()
 		err = errors.Join(err, audit.flush(flushCtx, r.deps.pool))
 	}()
-	return open(ctx, func(tx pgx.Tx) error {
+	return database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		// Re-checked inside: opening a transaction is a round trip, and a
 		// Runtime released during it must not reach the callback with a live
 		// handle. Refusing here rolls the (empty) transaction back.
 		if err := r.usable(); err != nil {
 			return err
 		}
-		return fn(ctx, extensionTx{
-			tx: tx,
-			core: extensionCore{
-				tx: tx, unattended: r.unattended, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
-			},
-			ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
-		})
+		return fn(ctx, r.txOn(tx, namespace, audit))
 	})
+}
+
+// enterUnitTx binds the invocation's authority to ctx, derives the unit's SQL
+// namespace and enters the Runtime's transaction depth. The caller leaves it.
+func (r *callRuntime) enterUnitTx(ctx context.Context) (context.Context, string, error) {
+	ctx, err := r.scoped(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	// Derived before any transaction opens: registration validated the name, so
+	// a failure here is a composition that should never have booted.
+	namespace, err := extension.Name(r.unit).Namespace()
+	if err != nil {
+		return nil, "", fmt.Errorf("compose: the invoking unit's name has no SQL namespace: %w", err)
+	}
+	return ctx, namespace, r.enterTx()
+}
+
+// txOn is the unit's handle on one open transaction, its own or core's.
+func (r *callRuntime) txOn(tx pgx.Tx, namespace string, audit *readAudit) extensionTx {
+	return extensionTx{
+		tx: tx,
+		core: extensionCore{
+			tx: tx, unattended: r.unattended, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
+		},
+		ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
+	}
 }
 
 // auditFlushBudget bounds writing a queued export entry once the unit is done.

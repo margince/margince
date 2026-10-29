@@ -221,6 +221,41 @@ func TestOverlayRefusals(t *testing.T) {
 			},
 			want: "which this core does not have",
 		},
+		"code that runs at load": {
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), overlaySource+"\nfunc init() {}\n")
+				return []extensionUnit{u}
+			},
+			want: "declares init",
+		},
+		"a package-level var": {
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), overlaySource+"\nvar hooked = helper()\n")
+				return []extensionUnit{u}
+			},
+			want: "declares a package-level var",
+		},
+		"a linkname directive": {
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), overlaySource+"\n//go:linkname reach other.secret\nfunc reach() int\n")
+				return []extensionUnit{u}
+			},
+			want: "carries //go:linkname",
+		},
+		"unsafe": {
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), strings.Replace(overlaySource, "package deals\n", "package deals\n\nimport _ \"unsafe\"\n", 1))
+				return []extensionUnit{u}
+			},
+			want: "imports unsafe",
+		},
+		"a core package the target does not import": {
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), strings.Replace(overlaySource, "package deals\n", "package deals\n\nimport _ \"example.com/core/internal/platform/auth\"\n", 1))
+				return []extensionUnit{u}
+			},
+			want: "imports example.com/core/internal/platform/auth",
+		},
 		"a function core does not have": {
 			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
 				writeTreeFile(t, filepath.Join(u.Dir, overlaysLayer, dealsPkg, "acme.go"), strings.ReplaceAll(overlaySource, "CreateDeal", "CreateDael"))

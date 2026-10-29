@@ -138,8 +138,8 @@ func allowlistedSurface(t *testing.T) map[string]bool {
 }
 
 // overlayFile reports a file in a unit's overlays/. It compiles into a core
-// package through `go build -overlay`, so it is core code and may import what
-// that package does; gen-composition limits it to internal/modules/.
+// package through `go build -overlay`, so its imports are held by
+// gen-composition's checkOverlayContent: only what that package already imports.
 func overlayFile(path string) bool {
 	return unitOverlayPath.MatchString(filepath.ToSlash(path))
 }

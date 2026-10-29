@@ -53,13 +53,24 @@ func (a *readAudit) flush(ctx context.Context, pool *pgxpool.Pool) error {
 		return nil
 	}
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		for _, detail := range a.pending {
-			if _, err := storekit.LogSystem(ctx, tx, "export", detail); err != nil {
-				return err
-			}
-		}
-		return nil
+		return a.write(ctx, tx)
 	})
+}
+
+// flushOn writes the queued entries on a transaction the caller holds open.
+func (a *readAudit) flushOn(ctx context.Context, tx pgx.Tx) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.write(ctx, tx)
+}
+
+func (a *readAudit) write(ctx context.Context, tx pgx.Tx) error {
+	for _, detail := range a.pending {
+		if _, err := storekit.LogSystem(ctx, tx, "export", detail); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // auditBulkRead queues a list as the export it is: who read which slice, and

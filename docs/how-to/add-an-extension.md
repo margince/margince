@@ -785,8 +785,12 @@ WriteHooks: []extension.WriteHook{
 ```
 
 `Handle` gets the audit images of the write, masked as the audit log masks them. Its `rt.Tx` joins the
-write's transaction, so your rows commit with core's. An error rolls the whole write back. Writes to your own
-`ext_*` tables, and writes a hook makes, run no hooks.
+write's transaction, so your rows commit with core's. An error rolls the whole write back. Writes a hook
+makes run no hooks.
+
+A write hook runs with nobody behind it, as a job does, because a core write may run as the system. So
+`Core()` is refused, and so are `Ingest` and `SyncNow`. Hook a record kind that agents can reach; the boot
+refuses your own `ext_*` rows and the seats.
 
 An operation hook runs before a core contract operation, named by its `operationId` in `crm.yaml`:
 
@@ -797,8 +801,11 @@ OperationHooks: []extension.OperationHook{
 ```
 
 It may replace `op.Body`, and core reads the new body as if the caller sent it. Or it returns one of the
-`extension.Err*` classes, and the caller gets your sentence with that class's status. The agent gate judges
-the body the caller sent. The boot refuses an operation the contract does not have.
+`extension.Err*` classes, and the caller gets your sentence with that class's status. It runs before the
+agent gate, so the gate judges the body your hook leaves. The boot refuses an operation agents cannot
+reach, so sign-in, credentials and consent stay core's.
+
+An operation hook runs on the REST API only. A rule that MCP tools must hold too belongs in a write hook.
 
 An overlay replaces a core function. A file at `overlays/internal/modules/<module>/<name>.go` in your unit
 compiles into that core package. It carries the license header, then `//go:build margince_overlay` above its
@@ -813,7 +820,10 @@ func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontract
 }
 ```
 
-Only packages under `internal/modules/` can take an overlay, and two units cannot replace one function.
+Only packages under `internal/modules/` can take an overlay, and two units cannot replace one function. An
+overlay file holds functions and types. It may not declare `init` or a package `var`, use a `//go:`
+line past its build tag, or import `unsafe` or `C`. Past the standard library, it imports only what
+the core package already imports.
 `make composition` writes `build/overlay/overlay.json`, and every composed `go` command passes it as
 `-overlay`. Record each function you replace in `overlays.lock` at your unit's root:
 

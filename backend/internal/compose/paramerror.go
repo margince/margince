@@ -13,12 +13,11 @@ import (
 
 // contractRouter builds the generated /v1 router. Every parameter refusal sits
 // innermost, so a caller refused for who they are hears that before they hear
-// their query was wrong. Operation hooks sit inside even those, so the agent
-// gate judges the body the caller sent and a unit's change reaches only core.
+// their query was wrong.
 func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) http.Handler {
 	return crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
-		Middlewares: append([]crmcontracts.MiddlewareFunc{operationHooks, refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...),
+		Middlewares: append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...),
 		// The generated default writes err.Error() as text/plain, an
 		// off-contract shape that also leaks the parser's internal text.
 		ErrorHandlerFunc: paramParseError,
