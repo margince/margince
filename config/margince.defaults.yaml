@@ -72,6 +72,9 @@ ai:
 analytics:
   performance_enabled: false
 
+assurance:
+  qualified_forecast_enforced: false
+
 auth:
   password:
     enabled: true

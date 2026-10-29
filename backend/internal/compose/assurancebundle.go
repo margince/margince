@@ -37,6 +37,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,6 +55,8 @@ type bundleDeps struct {
 	// exceptions reads the findings THIS RUN observed and nobody has deferred.
 	// It is bundleableFindings in production.
 	exceptions func(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]assurance.Exception, error)
+	// now is the worker's clock, for the deadline a delivered review carries.
+	now func() time.Time
 }
 
 // bundleRunFindings groups one run's open findings into one task per subject.
@@ -232,6 +235,9 @@ func groupBySubject(open []assurance.Exception) []subjectFindings {
 func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
+	if review, ok := reviewFinding(subject); ok {
+		return bundleReview(ctx, deps, cycle, subject, review)
+	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {
 		return false, fmt.Errorf("compose: asking for the subject's task: %w", err)
@@ -248,12 +254,19 @@ func bundleSubject(
 
 	minted := false
 	if !found {
-		task, err = mintBundleTask(ctx, deps, runID, subject)
+		task, err = mintBundleTask(ctx, deps, runTaskKey(subject, runID), subject, nil)
 		if err != nil {
 			return false, err
 		}
 		minted = true
 	}
+	return minted, fileUnderTask(ctx, deps, cycle, task, subject)
+}
+
+// fileUnderTask files a subject's findings under its task, if it is still open.
+func fileUnderTask(
+	ctx context.Context, deps bundleDeps, cycle, task ids.UUID, subject subjectFindings,
+) error {
 
 	// The findings are filed on ONE transaction that holds the task, because
 	// whether it is still open was read before this line and a rep can answer
@@ -271,7 +284,7 @@ func bundleSubject(
 	// transaction of its own, so by the time this one opens the task is on the
 	// rep's list and they can answer it — "nobody has seen it yet" stops being
 	// true the moment the mint commits.
-	if err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	return deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		open, err := taskStillOpenTx(ctx, tx, task)
 		if err != nil {
 			return err
@@ -284,10 +297,7 @@ func bundleSubject(
 			return nil
 		}
 		return bundleUnder(ctx, deps, tx, cycle, task, subject)
-	}); err != nil {
-		return minted, err
-	}
-	return minted, nil
+	})
 }
 
 // bundleUnder files every one of a subject's findings under one task.

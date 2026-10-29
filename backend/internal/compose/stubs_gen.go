@@ -1995,6 +1995,14 @@ func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
 }
 
+func (stubs) GetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastAssuranceEnforcement")
+}
+
+func (stubs) SetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetForecastAssuranceEnforcement")
+}
+
 func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }

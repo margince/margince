@@ -11047,6 +11047,27 @@ func (e ForecastAssuranceStatus) Valid() bool {
 	}
 }
 
+// Defines values for ForecastAssuranceEnforcementState.
+const (
+	ForecastAssuranceEnforcementStateEnforcing   ForecastAssuranceEnforcementState = "enforcing"
+	ForecastAssuranceEnforcementStateNotEnrolled ForecastAssuranceEnforcementState = "not_enrolled"
+	ForecastAssuranceEnforcementStateObserving   ForecastAssuranceEnforcementState = "observing"
+)
+
+// Valid indicates whether the value is a known member of the ForecastAssuranceEnforcementState enum.
+func (e ForecastAssuranceEnforcementState) Valid() bool {
+	switch e {
+	case ForecastAssuranceEnforcementStateEnforcing:
+		return true
+	case ForecastAssuranceEnforcementStateNotEnrolled:
+		return true
+	case ForecastAssuranceEnforcementStateObserving:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastAssurancePreviewReadiness.
 const (
 	ForecastAssurancePreviewReadinessAssurancePreviewChecksIncomplete    ForecastAssurancePreviewReadiness = "checks_incomplete"
@@ -41479,6 +41500,17 @@ type ForecastAssuranceReadiness string
 // ForecastAssuranceStatus `incomplete` means an upstream was unavailable. The run still happened and recorded what it could reach — refusing to run would produce no record in exactly the case worth reporting.
 type ForecastAssuranceStatus string
 
+// ForecastAssuranceEnforcement Whether the qualified forecast applies the viability reviews.
+type ForecastAssuranceEnforcement struct {
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks                     `json:"locks,omitempty"`
+	State ForecastAssuranceEnforcementState `json:"state"`
+}
+
+// ForecastAssuranceEnforcementState defines model for ForecastAssuranceEnforcement.State.
+type ForecastAssuranceEnforcementState string
+
 // ForecastAssurancePreview What a pass would find now, for somebody deciding whether to start one. Nothing here was recorded, and looking changed nothing.
 type ForecastAssurancePreview struct {
 	// EligibleDeals How much there would be to check, counted once per deal evaluated.
@@ -41602,6 +41634,24 @@ type ForecastMovementDeal struct {
 	ToMinor   *int64 `json:"to_minor,omitempty"`
 }
 
+// ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
+// A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+type ForecastQualifiedReadings struct {
+	// AmountsPartial True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
+	AmountsPartial *bool `json:"amounts_partial,omitempty"`
+	BestCaseMinor  int64 `json:"best_case_minor"`
+	EvidenceMinor  int64 `json:"evidence_minor"`
+	ExcludedCount  int   `json:"excluded_count"`
+
+	// ExcludedMinor Open baseline money on deals under an open viability review.
+	ExcludedMinor int64 `json:"excluded_minor"`
+	UnknownCount  int   `json:"unknown_count"`
+
+	// UnknownMinor Open baseline money on deals the check could not judge on current evidence.
+	UnknownMinor  int64 `json:"unknown_minor"`
+	WeightedMinor int64 `json:"weighted_minor"`
+}
+
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
 	AsOf               time.Time     `json:"as_of"`
@@ -41630,6 +41680,10 @@ type ForecastReadings struct {
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
 	PricedCount int `json:"priced_count"`
+
+	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
+	// A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
 	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
@@ -62437,6 +62491,11 @@ type GetForecastParamsPeriod string
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
 
+// SetForecastAssuranceEnforcementJSONBody defines parameters for SetForecastAssuranceEnforcement.
+type SetForecastAssuranceEnforcementJSONBody struct {
+	Enabled bool `json:"enabled"`
+}
+
 // ListInputChecksParams defines parameters for ListInputChecks.
 type ListInputChecksParams struct {
 	// ScopeKind Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
@@ -66520,6 +66579,9 @@ type ConnectFinanceSourceJSONRequestBody = ConnectFinanceSourceRequest
 
 // LinkFinanceSourceCustomerJSONRequestBody defines body for LinkFinanceSourceCustomer for application/json ContentType.
 type LinkFinanceSourceCustomerJSONRequestBody = LinkFinanceSourceCustomerRequest
+
+// SetForecastAssuranceEnforcementJSONRequestBody defines body for SetForecastAssuranceEnforcement for application/json ContentType.
+type SetForecastAssuranceEnforcementJSONRequestBody SetForecastAssuranceEnforcementJSONBody
 
 // ResolveInputCheckJSONRequestBody defines body for ResolveInputCheck for application/json ContentType.
 type ResolveInputCheckJSONRequestBody = ResolveInputCheck
@@ -79631,6 +79693,12 @@ type ServerInterface interface {
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
 	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	// Whether the qualified forecast applies the viability reviews.
+	// (GET /forecast/assurance/enforcement)
+	GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
+	// Switch the qualified forecast's enforcement on or off.
+	// (PUT /forecast/assurance/enforcement)
+	SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
 	// The open findings this caller can see.
 	// (GET /forecast/assurance/exceptions)
 	ListInputChecks(w http.ResponseWriter, r *http.Request, params ListInputChecksParams)
@@ -83909,6 +83977,18 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 // What last night's input check found, and how much of the pipeline it reached.
 // (GET /forecast/assurance)
 func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether the qualified forecast applies the viability reviews.
+// (GET /forecast/assurance/enforcement)
+func (_ Unimplemented) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch the qualified forecast's enforcement on or off.
+// (PUT /forecast/assurance/enforcement)
+func (_ Unimplemented) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107908,6 +107988,46 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// GetForecastAssuranceEnforcement operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastAssuranceEnforcement(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetForecastAssuranceEnforcement operation middleware
+func (siw *ServerInterfaceWrapper) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetForecastAssuranceEnforcement(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListInputChecks operation middleware
 func (siw *ServerInterfaceWrapper) ListInputChecks(w http.ResponseWriter, r *http.Request) {
 
@@ -127515,6 +127635,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance", wrapper.GetForecastAssurance)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/assurance/enforcement", wrapper.GetForecastAssuranceEnforcement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/forecast/assurance/enforcement", wrapper.SetForecastAssuranceEnforcement)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/assurance/exceptions", wrapper.ListInputChecks)

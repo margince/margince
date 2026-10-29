@@ -180,6 +180,13 @@ func forecastToolResult(
 		id := scope.ID.String()
 		out.ScopeID = &id
 	}
+	if q := in.Qualified; q != nil {
+		out.Qualified = &agents.ForecastQualifiedResult{
+			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
+			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
+			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
+		}
+	}
 	return out
 }
 

@@ -407,6 +407,23 @@
         "null"
       ]
     },
+    "assurance": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "qualified_forecast_enforced": {
+          "description": "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        }
+      }
+    },
     "auth": {
       "type": [
         "object",

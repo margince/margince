@@ -5358,6 +5358,45 @@
           "priced_count": {
             "type": "integer"
           },
+          "qualified": {
+            "type": "object",
+            "properties": {
+              "amounts_partial": {
+                "type": "boolean"
+              },
+              "best_case_minor": {
+                "type": "integer"
+              },
+              "evidence_minor": {
+                "type": "integer"
+              },
+              "excluded_count": {
+                "type": "integer"
+              },
+              "excluded_minor": {
+                "type": "integer"
+              },
+              "unknown_count": {
+                "type": "integer"
+              },
+              "unknown_minor": {
+                "type": "integer"
+              },
+              "weighted_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amounts_partial",
+              "best_case_minor",
+              "evidence_minor",
+              "excluded_count",
+              "excluded_minor",
+              "unknown_count",
+              "unknown_minor",
+              "weighted_minor"
+            ]
+          },
           "scope_id": {
             "type": "string"
           },

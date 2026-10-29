@@ -85,7 +85,8 @@ many tries, and the time shown is one that nearly every try beat.
 |---|---|
 | 🟢 Fast | Within the time we promise. |
 | 🟡 Slower than we promise | Over the promise, and we are working on it: the issue is linked. |
-| 🔴 Too slow | Over the promise with no fix under way yet, or some tries failed. |
+| 🔴 Too slow | Over the promise with no fix under way yet. |
+| 🔴 Failed | Some tries got no answer, so no time can be trusted. |
 | ⚪ Not measured | The screen had nothing to show yet, or the run cannot prove it. |
 
 `
@@ -221,6 +222,7 @@ type answer struct {
 	measured bool
 	sev      severity
 	ms       float64
+	budgetMs float64
 	issue    int
 }
 
@@ -244,7 +246,7 @@ func answerFor(kind momentKind, rows []measurement) answer {
 	if !seen {
 		return answer{}
 	}
-	a := answer{measured: true, sev: judge(worst).sev, ms: worst.P95Ms, issue: worst.KnownIssue}
+	a := answer{measured: true, sev: judge(worst).sev, ms: worst.P95Ms, budgetMs: worst.BudgetMs, issue: worst.KnownIssue}
 	if kind == journey && total > 0 {
 		a.ms = total
 	}
@@ -262,7 +264,23 @@ func (a answer) cell() string {
 	if !a.measured {
 		return "⚪ Not measured"
 	}
+	switch a.sev {
+	case sevFailed:
+		// A refused or failed try was not served, so its time proves nothing.
+		return colour(a.sev) + " Some tries failed"
+	case sevOver, sevOverListed:
+		// The coarse bands would read a time over the promise as under it.
+		return colour(a.sev) + " " + spokenSeconds(a.ms)
+	}
 	return colour(a.sev) + " " + spokenTime(a.ms)
+}
+
+// promise says the budget a slow answer missed, in the seconds the cell uses.
+func (a answer) promise() string {
+	if a.budgetMs <= 0 {
+		return ""
+	}
+	return " We promise under " + strings.TrimPrefix(spokenSeconds(a.budgetMs), "About ") + "."
 }
 
 func (a answer) words() string {
@@ -275,11 +293,11 @@ func (a answer) words() string {
 	case sevInconclusive:
 		return "Fast on the small trial company, which proves nothing yet."
 	case sevOverListed:
-		return fmt.Sprintf("Slower than we promise: we are working on it ([#%d](%s%d)).", a.issue, issueURL, a.issue)
+		return fmt.Sprintf("Slower than we promise: we are working on it ([#%d](%s%d)).%s", a.issue, issueURL, a.issue, a.promise())
 	case sevFailed:
-		return "Too slow: some tries failed."
+		return "Failed: some tries got no answer, so no time can be trusted."
 	}
-	return "Too slow, and nobody is working on it yet."
+	return "Too slow, and nobody is working on it yet." + a.promise()
 }
 
 func colour(s severity) string {
@@ -303,6 +321,11 @@ func spokenTime(ms float64) string {
 	case ms < 1000:
 		return "Under a second"
 	}
+	return spokenSeconds(ms)
+}
+
+// spokenSeconds is a time in seconds to one decimal, and whole seconds from ten on.
+func spokenSeconds(ms float64) string {
 	seconds := math.Round(ms/100) / 10
 	if seconds >= 10 {
 		seconds = math.Round(seconds)
