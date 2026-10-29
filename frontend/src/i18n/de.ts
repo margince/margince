@@ -7108,11 +7108,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
   "review.dealViability": "Kunde meldet sich nicht mehr",
-  "forecast.qualifiedAnswer": "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
-  "forecast.qualifiedLeftOut": "Deals, die ausgelassen sind, solange ihre Prüfung offen ist: {count} ({amount}).",
-  "forecast.qualifiedUnknown": "Deals, die nicht zählen, weil die letzte Prüfung sie nicht beurteilen konnte: {count} ({amount}).",
+  "forecast.qualifiedAnswer":
+    "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
+  "forecast.qualifiedLeftOut":
+    "Deals, die ausgelassen sind, solange ihre Prüfung offen ist: {count} ({amount}).",
+  "forecast.qualifiedUnknown":
+    "Deals, die nicht zählen, weil die letzte Prüfung sie nicht beurteilen konnte: {count} ({amount}).",
   "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
-  "review.enforcementHint": "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
+  "review.enforcementHint":
+    "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
   "review.enforcementOn": "Die gestützte Prognose ist an.",
   "review.enforcementOff": "Die gestützte Prognose ist aus.",
   "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",
