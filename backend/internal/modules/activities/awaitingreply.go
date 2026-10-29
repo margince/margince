@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
