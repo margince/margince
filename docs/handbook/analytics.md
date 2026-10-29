@@ -38,6 +38,7 @@ The **Deals** board itself also shows each stage's total and weighted total at t
 
 ### What analytics sections are there?
 The Analytics tabs are **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
+
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
 The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
@@ -73,10 +74,7 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 ## The reporting sections
 
-When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and
-**Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads
-and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in
-[Sales reporting](sales-reporting.md).
+When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
 Two sections appear only for some seats, and when they are missing, that means
 something:
@@ -191,7 +189,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 **Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
-The **SDR outcomes** tab shows held meetings and accepted opportunities. **Leads** shows new leads, status changes, leads qualified and first response time. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures. A workspace set up for SDRs opens Analytics on **SDR outcomes**.
+The **SDR outcomes** tab shows held meetings and accepted opportunities. **Leads** shows new leads, status changes, leads qualified and first response time. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures. A workspace set up for SDR teams opens Analytics on **SDR outcomes**.
 
 ## My outcomes
 
