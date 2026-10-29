@@ -9,10 +9,8 @@
 // obligation — a list of measured inks that the tree has outgrown is a gate
 // reporting PASS over a case it never looked at.
 export const chipInks: readonly string[] = [
-  // --textSecondary is deliberately absent: no rule in the tree paints --bgChip
-  // under it today, and chipfill.test.ts is what makes that a fact rather than a
-  // hope — the day one does, that gate fails until this list grows, and growing
-  // it re-arms the pairs it would then have to clear.
+  // --textSecondary is absent: no rule paints --bgChip under it.
+  // chipfill.test.ts fails the day one does, until this list grows.
   "--textPrimary",
   "--tealText",
   "--accentText",
