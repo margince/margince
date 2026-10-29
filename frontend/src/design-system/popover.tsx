@@ -56,6 +56,7 @@ export function Popover({
   dialog,
   panelClassName,
   width = "default",
+  align = "start",
   children,
 }: Readonly<{
   label: ReactNode;
@@ -109,6 +110,8 @@ export function Popover({
   /** `wide` is for a panel of rows that each carry a title and a verb on one
    *  line; prose asides stay `default`. */
   width?: "default" | "wide";
+  /** `end` for a trigger at the end of its row, so the panel stays over it. */
+  align?: "start" | "end";
   children: ReactNode;
 }>) {
   const [ownOpen, setOwnOpen] = useState(false);
@@ -128,10 +131,10 @@ export function Popover({
   const panel = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const triggerId = useId();
-  // From the trigger's leading edge: a popover is opened by words as often
-  // as by a chip, and a panel hung off the end of a full-width sentence lands
-  // at the margin with nothing under it.
-  const at = useAnchoredToTrigger(open, trigger, panel, "start");
+  // From the trigger's leading edge by default: a popover is opened by words
+  // as often as by a chip, and a panel hung off the end of a full-width
+  // sentence lands at the margin with nothing under it.
+  const at = useAnchoredToTrigger(open, trigger, panel, align);
 
   // Focus, shared with the evidence mark's own portalled panel: into the panel
   // when a press opened it, back to the trigger if the close dropped it, and
