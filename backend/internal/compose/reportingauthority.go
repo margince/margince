@@ -70,8 +70,8 @@ func (a reportingAuthority) Members(ctx context.Context, tx pgx.Tx) ([]ids.UUID,
 	return reportingMembers(ctx, tx, crmcontracts.ReportingScope{})
 }
 
-// MeasurableOwners narrows candidates to the reader's own population, which
-// holds exactly the live people an owner scope admits.
+// MeasurableOwners narrows candidates to the reader's own population. That
+// population holds the live members an owner scope admits and no one else.
 func (a reportingAuthority) MeasurableOwners(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) ([]ids.UUID, error) {
 	return reportingMembersAmong(ctx, tx, crmcontracts.ReportingScope{}, candidates)
 }

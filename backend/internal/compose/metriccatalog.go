@@ -48,6 +48,39 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
 }
 
+// reportingPresets are the selections the Analytics screen opens on. A preset
+// names metrics and charts only: each metric's meaning and read grant stay in
+// reportingMetrics.
+var reportingPresets = []crmcontracts.ReportingPreset{
+	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge}},
+	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+}
+
+// readablePresets narrows each preset to the offered metrics and the charts
+// they draw, so the screen's opening request is one the reader may ask.
+func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcontracts.ReportingPreset {
+	out := []crmcontracts.ReportingPreset{}
+	for _, preset := range reportingPresets {
+		readable := crmcontracts.ReportingPreset{Id: preset.Id, Metrics: []crmcontracts.ReportingMetricID{}, Blocks: []crmcontracts.ReportingBlockKind{}}
+		var drawn []crmcontracts.ReportingBlockKind
+		for _, metric := range offered {
+			if slices.Contains(preset.Metrics, metric.Id) {
+				readable.Metrics = append(readable.Metrics, metric.Id)
+				drawn = append(drawn, metric.Blocks...)
+			}
+		}
+		for _, block := range preset.Blocks {
+			if slices.Contains(drawn, block) {
+				readable.Blocks = append(readable.Blocks, block)
+			}
+		}
+		if len(readable.Metrics) > 0 {
+			out = append(out, readable)
+		}
+	}
+	return out
+}
+
 type metricEvaluator struct {
 	forecast *forecasting.Store
 }
@@ -59,6 +92,7 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 			out.Metrics = append(out.Metrics, reportingMetricMetadata(spec, language))
 		}
 	}
+	out.Presets = readablePresets(out.Metrics)
 	return out, nil
 }
 

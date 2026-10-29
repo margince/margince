@@ -40,10 +40,10 @@ func ownerKey(owner openapi_types.UUID, metric crmcontracts.ReportingMetricID) t
 // heldTargets are the targets one evaluation matched, by the figure each holds.
 type heldTargets map[targetKey]crmcontracts.ReportingTarget
 
-// matchingTargets reads every target the keys name in one statement, so an
+// matchingTargets reads every target the keys name in one statement. So an
 // evaluation's target cost does not grow with its metrics or owners. A figure
-// is held against a target only when the reader may read the target and
-// measure its scope: the evaluation's scope, and each owner in owners.
+// is held against a target only when the reader may read the target. The
+// reader must also measure the evaluation's scope and each owner in owners.
 func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetReach, frame crmcontracts.ReportingContext, keys []targetKey, owners []openapi_types.UUID) (heldTargets, error) {
 	held := heldTargets{}
 	if frame.TargetInterval == nil || !auth.Allows(ctx, "sales_target", principal.ActionRead) || len(keys) == 0 {

@@ -162,8 +162,8 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	return clause, nil
 }
 
-// measurableOwners is who a reader may measure one by one, resolved once per
-// evaluation so each metric and owner list asks a set, not the database.
+// measurableOwners is who a reader may measure one by one. It is resolved
+// once per evaluation, so each metric and owner list asks a set.
 type measurableOwners struct {
 	every bool
 	set   map[ids.UUID]bool

@@ -41,9 +41,9 @@ func TestReportingEvaluationCostDoesNotGrowWithTheTeamsOwners(t *testing.T) {
 	}
 }
 
-// reportingTeamOwnerCost evaluates one team of Rep1 and extra owners, each
-// with an owner target, under three seats, and checks every seat sees the
-// targets its tier allows.
+// reportingTeamOwnerCost evaluates a team of Rep1 and extra owners under three
+// seats. Each owner has a target, and each seat must see the targets its tier
+// allows.
 func reportingTeamOwnerCost(t *testing.T, extra int) map[string]ownerCostReading {
 	t.Helper()
 	e := setupForecast(t)
