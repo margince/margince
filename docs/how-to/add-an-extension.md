@@ -730,6 +730,47 @@ page looks as it does without the tier.
 The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
 or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
+## Add a page or replace a core file: `frontend/overrides/`
+
+Your unit's `frontend/overrides/` tree mirrors core's `frontend/`. Only the composed lane applies it, and
+`gen-composition` (`backend/tools/gen-composition/overrides.go`) checks every file in it.
+
+To add a page, write `frontend/overrides/src/custom/<folder>/screen.tsx`. It exports `screen`, typed
+`CustomScreen` from `@margince/frontend/app`, the same shape a fork's screen has in `frontend/src/custom/`
+([its README](../../frontend/src/custom/README.md)). The page gets `#/x/<key>`, and a `nav` gives it a
+sidebar row in the group it names. The folder name follows the rules of a unit name, and two units may not
+add the same folder.
+
+To replace a core file, write it at the same path under `frontend/overrides/`. Your file stands in for
+core's for every importer. It reaches core's own copy as `@margince-core/<path>`, so it can wrap that
+code instead of copying it:
+
+```tsx
+// frontend/overrides/src/app/shellrail.tsx
+export * from "@margince-core/src/app/shellrail";
+```
+
+Only files under `src/app/`, `src/components/` and `src/features/` can be replaced; the sidebar menu is
+`src/app/shellrail.tsx`. The files that take a password, a secret or a consent stay core's, and
+`unreplaceable` in `overrides.go` lists them. Two units cannot replace one file.
+
+Record the core file each of your files was written against in `frontend/overrides.lock`, one line each:
+
+```text
+src/app/shellrail.tsx sha256:<hash of core's file>
+```
+
+`make composition` warns when a line is missing, when core's file no longer matches it, or when it names a
+file you no longer replace. Each warning prints the line to write. A warning never fails the build, so a core
+upgrade still installs with your unit pinned.
+
+The composed typecheck can fail the build. That check holds your
+file to every export of the file it replaces. So a core change that removes or changes an export its
+callers use stops the build. A wrapper picks up the rest of core's change through `@margince-core/`.
+
+A file that replaces one of core may import `@margince-core/` only for that one file. An added screen and every
+other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse it.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

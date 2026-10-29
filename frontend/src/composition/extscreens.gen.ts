@@ -12,7 +12,11 @@
 // published-operations card, which is what a unit with no bespoke screen gets.
 // extensionPanels holds the components units draw inline on core pages, by
 // unit and slot; a page's slot draws nothing when no unit fills it.
+// extensionCustomScreens holds the screens units add under core's src/custom/,
+// each at #/x/<key>.
 
 export const extensionScreens = {};
 
 export const extensionPanels = {};
+
+export const extensionCustomScreens = {};

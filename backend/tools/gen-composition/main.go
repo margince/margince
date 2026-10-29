@@ -185,6 +185,12 @@ func generate(root string) error {
 	if err := emitComposedFrontendWorkspace(filepath.Join(root, filepath.FromSlash(composedFrontendWorkspaceDir)), unitNames); err != nil {
 		return err
 	}
+	if err := emitOverrides(root, composed.Overrides.Replaced); err != nil {
+		return err
+	}
+	for _, warning := range composed.Overrides.Warnings {
+		fmt.Fprintln(os.Stderr, "gen-composition: warning:", warning)
+	}
 	m, err := currentManifest(root, composed.Files)
 	if err != nil {
 		return err
@@ -395,7 +401,7 @@ var vanillaStubs = []struct {
 	},
 	{
 		rel:   frontendScreensVanillaStub,
-		emit:  func() []byte { return extScreensGen(nil, nil) },
+		emit:  func() []byte { return extScreensGen(nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extScreensGenHeader)",
 	},
 	{

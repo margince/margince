@@ -66,9 +66,14 @@
       "@margince/frontend/design-system": ["./src/surface/design-system.ts"],
       "@margince/frontend/api": ["./src/surface/api.ts"],
       "@margince/frontend/app": ["./src/surface/index.ts"],
-      "@margince-ext/*": ["../extensions/*/frontend"]
+      "@margince-ext/*": ["../extensions/*/frontend"],
+      // Core's own copy of a file a unit replaces, which the replacement wraps.
+      "@margince-core/*": ["./*"]
     }
   },
+  // The generated check that holds each replacement to the exports of the core
+  // file it replaces.
+  "include": ["src", "../build/composition-frontend/overrides.check.ts"],
   // A unit's screen lives outside src/ entirely now, and tsc reaches it by
   // following the generated registry's imports rather than by an include, so
   // this project sets no rootDir for an out-of-tree input to violate.

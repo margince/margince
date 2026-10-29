@@ -191,6 +191,7 @@ type composition struct {
 	Verbs     []declaredVerb
 	Jobs      []extension.JobDeclaration
 	Manifests []derivedManifest
+	Overrides frontendOverrides
 }
 
 // composedFiles builds the composition from the enabled set under extensions/.
@@ -248,6 +249,10 @@ func composedFiles(root string) (composition, error) {
 	if err := checkPanelFrontends(manifests); err != nil {
 		return composition{}, err
 	}
+	overrides, err := collectOverrides(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls))
 	if err != nil {
 		return composition{}, err
@@ -257,7 +262,7 @@ func composedFiles(root string) (composition, error) {
 		"backend/go.mod":             composedGoMod(goVersion),
 		"backend/extensions_gen.go":  wiring,
 		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts": extScreensGen(units, manifestPanels(manifests)),
+		extScreensGenFile:            extScreensGen(units, manifestPanels(manifests), overrides.Added),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With
@@ -265,7 +270,7 @@ func composedFiles(root string) (composition, error) {
 	for base, content := range contracts {
 		files["api/"+base] = content
 	}
-	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, Manifests: manifests}, nil
+	return composition{Files: files, Verbs: verbs, Jobs: jobDecls, Manifests: manifests, Overrides: overrides}, nil
 }
 
 // canonicalGoSource parses emitted Go source and requires it to already

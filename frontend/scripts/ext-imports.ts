@@ -207,6 +207,34 @@ export function throughLinks(target: string): string {
   return join(realpathSync(head), ...tail);
 }
 
+const MARGINCE_CORE = "@margince-core/";
+const OVERRIDES = "overrides";
+
+const stripExtension = (path: string) => path.replace(/\.[cm]?[jt]sx?$/, "");
+
+// replacedOriginal is the one `@margince-core/` specifier a replacement under
+// frontend/overrides/ may use: core's copy of the file it stands in for. An
+// added screen under src/custom/ replaces nothing, so it has none.
+function replacedOriginal(file: string, realLayer: string): string | undefined {
+  const target = relative(join(realLayer, OVERRIDES), throughLinks(file));
+  if (target.startsWith("..") || target.startsWith("src/custom/")) {
+    return undefined;
+  }
+  return MARGINCE_CORE + stripExtension(target);
+}
+
+function judgeCoreOriginal(
+  s: Specifier,
+  original: string | undefined,
+  where: (s: Specifier) => string,
+): string[] {
+  return original !== undefined && stripExtension(s.text) === original
+    ? []
+    : [
+        `${where(s)}: '${s.text}' reaches core's own files — only a replacement under frontend/overrides/ may, and only the one file it replaces`,
+      ];
+}
+
 // judge applies the three rules to one file's specifiers. `file` is absolute
 // because rule 1 resolves against it; `shown` is what a reader is handed. A
 // repo-relative path would resolve against the working directory instead, and
@@ -226,7 +254,12 @@ export function judge(args: {
   // realpath syscall that would otherwise run per specifier.
   const realLayer = throughLinks(layer);
 
+  const original = replacedOriginal(file, realLayer);
+
   return specifiers.flatMap((s) => {
+    if (s.text.startsWith(MARGINCE_CORE)) {
+      return judgeCoreOriginal(s, original, where);
+    }
     if (s.text.startsWith(".")) {
       const resolved = throughLinks(resolve(dirname(file), s.text));
       // The layer itself, or something beneath it, so the separator matters.

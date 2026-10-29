@@ -496,6 +496,47 @@ describe("the extension-import detector sees what it claims to", () => {
     },
     // A `//` inside a string is not a comment — the residue the shell gate's
     // sibling had to answer by hand, and the parser answers for nothing.
+    // A replacement wraps core's own copy of the file it stands in for, so it
+    // may name it; the unit's other files may not.
+    {
+      name: "a replacement wrapping core's own file",
+      want: null,
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'export * from "@margince-core/src/app/shellrail";',
+      },
+    },
+    {
+      name: "a replacement reaching a core file other than the one it replaces",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'import { api } from "@margince-core/src/api/client";',
+      },
+    },
+    {
+      name: "an added screen reaching a core file",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/custom/desk/screen.tsx":
+          'import { NAV } from "@margince-core/src/app/nav";',
+      },
+    },
+    {
+      name: "a replacement climbing out of core with ..",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'import x from "@margince-core/../extensions/other/frontend/x";',
+      },
+    },
+    {
+      name: "a core file reached from outside overrides/",
+      want: "only a replacement under frontend/overrides/",
+      files: {
+        "screen.tsx": 'import { NAV } from "@margince-core/src/app/nav";',
+      },
+    },
     {
       name: "a URL in a string, whose // is not a comment",
       want: null,

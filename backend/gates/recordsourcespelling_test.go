@@ -71,6 +71,9 @@ var recordSourceExempt = gatekit.Waive(map[string]string{
 	"tools/gen-composition/contracts.go": "Source here is the path to one extension's own " +
 		"api/crm.yaml, read to assemble the composed contract — a schema file, not a record",
 	"tools/gen-composition/contracts_test.go": "the same schema-file field, planted and asserted",
+	"tools/gen-composition/overrides.go": "Source is the unit file that replaces or adds a core " +
+		"frontend file — a path, not a record",
+	"tools/gen-composition/overrides_test.go": "the same file-path field, planted and asserted",
 	"tools/gen-payloads/config.go": "Source is the OpenAPI 3.1 file this generator reads " +
 		"components/schemas from — a schema file, not a record",
 	"tools/gen-recordfields/main.go": "the \"source\" key marks the field's ROLE in a " +

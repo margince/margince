@@ -21,6 +21,9 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
+// A unit adds a page at frontend/overrides/src/custom/<folder>/screen.tsx,
+// exporting `screen: CustomScreen`; it gets #/x/<key> and, with `nav`, a rail row.
+export type { CustomLabel, CustomScreen } from "../app/custom";
 // `formatNumber` alongside `formatDateTime` for the same reason: a unit's screen
 // renders figures a reader reads, `useT` below refuses a raw number, and the
 // only alternative left to a unit would be `String(n)` — which groups for

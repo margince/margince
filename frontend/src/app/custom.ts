@@ -1,3 +1,4 @@
+import { extensionCustomScreens } from "@composition/screens";
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import type { Locale } from "../i18n";
@@ -151,7 +152,12 @@ export type CustomScreenRegistry = ReadonlyMap<string, CustomScreen>;
  * is a fork's, and a work-in-progress file there must not stop the product
  * compiling.
  */
-export const customScreens: CustomScreenRegistry = buildRegistry(declared);
+export const customScreens: CustomScreenRegistry = buildRegistry({
+  ...declared,
+  // A composed unit adds a screen at frontend/overrides/src/custom/<folder>/,
+  // keyed by its file so a key clash names the unit.
+  ...extensionCustomScreens,
+});
 
 /**
  * The registry, refusing a key claimed twice.

@@ -7,6 +7,10 @@ import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import { serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { materialSymbolsLicense } from "./scripts/vite-licenses.ts";
+import {
+  overrideCoreFiles,
+  readFileOverrides,
+} from "./scripts/vite-overrides.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 
@@ -19,6 +23,12 @@ import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 // directory, exactly as GOWORK names the generated workspace for the Go lane.
 const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
+// Core frontend files a unit replaces, as gen-composition accepted them. Only a
+// composed lane applies them.
+const fileOverrides = readFileOverrides(
+  join(frontendRoot, "..", "build/composition-frontend/overrides.json"),
+  Boolean(composedComposition),
+);
 const compositionDir = composedComposition
   ? resolve(composedComposition)
   : join(frontendRoot, "src", "composition");
@@ -75,6 +85,7 @@ export default defineConfig({
   // module scripts and /@vite/client, which the api's admission check refuses by
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
+    overrideCoreFiles(frontendRoot, fileOverrides),
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
