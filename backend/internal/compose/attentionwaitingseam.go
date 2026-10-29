@@ -91,9 +91,9 @@ func (w attentionWaiting) Hidden(
 }
 
 func (w attentionWaiting) Unanswered(
-	ctx context.Context, asOf time.Time, owner *ids.UUID,
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor,
 ) ([]attention.WaitingCustomer, bool, error) {
-	kept, cut, err := w.waitingPages(ctx, asOf, owner)
+	kept, cut, err := w.waitingPages(ctx, asOf, narrow)
 	if err != nil {
 		return nil, false, err
 	}
@@ -210,17 +210,20 @@ const waitingRefillRounds = 3
 // only when the LAST page was also full, so a refill that reached the end of
 // the matching rows reports a complete scan rather than inheriting the first
 // page's truncation.
-func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]activities.WaitingReply, bool, error) {
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
 	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
 		var rows []activities.WaitingReply
 		var err error
-		if owner == nil {
+		switch {
+		case narrow.Owner != nil:
+			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *narrow.Owner)
+		case narrow.Team:
+			rows, err = w.store.WaitingRepliesAnsweredByBefore(ctx, asOf, before, narrow.Seats)
+		default:
 			rows, err = w.store.WaitingRepliesBefore(ctx, asOf, before)
-		} else {
-			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *owner)
 		}
 		if err != nil {
 			return nil, false, err

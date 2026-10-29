@@ -46,9 +46,11 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer fetched before it. The one exception is the answer the shell prefetched
-// for the screen being opened (app/homeprefetch.ts). While it is under a second
-// old, that screen's mount uses it instead of fetching it a second time.
+// answer fetched before it. Two exceptions. The answer the shell prefetched for
+// the screen being opened (app/homeprefetch.ts) serves that mount while under a
+// second old. And the queue drawer shares Home's day already on screen: Home
+// keeps it current, so only staleness refetches it. Other live reads, such as a
+// record's review verbs, still read again on every mount.
 export const LIVE_ANSWER_CURRENT_MS = 1_000;
 
 const prefetchedAnswers = new Map<string, number>();
@@ -58,15 +60,31 @@ export function notePrefetched(queryHash: string, answeredAt: number): void {
   prefetchedAnswers.set(queryHash, answeredAt);
 }
 
+// The day's worklist key (worklistKey, mine, all, no owner): Home and its queue
+// drawer both read it.
+function isSharedDay(key: QueryKey): boolean {
+  return (
+    key[0] === "worklist" &&
+    key[1] === "mine" &&
+    key[2] === "all" &&
+    key[3] === ""
+  );
+}
+
 export function liveOnMount(
   query: {
     queryKey: QueryKey;
     queryHash: string;
     state: { dataUpdatedAt: number };
+    // The mounting observer counts itself, so more than one means another view.
+    getObserversCount?: () => number;
   },
   now = Date.now(),
 ): "always" | true {
   if (!isLiveWorkRead(query.queryKey)) return true;
+  if (isSharedDay(query.queryKey) && (query.getObserversCount?.() ?? 0) > 1) {
+    return true;
+  }
   const answeredAt = query.state.dataUpdatedAt;
   const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
   return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
@@ -82,7 +100,7 @@ function isLiveRead(key: QueryKey): boolean {
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
-const MAX_RETRIES = 2;
+export const MAX_RETRIES = 2;
 
 // The 5xx statuses that are SETTLED rather than failed, and so are not retried.
 //

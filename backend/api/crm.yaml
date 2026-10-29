@@ -28575,6 +28575,78 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/assurance/exceptions/{id}/wait:
+    post:
+      tags: [Reports]
+      operationId: waitInputCheck
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Answer a customer review with the day the customer asked you to wait until.
+      description: |
+        For a `deal_viability` review only. One transaction records the customer's wait on
+        the deal (`wait_until`) and answers the review `remind_later` for the same day. The
+        review stays open and the deal stays out of the qualified forecast while it waits:
+        a wait is not support. The review comes back on that day.
+
+        404 when the finding is not an open customer review.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [until]
+              properties:
+                until: { type: string, format: date }
+              additionalProperties: false
+      responses:
+        '204':
+          description: The wait was recorded on the deal and the review.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/assurance/exceptions/{id}/close-lost:
+    post:
+      tags: [Reports]
+      operationId: closeLostInputCheck
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Answer a customer review by closing its deal as lost.
+      description: |
+        For a `deal_viability` review only. One transaction moves the deal to its pipeline's
+        lost stage with the reason given, and answers the review `not_relevant` with that
+        reason. A review is never answered `not_relevant` while its deal is still open.
+
+        404 when the finding is not an open customer review. 422 when the pipeline has no
+        lost stage.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lost_reason]
+              properties:
+                lost_reason: { type: string, minLength: 1 }
+              additionalProperties: false
+      responses:
+        '204':
+          description: The deal was closed as lost and the review answered.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/movement:
     get:
       tags: [Reports]

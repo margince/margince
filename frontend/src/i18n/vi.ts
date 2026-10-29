@@ -6993,6 +6993,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
   "review.enforcementPreviewUnknown_other":
     "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
+  "review.revive": "Khách hàng đã quay lại",
+  "review.reviveHelp":
+    "Tính lại deal khi khách hàng đã viết thư hoặc gặp bạn, ngày chốt đã được xác nhận và đã có bước tiếp theo.",
+  "review.wait": "Khách hàng đề nghị chờ",
+  "review.waitHelp":
+    "Ghi việc chờ vào deal. Deal không được tính cho đến ngày đó, và việc xem xét sẽ quay lại vào ngày đó.",
+  "review.waitUntil": "Chờ đến",
+  "review.closeLost": "Đóng là thua",
+  "review.closeLostHelp": "Đóng deal là thua, kèm lý do của bạn.",
   "review.enforcementOn": "Dự báo đã xác thực đang bật.",
   "review.enforcementOff": "Dự báo đã xác thực đang tắt.",
   "review.enforcementAdminOnly": "Chỉ admin mới đổi được mục này.",

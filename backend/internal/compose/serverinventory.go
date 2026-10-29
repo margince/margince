@@ -132,6 +132,7 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
+	reviewAnswerHandlers
 	companyOfferedHandlers
 	strengthHandlers
 	recordAccessHandlers
