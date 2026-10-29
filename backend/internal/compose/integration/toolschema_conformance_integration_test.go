@@ -370,7 +370,7 @@ func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Regi
 }
 
 // readinessOfABookedMeeting books a meeting the acting rep hosts and confirms,
-// then takes back, the revision prep_for_meeting shows an agent for it.
+// then takes back, the revision prep_for_meeting answers for it.
 func readinessOfABookedMeeting(ctx context.Context, t *testing.T, registry *agents.Registry) []struct{ tool, args string } {
 	t.Helper()
 	start := clocktest.Now(t).UTC().Add(2 * time.Hour).Truncate(time.Minute)

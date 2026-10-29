@@ -216,22 +216,44 @@ func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
 	}
 }
 
-func TestAMeetingTheCallerMayNotReadIsNotFoundAndKeepsNoReadiness(t *testing.T) {
+// The rep minutes a meeting that names the colleague as host, then keeps it to
+// the rep alone. Hosting makes the colleague an attendee; it does not let them read.
+func TestAHostOutsideTheMeetingsAudienceIsNotFoundAndKeepsNoReadiness(t *testing.T) {
 	e := setupSend(t)
-	meeting := bookMeeting(t, e, "Rep alone", clocktest.Now(t).Add(time.Hour))
-	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
+	subject, booked := "Pricing review", string(crmcontracts.ActivityMeetingStatusBooked)
+	start, host := clocktest.Now(t).Add(time.Hour), ids.From[ids.UserKind](e.other)
+	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &start,
+		MeetingStatus: &booked, Source: "manual", HostUserID: &host,
+	})
+	if err != nil {
+		t.Fatalf("logging the meeting: %v", err)
+	}
+	meeting := ids.From[ids.ActivityKind](ids.UUID(out.Id))
+	colleague := e.seatCtx(e.other)
+	read, attends := preparationOf(colleague, t, e, meeting)
+	if !attends || read.Revision == "" {
+		t.Fatalf("the host reads %+v (present %v) before the narrowing, want a revision", read, attends)
+	}
 	if _, err := meetingStore(e).SetAudience(meetingCtx(e), meeting, SetAudienceInput{
 		Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}},
 	}); err != nil {
 		t.Fatalf("narrowing the meeting to the rep: %v", err)
 	}
-	stranger := e.seatCtx(e.other)
 
-	if _, err := meetingStore(e).ConfirmMeetingReady(stranger, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("confirming a meeting the caller may not read answered %v, want not found", err)
+	if _, err := meetingStore(e).ConfirmMeetingReady(colleague, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("confirming a meeting the host may not read answered %v, want not found", err)
 	}
-	if _, err := meetingStore(e).WithdrawMeetingReady(stranger, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("withdrawing from a meeting the caller may not read answered %v, want not found", err)
+	var kept int
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM meeting_readiness
+		WHERE activity_id = $1 AND attendee_id = $2`, meeting.UUID, e.other).Scan(&kept); err != nil {
+		t.Fatalf("counting the host's readiness rows: %v", err)
+	}
+	if kept != 0 {
+		t.Errorf("the refused confirmation left %d readiness rows for the host, want none", kept)
+	}
+	if _, err := meetingStore(e).WithdrawMeetingReady(colleague, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("withdrawing from a meeting the host may not read answered %v, want not found", err)
 	}
 	if audited, announced, _ := readinessTrail(t, e, meeting); audited != 0 || announced != 0 {
 		t.Errorf("the refused writes left %d audit rows and %d events, want none", audited, announced)
