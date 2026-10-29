@@ -16,8 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Meetings is today's booked meetings that have not happened yet: the day
-// meetings first, as a calendar's all-day row, then by start, all within limit.
+// Meetings is today's booked meetings that have not happened yet. The day
+// meetings come first, as a calendar's all-day row, then the timed ones by
+// start, each up to limit. full says either read left a meeting out.
 // Optional: nil means this feed does not read meetings, which is not a day with
 // none in it.
 //
@@ -25,7 +26,7 @@ import (
 // calendar, or naming them as a participant. Answering it unscoped puts one
 // seat's appointments in every colleague's brief.
 type Meetings interface {
-	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) (meetings []Meeting, full bool, err error)
 }
 
 // MeetingWindow is the stretch a meetings read covers: a timed meeting starting
@@ -95,19 +96,21 @@ type Meeting struct {
 	// then offers no verb rather than a link to a page picked at random.
 	ContactID ids.UUID
 
-	// True when nothing has been written down for a meeting about to happen.
-	// Three-state, with the guard below: a meeting whose content this reader may
-	// not read also arrives empty, and calling that "needs prep" would tell a rep
-	// to prepare a meeting they cannot see.
-	NeedsPrep bool
-
-	// Whether NeedsPrep was answerable at all; false when content is withheld.
-	PrepKnown bool
+	// The reader's own preparation for the meeting. Nil when the reader does
+	// not attend it or may not read its content. A rep cannot act on a meeting
+	// they cannot open, or on someone else's.
+	Preparation *crmcontracts.MeetingPreparation
 
 	// Whose calendar this came off, and what the row names as its owner. Zero
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+}
+
+// needsPreparation says the reader attends the meeting and has not confirmed
+// they are ready for its current revision.
+func (m Meeting) needsPreparation() bool {
+	return m.Preparation != nil && m.Preparation.State != crmcontracts.MeetingPreparationStateReady
 }
 
 // precisionOf is a row's wire precision: what the lane said, else an instant.

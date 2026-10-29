@@ -355,6 +355,9 @@ type PrepForMeetingResult struct {
 	// other anchors name a record rather than a room, and there is no brief to
 	// write for them.
 	Brief *MeetingBriefResult `json:"brief,omitempty"`
+	// Preparation is the caller's own readiness for a meeting anchor they
+	// attend, with the revision confirm_meeting_ready takes.
+	Preparation *MeetingPreparationResult `json:"preparation,omitempty"`
 }
 
 // QualifiedField is one gap the tool filled and the evidence it filled it from.

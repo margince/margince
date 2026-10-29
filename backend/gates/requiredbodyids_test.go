@@ -118,6 +118,8 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// Served by the registry: the handler passes the raw body to
 	// Registry.Invoke, which refuses an absent required argument by name.
 	"ProgressDealRequest": "registry-served; never decoded into this type, and Invoke refuses an absent to_stage_id by name",
+	// Served by the registry for both readiness verbs, as ProgressDealRequest is.
+	"MeetingReadyRequest": "registry-served; never decoded into this type, and Invoke refuses an absent activity_id by name",
 })
 
 func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {

@@ -2216,6 +2216,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.owner_id": "Người chịu trách nhiệm",
   "history.field.provider_claims_received": "Thông tin đã nhận từ nhà cung cấp",
   "history.field.reachability": "Liên lạc được",
+  "history.field.readiness": "Sẵn sàng cho cuộc họp",
   "history.field.reply_verdict": "Kết quả thư trả lời",
   "history.field.reply_verdict_by": "Nguồn kết quả thư trả lời",
   "history.field.research_claims_accepted": "Thông tin tìm hiểu đã chấp nhận",
@@ -14277,6 +14278,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã đánh dấu xong việc trong Danh sách công việc",
   "webhooks.event.activity.marked_handled.when":
     "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.activity.readiness_recorded.label":
+    "Thay đổi trạng thái sẵn sàng cho cuộc họp",
+  "webhooks.event.activity.readiness_recorded.when":
+    "Ai đó đánh dấu đã sẵn sàng cho một cuộc họp, hoặc hoàn tác việc đó.",
   "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
   "webhooks.event.engagement.reply.when":
     "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",
@@ -16256,6 +16261,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Chỉ người có quyền sửa cả hai hồ sơ mới có thể xử lý cặp này: quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Cần chuẩn bị",
+  "worklist.ready.confirm": "Tôi đã sẵn sàng",
+  "worklist.ready.badge": "Sẵn sàng",
+  "worklist.ready.done": "Đã ghi nhận bạn sẵn sàng cho cuộc họp này.",
+  "worklist.ready.failed": "Chưa ghi nhận được bạn sẵn sàng. Thử lại.",
+  "worklist.ready.stale":
+    "Cuộc họp đã thay đổi. Hãy xem lại rồi đánh dấu sẵn sàng.",
+  "worklist.ready.undoFailed":
+    "Hoàn tác không thành công. Bạn vẫn được đánh dấu sẵn sàng.",
+  "worklist.ready.changed": "Đã thay đổi kể từ khi bạn sẵn sàng: {facts}",
+  "worklist.ready.fact.start_time": "giờ bắt đầu",
+  "worklist.ready.fact.agenda": "chương trình",
+  "worklist.ready.fact.participants": "khách mời",
   "worklist.pane.title": "Chi tiết hồ sơ",
   "worklist.pane.openRow": "Xem chi tiết việc {position}, {title}",
   "worklist.pane.loading": "Đang tải hồ sơ…",
@@ -16330,7 +16347,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.deal_drifts": "Deal tiếp tục chững lại.",
   "worklist.consequence.deal_slips_past_close": "Deal trễ qua ngày chốt.",
   "worklist.consequence.meeting_unprepared":
-    "Cuộc họp bắt đầu mà chưa chuẩn bị.",
+    "Cuộc họp bắt đầu trước khi bạn xác nhận đã sẵn sàng.",
   "worklist.consequence.task_slips": "Việc cần làm trễ hạn.",
   "worklist.consequence.work_blocked":
     "Công việc đang chờ việc này vẫn bị chặn.",
@@ -16626,7 +16643,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.because.meeting_soon": "sắp bắt đầu",
   "worklist.because.meeting_booked": "đã hẹn họp",
   "worklist.because.meeting_booked.value": "đã hẹn họp vào {value}",
-  "worklist.because.meeting_unprepared": "chưa chuẩn bị gì",
+  "worklist.because.meeting_unprepared": "chưa xác nhận sẵn sàng",
   "worklist.because.outcome_unrecorded": "chưa ghi nhận kết quả",
   "worklist.because.you_wrote_last": "bạn gửi tin sau cùng",
   "worklist.because.no_reply_days": "chưa ghi nhận phản hồi",
