@@ -74,20 +74,77 @@ Served next to `/v1`:
 
   | Metric | Type | Labels |
   |---|---|---|
-  | `margince_worklist_stage_duration_seconds` | histogram | `stage` |
+  | `margince_worklist_stage_duration_seconds` | histogram | `read`, `stage` |
+  | `margince_worklist_stage_statements_total` | counter | `read`, `stage` |
+  | `margince_worklist_stage_statement_errors_total` | counter | `read`, `stage` |
+  | `margince_worklist_stage_db_seconds` | histogram | `read`, `stage` |
+  | `margince_worklist_stage_pool_wait_seconds` | histogram | `read`, `stage` |
+  | `margince_worklist_stage_app_seconds` | histogram | `read`, `stage` |
+  | `margince_worklist_stage_app_clipped_total` | counter | `read`, `stage` |
+  | `margince_worklist_pool_wait_seconds` | histogram | `read` |
 
-  **`stage` is a fixed name from the code**, never a request value. Each `timeStage` call in
-  `backend/internal/compose/attention` names one step, and every optional lane is timed under its
-  own lane name. The buckets run from `1ms` to `8s`, past the `4s` budget an optional lane may
-  spend. The series start empty and count from process start, so read them through `rate`. The
-  stages that cost the most time, over 5 minutes:
+  **Both labels are fixed names from the code**, never a request value. `read` names the call that
+  opened the snapshot:
+
+  - `worklist`: `/v1/worklist`, the read Home makes;
+  - `attention`: `/v1/attention`;
+  - `team_exceptions`: the team exceptions read. The day it reads inside its snapshot counts here
+    once, never under `attention` as well;
+  - `unmetered`: a stage timed outside all three. It has time series and no cost series.
+
+  Each `timeStage` call in `backend/internal/compose/attention` names one `stage`, and every
+  optional lane is timed under its own lane name. The buckets run from `1ms` to `8s`, past the `4s`
+  budget an optional lane may spend. One bucket sits at `0.75s`, the target for one `/v1/worklist`
+  read. The series start empty and count from process start, so read them through `rate`. The
+  stages of Home's read that cost the most time, over 5 minutes:
 
   ```promql
-  topk(5, sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum[5m]))
-    / sum by (stage) (rate(margince_worklist_stage_duration_seconds_count[5m])))
+  topk(5, sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum{read="worklist"}[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_duration_seconds_count{read="worklist"}[5m])))
   ```
 
   A slow `/v1/worklist` in the HTTP section shows here as the stage that grew.
+
+  The other families split each stage's time by where the process waited. A tracer on every pool
+  sees each pgx call. A statement in an inner stage counts in that stage only, never in the stage
+  around it.
+
+  - `margince_worklist_stage_statements_total` counts each `Query`, `QueryRow`, `Exec`, `Prepare`
+    and `CopyFrom` call, and each query of a batch whose result pgx read. A `Prepare` that pgx makes
+    inside one of these calls is part of that call.
+  - `margince_worklist_stage_statement_errors_total` counts those that ended in an error or a
+    cancel, and a batch that failed before any of its queries ran.
+  - `margince_worklist_stage_db_seconds` is time inside pgx statement calls. It starts when the call
+    starts, before pgx turns the arguments into bytes or asks the server for a plan. A `Query` ends when its rows close, so this
+    time also holds the rows the code read and scanned between `Query` and `Close`.
+  - `margince_worklist_stage_pool_wait_seconds` is time inside pool `Acquire` calls: checkout, and any
+    connect and health check that call ran.
+  - `margince_worklist_stage_app_seconds` is the rest of the stage: its time less the two above and
+    its inner stages.
+  - `margince_worklist_stage_app_clipped_total` counts runs where those added up to more than the
+    stage's own time, so the rest read as zero. A read's stages and pgx calls run one after another,
+    so this stays at zero unless calls start to overlap.
+  - The stage `outside_stages` holds the calls a read makes outside every timed stage, such as
+    `BEGIN`, `COMMIT` and the scope checks. It has cost series and no `margince_worklist_stage_duration_seconds` series.
+  - `margince_worklist_pool_wait_seconds` is the time inside `Acquire` for one whole read: its
+    snapshot, and any write that commits on its own connection. The pool section's acquire counters
+    add up every wait in the process; this family gives one value for each read.
+
+  These families do not tell the server's planning apart from the time it ran a statement. They do
+  not count the rows a statement returned. A stage's database time is what the process spent waiting on pgx, not
+  what the server spent. Statements per read and the pgx share of each stage of Home's read, over 5
+  minutes:
+
+  ```promql
+  sum by (stage) (rate(margince_worklist_stage_statements_total{read="worklist"}[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_db_seconds_count{read="worklist"}[5m]))
+  sum by (stage) (rate(margince_worklist_stage_db_seconds_sum{read="worklist"}[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum{read="worklist"}[5m]))
+  ```
+
+  The `read` label and the `0.75s` bucket also changed the series of
+  `margince_worklist_stage_duration_seconds`. A query that adds up `by (stage)` reads the same totals
+  as before. A saved query that names each `le` value needs the new one.
 
   The connection pool section reports the own pool of this process. It publishes every value pgx
   works out, as gauges and counters:
