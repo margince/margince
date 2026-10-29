@@ -72,9 +72,10 @@ export const LICENSE = (
   checked_at: "2026-08-01T09:00:00Z",
 });
 
-export const EMPTY_USAGE = {
-  days: [],
-  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" as const },
+/** A month with no priced line: the summary carries no figure. */
+export const UNPRICED_SPEND = {
+  currency: "USD",
+  computed_at: "2026-08-01T09:00:00Z",
 };
 
 export const COMPANY_360_VIEW = {
@@ -113,7 +114,7 @@ export type FetchRoutes = {
   dedupe?: () => Response | Promise<Response>;
   approvals?: () => Response | Promise<Response>;
   aiCalls?: () => Response | Promise<Response>;
-  aiUsage?: () => Response | Promise<Response>;
+  aiSpend?: () => Response | Promise<Response>;
   me?: () => Response | Promise<Response>;
   profile?: () => Response | Promise<Response>;
   license?: () => Response | Promise<Response>;
@@ -156,8 +157,8 @@ export function stubAgentRailApi(routes: FetchRoutes = {}) {
             ...{ tasks: [], task_options: [] },
           });
     }
-    if (pathname.endsWith("/ai/usage")) {
-      return routes.aiUsage ? routes.aiUsage() : jsonResponse(EMPTY_USAGE);
+    if (pathname.endsWith("/ai/usage/summary")) {
+      return routes.aiSpend ? routes.aiSpend() : jsonResponse(UNPRICED_SPEND);
     }
     if (pathname.endsWith("/me/ai-activity")) {
       return routes.agentActivity

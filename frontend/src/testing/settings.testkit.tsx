@@ -176,10 +176,15 @@ export function keyedEnvelope(url: string) {
   if (url.includes("/ai/health")) {
     return jsonResponse({ window_hours: 1, rungs: [] });
   }
-  // `budget` is required too, and the agent at the foot of the settings rail
-  // indexes it for the currency its spend figure is in. A month with no call is
-  // the honest answer for a fixture, and the figure it draws is then absent
-  // rather than a confident zero (app/agentrail.tsx).
+  // The agent at the foot of the settings rail reads the month's spend summary.
+  // A fixture month has no priced call, so the rail draws no figure.
+  if (url.includes("/ai/usage/summary")) {
+    return jsonResponse({
+      currency: "USD",
+      computed_at: "2026-08-01T09:00:00Z",
+    });
+  }
+  // `budget` is required on the usage report the spend card reads.
   if (url.includes("/ai/usage")) {
     return jsonResponse({
       days: [],
