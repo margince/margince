@@ -336,15 +336,16 @@ describe("reading the latest inbound item", () => {
     expect(asked[0].searchParams.get("entity_id")).toBe("lead-1");
   });
 
-  it("sets the item aside once Noticed is pressed, and keeps it aside", async () => {
+  it("shows nothing once the newest item is noticed, not an older one", async () => {
     const user = userEvent.setup();
-    serveLatest([MAIL_IN, chat]);
+    const asked = serveLatest([MAIL_IN, chat]);
     withProviders(<Probe kind="contact" id="contact-noticed" />);
     expect(await screen.findByText("email:mail")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Noticed" }));
-    expect(screen.getByText("message:chat")).toBeTruthy();
+    expect(screen.getByText("none")).toBeTruthy();
     cleanup();
     withProviders(<Probe kind="contact" id="contact-noticed" />);
-    expect(await screen.findByText("message:chat")).toBeTruthy();
+    await waitFor(() => expect(asked).toHaveLength(2));
+    expect(screen.getByText("none")).toBeTruthy();
   });
 });

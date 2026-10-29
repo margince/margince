@@ -72,14 +72,15 @@ export function useLatestInbound(
         }),
       ),
   });
-  const latest = query.data?.data.find(
-    ({ activity }) =>
-      !noticed.has(activity.id) && readStored(noticedKey(activity.id)) === null,
-  );
+  // Only the newest item shows: once it is noticed, an older one does not take its place.
+  const latest = query.data?.data[0];
   if (!latest) {
     return undefined;
   }
   const id = latest.activity.id;
+  if (noticed.has(id) || readStored(noticedKey(id)) !== null) {
+    return undefined;
+  }
   const notice = () => {
     writeStored(noticedKey(id), "1");
     setNoticed((ids) => new Set(ids).add(id));
