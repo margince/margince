@@ -3216,7 +3216,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "latest.kind.message": "Tin nhắn mới",
   "latest.kind.webForm": "Biểu mẫu trang web mới",
   "latest.line.open": "{kind}: xem trong Tổng quan",
-  "latest.makeTask": "Chuyển thành việc cần làm",
+  "latest.makeTask": "Tạo việc",
   "latest.noticed": "Đánh dấu đã xem",
   "latest.read.email": "Đọc email",
   "latest.read.message": "Đọc tin nhắn",

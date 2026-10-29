@@ -124,7 +124,7 @@ describe("a record's Next bar with what just came in", () => {
     expect(screen.getByText("Can you send the order form today?")).toBeTruthy();
     expect(screen.getByText(/Jonas Weber/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reply to mail" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Make it a task" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create task" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Noticed" })).toBeTruthy();
   });
 
@@ -140,7 +140,7 @@ describe("a record's Next bar with what just came in", () => {
     );
     expect(screen.getByText("Send the pilot results")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Read email" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Make it a task" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create task" })).toBeNull();
   });
 
   it("stays one line above a bar its page calls urgent", () => {
@@ -179,7 +179,7 @@ describe("a record's Next bar with what just came in", () => {
     expect(screen.getAllByText("New email").length).toBeGreaterThan(0);
     expect(screen.queryByText("Re: Pricing for 40 seats")).toBeNull();
     expect(screen.queryByRole("button", { name: "Read email" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Make it a task" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create task" })).toBeNull();
   });
 
   it("reads a website form's answers as one line", () => {
@@ -239,7 +239,7 @@ describe("making the item a task", () => {
     const user = userEvent.setup();
     const posted = serveTasks();
     withProviders(scoped(MAIL_IN, <RecordNextBar />));
-    await user.click(screen.getByRole("button", { name: "Make it a task" }));
+    await user.click(screen.getByRole("button", { name: "Create task" }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toEqual({
       subject: "Reply: Re: Pricing for 40 seats",
@@ -262,7 +262,7 @@ describe("making the item a task", () => {
         <RecordNextBar />,
       ),
     );
-    await user.click(screen.getByRole("button", { name: "Make it a task" }));
+    await user.click(screen.getByRole("button", { name: "Create task" }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toEqual({
       subject: "Follow up: Website form: Request a demo",

@@ -3309,7 +3309,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "latest.kind.message": "Neue Nachricht",
   "latest.kind.webForm": "Neues Website-Formular",
   "latest.line.open": "{kind}: in der Übersicht zeigen",
-  "latest.makeTask": "Als Aufgabe anlegen",
+  "latest.makeTask": "Aufgabe erstellen",
   "latest.noticed": "Zur Kenntnis nehmen",
   "latest.read.email": "E-Mail lesen",
   "latest.read.message": "Nachricht lesen",

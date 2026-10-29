@@ -3292,7 +3292,7 @@ export const en = {
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",
   "latest.line.open": "{kind}: open in Overview",
-  "latest.makeTask": "Make it a task",
+  "latest.makeTask": "Create task",
   "latest.noticed": "Noticed",
   "latest.read.email": "Read email",
   "latest.read.message": "Read message",

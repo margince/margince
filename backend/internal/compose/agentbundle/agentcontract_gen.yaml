@@ -2775,7 +2775,9 @@ paths:
         `waiting_reply` read lists, so a badge, the waiting lane and this agree on who is
         waiting. A website form lands as a note that read does not know. It counts as
         answered once a later outbound email or message, a call, or a held meeting is on the
-        record. At most 10 items, which is more than a reader sets aside in a week.
+        record. An item an open task already stands for is left out, so an empty answer
+        does not mean nothing came in. At most 10 items, which is more than a reader sets
+        aside in a week.
       parameters:
         - name: entity_type
           in: query

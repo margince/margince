@@ -5575,11 +5575,12 @@ export interface paths {
          *     `waiting_reply` read lists, so a badge, the waiting lane and this agree on who is
          *     waiting. A website form lands as a note that read does not know. It counts as
          *     answered once a later outbound email or message, a call, or a held meeting is on the
-         *     record. At most 10 items, which is more than a reader sets aside in a week.
+         *     record. An item an open task already stands for is left out, so an empty answer
+         *     does not mean nothing came in. At most 10 items, which is more than a reader sets
+         *     aside in a week.
          *
-         *     An item an open task already stands for is left out, as the `waiting_reply` read
-         *     leaves it out: one made from it, or the reminder filed for its request, a
-         *     colleague's private task included. `accepts_request` says a task made from the item
+         *     The task that leaves an item out is one made from it, or the reminder filed for its
+         *     request, a colleague's private task included, as in the `waiting_reply` read. `accepts_request` says a task made from the item
          *     should accept its request (`request_activity_id`), so that completing the task
          *     settles the request. When it is false, a task made from it carries
          *     `source_activity_id` instead.
