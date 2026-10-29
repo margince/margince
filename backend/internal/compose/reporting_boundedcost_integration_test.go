@@ -76,7 +76,7 @@ func reportingTeamOwnerCost(t *testing.T, extra int) map[string]ownerCostReading
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "closed_win_rate", "open_pipeline"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment", "target_progress"}}
 	readings := map[string]ownerCostReading{}
 	for name, reader := range map[string]context.Context{"admin": admin, "team lead": reportingTieredReader(admin, principal.RowScopeTeam), "rep": reportingTieredReader(admin, principal.RowScopeOwn)} {
-		reading := evaluateOwnerCost(t, service, reader, selection)
+		reading := evaluateOwnerCost(reader, t, service, selection)
 		visible := want
 		if name == "rep" {
 			visible = map[string]float64{e.Rep1.String(): want[e.Rep1.String()]}
@@ -98,7 +98,7 @@ func reportingTeamOwnerCost(t *testing.T, extra int) map[string]ownerCostReading
 	return readings
 }
 
-func evaluateOwnerCost(t *testing.T, service *reporting.Service, reader context.Context, selection crmcontracts.ReportingSelection) ownerCostReading {
+func evaluateOwnerCost(reader context.Context, t *testing.T, service *reporting.Service, selection crmcontracts.ReportingSelection) ownerCostReading {
 	t.Helper()
 	metered, meter := database.WithStatementMeter(reader)
 	result, err := service.Evaluate(metered, selection)
