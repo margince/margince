@@ -33665,9 +33665,9 @@ type Company360SinceLastVisit struct {
 	NewActivities  int  `json:"new_activities"`
 
 	// PendingProposals Null when the caller cannot triage approvals (an agent principal) — not
-	// counted, as opposed to counted as zero. Saturates at 200: deciding who may
-	// see a staged change is a per-row check, and a badge is not worth making one
-	// record page pay for an unbounded backlog.
+	// counted, as opposed to counted as zero. Exact: every pending proposal on this
+	// company the caller could decide, including ones past the approvals section's
+	// scan cap.
 	PendingProposals *int `json:"pending_proposals,omitempty"`
 }
 
