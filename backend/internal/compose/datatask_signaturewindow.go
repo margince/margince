@@ -22,7 +22,7 @@ import (
 func signatureWindowDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792842314_signature_fields_outside_the_senders_text", Version: 1,
-		Title: "Taking back contact details read from quoted mail", Requires: []string{"core/1792842046"},
+		Title: "Taking back contact details read from quoted mail", Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "signature_fields", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -40,14 +40,13 @@ func renamesAContact(currentName string, in UpdateContactInput) bool {
 	return in.FullName != nil && NormalizeContactName(*in.FullName) != NormalizeContactName(currentName)
 }
 
-// recheckIfEdited runs the re-check when an update moved the contact's name or
-// replaced its addresses. A new address can reveal a twin too: the same mailbox
-// under a plus tag, or a subdomain of the twin's employer.
+// recheckIfEdited checks names, addresses and numbers that changed. A new
+// address or number can reveal a duplicate without a name change.
 //
 // The lane locks were taken before the edit wrote anything
 // (lockEditedContactLanes), so the re-check's own locks are already held.
-func recheckIfEdited(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentName string, in UpdateContactInput, emailsChanged bool) error {
-	if !renamesAContact(currentName, in) && !emailsChanged {
+func recheckIfEdited(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentName string, in UpdateContactInput, identifiersChanged bool) error {
+	if !renamesAContact(currentName, in) && !identifiersChanged {
 		return nil
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -59,9 +58,9 @@ func recheckIfEdited(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentNa
 
 // lockEditedContactLanes locks the contact's row, then the lanes for the
 // addresses and the name it will hold, before the edit writes an address
-// (lockorder.go). An edit that neither renames nor sends addresses takes none.
+// (lockorder.go). An edit without a name, address or number change takes none.
 func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput) error {
-	if !renamesAContact(current.FullName, in) && in.Emails == nil {
+	if !renamesAContact(current.FullName, in) && in.Emails == nil && in.Phones == nil {
 		return nil
 	}
 	if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
