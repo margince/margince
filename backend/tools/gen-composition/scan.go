@@ -248,7 +248,9 @@ func refuseNonRootGoPackages(name, dir string) error {
 		return err
 	}
 	for _, e := range entries {
-		if !e.IsDir() || slices.Contains(unbuiltCapabilityLayers, e.Name()) {
+		// overlays/ compiles into core's packages, never as one of the unit's;
+		// composeOverlays holds every file there to the build tag.
+		if !e.IsDir() || slices.Contains(unbuiltCapabilityLayers, e.Name()) || e.Name() == overlaysLayer {
 			continue
 		}
 		sub := filepath.Join(dir, e.Name())

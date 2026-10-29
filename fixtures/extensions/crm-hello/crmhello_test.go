@@ -103,3 +103,20 @@ func TestAGoneDealIsHandledAndAFailedReadIsRetried(t *testing.T) {
 		t.Error("a failed read was marked handled, so the bus never delivers it again")
 	}
 }
+
+func TestTheHooksRefuseOnlyTheirSentinels(t *testing.T) {
+	e := New()
+	write, operation := e.WriteHooks[0].Handle, e.OperationHooks[0].Handle
+	if err := write(context.Background(), nil, extension.Write{After: []byte(`{"name":"Fleet"}`)}); err != nil {
+		t.Fatalf("an ordinary deal was refused: %v", err)
+	}
+	if err := write(context.Background(), nil, extension.Write{After: []byte(`{"name":"` + sentinelWrite + `"}`)}); !errors.Is(err, extension.ErrConflict) {
+		t.Fatalf("err = %v, want the sentinel write refused as a conflict", err)
+	}
+	if err := operation(context.Background(), nil, &extension.Operation{Body: []byte(`{"name":"Fleet"}`)}); err != nil {
+		t.Fatalf("an ordinary call was refused: %v", err)
+	}
+	if err := operation(context.Background(), nil, &extension.Operation{Body: []byte(`{"name":"` + sentinelOperation + `"}`)}); !errors.Is(err, extension.ErrInvalid) {
+		t.Fatalf("err = %v, want the sentinel call refused as invalid", err)
+	}
+}

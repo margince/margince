@@ -69,6 +69,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
 | Origins | The list of places a lead can come from, kept in Settings. |
 | origins | The list of places a lead can come from, kept in Settings. |
+| overlay | A unit's Go file compiled into a core package with `go build -overlay`, replacing a core function. |
 | PNG | A common image file format, saved as .png. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |

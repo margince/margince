@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -136,6 +137,15 @@ func allowlistedSurface(t *testing.T) map[string]bool {
 	return marked
 }
 
+// overlayFile reports a file in a unit's overlays/. It compiles into a core
+// package through `go build -overlay`, so its imports are held by
+// gen-composition's checkOverlayContent: only what that package already imports.
+func overlayFile(path string) bool {
+	return unitOverlayPath.MatchString(filepath.ToSlash(path))
+}
+
+var unitOverlayPath = regexp.MustCompile(`(^|/)extensions/[^/]+/overlays/`)
+
 // TestExtensionsImportOnlyTheAllowlistedSurface: an extension reaches the
 // product only through the marker-allowlisted backend/pkg packages —
 // never internal/**, cmd/**, an unmarked pkg package, the composition
@@ -150,7 +160,7 @@ func TestExtensionsImportOnlyTheAllowlistedSurface(t *testing.T) {
 		for file, imports := range goImports(t, dir) {
 			for _, imp := range imports {
 				if strings.HasPrefix(imp, modulePath+"/") {
-					if !surface[imp] {
+					if !surface[imp] && !overlayFile(file) {
 						t.Errorf("%s imports %s: extensions import only the allowlisted published surface (a backend/pkg package carrying %s)", file, imp, extensionSurfaceMarker)
 					}
 					continue

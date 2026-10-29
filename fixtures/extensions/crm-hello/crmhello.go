@@ -11,8 +11,10 @@
 package crmhello
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -22,7 +24,8 @@ import (
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
 // nothing. The subscription puts a declared system read in the extension lane,
-// and the panel puts the frontend layer and a panel slot there.
+// and the panel puts the frontend layer and a panel slot there. The hooks put
+// a write hook and an operation hook there.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
@@ -39,7 +42,34 @@ func New() extension.Extension {
 		Panels: []extension.Panel{
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},
+		WriteHooks: []extension.WriteHook{
+			{Entity: "deal", Actions: []string{"create"}, Handle: refuseSentinelWrite},
+		},
+		OperationHooks: []extension.OperationHook{
+			{Operations: []string{"createDeal"}, Handle: refuseSentinelOperation},
+		},
 	}
+}
+
+// The hooks refuse only their own sentinel names, so a composed lane runs them
+// on every deal create without changing what any other test sees.
+const (
+	sentinelWrite     = "crm-hello: refuse this write"
+	sentinelOperation = "crm-hello: refuse this call"
+)
+
+func refuseSentinelWrite(_ context.Context, _ extension.Runtime, w extension.Write) error {
+	if bytes.Contains(w.After, []byte(sentinelWrite)) {
+		return fmt.Errorf("%w: crm-hello refuses this deal", extension.ErrConflict)
+	}
+	return nil
+}
+
+func refuseSentinelOperation(_ context.Context, _ extension.Runtime, op *extension.Operation) error {
+	if bytes.Contains(op.Body, []byte(sentinelOperation)) {
+		return fmt.Errorf("%w: crm-hello refuses this call", extension.ErrInvalid)
+	}
+	return nil
 }
 
 // noteDealChange reads the deal a delivery names and logs its stage, the

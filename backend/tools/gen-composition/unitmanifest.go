@@ -66,6 +66,8 @@ type unitManifest struct {
 	// Secrets has it: every manifest already in the tree predates the field.
 	Subscriptions []subscriptionRequest `json:"subscriptions,omitempty"`
 
+	interceptions
+
 	// Ingress are the providers the unit brings records IN from (see
 	// extension.IngressSource). Like a subscription it carries no tier and no
 	// scope, and what it records is reach — but reach that leaves a permanent

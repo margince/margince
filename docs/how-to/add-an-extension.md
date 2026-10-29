@@ -771,6 +771,69 @@ callers use stops the build. A wrapper picks up the rest of core's change throug
 A file that replaces one of core may import `@margince-core/` only for that one file. An added screen and every
 other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse it.
 
+## Change what core does: hooks and the overlay
+
+Use the first of these that does the job. Each is derived into your unit's `manifest.generated.json`, so an
+operator sees what your unit changes.
+
+A write hook runs after an audited core write, inside its transaction:
+
+```go
+WriteHooks: []extension.WriteHook{
+	{Entity: "deal", Actions: []string{"create"}, Handle: onDealCreated},
+},
+```
+
+`Handle` gets the audit images of the write, masked as the audit log masks them. Its `rt.Tx` joins the
+write's transaction, so your rows commit with core's. An error rolls the whole write back. Writes a hook
+makes run no hooks.
+
+A write hook runs with nobody behind it, as a job does, because a core write may run as the system. So
+`Core()` is refused, and so are `Ingest` and `SyncNow`. Hook a record kind that agents can reach; the boot
+refuses your own `ext_*` rows and the seats.
+
+An operation hook runs before a core contract operation, named by its `operationId` in `crm.yaml`:
+
+```go
+OperationHooks: []extension.OperationHook{
+	{Operations: []string{"createDeal"}, Handle: checkDealName},
+},
+```
+
+It may replace `op.Body`, and core reads the new body as if the caller sent it. Or it returns one of the
+`extension.Err*` classes, and the caller gets your sentence with that class's status. It runs before the
+agent gate, so the gate judges the body your hook leaves. The boot refuses an operation agents cannot
+reach, so sign-in, credentials and consent stay core's.
+
+An operation hook runs on the REST API only. A rule that MCP tools must hold too belongs in a write hook.
+
+An overlay replaces a core function. A file at `overlays/internal/modules/<module>/<name>.go` in your unit
+compiles into that core package. It carries the license header, then `//go:build margince_overlay` above its
+`package` line, so your own build leaves it out. A function marked `//margince:decorate` replaces core's
+function of the same name. Core's stays in the package as `<name>__core`, so yours can call it:
+
+```go
+//margince:decorate
+func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontracts.Deal, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	return s.CreateDeal__core(ctx, in)
+}
+```
+
+Only packages under `internal/modules/` can take an overlay, and two units cannot replace one function. An
+overlay file holds functions and types. It may not declare `init` or a package `var`, use a `//go:`
+line past its build tag, or import `unsafe` or `C`. Past the standard library, it imports only what
+the core package already imports.
+`make composition` writes `build/overlay/overlay.json`, and every composed `go` command passes it as
+`-overlay`. Record each function you replace in `overlays.lock` at your unit's root:
+
+```text
+internal/modules/deals.(*Store).CreateDeal sha256:<hash of core's function>
+```
+
+As with `frontend/overrides.lock`, a missing or stale line only warns, and the warning prints the line to
+write. The build fails when core changes the function's signature, because your file no longer compiles.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

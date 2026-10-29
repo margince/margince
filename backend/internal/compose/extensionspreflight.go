@@ -29,5 +29,8 @@ func preflightDeclarations(e extension.Extension) error {
 	if err := preflightSystemReads(e); err != nil {
 		return err
 	}
+	if err := preflightHooks(e); err != nil {
+		return err
+	}
 	return preflightIngress(e)
 }

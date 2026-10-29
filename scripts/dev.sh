@@ -1179,14 +1179,14 @@ up)
     # of its extensions' tables.
     ( cd backend && GOWORK="$PWD/../go.work" go run ./tools/gen-composition )
     ( cd backend && MARGINCE_OWNER_DSN="$dev_owner_url" \
-      GOWORK="$PWD/../build/composition/go.work" go run ./cmd/migrate up )
+      GOWORK="$PWD/../build/composition/go.work" GOFLAGS="-overlay=$PWD/../build/overlay/overlay.json" go run ./cmd/migrate up )
     echo "=== build api (once, before the readiness poll) ==="
     # ONE revision for both halves of the stack, so the api and the documents it
     # fetches can be compared exactly as they are in a deployed installation.
     # Overridable: setting MARGINCE_BUILD_REVISION before `make dev` is how the
     # skew path is exercised deliberately, since a matching pair proves only the
     # quiet case.
-    ( cd backend && GOWORK="$PWD/../build/composition/go.work" \
+    ( cd backend && GOWORK="$PWD/../build/composition/go.work" GOFLAGS="-overlay=$PWD/../build/overlay/overlay.json" \
         go build -ldflags "-X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=${MARGINCE_BUILD_REVISION}" \
         -o ../bin/api ./cmd/api )
     echo "=== servers ==="
@@ -1451,7 +1451,7 @@ up)
   # flags). How often each pass runs and how often a
   # mailbox syncs are admin settings (Settings -> System health, Capture), so
   # a demo that wants a quicker mail poll sets it there.
-  ( cd backend && GOWORK="$PWD/../build/composition/go.work" go build -o ../bin/worker ./cmd/worker ) > >(log_as boot) 2>&1
+  ( cd backend && GOWORK="$PWD/../build/composition/go.work" GOFLAGS="-overlay=$PWD/../build/overlay/overlay.json" go build -o ../bin/worker ./cmd/worker ) > >(log_as boot) 2>&1
   ./bin/worker --dsn "$dev_app_url" --redis "${REDIS_ADDR}" \
     --config "$deploy_cfg" --config-file "$dev_cfg" \
     "${env_file_flag[@]+"${env_file_flag[@]}"}" > >(log_as worker) 2>&1 &

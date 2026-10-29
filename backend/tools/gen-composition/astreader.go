@@ -91,7 +91,8 @@ func readUnitManifest(u extensionUnit, vocab map[string]string, verbs []declared
 	if m.Name != u.Name {
 		return unitManifest{}, fmt.Errorf("extensions/%s: New() declares name %q — the directory name IS the unit name", u.Name, m.Name)
 	}
-	return m, nil
+	m.Overlays, err = declaredOverlays(u.Dir)
+	return m, err
 }
 
 func findNew(pkgs map[string][]*ast.File) (fn *ast.FuncDecl, file *ast.File, count int) {
@@ -417,6 +418,8 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.Subscriptions = append(m.Subscriptions, subs...)
 		}
+	case "WriteHooks", "OperationHooks":
+		err = r.readHookField(key.Name, kv.Value, file, m)
 	case "Ingress":
 		var sources []ingressSource
 		sources, err = r.readIngress(kv.Value, file)
