@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -57,7 +58,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 	t.Helper()
 	ctx := context.Background()
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
-	svc, users := approvals.NewService(e.DB()), identity.NewServiceFor(e.DB())
+	svc, users := compose.NewApprovalsService(e.DB()), identity.NewServiceFor(e.DB())
 	sweep := principal.SystemActing(principal.WithWorkspaceID(ctx, ws), dailyStagingActor)
 	perRep := func(n int) int { return max(2, int(float64(n)*scale)) }
 	pending, applied, expired := perRep(dailyPendingPerRep), perRep(dailyAppliedPerRep), perRep(dailyExpiredPerRep)
@@ -88,7 +89,10 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 // what ran since the reader's brief, and the day's automatic work comes after it.
 func applyDailyApprovals(t *testing.T, e *apptest.AppEnv, made DailyApprovals) DailyApprovals {
 	t.Helper()
-	svc := approvals.NewService(e.DB())
+	// The production service, without the close-date effect: compose keeps the
+	// auto-apply wiring that registers it to itself. The receipt is real; the
+	// deal's date does not move.
+	svc := compose.NewApprovalsService(e.DB())
 	for _, card := range made.toApply {
 		if _, err := svc.ApplyUnderPolicy(card.agent, card.id); err != nil {
 			t.Fatalf("applying close-date card %s under policy: %v", card.id, err)

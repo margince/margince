@@ -92,7 +92,8 @@ type DailyResult struct {
 	FirstP95 time.Duration
 	// Incomplete counts 200 answers that named an unavailable source.
 	Incomplete int
-	Empty      bool
+	// Lacking counts timed answers without the field the strict lane needs filled.
+	Lacking int
 }
 
 const dailyScaleEnv = "MARGINCE_BENCH_DAILY_SCALE"

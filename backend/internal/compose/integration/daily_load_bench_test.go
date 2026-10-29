@@ -87,20 +87,27 @@ type dailyLoadCall struct {
 	call dailyCall
 }
 
-// morningJourney is the start of a day: shell, Worklist, Home, two palette
-// searches and two record opens, in the order a user meets them.
-func morningJourney(in dailyInput) []dailyLoadCall {
-	var journey []dailyLoadCall
-	add := func(flow string, calls ...dailyCall) {
+// morningJourney is the start of a day as screens: shell, Home, Worklist, two
+// palette searches and two record opens, in the order a user meets them. A
+// screen's calls go out together, as its components mount together; the
+// screens follow one another.
+func morningJourney(in dailyInput) [][]dailyLoadCall {
+	var journey [][]dailyLoadCall
+	screen := func(flow string, calls ...dailyCall) {
+		var stage []dailyLoadCall
 		for _, call := range calls {
-			journey = append(journey, dailyLoadCall{dailyRowName(flow, call), call})
+			stage = append(stage, dailyLoadCall{dailyRowName(flow, call), call})
 		}
+		journey = append(journey, stage)
 	}
-	add("app_shell", appShellCalls(in)...)
-	add("worklist", worklistCalls(in)[0])
-	add("home", homeCalls(in)...)
-	add("palette_search", paletteCalls(in)[:2]...)
-	add("record_open", recordOpenCalls(in)[0], recordOpenCalls(in)[2])
+	screen("app_shell", appShellCalls(in)...)
+	screen("home", homeCalls(in)...)
+	screen("worklist", worklistCalls(in)[0])
+	for _, call := range paletteCalls(in)[:2] {
+		screen("palette_search", call)
+	}
+	screen("record_open", recordOpenCalls(in)[0])
+	screen("record_open", recordOpenCalls(in)[2])
 	return journey
 }
 
@@ -208,9 +215,15 @@ func runMorningSession(ctx context.Context, e *apptest.AppEnv, in dailyInput, ta
 	stop := make(chan struct{})
 	var polls sync.WaitGroup
 	polls.Go(func() { pollMorning(ctx, e, in.Seat, tally, stop) })
-	for _, step := range morningJourney(in) {
-		status, body, _, err := in.Seat.fetch(ctx, e.TS.URL, step.call.Path)
-		tally.admit(in.Seat.Name, step.row, dailyResponse{step.call, status, body}, err, absent)
+	for _, stage := range morningJourney(in) {
+		var calls sync.WaitGroup
+		for _, step := range stage {
+			calls.Go(func() {
+				status, body, _, err := in.Seat.fetch(ctx, e.TS.URL, step.call.Path)
+				tally.admit(in.Seat.Name, step.row, dailyResponse{step.call, status, body}, err, absent)
+			})
+		}
+		calls.Wait()
 	}
 	close(stop)
 	polls.Wait()

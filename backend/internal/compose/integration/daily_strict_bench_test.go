@@ -15,35 +15,64 @@ import (
 )
 
 // strictHomeCohort is one row and seat the strict Home lane must find measured,
-// and the budget it answers to. A filled cohort fails on an empty answer: the
-// corpus gives that seat data there, so empty means a source went missing.
+// and the budget it answers to. holds names the top-level field that must carry
+// data in every timed answer, where the corpus gives that seat data; "" means
+// the row may answer empty.
 type strictHomeCohort struct {
 	requirement, row, seat string
 	budget                 time.Duration
-	filled                 bool
+	holds                  string
 }
 
 // strictHomeCohorts are Home's acceptance targets. They are stricter than the
 // published PERF rows and never consult DailyKnownIssues.
 //
-// The manager owns no records, so their brief and receipts are the declared
-// empty cohort: timed, but never required to hold anything.
+// The manager owns no records, so their brief, receipts and own queue are the
+// declared empty cohort: timed, but never required to hold anything.
 var strictHomeCohorts = []strictHomeCohort{
-	{"R02", "worklist", "rep", 750 * time.Millisecond, true},
-	{"R02", "worklist", "manager", 750 * time.Millisecond, true},
-	{"R02", "home_worklist", "rep", 750 * time.Millisecond, true},
-	{"R02", "home_worklist", "manager", 750 * time.Millisecond, false},
-	{"R04", "app_shell_me", "rep", 150 * time.Millisecond, true},
-	{"R04", "app_shell_me", "manager", 150 * time.Millisecond, true},
-	{"R04", "morning_load_cheap_route", "team", 150 * time.Millisecond, false},
-	{"R05", "home_brief", "rep", 200 * time.Millisecond, true},
-	{"R05", "home_brief", "manager", 200 * time.Millisecond, false},
-	{"R05", "home_handled", "rep", 200 * time.Millisecond, true},
-	{"R05", "home_handled", "manager", 200 * time.Millisecond, false},
-	{"R05", "home_magic", "rep", 200 * time.Millisecond, true},
-	{"R05", "home_magic", "manager", 200 * time.Millisecond, false},
-	{"R06", "admin_rail_ai_usage", "admin", 100 * time.Millisecond, true},
-	{"R06", "admin_rail_embed_reindex_identities", "admin", 100 * time.Millisecond, false},
+	{"R02", "worklist", "rep", 750 * time.Millisecond, "queue"},
+	{"R02", "worklist", "manager", 750 * time.Millisecond, "queue"},
+	{"R02", "home_worklist", "rep", 750 * time.Millisecond, "queue"},
+	{"R02", "home_worklist", "manager", 750 * time.Millisecond, ""},
+	{"R04", "app_shell_me", "rep", 150 * time.Millisecond, "user"},
+	{"R04", "app_shell_me", "manager", 150 * time.Millisecond, "user"},
+	{"R04", "morning_load_cheap_route", "team", 150 * time.Millisecond, ""},
+	{"R05", "home_brief", "rep", 200 * time.Millisecond, "items"},
+	{"R05", "home_brief", "manager", 200 * time.Millisecond, ""},
+	{"R05", "home_handled", "rep", 200 * time.Millisecond, "receipts"},
+	{"R05", "home_handled", "manager", 200 * time.Millisecond, ""},
+	{"R05", "home_magic", "rep", 200 * time.Millisecond, "done"},
+	{"R05", "home_magic", "manager", 200 * time.Millisecond, ""},
+	{"R06", "admin_rail_ai_usage", "admin", 100 * time.Millisecond, "cost_est_minor"},
+	{"R06", "admin_rail_embed_reindex_identities", "admin", 100 * time.Millisecond, ""},
+}
+
+// strictHolds is the field a row's timed answers must carry for a seat, or "".
+func strictHolds(row, seat string) string {
+	for _, c := range strictHomeCohorts {
+		if c.row == row && c.seat == seat {
+			return c.holds
+		}
+	}
+	return ""
+}
+
+// holdsData reports whether a JSON object's field is present and carries
+// something: a non-empty list, an object, or a non-null value.
+func holdsData(body []byte, field string) bool {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(body, &object) != nil {
+		return false
+	}
+	value, ok := object[field]
+	if !ok || string(value) == "null" {
+		return false
+	}
+	var list []json.RawMessage
+	if json.Unmarshal(value, &list) == nil {
+		return len(list) > 0
+	}
+	return true
 }
 
 // JudgeStrictHome judges every strict cohort against the run's results. A
@@ -63,8 +92,8 @@ func JudgeStrictHome(results []DailyResult) []StrictVerdict {
 		worst := max(r.P95, r.FirstP95)
 		v.P95Ms, v.Samples = ms(worst), r.Samples
 		v.Failure = strictFailure(r, worst, c.budget)
-		if v.Failure == "" && c.filled && r.Empty {
-			v.Failure = "answered empty where the corpus holds data"
+		if v.Failure == "" && c.holds != "" && r.Lacking > 0 {
+			v.Failure = fmt.Sprintf("%d of %d answers carried no %s", r.Lacking, r.Samples, c.holds)
 		}
 		v.Pass = v.Failure == ""
 		verdicts = append(verdicts, v)
@@ -192,16 +221,34 @@ func TestUnavailableSourcesReadsTheWorklistsOwnField(t *testing.T) {
 	}
 }
 
-func TestAnEmptyAnswerFailsOnlyWhereTheCorpusHoldsData(t *testing.T) {
+func TestAnAnswerWithoutItsDataFailsOnlyWhereTheCorpusHoldsData(t *testing.T) {
 	results := strictCohortResults()
 	for i := range results {
-		results[i].Empty = true
+		results[i].Lacking = 1
 	}
 	for _, v := range JudgeStrictHome(results) {
-		filled := v.Name != "morning_load_cheap_route" && v.Name != "admin_rail_embed_reindex_identities" &&
-			(v.Seat != "manager" || v.Name == "worklist" || v.Name == "app_shell_me")
-		if v.Pass == filled {
-			t.Errorf("%s %s: pass=%v on an empty answer; want a failure exactly where the corpus holds data", v.Name, v.Seat, v.Pass)
+		if want := strictHolds(v.Name, v.Seat) == ""; v.Pass != want {
+			t.Errorf("%s %s: pass=%v with one answer lacking its data; want pass=%v", v.Name, v.Seat, v.Pass, want)
+		}
+	}
+}
+
+func TestHoldsDataReadsTheNamedFieldNotTheEnvelope(t *testing.T) {
+	emptyQueue := `{"as_of":"2026-10-29T00:00:00Z","queue":[],"summary":{"considered":0},"scope_options":["mine","team"],"sources_unavailable":[]}`
+	for _, c := range []struct {
+		body, field string
+		want        bool
+	}{
+		{emptyQueue, "queue", false},
+		{`{"queue":[{"id":"a"}],"summary":{}}`, "queue", true},
+		{`{"done":[],"needs_you":[],"totals":{"done":0}}`, "done", false},
+		{`{"currency":"USD","computed_at":"2026-10-29T00:00:00Z"}`, "cost_est_minor", false},
+		{`{"cost_est_minor":0,"currency":"USD"}`, "cost_est_minor", true},
+		{`{"user":null}`, "user", false},
+		{`[]`, "queue", false},
+	} {
+		if got := holdsData([]byte(c.body), c.field); got != c.want {
+			t.Errorf("holdsData(%s, %q) = %v, want %v", c.body, c.field, got, c.want)
 		}
 	}
 }

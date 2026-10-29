@@ -250,7 +250,9 @@ type dailyTally struct {
 	s5xx, s422 int
 	// incomplete counts 200 answers that named an unavailable source.
 	incomplete int
-	empty      bool
+	// lacking counts timed answers without the field strictHolds names.
+	lacking int
+	empty   bool
 	// emptyCalls names the calls of a composite row that answered empty.
 	emptyCalls []string
 	answer     []byte
@@ -491,9 +493,13 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 		if err != nil {
 			return nil, err
 		}
+		holds := strictHolds(name, s.Role)
 		for _, r := range answered {
 			if err := f.admit(r, tallied(&tally, counted)); err != nil {
 				return nil, err
+			}
+			if counted && holds != "" && r.status < 300 && !holdsData(r.body, holds) {
+				tally.lacking++
 			}
 		}
 		return []time.Duration{elapsed}, nil
@@ -686,7 +692,7 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
 			P95: stats.P95, Budget: budget, Samples: stats.Samples,
-			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Empty: tally.empty,
+			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Lacking: tally.lacking,
 		},
 		Empty:  tally.empty,
 		Answer: tally.answer,
