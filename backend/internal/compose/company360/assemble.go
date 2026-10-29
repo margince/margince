@@ -133,20 +133,24 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 	if err != nil {
 		return crmcontracts.Company360{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
-		if err != nil {
-			return err
-		}
-		out.Company = company
-		if err := opts.admit(ctx, tx, companyID, &out); err != nil {
-			return err
-		}
-		prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
-		if err != nil {
-			return err
-		}
-		return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+	// One repeatable-read snapshot, so the pending-proposal count and its capped
+	// list agree with each other and with every other section.
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+			if err != nil {
+				return err
+			}
+			out.Company = company
+			if err := opts.admit(ctx, tx, companyID, &out); err != nil {
+				return err
+			}
+			prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
+			if err != nil {
+				return err
+			}
+			return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.Company360{}, err

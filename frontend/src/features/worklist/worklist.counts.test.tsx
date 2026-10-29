@@ -434,6 +434,21 @@ describe("the line compares items with items", () => {
     page.sources_unavailable = page.sources_unavailable.slice(1);
     expect(completenessText(page, "all", t, "en", [task(1)])).toBeNull();
   });
+
+  it("names no limit on a category the server counted in full", () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 200,
+        shown: 25,
+        more_available: true,
+        total: 340,
+      },
+    ]);
+    const line = completenessText(page, "decisions", t, "en") ?? "";
+    expect(line).toMatch(/^25 of 340 items shown/);
+    expect(line).not.toContain("200");
+  });
 });
 
 it("does not print an exact pill total over a failed or withheld source", () => {
