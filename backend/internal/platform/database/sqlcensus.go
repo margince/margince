@@ -66,11 +66,11 @@ func processCensus(dir string) (*sqlCensus, error) {
 }
 
 func newSQLCensus(dir string) (*sqlCensus, error) {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return nil, fmt.Errorf("sql census: %w", err)
 	}
 	name := filepath.Join(dir, fmt.Sprintf("census-%d.jsonl", os.Getpid()))
-	out, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	out, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600) //nolint:gosec // a file of this process, in the directory the integration lane names
 	if err != nil {
 		return nil, fmt.Errorf("sql census: %w", err)
 	}
