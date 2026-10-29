@@ -4,10 +4,10 @@
  * mirrors them exactly and tokens.test.ts pins every value, so a drift from the
  * design source of truth fails the build.
  *
- * Semantic split (§2, UX review 2026-06-29): the brand accent (deep emerald) means
+ * Semantic split (§2, UX review 2026-06-29): the brand accent (deep teal) means
  * PRIMARY ACTION and brand only; AI/agent-authored surfaces carry their own indigo
  * hue; status (success/warning/danger) is a third family. One meaning per colour —
- * success stays a brighter grass-green than the brand emerald on purpose.
+ * success stays a brighter grass-green than the brand teal.
  */
 :root {
   /*
@@ -130,9 +130,9 @@
   --bgRail: #13231d;
   /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
    * (white-alpha icons on the dark green field in BOTH themes), and the
-   * workspace chip stays brand emerald even when the dark accent lightens. */
+   * workspace chip keeps one brand value even when the dark accent lightens. */
   --overlayScrim: rgba(19, 35, 29, 0.4);
-  --accentBrand: #0b7a53;
+  --accentBrand: #045647;
   --railIconActive: #fff;
   /* The onboarding dialog's dark glass, unthemed like the rail it sits beside:
    * the hero is dark in both themes, so its fill, quiet ink and shadow tint are

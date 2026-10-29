@@ -193,7 +193,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     expect(all).not.toContain("#ff6b00"); // Gradion orange
   });
 
-  it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
+  it("keeps the brand teal and success grass-green tonally distinct (§2)", () => {
     expect(normalize(light["--accent"])).not.toBe(
       normalize(light["--success"]),
     );

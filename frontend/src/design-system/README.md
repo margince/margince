@@ -246,7 +246,7 @@ Paint it where that is true and nowhere else. A card tinted indigo for looks tel
 that screen something false about who decided.
 
 It is a family of its own for the same reason the five states are: one meaning per colour.
-`--accent` (deep emerald) is the brand and the primary action. The state hues report how something
+`--accent` (deep teal) is the brand and the primary action. The state hues report how something
 went. None of them means "written by a model". The top of `tokens.css` states the split, and
 `tokens.test.ts` pins it.
 

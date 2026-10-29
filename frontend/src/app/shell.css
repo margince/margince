@@ -496,7 +496,7 @@
   height: 40px;
   border-radius: var(--r-control);
   overflow: hidden;
-  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
+  /* Flat brand fill, no gradient and no lift: the mark is the one filled
      thing in the chrome. */
   background: var(--accentBrand);
   color: var(--textOnAccent);
@@ -505,7 +505,7 @@
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
    stands here is an icon drawn for its own background, or the monogram Avatar
-   tints from the record's identity, and either one on the brand emerald would
+   tints from the record's identity, and either one on the brand fill would
    be a second surface behind a finished mark. The avatar takes the chip's
    square, because a company's icon is drawn square and a circle crops it. */
 .rail .ws-chip-company {

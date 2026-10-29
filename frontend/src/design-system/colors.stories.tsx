@@ -143,7 +143,8 @@ const ACCENT: readonly Entry[] = [
   { token: "--accentMed" },
   {
     token: "--accentBrand",
-    usage: "Brand emerald that stays put when the dark accent lightens.",
+    usage:
+      "The brand mark's fill, one value in both themes: the workspace chip, the app icon, the browser's title bar.",
   },
   {
     token: "--teal",
@@ -675,7 +676,7 @@ export const Status: Story = {
           the rest is derived from it in tokens.css. Choose by what the colour
           is doing: the base for what is seen with nothing read on it, Text for
           ink, Surface for a badge, Bg for a wash, Border for a hairline.
-          Success stays a brighter green than the brand emerald on purpose.
+          Success stays a brighter green than the brand teal.
         </p>
         {THEMES.map((theme) => (
           <StatusPanel key={theme} theme={theme} values={values} />
@@ -685,12 +686,12 @@ export const Status: Story = {
   },
 };
 
-/** Emerald is brand and primary action, teal is identity. */
+/** The accent is brand and primary action, `--teal` is identity. */
 export const AccentAndBrand: Story = {
   name: "Accent and brand",
   render: () => (
     <Rows
-      intro="Emerald means primary action and brand, and nothing else: at most one filled control in view wears it, and a selected row takes its wash. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
+      intro="The accent means primary action and brand, and nothing else: at most one filled control in view wears it, and so does the current row of the side rail. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
       entries={ACCENT}
     />
   ),
