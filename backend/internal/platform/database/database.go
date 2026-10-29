@@ -12,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -94,8 +93,8 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// Inert until a caller binds a StatementMeter to the context. The worklist
 	// binds one to split each stage's time into pgx calls, pool waits and the rest.
 	tracer := statementTracer{now: time.Now}
-	if dir := os.Getenv(SQLCensusDirEnv); dir != "" {
-		census, err := processCensus(dir)
+	if censusDir != "" {
+		census, err := processCensus(censusDir)
 		if err != nil {
 			return nil, err
 		}

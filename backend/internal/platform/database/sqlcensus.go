@@ -16,9 +16,13 @@ import (
 	"sync"
 )
 
-// SQLCensusDirEnv names a directory; when set, every pool this package builds
-// records each distinct statement it sends, with the Go call chain that sent it.
+// SQLCensusDirEnv names a directory. An integration build that sets it has
+// every pool record each distinct statement, with the call chain that sent it.
 const SQLCensusDirEnv = "MARGINCE_SQL_CENSUS_DIR"
+
+// censusDir is SQLCensusDirEnv as the integration build read it. A product
+// build never sets it, so no product pool records.
+var censusDir string
 
 // CensusMinBytes skips the statements too small to plan expensively. Over the
 // integration lane, every statement that grew a backend by 64 MB was over 18 KB,
