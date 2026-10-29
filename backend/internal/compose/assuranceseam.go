@@ -248,10 +248,13 @@ func customerRefusalSQL(alias, asOf string) string {
 // earlierAnswerSQL is when the newest answer to the retired buyer-silent check
 // on the deal runs out, if it has not yet. Its findings close on the first
 // night the mail is read, but the answers stay, and a deal somebody answered is
-// not asked again before its answer ends.
+// not asked again before its answer ends. A reminder holds at most as long as
+// any answer may hide a finding.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
+	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
+		arg(int(assurance.MaxSuppression/(24*time.Hour))))
 	return fmt.Sprintf(`(SELECT CASE
-		    WHEN r.outcome = $%[3]d AND r.remind_at > %[2]s THEN r.remind_at
+		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
 		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
 		  JOIN assurance_exception x ON x.id = r.exception_id

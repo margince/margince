@@ -23,8 +23,8 @@ import (
 )
 
 // answerEarlierCheck raises a buyer-silent finding on the silent deal and has
-// an admin answer it as correct until the given day.
-func (v *viabilityEnv) answerEarlierCheck(t *testing.T, until time.Time) {
+// an admin give it the answer.
+func (v *viabilityEnv) answerEarlierCheck(t *testing.T, answer assurance.Resolution) {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), v.WS), assuranceActor)
 	store := assurance.NewStore(InstallationDB(v.Pool))
@@ -41,9 +41,7 @@ func (v *viabilityEnv) answerEarlierCheck(t *testing.T, until time.Time) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Resolve(v.Admin(), finding, assurance.Resolution{
-		Outcome: assurance.OutcomeValueCorrect, Reason: "The buyer is on parental leave", ExpiresAt: &until,
-	}, v.now); err != nil {
+	if err := store.Resolve(v.Admin(), finding, answer, v.now); err != nil {
 		t.Fatalf("answering the earlier check: %v", err)
 	}
 }
@@ -51,7 +49,9 @@ func (v *viabilityEnv) answerEarlierCheck(t *testing.T, until time.Time) {
 func TestAnEarlierAnswerIsHonouredUntilItRunsOut(t *testing.T) {
 	v := setupViability(t)
 	until := v.now.AddDate(0, 0, 30)
-	v.answerEarlierCheck(t, until)
+	v.answerEarlierCheck(t, assurance.Resolution{
+		Outcome: assurance.OutcomeValueCorrect, Reason: "The buyer is on parental leave", ExpiresAt: &until,
+	})
 
 	v.check(t)
 	if v.openReviews(t, v.silent) != 0 {
@@ -68,14 +68,34 @@ func TestAnEarlierAnswerIsHonouredUntilItRunsOut(t *testing.T) {
 		t.Fatalf("qualified readings %+v, want the answered deal counted", q)
 	}
 
-	later := until.Add(time.Hour)
-	v.worker.now = func() time.Time { return later }
+	v.checkAt(t, until.Add(time.Hour))
+	if v.openReviews(t, v.silent) != 1 {
+		t.Fatalf("once the answer ran out the silent deal got no review")
+	}
+}
+
+// checkAt runs the check at a later instant, with the mailbox read just before.
+func (v *viabilityEnv) checkAt(t *testing.T, at time.Time) {
+	t.Helper()
+	v.worker.now = func() time.Time { return at }
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE capture_sync_state SET last_success_at = $1`, later.Add(-3*time.Hour)); err != nil {
+		`UPDATE capture_sync_state SET last_success_at = $1`, at.Add(-3*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	v.check(t)
+}
+
+func TestAnEarlierReminderHoldsNoLongerThanAnyAnswerMay(t *testing.T) {
+	v := setupViability(t)
+	remind := v.now.AddDate(0, 0, 200)
+	v.answerEarlierCheck(t, assurance.Resolution{Outcome: assurance.OutcomeRemindLater, RemindAt: &remind})
+
+	v.check(t)
+	if v.openReviews(t, v.silent) != 0 {
+		t.Fatalf("a deal somebody deferred got a fresh review at once")
+	}
+	v.checkAt(t, v.now.Add(assurance.MaxSuppression).Add(24*time.Hour))
 	if v.openReviews(t, v.silent) != 1 {
-		t.Fatalf("once the answer ran out the silent deal got no review")
+		t.Fatalf("a reminder 200 days out still held after %s; it must end with the ceiling", assurance.MaxSuppression)
 	}
 }
