@@ -117,7 +117,9 @@ func (s *Store) linkCandidatesTx(
 	// from idx_contact_email_domain_reversed instead of every live contact. The
 	// unique index refuses a link while it holds an edge, and a contact whose end
 	// date is still ahead works there now.
-	rows, err := tx.Query(ctx, storekit.SQLf(`
+	companyPos := arg(companyID)
+	notSeat := storekit.HoldsNoSeatAddressSQL("c.id", seats.For(ids.Nil), arg)
+	query := storekit.SQLf(`
 		SELECT c.id, c.full_name, c.title, matched.email
 		  FROM contact c
 		  JOIN LATERAL (
@@ -138,8 +140,9 @@ func (s *Store) linkCandidatesTx(
 		   AND %[5]s AND %[6]s AND %[7]s
 		 ORDER BY lower(c.full_name), c.id
 		 LIMIT %[8]d`,
-		matching, arg(companyID), employment.LiveSlotSQL("rel"), employment.IsCurrentSQL("rel.ended_at"),
-		storekit.HoldsNoSeatAddressSQL("c.id", seats.For(ids.Nil), arg), scope, narrowed, limit), args...)
+		matching, companyPos, employment.LiveSlotSQL("rel"), employment.IsCurrentSQL("rel.ended_at"),
+		notSeat, scope, narrowed, limit)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading link candidates: %w", err)
 	}
