@@ -164,3 +164,38 @@ func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 	}
 	t.Fatal("human-held task disappeared from its assignee's current tasks")
 }
+
+// A request whose reminder its assignee pinned is still held past the horizon,
+// so it stays on a colleague's queue. Completing the reminder settles it, and
+// the request leaves.
+func TestAPinnedRequestStaysPastTheHorizonUntilItsReminderIsDone(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	id := seedEmailRequest(t, e, "Please send the pricing", "commitment", OwedVerdictAsksUs)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var reminder, assignee ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id, assignee_id FROM activity WHERE source_activity_id = $1`, id).Scan(&reminder, &assignee); err != nil {
+		t.Fatalf("reading the reminder the pass filed: %v", err)
+	}
+	if err := store.PinWorklistRow(e.asSeat(assignee), WorklistRowRef{Source: "task", RowID: reminder.String()}); err != nil {
+		t.Fatalf("pinning the reminder: %v", err)
+	}
+	reader := e.asSeat(e.other)
+	if assignee == e.other {
+		reader = e.asSeat(e.rep)
+	}
+
+	if !e.waitingAt(reader, t, pastTheHorizon)[id] {
+		t.Fatal("a request its assignee pinned left the queue 200 days later: the horizon dropped a held request")
+	}
+	done := true
+	if _, err := store.UpdateActivity(e.asSeat(assignee), ids.From[ids.ActivityKind](reminder), UpdateActivityInput{IsDone: &done}); err != nil {
+		t.Fatalf("completing the reminder: %v", err)
+	}
+	if e.waitingAt(reader, t, pastTheHorizon)[id] {
+		t.Error("a request whose reminder was completed is still on the queue")
+	}
+}
