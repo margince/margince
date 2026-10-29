@@ -169,10 +169,9 @@ func worklistCalls(in dailyInput) []dailyCall {
 	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 }
 
-// homeCalls are what the Today view sends once the shell's gates clear, as a
-// browser on Today sends them; the weekly review is the Weekly view's read and
-// Today never asks for it. Every seat has a brief, made in the brief step, so
-// its 404 fails the run.
+// homeCalls are what a browser on Today sends once the shell's gates clear.
+// The weekly review is the Weekly view's read, which Today never sends. Every
+// seat has a brief from the brief step, so its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},

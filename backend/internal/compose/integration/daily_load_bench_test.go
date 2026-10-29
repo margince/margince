@@ -87,10 +87,9 @@ type dailyLoadCall struct {
 	call dailyCall
 }
 
-// morningJourney is the start of a day as screens: shell, Home, Worklist, two
-// palette searches and two record opens, in the order a user meets them. A
-// screen's calls go out together, as its components mount together; the
-// screens follow one another.
+// morningJourney is the start of a day as screens, in the order a user meets
+// them: shell, Home, Worklist, two palette searches and two record opens. A
+// screen's calls go out together, as its components mount together.
 func morningJourney(in dailyInput) [][]dailyLoadCall {
 	var journey [][]dailyLoadCall
 	screen := func(flow string, calls ...dailyCall) {

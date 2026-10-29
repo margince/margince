@@ -14,10 +14,9 @@ import (
 	"time"
 )
 
-// strictHomeCohort is one row and seat the strict Home lane must find measured,
-// and the budget it answers to. holds names the top-level field that must carry
-// data in every timed answer, where the corpus gives that seat data; "" means
-// the row may answer empty.
+// strictHomeCohort is one row and seat the strict Home lane must find
+// measured, with its budget. holds names the top-level field every timed
+// answer must fill, where the corpus gives that seat data. "" allows empty.
 type strictHomeCohort struct {
 	requirement, row, seat string
 	budget                 time.Duration
@@ -78,8 +77,8 @@ func holdsData(body []byte, field string) bool {
 }
 
 // JudgeStrictHome judges every strict cohort against the run's results. A
-// cohort passes only when it was measured, every round's p95 is under its
-// budget, and no answer was a server error, a refusal or missing a source.
+// cohort passes only when measured with every round's p95 under its budget.
+// A server error, a refusal or a missing source fails it too.
 func JudgeStrictHome(results []DailyResult) []StrictVerdict {
 	verdicts := make([]StrictVerdict, 0, len(strictHomeCohorts))
 	for _, c := range strictHomeCohorts {

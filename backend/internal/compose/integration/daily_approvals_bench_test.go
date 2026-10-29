@@ -21,9 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Per rep at the published tier: pending cards past two pages of the shell's
-// 50-row approvals read, the day's applied receipts, and expired cards that
-// must count nowhere.
+// Per rep at the published tier. Pending cards fill more than two 50-row
+// pages. Applied cards are the day's receipts; expired ones count nowhere.
 const (
 	dailyPendingPerRep = 130
 	dailyAppliedPerRep = 40
@@ -143,7 +142,7 @@ func dailyOpenDeals(t *testing.T, e *apptest.AppEnv, rep ids.UUID, n int) []ids.
 	return deals
 }
 
-// stageDailyCloseDate stages one "is this date right" card for a deal; the
+// stageDailyCloseDate stages one "is this date right" card for a deal. The
 // i-th card proposes a date i days out, so no two cards carry one diff.
 func stageDailyCloseDate(sweep context.Context, t *testing.T, svc *approvals.Service, deal ids.UUID, i int) ids.ApprovalID {
 	t.Helper()
