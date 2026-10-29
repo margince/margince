@@ -18490,7 +18490,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",
   "record.verb.log": "Notiz",
-  "record.verb.task": "Aufgabe",
   "record.verb.more": "Mehr",
   "standing.timeline.more_one": "+{count} weiteres",
   "standing.timeline.more_other": "+{count} weitere",

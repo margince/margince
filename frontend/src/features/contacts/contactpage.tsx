@@ -2,6 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../components/activitygate";
+import {
   LatestInboundLine,
   useLatestInbound,
 } from "../../components/latestinbound";
@@ -21,7 +25,7 @@ import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useContact360 } from "./contact360";
-import { ContactActions, useActivityGate } from "./contactactions";
+import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
 import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
@@ -59,7 +63,7 @@ export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 function refusalsOf(
   readOnlyReason: string | undefined,
   readOnlyReasonId: string,
-  activity: ReturnType<typeof useActivityGate>,
+  activity: ActivityGate,
   t: ReturnType<typeof useT>,
 ): ReactNode {
   const activityRefused = activity.refusedId !== undefined;

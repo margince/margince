@@ -71,12 +71,14 @@ describe("the contact header", () => {
     }
   });
 
-  it("keeps meetings, Log activity, Add task and the menu", () => {
+  it("keeps meetings, Log activity and the menu, with Add task inside it", () => {
     mountHeader();
+    expect(
+      screen.queryByRole("button", { name: en["contact.action.addTask"] }),
+    ).toBeNull();
     for (const verb of [
       en["contact.action.meetings"],
       en["log.title"],
-      en["contact.action.addTask"],
       en["record.moreActions"],
     ]) {
       expect(screen.getByRole("button", { name: verb })).toBeTruthy();

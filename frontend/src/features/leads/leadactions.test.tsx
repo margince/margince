@@ -163,6 +163,7 @@ describe("the lead header's Log activity and Add task", () => {
     );
     await user.click(screen.getByRole("button", { name: "Close" }));
 
+    await user.click(screen.getByRole("button", { name: "More actions" }));
     await user.click(await screen.findByRole("button", { name: "Add task" }));
     const drawer = await screen.findByRole("dialog", { name: "Add task" });
     expect(within(drawer).getByLabelText("Due date")).toBeTruthy();
@@ -170,6 +171,7 @@ describe("the lead header's Log activity and Add task", () => {
   });
 
   it("refuses both verbs with the same reason the header's Email verb reads on a terminal lead", async () => {
+    const user = userEvent.setup();
     stubLead({
       status: "disqualified",
       archived_at: "2026-07-01T00:00:00Z",
@@ -178,7 +180,8 @@ describe("the lead header's Log activity and Add task", () => {
 
     const email = await screen.findByRole("button", { name: "Email" });
     const logButton = screen.getByRole("button", { name: "Log activity" });
-    const addTask = screen.getByRole("button", { name: "Add task" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const addTask = await screen.findByRole("button", { name: "Add task" });
     expect(logButton.hasAttribute("disabled")).toBe(true);
     expect(addTask.hasAttribute("disabled")).toBe(true);
     // The SAME id, not a second sentence: one reason serves every refused

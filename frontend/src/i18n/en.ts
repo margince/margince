@@ -18351,7 +18351,6 @@ export const en = {
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
   "record.verb.log": "Log",
-  "record.verb.task": "Task",
   "record.verb.more": "More",
   "standing.timeline.more_one": "+{count} more",
   "standing.timeline.more_other": "+{count} more",

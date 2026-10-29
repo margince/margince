@@ -403,11 +403,11 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    for (const label of [en["log.title"], en["log.addTask"]]) {
-      expect(
-        screen.getByRole("button", { name: label }).hasAttribute("disabled"),
-      ).toBe(true);
-    }
+    expect(
+      screen
+        .getByRole("button", { name: en["log.title"] })
+        .hasAttribute("disabled"),
+    ).toBe(true);
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
     // a pressable one: clicking it opens the flow and the save 403s. Edit is
@@ -420,6 +420,7 @@ describe("ProjectScreen", () => {
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
     for (const label of [
+      /^Add task/,
       /^Edit project/,
       /^Archive/,
       /^Assign/,

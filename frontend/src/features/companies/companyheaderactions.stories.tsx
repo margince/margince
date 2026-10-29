@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -10,6 +11,8 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { CompanyHeaderActions } from "./companyheaderactions";
+// The bar class the stories wrap the verbs in is styled by the record view.
+import "../../design-system/recordview.css";
 
 // The account header's verbs on their own: write, then the pair that records
 // what already happened. What the stories hold is where a refusal lands — a
@@ -48,16 +51,25 @@ function Row({
           measure the record page gives them. */}
       <div style={{ maxWidth: "18.75rem" }}>
         <div className="record-split-verbs">
-          <CompanyHeaderActions
-            company={record}
-            composerOpen={false}
-            onComposerOpen={() => undefined}
-            drawer={null}
-            onDrawer={() => undefined}
-          />
+          <GatedActions record={record} />
         </div>
       </div>
     </StoryProviders>
+  );
+}
+
+// The gate is the page's, read inside the providers the way the page reads it.
+function GatedActions({ record }: Readonly<{ record: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <CompanyHeaderActions
+      company={record}
+      composerOpen={false}
+      onComposerOpen={() => undefined}
+      drawer={null}
+      onDrawer={() => undefined}
+      activity={activity}
+    />
   );
 }
 
