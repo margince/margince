@@ -1,5 +1,12 @@
 /** @vitest-environment happy-dom */
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
@@ -18,7 +25,20 @@ import { WorkspaceRail } from "./shell";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
+
+const ABSURD_NAME =
+  "Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien e. V.";
+
+// The happy-dom render lays nothing out, so the two widths the tip reads
+// are stubbed to say whether the name fit its one line.
+function nameFits(fits: boolean) {
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+    fits ? 120 : 640,
+  );
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(160);
+}
 
 describe("The rail's brand block", () => {
   // The company is the heading. The product it runs on is the line beneath
@@ -40,6 +60,22 @@ describe("The rail's brand block", () => {
     expect(attribution?.textContent).toContain("Powered by Margince");
     expect(within(brand).queryByText("Powered by Margince")).toBeNull();
     expect(brand.getAttribute("href")).toBe("#/home");
+  });
+
+  // A name of any length keeps the head one line tall, so the whole name has
+  // to be reachable some other way, and only when the line cut it.
+  it.each([
+    ["shows the whole name when its line cut it", false, ABSURD_NAME],
+    ["stays away when the name fits", true, null],
+  ])("%s", (_name, fits, shown) => {
+    nameFits(fits);
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing({ display_name: ABSURD_NAME }));
+    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+
+    fireEvent.focus(screen.getByRole("link", { name: /Bundesverband/ }));
+
+    expect(screen.queryByRole("tooltip")?.textContent ?? null).toBe(shown);
   });
 
   // A company save refreshes /me (storeCompany). The rail has to be OBSERVING

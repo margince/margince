@@ -535,11 +535,16 @@
    faded-out text keeps its intrinsic width and pushes the logomark off centre.
    It is one element, so animating its width is cheap and keeps the brand block
    closing in step with the column. */
+/* One line, whatever the name: an installation name runs to 200 characters,
+   and a head that grew with it pushed every destination below it down. The
+   whole name is the link's tooltip (shellrail.tsx). */
 .rail .ws-name {
   min-width: 0;
   width: auto;
   opacity: 1;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition:
     opacity var(--dur-state) var(--ease-in-out),
     width var(--dur-move) var(--ease-out);
@@ -553,10 +558,8 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
-/* Collapsed the name is gone in BOTH axes. Width alone left its block height
-   standing — a name that wraps to two lines expanded held that much air open in
-   the 56px column, so the head's height (and every row under it) depended on how
-   long the installation's name is on a rail nobody can read it in. */
+/* Collapsed the name is gone in BOTH axes. Width alone left its line box
+   standing, air held open under the mark in a column nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
   height: 0;
