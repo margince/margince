@@ -66,12 +66,7 @@ type unitManifest struct {
 	// Secrets has it: every manifest already in the tree predates the field.
 	Subscriptions []subscriptionRequest `json:"subscriptions,omitempty"`
 
-	// What the unit intercepts and compiles over: "<entity>.<action>" writes it
-	// runs inside, operationIds it runs before, and "<package>.<function>" core
-	// functions its overlays/ replaces. omitempty for the reason Secrets has it.
-	WriteHooks     []string `json:"write_hooks,omitempty"`
-	OperationHooks []string `json:"operation_hooks,omitempty"`
-	Overlays       []string `json:"overlays,omitempty"`
+	interceptions
 
 	// Ingress are the providers the unit brings records IN from (see
 	// extension.IngressSource). Like a subscription it carries no tier and no

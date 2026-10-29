@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -106,6 +108,9 @@ func TestDecorated(t *testing.T) {
 }
 `)
 	if _, err := composeOverlays(root, []extensionUnit{u}); err != nil {
+		t.Fatal(err)
+	}
+	if err := gatekit.DeclareInputs(os.Getenv, root); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command("go", "test", "-overlay="+filepath.Join(root, composedOverlayFile), "./"+dealsPkg)

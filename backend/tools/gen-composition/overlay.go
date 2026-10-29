@@ -105,6 +105,26 @@ func decoratedFuncs(file *ast.File) []string {
 	return out
 }
 
+// emitReplacements writes the frontend files and backend functions units
+// compile over core. It prints each lock drift as a warning.
+func emitReplacements(root string, composed composition) error {
+	if err := emitOverrides(root, composed.Overrides.Replaced); err != nil {
+		return err
+	}
+	units := make([]extensionUnit, 0, len(composed.Manifests))
+	for _, m := range composed.Manifests {
+		units = append(units, m.Unit)
+	}
+	overlayWarnings, err := composeOverlays(root, units)
+	if err != nil {
+		return err
+	}
+	for _, warning := range slices.Concat(composed.Overrides.Warnings, overlayWarnings) {
+		fmt.Fprintln(os.Stderr, "gen-composition: warning:", warning)
+	}
+	return nil
+}
+
 // composeOverlays rewrites build/overlay for every unit's overlays/. It
 // returns a warning for each lock line that is missing, stale or extra.
 func composeOverlays(root string, units []extensionUnit) ([]string, error) {

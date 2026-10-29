@@ -418,10 +418,8 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.Subscriptions = append(m.Subscriptions, subs...)
 		}
-	case "WriteHooks":
-		m.WriteHooks, err = r.readWriteHooks(kv.Value, file)
-	case "OperationHooks":
-		m.OperationHooks, err = r.readOperationHooks(kv.Value, file)
+	case "WriteHooks", "OperationHooks":
+		err = r.readHookField(key.Name, kv.Value, file, m)
 	case "Ingress":
 		var sources []ingressSource
 		sources, err = r.readIngress(kv.Value, file)

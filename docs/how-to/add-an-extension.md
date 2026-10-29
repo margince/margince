@@ -771,6 +771,59 @@ callers use stops the build. A wrapper picks up the rest of core's change throug
 A file that replaces one of core may import `@margince-core/` only for that one file. An added screen and every
 other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse it.
 
+## Change what core does: hooks and the overlay
+
+Use the first of these that does the job. Each is derived into your unit's `manifest.generated.json`, so an
+operator sees what your unit changes.
+
+A write hook runs after an audited core write, inside its transaction:
+
+```go
+WriteHooks: []extension.WriteHook{
+	{Entity: "deal", Actions: []string{"create"}, Handle: onDealCreated},
+},
+```
+
+`Handle` gets the audit images of the write, masked as the audit log masks them. Its `rt.Tx` joins the
+write's transaction, so your rows commit with core's. An error rolls the whole write back. Writes to your own
+`ext_*` tables, and writes a hook makes, run no hooks.
+
+An operation hook runs before a core contract operation, named by its `operationId` in `crm.yaml`:
+
+```go
+OperationHooks: []extension.OperationHook{
+	{Operations: []string{"createDeal"}, Handle: checkDealName},
+},
+```
+
+It may replace `op.Body`, and core reads the new body as if the caller sent it. Or it returns one of the
+`extension.Err*` classes, and the caller gets your sentence with that class's status. The agent gate judges
+the body the caller sent. The boot refuses an operation the contract does not have.
+
+An overlay replaces a core function. A file at `overlays/internal/modules/<module>/<name>.go` in your unit
+compiles into that core package. It carries the license header, then `//go:build margince_overlay` above its
+`package` line, so your own build leaves it out. A function marked `//margince:decorate` replaces core's
+function of the same name. Core's stays in the package as `<name>__core`, so yours can call it:
+
+```go
+//margince:decorate
+func (s *Store) CreateDeal(ctx context.Context, in CreateDealInput) (crmcontracts.Deal, error) {
+	in.Name = strings.TrimSpace(in.Name)
+	return s.CreateDeal__core(ctx, in)
+}
+```
+
+Only packages under `internal/modules/` can take an overlay, and two units cannot replace one function.
+`make composition` writes `build/overlay/overlay.json`, and every composed `go` command passes it as
+`-overlay`. Record each function you replace in `overlays.lock` at your unit's root:
+
+```text
+internal/modules/deals.(*Store).CreateDeal sha256:<hash of core's function>
+```
+
+As with `frontend/overrides.lock`, a missing or stale line only warns, and the warning prints the line to
+write. The build fails when core changes the function's signature, because your file no longer compiles.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

@@ -28,6 +28,12 @@
       ]
     }
   ],
+  "write_hooks": [
+    "deal.create"
+  ],
+  "operation_hooks": [
+    "createDeal"
+  ],
   "settings": [
     {
       "key": "greeting",

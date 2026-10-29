@@ -8,6 +8,26 @@ import (
 	"sort"
 )
 
+// interceptions is what a unit's manifest says it intercepts and compiles over.
+// It names "<entity>.<action>" writes, operationIds, and the
+// "<package>.<function>" core functions its overlays/ replaces. omitempty for
+// the reason unitManifest.Secrets has it.
+type interceptions struct {
+	WriteHooks     []string `json:"write_hooks,omitempty"`
+	OperationHooks []string `json:"operation_hooks,omitempty"`
+	Overlays       []string `json:"overlays,omitempty"`
+}
+
+// readHookField reads the WriteHooks or OperationHooks field into m.
+func (r *unitReader) readHookField(name string, value ast.Expr, file *ast.File, m *unitManifest) (err error) {
+	if name == "WriteHooks" {
+		m.WriteHooks, err = r.readWriteHooks(value, file)
+		return err
+	}
+	m.OperationHooks, err = r.readOperationHooks(value, file)
+	return err
+}
+
 // readWriteHooks reads WriteHooks into "<entity>.<action>" entries, so the
 // manifest names every write a unit runs inside.
 func (r *unitReader) readWriteHooks(expr ast.Expr, file *ast.File) ([]string, error) {
