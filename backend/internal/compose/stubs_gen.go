@@ -347,6 +347,10 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiUsageSummary")
+}
+
 func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsContext")
 }
@@ -545,6 +549,10 @@ func (stubs) RejectApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) ListApprovals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListApprovalsParams) {
 	httperr.NotImplemented(w, r, "ListApprovals")
+}
+
+func (stubs) CountPendingApprovals(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CountPendingApprovals")
 }
 
 func (stubs) GetApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

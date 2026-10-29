@@ -55,11 +55,10 @@ func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
 	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
 }
 
-// Counts use the same decidability probe and bounded scan as the inbox.
+// CountPending is the engine's exact count, under the scope the lane reads.
 func (a attentionApprovals) CountPending(ctx context.Context, in attention.ApprovalQuery) (int, error) {
-	in.Status, in.Limit = stagedAndUndecided, approvals.PendingScanCap
-	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
-	return len(rows), err
+	count, err := a.svc.CountPending(ctx, approvalListInput(in))
+	return count.Count, err
 }
 
 func (a attentionApprovals) PendingInScope(ctx context.Context, in attention.ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {

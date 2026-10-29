@@ -8,6 +8,7 @@ import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
 import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
+import { Button } from "./atoms";
 import { Avatar } from "./avatar";
 import { Callout } from "./callout";
 import { EmailEntry } from "./emailentry";
@@ -29,20 +30,22 @@ type Renders = Readonly<{
   formatWhen: ActivityWhenFormatter;
   /** Names the records a message is filed against, on its envelope. */
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  renderActions?: (presentation: EmailPresentation) => ReactNode;
 }>;
 
 /**
- * A conversation read in order, oldest first, inside the email drawer.
+ * A conversation read newest first, inside the email drawer.
  *
- * The message the reader opened is open; the rest of the thread is folded to
+ * The newest and originally opened messages stay open; the rest are folded to
  * one `EmailEntry` row each. Opening a row reads that message on its own, so
- * the server decides again whether this reader may see it. `notice` is a line
- * under the last message, such as the word that a reply was added.
+ * the server decides again whether this reader may see it. `notice` appears
+ * above the thread so a sent reply is confirmed beside the newest message.
  */
 export function EmailThread({
   presentation,
   formatWhen,
   renderRecords,
+  renderActions,
   related,
   notice,
 }: Renders &
@@ -52,9 +55,16 @@ export function EmailThread({
     related?: () => ReactNode;
     notice?: string;
   }>) {
+  const messages = threadOrder(presentation);
+  const newestId = messages[0]?.activity_id ?? presentation.id;
+  const [seenNewest, setSeenNewest] = useState(newestId);
   const [opened, setOpened] = useState<ReadonlySet<string>>(
-    () => new Set([presentation.id]),
+    () => new Set([newestId, presentation.id]),
   );
+  if (seenNewest !== newestId) {
+    setSeenNewest(newestId);
+    setOpened((was) => new Set([...was, newestId]));
+  }
   const toggle = (id: string) =>
     setOpened((was) => {
       const next = new Set(was);
@@ -63,8 +73,14 @@ export function EmailThread({
     });
   return (
     <div className="emailthread">
+      {notice && (
+        <p role="status" className="emailthread__notice">
+          <CircleCheck aria-hidden="true" />
+          {notice}
+        </p>
+      )}
       <ol className="emailthread__list">
-        {threadOrder(presentation).map((summary) => {
+        {messages.map((summary) => {
           const isOpen = opened.has(summary.activity_id);
           const self = summary.activity_id === presentation.id;
           return (
@@ -85,6 +101,7 @@ export function EmailThread({
                   presentation={presentation}
                   formatWhen={formatWhen}
                   renderRecords={renderRecords}
+                  renderActions={renderActions}
                   related={related}
                   onFold={() => toggle(summary.activity_id)}
                 />
@@ -94,6 +111,7 @@ export function EmailThread({
                   activityId={summary.activity_id}
                   formatWhen={formatWhen}
                   renderRecords={renderRecords}
+                  renderActions={renderActions}
                   onFold={() => toggle(summary.activity_id)}
                 />
               )}
@@ -101,18 +119,12 @@ export function EmailThread({
           );
         })}
       </ol>
-      {notice && (
-        <p role="status" className="emailthread__notice">
-          <CircleCheck aria-hidden="true" />
-          {notice}
-        </p>
-      )}
     </div>
   );
 }
 
 /**
- * The opened message and the page of the thread the read carried, oldest
+ * The opened message and the page of the thread the read carried, newest
  * first. The opened one is in the list once, whatever the page holds.
  */
 export function threadOrder(
@@ -121,9 +133,12 @@ export function threadOrder(
   const others = (presentation.thread?.members ?? []).filter(
     (member) => member.activity_id !== presentation.id,
   );
-  return [...others, presentation.summary].sort(
-    (a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at),
-  );
+  return [...others, presentation.summary].sort((a, b) => {
+    const byTime = Date.parse(b.occurred_at) - Date.parse(a.occurred_at);
+    if (byTime !== 0) return byTime;
+    if (a.activity_id === b.activity_id) return 0;
+    return a.activity_id < b.activity_id ? 1 : -1;
+  });
 }
 
 // Another message of the thread, read when the reader opens it.
@@ -131,6 +146,7 @@ function ReadMessage({
   activityId,
   formatWhen,
   renderRecords,
+  renderActions,
   onFold,
 }: Renders & Readonly<{ activityId: string; onFold: () => void }>) {
   const t = useT();
@@ -147,6 +163,7 @@ function ReadMessage({
         presentation={read.data}
         formatWhen={formatWhen}
         renderRecords={renderRecords}
+        renderActions={renderActions}
         onFold={onFold}
       />
     );
@@ -172,6 +189,7 @@ function OpenMessage({
   presentation,
   formatWhen,
   renderRecords,
+  renderActions,
   related,
   onFold,
 }: Renders &
@@ -185,6 +203,10 @@ function OpenMessage({
   if (presentation.access.content_state === "withheld") {
     return (
       <div className="emailthread__message">
+        <Button variant="ghost" onClick={onFold} aria-expanded="true">
+          <ChevronUp aria-hidden="true" />
+          {t("common.collapse")}
+        </Button>
         <SurfaceState
           loadingLabel={t("email.detail.loading")}
           state="withheld"
@@ -248,6 +270,11 @@ function OpenMessage({
       <EmailText body={presentation.body ?? ""} />
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
+      {renderActions && (
+        <div className="emailthread__actions">
+          {renderActions(presentation)}
+        </div>
+      )}
     </article>
   );
 }
@@ -259,10 +286,6 @@ const TEXT_NOTICES = {
   unassessed: "email.thread.textUnassessed",
 } as const;
 
-/**
- * Says that a mail's text was read only in part, not at all, not yet checked,
- * or is a forwarded original's.
- */
 function TextNotice({
   completeness,
 }: Readonly<{ completeness?: EmailPresentation["body_completeness"] }>) {
@@ -279,7 +302,11 @@ function TextNotice({
   }
   return (
     <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
-      {t("email.thread.textUnreadableHint")}
+      {t(
+        completeness === "unassessed"
+          ? "email.thread.textUnassessedHint"
+          : "email.thread.textUnreadableHint",
+      )}
     </Callout>
   );
 }

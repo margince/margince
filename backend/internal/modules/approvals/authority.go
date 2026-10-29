@@ -416,10 +416,7 @@ func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 	if err != nil {
 		return false, err
 	}
-	if !a.PendingAt(now) || !requestedInScope(a, p.UserID, scope) {
-		return false, nil
-	}
-	return decidable(ctx, tx, p, a)
+	return pendingEligible(ctx, tx, p, scope, now)(a)
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {
