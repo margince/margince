@@ -7140,7 +7140,9 @@ export const en = {
   "review.noNextStep": "No next step",
   "review.noEconomicBuyer": "No signer identified",
   "review.buyerSilent": "Buyer has gone quiet",
-  "review.dealViability": "Customer has gone quiet",
+  "review.dealViability": "Customer support needs review",
+  "forecast.qualifiedPartial":
+    "Some of these deals have no amount you can see, so the amounts above are lower than their full value.",
   "forecast.qualifiedLeftOut_one":
     "{count} deal ({amount}) is left out while its review is open.",
   "forecast.qualifiedLeftOut_other":

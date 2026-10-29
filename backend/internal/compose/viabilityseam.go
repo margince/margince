@@ -36,8 +36,9 @@ func viabilityFingerprintSQL(deal string) string {
 // Eligible needs a CURRENT receipt: this policy, not past its validity, judged
 // on the evidence the deal still carries. Without one the deal is unknown, even
 // with no finding open, because no finding is not the same as judged and fine.
-// A judged deal with an open review is excluded; one whose review somebody
-// resolved or overrode counts again.
+// A judged deal with an open review is excluded. An override counts the deal
+// again until it ends; once it has ended the deal is unknown until the next
+// check reopens the review.
 func viabilityQualificationSQL(deal string, arg func(any) int) string {
 	return fmt.Sprintf(`(CASE
 		WHEN %[1]s.status <> 'open' THEN '%[5]s'
@@ -48,8 +49,14 @@ func viabilityQualificationSQL(deal string, arg func(any) int) string {
 		WHEN EXISTS (SELECT 1 FROM assurance_exception vx
 		              WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
 		                AND vx.type = $%[4]d AND vx.status = 'open') THEN '%[6]s'
+		WHEN EXISTS (SELECT 1 FROM assurance_exception vx
+		              WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
+		                AND vx.type = $%[4]d AND vx.status = 'resolved'
+		                AND NOT EXISTS (SELECT 1 FROM assurance_resolution vs
+		                                 WHERE vs.exception_id = vx.id AND vs.outcome = '%[9]s'
+		                                   AND vs.expires_at > now())) THEN '%[7]s'
 		ELSE '%[5]s' END)`,
 		deal, arg(viability.PolicyVersion), viabilityFingerprintSQL(deal), arg(assurance.TypeDealViability),
 		viability.QualificationEligible, viability.QualificationExcluded, viability.QualificationUnknown,
-		viability.OutcomeUnknown)
+		viability.OutcomeUnknown, assurance.OutcomeValueCorrect)
 }

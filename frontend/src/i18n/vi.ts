@@ -6933,7 +6933,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Chưa có bước tiếp theo",
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
-  "review.dealViability": "Khách hàng đã im lặng",
+  "review.dealViability": "Cần xem lại sự ủng hộ của khách hàng",
+  "forecast.qualifiedPartial":
+    "Một số deal này không có số tiền bạn xem được, nên các số tiền ở trên thấp hơn giá trị đầy đủ.",
   "forecast.qualifiedLeftOut_one":
     "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
   "forecast.qualifiedLeftOut_other":

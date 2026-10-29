@@ -139,6 +139,8 @@ type ForecastQualifiedResult struct {
 	UnknownMinor  int64 `json:"unknown_minor"`
 	ExcludedCount int   `json:"excluded_count"`
 	UnknownCount  int   `json:"unknown_count"`
+	// AmountsPartial says some left-out deal had no amount the reader can see.
+	AmountsPartial bool `json:"amounts_partial"`
 }
 
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.

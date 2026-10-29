@@ -40477,6 +40477,8 @@ export interface components {
             unknown_minor: number;
             excluded_count: number;
             unknown_count: number;
+            /** @description True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure. */
+            amounts_partial?: boolean;
         };
         /** @description One frozen forecast, by the handle a movement read takes. */
         ForecastSnapshotRef: {

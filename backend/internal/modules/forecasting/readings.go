@@ -69,6 +69,10 @@ type QualifiedReadings struct {
 	UnknownMinor  int64
 	ExcludedCount int
 	UnknownCount  int
+	// AmountsPartial is true when an excluded or unknown deal had no amount
+	// the reader can see: unpriced, no exchange rate, or masked. The two
+	// subtotals are then lower than the money those deals carry.
+	AmountsPartial bool
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -274,6 +278,9 @@ func qualify(out *Readings, c Contribution, base int64) error {
 		q.ExcludedCount++
 	case viability.QualificationUnknown:
 		q.UnknownCount++
+	}
+	if c.Qualification != viability.QualificationEligible && c.BaseMinor == nil {
+		q.AmountsPartial = true
 	}
 	return nil
 }

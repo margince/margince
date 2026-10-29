@@ -41634,9 +41634,11 @@ type ForecastMovementDeal struct {
 // ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 // A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 type ForecastQualifiedReadings struct {
-	BestCaseMinor int64 `json:"best_case_minor"`
-	EvidenceMinor int64 `json:"evidence_minor"`
-	ExcludedCount int   `json:"excluded_count"`
+	// AmountsPartial True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
+	AmountsPartial *bool `json:"amounts_partial,omitempty"`
+	BestCaseMinor  int64 `json:"best_case_minor"`
+	EvidenceMinor  int64 `json:"evidence_minor"`
+	ExcludedCount  int   `json:"excluded_count"`
 
 	// ExcludedMinor Open baseline money on deals under an open viability review.
 	ExcludedMinor int64 `json:"excluded_minor"`

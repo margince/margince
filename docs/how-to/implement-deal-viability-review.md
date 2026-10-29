@@ -3,7 +3,7 @@
 Status: reviewed and reconciled implementation plan. The first slice is built: the pure assessment
 (`deals.AssessViability`), the `deal_viability` rule with a receipt per deal, one task per review
 episode, the qualified readings behind `assurance.qualified_forecast_enforced`, and the sweep's
-category notch held while enforcement is on. The rest is open in #9487 to #9492.
+category notch held while enforcement is on. The rest is open in #9487 to #9492, #9496 and #9497.
 Source baseline: `3f9a9d7d6196c6ab8e1d3f5bfb4accff15cb7414`.
 The Claude review used `5daf71807da3e2e719e4aa4dd0d831f07ebb8888`; section 11 records its dispositions.
 Section 12 records the inline outcome checks against the source baseline.

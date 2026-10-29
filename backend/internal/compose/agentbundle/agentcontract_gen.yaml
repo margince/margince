@@ -19455,6 +19455,10 @@ components:
           description: Open baseline money on deals the check could not judge on current evidence.
         excluded_count: {type: integer}
         unknown_count: {type: integer}
+        amounts_partial:
+          type: boolean
+          description: >-
+            True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
       additionalProperties: false
     ForecastSnapshotRef:
       type: object

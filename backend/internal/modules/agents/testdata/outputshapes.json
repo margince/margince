@@ -5361,6 +5361,9 @@
           "qualified": {
             "type": "object",
             "properties": {
+              "amounts_partial": {
+                "type": "boolean"
+              },
               "best_case_minor": {
                 "type": "integer"
               },
@@ -5384,6 +5387,7 @@
               }
             },
             "required": [
+              "amounts_partial",
               "best_case_minor",
               "evidence_minor",
               "excluded_count",

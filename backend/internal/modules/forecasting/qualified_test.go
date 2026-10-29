@@ -51,3 +51,17 @@ func TestNoQualifiedReadingExistsWhileEnforcementIsOff(t *testing.T) {
 			got.Qualified)
 	}
 }
+
+func TestALeftOutDealWithNoVisibleAmountMarksTheSubtotalsPartial(t *testing.T) {
+	t.Parallel()
+	masked := healthyDeal(t)
+	masked.AmountMinor, masked.BaseMinor, masked.Qualification = nil, nil, viability.QualificationExcluded
+	got, err := Compute(testPeriod(t), *day(t, time.May, 14), []Deal{masked})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Qualified == nil || !got.Qualified.AmountsPartial || got.Qualified.ExcludedCount != 1 {
+		t.Fatalf("qualified readings %+v, want one excluded deal and the subtotal marked partial — "+
+			"otherwise the screen says the deal carries no money", got.Qualified)
+	}
+}

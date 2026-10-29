@@ -45,6 +45,9 @@ export function QualifiedAnswer({
           })}
         </p>
       )}
+      {qualified.amounts_partial && (
+        <p className="t-caption">{t("forecast.qualifiedPartial")}</p>
+      )}
     </>
   );
 }

@@ -7107,7 +7107,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Kein nächster Schritt",
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
-  "review.dealViability": "Kunde meldet sich nicht mehr",
+  "review.dealViability": "Rückhalt beim Kunden prüfen",
+  "forecast.qualifiedPartial":
+    "Einige dieser Deals haben keinen Betrag, den du sehen kannst. Die Beträge oben liegen deshalb unter ihrem vollen Wert.",
   "forecast.qualifiedLeftOut_one":
     "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
   "forecast.qualifiedLeftOut_other":

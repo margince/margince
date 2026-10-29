@@ -291,3 +291,38 @@ func TestCloseDateSweepLowersNoCategoryWhileTheQualifiedForecastIsEnforced(t *te
 		t.Errorf("date = %v, want retained %s", swept.expectedClose, want)
 	}
 }
+
+// A review is answered with an override or a reminder. "Fixed" with nothing
+// checked would put the deal back in the qualified forecast unseen. An override
+// counts it again until it ends, and an ended override reads unknown at once.
+func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	store := assurance.NewStore(InstallationDB(v.Pool))
+	if err := store.SetQualifiedForecastEnforced(v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		t.Fatal(err)
+	}
+	var review ids.UUID
+	if err := v.Pool.QueryRow(context.Background(), `SELECT id FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent).Scan(&review); err != nil {
+		t.Fatal(err)
+	}
+	now := clocktest.Now(t)
+	if err := store.Resolve(v.Admin(), review, assurance.Resolution{Outcome: assurance.OutcomeFixedRecord}, now); err == nil {
+		t.Fatal("a review was closed as fixed with nothing checked")
+	}
+	until := now.AddDate(0, 0, 30)
+	if err := store.Resolve(v.Admin(), review, assurance.Resolution{
+		Outcome: assurance.OutcomeValueCorrect, Reason: "Signed order in the post", ExpiresAt: &until,
+	}, now); err != nil {
+		t.Fatalf("overriding the review: %v", err)
+	}
+	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 0 || q.EvidenceMinor != 600_000 {
+		t.Fatalf("qualified readings %+v, want the overridden deal counted again", q)
+	}
+	v.WsExec(t, `UPDATE assurance_resolution SET expires_at = now() - interval '1 minute'
+		WHERE exception_id = $1`, review)
+	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 || q.UnknownMinor != 500_000 {
+		t.Fatalf("qualified readings %+v, want the deal unknown once its override ended", q)
+	}
+}

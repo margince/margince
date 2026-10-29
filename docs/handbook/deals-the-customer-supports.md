@@ -9,7 +9,7 @@ and a task do not count.
 
 After 60 days with no word from the customer, the deal gets a review in
 **Checks before the call** on the **Forecast** section of **Analytics**. The
-review is named **Customer has gone quiet**, and the owner of the deal gets one
+review is named **Customer support needs review**, and the owner of the deal gets one
 task. The close date does not change this: a deal three months from its close
 date gets the same review.
 
@@ -17,6 +17,11 @@ A reply from the customer does not end the review. The review stays until
 somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
 same review.
+
+A review takes two answers. **Value is correct** keeps the deal counted until a
+date you choose, at most 90 days from today, and asks for a reason. **Remind
+later** keeps the review open until the day you pick. When an override ends,
+the deal is not counted until the next check looks at it again.
 
 ## Count only deals the customer supports
 

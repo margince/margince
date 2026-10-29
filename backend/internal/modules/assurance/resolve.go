@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -97,6 +98,9 @@ func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution
 
 	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
+			return err
+		}
+		if err := ensureOutcomeFitsReview(ctx, tx, exceptionID, in.Outcome); err != nil {
 			return err
 		}
 		if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
@@ -205,6 +209,26 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	// Not the live probe: an answer puts nothing on the deal, and CloseDeparted
 	// closes the findings of a deal that was archived.
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
+}
+
+// ReviewOutcomes are the answers a viability review takes. A review closes the
+// forecast's question about a deal, so "fixed" with nothing checked would put
+// the deal back in the qualified forecast unseen. Only a reasoned override
+// with an end date, or a reminder that keeps the review open, is accepted.
+func ReviewOutcomes() []string { return []string{OutcomeValueCorrect, OutcomeRemindLater} }
+
+func ensureOutcomeFitsReview(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
+	var kind string
+	if err := tx.QueryRow(ctx, `SELECT type FROM assurance_exception WHERE id = $1`, exceptionID).Scan(&kind); err != nil {
+		return fmt.Errorf("assurance: reading the finding's type: %w", err)
+	}
+	if !slices.Contains(ReviewTypes(), kind) || slices.Contains(ReviewOutcomes(), outcome) {
+		return nil
+	}
+	return &values.ParseError{
+		Field: slotOutcome, Code: "not_allowed",
+		Message: "a customer review is answered with an override that states a reason and an end date, or with a reminder",
+	}
 }
 
 // checkResolution refuses an answer the surface cannot honour, and returns the
