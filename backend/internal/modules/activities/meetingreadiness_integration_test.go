@@ -215,3 +215,25 @@ func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
 		t.Errorf("the audit row names a %q actor, want the agent", actor)
 	}
 }
+
+func TestAMeetingTheCallerMayNotReadIsNotFoundAndKeepsNoReadiness(t *testing.T) {
+	e := setupSend(t)
+	meeting := bookMeeting(t, e, "Rep alone", clocktest.Now(t).Add(time.Hour))
+	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
+	if _, err := meetingStore(e).SetAudience(meetingCtx(e), meeting, SetAudienceInput{
+		Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}},
+	}); err != nil {
+		t.Fatalf("narrowing the meeting to the rep: %v", err)
+	}
+	stranger := e.seatCtx(e.other)
+
+	if _, err := meetingStore(e).ConfirmMeetingReady(stranger, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("confirming a meeting the caller may not read answered %v, want not found", err)
+	}
+	if _, err := meetingStore(e).WithdrawMeetingReady(stranger, meeting, read.Revision); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("withdrawing from a meeting the caller may not read answered %v, want not found", err)
+	}
+	if audited, announced, _ := readinessTrail(t, e, meeting); audited != 0 || announced != 0 {
+		t.Errorf("the refused writes left %d audit rows and %d events, want none", audited, announced)
+	}
+}
