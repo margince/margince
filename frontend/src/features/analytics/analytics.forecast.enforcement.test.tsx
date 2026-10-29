@@ -17,8 +17,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// An admin sees what switching on would leave out, and the switch sends back
-// the preview it showed, so the server can refuse a picture that changed.
+// An admin sees what switching on would leave out. The switch sends back the
+// preview it showed, so the server can refuse a picture that changed.
 it("shows what switching on leaves out and sends the preview back", async () => {
   const sent: unknown[] = [];
   vi.stubGlobal(

@@ -247,8 +247,8 @@ func customerRefusalSQL(alias, asOf string) string {
 
 // earlierAnswerSQL is when the newest answer to the retired buyer-silent check
 // on the deal runs out, if it has not yet. Its findings close on the first
-// night the mail is read, but the answers stay, and a deal somebody answered is
-// not asked again before its answer ends. The answer was about one silence:
+// night the mail is read, but the answers stay. A deal somebody answered is not
+// asked again before its answer ends. The answer was about one silence:
 // once the customer moved the deal after it, a later silence is a new one. A
 // reminder holds at most as long as any answer may hide a finding.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {

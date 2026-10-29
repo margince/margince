@@ -27,9 +27,9 @@ func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.Set
 	return h
 }
 
-// EnforcementPreview is what switching enforcement on would do now: how many
-// open deals the qualified forecast would leave out, how many it could not
-// judge, and a digest of every deal's treatment. Switching on is bound to the
+// EnforcementPreview is what switching enforcement on would do now. It counts
+// the open deals the qualified forecast would leave out and those it could not
+// judge, and digests every deal's treatment. Switching on is bound to the
 // digest, so nobody switches on a picture that has since changed.
 type EnforcementPreview struct {
 	LeftOut int
@@ -113,8 +113,8 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 	if h.locks != nil {
 		out.Locks = h.locks([]config.Any{QualifiedForecastEnforced})
 	}
-	// The preview counts every open deal, so only the admin who may switch
-	// sees it; a reader in a narrower scope would learn counts they cannot open.
+	// The preview counts every open deal, so only the admin who may switch sees
+	// it. A reader in a narrower scope would learn counts they cannot open.
 	if h.preview != nil && state == crmcontracts.ForecastAssuranceEnforcementStateObserving &&
 		auth.RequireAdmin(ctx) == nil {
 		preview, err := h.preview(ctx)
