@@ -5834,6 +5834,14 @@ export const en = {
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
   "brief.rail.numbers": "Numbers",
+  "extensionReports.withheld": "Withheld: too few records to show",
+  "extensionReports.noValue": "No value",
+  "extensionReports.excluded_one":
+    "{count} record is hidden from you by a field permission.",
+  "extensionReports.excluded_other":
+    "{count} records are hidden from you by a field permission.",
+  "extensionReports.failed":
+    "The reports your extensions add could not be loaded.",
   "brief.deck.later": "Later",
   "brief.deck.showMore": "Show full message",
   "brief.deck.showLess": "Show less",

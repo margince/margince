@@ -101,10 +101,10 @@ type unitManifest struct {
 	// Settings are the values an admin can change, drawn on the unit's card.
 	Settings []declaredSetting `json:"settings,omitempty"`
 
-	// CompanyTypes and RecordKinds are what the unit adds beside core's own.
+	// Types, kinds and reports are what the unit adds beside core's own.
 	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
 	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
-
+	reportDecls
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
 

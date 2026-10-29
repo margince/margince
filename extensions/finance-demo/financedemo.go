@@ -57,7 +57,11 @@ func New() extension.Extension {
 				{Role: "manager", Actions: []extension.RbacAction{extension.RbacRead}},
 			},
 		}},
-		Migrations: migrations,
+		// The reference for a report: how many ledger accounts exist, drawn on
+		// Reports and Home for a seat that may read the kind.
+		ReportCounts:     []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
+		ReportBreakdowns: []extension.ReportBreakdown{{Name: "accounts_by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
+		Migrations:       migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:    "offline_demo",
 			Check:       check,

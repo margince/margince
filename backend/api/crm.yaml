@@ -7948,6 +7948,30 @@ paths:
               schema: { $ref: '#/components/schemas/RecordKindDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /extension-reports:
+    get:
+      tags: [Extensions]
+      operationId: listExtensionReports
+      security: [ { cookieAuth: [] } ]   # Reports and Home draw it; an agent asks the report tools
+      x-agent-access: human-only
+      summary: The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+      description: |
+        Each count and breakdown an installed extension declares, run through the report engine for
+        this caller. Row scope, field masks and the group floor apply as they do to a core report.
+        Which extensions are installed is a fact of the binary, so the contract cannot list them;
+        this operation does.
+
+        A report the caller may not read, or whose custom field this installation does not define,
+        is left out. A breakdown over a multi-select custom field splits by the combination of
+        values a record holds. Empty when no installed extension declares one.
+      responses:
+        '200':
+          description: Every report this caller may read, ordered by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionReportDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # ---------------------------- /activities ---------------------------------
   /tasks:
     post:
@@ -49130,6 +49154,58 @@ components:
         unit:
           type: string
           description: The extension that declared the type.
+    ExtensionReportDirectory:
+      type: object
+      description: The counts and breakdowns installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ExtensionReport' }
+    ExtensionReport:
+      type: object
+      required: [name, unit, label, kind, population, groups, withheld, total, excluded_by_permission]
+      properties:
+        name:
+          type: string
+          description: The report as `ext:<unit>:<name>`.
+        unit:
+          type: string
+          description: The extension that declared it.
+        label:
+          type: string
+          description: What a screen shows, in English.
+        kind:
+          type: string
+          enum: [count, breakdown]
+        population:
+          type: string
+          description: What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
+        by:
+          type: string
+          description: The field a breakdown splits by. Absent on a count.
+        groups:
+          type: array
+          description: |
+            One entry per group of a breakdown, or one for a count. A group the floor withheld
+            carries no key and no count.
+          items: { $ref: '#/components/schemas/ExtensionReportGroup' }
+        withheld:
+          type: boolean
+          description: The group floor kept a group back, and with it the total.
+        total:
+          type: [integer, 'null']
+          description: The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
+        excluded_by_permission:
+          type: [integer, 'null']
+          description: Visible rows a field mask withheld from this run. Null when no mask applied.
+    ExtensionReportGroup:
+      type: object
+      required: [key, count, withheld]
+      properties:
+        key: { type: [string, 'null'], description: "The value of the field. Null for records with no value, and for a withheld group." }
+        count: { type: [integer, 'null'], description: "Null for a withheld group." }
+        withheld: { type: boolean }
     RecordKindDirectory:
       type: object
       description: The record kinds installed extensions add that this caller may read, ordered by name.

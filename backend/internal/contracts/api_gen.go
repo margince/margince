@@ -10297,6 +10297,24 @@ func (e ExtensionIngestRefusalRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ExtensionReportKind.
+const (
+	ExtensionReportKindBreakdown ExtensionReportKind = "breakdown"
+	ExtensionReportKindCount     ExtensionReportKind = "count"
+)
+
+// Valid indicates whether the value is a known member of the ExtensionReportKind enum.
+func (e ExtensionReportKind) Valid() bool {
+	switch e {
+	case ExtensionReportKindBreakdown:
+		return true
+	case ExtensionReportKindCount:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ExtractedFieldConfidence.
 const (
 	ExtractedFieldConfidenceHigh   ExtractedFieldConfidence = "high"
@@ -40207,6 +40225,56 @@ type ExtensionIngestRefusal struct {
 // names the mapping to fix: "every record fails its participants" is a different
 // bug from "every record fails its key".
 type ExtensionIngestRefusalRefusal string
+
+// ExtensionReport defines model for ExtensionReport.
+type ExtensionReport struct {
+	// By The field a breakdown splits by. Absent on a count.
+	By *string `json:"by,omitempty"`
+
+	// ExcludedByPermission Visible rows a field mask withheld from this run. Null when no mask applied.
+	ExcludedByPermission *int `json:"excluded_by_permission"`
+
+	// Groups One entry per group of a breakdown, or one for a count. A group the floor withheld
+	// carries no key and no count.
+	Groups []ExtensionReportGroup `json:"groups"`
+	Kind   ExtensionReportKind    `json:"kind"`
+
+	// Label What a screen shows, in English.
+	Label string `json:"label"`
+
+	// Name The report as `ext:<unit>:<name>`.
+	Name string `json:"name"`
+
+	// Population What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
+	Population string `json:"population"`
+
+	// Total The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
+	Total *int `json:"total"`
+
+	// Unit The extension that declared it.
+	Unit string `json:"unit"`
+
+	// Withheld The group floor kept a group back, and with it the total.
+	Withheld bool `json:"withheld"`
+}
+
+// ExtensionReportKind defines model for ExtensionReport.Kind.
+type ExtensionReportKind string
+
+// ExtensionReportDirectory The counts and breakdowns installed extensions add that this caller may read, ordered by name.
+type ExtensionReportDirectory struct {
+	Data []ExtensionReport `json:"data"`
+}
+
+// ExtensionReportGroup defines model for ExtensionReportGroup.
+type ExtensionReportGroup struct {
+	// Count Null for a withheld group.
+	Count *int `json:"count"`
+
+	// Key The value of the field. Null for records with no value, and for a withheld group.
+	Key      *string `json:"key"`
+	Withheld bool    `json:"withheld"`
+}
 
 // ExtensionSettings The governance settings of one composed extension unit.
 type ExtensionSettings struct {
@@ -78666,6 +78734,9 @@ type ServerInterface interface {
 	// Start an admin's consent to an extension unit's OAuth app.
 	// (POST /ext-oauth/{provider}/connect)
 	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
+	// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+	// (GET /extension-reports)
+	ListExtensionReports(w http.ResponseWriter, r *http.Request)
 	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
@@ -82863,6 +82934,12 @@ func (_ Unimplemented) ExtOauthCallback(w http.ResponseWriter, r *http.Request, 
 // Start an admin's consent to an extension unit's OAuth app.
 // (POST /ext-oauth/{provider}/connect)
 func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+// (GET /extension-reports)
+func (_ Unimplemented) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -106186,6 +106263,26 @@ func (siw *ServerInterfaceWrapper) ConnectExtOauth(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListExtensionReports operation middleware
+func (siw *ServerInterfaceWrapper) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExtensionReports(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListExtensions operation middleware
 func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http.Request) {
 
@@ -126275,6 +126372,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ext-oauth/{provider}/connect", wrapper.ConnectExtOauth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extension-reports", wrapper.ListExtensionReports)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)

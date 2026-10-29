@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId, useState } from "react";
+import { ExtensionReports } from "../../components/extensionreports";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -258,6 +259,7 @@ function PersonalMorning({
                 />
               </div>
             )}
+            <ExtensionReports />
             <SchedulePanel day={day} state={state} />
             <BriefChanges />
           </>

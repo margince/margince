@@ -55,6 +55,7 @@ import "./analytics.css";
 // and then summed, so neither screen re-derives one from the raw total. All
 // three bodies render into ONE panel whose action band carries the explain
 // toggle: the segment changes what the panel holds, not what the page is.
+import { ExtensionReports } from "../../components/extensionreports";
 import { ReportCard, SECTION_REPORTS, useReportRun } from "./analytics.reports";
 
 export { buildStageAggregates, ForecastTile } from "./analytics.pipeline";
@@ -492,6 +493,7 @@ function PipelineSection({
           scope={scope}
         />
       ))}
+      <ExtensionReports />
     </>
   );
 }
