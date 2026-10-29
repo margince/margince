@@ -484,13 +484,12 @@ it("pins the first column of a table that asks, on DataTable and by hand", () =>
   expect(pinned).toHaveLength(2);
 });
 
-// The pinned cell slides over the rest, so the pane's see-through ground is
-// laid over the page beneath it.
+// The pinned cell slides over the rest, so it takes its host's opaque ground.
 it("gives a pinned cell an opaque ground at rest and under the pointer", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const css = readFileSync(join(here, "atoms.css"), "utf8");
-  expect(css).toContain(
-    ".panel .table-scroll-sticky > table > * > tr > :first-child {\n  background: linear-gradient(var(--pane), var(--pane)), var(--bgPage);",
+  expect(css).toMatch(
+    /\.table-scroll-sticky > table > \* > tr > :first-child \{[^}]*background: var\(--ground\);/,
   );
   expect(css).toContain(
     ".table-scroll-sticky > .table > tbody > tr:hover > :first-child {\n  background: var(--bgHover);",

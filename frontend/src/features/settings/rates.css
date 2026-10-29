@@ -24,7 +24,7 @@
 .rates-manual-actions {
   position: sticky;
   bottom: 0;
-  background: var(--bgElevated);
+  background: var(--ground);
   padding-block: var(--space-3) 0;
   border-top: 1px solid var(--borderSubtle);
 }

@@ -504,7 +504,7 @@
   z-index: 1;
   margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) 0;
   padding: var(--space-4) var(--space-5);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
 }
 .brief-queue-body .worklist-day {

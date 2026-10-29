@@ -67,11 +67,6 @@
      boards those are is a fact about callers and changes without this file
      hearing about it, so the condition is the surface. */
   overflow-x: clip;
-  /* A RECESS in the surface, not a card on it. --bgInset is a card's ground and
-     read as one — five of them in a row made the board a grid of grey slabs
-     with the deals inside them, and the cards had to fight their own
-     containers to look like the subject. */
-  background: var(--bgWell);
   border-radius: var(--r-md);
   /* NO INSET ABOVE THE HEAD: the head carries it (below), so the band it draws
      reaches the column's top edge. An inset here is a strip of the scrollport
@@ -143,7 +138,7 @@
   margin-inline: calc(-1 * var(--space-3));
   /* The column's own ground, or the cards slide visibly behind a transparent
      strip. */
-  background: var(--bgWell);
+  background: var(--ground);
 }
 .board-col-head .stage {
   color: var(--textPrimary);
@@ -283,12 +278,7 @@
   /* Keeps the layers raised over that link inside the card; loose, they tie
      the stuck column head's z-index and paint over it by coming later. */
   isolation: isolate;
-  /* The pane over the column's ground, not the elevated surface: a card lifts
-     off the stage it sits in by being translucent white over it, which is the
-     same separation every other pane in the product is drawn with.
-     --shadow-rest on top of that is the top side every resting surface here
-     has, and it is one layer under a hairline rather than a second edge. */
-  background: var(--pane);
+  /* --shadow-rest is one layer under a hairline rather than a second edge. */
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-control);
   box-shadow: var(--shadow-rest);
@@ -630,7 +620,6 @@
      rather than as the start of a list. The chronology's pane is the same pane
      every zone of the record stands on. */
   padding: var(--space-2) var(--space-5);
-  background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
 }
@@ -729,7 +718,7 @@
 }
 
 .timeline .tl-dot-quiet {
-  background: var(--bgElevated);
+  background: var(--ground);
   border-color: var(--borderStrong);
 }
 /* A change the AGENT made: indigo, because the hue is a fact about who did
@@ -778,7 +767,7 @@
   height: 24px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
   border: 1px solid var(--borderStrong);
   display: grid;
   place-items: center;
@@ -916,10 +905,9 @@
 
 /* A note's body on its own plate: the rep's aside about the record, told
    apart from the correspondence around it before a word of either is read.
-   The recessed ground, not a tint — colour on this page means direction or
+   The next level's ground, not a tint — colour on this page means direction or
    provenance, and a note has neither. */
 .tl-note .tl-text {
-  background: var(--bgInset);
   border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
@@ -984,14 +972,13 @@
 }
 
 /* A thread's members are a card on the body side of the rail: the
-   conversation is one entry on the axis, and its messages sit inside it on the
-   recessed ground, each with its own mark, newest first. */
+   conversation is one entry on the axis, and its messages sit inside it one
+   level down, each with its own mark, newest first. */
 .tl-group-members {
   margin-block-start: var(--space-2);
   padding-inline: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgInset);
 }
 
 /*
@@ -1048,7 +1035,6 @@
   padding: var(--space-3) var(--space-4) var(--space-2);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-lg);
-  background: var(--pane);
 }
 
 /* The thread's verbs sit at the end of its own head line — Reply belongs to
@@ -1108,7 +1094,7 @@
   height: 28px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
   border: 1px solid var(--borderStrong);
 }
 .tl-msg-mark svg {

@@ -20,7 +20,6 @@
 }
 .record-split-details,
 .record-split-sheet {
-  background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
@@ -129,19 +128,15 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The verbs as one bordered bar of tiles, glyph over word, sharing the width.
-   A glyph-only verb shows its accessible name as the word, so the tile and
-   the screen reader say one thing. The one filled verb runs full width above
-   the tiles; a refusal sentence the verbs point at drops under them. */
+/* The verbs as one row of tiles, glyph over word, sharing the width, with no
+   box of their own. A glyph-only verb shows its accessible name as the word, so
+   the tile and the screen reader say one thing. The one filled verb runs full
+   width above the tiles; a refusal sentence the verbs point at drops under. */
 .record-split-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 0;
-  padding: 2px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-control);
-  background: var(--bgElevated);
 }
 /* Every tile starts from one basis, larger than any tile's own padding and
    small enough that six fit the card, so the bar shares out equal widths
@@ -170,7 +165,7 @@
   border-color: transparent;
   border-inline-width: 0;
   box-shadow: none;
-  background: var(--bgElevated);
+  background: var(--ground);
   font: var(--fontBodySmall);
   text-align: center;
   white-space: nowrap;
@@ -310,7 +305,7 @@
   display: inline;
   min-inline-size: 0;
   padding: 0;
-  background: var(--pane);
+  background: var(--ground);
   color: var(--textSecondary);
   font-weight: var(--fontWeightRegular);
 }

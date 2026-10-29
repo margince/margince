@@ -69,7 +69,6 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   font: var(--fontBodySmall);
   color: var(--textSecondary);
 }

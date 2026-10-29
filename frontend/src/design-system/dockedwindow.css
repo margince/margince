@@ -17,7 +17,6 @@
   block-size: min(var(--dockHeight), calc(100dvh - var(--space-6)));
   border-start-start-radius: var(--r-sm);
   border-start-end-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   overflow: clip;
 }

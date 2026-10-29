@@ -571,7 +571,6 @@
   border: 1px solid var(--borderSubtle);
   /* The pane's corner: the flyout is one more pane, opened beside the rail. */
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
   backdrop-filter: blur(20px);
   /* The one shadow a layer over the page may cast (DESIGN.md §5). */
   box-shadow: var(--shadow-pop);

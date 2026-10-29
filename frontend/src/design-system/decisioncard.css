@@ -218,7 +218,6 @@
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  background: var(--bgElevated);
   /* The two bands are full-bleed by negative margin, so the card has to clip
      them back to its own radius. */
   overflow: hidden;

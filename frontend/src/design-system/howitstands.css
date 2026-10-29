@@ -8,9 +8,11 @@
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-6) var(--space-6) var(--space-5);
-  background:
-    radial-gradient(560px 320px at 0 0, var(--standing-wash), transparent 70%),
-    var(--bgElevated);
+  background-image: radial-gradient(
+    560px 320px at 0 0,
+    var(--standing-wash),
+    transparent 70%
+  );
 }
 .standing-sheet-head {
   display: flex;

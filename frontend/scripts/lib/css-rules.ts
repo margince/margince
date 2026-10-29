@@ -156,7 +156,18 @@ const CLASS = /\.((?:[\w-]|\\.)+)/g;
 // `:not(.btn)` would otherwise make `btn` a class the chip carries, and the
 // subtree search would then find nothing at all. An `:is()` adds the classes
 // every alternative shares, which is what the element MUST carry.
+const classesRead = new Map<string, ReadonlySet<string>>();
+
 export function classesOf(compound: string): Set<string> {
+  let read = classesRead.get(compound);
+  if (read === undefined) {
+    read = classesWritten(compound);
+    classesRead.set(compound, read);
+  }
+  return new Set(read);
+}
+
+function classesWritten(compound: string): Set<string> {
   const names = new Set<string>();
   for (const part of splitTopLevel(compound, ":")) {
     const functional = /^[\w-]+\(/.test(part);
@@ -189,7 +200,18 @@ const COMBINATORS = " \t\n\r\f>+~";
 
 type Chain = { compounds: string[]; combinators: string[] };
 
+const chainsRead = new Map<string, Chain>();
+
 function chain(selector: string): Chain {
+  let read = chainsRead.get(selector);
+  if (read === undefined) {
+    read = chainWritten(selector);
+    chainsRead.set(selector, read);
+  }
+  return { compounds: [...read.compounds], combinators: [...read.combinators] };
+}
+
+function chainWritten(selector: string): Chain {
   const links: Chain = { compounds: [], combinators: [] };
   let combinator = " ";
   for (const piece of pieces(selector, COMBINATORS)) {
@@ -218,41 +240,78 @@ export function compounds(selector: string): string[] {
 const MAX_ALTERNATIVES = 256;
 
 // A census of what a rule MIGHT paint reads each alternative, not their overlap.
+// Kept per selector: gates ask for the same rule once per element they check.
+const alternativesRead = new Map<string, readonly string[]>();
+
 export function alternativesOf(selector: string): string[] {
+  let read = alternativesRead.get(selector);
+  if (read === undefined) {
+    read = everyCombination(selector) ?? eachAlternativeOnce(selector);
+    alternativesRead.set(selector, read);
+  }
+  return [...read];
+}
+
+// Every combination of every alternation, or undefined once there are more
+// than MAX_ALTERNATIVES of them.
+function everyCombination(selector: string): string[] | undefined {
   const links = chain(selector);
   const at = links.compounds.findIndex((one) => alternation(one) !== undefined);
   const split = alternation(links.compounds[at] ?? "");
   if (split === undefined) return [selector];
-  const out = selectorList(split.list).flatMap((alternative) => {
-    const inner = chain(alternative);
-    const subject = mergedCompound(
-      split.before,
-      inner.compounds.at(-1) ?? "",
-      split.after,
-    );
-    if (subject === undefined) return [];
-    return alternativesOf(
-      joined({
-        compounds: [
-          ...links.compounds.slice(0, at),
-          ...inner.compounds.slice(0, -1),
-          subject,
-          ...links.compounds.slice(at + 1),
-        ],
-        combinators: [
-          ...links.combinators.slice(0, at),
-          ...inner.combinators,
-          ...links.combinators.slice(at),
-        ],
-      }),
-    );
-  });
-  if (out.length > MAX_ALTERNATIVES) {
-    throw new Error(
-      `${selector} distributes past ${MAX_ALTERNATIVES} selectors`,
-    );
+  const out: string[] = [];
+  for (const alternative of selectorList(split.list)) {
+    const written = substituted(links, at, split, alternative);
+    if (written === undefined) continue;
+    const combinations = everyCombination(written);
+    if (combinations === undefined) return undefined;
+    out.push(...combinations);
+    if (out.length > MAX_ALTERNATIVES) return undefined;
   }
   return out;
+}
+
+// Past the cap, each alternation is read on its own and the others stay as
+// written. Every alternative is still seen once, though not every combination.
+function eachAlternativeOnce(selector: string): string[] {
+  const links = chain(selector);
+  return links.compounds.flatMap((compound, at) => {
+    const split = alternation(compound);
+    if (split === undefined) return [];
+    return selectorList(split.list).flatMap(
+      (alternative) => substituted(links, at, split, alternative) ?? [],
+    );
+  });
+}
+
+// The selector with one alternative in place of the alternation it belongs to,
+// a complex alternative's ancestors hung in front of the compound.
+function substituted(
+  links: Chain,
+  at: number,
+  split: Alternation,
+  alternative: string,
+): string | undefined {
+  const inner = chain(alternative);
+  const subject = mergedCompound(
+    split.before,
+    inner.compounds.at(-1) ?? "",
+    split.after,
+  );
+  if (subject === undefined) return undefined;
+  return joined({
+    compounds: [
+      ...links.compounds.slice(0, at),
+      ...inner.compounds.slice(0, -1),
+      subject,
+      ...links.compounds.slice(at + 1),
+    ],
+    combinators: [
+      ...links.combinators.slice(0, at),
+      ...inner.combinators,
+      ...links.combinators.slice(at),
+    ],
+  });
 }
 
 type Alternation = { before: string; list: string; after: string };

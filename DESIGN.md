@@ -38,11 +38,11 @@ screen against it. The sources are listed at the end of the section.
 
 1. **Depth comes from a ladder of surfaces**. Linear and Raycast draw no drop shadow at all.
 
-   A card is one step lighter than the page, and a row under the pointer is one step lighter again.
-   That order is the whole system of height.
+   A pane sits one step off the page, and a pane inside it one step off that pane. Its ground
+   comes from how deep it sits, not from what it is, so one card reads the same on every screen.
 
    Vercel puts the border first. A 1px hairline marks
-   every element that does not move, and a real shadow is kept for something above the page. Rule: paper → surface → raised is the ladder, and it keeps the parts apart.
+   every element that does not move, and a real shadow is kept for something above the page. Rule: the page, then one level for each pane inside a pane, is the ladder, and it keeps the parts apart.
 
    A surface at
    rest adds one tight layer on top (`--shadow-rest`, 1px down and 2px of blur at 5%). That gives it
@@ -209,6 +209,7 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 | `--bg` | `#f1f5f2` | The paper the page is read on. |
 | `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top right. Round fills of 900×620, and the only thing on the page that is there for looks. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
+| `--ladder1` … `--ladder4` | `--pane`, `--bgWell`, `--bgInset`, `--bgElevated` | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the open sidebar row. |
 | `--bgChip` | `rgba(16,26,21,.07)` | The shipped name of the `--bg3` pill and keycap fill: the fill under a badge, a keycap, a segmented strip, the floor of a meter. It is see-through, so a chip reads one step deeper than any ground it lands on; a solid value would be lost on a plate of the same grey. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgInset`, the ground with the lowest contrast of the four a chip lands on, and `.08` would drop that to 4.49:1, under the floor. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; the outline of a control, the axis of the spine. |
@@ -223,6 +224,9 @@ The same room with the lights down. The ground is `--bg #0c1311`, a small step a
 mock. So the hover step of the sidebar still has room under the page. The glows are stronger (`.10` /
 `.20`) because they are the only light. Each pane is `rgba(255,255,255,.045)` with a `.09` edge, and ink
 runs from `#eef3ef` down to `#5c6862`.
+
+A pane in a pane lifts one step toward the light per level, up to `#202725` at level 4. That is as
+light as a state chip's ground can go and still clear AA.
 
  The accent goes up to `#2bb673` with dark ink on it, and the
 indigo text to `#b3b7f5`. The chip turns around instead of copying the light theme: `--bgChip` becomes
@@ -326,8 +330,10 @@ target for that new build. The shipped sheet may not match it.
 
   Nothing at rest glows, the monogram mesh is the only gradient, and nothing stacks a shadow under a
   shadow.
-- **No pane inside a pane**. A zone is one pane; the things in it are a title, a rule and rows. The
-  only closed shapes inside a pane are the agent's tinted row and a staged row's dashed edge.
+- A pane in a pane is one level down. A zone is a pane on the page, and a card in it sits on the
+  next level's ground. Level 4 holds for anything deeper. `surfaces.css` gives each level its ground,
+  so no component picks one. A dialog, popover, menu or side sheet keeps its own surface, and a card
+  in it starts again at level 2.
 
 ### More, and less
 
@@ -878,7 +884,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 | `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (12px) radius; focus is a 2px emerald ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never in upper case. `soft` by default: the tint of the tone behind the word, in the ink of the tone, with a hairline of the same tone as its edge (the record's standing badges beside its name, a status in a row). `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the `Sparkles` glyph. |
 | `Chip` | A fact a reader can use: a pill on the raised ground with a neutral hairline and a glyph, a link when the fact has a place to go, and a hover that says so. A badge is a tinted status, with an edge in its tone, that nobody presses. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
+| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` is a row one level down from the pane. |
 | `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The field row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, and the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures aligned right; the selected row on `--accentBg`. Edge to edge inside its zone. |
@@ -918,7 +924,7 @@ where motion is *spent*:
 
 ## 10. Restraint: what a screen in this language does not do
 
-- Does not put a pane inside a pane. A zone is one pane; inside it a title, a hairline and rows.
+- Does not pick a pane's ground by hand. How deep the pane sits picks it (section 5).
 - Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram, section 3, is the
   one gradient). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
   its own. The two corner glows on the ground are the only other light, and the only tinted thing

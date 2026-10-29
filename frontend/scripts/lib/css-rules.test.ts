@@ -118,6 +118,14 @@ describe("the alternatives of a selector", () => {
     ]);
   });
 
+  it("reads each alternative once when the combinations pass the cap", () => {
+    const list = Array.from({ length: 20 }, (_, at) => `.s${at}`).join(", ");
+    const read = alternativesOf(`:where(${list}) :where(${list})`);
+    expect(read).toHaveLength(40);
+    expect(read).toContain(`.s19 :where(${list})`);
+    expect(read).toContain(`:where(${list}) .s0`);
+  });
+
   it("hangs a complex alternative's ancestors in front of the compound", () => {
     expect(alternativesOf("button:is(.menu > .b).c")).toEqual([
       ".menu > button.b.c",

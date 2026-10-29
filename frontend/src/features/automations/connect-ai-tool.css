@@ -23,7 +23,6 @@
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgWell);
 }
 
 .aiconnect-admin {
@@ -34,7 +33,6 @@
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
 }
 
 .aiconnect-admin-text {

@@ -1,0 +1,282 @@
+/** @vitest-environment jsdom */
+import { readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import ts from "typescript";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  appStylesheets,
+  classesOf,
+  compounds,
+  type Rule,
+  rulesOf,
+  splitTopLevel,
+} from "../../scripts/lib/css-rules";
+import {
+  extensionFrontendFiles,
+  filesMatching,
+  parseSource,
+} from "../../scripts/lib/source-tree";
+import {
+  ladderLists,
+  ladderSheet,
+  OVERLAY_RUNG,
+  PAGE_RUNGS,
+} from "../../scripts/lib/surface-ladder";
+import { parseBlock, tokenDecls } from "./tokens-testing";
+
+// A rule outside surfaces.css that names a rung picks a pane's depth by hand.
+// The ledger holds the spellings older than the ladder, and only shrinks.
+
+const here = dirname(fileURLToPath(import.meta.url));
+const frontendRoot = join(here, "..", "..");
+const ladderPath = join(here, "surfaces.css");
+const ladderText = readFileSync(ladderPath, "utf8");
+const ledgerPath = join(here, "surfaces.ledger.txt");
+
+const VAR = /var\((--[\w-]+)\)/g;
+
+// The rungs, and the light tokens each stands for: --bgInset picks level 3 as
+// surely as --ladder3 does.
+function rungTokens(): Set<string> {
+  const light = parseBlock(tokenDecls, ":root");
+  const named = [...PAGE_RUNGS, OVERLAY_RUNG].flatMap((rung) =>
+    [rung.ground, rung.paint].flatMap((value) =>
+      [...value.matchAll(VAR)].map((match) => match[1]),
+    ),
+  );
+  const behind = named.flatMap((name) =>
+    [...(light[name] ?? "").matchAll(VAR)].map((match) => match[1]),
+  );
+  return new Set([...named, ...behind]);
+}
+
+const RUNGS = rungTokens();
+const NAMES_A_RUNG = new RegExp(
+  `--(?:${[...RUNGS].map((name) => name.slice(2)).join("|")})(?![\\w-])`,
+);
+
+// A custom property declared on a theme root is a token's definition: brand
+// derives its washes there, and tokens.css states the rungs themselves.
+const THEME_ROOT = /^(?::root|\[data-theme=)/;
+
+function declarations(body: string): { property: string; value: string }[] {
+  return splitTopLevel(body, ";").flatMap((part) => {
+    const colon = part.indexOf(":");
+    if (colon < 0) return [];
+    return [
+      {
+        property: part.slice(0, colon).trim(),
+        value: part
+          .slice(colon + 1)
+          .trim()
+          .replace(/\s+/g, " "),
+      },
+    ];
+  });
+}
+
+/** Every declaration outside the ladder that names a rung, one line each. */
+function cssSpellings(rules: readonly Rule[]): string[] {
+  return rules.flatMap((rule) => {
+    if (rule.file === ladderPath) return [];
+    const path = relative(frontendRoot, rule.file);
+    const selector = rule.selector.replace(/\s+/g, " ");
+    return declarations(rule.body)
+      .filter(({ value }) => NAMES_A_RUNG.test(value))
+      .filter(
+        ({ property }) =>
+          !(property.startsWith("--") && THEME_ROOT.test(selector)),
+      )
+      .map(
+        ({ property, value }) =>
+          `${path}: ${selector} { ${property}: ${value} }`,
+      );
+  });
+}
+
+/** Every string a script or component holds that names a rung. */
+function scriptSpellings(path: string, text: string): string[] {
+  const found: string[] = [];
+  const walk = (node: ts.Node) => {
+    if (
+      (ts.isStringLiteralLike(node) ||
+        ts.isTemplateHead(node) ||
+        ts.isTemplateMiddle(node) ||
+        ts.isTemplateTail(node)) &&
+      NAMES_A_RUNG.test(node.text)
+    ) {
+      found.push(`${relative(frontendRoot, path)}: "${node.text}"`);
+    }
+    ts.forEachChild(node, walk);
+  };
+  walk(parseSource(path, text));
+  return found;
+}
+
+const sheets = appStylesheets(frontendRoot);
+const scripts = [
+  ...filesMatching(join(frontendRoot, "src"), /\.tsx?$/),
+  ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")),
+].filter(
+  // Tests plant spellings to probe gates; stories draw tokens as specimens.
+  (path) => /\.tsx?$/.test(path) && !/\.(test|stories)\.tsx?$/.test(path),
+);
+
+function ledger(): string[] {
+  return readFileSync(ledgerPath, "utf8")
+    .split("\n")
+    .filter((line) => line.trim() !== "" && !line.startsWith("#"));
+}
+
+describe("the nesting ladder has one painter", () => {
+  it("reads the whole tree", () => {
+    expect(sheets.length).toBeGreaterThan(250);
+    for (const sheet of ["recordview.css", "conversation.css", "view.css"]) {
+      expect(
+        sheets.some((path) => path.endsWith(sheet)),
+        sheet,
+      ).toBe(true);
+    }
+    expect(scripts.length).toBeGreaterThan(500);
+    expect([...RUNGS].sort()).toEqual(
+      expect.arrayContaining(["--bgInset", "--bgWell", "--pane", "--ladder2"]),
+    );
+  });
+
+  it("finds a rung however it is spelled", () => {
+    const planted: Rule[] = [
+      ["background-image", "linear-gradient(var(--pane), var(--pane))"],
+      ["background", 'url("a.svg") no-repeat, var(--bgInset)'],
+      ["--plate", "var(--bgElevated)"],
+      ["box-shadow", "0 0 0 100vw var(--bgWell)"],
+      ["background-color", "var(--ladder3)"],
+    ].map(([property, value]) => ({
+      file: join(here, "probe.css"),
+      selector: ".probe",
+      body: `${property}: ${value}`,
+    }));
+    expect(cssSpellings(planted)).toHaveLength(planted.length);
+    expect(
+      scriptSpellings(
+        join(here, "probe.tsx"),
+        'const a = <div style={{ background: "var(--bgInset)" }} />; const b = `var(--pane)`;',
+      ),
+    ).toHaveLength(2);
+    expect(
+      cssSpellings([
+        {
+          file: join(here, "probe.css"),
+          selector: ".probe",
+          body: "background: var(--bgInsetLine)",
+        },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("names a rung only in surfaces.css, apart from the ledger", () => {
+    const found = [
+      ...cssSpellings(rulesOf(sheets)),
+      ...scripts.flatMap((path) =>
+        scriptSpellings(path, readFileSync(path, "utf8")),
+      ),
+    ].sort();
+    const kept = ledger();
+    expect(
+      found.filter((line) => !kept.includes(line)),
+      "paint a pane by joining the ladder (node scripts/surface-ladder.ts <selector>); " +
+        "a band or mark that must match its host reads var(--ground)",
+    ).toEqual([]);
+    expect(
+      kept.filter((line) => !found.includes(line)),
+      "the ledger only shrinks: remove the lines that no longer match",
+    ).toEqual([]);
+  });
+});
+
+describe("the ladder's lists", () => {
+  const lists = ladderLists(ladderText);
+
+  it("are one list each, copied into every depth", () => {
+    expect(lists.surfaces.length).toBeGreaterThan(40);
+    expect(lists.overlays.length).toBeGreaterThan(10);
+    expect(ladderText).toBe(ladderSheet(lists.surfaces, lists.overlays));
+  });
+
+  it("name classes some other sheet styles", () => {
+    const styled = new Set(
+      rulesOf(sheets.filter((path) => path !== ladderPath)).flatMap((rule) =>
+        compounds(rule.selector).flatMap((part) => [...classesOf(part)]),
+      ),
+    );
+    const named = [...lists.surfaces, ...lists.overlays].flatMap((selector) =>
+      compounds(selector).flatMap((part) => [...classesOf(part)]),
+    );
+    expect(named.filter((name) => !styled.has(name))).toEqual([]);
+  });
+});
+
+describe("a pane's ground is its depth", () => {
+  afterEach(() => {
+    document.head.replaceChildren();
+    document.body.replaceChildren();
+  });
+
+  // jsdom stops matching a :where() past about fifty selectors; the sheet is
+  // ladderSheet's output (asserted above), so a short list runs the same rules.
+  const { surfaces, overlays } = ladderLists(ladderText);
+  const used = [".panel", ".card", ".record-card", ".record-split-sheet"];
+  const sheet = ladderSheet(
+    surfaces.filter(
+      (selector) => used.includes(selector) || selector.startsWith(".lt"),
+    ),
+    overlays.filter((selector) => selector === ".modal"),
+  );
+
+  function groundsOf(markup: string): Record<string, string> {
+    const style = document.createElement("style");
+    style.textContent = sheet;
+    document.head.append(style);
+    document.body.innerHTML = markup;
+    return Object.fromEntries(
+      [...document.querySelectorAll("[id]")].map((element) => [
+        element.id,
+        getComputedStyle(element).getPropertyValue("--ground").trim(),
+      ]),
+    );
+  }
+
+  const [one, two, three, four] = PAGE_RUNGS.map((rung) => rung.ground);
+
+  it("counts from the page, and stays at the last rung past four", () => {
+    expect(
+      groundsOf(`
+        <section class="panel" id="p1"><div>
+          <div class="card" id="p2"><div class="panel" id="p3">
+            <div class="record-card" id="p4"><div class="panel" id="p5"></div></div>
+          </div></div>
+        </div></section>`),
+    ).toEqual({ p1: one, p2: two, p3: three, p4: four, p5: four });
+  });
+
+  it("counts again from an overlay, wherever the overlay sits", () => {
+    expect(
+      groundsOf(`
+        <section class="panel"><div class="panel"><div class="panel">
+          <div class="modal" id="o">
+            <div class="panel" id="o2"><div class="card" id="o3">
+              <div class="panel" id="o4"></div>
+            </div></div>
+          </div>
+        </div></div></section>`),
+    ).toEqual({ o: OVERLAY_RUNG.ground, o2: two, o3: three, o4: four });
+  });
+
+  it("leaves a list inside a panel as a band of that panel", () => {
+    expect(
+      groundsOf(`
+        <section class="panel"><div class="lt" id="band"></div></section>
+        <section class="record-split-sheet"><div class="lt" id="box"></div></section>`),
+    ).toEqual({ band: one, box: two });
+  });
+});

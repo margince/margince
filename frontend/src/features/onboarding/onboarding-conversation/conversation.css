@@ -21,7 +21,6 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
-  background: var(--bgInset);
 }
 
 .ob-conv-speaker {
@@ -80,7 +79,6 @@
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-conv-confirm header {
@@ -223,7 +221,6 @@
   padding: var(--space-5);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 .ob-team-invited {
   margin: 0;
@@ -277,7 +274,6 @@
   padding: var(--space-8) var(--space-6);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
   text-align: center;
 }
 
@@ -333,7 +329,6 @@
   padding: var(--padCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   transition:
     border-color var(--dur-state) ease,
     background var(--dur-state) ease;
@@ -444,7 +439,6 @@
   margin-left: calc(20px + var(--space-3));
   padding: var(--space-4);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 
 .ob-decision-proof-head {
@@ -554,7 +548,6 @@
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
   overflow: hidden;
 }
 
@@ -815,7 +808,6 @@
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-source-body {
@@ -874,7 +866,6 @@
   padding: var(--space-4);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-speaker.is-picked {
@@ -943,7 +934,6 @@
   padding: var(--padPanel);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 .ob-voice-result-label {
@@ -1113,7 +1103,6 @@
   margin: 0;
   padding: var(--space-4);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-result-next b {
@@ -1327,7 +1316,6 @@
   padding: var(--padCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 /* `min-width: 0`: the avatar beside this is `flex: none`, so without this
@@ -1362,7 +1350,6 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgInset);
 }
 
 .ob-company-card-facts dt {
@@ -1810,7 +1797,6 @@
   width: 100%;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   transition: background var(--dur-state) ease;
 }
 
@@ -1942,7 +1928,6 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 
 .ob-triage-omitted svg {
@@ -2060,7 +2045,6 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-triage-contact-name {
@@ -2163,7 +2147,6 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
 }
 
 /* The one control that decides whether a found fact is kept: the product's tick,
@@ -2392,7 +2375,6 @@
   padding: var(--space-5);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 .ob-basis-section h3 {

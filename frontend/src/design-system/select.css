@@ -92,7 +92,6 @@
   max-width: min(24rem, var(--popupRoom, 90vw));
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);

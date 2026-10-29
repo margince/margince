@@ -16,7 +16,6 @@
   align-self: stretch;
   padding: var(--space-3);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   white-space: pre-wrap;
   word-break: break-all;
 }

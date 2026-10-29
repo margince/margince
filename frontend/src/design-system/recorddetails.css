@@ -58,7 +58,6 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-control);
-  background: var(--bgInset);
   font: var(--fontBodySmall);
   color: var(--textPrimary);
   text-wrap: pretty;

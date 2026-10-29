@@ -13,7 +13,6 @@
   padding: var(--space-5);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .pdigest-eyebrow {

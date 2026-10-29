@@ -89,7 +89,6 @@
   flex-direction: column;
   padding: var(--controlGap);
   gap: 1px; /* ds:ignore menu rows read as one list, not as spaced blocks */
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
@@ -246,7 +245,6 @@
   flex-direction: column;
   padding: var(--controlGap);
   gap: 1px; /* ds:ignore one list, not spaced blocks */
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);

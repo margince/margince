@@ -3,6 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties, ReactNode } from "react";
+import { expect } from "storybook/test";
+import { Panel, PanelBody } from "./panel";
 import {
   specimenColumn,
   specimenIntro,
@@ -12,14 +14,9 @@ import {
 } from "./tokenspecimen";
 
 /**
- * Depth is light first and shadow second. A surface is separated from the one
- * under it by its own lightness, which is what lets the resting shadow be as
- * slight as it is. The shadow then depends on what the thing is: a surface and
- * a filled control have a top side, a field has a floor, and what is truly
- * above the plane (a popover, a menu, a drawer) takes the pop.
- *
- * Flip the theme in the toolbar. On a dark ground every surface lifts toward
- * the light, so the ladder runs the other way and the shadows deepen.
+ * Depth is light first and shadow second. A surface stands off the one under
+ * it by its own lightness, so the resting shadow can stay slight. Flip the
+ * theme in the toolbar: on a dark ground every level lifts toward the light.
  */
 const meta = {
   title: "Foundations/Elevation",
@@ -45,9 +42,7 @@ const label: CSSProperties = {
 };
 const wide: CSSProperties = { maxWidth: "720px" };
 
-type Rung = Readonly<{ token: string; usage: string }>;
-
-function Label({ token, usage }: Rung) {
+function Label({ token, usage }: Readonly<{ token: string; usage: string }>) {
   return (
     <div style={label}>
       <code className={specimenToken}>{token}</code>
@@ -56,89 +51,121 @@ function Label({ token, usage }: Rung) {
   );
 }
 
-function Nest({ rung, children }: { rung: Rung; children?: ReactNode }) {
+const ground: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "var(--space-4)",
+  padding: "var(--space-6)",
+  background: "var(--bgPage)",
+  border: "1px solid var(--borderSubtle)",
+  borderRadius: "var(--r-lg)",
+};
+const swatches: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+  gap: "var(--space-3)",
+};
+
+// The rung each level paints, drawn straight from its token: the play below
+// holds every real pane against these.
+const RUNGS = [
+  { probe: "1", token: "--ladder1", usage: "Level 1: a pane on the page." },
+  { probe: "2", token: "--ladder2", usage: "Level 2: a pane in a pane." },
+  { probe: "3", token: "--ladder3", usage: "Level 3." },
+  { probe: "4", token: "--ladder4", usage: "Level 4 and deeper." },
+  {
+    probe: "overlay",
+    token: "--bgElevated",
+    usage: "An overlay's own surface.",
+  },
+] as const;
+
+function Level({ level, children }: { level: string; children?: ReactNode }) {
   return (
-    <div style={{ ...box, background: `var(${rung.token})` }}>
-      <Label {...rung} />
-      {children}
-    </div>
+    <Panel title={level}>
+      <PanelBody>{children}</PanelBody>
+    </Panel>
   );
 }
 
 /**
- * The ladder, drawn as it is stacked on a record page: the page, a well cut
- * into it, a card on that well, and the elevated surface a card or a panel
- * is made of. Each rung is one visible step off its neighbours, and a card is
- * separated by its own lightness rather than by the shadow alone.
+ * The ladder as the product draws it: real panels nested on the page. The same
+ * panels sit inside an overlay, which counts again from its own surface.
  */
 export const Surfaces: Story = {
   render: () => (
     <div className={specimenColumn} style={wide}>
       <p className={specimenIntro}>
-        Elevation here is light first and shadow second. A surface is separated
-        from the one under it by its own lightness, so choose the rung by what
-        the thing is: the page to read on, a well for a recess, a card for an
-        inset plate, the elevated surface for what lifts off the page. Do not
-        put a pane inside a pane.
+        A pane takes its ground from its depth, not its kind. A pane on the page
+        is level 1, a pane inside it level 2, then level 3, then level 4 for
+        anything deeper. An overlay keeps its own surface and counts again: a
+        card in a dialog is level 2. Nest a Panel and it takes the right ground.
       </p>
-      <Nest rung={{ token: "--bgPage", usage: "The reading ground." }}>
-        <Nest
-          rung={{
-            token: "--bgWell",
-            usage:
-              "A recess in an elevated surface, so the panes inside it are the lifted thing.",
-          }}
-        >
-          <Nest
-            rung={{
-              token: "--bgInset",
-              usage: "A well inside a card: an inset row, a plate.",
-            }}
+      <div style={swatches}>
+        {RUNGS.map((rung) => (
+          <div
+            key={rung.probe}
+            data-probe={rung.probe}
+            style={{ ...box, background: `var(${rung.token})` }}
           >
-            <Nest
-              rung={{
-                token: "--bgElevated",
-                usage:
-                  "A card, a panel, a menu. The brightest thing on screen in light.",
-              }}
-            />
-          </Nest>
-        </Nest>
-      </Nest>
+            <Label token={rung.token} usage={rung.usage} />
+          </div>
+        ))}
+      </div>
+      <div style={ground} data-ladder="page">
+        <Level level="Level 1">
+          <Level level="Level 2">
+            <Level level="Level 3">
+              <Level level="Level 4">
+                <Level level="Level 5 keeps level 4" />
+              </Level>
+            </Level>
+          </Level>
+        </Level>
+      </div>
+      <div style={ground}>
+        <div className="modal" data-ladder="overlay">
+          <Level level="Level 2, in an overlay">
+            <Level level="Level 3" />
+          </Level>
+        </div>
+      </div>
     </div>
   ),
+  play: async ({ canvasElement }) => {
+    const paint = (element: Element | null) =>
+      element === null ? "" : getComputedStyle(element).backgroundColor;
+    const probe = (name: string) =>
+      paint(canvasElement.querySelector(`[data-probe="${name}"]`));
+    const panes = (ladder: string) =>
+      [
+        ...canvasElement.querySelectorAll(
+          `[data-ladder="${ladder}"] section.panel`,
+        ),
+      ].map(paint);
+    await expect(panes("page")).toEqual(["1", "2", "3", "4", "4"].map(probe));
+    await expect(
+      paint(canvasElement.querySelector('[data-ladder="overlay"]')),
+    ).toBe(probe("overlay"));
+    await expect(panes("overlay")).toEqual(["2", "3"].map(probe));
+  },
 };
 
 /**
- * A pane is one zone over the page ground, edged with a hairline.
+ * A pane is one zone over the page ground, edged with a hairline; a pane in
+ * it lies one level down.
  */
 export const Pane: Story = {
   render: () => (
     <div className={specimenColumn} style={{ maxWidth: "880px" }}>
       <p className={specimenIntro}>
-        Use a pane for one zone over the page ground, with a hairline for its
-        edge.
+        Use a pane for one zone over the page ground, with --paneEdge for its
+        hairline. A pane inside it takes the next level's ground by itself.
       </p>
-      <div
-        style={{
-          padding: "var(--space-4)",
-          background: "var(--bgPage)",
-          border: "1px solid var(--borderSubtle)",
-          borderRadius: "var(--r-lg)",
-        }}
-      >
-        <div
-          style={{
-            ...box,
-            background: "var(--pane)",
-            border: "1px solid var(--paneEdge)",
-          }}
-        >
-          <Label
-            token="--pane"
-            usage="One pane per zone, with --paneEdge for its hairline."
-          />
-        </div>
+      <div style={ground}>
+        <Level level="A zone on the page">
+          <Level level="A card in the zone" />
+        </Level>
       </div>
     </div>
   ),

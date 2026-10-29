@@ -39,7 +39,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   padding: var(--space-3);
-  background: var(--bgInset);
   transition: border-color var(--dur-state) var(--ease-out);
 }
 

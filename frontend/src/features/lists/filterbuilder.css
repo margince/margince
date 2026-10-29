@@ -26,7 +26,6 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgWell);
 }
 
 .filter-group-head {

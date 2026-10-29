@@ -212,7 +212,6 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0;
   border-block-start: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
   --stat-strip-tail: 1;
 }
 .stat-strip[data-density="plate"] > .stat-card,

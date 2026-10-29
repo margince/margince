@@ -38,7 +38,6 @@
      overlay (50), which may both cover the strip. */
   position: relative;
   z-index: 20;
-  background: var(--pane);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--paneEdge);
 }

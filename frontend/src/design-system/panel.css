@@ -4,7 +4,6 @@
  * side, and it is the same one layer every resting surface in the product
  * wears. */
 .panel {
-  background: var(--pane);
   border: 1px solid var(--paneEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
@@ -359,14 +358,12 @@
   padding-top: var(--space-4);
 }
 
-/* The plate is a ROW on the recessed ground, not a well inside the pane: a
- * box inside a pane is the one thing the language refuses. It runs the pane's
- * width like every other row and is told apart by its ground alone. */
+/* The plate is a ROW one level down from the pane: it runs the pane's width
+ * like every other row and is told apart by its ground alone. */
 .panel-plate {
   margin: 0;
   padding: var(--space-3) var(--padPanel);
   border-radius: 0;
-  background: var(--bgInset);
 }
 
 /* The lead panel — the one card on a page asking for a move rather than

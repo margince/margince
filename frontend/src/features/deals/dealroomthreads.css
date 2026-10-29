@@ -62,7 +62,6 @@
   flex-direction: column;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   overflow: hidden;
   transition: border-color var(--dur-state) var(--ease-out);
 }
@@ -83,7 +82,6 @@
   align-items: flex-end;
   height: 112px;
   overflow: hidden;
-  background: var(--bgInset);
   border-bottom: 1px solid var(--borderSubtle);
 }
 

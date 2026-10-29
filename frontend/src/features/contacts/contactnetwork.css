@@ -200,7 +200,6 @@
   border-radius: var(--r-md);
   corner-shape: round;
   border: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
 }
 .pn-hero-who {
   min-width: 0;
@@ -274,7 +273,7 @@
   display: grid;
   place-items: center;
   border: 2px solid var(--borderStrong);
-  background: var(--bgElevated);
+  background: var(--ground);
   font-variant-numeric: tabular-nums;
 }
 .pn-relay-done .pn-relay-num {

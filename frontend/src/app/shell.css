@@ -350,7 +350,6 @@
  * pinned to the foot. */
 .rail {
   /* The blur is for the phone bar, which floats over the page. */
-  background: var(--pane);
   backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
@@ -442,7 +441,6 @@
   padding: var(--space-2);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
 }
 /* Collapsed the head is the mark and the marker under it, centred on the 56px
    column's axis, which is the axis every row glyph below stands on too. No card:
@@ -1078,7 +1076,6 @@
 }
 .palette {
   width: min(560px, calc(100vw - 40px));
-  background: var(--bgElevated);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   overflow: hidden;
@@ -1841,7 +1838,6 @@
   padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   max-height: 60vh;
   overflow-y: auto;

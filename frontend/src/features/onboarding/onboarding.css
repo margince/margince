@@ -87,7 +87,6 @@
 .readfail {
   display: flex;
   gap: var(--space-3);
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-rest);
@@ -266,7 +265,6 @@
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
   border: 1px solid var(--borderSubtle);
-  background: var(--bgInset);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }

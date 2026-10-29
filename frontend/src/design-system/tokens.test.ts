@@ -9,6 +9,7 @@ import {
   composite,
   contrastOf,
   luminance,
+  luminanceOf,
   normalize,
   parseBlock,
   states,
@@ -248,6 +249,31 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       });
     }
 
+    // Dark lifts every level, capped by the state chips' AA above; light takes
+    // its grounds as they stand, turning back toward white at level 4.
+    it("steps each level of the nesting ladder off the one it lies in", () => {
+      const levels = ["--ladder1Solid", "--ladder2", "--ladder3", "--ladder4"];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (let at = 1; at < levels.length; at += 1) {
+          const ratio = contrastOf(pal[levels[at]], pal[levels[at - 1]]);
+          expect(
+            ratio,
+            `${theme}: ${levels[at]} on ${levels[at - 1]}`,
+          ).toBeGreaterThanOrEqual(1.03);
+        }
+      }
+      const dark = levels.map((name) => luminance(themes.dark[name]));
+      expect([...dark].sort((a, b) => a - b)).toEqual(dark);
+    });
+
+    it("makes level 1 opaque without moving it", () => {
+      for (const pal of Object.values(themes)) {
+        expect(luminanceOf(pal["--ladder1Solid"])).toBe(
+          luminanceOf(composite(pal["--pane"], pal["--bgPage"])),
+        );
+      }
+    });
+
     // The grounds a callout's words sit on, read from the sheet that paints them.
     const calloutWashes = rulesOf([join(here, "callout.css")])
       .flatMap((rule) => declaredValues(rule.body, "--callout-wash"))
@@ -291,6 +317,10 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgInset": prose,
         "--bgHover": prose,
         "--bgStrip": prose,
+        "--ladder1Solid": prose,
+        "--ladder2": prose,
+        "--ladder3": prose,
+        "--ladder4": prose,
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill, and so is the opaque Surface a soft badge letters on.
         // A state's fill is its TEXT token, never its base: no one ink sits on
@@ -350,6 +380,10 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgInset",
         "--bgHover",
         "--bgStrip",
+        "--ladder1Solid",
+        "--ladder2",
+        "--ladder3",
+        "--ladder4",
       ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {

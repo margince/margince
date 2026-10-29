@@ -271,7 +271,6 @@
 .webhook-picker-group {
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
 }
 
 .webhook-picker-group-name {

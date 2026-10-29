@@ -14,30 +14,20 @@
    * The GROUNDS are the design's paper (DESIGN.md §3), and the two themes are
    * one room with the lights up or down rather than two tints.
    *
-   * A ladder, darkest first, from a well inside a card up to the surface a card
-   * floats on. Each rung is one visible step off its neighbours, and the ORDER
-   * is the part that carries meaning — tokens.test.ts asserts the ordering in
-   * both themes rather than trusting five plausible values to stay in sequence:
+   * Darkest first, as tokens.test.ts asserts the order in both themes:
    *
-   *   --bgHover        #d7ede5  a pointer resting on a row on the page
-   *   --bgInset         #eaedeb  a well inside a card: an inset row, a plate
+   *   --bgHover        #d7ede5  a pointer resting on a row
+   *   --bgInset         #eaedeb  level 3 of the nesting ladder; a pressed control
    *   --bgStrip        #e3f1ec  a toolbar or footer band on the ground
    *   --bgPage         #eff6f3  the reading ground, flat under the shell
-   *   --bgElevated     #fbfcfb  a card, a panel, a menu
+   *   --bgElevated     #fbfcfb  an overlay, a control's face, ladder level 4
    *
-   * The dark theme is NOT this list mirrored. On a dark ground every surface
-   * lifts toward the light, so the ladder runs the other way and only the
-   * DIRECTION of each step is shared; the dark block states its own order.
-   *
-   * The page is no longer the brightest thing on screen; --bgElevated is, and
-   * a card is therefore separated by its own lightness rather than by the
-   * shadow alone. That is what lets --shadow-rest be as slight as it is.
+   * A pane's ground follows its depth, not its kind: the --ladder* tokens below
+   * and surfaces.css. The dark theme states its own order.
    */
   --bgPage: #eff6f3;
   --bgElevated: #fbfcfb;
-  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
-   * --bgPage: one step off BOTH its hosts. The old value was one step off white
-   * only, which is invisible once the page stops being white. */
+  /* 1.19:1 against --bgElevated and 1.12:1 against --bgPage: one step off both. */
   --bgInset: #eaedeb;
   /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
    * segmented strip, the trough of a meter. Translucent, so it reads one step
@@ -47,14 +37,18 @@
   /* A band that lies on the ground rather than being it, so it must not vanish
    * into the page the way a pre-paint or a frame should. */
   --bgStrip: #e3f1ec;
-  /* A RECESS in an elevated surface — the well a board's stage is drawn as.
-   * One hair under --bgElevated (1.03:1), which is what lets the panes inside
-   * it be the lifted thing: --bgInset is a card's own ground, and five of them
-   * side by side read as five cards with cards inside them. */
+  /* Level 2 of the nesting ladder: one hair under the pane it lies in. */
   --bgWell: #f6f8f7;
-  /* One pane per zone (DESIGN.md §5), and a hairline for its edge. */
+  /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
+  /* The nesting ladder's grounds, by depth (surfaces.css paints them). Solid is
+   * level 1 made opaque, for a band or mark that hides what passes under it. */
+  --ladder1: var(--pane);
+  --ladder1Solid: var(--pane);
+  --ladder2: var(--bgWell);
+  --ladder3: var(--bgInset);
+  --ladder4: var(--bgElevated);
 
   --accent: #045647;
   /* The accent as TEXT, split from the accent as a FILL: equal in light; in
@@ -779,6 +773,12 @@
   --bgWell: #111815;
   --pane: rgba(239, 247, 244, 0.045);
   --paneEdge: rgba(239, 247, 244, 0.09);
+  /* Each level lifts toward the light: the pane's ink over the page at a rising
+     share, so the hue holds. Level 4 stops where a state chip still clears AA. */
+  --ladder1Solid: #161d1b;
+  --ladder2: #1a211f;
+  --ladder3: #1d2422;
+  --ladder4: #202725;
 
   --accent: #3aae94;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
@@ -928,6 +928,10 @@
     --bgWell: #111815;
     --pane: rgba(239, 247, 244, 0.045);
     --paneEdge: rgba(239, 247, 244, 0.09);
+    --ladder1Solid: #161d1b;
+    --ladder2: #1a211f;
+    --ladder3: #1d2422;
+    --ladder4: #202725;
 
     --accent: #3aae94;
 

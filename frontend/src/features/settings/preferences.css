@@ -43,7 +43,6 @@
      text takes the slack instead, so the box stays beside its own copy. */
   justify-content: flex-start;
   gap: var(--space-4);
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   padding: var(--space-4);

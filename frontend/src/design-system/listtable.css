@@ -14,7 +14,6 @@
   /* min-height:0 is what lets the scrolling body actually shrink inside a
    * flex column; without it the table pushes the surface past the viewport. */
   min-height: 0;
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
   /* The list surface is one card, and takes the resting shadow: the same
@@ -422,7 +421,6 @@
   max-block-size: var(--menuMaxBlockSize, 400px);
   overflow-y: auto;
   padding: var(--controlGap);
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
@@ -707,7 +705,7 @@
   z-index: 1;
   text-align: left;
   padding: var(--space-2) var(--space-3);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
   /* A label longer than its column wraps, and the column keeps its width. */
   hyphens: auto;
@@ -756,7 +754,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderStrong);
 }
 
@@ -833,7 +831,7 @@
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--bgElevated);
+  background: var(--ground);
   border-right: 1px solid var(--borderSubtle);
 }
 
