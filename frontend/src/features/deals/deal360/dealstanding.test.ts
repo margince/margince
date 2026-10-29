@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../../api/schema";
+import { UTC_ZONE } from "../../../format/timezone";
 import { deal, offer } from "../deals.testkit";
 import {
   closeTone,
@@ -96,10 +97,24 @@ describe("momentum", () => {
   it.each([
     [{ stalled: true, last_activity_at: "2026-08-01" }, "stalled", "danger"],
     [{ stalled: false, wait_until: "2026-09-01" }, "on_hold", "neutral"],
+    [
+      {
+        stalled: false,
+        wait_until: "2026-08-20",
+        last_activity_at: "2026-08-11",
+      },
+      "active",
+      "success",
+    ],
+    [{ stalled: false, wait_until: "2026-08-15" }, "quiet", "neutral"],
     [{ stalled: false, last_activity_at: "2026-08-11" }, "active", "success"],
     [{ stalled: false }, "quiet", "neutral"],
-  ] as const)("%o reads %s", (fields, state, tone) => {
-    const momentum = momentumOf(fields);
+  ] as const)("%o reads %s on 20 Aug", (fields, state, tone) => {
+    const momentum = momentumOf(
+      fields,
+      UTC_ZONE,
+      new Date("2026-08-20T12:00:00Z"),
+    );
     expect(momentum.state).toBe(state);
     expect(momentumTone(momentum)).toBe(tone);
   });

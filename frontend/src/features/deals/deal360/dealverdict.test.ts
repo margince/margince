@@ -88,6 +88,20 @@ describe("an open deal's verdict", () => {
     });
   });
 
+  it.each([
+    ["on the agreed day", "2026-05-30", "30 May"],
+    ["after the agreed day", "2026-05-29", "29 May"],
+  ])(
+    "calls the wait over %s, as the server's stall rule does",
+    (_, day, date) => {
+      expect(verdictFor({ wait_until: day })).toEqual({
+        word: t("deal.verdict.waitOver"),
+        sentence: t("deal.verdict.waitOverSince", { date }),
+        tone: "warning",
+      });
+    },
+  );
+
   it("flags a close date gone by", () => {
     expect(verdictFor({ expected_close_date: "2020-01-15" })).toMatchObject({
       word: t("deal.verdict.overdueToClose"),

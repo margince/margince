@@ -14939,7 +14939,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactLink.copyEmail": "Sao chép địa chỉ email",
   "contactLink.emailCopied": "Đã sao chép địa chỉ email",
   "contactLink.copyEmailRemedy": "Hãy chọn địa chỉ và sao chép bằng bàn phím.",
-  "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",
@@ -18025,6 +18024,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.onHold": "Tạm dừng",
   "deal.verdict.onHoldUntil":
     "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.waitOver": "Việc tiếp theo quá hạn",
+  "deal.verdict.waitOverSince":
+    "Khách hàng hẹn chờ đến {date}. Đã đến ngày, hãy liên hệ lại.",
   "deal.verdict.overdueToClose": "Quá hạn chốt",
   "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
   "deal.verdict.notStarted": "Chưa bắt đầu",
