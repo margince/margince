@@ -105,6 +105,7 @@ func (h Handlers) GetActivity(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, activity)
 }
 
+// ListLatestInbound serves a record page what it leads its Next bar with.
 func (h Handlers) ListLatestInbound(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLatestInboundParams) {
 	items, err := h.store.LatestInbound(r.Context(), string(params.EntityType), ids.UUID(params.EntityId))
 	if err != nil {
