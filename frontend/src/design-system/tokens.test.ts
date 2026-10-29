@@ -212,10 +212,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   // way and only the DIRECTION of each step is shared. Each theme therefore
   // states its own expected order, and both are checked the same way.
   describe("the surface ladder holds its order", () => {
-    // Darkest first, as measured. The two themes are deliberately DIFFERENT
-    // sequences: light lifts from the hovered row up to the elevated surface,
-    // while dark puts the page lowest and lifts every other ground above it,
-    // because a dark surface has only one direction to move in.
+    // Darkest first, as measured. The two themes differ: dark puts
+    // the page lowest and lifts every other ground above it.
     const ladders = {
       light: [
         "--bgHover",
