@@ -33,6 +33,7 @@ import {
   RecordsLandingCard,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
+import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import { ForecastReview } from "./analytics.forecast.review";
 import {
   FORECAST_PERIODS,
@@ -286,14 +287,7 @@ function ForecastAnswer({
           {call && (
             <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
           )}
-          {readings.qualified && (
-            <QualifiedAnswer
-              qualified={readings.qualified}
-              wonMinor={readings.won_minor}
-              money={money}
-              locale={locale}
-            />
-          )}
+          <QualifiedAnswer readings={readings} money={money} locale={locale} />
         </PanelBody>
       </Panel>
 
@@ -346,49 +340,6 @@ function ForecastAnswer({
             />
           )}
         </StatStrip>
-      )}
-    </>
-  );
-}
-
-// The figure the customer still supports, under the baseline it is a part of.
-// Left-out and unknown deals are said apart: an unknown deal is a gap in what
-// was checked, and folding it into "left out" would blame the pipeline for it.
-function QualifiedAnswer({
-  qualified,
-  wonMinor,
-  money,
-  locale,
-}: Readonly<{
-  qualified: NonNullable<Readings["qualified"]>;
-  wonMinor: number;
-  money: (minor: number | null | undefined) => string;
-  locale: Locale;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <p>
-        {t("forecast.qualifiedAnswer", {
-          evidence: money(wonMinor + qualified.evidence_minor),
-          weighted: money(qualified.weighted_minor),
-        })}
-      </p>
-      {qualified.excluded_count > 0 && (
-        <p className="t-caption">
-          {t("forecast.qualifiedLeftOut", {
-            count: formatNumber(qualified.excluded_count, locale),
-            amount: money(qualified.excluded_minor),
-          })}
-        </p>
-      )}
-      {qualified.unknown_count > 0 && (
-        <p className="t-caption">
-          {t("forecast.qualifiedUnknown", {
-            count: formatNumber(qualified.unknown_count, locale),
-            amount: money(qualified.unknown_minor),
-          })}
-        </p>
       )}
     </>
   );
