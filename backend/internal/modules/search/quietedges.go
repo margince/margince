@@ -18,14 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// ExcludeEdges renders a predicate that removes candidates before the LIMIT,
-// over the alias `e` this projection gives the edge row.
+// ExcludeEdges renders a predicate that removes candidate contacts before the
+// LIMIT, over alias `e`, the contact's strongest edge. It judges the contact.
+// A test on one colleague's edge drops the contact; it promotes no other edge.
 //
-// A HOLE rather than a join, because the rows that decide it belong to another
-// module and this one never imports a sibling. The caller supplies the SQL and
-// the arguments through the same `arg` counter, so the fragment is numbered
-// against this statement's own list. It runs before the cut: a contact
-// filtered afterwards has already spent a slot.
+// A HOLE rather than a join: the deciding rows belong to another module. The
+// caller numbers its fragment through the same `arg` counter.
 type ExcludeEdges func(arg func(any) int) (string, error)
 
 // QuietRead is one ask of the quiet-relationship candidates.
@@ -126,6 +124,18 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 			excluded = got
 		}
 	}
+	// One owner's read starts from that owner's contacts and reaches their
+	// edges through a fenced lateral. Planned freely, it put the few live
+	// colleagues outermost and rescanned the owner's contacts once per colleague.
+	source := `FROM graph_interaction_edge e
+		      ` + liveMemberJoin + `
+		      JOIN contact p ON p.id = e.contact_id`
+	if !read.Owner.IsZero() {
+		source = `FROM contact p
+		      CROSS JOIN LATERAL (SELECT e.* FROM graph_interaction_edge e
+		              ` + liveMemberJoin + `
+		             WHERE e.contact_id = p.id OFFSET 0) e`
+	}
 	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
@@ -152,7 +162,7 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 		  JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
 		 WHERE (%s)
 		 ORDER BY e.count_total DESC, x.touched ASC, e.contact_id
-		 LIMIT $%d`, quietEdgeSource(read), workforce.LiveMemberSQL("o"),
+		 LIMIT $%d`, source, workforce.LiveMemberSQL("o"),
 		exchangedPos, owned, scope,
 		liveExchangeClock(asOf), beforePos, afterPos, excluded, limitPos), args...)
 	if err != nil {
@@ -160,22 +170,6 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	}
 	defer rows.Close()
 	return scanQuietContacts(rows)
-}
-
-// quietEdgeSource is the candidates' FROM: live colleagues' edges and their
-// contact. One owner's read starts from that owner's contacts and reaches their
-// edges through a fenced lateral. Planned freely, it put the few live
-// colleagues outermost and rescanned the owner's contacts once per colleague.
-func quietEdgeSource(read QuietRead) string {
-	if !read.Owner.IsZero() {
-		return `FROM contact p
-		      CROSS JOIN LATERAL (SELECT e.* FROM graph_interaction_edge e
-		              ` + liveMemberJoin + `
-		             WHERE e.contact_id = p.id OFFSET 0) e`
-	}
-	return `FROM graph_interaction_edge e
-		      ` + liveMemberJoin + `
-		      JOIN contact p ON p.id = e.contact_id`
 }
 
 // quietOwnerClause narrows the candidates to one live owner, to contacts with

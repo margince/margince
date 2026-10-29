@@ -36,10 +36,9 @@ func quietCandidates(t *testing.T, e *integration.Env, read search.QuietRead) []
 	return got
 }
 
-// The limit cuts the strongest quiet relationships, and nothing else decides
-// which: an excluded contact and a recently touched one spend no slot however
-// strong, and a tie is broken by the older silence. The owner's read and the
-// unnarrowed read answer the same rows for that owner.
+// The limit keeps the strongest quiet relationships. An excluded contact and a
+// recently touched one spend no slot, however strong. A tie goes to the older
+// silence, and the owner's read and the unnarrowed read agree.
 func TestTheQuietLimitKeepsTheStrongestRelationshipsThatAreReallyQuiet(t *testing.T) {
 	e := integration.Setup(t)
 	excluded := e.SeedContact(t, "Strongest but set aside", &e.Rep1)

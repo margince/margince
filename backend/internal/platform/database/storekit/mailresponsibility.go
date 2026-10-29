@@ -162,12 +162,13 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
 }
 
-// DirectMailActivitiesSQL is every activity whose parsed To line names one
-// seat, built once as an array. A seat's own reads start from it, over the
-// address index, rather than testing each mail in the workspace.
+// DirectMailActivitiesSQL lists the live inbound mail whose parsed To line
+// names one seat, built once as an array. A seat's own reads start from it,
+// over the address index, rather than testing each mail in the workspace.
 func DirectMailActivitiesSQL(identities, seat string) string {
-	return "ARRAY(SELECT recipient.activity_id FROM activity_participant recipient WHERE " +
-		strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
+	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL
+ WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
 }
 
 // DirectMailSeatsSQL lists every seat the mail's parsed To line names.
