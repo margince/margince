@@ -6,7 +6,7 @@
 package compose
 
 // A deal the customer is talking about still needs a close date they back and
-// a next step to count, and a refusal is not the customer moving the deal.
+// a next step to count. A refusal is not the customer moving the deal.
 // These run the real worker over deals written through the deals and
 // activities stores, with the verdict written by the classifier's own writer.
 

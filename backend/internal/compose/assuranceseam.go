@@ -223,15 +223,14 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	return out, nil
 }
 
-// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That
-// is a message a contact on it wrote, or a meeting or call with them that took
-// place. Our own mail, a colleague's reply, a task, a field edit, a canceled
-// meeting and a machine's mail never do, and nor does a message not every
-// member may read. Nor does a refusal: a message judged
-// negative. An unjudged message counts, because every message from before the
-// verdict existed is unjudged.
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
+// a message a contact on it wrote, or a meeting or call with them that happened.
+// Our own mail, a task, a field edit and a machine's mail never count. Nor do a
+// message not every member may read, or a refusal. An unjudged message counts,
+// because every message from before the verdict existed is unjudged.
 func customerProgressSQL(alias, asOf string) string {
-	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND ((" + customerWroteSQL(alias) + " AND " +
+	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) +
+		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"

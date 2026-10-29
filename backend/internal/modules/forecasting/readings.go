@@ -69,8 +69,8 @@ type QualifiedReadings struct {
 	UnknownMinor  int64
 	ExcludedCount int
 	UnknownCount  int
-	// The part of the excluded money with no review behind it: a weak close
-	// date or no next step on a deal the customer still talks about.
+	// The part of the excluded money with no review behind it. Such a deal has a
+	// weak close date or no next step, and the customer still talks about it.
 	UnsupportedMinor int64
 	UnsupportedCount int
 	// AmountsPartial is true when an excluded or unknown deal had no amount

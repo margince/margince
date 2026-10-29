@@ -18,7 +18,7 @@ type Outcome string
 
 // The outcomes. Unknown is not a weaker eligible. It says the sources needed
 // to judge the deal could not be read, and no qualified total may count it.
-// Unsupported leaves the deal out like a review does, but asks nobody: the
+// Unsupported leaves the deal out like a review does, but asks nobody. The
 // customer is talking, and the rep fixes the date or the next step on the deal.
 const (
 	OutcomeEligible       Outcome = "eligible"

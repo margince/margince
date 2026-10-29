@@ -441,8 +441,8 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
   ).toContain("1 deal (");
 });
 
-// A deal left out with no review is said apart from one under review: the
-// rep fixes it on the deal, and no review will ask.
+// A deal left out with no review is said apart from one under review. The rep
+// fixes it on the deal, and no review will ask.
 it("says apart deals left out for a weak date or no next step", async () => {
   vi.stubGlobal(
     "fetch",
