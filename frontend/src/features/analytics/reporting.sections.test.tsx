@@ -10,6 +10,8 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { AnalyticsScreen } from "./analytics";
+import { render as renderScreen } from "./analytics.testkit";
 import type { ReportingEvaluation } from "./reporting.model";
 import { ReportingOverview } from "./reporting.overview";
 import {
@@ -19,7 +21,12 @@ import {
   reportingSectionsCatalog,
   reportingStoryScope,
 } from "./reporting.story-fixtures";
-import { metricView, type ReportingView } from "./reporting.views";
+import {
+  metricView,
+  REPORTING_VIEWS,
+  type ReportingView,
+  VIEW_SHAPE,
+} from "./reporting.views";
 
 const originalFetch = globalThis.fetch;
 afterEach(() => {
@@ -38,7 +45,7 @@ function showView(
   catalog: Catalog = reportingSectionsCatalog,
   address = "",
 ) {
-  window.location.hash = `#/analytics/performance?view=${view}${address}`;
+  window.location.hash = `#/analytics/${VIEW_SHAPE[view].section}${address}`;
   installFetchStub({
     ...reportingSectionRoutes(evaluation),
     "GET /analytics/metrics": () =>
@@ -61,7 +68,7 @@ function showView(
   globalThis.fetch = recording;
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view={view} scope={reportingStoryScope} />
     </StoryProviders>,
   );
   return asked;
@@ -102,7 +109,7 @@ describe("the Leads view", () => {
       "leads",
       reportingLeadsEvaluation,
       reportingSectionsCatalog,
-      "&close=fiscal_quarter",
+      "?close=fiscal_quarter",
     );
 
     await panel(titled(en["reporting.leads_created"]));
@@ -214,34 +221,52 @@ describe("the Partners view", () => {
       }),
     ).toBeNull();
   });
-
-  it("offers each view the seat's catalog holds", async () => {
-    showView("partners", reportingPartnersEvaluation);
-
-    for (const view of ["sales", "sdr", "leads", "partners"] as const) {
-      expect(
-        await screen.findByRole("button", {
-          name: en[`reporting.${view}`],
-          pressed: view === "partners",
-        }),
-      ).toBeInTheDocument();
-    }
-  });
 });
 
-describe("a seat that cannot read a view", () => {
+const TAB_LABEL = {
+  sales: "analytics.sectionPerformance",
+  sdr: "reporting.sdr",
+  leads: "reporting.leads",
+  partners: "reporting.partners",
+} as const;
+
+describe("which views a seat reads", () => {
   const withoutLeads: Catalog = {
     metrics: reportingSectionsCatalog.metrics.filter(
       (metric) => metricView(metric.id) !== "leads",
     ),
   };
 
+  // The whole screen, because which views are tabs is the screen's to decide.
+  function showScreen(address: string, catalog: Catalog) {
+    window.location.hash = address;
+    installFetchStub({
+      ...reportingSectionRoutes(reportingPartnersEvaluation),
+      "GET /analytics/metrics": () =>
+        jsonResponse({ ...catalog, schedule_ready: true }),
+    });
+    renderScreen(<AnalyticsScreen />);
+  }
+
+  it("offers each view the seat's catalog holds as a tab", async () => {
+    showScreen("#/analytics/partners", reportingSectionsCatalog);
+
+    for (const view of REPORTING_VIEWS) {
+      expect(
+        await screen.findByRole("button", {
+          name: en[TAB_LABEL[view]],
+          pressed: view === "partners",
+        }),
+      ).toBeInTheDocument();
+    }
+  });
+
   it("is not offered it, and its address opens the first view the seat has", async () => {
-    showView("leads", reportingPartnersEvaluation, withoutLeads);
+    showScreen("#/analytics/leads", withoutLeads);
 
     expect(
       await screen.findByRole("button", {
-        name: en["reporting.sales"],
+        name: en["analytics.sectionPerformance"],
         pressed: true,
       }),
     ).toBeInTheDocument();
@@ -250,12 +275,23 @@ describe("a seat that cannot read a view", () => {
     ).toBeNull();
   });
 
+  it("opens the tab an old view-switch address named", async () => {
+    showScreen("#/analytics/performance?view=partners", withoutLeads);
+
+    expect(
+      await screen.findByRole("button", {
+        name: en["reporting.partners"],
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("says why there is no view to choose when it reads none", async () => {
-    showView("sales", reportingPartnersEvaluation, { metrics: [] });
+    showScreen("#/analytics/performance", { metrics: [] });
 
     expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
     expect(
-      screen.queryByRole("group", { name: en["reporting.view"] }),
+      screen.queryByRole("button", { name: en["reporting.sdr"] }),
     ).toBeNull();
   });
 });

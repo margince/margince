@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "../../format/format";
 import { en } from "../../i18n/en";
 import { SECTIONS, sectionFromAddress } from "../../lib/analytics.address";
-import { AnalyticsScreen, analyticsTabs } from "./analytics";
+import { AnalyticsScreen } from "./analytics";
+import { analyticsTabs } from "./analytics.tabs";
 import {
   openPipeline,
   ownLensContext,
@@ -22,11 +23,13 @@ afterEach(() => {
 it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
   expect(analyticsTabs(SECTIONS)).toEqual([
     "performance",
+    "sdr",
+    "leads",
+    "partners",
     "forecast",
     "pipeline",
     "outcomes",
     "delivery",
-    "reports",
   ]);
   expect(analyticsTabs([...SECTIONS].reverse())).toEqual(
     analyticsTabs(SECTIONS),
@@ -509,6 +512,18 @@ describe("sectionFromAddress", () => {
   it("answers an old report address with the section that now holds it", () => {
     expect(sectionFromAddress("deals-by-stage")).toBe("pipeline");
     expect(sectionFromAddress("open-deals-per-company")).toBe("pipeline");
+  });
+
+  // Performance's views were once one page with a switch named by `?view=`.
+  it("answers an old view-switch address with that view's tab", () => {
+    expect(sectionFromAddress("performance", "performance", "sdr")).toBe("sdr");
+    expect(sectionFromAddress(undefined, "performance", "leads")).toBe("leads");
+    expect(sectionFromAddress("performance", "performance", "sales")).toBe(
+      "performance",
+    );
+    expect(sectionFromAddress("forecast", "performance", "sdr")).toBe(
+      "forecast",
+    );
   });
 
   // A segment is whatever a reader typed. Anything unrecognized lands on the

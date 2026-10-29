@@ -78,7 +78,11 @@ export const SECTION_REPORTS = {
     "forecast",
     "open-deals-per-company",
   ],
+  // Performance and its sibling views draw the evaluated overview instead.
   performance: [],
+  sdr: [],
+  leads: [],
+  partners: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.

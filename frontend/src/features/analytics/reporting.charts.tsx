@@ -170,7 +170,9 @@ function itemKey(item: LaidOutItem): string {
     : `question:${item.question.id}`;
 }
 
-// One chart in its panel, with the door to the records behind it.
+// One chart in its panel. The head holds the title alone; what the figure
+// covers and the door to the records behind it sit in the foot, so a row of
+// cards reads as a row of titles over a row of charts.
 export function ChartPanel({
   chart,
   wide,
@@ -192,30 +194,30 @@ export function ChartPanel({
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
       title={chartTitle(chart, evaluation, t)}
-      // The one door from a chart to the records behind it, in the head
-      // beside the title it opens, rather than trailing the figure.
-      titleAction={
-        drawn ? (
-          <Button
-            variant="link"
-            onClick={() =>
-              onEvidence({
-                metric: chart.metric,
-                context_id: chart.context_id,
-              })
-            }
-          >
-            {t("reporting.viewRecords")}
-          </Button>
-        ) : undefined
+      footer={
+        <>
+          <ChartContext
+            chart={chart}
+            evaluation={evaluation}
+            editionId={editionId}
+          />
+          {drawn && (
+            <Button
+              variant="link"
+              onClick={() =>
+                onEvidence({
+                  metric: chart.metric,
+                  context_id: chart.context_id,
+                })
+              }
+            >
+              {t("reporting.viewRecords")}
+            </Button>
+          )}
+        </>
       }
     >
       <PanelBody>
-        <ChartContext
-          chart={chart}
-          evaluation={evaluation}
-          editionId={editionId}
-        />
         {drawn ? (
           <ChartBody
             chart={chart}

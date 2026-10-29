@@ -142,12 +142,15 @@
   gap: var(--gapActions);
 }
 
+/* The chart's foot: what it covers takes the free width, so the door to its
+ * records lands at the band's end. */
 .reporting-context {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  min-width: 0;
 }
 .reporting-dialog fieldset {
   display: grid;

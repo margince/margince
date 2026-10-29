@@ -51,7 +51,7 @@ it("sends independent pipeline, target-period and expected-close filters and ope
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });

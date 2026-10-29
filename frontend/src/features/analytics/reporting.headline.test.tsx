@@ -71,7 +71,7 @@ it.each([
     const asked = recordEvaluations();
     render(
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>,
     );
     await vi.waitFor(() => expect(asked.length).toBeGreaterThan(0));
