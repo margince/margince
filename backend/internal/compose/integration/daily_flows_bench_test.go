@@ -799,12 +799,15 @@ func dailyAnalyticsTemplate(t *testing.T, e *apptest.AppEnv, s Seat) string {
 	return framework.Definition.Template
 }
 
-// dailyTemplateMetrics is the screen's metric filter and block wish list for a template.
+// dailyTemplateMetrics is the metric filter and block wish list of the view the
+// screen opens on for a template. METRIC_VIEW and VIEW_SHAPE in
+// frontend/src/features/analytics/reporting.views.ts hold the lists; a request
+// for more than eight metrics is refused, so one view is asked, never all.
 func dailyTemplateMetrics(template string) (func(id string) bool, []string) {
-	sdr := []string{"meetings_held", "accepted_opportunities"}
+	view := []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created"}
+	blocks := []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
 	if template == "sdr" {
-		return func(id string) bool { return slices.Contains(sdr, id) }, []string{"sdr_outcomes", "target_progress"}
+		view, blocks = []string{"meetings_held", "accepted_opportunities"}, []string{"sdr_outcomes", "target_progress"}
 	}
-	return func(id string) bool { return !slices.Contains(append(sdr, "forecast_landing"), id) },
-		[]string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
+	return func(id string) bool { return slices.Contains(view, id) }, blocks
 }
