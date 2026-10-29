@@ -65,6 +65,12 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}); err != nil {
 			return err
 		}
+		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+			return err
+		}
+		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
+			return err
+		}
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			_, err := contact360.LastTouchFor(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](contact)}, contact360.AssembleOptions{AsOf: at})
 			return err
