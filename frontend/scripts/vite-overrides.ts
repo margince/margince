@@ -6,7 +6,8 @@ import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 
 // One core frontend file a unit replaces, as gen-composition wrote it to
-// build/composition-frontend/overrides.json.
+// build/composition-frontend/overrides.json. source is relative to the
+// repository root.
 export type FileOverride = {
   unit: string;
   target: string;
@@ -42,18 +43,20 @@ export function overrideCoreFiles(
   frontendRoot: string,
   overrides: readonly FileOverride[],
 ): Plugin {
+  // A source is relative to the repository root, the frontend's parent.
+  const sourceOf = (o: FileOverride) => resolve(frontendRoot, "..", o.source);
   // Keyed by real path, because that is the id Vite resolves a module to.
   const byTarget = new Map(
     overrides.map((o) => [
       realpathSync(resolve(frontendRoot, o.target)),
-      o.source,
+      sourceOf(o),
     ]),
   );
   // A replacement may reach core's copy of the one file it replaces, and nothing
   // else; ext-imports refuses the rest before a build gets here.
   const originalOf = new Map(
     overrides.map((o) => [
-      realpathSync(o.source),
+      realpathSync(sourceOf(o)),
       resolve(frontendRoot, o.target),
     ]),
   );
