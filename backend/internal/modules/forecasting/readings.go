@@ -69,6 +69,10 @@ type QualifiedReadings struct {
 	UnknownMinor  int64
 	ExcludedCount int
 	UnknownCount  int
+	// The part of the excluded money with no review behind it. Such a deal has a
+	// weak close date or no next step, and the customer still talks about it.
+	UnsupportedMinor int64
+	UnsupportedCount int
 	// AmountsPartial is true when an excluded or unknown deal had no amount
 	// the reader can see: unpriced, no exchange rate, or masked. The two
 	// subtotals are then lower than the money those deals carry.
@@ -260,7 +264,8 @@ func qualify(out *Readings, c Contribution, base int64) error {
 		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
 		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
 		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},
-		{&q.ExcludedMinor, base, c.Qualification == viability.QualificationExcluded},
+		{&q.ExcludedMinor, base, excluded(c.Qualification)},
+		{&q.UnsupportedMinor, base, c.Qualification == viability.QualificationUnsupported},
 		{&q.UnknownMinor, base, c.Qualification == viability.QualificationUnknown},
 	}
 	for _, add := range adds {
@@ -276,6 +281,9 @@ func qualify(out *Readings, c Contribution, base int64) error {
 	switch c.Qualification {
 	case viability.QualificationExcluded:
 		q.ExcludedCount++
+	case viability.QualificationUnsupported:
+		q.ExcludedCount++
+		q.UnsupportedCount++
 	case viability.QualificationUnknown:
 		q.UnknownCount++
 	}
@@ -283,6 +291,12 @@ func qualify(out *Readings, c Contribution, base int64) error {
 		q.AmountsPartial = true
 	}
 	return nil
+}
+
+// excluded reports a deal the qualified readings leave out, under review or
+// unsupported alike.
+func excluded(q viability.Qualification) bool {
+	return q == viability.QualificationExcluded || q == viability.QualificationUnsupported
 }
 
 // ErrReadingOutOfRange marks a total that cannot be represented. A refusal

@@ -18,6 +18,9 @@ type ViabilityInput struct {
 	// LastCustomerProgressAt is when the customer last wrote to us or met with
 	// us. Our own mail, a field edit or a task never moves it.
 	LastCustomerProgressAt *time.Time
+	// LastCustomerRefusalAt is when the customer last wrote to refuse. A refusal
+	// is not progress; it only counts while nothing they sent since moved the deal.
+	LastCustomerRefusalAt *time.Time
 	// CustomerWaitUntil is the day the customer asked us to wait until.
 	CustomerWaitUntil *time.Time
 	// ConfirmedMeetingAt is the next meeting still to come that a customer
@@ -71,15 +74,24 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 		out.NextChange = &crossing
 	}
 
-	if silent && deferral == "" {
+	switch {
+	case declined(in.LastCustomerRefusalAt, progress, asOf):
+		out.Reasons = append(out.Reasons, viability.ReasonCustomerDeclined)
+	case silent && deferral == "":
 		out.Reasons = append(out.Reasons, silenceReason(progress))
 	}
 	if in.OpenReview {
 		out.Reasons = append(out.Reasons, viability.ReasonRequalificationPending)
 	}
+	support := supportReasons(in, silent && deferral == "", deferral, asOf, zone)
 	if len(out.Reasons) > 0 {
 		out.Outcome = viability.OutcomeReviewRequired
-		out.Reasons = append(out.Reasons, dateAndStepReasons(in, silent, asOf, zone)...)
+		out.Reasons = append(out.Reasons, support...)
+		return out
+	}
+	if len(support) > 0 {
+		out.Outcome = viability.OutcomeUnsupported
+		out.Reasons = support
 		return out
 	}
 	if deferral != "" {
@@ -90,6 +102,15 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 	}
 	out.Outcome = viability.OutcomeEligible
 	return out
+}
+
+// declined reports a refusal nothing has answered since: a later message or
+// meeting that moved the deal outranks it.
+func declined(refusal, progress *time.Time, asOf time.Time) bool {
+	if refusal == nil || refusal.After(asOf) {
+		return false
+	}
+	return progress == nil || refusal.After(*progress)
 }
 
 // activeDeferral is the supported reason to wait, if one is still running.
@@ -117,15 +138,20 @@ func silenceReason(progress *time.Time) viability.Reason {
 	return viability.ReasonCustomerSilent
 }
 
-// dateAndStepReasons names what somebody must validate before support returns.
-// An unset provisional flag is not a confirmation: a date the customer has
-// been silent about is unsupported whatever the flag says.
-func dateAndStepReasons(in ViabilityInput, silent bool, asOf time.Time, zone *time.Location) []viability.Reason {
+// supportReasons names what a deal lacks to count, judged on every deal. An
+// unset provisional flag is not a confirmation: a date the customer has been
+// silent about is unsupported whatever the flag says. A wait or a confirmed
+// meeting is itself the next step, and a close date before the wait ends
+// cannot hold.
+func supportReasons(in ViabilityInput, silent bool, deferral viability.Reason, asOf time.Time, zone *time.Location) []viability.Reason {
 	var out []viability.Reason
-	if in.ExpectedClose == nil || in.CloseProvisional || silent || CloseIsOverdue(*in.ExpectedClose, asOf, zone) {
+	switch {
+	case in.ExpectedClose == nil || in.CloseProvisional || silent || CloseIsOverdue(*in.ExpectedClose, asOf, zone):
+		out = append(out, viability.ReasonCloseDateUnsupported)
+	case deferral == viability.ReasonCustomerWait && in.ExpectedClose.Before(*in.CustomerWaitUntil):
 		out = append(out, viability.ReasonCloseDateUnsupported)
 	}
-	if !in.HasNextStep {
+	if !in.HasNextStep && deferral == "" {
 		out = append(out, viability.ReasonNoNextStep)
 	}
 	return out

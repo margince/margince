@@ -5382,6 +5382,12 @@
               "unknown_minor": {
                 "type": "integer"
               },
+              "unsupported_count": {
+                "type": "integer"
+              },
+              "unsupported_minor": {
+                "type": "integer"
+              },
               "weighted_minor": {
                 "type": "integer"
               }
@@ -5394,6 +5400,8 @@
               "excluded_minor",
               "unknown_count",
               "unknown_minor",
+              "unsupported_count",
+              "unsupported_minor",
               "weighted_minor"
             ]
           },

@@ -11,16 +11,19 @@ package viability
 
 // PolicyVersion names the assessment rule. A receipt stamped with another
 // version was judged by a different rule, so a reader treats it as unknown.
-const PolicyVersion = "v1"
+const PolicyVersion = "v2"
 
 // Outcome is what one assessment concluded about one deal.
 type Outcome string
 
 // The outcomes. Unknown is not a weaker eligible. It says the sources needed
 // to judge the deal could not be read, and no qualified total may count it.
+// Unsupported leaves the deal out like a review does, but asks nobody. The
+// customer is talking, and the rep fixes the date or the next step on the deal.
 const (
 	OutcomeEligible       Outcome = "eligible"
 	OutcomeReviewRequired Outcome = "review_required"
+	OutcomeUnsupported    Outcome = "unsupported"
 	OutcomeWaiting        Outcome = "waiting"
 	OutcomeUnknown        Outcome = "unknown"
 )
@@ -35,6 +38,9 @@ const (
 	// ReasonCustomerSilent: the customer has said nothing for longer than the
 	// threshold since they last wrote or met with us.
 	ReasonCustomerSilent Reason = "customer_silent"
+	// ReasonCustomerDeclined: the customer's latest message refused, and
+	// nothing they sent since moved the deal.
+	ReasonCustomerDeclined Reason = "customer_declined"
 	// ReasonNeverContacted: the customer has said nothing since the deal was
 	// created, for longer than the threshold.
 	ReasonNeverContacted Reason = "never_contacted"
@@ -67,5 +73,8 @@ const (
 	QualificationNotApplied Qualification = ""
 	QualificationEligible   Qualification = "eligible"
 	QualificationExcluded   Qualification = "excluded"
-	QualificationUnknown    Qualification = "unknown"
+	// QualificationUnsupported is excluded with no review behind it: a weak close
+	// date or no next step on a deal the customer is still talking about.
+	QualificationUnsupported Qualification = "unsupported"
+	QualificationUnknown     Qualification = "unknown"
 )
