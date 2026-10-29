@@ -223,7 +223,7 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 ### Dark
 
 The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and only
-`--ladder4` lifts past the hover step. Each pane is
+`--ladder4` lifts past the hover step. A pane on the page (level 1) is
 `rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
 
 A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is

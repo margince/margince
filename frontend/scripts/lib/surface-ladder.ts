@@ -202,6 +202,10 @@ export function editedLists(
   const surfaces = split < 0 ? args : args.slice(0, split);
   const overlays = split < 0 ? [] : args.slice(split + 1);
   const added = [...surfaces, ...overlays];
+  const flags = added.filter((one) => one.startsWith("-"));
+  if (flags.length > 0) {
+    throw new Error(`not a selector: ${flags.join(", ")}`);
+  }
   const twice = added.filter(
     (selector, at) =>
       listed.includes(selector) || added.indexOf(selector) !== at,

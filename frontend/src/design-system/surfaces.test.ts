@@ -594,6 +594,16 @@ describe("the ladder's command", () => {
       expect(() => editedLists(current, args)).toThrow(/not on the ladder/);
     }
   });
+
+  it("refuses an argument that is a flag, not a selector", () => {
+    for (const args of [
+      ["--help"],
+      [".a", "--remove", ".b"],
+      [".c", "--", "-x"],
+    ]) {
+      expect(() => editedLists(current, args)).toThrow(/not a selector/);
+    }
+  });
 });
 
 describe("a pane's ground is its depth", () => {

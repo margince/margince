@@ -174,7 +174,9 @@ level 4 for anything deeper. `surfaces.css` paints every level, and a component 
 own. The one exception is a fixed state colour, such as a pressed reading or the selected row:
 `surfaces.ledger.txt` names each one with its reason.
 
-Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`), stronger as it goes deeper.
+Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`). In light, level 2 is
+weaker than level 1 (1.20:1 against 1.32:1), and each deeper one is stronger. In dark, each is
+stronger than the last, from 1.13:1 to 1.51:1.
 A pane's border and the rule under its head read it as `var(--groundEdge)`. A dialog, popover,
 menu or side sheet keeps its own surface, and a card in it starts again at level 2.
 `Foundations/Elevation` draws the ladder in both themes.
