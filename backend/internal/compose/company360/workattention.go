@@ -224,8 +224,8 @@ func overdueTasksBy(
 	if err != nil {
 		return nil, false, err
 	}
-	// The scope is computed once, in the inner select. The window and the order
-	// read it as a column, because Postgres plans every copy of the gate.
+	// The scope is computed once, in the inner select, and OFFSET 0 keeps the
+	// planner from pulling it up into a copy per reference of t.visible.
 	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (t.key) t.key, t.subject, t.assignee, t.due, t.visible,
 		       bool_or(NOT t.visible) OVER (PARTITION BY t.key) AS dropped
@@ -238,7 +238,7 @@ func overdueTasksBy(
 		                 AND `+identity.LiveMemberSQL("u")+`
 		         WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		           AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
-		           AND %[6]s AND %[7]s) t
+		           AND %[6]s AND %[7]s OFFSET 0) t
 		 ORDER BY t.key, t.visible DESC, t.due, t.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
