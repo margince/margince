@@ -7,14 +7,10 @@ package compose
 // batch per run. It registers itself — worker and schedule together — so
 // jobs.go grows one line as this surface does.
 //
-// The pass is the high-water mark of the duplication it removes. Capture
-// writes the provider original with the attachment's octets still in it, and
-// this takes them back out once the object store can vouch for them. One batch
-// per cadence is a fixed rate, though, and a mailbox backfill outruns it by an
-// order of magnitude: the originals it writes would sit on disk whole for
-// hours. So a pass keeps taking batches while they come back full, until its
-// drain budget runs out, and the rate follows the backlog rather than the
-// clock.
+// Capture writes the provider original with the attachment's octets in it.
+// This sweep takes them out once the object store can vouch for them. A
+// mailbox backfill outruns one batch a cadence, so a pass keeps taking batches
+// while they come back full, until its drain budget runs out.
 //
 // It registers only where an object store is configured. Without one the sweep
 // can prove nothing, and a pass that read the table anyway would either stamp
@@ -42,17 +38,14 @@ import (
 const capturePartSlimQueue = "capture_part_slim"
 
 // capturePartSlimMaxWorkers is one. The sweep is bounded by the object store
-// and by the pool every other job shares, so a second buys contention rather
-// than throughput — and one worker draining batch after batch is what clears a
-// backlog.
+// and by the pool every other job shares. A second worker buys contention, not
+// throughput, and one worker draining batch after batch clears a backlog.
 const capturePartSlimMaxWorkers = 1
 
 // capturePartSlimDrainBudget bounds how long one pass keeps taking batches.
-//
-// Under the cadence, so a pass that drains a backlog has finished before the
-// next one is due rather than queueing behind it, and far under the job's
-// timeout, which also has to cover the one batch already running when the
-// budget is spent. It is checked BETWEEN batches, never inside one.
+// It is under the cadence, so a draining pass ends before the next is due.
+// It is far under the job's timeout, which must also cover the batch still
+// running when the budget is spent. It is checked between batches only.
 const capturePartSlimDrainBudget = 4 * time.Minute
 
 // addCapturePartSlimJobs registers the worker and returns its schedule.
@@ -135,14 +128,10 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 	return nil
 }
 
-// drainPartSlim takes batches until one comes back short, one reports a part
-// the store could not vouch for, or the budget is spent, and sums what they did.
-//
-// A short batch means the backlog is drained. An unproved part stops the pass
-// because a row whose parts the store would not vouch for is stamped as
-// considered all the same: while the store is not answering, every further
-// batch would spend backlog it could not slim, so the pass falls back to one
-// batch a cadence until the store answers again.
+// drainPartSlim takes batches and sums what they did. It stops at a short
+// batch, which means the backlog is drained, or when the budget is spent.
+// It also stops at a part the store could not vouch for. Such a row is still
+// stamped as considered, so more batches would spend rows they cannot slim.
 func drainPartSlim(
 	ctx context.Context,
 	batch func(context.Context) (capture.PartSlimResult, error),
