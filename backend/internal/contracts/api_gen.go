@@ -15916,6 +15916,48 @@ func (e RecordGrantSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for RecordKindOptionActions.
+const (
+	RecordKindOptionActionsCreate RecordKindOptionActions = "create"
+	RecordKindOptionActionsDelete RecordKindOptionActions = "delete"
+	RecordKindOptionActionsRead   RecordKindOptionActions = "read"
+	RecordKindOptionActionsUpdate RecordKindOptionActions = "update"
+)
+
+// Valid indicates whether the value is a known member of the RecordKindOptionActions enum.
+func (e RecordKindOptionActions) Valid() bool {
+	switch e {
+	case RecordKindOptionActionsCreate:
+		return true
+	case RecordKindOptionActionsDelete:
+		return true
+	case RecordKindOptionActionsRead:
+		return true
+	case RecordKindOptionActionsUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordKindOptionDeletePolicy.
+const (
+	RecordKindOptionDeletePolicyArchiveOnly RecordKindOptionDeletePolicy = "archive_only"
+	RecordKindOptionDeletePolicyErasable    RecordKindOptionDeletePolicy = "erasable"
+)
+
+// Valid indicates whether the value is a known member of the RecordKindOptionDeletePolicy enum.
+func (e RecordKindOptionDeletePolicy) Valid() bool {
+	switch e {
+	case RecordKindOptionDeletePolicyArchiveOnly:
+		return true
+	case RecordKindOptionDeletePolicyErasable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordQualifyingEventRequestKind.
 const (
 	RecordQualifyingEventRequestKindInPerson           RecordQualifyingEventRequestKind = "in_person"
@@ -48807,6 +48849,53 @@ type RecordIntroductionInput struct {
 	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
 }
 
+// RecordKindDirectory The record kinds installed extensions add that this caller may read, ordered by name.
+type RecordKindDirectory struct {
+	Data []RecordKindOption `json:"data"`
+}
+
+// RecordKindField defines model for RecordKindField.
+type RecordKindField struct {
+	// Label What a screen shows, in English.
+	Label string `json:"label"`
+
+	// Name The column the unit's table keeps the value in.
+	Name string `json:"name"`
+}
+
+// RecordKindOption defines model for RecordKindOption.
+type RecordKindOption struct {
+	// Actions The actions this caller holds on the kind. Every other action is denied.
+	Actions []RecordKindOptionActions `json:"actions"`
+
+	// DeletePolicy What removing a record of the kind means. `archive_only` keeps the row.
+	DeletePolicy RecordKindOptionDeletePolicy `json:"delete_policy"`
+
+	// DisplayName What a screen calls one record of the kind, in English.
+	DisplayName string            `json:"display_name"`
+	Fields      []RecordKindField `json:"fields"`
+
+	// Kind The short name inside the unit.
+	Kind string `json:"kind"`
+
+	// Name The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+	// unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+	// digits or underscores.
+	Name string `json:"name"`
+
+	// NaturalKey The fields that together identify one record. The unit's table holds them unique.
+	NaturalKey []string `json:"natural_key"`
+
+	// Unit The extension that declared the kind.
+	Unit string `json:"unit"`
+}
+
+// RecordKindOptionActions defines model for RecordKindOption.Actions.
+type RecordKindOptionActions string
+
+// RecordKindOptionDeletePolicy What removing a record of the kind means. `archive_only` keeps the row.
+type RecordKindOptionDeletePolicy string
+
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
 	Data []List `json:"data"`
@@ -79408,6 +79497,9 @@ type ServerInterface interface {
 	// Revoke a manual record grant (human-only).
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
+	// Which kinds of record installed extensions add beside core's own.
+	// (GET /record-kinds)
+	ListRecordKinds(w http.ResponseWriter, r *http.Request)
 	// List responsibility roles, active and retired, in display order.
 	// (GET /record-roles)
 	ListRecordRoles(w http.ResponseWriter, r *http.Request)
@@ -84433,6 +84525,12 @@ func (_ Unimplemented) CreateRecordGrant(w http.ResponseWriter, r *http.Request,
 // Revoke a manual record grant (human-only).
 // (DELETE /record-grants/{id})
 func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which kinds of record installed extensions add beside core's own.
+// (GET /record-kinds)
+func (_ Unimplemented) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -116953,6 +117051,26 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListRecordKinds operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordKinds(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecordRoles operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
 
@@ -126988,6 +127106,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/record-grants/{id}", wrapper.RevokeRecordGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-kinds", wrapper.ListRecordKinds)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-roles", wrapper.ListRecordRoles)

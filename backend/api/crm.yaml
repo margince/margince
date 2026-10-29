@@ -7924,6 +7924,30 @@ paths:
               schema: { $ref: '#/components/schemas/CompanyTypeDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /record-kinds:
+    get:
+      tags: [Extensions]
+      operationId: listRecordKinds
+      security: [ { cookieAuth: [] } ]   # screens read it; an agent meets a kind through the record that carries it
+      x-agent-access: human-only
+      summary: Which kinds of record installed extensions add beside core's own.
+      description: |
+        The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+        screen shows, its fields, its natural key, its delete policy and the actions this caller
+        holds on it. Which extensions are installed is a fact of the binary, so the contract
+        cannot list the kinds; this operation does.
+
+        A kind the caller holds no read right on is left out, because every right on an extension
+        kind is denied until a role is granted it. Empty when no installed extension declares a
+        kind, or none is readable by this caller.
+      responses:
+        '200':
+          description: Every readable kind, ordered by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordKindDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # ---------------------------- /activities ---------------------------------
   /tasks:
     post:
@@ -49106,6 +49130,54 @@ components:
         unit:
           type: string
           description: The extension that declared the type.
+    RecordKindDirectory:
+      type: object
+      description: The record kinds installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordKindOption' }
+    RecordKindOption:
+      type: object
+      required: [name, unit, kind, display_name, fields, natural_key, delete_policy, actions]
+      properties:
+        name:
+          type: string
+          description: |
+            The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+            unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+            digits or underscores.
+        unit:
+          type: string
+          description: The extension that declared the kind.
+        kind:
+          type: string
+          description: The short name inside the unit.
+        display_name:
+          type: string
+          description: What a screen calls one record of the kind, in English.
+        fields:
+          type: array
+          items: { $ref: '#/components/schemas/RecordKindField' }
+        natural_key:
+          type: array
+          description: The fields that together identify one record. The unit's table holds them unique.
+          items: { type: string }
+        delete_policy:
+          type: string
+          enum: [archive_only, erasable]
+          description: What removing a record of the kind means. `archive_only` keeps the row.
+        actions:
+          type: array
+          description: The actions this caller holds on the kind. Every other action is denied.
+          items: { type: string, enum: [create, read, update, delete] }
+    RecordKindField:
+      type: object
+      required: [name, label]
+      properties:
+        name: { type: string, description: "The column the unit's table keeps the value in." }
+        label: { type: string, description: "What a screen shows, in English." }
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered (ADR-0107).

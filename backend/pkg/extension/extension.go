@@ -277,6 +277,11 @@ type Extension struct {
 	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.
 	CompanyTypes []CompanyType
 
+	// RecordKinds are the kinds of record this unit adds beside core's own,
+	// stored as `ext:<unit>:<kind>`. Core treats each as a real record in links,
+	// tags, lists and the audit log, under rights that default to deny.
+	RecordKinds []RecordKindDeclaration
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.

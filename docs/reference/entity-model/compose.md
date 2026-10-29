@@ -1100,7 +1100,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `entity_company_id` | `uuid` |  | Points at `company.id`. |
 | `entity_contact_id` | `uuid` |  | Points at `contact.id`. |
 | `entity_id` | `uuid` | yes |  |
-| `entity_type` | `text` | yes | One of `company`, `contact`. |
+| `entity_type` | `text` | yes |  |
 | `entity_unkeyed` | `boolean`, default `false` | yes |  |
 | `last_viewed_at` | `timestamp with time zone` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -1118,7 +1118,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `user_record_view_entity_company_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM CASE WHEN (entity_type = 'company') THEN entity_id ELSE NULL::uuid END))))`
 - `user_record_view_entity_contact_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM CASE WHEN (entity_type = 'contact') THEN entity_id ELSE NULL::uuid END))))`
 - `user_record_view_entity_shape`: `CHECK ((entity_unkeyed OR (num_nonnulls(entity_company_id, entity_contact_id) = 1)))`
-- `user_record_view_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['company', 'contact'])))`
+- `user_record_view_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['company', 'contact'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `user_record_view_user_id_entity_type_entity_id_key`: `UNIQUE (user_id, entity_type, entity_id)`
 
 **Indexes**

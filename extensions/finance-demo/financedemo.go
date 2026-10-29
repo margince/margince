@@ -17,11 +17,15 @@ package financedemo
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/accounting"
 )
+
+//go:embed migrations
+var migrations embed.FS
 
 // directorySize is how many demo customers the source lists, enough to link
 // every customer company the demo seed creates.
@@ -36,6 +40,24 @@ func New() extension.Extension {
 		// The reference for a company type: an account whose invoices this
 		// source's ledger holds.
 		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},
+		// The reference for a record kind: a ledger account, kept in the unit's
+		// own table. No role holds a right on it until an admin grants one,
+		// except the starting grants named here.
+		RecordKinds: []extension.RecordKindDeclaration{{
+			Kind:        "ledger_account",
+			DisplayName: "Ledger account",
+			Table:       "ext_finance_demo_ledger_account",
+			Fields: []extension.RecordKindField{
+				{Name: "account_code", Label: "Account code"},
+				{Name: "name", Label: "Name"},
+			},
+			NaturalKey: []string{"account_code"},
+			Defaults: []extension.RbacDefault{
+				{Role: "admin", Actions: []extension.RbacAction{extension.RbacRead, extension.RbacCreate, extension.RbacUpdate, extension.RbacDelete}},
+				{Role: "manager", Actions: []extension.RbacAction{extension.RbacRead}},
+			},
+		}},
+		Migrations: migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:    "offline_demo",
 			Check:       check,

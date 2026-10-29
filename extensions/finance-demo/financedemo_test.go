@@ -54,6 +54,16 @@ func TestTheDeclarationIsAValidFinanceSource(t *testing.T) {
 	}
 }
 
+func TestTheDeclaredRecordKindIsValidForThisUnit(t *testing.T) {
+	ext := New()
+	if len(ext.RecordKinds) != 1 {
+		t.Fatalf("declares %d record kinds, want 1", len(ext.RecordKinds))
+	}
+	if err := ext.RecordKinds[0].Validate(ext.Name); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTheDeclarationIsAValidOAuthApp(t *testing.T) {
 	apps := New().OAuthApps
 	if len(apps) != 1 {

@@ -468,7 +468,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `project_id` | `uuid`, generated as `CASE WHEN (record_type = 'project'::text) THEN record_id ELSE NULL::uuid END` |  | Computed by the database. It cannot be written directly. |
 | `reason` | `text` |  | Accountability/lawful-basis note surfaced in the audit row. |
 | `record_id` | `uuid` | yes |  |
-| `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
+| `record_type` | `text` | yes |  |
 | `subject_id` | `uuid` | yes | app_user(id) or team(id) per subject_type. |
 | `subject_type` | `text` | yes | One of `user`, `team`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -488,8 +488,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `record_grant_access_check`: `CHECK ((access = ANY (ARRAY['read', 'write'])))`
-- `record_grant_record_shape`: `CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1))`
-- `record_grant_record_type_check`: `CHECK ((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `record_grant_record_shape`: `CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = CASE WHEN (record_type ~ '^ext:') THEN 0 ELSE 1 END))`
+- `record_grant_record_type_check`: `CHECK (((record_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])) OR (record_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `record_grant_subject_type_check`: `CHECK ((subject_type = ANY (ARRAY['user', 'team'])))`
 - `record_grant_unique`: `UNIQUE (record_type, record_id, subject_type, subject_id)`
 - `record_grant_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

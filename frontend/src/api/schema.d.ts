@@ -5376,6 +5376,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/record-kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which kinds of record installed extensions add beside core's own.
+         * @description The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+         *     screen shows, its fields, its natural key, its delete policy and the actions this caller
+         *     holds on it. Which extensions are installed is a fact of the binary, so the contract
+         *     cannot list the kinds; this operation does.
+         *
+         *     A kind the caller holds no read right on is left out, because every right on an extension
+         *     kind is denied until a role is granted it. Empty when no installed extension declares a
+         *     kind, or none is readable by this caller.
+         */
+        get: operations["listRecordKinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks": {
         parameters: {
             query?: never;
@@ -35466,6 +35493,40 @@ export interface components {
             /** @description The extension that declared the type. */
             unit: string;
         };
+        /** @description The record kinds installed extensions add that this caller may read, ordered by name. */
+        RecordKindDirectory: {
+            data: components["schemas"]["RecordKindOption"][];
+        };
+        RecordKindOption: {
+            /**
+             * @description The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+             *     unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+             *     digits or underscores.
+             */
+            name: string;
+            /** @description The extension that declared the kind. */
+            unit: string;
+            /** @description The short name inside the unit. */
+            kind: string;
+            /** @description What a screen calls one record of the kind, in English. */
+            display_name: string;
+            fields: components["schemas"]["RecordKindField"][];
+            /** @description The fields that together identify one record. The unit's table holds them unique. */
+            natural_key: string[];
+            /**
+             * @description What removing a record of the kind means. `archive_only` keeps the row.
+             * @enum {string}
+             */
+            delete_policy: "archive_only" | "erasable";
+            /** @description The actions this caller holds on the kind. Every other action is denied. */
+            actions: ("create" | "read" | "update" | "delete")[];
+        };
+        RecordKindField: {
+            /** @description The column the unit's table keeps the value in. */
+            name: string;
+            /** @description What a screen shows, in English. */
+            label: string;
+        };
         /** @description Every messaging transport this installation has registered (ADR-0107). */
         ChannelProviderDirectory: {
             data: components["schemas"]["ChannelProviderEntry"][];
@@ -59548,6 +59609,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CompanyTypeDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listRecordKinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every readable kind, ordered by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordKindDirectory"];
                 };
             };
             401: components["responses"]["Unauthorized"];
