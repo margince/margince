@@ -578,6 +578,7 @@ bench-worklist-backlog: composition ## Worklist first page, walk and whole-sourc
 	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
 	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
 	  $(GO) test -tags "integration bench" -run "^TestDailyWorklistBacklog$$" -count=1 -v -timeout 180m ./internal/compose/integration'
+	@$(GO) test -run '^$$' -bench '^BenchmarkRankingAWholeBacklog$$' -benchmem ./internal/compose/attention
 
 bench-daily-clean: ## Drop margince_bench_daily, the database bench-daily leaves behind
 	@bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'

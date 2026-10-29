@@ -34,7 +34,8 @@ import (
 // measured on request only: the plan reports it and it blocks nothing.
 const backlogSizesEnv = "MARGINCE_BENCH_BACKLOG_SIZES"
 
-// backlogConcurrentReaders is the reader count the stage 0 budgets name.
+// backlogConcurrentReaders is the reader count the stage 0 budgets name. Only two
+// reps carry a backlog, so the bench sends that many requests at once from one.
 const backlogConcurrentReaders = 10
 
 // backlogCountsOnlyEnv set to 1 skips every timed sample. What each lane cap
@@ -74,9 +75,9 @@ func TestDailyWorklistBacklog(t *testing.T) {
 		})
 		seeded = size
 		subjects := []backlogSubject{
-			{seat: mixed, scope: "mine", owners: []string{mixed.UserID}, mix: backlogMixed.name},
-			{seat: dominant, scope: "mine", owners: []string{dominant.UserID}, mix: backlogDominant.name},
-			{seat: manager, scope: "team", owners: roster, mix: "both"},
+			{seat: mixed, scope: "mine", owners: []string{mixed.UserID}, mix: backlogMixed.name, seeded: size},
+			{seat: dominant, scope: "mine", owners: []string{dominant.UserID}, mix: backlogDominant.name, seeded: size},
+			{seat: manager, scope: "team", owners: roster, mix: "both", seeded: 2 * size},
 		}
 		for _, subject := range subjects {
 			measureBacklog(t, e, size, subject)
@@ -92,6 +93,8 @@ type backlogSubject struct {
 	seat       Seat
 	scope, mix string
 	owners     []string
+	// seeded is the backlog this scope holds: both reps' for the team.
+	seeded int
 }
 
 func (b backlogSubject) path() string { return "/v1/worklist?scope=" + b.scope + "&filter=all" }
@@ -115,8 +118,8 @@ func measureBacklog(t *testing.T, e *apptest.AppEnv, size int, b backlogSubject)
 	t.Helper()
 	first := backlogPage(t, e, b.seat, b.path())
 	pages, reached, walked := walkBacklog(t, e, b)
-	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s total=%d unavailable=%d reach=%s walk pages=%d rows=%d in %s",
-		size, b.scope, b.mix, first.Summary.Total, len(first.SourcesUnavailable), reachLine(first),
+	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s seeded=%d total=%d unavailable=%d reach=%s walk pages=%d rows=%d in %s",
+		size, b.scope, b.mix, b.seeded, first.Summary.Total, len(first.SourcesUnavailable), reachLine(first),
 		pages, reached, walked.Round(time.Millisecond))
 	if !backlogCountsOnly() {
 		timeFirstPage(t, e, size, b)
@@ -208,7 +211,13 @@ func measureConcurrentReaders(t *testing.T, e *apptest.AppEnv, size int, seat Se
 		errs := make([]error, backlogConcurrentReaders)
 		var wg sync.WaitGroup
 		for i := range backlogConcurrentReaders {
-			wg.Go(func() { _, _, took[i], errs[i] = seat.fetch(context.Background(), e.TS.URL, path) })
+			wg.Go(func() {
+				var status int
+				status, _, took[i], errs[i] = seat.fetch(context.Background(), e.TS.URL, path)
+				if errs[i] == nil && status != 200 {
+					errs[i] = fmt.Errorf("GET %s answered %d", path, status)
+				}
+			})
 		}
 		wg.Wait()
 		return took, joinErrs(errs)
@@ -221,7 +230,7 @@ func measureConcurrentReaders(t *testing.T, e *apptest.AppEnv, size int, seat Se
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("perfbench [backlog]: size=%d concurrent_readers=%d scope=mine mix=mixed p50=%s p95=%s samples=%d",
+	t.Logf("perfbench [backlog]: size=%d burst=%d requests from one reader scope=mine mix=mixed p50=%s p95=%s samples=%d",
 		size, backlogConcurrentReaders, stats.P50, stats.P95, stats.Samples)
 }
 
@@ -292,11 +301,15 @@ func probeBacklog(t *testing.T, e *apptest.AppEnv, b backlogSubject, size int) b
 		owners[i] = ids.MustParse(owner)
 	}
 	activityStore, dealStore := activities.NewStore(e.DB()), deals.NewStore(e.DB(), compose.DealsInstallation())
+	if backlogCountsOnly() {
+		probe, err := enumerateBacklog(ctx, activityStore, dealStore, b.scope, owners)
+		if err != nil {
+			t.Fatalf("enumerating %s as %s: %v", b.scope, b.seat.Name, err)
+		}
+		return probe
+	}
 	runs := dailySamples
-	switch {
-	case backlogCountsOnly():
-		runs = 1
-	case size > 10_000:
+	if size > 10_000 {
 		runs = 5
 	}
 	var probe backlogProbe
