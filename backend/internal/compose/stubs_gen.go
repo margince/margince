@@ -551,6 +551,10 @@ func (stubs) ListApprovals(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "ListApprovals")
 }
 
+func (stubs) CountPendingApprovals(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CountPendingApprovals")
+}
+
 func (stubs) GetApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetApproval")
 }

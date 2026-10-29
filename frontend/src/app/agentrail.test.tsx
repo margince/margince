@@ -27,6 +27,7 @@ import {
   openPanel,
   PROFILE,
   panel,
+  pendingCount,
   ROUTE,
   render,
   settlesOnLine,
@@ -53,8 +54,6 @@ afterEach(() => {
 
 type Candidate = components["schemas"]["DedupeCandidate"];
 
-type Approval = components["schemas"]["Approval"];
-
 type AiCallSummary = components["schemas"]["AiCallSummary"];
 
 const CANDIDATE = (id: string): Candidate => ({
@@ -68,14 +67,6 @@ const CANDIDATE = (id: string): Candidate => ({
   // the authority is granted rather than left as a second reason for silence.
   can_decide: true,
   status: "open",
-  created_at: "2026-08-01T09:00:00Z",
-});
-
-const APPROVAL = (id: string): Approval => ({
-  id,
-  kind: "send_email",
-  status: "pending",
-  proposed_by: "agent:runner",
   created_at: "2026-08-01T09:00:00Z",
 });
 
@@ -269,12 +260,8 @@ describe("AgentRail", () => {
   // second badge of its own: the same number twice in one column is a reader
   // checking whether the two agree.
   it("says what is waiting in its line, and badges no count of its own", async () => {
-    stubAgentRailApi({
-      approvals: () =>
-        jsonResponse({
-          data: [APPROVAL("a-1"), APPROVAL("a-2"), APPROVAL("a-3")],
-          page: emptyPage,
-        }),
+    const fetchMock = stubAgentRailApi({
+      approvals: () => jsonResponse(pendingCount(3)),
     });
     const { container } = render(ROUTE);
     await settlesOnLine(
@@ -282,6 +269,14 @@ describe("AgentRail", () => {
       en["agent.line.waiting_other"].replace("{count}", "3"),
     );
     expect(block(container).querySelector(".arbadge")).toBeNull();
+    // One count, never the pages of the queue it counts.
+    const paths = fetchMock.mock.calls.map(
+      ([request]) => new URL(request.url).pathname,
+    );
+    expect(
+      paths.filter((path) => path.endsWith("/approvals/pending-count")),
+    ).toHaveLength(1);
+    expect(paths.filter((path) => path.endsWith("/approvals"))).toEqual([]);
   });
 
   // The duplicate queue is not the agent's work. It is a queue the product
@@ -633,8 +628,7 @@ describe("AgentRail", () => {
   it("publishes what the margins draw, and goes quiet when it unmounts", async () => {
     clearAgentEdge();
     stubAgentRailApi({
-      approvals: () =>
-        jsonResponse({ data: [APPROVAL("a-1")], page: emptyPage }),
+      approvals: () => jsonResponse(pendingCount(1)),
     });
     const view = render(ROUTE);
     // The unanswered queue reaches a reader through this panel's own line, with

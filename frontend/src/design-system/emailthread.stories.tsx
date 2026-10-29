@@ -4,7 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../api/schema";
-import { StoryProviders } from "../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../testing/story-utils";
+import { Button } from "./atoms";
 import { EmailThread } from "./emailthread";
 
 // The opened message of a thread, once for each answer the server gives about
@@ -57,7 +62,29 @@ const HEADER_ONLY = "From: ana@brandt.example\nTo: lars@margince.example";
 function Thread({
   completeness,
   body,
-}: Readonly<{ completeness: BodyCompleteness; body?: string }>) {
+  newerMessage = false,
+}: Readonly<{
+  completeness: BodyCompleteness;
+  body?: string;
+  newerMessage?: boolean;
+}>) {
+  const latest: EmailPresentation = {
+    ...BASE,
+    id: "22222222-2222-4222-8222-222222222222",
+    occurred_at: "2026-09-02T09:12:00Z",
+    body: "Thursday works for us. Can you send the revised offer?",
+    summary: {
+      ...BASE.summary,
+      activity_id: "22222222-2222-4222-8222-222222222222",
+      occurred_at: "2026-09-02T09:12:00Z",
+    },
+  };
+  if (newerMessage) {
+    installFetchStub({
+      [`GET /activities/${latest.id}/email-presentation`]: () =>
+        jsonResponse(latest),
+    });
+  }
   return (
     <StoryProviders>
       <EmailThread
@@ -65,8 +92,15 @@ function Thread({
           ...BASE,
           body: body ?? BASE.body,
           body_completeness: completeness,
+          thread: {
+            members: newerMessage ? [latest.summary] : [],
+            next_cursor: null,
+          },
         }}
-        formatWhen={() => "1 Sep 09:12"}
+        formatWhen={(at) =>
+          at.startsWith("2026-09-02") ? "2 Sep 09:12" : "1 Sep 09:12"
+        }
+        renderActions={() => <Button variant="primary">Reply</Button>}
       />
     </StoryProviders>
   );
@@ -82,6 +116,10 @@ type Story = StoryObj<typeof Thread>;
 
 /** Read in full: no note. */
 export const Complete: Story = { args: { completeness: "complete" } };
+
+export const OpenedFromOlderMessage: Story = {
+  args: { completeness: "complete", newerMessage: true },
+};
 
 /** A text part was not read in full; the start is shown. */
 export const Partial: Story = {
@@ -99,7 +137,11 @@ export const Unreadable: Story = {
 /** The mail added nothing of its own; the text is the forwarded original's. */
 export const Forwarded: Story = { args: { completeness: "forwarded" } };
 
-/** Stored before Margince checked this, and not checked yet. */
+/** Unverified text stays readable, with its limit on automatic follow-ups. */
 export const Unassessed: Story = {
+  args: { completeness: "unassessed" },
+};
+
+export const UnassessedWithoutText: Story = {
   args: { completeness: "unassessed", body: HEADER_ONLY },
 };

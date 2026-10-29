@@ -126,7 +126,7 @@ func appShellCalls(dailyInput) []dailyCall {
 		{Name: "installation_settings", Path: "/v1/installation/settings"},
 		{Name: "onboarding_state", Path: "/v1/onboarding/state", Optional: true},
 		{Name: "connectors", Path: "/v1/connectors"},
-		{Name: "approvals", Path: "/v1/approvals?status=pending&limit=50"},
+		{Name: "approvals", Path: "/v1/approvals/pending-count"},
 		{Name: "assistant_profile", Path: "/v1/assistant/profile"},
 		{Name: "ai_activity", Path: dailyAIActivityPath()},
 		{Name: "voice_profiles", Path: "/v1/voice-profiles"},
