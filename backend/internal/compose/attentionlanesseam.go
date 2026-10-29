@@ -159,7 +159,14 @@ func (d attentionDecay) quietPage(
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
-	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{AsOf: now})
+	// The last-touch read keys on the candidates and plans far slower than it
+	// runs, so it reuses its generic plan.
+	var touched map[ids.ContactID]contact360.LastTouch
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		touched, err = contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{AsOf: now})
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
