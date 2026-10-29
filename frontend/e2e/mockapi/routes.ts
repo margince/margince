@@ -300,6 +300,11 @@ export const routes: readonly MockRoute[] = [
   { path: "/approvals", handle: reply(page([approval])) },
   {
     method: "GET",
+    path: "/approvals/pending-count",
+    handle: reply({ count: 1, as_of: "2026-07-06T08:00:00Z" }),
+  },
+  {
+    method: "GET",
     path: "/worklist",
     when: (state) => state.options.callTasks === true,
     handle: reply(calls.callTasksWorklist),
