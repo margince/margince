@@ -138,6 +138,13 @@ func TestTheMeetingsLaneKeepsNoMoreDayMeetingsThanItsCap(t *testing.T) {
 	if got := len(plannedAndUnprepared(read, plannedCap)); got != plannedCap {
 		t.Errorf("the lane kept %d day meetings, want its cap %d", got, plannedCap)
 	}
+	read = append(read, Meeting{
+		ID: ids.NewV7(), Subject: "Fair to confirm", StartsAt: readInstant,
+		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay, Preparation: ownPreparation(false),
+	})
+	if got := len(plannedAndUnprepared(read, plannedCap)); got != plannedCap+1 {
+		t.Errorf("the lane kept %d day meetings, want its cap and the one still to confirm", got)
+	}
 }
 
 // The lane may hold more than its cap, so only what it read and cut says

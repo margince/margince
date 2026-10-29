@@ -33,17 +33,19 @@ func (m attentionMeetings) Today(
 	scope attention.TaskScope, owner ids.UUID,
 ) ([]attention.Meeting, bool, error) {
 	days := attention.MeetingWindow{From: window.From, Until: window.From, DaysFrom: window.DaysFrom, DaysUntil: window.DaysUntil}
-	rows, err := m.openIn(ctx, days, limit, scope, owner)
+	rows, err := m.openIn(ctx, days, limit+1, scope, owner)
 	if err != nil {
 		return nil, false, err
 	}
 	timed := attention.MeetingWindow{From: window.From, Until: window.Until, DaysFrom: window.DaysUntil, DaysUntil: window.DaysUntil}
-	hours, err := m.openIn(ctx, timed, limit, scope, owner)
+	hours, err := m.openIn(ctx, timed, limit+1, scope, owner)
 	if err != nil {
 		return nil, false, err
 	}
-	ahead, err := m.named(ctx, append(rows, hours...))
-	return ahead, len(rows) >= limit || len(hours) >= limit, err
+	// One row past the limit says whether a meeting was left out.
+	full := len(rows) > limit || len(hours) > limit
+	ahead, err := m.named(ctx, append(rows[:min(len(rows), limit)], hours[:min(len(hours), limit)]...))
+	return ahead, full, err
 }
 
 // openIn reads the open meetings of one window, soonest first, up to limit.

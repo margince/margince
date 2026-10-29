@@ -119,8 +119,8 @@ func moveCapturedMeetingTx(
 	if err != nil {
 		return false, err
 	}
-	// The event names what the contract can name. It carries no duration and no
-	// agenda, so a change of either alone is in the audit row and announces nothing.
+	// The event names what the contract can name. It carries no duration, so a
+	// change of length alone is in the audit row and announces nothing.
 	if changed, ok := moved.changedFields(stored); ok {
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 			ChangedFields: changed,
@@ -171,7 +171,11 @@ func (p meetingPlace) changedFields(before meetingPlace) (crmcontracts.PublicEve
 	if status := changedStatus(deref(before.status), deref(p.status)); status != "" {
 		fields.MeetingStatus = new(crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(status))
 	}
-	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil || fields.MeetingStatus != nil
+	if before.agenda != p.agenda {
+		fields.AgendaChanged = new(true)
+	}
+	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil || fields.MeetingStatus != nil ||
+		fields.AgendaChanged != nil
 }
 
 func sameDuration(a, b *int) bool {

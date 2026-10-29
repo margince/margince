@@ -37,23 +37,20 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kep
 // reader still has to prepare them, so a full day never hides one.
 const meetingsPrepCeiling = 4 * plannedCap
 
-// plannedAndUnprepared keeps the first limit day meetings, the first limit
-// timed meetings, and every later timed one the reader has not confirmed ready
-// for. A day meeting has no start to be near, so it never takes a timed one's
-// place and never needs preparing before one.
+// plannedAndUnprepared keeps the first limit day meetings and the first limit
+// timed meetings, and every later one the reader has not confirmed ready for.
+// Day and timed meetings are counted apart, so a day meeting never takes a
+// timed one's place.
 func plannedAndUnprepared(read []Meeting, limit int) []Meeting {
 	kept := make([]Meeting, 0, min(len(read), 2*limit))
 	days, timed := 0, 0
 	for _, meeting := range read {
+		seen := &timed
 		if meeting.Precision == crmcontracts.OccurredPrecisionOccurredPrecisionDay {
-			days++
-			if days <= limit {
-				kept = append(kept, meeting)
-			}
-			continue
+			seen = &days
 		}
-		timed++
-		if timed <= limit || meeting.needsPreparation() {
+		*seen++
+		if *seen <= limit || meeting.needsPreparation() {
 			kept = append(kept, meeting)
 		}
 	}

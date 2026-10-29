@@ -72,6 +72,18 @@ func TestABusyDayAtThePageLimitKeepsTheSoonestMeetings(t *testing.T) {
 	}
 }
 
+func TestADayExactlyAtThePageLimitLeavesNothingOut(t *testing.T) {
+	e := integration.Setup(t)
+	now := laneDay
+	for hour := 7; hour <= 9; hour++ {
+		bookMeeting(t, e, fmt.Sprintf("At %02d:00", hour), now.Truncate(24*time.Hour).Add(time.Duration(hour)*time.Hour), "")
+	}
+
+	if got, full := todaySubjectsAtLimit(t, e, now, 3); len(got) != 3 || full {
+		t.Fatalf("the lane = %v, full %v; want all three and nothing left out", got, full)
+	}
+}
+
 func TestTheOutcomeLaneReadsTheOldestDebtAtAnyDepth(t *testing.T) {
 	e := integration.Setup(t)
 	now := laneDay.Add(14 * time.Hour)

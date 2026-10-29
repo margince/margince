@@ -81,4 +81,8 @@ func TestOnlyTheInvitesOwnDescriptionAsksTheAttendeeToConfirmAgain(t *testing.T)
 	if got.Ready || !slices.Equal(got.Changed, []activities.PreparationFact{activities.FactAgenda}) {
 		t.Errorf("after the organizer changed the invite the rep reads %+v, want needs review naming only the agenda", got)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $1::text
+		AND envelope->'payload'->'changed_fields'->>'agenda_changed' = 'true'`, id); n != 1 {
+		t.Errorf("the organizer's change announced %d agenda events, want one", n)
+	}
 }

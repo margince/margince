@@ -10,7 +10,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meetingRow } from "../../testing/brief.fixtures";
-import type { WorklistItem } from "./worklist.queries";
+import { type WorklistItem, worklistKey } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
 // "I'm ready" on the reader's own meeting. The press sends the revision the row
@@ -91,8 +91,9 @@ describe("I'm ready on a meeting the reader still has to prepare", () => {
     });
   });
 
-  it("says the meeting changed when the server refuses an old revision", async () => {
+  it("says the meeting changed and reloads the row when the server refuses an old revision", async () => {
     const user = userEvent.setup();
+    const reload = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     draw(meetingRow("m1", false), 409);
 
     await user.click(
@@ -100,6 +101,8 @@ describe("I'm ready on a meeting the reader still has to prepare", () => {
     );
 
     expect(await screen.findByText(en["worklist.ready.stale"])).toBeTruthy();
+    expect(reload).toHaveBeenCalledWith({ queryKey: worklistKey });
+    reload.mockRestore();
   });
 
   it("names what changed since the reader was ready", () => {

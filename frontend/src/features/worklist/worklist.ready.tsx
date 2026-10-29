@@ -8,7 +8,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { Badge, Button } from "../../design-system/atoms";
-import { useToast } from "../../design-system/toast";
+import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isUnprepared } from "../../lib/meetingreadiness";
@@ -61,9 +61,14 @@ export function useMeetingReady() {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
     // On the mutation, not the press. The undo is pressed after the row turned
-    // ready and lost its button, and a press's own callbacks go with it.
-    onError: (error, input) =>
-      toast.show(t(failure(error, input)), { tone: "danger" }),
+    // ready and lost its button, and a press's own callbacks go with it. A
+    // stale revision reloads the row, so it names what changed.
+    onError: (error, input) => {
+      if (problemStatus(error) === 409) {
+        queryClient.invalidateQueries({ queryKey: worklistKey });
+      }
+      toast.show(t(failure(error, input)), { tone: "danger" });
+    },
   });
 }
 
@@ -87,11 +92,9 @@ export function MeetingReadyVerb({ item }: Readonly<{ item: WorklistItem }>) {
         ready.mutate(sent, {
           onSuccess: () =>
             toast.show(t("worklist.ready.done"), {
-              action: {
-                kind: "undo",
-                label: t("worklist.disposition.undo"),
-                onAct: () => ready.mutate({ ...sent, undo: true }),
-              },
+              action: undoAction(t("worklist.disposition.undo"), () =>
+                ready.mutate({ ...sent, undo: true }),
+              ),
             }),
         })
       }

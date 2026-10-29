@@ -37,7 +37,8 @@ func descriptionText(desc string) string {
 
 // agendaFingerprint identifies the description as the provider sent it, before
 // rendering and masking, so a change to either never reads as a new agenda.
-// An empty description has a fingerprint too: an empty slot keeps the stored one.
+// Space around the text carries no agenda, so it never asks anyone again. An
+// empty description has a fingerprint too, because an empty slot keeps the stored one.
 func agendaFingerprint(desc string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(desc)))
 	return hex.EncodeToString(sum[:16])

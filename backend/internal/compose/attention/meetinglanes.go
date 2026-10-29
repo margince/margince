@@ -18,8 +18,7 @@ import (
 
 // Meetings is today's booked meetings that have not happened yet. The day
 // meetings come first, as a calendar's all-day row, then the timed ones by
-// start, each up to limit. full says either read filled its limit, so a later meeting
-// may exist that was not read.
+// start, each up to limit. full says either read left a meeting out.
 // Optional: nil means this feed does not read meetings, which is not a day with
 // none in it.
 //
