@@ -237,15 +237,22 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 // and it says so by taking no cursor at all, rather than every call site
 // carrying a zero somebody has to recognise as "the beginning".
 func (s *Store) WaitingRepliesBefore(ctx context.Context, asOf time.Time, before WaitingPosition) ([]WaitingReply, error) {
-	return s.scanWaitingReplies(ctx, asOf, before, nil)
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{})
 }
 
 // WaitingRepliesForOwnerBefore narrows mail responsibility before the scan bound.
 func (s *Store) WaitingRepliesForOwnerBefore(ctx context.Context, asOf time.Time, before WaitingPosition, owner ids.UUID) ([]WaitingReply, error) {
-	return s.scanWaitingReplies(ctx, asOf, before, &owner)
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{owner: &owner})
 }
 
-func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, owner *ids.UUID) ([]WaitingReply, error) {
+// WaitingRepliesAnsweredByBefore is WaitingRepliesBefore kept, before the scan
+// bound, to the mail one of these seats answers for. A message that is not
+// mail answers to nobody and stays, as it does in the unnarrowed read.
+func (s *Store) WaitingRepliesAnsweredByBefore(ctx context.Context, asOf time.Time, before WaitingPosition, seats []ids.UUID) ([]WaitingReply, error) {
+	return s.scanWaitingReplies(ctx, asOf, before, mailSeats{answeredBy: seats, bySeats: true})
+}
+
+func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, seats mailSeats) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -295,8 +302,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			linkVisible = scopeUnbounded
 		}
 		subject := readerOrNobody(ctx)
-		if owner != nil {
-			subject = *owner
+		if seats.owner != nil {
+			subject = *seats.owner
 		}
 		reader := arg(subject)
 		// One snapshot for this read. Passed as a list rather than tested in Go
@@ -325,7 +332,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 		if err != nil {
 			return err
 		}
-		responsibility := personalMailResponsibilitySQL(owner, identities, arg)
+		responsibility := seats.responsibilitySQL(identities, arg)
 		rows, err := tx.Query(ctx,
 			"SELECT waiting.*, "+directMailSeatsSQL(identities)+" FROM ("+fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
@@ -345,7 +352,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		defer rows.Close()
-		waiting, err = collectWaiting(rows, owner)
+		waiting, err = collectWaiting(rows, seats.owner)
 		return err
 	})
 	if err != nil {

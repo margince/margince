@@ -171,18 +171,21 @@ func DirectMailActivitiesSQL(identities, seat string) string {
  WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
 }
 
-// DirectMailSeatsSQL lists every seat the mail's parsed To line names.
+// DirectMailSeatsSQL lists every seat the mail's parsed To line names. It is
+// directRecipientMatch with each seat's addresses left a jsonb array, which `?`
+// tests in place instead of unpacking it once per recipient.
 func DirectMailSeatsSQL(activity, identities string) string {
-	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE " +
-		DirectMailRecipientSQL(activity, "ARRAY(SELECT jsonb_array_elements_text(mail_seat.value))") + ")"
+	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE EXISTS (SELECT 1 FROM activity_participant recipient\n WHERE recipient.activity_id = " +
+		activity + ".id AND recipient.role = 'to'\n AND mail_seat.value ? lower(recipient.address)))"
 }
 
 // SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
 // To line when it is the only seat there, else NULL. Two addressed seats make
-// no automatic duty for either, and no shared one.
+// no automatic duty for either, and no shared one. OFFSET 0 keeps the planner
+// from inlining the seat list into both of its uses, which built it twice.
 func SoleDirectMailSeatSQL(activity, identities string) string {
 	return "(SELECT CASE WHEN cardinality(direct.seats) = 1 THEN direct.seats[1] END FROM (SELECT " +
-		DirectMailSeatsSQL(activity, identities) + " AS seats) direct)"
+		DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.
