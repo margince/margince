@@ -1,6 +1,6 @@
 /* TimelineFilterBar — the row of dials above a record's timeline.
  *
- * One row that wraps rather than a grid: the bar sits above a list whose
+ * One row of controls at one height that wraps rather than a grid: the bar sits above a list whose
  * column is narrow on a phone and wide on a desk, and the controls keep their
  * own width either way. The note under it is a fact about the list, not a
  * control, so it sits on its own line in caption ink. */
@@ -22,7 +22,7 @@
 /* The search box takes what is left of the line; the kind and the dates are
  * sized by their own content. */
 .timeline-filters-row .input-icon {
-  flex: 1 1 12rem;
+  flex: 1 1 10rem;
 }
 
 /* The kind dial is sized to its own words. `.input` is a full-width field by
@@ -36,11 +36,21 @@
   min-inline-size: 9rem;
 }
 
-/* Wraps, because a date box never narrows below its day: the To field drops
- * under From when both cannot fit. */
+/* The range keeps its two boxes and the dash together: it wraps as one under
+ * the search when the row is too narrow, never split across two lines. Each box
+ * is sized to its own day, not stretched. */
 .timeline-filters-range {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--space-1);
+}
+.timeline-filters-range .date-input {
+  inline-size: 10rem;
+}
+.timeline-filters-range .date-input .input {
+  inline-size: 100%;
+}
+.timeline-filters-dash {
+  color: var(--textSecondary);
 }

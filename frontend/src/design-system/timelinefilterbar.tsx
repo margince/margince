@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
-import { Field, SearchField } from "./atoms";
+import { SearchField } from "./atoms";
 import { DateInput } from "./dateinput";
 import {
   ACTIVITY_KINDS,
@@ -106,31 +106,29 @@ export function TimelineFilterBar({
             }
           }}
         />
+        {/* A range, read as one: two day boxes either side of a dash, named
+            From and To for a screen reader. Labels over the boxes would stand
+            them taller than the dials beside them. */}
         <span className="timeline-filters-range">
-          <Field label={t("timeline.filters.from")}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={value.after ?? ""}
-                max={value.before || undefined}
-                onChange={(event) =>
-                  onChange({ ...value, after: event.target.value })
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("timeline.filters.to")}>
-            {(control) => (
-              <DateInput
-                {...control}
-                value={value.before ?? ""}
-                min={value.after || undefined}
-                onChange={(event) =>
-                  onChange({ ...value, before: event.target.value })
-                }
-              />
-            )}
-          </Field>
+          <DateInput
+            aria-label={t("timeline.filters.from")}
+            value={value.after ?? ""}
+            max={value.before || undefined}
+            onChange={(event) =>
+              onChange({ ...value, after: event.target.value })
+            }
+          />
+          <span className="timeline-filters-dash" aria-hidden="true">
+            –
+          </span>
+          <DateInput
+            aria-label={t("timeline.filters.to")}
+            value={value.before ?? ""}
+            min={value.after || undefined}
+            onChange={(event) =>
+              onChange({ ...value, before: event.target.value })
+            }
+          />
         </span>
       </div>
       {value.q && (

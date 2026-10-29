@@ -274,7 +274,10 @@ describe("ProjectScreen", () => {
     await within(drawer).findByText("Kickoff agenda");
 
     expect(within(drawer).getByRole("button", { name: "Reply" })).toBeTruthy();
-    await user.click(within(drawer).getByRole("button", { name: "Relink" }));
+    await user.click(
+      within(drawer).getByRole("button", { name: "More actions" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Relink" }));
     await waitFor(() =>
       expect(screen.getAllByRole("dialog").length).toBeGreaterThan(1),
     );
