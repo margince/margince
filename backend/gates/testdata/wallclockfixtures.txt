@@ -337,9 +337,9 @@ internal/modules/ai/providerhealthshare_test.go 1
 internal/modules/ai/ratelane_integration_test.go 2
 internal/modules/approvals/lapsemark_integration_test.go 1
 internal/modules/approvals/sameagent_test.go 2
-internal/modules/assurance/preview_integration_test.go 9
+internal/modules/assurance/preview_integration_test.go 8
 internal/modules/assurance/runmembership_integration_test.go 2
-internal/modules/assurance/scan_integration_test.go 30
+internal/modules/assurance/scan_integration_test.go 28
 internal/modules/automation/automationpreview_integration_test.go 1
 internal/modules/automation/handlers_clock_test.go 2
 internal/modules/automation/handlers_event_route_lead_test.go 1

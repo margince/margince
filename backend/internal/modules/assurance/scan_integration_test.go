@@ -221,7 +221,7 @@ func TestARunWithUnreadableInputsStillExists(t *testing.T) {
 	ctx := e.as()
 
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) {
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) {
 			return nil, context.DeadlineExceeded
 		},
 		func(context.Context, pgx.Tx, time.Time) []SourceCoverage {
@@ -281,7 +281,7 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 	}
 	subjects := []Subject{sick}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
@@ -336,7 +336,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 	}
 	subjects := []Subject{sick}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
@@ -390,17 +390,16 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	e := setupScan(t)
 	ctx := e.as()
 
-	long := time.Now().UTC().AddDate(0, 0, -120)
-	amount := int64(100_000_00)
+	amount, offered := int64(100_000_00), int64(60_000_00)
 	silent := Subject{
 		DealID: ids.NewV7().String(), Owner: e.rep.String(),
 		AmountMinor: &amount, Currency: "EUR", Category: "commit",
-		LastInboundAt: &long, HasNextStep: true, HasEconomicBuyer: true,
+		OfferTotalMinor: &offered, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{silent}
 	coverage := checkedCoverage
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCoverage {
 			return coverage(ctx, tx, now)
 		},
@@ -409,14 +408,14 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Tonight the mailbox cannot be read, and the deal row alone no longer
-	// shows the silence — LastInboundAt is what the mailbox feeds.
-	subjects[0].LastInboundAt = nil
+	// Tonight the offers cannot be read, and the deal row alone no longer
+	// shows the gap: OfferTotalMinor is what the offers source feeds.
+	subjects[0].OfferTotalMinor = nil
 	coverage = func(context.Context, pgx.Tx, time.Time) []SourceCoverage {
 		now := time.Now().UTC()
 		return []SourceCoverage{
-			{Source: "mail", State: CoverageUnavailable},
-			{Source: "offers", State: CoverageChecked, CheckedThrough: &now},
+			{Source: "mail", State: CoverageChecked, CheckedThrough: &now},
+			{Source: "offers", State: CoverageUnavailable},
 		}
 	}
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
@@ -427,19 +426,18 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
-			silent.DealID, TypeBuyerSilent).Scan(&status)
+			silent.DealID, TypeAmountVsOffer).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if status != "open" {
-		t.Errorf("the silence finding is %q after a night the mailbox went unread, want "+
-			"open — clearing it would read an unread mailbox as an all-clear", status)
+		t.Errorf("the offer finding is %q after a night the offers went unread, want "+
+			"open — clearing it would read an unread source as an all-clear", status)
 	}
 
-	// The admit arm: the NEXT night the mailbox is read again and the buyer
-	// has answered. Now absence is a looked-at fact, and the finding clears.
-	recent := time.Now().UTC().AddDate(0, 0, -2)
-	subjects[0].LastInboundAt = &recent
+	// The admit arm: the NEXT night the offers are read again and agree. Now
+	// absence is a looked-at fact, and the finding clears.
+	subjects[0].OfferTotalMinor = &amount
 	coverage = checkedCoverage
 	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
@@ -451,12 +449,12 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT status FROM assurance_exception WHERE subject_id = $1 AND type = $2`,
-			silent.DealID, TypeBuyerSilent).Scan(&status)
+			silent.DealID, TypeAmountVsOffer).Scan(&status)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if status != ExceptionConditionCleared {
-		t.Errorf("after a checked night with the buyer answering, the finding is %q, "+
+		t.Errorf("after a checked night with the offer agreeing, the finding is %q, "+
 			"want %q", status, ExceptionConditionCleared)
 	}
 }
@@ -540,7 +538,7 @@ func TestAFindingReopensWhenItsDealRejoinsTheEligibleSet(t *testing.T) {
 	}
 	subjects := []Subject{subject}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
@@ -594,7 +592,7 @@ func TestAFindingWhoseDealLeftTheEligibleSetIsClosedAsDeparted(t *testing.T) {
 	}
 	subjects := []Subject{subject(departingID), subject(stayingID)}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
@@ -637,7 +635,7 @@ func TestAPassThatReadNoDealsClosesNothingAsDeparted(t *testing.T) {
 		Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
@@ -699,7 +697,7 @@ func TestNeitherClosingSweepRunsForAReaderWhoMayNotUpdate(t *testing.T) {
 		Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return subjects, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 	if _, err := scanner.Scan(e.as(), time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)

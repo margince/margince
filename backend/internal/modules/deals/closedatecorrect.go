@@ -255,7 +255,14 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string,
 	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
-	notched := forecastDowngrade(category)
+	lowers, err := c.policy.LowersForecastCategory(ctx)
+	if err != nil {
+		return "", err
+	}
+	notched := category
+	if lowers {
+		notched = forecastDowngrade(category)
+	}
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the
 	// stage-velocity date the assessment computed, on BOTH branches. It
 	// used to be overwritten here with the deal's CURRENT date whenever the

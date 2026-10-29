@@ -7140,6 +7140,27 @@ export const en = {
   "review.noNextStep": "No next step",
   "review.noEconomicBuyer": "No signer identified",
   "review.buyerSilent": "Buyer has gone quiet",
+  "review.dealViability": "Customer support needs review",
+  "forecast.qualifiedPartial":
+    "Some of these deals have no amount you can see, so the amounts above are lower than their full value.",
+  "forecast.qualifiedLeftOut_one":
+    "{count} deal ({amount}) is left out while its review is open.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} deals ({amount}) are left out while their reviews are open.",
+  "forecast.qualifiedUnknown_one":
+    "{count} deal ({amount}) is not counted because the last check could not judge it.",
+  "forecast.qualifiedUnknown_other":
+    "{count} deals ({amount}) are not counted because the last check could not judge them.",
+  "forecast.qualifiedAnswer":
+    "Won plus confirmed commits the customer still supports: {evidence}. Weighted: {weighted}.",
+  "review.enforcementLabel": "Count only deals the customer supports",
+  "review.enforcementHint":
+    "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
+  "review.enforcementOn": "The qualified forecast is on.",
+  "review.enforcementOff": "The qualified forecast is off.",
+  "review.enforcementAdminOnly": "Only an admin can change this.",
+  "review.enforcementNotStarted":
+    "Run the first check before you turn this on.",
   "review.commitUnpriced": "Committed with no amount",
   "review.stageExitUnmet": "Stage exit criteria not met",
   "review.unknownCheck": "Unnamed check",

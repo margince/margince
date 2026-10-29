@@ -7107,6 +7107,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Kein nächster Schritt",
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
+  "review.dealViability": "Rückhalt beim Kunden prüfen",
+  "forecast.qualifiedPartial":
+    "Einige dieser Deals haben keinen Betrag, den du sehen kannst. Die Beträge oben liegen deshalb unter ihrem vollen Wert.",
+  "forecast.qualifiedLeftOut_one":
+    "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} Deals ({amount}) bleiben draußen, solange ihre Prüfung offen ist.",
+  "forecast.qualifiedUnknown_one":
+    "{count} Deal ({amount}) zählt nicht, weil die letzte Prüfung ihn nicht beurteilen konnte.",
+  "forecast.qualifiedUnknown_other":
+    "{count} Deals ({amount}) zählen nicht, weil die letzte Prüfung sie nicht beurteilen konnte.",
+  "forecast.qualifiedAnswer":
+    "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
+  "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
+  "review.enforcementHint":
+    "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
+  "review.enforcementOn": "Die gestützte Prognose ist an.",
+  "review.enforcementOff": "Die gestützte Prognose ist aus.",
+  "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",
+  "review.enforcementNotStarted": "Starte zuerst die erste Prüfung.",
   "review.commitUnpriced": "Commit ohne Betrag",
   "review.stageExitUnmet": "Austrittskriterien der Phase nicht erfüllt",
   "review.unknownCheck": "Unbenannte Prüfung",

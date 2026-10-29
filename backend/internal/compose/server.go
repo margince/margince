@@ -282,7 +282,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
 			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		),
+		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the

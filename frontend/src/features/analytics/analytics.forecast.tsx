@@ -33,6 +33,7 @@ import {
   RecordsLandingCard,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
+import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import { ForecastReview } from "./analytics.forecast.review";
 import {
   FORECAST_PERIODS,
@@ -286,6 +287,7 @@ function ForecastAnswer({
           {call && (
             <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
           )}
+          <QualifiedAnswer readings={readings} money={money} />
         </PanelBody>
       </Panel>
 

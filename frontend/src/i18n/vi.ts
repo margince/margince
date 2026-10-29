@@ -6933,6 +6933,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Chưa có bước tiếp theo",
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
+  "review.dealViability": "Cần xem lại sự ủng hộ của khách hàng",
+  "forecast.qualifiedPartial":
+    "Một số deal này không có số tiền bạn xem được, nên các số tiền ở trên thấp hơn giá trị đầy đủ.",
+  "forecast.qualifiedLeftOut_one":
+    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
+  "forecast.qualifiedUnknown_one":
+    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
+  "forecast.qualifiedUnknown_other":
+    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
+  "forecast.qualifiedAnswer":
+    "Deal đã chốt và Commit đã xác nhận mà khách hàng vẫn ủng hộ: {evidence}. Có trọng số: {weighted}.",
+  "review.enforcementLabel": "Chỉ tính deal được khách hàng ủng hộ",
+  "review.enforcementHint":
+    "Deal có khách hàng ngừng trả lời sẽ ra khỏi dòng các deal được khách hàng ủng hộ cho đến khi được xem xét. Các số liệu khác không đổi.",
+  "review.enforcementOn": "Dự báo đã xác thực đang bật.",
+  "review.enforcementOff": "Dự báo đã xác thực đang tắt.",
+  "review.enforcementAdminOnly": "Chỉ admin mới đổi được mục này.",
+  "review.enforcementNotStarted": "Hãy chạy lần kiểm tra đầu tiên trước.",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
   "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",

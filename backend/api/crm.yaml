@@ -28088,6 +28088,62 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /forecast/assurance/enforcement:
+    get:
+      tags: [Reports]
+      operationId: getForecastAssuranceEnforcement
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Whether the qualified forecast applies the viability reviews.
+      description: |
+        `state` is `not_enrolled` before the input check has ever run, `observing` once it
+        runs and raises reviews and tasks but the forecast figures are unchanged, and
+        `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
+        forecast reading carry `qualified`, and only then does the close-date sweep stop
+        lowering forecast categories.
+      responses:
+        '200':
+          description: The installation's enforcement state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastAssuranceEnforcement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [Reports]
+      operationId: setForecastAssuranceEnforcement
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Switch the qualified forecast's enforcement on or off.
+      description: |
+        Admin only. Switching on changes the qualified forecast figures for every reader,
+        so it is refused with `409 input_check_not_started` until a check has judged a
+        deal: before that the qualified forecast would count nothing. A setting fixed by
+        the environment is refused with `409 setting_locked`.
+
+        Switching off takes effect at once. The reviews, their tasks and their history
+        stay; only the qualified readings disappear, and the baseline readings never
+        changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+              additionalProperties: false
+      responses:
+        '200':
+          description: The state after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastAssuranceEnforcement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/coverage:
     get:
       tags: [Reports]
@@ -55481,6 +55537,48 @@ components:
             Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers
             a different population. Empty when nothing was frozen, and always empty for
             `managed_teams`, which nothing is frozen against.
+        qualified: { $ref: '#/components/schemas/ForecastQualifiedReadings' }
+      additionalProperties: false
+    ForecastQualifiedReadings:
+      type: object
+      description: >-
+        The readings restricted to deals the customer still supports, present only while the
+        installation enforces viability reviews (`assurance.qualified_forecast_enforced`).
+        Absent means no qualified reading exists, never that it equals the baseline.
+
+        A deal under an open viability review is excluded. A deal the input check could not
+        judge on current evidence, because the mailbox was unread, the deal is new, or the
+        evidence changed since the check, is unknown. The two are counted apart: an unknown
+        deal is a gap in what was checked, not in the pipeline. Every figure is a subset of
+        the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+      required:
+        - evidence_minor
+        - best_case_minor
+        - weighted_minor
+        - excluded_minor
+        - unknown_minor
+        - excluded_count
+        - unknown_count
+      properties:
+        evidence_minor: { type: integer, format: int64 }
+        best_case_minor: { type: integer, format: int64 }
+        weighted_minor: { type: integer, format: int64 }
+        excluded_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals under an open viability review.
+        unknown_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals the check could not judge on current evidence.
+        excluded_count: { type: integer }
+        unknown_count: { type: integer }
+        amounts_partial:
+          type: boolean
+          description: >-
+            True when an excluded or unknown deal had no amount the reader can see: unpriced,
+            no exchange rate, or masked. The two subtotals are then lower than the money those
+            deals carry, and are not the full figure.
       additionalProperties: false
     ForecastSnapshotRef:
       type: object
@@ -55758,6 +55856,16 @@ components:
       required: [status]
       properties:
         status: { type: string, enum: [enqueued], x-enum-varnames: [AssuranceRunEnqueued] }
+      additionalProperties: false
+    ForecastAssuranceEnforcement:
+      type: object
+      description: Whether the qualified forecast applies the viability reviews.
+      required: [state]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        state:
+          type: string
+          enum: [not_enrolled, observing, enforcing]
       additionalProperties: false
     ForecastAssurance:
       type: object
