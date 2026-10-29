@@ -119,6 +119,38 @@ describe("the ways to reach a contact in the header", () => {
 
     expect(screen.queryByText(/@brandt\.example/)).toBeNull();
   });
+
+  it("puts the write and Call icons beside the address and the number", () => {
+    show("manual", reachable);
+
+    expect(
+      screen.getByRole("link", { name: "Write email" }).getAttribute("href"),
+    ).toBe("mailto:dana@brandt.example");
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(
+      screen.getByRole("link", { name: "+49 30 2222" }).getAttribute("href"),
+    );
+  });
+
+  it("keeps the Call icon and draws no write icon on an archived contact", () => {
+    show("manual", { ...reachable, archived_at: "2026-08-14T09:00:00Z" });
+
+    expect(screen.queryByRole("link", { name: "Write email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write email" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Call" })).toBeInTheDocument();
+  });
+
+  it("draws neither icon without an address or a number", () => {
+    show("manual", {
+      ...reachable,
+      primary_email: null,
+      phones: [],
+    });
+
+    expect(screen.queryByRole("link", { name: "Write email" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
 });
 
 describe("a contact whose country does not fit the postal code and city", () => {

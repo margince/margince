@@ -32,12 +32,12 @@ import { writtenByLabel } from "../../../lib/leadorigins";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
-import { waitHolds } from "./dealstanding";
 import {
   LostReasonFact,
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
+import { waitHolds } from "./dealstanding";
 
 type Deal = components["schemas"]["Deal"];
 

@@ -14938,7 +14938,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactLink.copyEmail": "Sao chép địa chỉ email",
   "contactLink.emailCopied": "Đã sao chép địa chỉ email",
   "contactLink.copyEmailRemedy": "Hãy chọn địa chỉ và sao chép bằng bàn phím.",
-  "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",

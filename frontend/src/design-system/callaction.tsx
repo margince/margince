@@ -35,9 +35,11 @@ type CallActionProps = { record: CallRecord } & (
       appearance: "icon";
       number: string | undefined;
       label: string;
-      /** Why there is nothing to dial, for a missing or refused number. */
-      reason: string;
+      /** Why there is nothing to dial. Absent, such a number draws no glyph. */
+      reason?: string;
       word?: string;
+      /** A glyph inside a line of text, beside the number it dials. */
+      inline?: boolean;
       /** The id of a sentence on the page that refuses the call, number or not. */
       reasonId?: string;
     }
@@ -82,13 +84,27 @@ export function CallAction(props: Readonly<CallActionProps>) {
     }
     return linkVerb(href, <Phone aria-hidden="true" />, props.label, onClick);
   }
+  return callIcon(props, href, onClick);
+}
+
+type CallIconProps = Extract<CallActionProps, { appearance: "icon" }>;
+
+function callIcon(
+  props: Readonly<CallIconProps>,
+  href: string | null,
+  onClick: ((event: MouseEvent<HTMLAnchorElement>) => void) | undefined,
+) {
   const icon = <Phone aria-hidden="true" />;
+  if (!href && props.reason === undefined && props.reasonId === undefined) {
+    return null;
+  }
   if (props.reasonId !== undefined || !href) {
     return (
       <IconAction
         label={props.label}
         word={props.word}
         icon={icon}
+        inline={props.inline}
         reason={props.reasonId === undefined ? props.reason : undefined}
         reasonId={props.reasonId}
       />
@@ -99,6 +115,7 @@ export function CallAction(props: Readonly<CallActionProps>) {
       label={props.label}
       word={props.word}
       icon={icon}
+      inline={props.inline}
       href={href}
       onClick={onClick}
     />

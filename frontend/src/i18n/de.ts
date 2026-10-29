@@ -15345,7 +15345,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactLink.emailCopied": "E-Mail-Adresse kopiert",
   "contactLink.copyEmailRemedy":
     "Markiere die Adresse und kopiere sie mit der Tastatur.",
-  "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",

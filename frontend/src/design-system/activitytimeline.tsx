@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
+import { markdownLines } from "./markdown-parse";
 import {
   type ContactOn,
   contactsOn,
@@ -12,7 +13,6 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
-import { markdownLines } from "./markdown-parse";
 import { provenanceOf } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
