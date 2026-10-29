@@ -51,6 +51,13 @@ export const PINNED_RUNGS = [
   { selector: '.stat-strip[data-density="plate"]', level: 2, takes: "edge" },
 ] as const;
 
+// A host that paints a layer under its content: a ring, a glow, the waves. A
+// pane on it paints its opaque ground: level 1's paint is see-through in dark.
+export const UNDERLAY_HOSTS = [
+  ".brief-triage-frame",
+  ":has(> .ambient-waves)",
+] as const;
+
 // From level 2 the house hairline fades into the ground, so a seam takes the edge.
 type Rung = Readonly<{
   ground: string;
@@ -126,12 +133,15 @@ export function ladderSheet(
         : `  --groundEdge: ${rung.edge};\n`;
     return `:where(${selector}) {\n${body}}\n`;
   });
+  const hosts = `:where(${UNDERLAY_HOSTS.join(", ")})`;
+  const underlay = `${hosts}\n${compound(surfaces, 1, 2)} {\n  background-color: var(--ground);\n}\n`;
   return [
     HEADER,
     ...page,
     rule([overlays], OVERLAY_RUNG),
     ...overlay,
     ...pinned,
+    underlay,
   ].join("");
 }
 

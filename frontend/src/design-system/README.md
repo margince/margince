@@ -183,6 +183,9 @@ stays a step off the level it sits on.
 A new kind of pane joins with `node scripts/surface-ladder.ts '<selector>'`, which writes the
 selector into every depth of `surfaces.css`. A band or mark that has to hide what passes under it
 reads `var(--ground)`, the solid ground of the level it sits in.
+A pane on a host that draws a layer under it, such as a ring, a glow or the waves, paints that
+solid ground too. The generator lists those hosts in `UNDERLAY_HOSTS`, and the gate reads them from
+the tree.
 A part that keeps one rung at any depth, as the list toolbar does, is named in `PINNED_RUNGS` in
 the generator, never painted by hand.
 `surfaces.test.ts` fails a rule outside `surfaces.css` that names a rung. Its ledger,

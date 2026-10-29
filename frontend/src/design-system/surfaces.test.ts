@@ -10,6 +10,7 @@ import {
   compounds,
   type Rule,
   rulesOf,
+  selectorList,
   splitTopLevel,
 } from "../../scripts/lib/css-rules";
 import {
@@ -23,8 +24,9 @@ import {
   OVERLAY_RUNG,
   PAGE_RUNGS,
   PINNED_RUNGS,
+  UNDERLAY_HOSTS,
 } from "../../scripts/lib/surface-ladder";
-import { parseBlock, tokenDecls } from "./tokens-testing";
+import { parseBlock, themes, tokenDecls } from "./tokens-testing";
 
 // A rule outside surfaces.css that names a rung picks a pane's depth by hand.
 // The ledger holds the spellings older than the ladder, and only shrinks.
@@ -370,5 +372,68 @@ describe("a pane's ground is its depth", () => {
         <section class="panel"><div class="lt" id="band"></div></section>
         <section class="record-split-sheet"><div class="lt" id="box"></div></section>`),
     ).toEqual({ band: one, box: two });
+  });
+});
+
+// A pseudo-element lies under its host's content, an element under its parent's.
+function underlayHosts(): string[] {
+  const layers = rulesOf(sheets)
+    .filter((rule) => rule.file !== ladderPath)
+    .filter((rule) =>
+      declarations(rule.body).some(
+        ({ property, value }) =>
+          property === "z-index" && value.startsWith("-"),
+      ),
+    )
+    .flatMap((rule) => selectorList(rule.selector));
+  const hosts = layers.map((layer) => {
+    const host = layer.replace(/::?(?:before|after)$/, "");
+    return host === layer ? `:has(> ${layer})` : host;
+  });
+  return [...new Set(hosts)].sort();
+}
+
+const OPAQUE = /^#[0-9a-f]{6}$/i;
+
+describe("a layer under a pane stays under it", () => {
+  it("gives every rung an opaque ground in both themes", () => {
+    for (const rung of [...PAGE_RUNGS, OVERLAY_RUNG]) {
+      for (const [theme, palette] of Object.entries(themes)) {
+        const name = rung.ground.match(/^var\((--[\w-]+)\)$/)?.[1] ?? "";
+        expect(palette[name], `${rung.ground} in ${theme}`).toMatch(OPAQUE);
+      }
+    }
+  });
+
+  it("paints the ground of a pane on every host the tree stacks a layer in", () => {
+    expect(underlayHosts()).toEqual([...UNDERLAY_HOSTS].sort());
+  });
+
+  it("reads an opaque fill for a layer that hides the border-box one under it", () => {
+    const knockouts = rulesOf(sheets).flatMap((rule) => {
+      const paint = declarations(rule.body)
+        .filter(({ property }) => property.startsWith("background"))
+        .map(({ value }) => value)
+        .join(", ");
+      if (!paint.includes("padding-box") || !paint.includes("border-box"))
+        return [];
+      const fills = [
+        ...paint.matchAll(/linear-gradient\(\s*(var\(--[\w-]+\)),\s*\1\s*\)/g),
+      ].map((match) => match[1] ?? "");
+      return [{ selector: rule.selector, fills }];
+    });
+    expect(knockouts.length).toBeGreaterThan(0);
+    for (const { selector, fills } of knockouts) {
+      expect(fills.length, selector).toBeGreaterThan(0);
+      for (const fill of fills) {
+        if (fill === "var(--ground)") continue;
+        const name = fill.slice(4, -1);
+        for (const [theme, palette] of Object.entries(themes)) {
+          expect(palette[name], `${selector}: ${fill} in ${theme}`).toMatch(
+            OPAQUE,
+          );
+        }
+      }
+    }
   });
 });
