@@ -37,12 +37,9 @@ const FIGURE_STEP_MS = 150;
 /**
  * The morning's greeting, over the whole page, once a local day.
  *
- * Whether it plays is known on the first render, from the stored day and the
- * reader's motion setting, so it rises with the page and never after it. The
- * day's figures join it when the day's read lands, and only a read from today,
- * so its figures are the page's own. It never plays for a reader who asked for
- * less motion. Any key or press ends it at once; the page under it is drawn
- * all along, so nothing waits on it.
+ * It decides on the first render, from the stored day and the motion setting,
+ * so it rises with the page. Its figures join when today's read lands. Any key
+ * or press ends it; the page under it is drawn all along.
  */
 export function BriefIntro({
   firstName,
