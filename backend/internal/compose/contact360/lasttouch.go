@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -133,7 +134,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)
 	// One newest row per direction carries its time and its precision together.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
 		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
 		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, '')
@@ -149,9 +150,19 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow), args...)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow)
+	// Inside a composed read it reuses its generic plan: it keys on the
+	// contacts, spells every kind as a literal, and plans far slower than it runs.
+	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		return scanLastTouches(ctx, tx, query, args, out)
+	})
+	return out, err
+}
+
+func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, out map[ids.ContactID]LastTouch) error {
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -161,14 +172,11 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 			&touch.ContactAt, &touch.PrecedingContactAt,
 			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision,
 			&touch.LiveInboundPrecision, &touch.PrecedingPrecision); err != nil {
-			return nil, err
+			return err
 		}
 		out[contactID] = touch
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return rows.Err()
 }
 
 // newestRow picks a direction's newest row, the one max(a.occurred_at) names.
