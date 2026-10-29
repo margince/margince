@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
 // NewRegistry wires the full 🟢/🟡 tool set over the composite provider.
@@ -140,7 +139,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
 	// One engine ranks search_records and resolves an intent tool's record_name.
 	recordSearch := recordSearchSeam(pool)
-	registerMeetingTools(registry, db, retriever, meetingBrief, recordSearch)
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, meetingReadiness{store: activities.NewStore(db)})
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
 	agents.RegisterRecordSearchTool(registry, provider, recordSearch)
@@ -286,15 +285,4 @@ func providerWithTranscripts(db *database.DB, onLanding activities.TranscriptRea
 func registryRetrievers(pool *pgxpool.Pool, embedder search.Embedder) (*search.Retriever, riskAwareRetriever) {
 	retriever := search.NewRetriever(search.NewStore(InstallationDB(pool)), embedder)
 	return retriever, riskAwareRetriever{pool: pool, inner: retriever}
-}
-
-// registerMeetingTools registers the intent tools and the readiness verbs over
-// one readiness seam, so prep_for_meeting and "I'm ready" read one revision.
-func registerMeetingTools(
-	registry *agents.Registry, db *database.DB, retriever retrieval.Retriever,
-	meetingBrief agents.MeetingBriefReader, recordSearch agents.RecordSearch,
-) {
-	readiness := meetingReadiness{store: activities.NewStore(db)}
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, readiness)
-	agents.RegisterMeetingReadinessTools(registry, readiness)
 }

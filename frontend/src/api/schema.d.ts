@@ -12320,7 +12320,7 @@ export interface paths {
         /**
          * Say you are ready for a meeting you attend.
          * @description The answer the `confirm_meeting_ready` agent tool gives, run by the same tool on both
-         *     doors. It records that the caller, or the person an agent acts for, is ready for the
+         *     doors. It records that the caller, or the user an agent acts for, is ready for the
          *     meeting at `preparation_revision`. Reading the brief does not do this; only this call
          *     does.
          *
@@ -36540,7 +36540,7 @@ export interface components {
          *     confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
          *     new revision, so a confirmed meeting needs review again. A brief written about the
          *     meeting is not a preparation fact: generating it again changes nothing here. For an
-         *     agent, the caller is the person it acts for.
+         *     agent, the caller is the user it acts for.
          */
         MeetingPreparation: {
             /** Format: uuid */

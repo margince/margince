@@ -28,7 +28,7 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kep
 	if err != nil {
 		return nil, false, err
 	}
-	kept = plannedAndUnprepared(read, plannedCap)
+	kept = plannedAndUnprepared(read)
 	return kept, full || len(kept) < len(read), nil
 }
 
@@ -37,12 +37,12 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kep
 // reader still has to prepare them, so a full day never hides one.
 const meetingsPrepCeiling = 4 * plannedCap
 
-// plannedAndUnprepared keeps the first limit day meetings and the first limit
-// timed meetings, and every later one the reader has not confirmed ready for.
+// plannedAndUnprepared keeps the first plannedCap day meetings and the first
+// plannedCap timed meetings, and every later one the reader has not confirmed ready for.
 // Day and timed meetings are counted apart, so a day meeting never takes a
 // timed one's place.
-func plannedAndUnprepared(read []Meeting, limit int) []Meeting {
-	kept := make([]Meeting, 0, min(len(read), 2*limit))
+func plannedAndUnprepared(read []Meeting) []Meeting {
+	kept := make([]Meeting, 0, min(len(read), 2*plannedCap))
 	days, timed := 0, 0
 	for _, meeting := range read {
 		seen := &timed
@@ -50,7 +50,7 @@ func plannedAndUnprepared(read []Meeting, limit int) []Meeting {
 			seen = &days
 		}
 		*seen++
-		if *seen <= limit || meeting.needsPreparation() {
+		if *seen <= plannedCap || meeting.needsPreparation() {
 			kept = append(kept, meeting)
 		}
 	}

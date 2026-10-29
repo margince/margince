@@ -52,14 +52,14 @@ type MeetingPreparation struct {
 // participant is named by its identity, so the order rows come back in changes
 // nothing.
 func preparationFactsOf(startsAt time.Time, precision, agenda string, participants []string) PreparationFacts {
-	people := slices.Clone(participants)
-	slices.Sort(people)
-	people = slices.Compact(people)
+	guests := slices.Clone(participants)
+	slices.Sort(guests)
+	guests = slices.Compact(guests)
 	return PreparationFacts{
 		StartsAt:     startsAt.UTC().Truncate(time.Second),
 		StartsOnDay:  precision == precisionDay,
 		Agenda:       agenda,
-		Participants: fingerprint(people...),
+		Participants: fingerprint(guests...),
 	}
 }
 

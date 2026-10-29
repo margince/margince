@@ -50,7 +50,7 @@ func sharedMeeting(t *testing.T, e *sendEnv, start time.Time) ids.ActivityID {
 	return ids.From[ids.ActivityKind](ids.UUID(out.Id))
 }
 
-func preparationOf(t *testing.T, e *sendEnv, ctx context.Context, meeting ids.ActivityID) (MeetingPreparation, bool) {
+func preparationOf(ctx context.Context, t *testing.T, e *sendEnv, meeting ids.ActivityID) (MeetingPreparation, bool) {
 	t.Helper()
 	read, err := meetingStore(e).MeetingPreparations(ctx, []ids.UUID{meeting.UUID})
 	if err != nil {
@@ -90,7 +90,7 @@ func TestAnAttendeeConfirmsTheyAreReadyAtTheRevisionTheyRead(t *testing.T) {
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
 	rep := meetingCtx(e)
-	before, ok := preparationOf(t, e, rep, meeting)
+	before, ok := preparationOf(rep, t, e, meeting)
 	if !ok || before.Ready || before.Revision == "" {
 		t.Fatalf("before any confirmation the host reads %+v (present %v), want a revision that is not ready", before, ok)
 	}
@@ -102,7 +102,7 @@ func TestAnAttendeeConfirmsTheyAreReadyAtTheRevisionTheyRead(t *testing.T) {
 	if !after.Ready || after.Revision != before.Revision {
 		t.Errorf("the write answered %+v, want ready at %s", after, before.Revision)
 	}
-	if read, _ := preparationOf(t, e, rep, meeting); !read.Ready {
+	if read, _ := preparationOf(rep, t, e, meeting); !read.Ready {
 		t.Error("the confirmation did not read back as ready")
 	}
 	if _, err := meetingStore(e).ConfirmMeetingReady(rep, meeting, before.Revision); err != nil {
@@ -118,14 +118,14 @@ func TestAStaleRevisionIsRefusedAndTheMovedStartIsNamed(t *testing.T) {
 	start := clocktest.Now(t).Add(time.Hour)
 	meeting := sharedMeeting(t, e, start)
 	rep := meetingCtx(e)
-	first, _ := preparationOf(t, e, rep, meeting)
+	first, _ := preparationOf(rep, t, e, meeting)
 	if _, err := meetingStore(e).ConfirmMeetingReady(rep, meeting, first.Revision); err != nil {
 		t.Fatalf("confirming: %v", err)
 	}
 
 	reschedule(t, e, meeting, start.Add(30*time.Minute))
 
-	moved, _ := preparationOf(t, e, rep, meeting)
+	moved, _ := preparationOf(rep, t, e, meeting)
 	if moved.Ready || len(moved.Changed) != 1 || moved.Changed[0] != FactStartTime {
 		t.Errorf("after the move the host reads %+v, want needs review naming only the start time", moved)
 	}
@@ -142,12 +142,12 @@ func TestUndoTakesBackOnlyTheConfirmationItWasFor(t *testing.T) {
 	start := clocktest.Now(t).Add(time.Hour)
 	meeting := sharedMeeting(t, e, start)
 	rep := meetingCtx(e)
-	old, _ := preparationOf(t, e, rep, meeting)
+	old, _ := preparationOf(rep, t, e, meeting)
 	if _, err := meetingStore(e).ConfirmMeetingReady(rep, meeting, old.Revision); err != nil {
 		t.Fatalf("confirming: %v", err)
 	}
 	reschedule(t, e, meeting, start.Add(time.Hour))
-	current, _ := preparationOf(t, e, rep, meeting)
+	current, _ := preparationOf(rep, t, e, meeting)
 	if _, err := meetingStore(e).ConfirmMeetingReady(rep, meeting, current.Revision); err != nil {
 		t.Fatalf("confirming the new revision: %v", err)
 	}
@@ -169,11 +169,11 @@ func TestOneAttendeesReadinessLeavesTheOtherUnprepared(t *testing.T) {
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
 	rep, colleague := meetingCtx(e), e.seatCtx(e.other)
-	read, _ := preparationOf(t, e, rep, meeting)
+	read, _ := preparationOf(rep, t, e, meeting)
 	if _, err := meetingStore(e).ConfirmMeetingReady(rep, meeting, read.Revision); err != nil {
 		t.Fatalf("confirming: %v", err)
 	}
-	theirs, ok := preparationOf(t, e, colleague, meeting)
+	theirs, ok := preparationOf(colleague, t, e, meeting)
 	if !ok || theirs.Ready || theirs.Revision != read.Revision {
 		t.Errorf("the invited colleague reads %+v (present %v), want the same revision, not ready", theirs, ok)
 	}
@@ -182,9 +182,9 @@ func TestOneAttendeesReadinessLeavesTheOtherUnprepared(t *testing.T) {
 func TestOnlyAnAttendeeCanSayTheyAreReady(t *testing.T) {
 	e := setupSend(t)
 	meeting := bookMeeting(t, e, "Rep alone", clocktest.Now(t).Add(time.Hour))
-	read, _ := preparationOf(t, e, meetingCtx(e), meeting)
+	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
 	outsider := e.seatCtx(e.other)
-	if _, ok := preparationOf(t, e, outsider, meeting); ok {
+	if _, ok := preparationOf(outsider, t, e, meeting); ok {
 		t.Error("a colleague who does not attend the meeting read a preparation state for it")
 	}
 	_, err := meetingStore(e).ConfirmMeetingReady(outsider, meeting, read.Revision)
@@ -197,7 +197,7 @@ func TestOnlyAnAttendeeCanSayTheyAreReady(t *testing.T) {
 func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
-	read, _ := preparationOf(t, e, meetingCtx(e), meeting)
+	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
 	human, _ := principal.Actor(meetingCtx(e))
 	agent := principal.WithActor(meetingCtx(e), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(),
@@ -208,7 +208,7 @@ func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
 	if _, err := meetingStore(e).ConfirmMeetingReady(agent, meeting, read.Revision); err != nil {
 		t.Fatalf("the agent confirming: %v", err)
 	}
-	if mine, _ := preparationOf(t, e, meetingCtx(e), meeting); !mine.Ready {
+	if mine, _ := preparationOf(meetingCtx(e), t, e, meeting); !mine.Ready {
 		t.Error("the agent's confirmation did not make its user ready")
 	}
 	if _, _, actor := readinessTrail(t, e, meeting); actor != string(principal.PrincipalAgent) {

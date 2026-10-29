@@ -36,7 +36,7 @@ func agendaInvite(t *testing.T, e *integration.Env, description string) {
 	}
 }
 
-func agendaPreparation(t *testing.T, ctx context.Context, store *activities.Store, id ids.UUID) activities.MeetingPreparation {
+func agendaPreparation(ctx context.Context, t *testing.T, store *activities.Store, id ids.UUID) activities.MeetingPreparation {
 	t.Helper()
 	read, err := store.MeetingPreparations(ctx, []ids.UUID{id})
 	if err != nil {
@@ -60,7 +60,7 @@ func TestOnlyTheInvitesOwnDescriptionAsksTheAttendeeToConfirmAgain(t *testing.T)
 	rep := e.As(e.Rep1, nil, integration.AdminPerms)
 	store := activities.NewStore(InstallationDB(e.Pool))
 	meeting := ids.From[ids.ActivityKind](id)
-	if _, err := store.ConfirmMeetingReady(rep, meeting, agendaPreparation(t, rep, store, id).Revision); err != nil {
+	if _, err := store.ConfirmMeetingReady(rep, meeting, agendaPreparation(rep, t, store, id).Revision); err != nil {
 		t.Fatalf("confirming: %v", err)
 	}
 
@@ -68,16 +68,16 @@ func TestOnlyTheInvitesOwnDescriptionAsksTheAttendeeToConfirmAgain(t *testing.T)
 	if _, err := store.UpdateActivity(rep, meeting, activities.UpdateActivityInput{Body: &note}); err != nil {
 		t.Fatalf("typing a note into the meeting: %v", err)
 	}
-	if got := agendaPreparation(t, rep, store, id); !got.Ready {
+	if got := agendaPreparation(rep, t, store, id); !got.Ready {
 		t.Errorf("the rep's own note asked them to confirm again: %+v", got)
 	}
 	agendaInvite(t, e, "Agenda: pricing")
-	if got := agendaPreparation(t, rep, store, id); !got.Ready {
+	if got := agendaPreparation(rep, t, store, id); !got.Ready {
 		t.Errorf("a resync of the same invite asked them to confirm again: %+v", got)
 	}
 
 	agendaInvite(t, e, "Agenda: pricing and the renewal date")
-	got := agendaPreparation(t, rep, store, id)
+	got := agendaPreparation(rep, t, store, id)
 	if got.Ready || !slices.Equal(got.Changed, []activities.PreparationFact{activities.FactAgenda}) {
 		t.Errorf("after the organizer changed the invite the rep reads %+v, want needs review naming only the agenda", got)
 	}

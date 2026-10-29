@@ -26,11 +26,14 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-// search resolves a `record_name` on the engine search_records runs.
+// search resolves a `record_name` on the engine search_records runs. The
+// readiness verbs need no retriever and share prep_for_meeting's seam, so both
+// read one preparation revision.
 func RegisterIntentTools(
 	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader, search RecordSearch,
 	readiness MeetingReadiness,
 ) {
+	registerMeetingReadinessTools(r, readiness)
 	if retriever == nil {
 		return
 	}

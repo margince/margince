@@ -38,8 +38,8 @@ const (
 	undoMeetingReadyTool    = "undo_meeting_ready"
 )
 
-// RegisterMeetingReadinessTools wires both verbs; a nil seam wires neither.
-func RegisterMeetingReadinessTools(r *Registry, readiness MeetingReadiness) {
+// registerMeetingReadinessTools wires both verbs; a nil seam wires neither.
+func registerMeetingReadinessTools(r *Registry, readiness MeetingReadiness) {
 	if readiness == nil {
 		return
 	}

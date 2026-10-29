@@ -82,7 +82,7 @@ func TestTheMeetingsLaneKeepsEveryMeetingTheReaderStillHasToPrepare(t *testing.T
 	read = append([]Meeting{day}, read...)
 
 	kept := map[string]bool{}
-	for _, meeting := range plannedAndUnprepared(read, plannedCap) {
+	for _, meeting := range plannedAndUnprepared(read) {
 		kept[meeting.Subject] = true
 	}
 	for _, want := range []string{"Trade fair", "At 00", fmt.Sprintf("At %02d", plannedCap-1), fmt.Sprintf("At %02d", plannedCap+2), fmt.Sprintf("At %02d", plannedCap+3)} {
@@ -135,14 +135,14 @@ func TestTheMeetingsLaneKeepsNoMoreDayMeetingsThanItsCap(t *testing.T) {
 	for i := range plannedCap + 3 {
 		read = append(read, Meeting{ID: ids.NewV7(), Subject: fmt.Sprintf("Fair %d", i), StartsAt: readInstant, Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay})
 	}
-	if got := len(plannedAndUnprepared(read, plannedCap)); got != plannedCap {
+	if got := len(plannedAndUnprepared(read)); got != plannedCap {
 		t.Errorf("the lane kept %d day meetings, want its cap %d", got, plannedCap)
 	}
 	read = append(read, Meeting{
 		ID: ids.NewV7(), Subject: "Fair to confirm", StartsAt: readInstant,
 		Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay, Preparation: ownPreparation(false),
 	})
-	if got := len(plannedAndUnprepared(read, plannedCap)); got != plannedCap+1 {
+	if got := len(plannedAndUnprepared(read)); got != plannedCap+1 {
 		t.Errorf("the lane kept %d day meetings, want its cap and the one still to confirm", got)
 	}
 }

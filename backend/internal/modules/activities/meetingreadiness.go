@@ -112,7 +112,7 @@ func (s *Store) changeReadiness(
 ) (MeetingPreparation, error) {
 	if revision == "" {
 		return MeetingPreparation{}, &values.ParseError{
-			Field: "preparation_revision", Code: "required",
+			Field: "preparation_revision", Code: codeRequired,
 			Message: "send the preparation revision the meeting was read at",
 		}
 	}
@@ -153,7 +153,7 @@ func (s *Store) changeReadiness(
 }
 
 // recordReadiness is the audit row and the event, in the readiness write's
-// transaction. The attendee is the audit row's actor, or the person an agent
+// transaction. The attendee is the audit row's actor, or the user an agent
 // acted for; the event names nobody.
 func recordReadiness(ctx context.Context, tx pgx.Tx, id ids.UUID, revision, state string) error {
 	after := map[string]any{"readiness": state}
@@ -170,7 +170,7 @@ func recordReadiness(ctx context.Context, tx pgx.Tx, id ids.UUID, revision, stat
 }
 
 // readinessAttendee is whose readiness a call reads or writes: the signed-in
-// person, or the person an agent acts for. Nobody else has a meeting to be
+// user, or the user an agent acts for. Nobody else has a meeting to be
 // ready for.
 func readinessAttendee(ctx context.Context) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
@@ -184,6 +184,9 @@ func readinessAttendee(ctx context.Context) (ids.UUID, error) {
 	}
 	return ids.UUID{}, apperrors.ErrPermissionDenied
 }
+
+// fieldMeetingID is the request field naming the meeting a readiness verb acts on.
+const fieldMeetingID = "activity_id"
 
 // meetingFacts is a meeting's current facts as the write reads them.
 type meetingFacts struct {
@@ -199,7 +202,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 		kind, precision, agenda string
 		startsAt                time.Time
 		attends                 bool
-		people                  []string
+		guests                  []string
 		current                 meetingFacts
 	)
 	query := storekit.SQLf(`
@@ -207,7 +210,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 		  FROM activity a WHERE a.id = $1 AND `+activityLive+`
 		   FOR SHARE OF a`, participantsSQL, storekit.MeetingResponsibilitySQL("a", "$2"))
 	if err := tx.QueryRow(ctx, query, id, attendee).Scan(
-		&kind, &startsAt, &precision, &agenda, &people, &attends); err != nil {
+		&kind, &startsAt, &precision, &agenda, &guests, &attends); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return meetingFacts{}, apperrors.ErrNotFound
 		}
@@ -215,15 +218,15 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 	}
 	if kind != KindMeeting {
 		return meetingFacts{}, &values.ParseError{
-			Field: "activity_id", Code: "not_a_meeting", Message: "only a meeting has a preparation to be ready for",
+			Field: fieldMeetingID, Code: "not_a_meeting", Message: "only a meeting has a preparation to be ready for",
 		}
 	}
 	if !attends {
 		return meetingFacts{}, &values.ParseError{
-			Field: "activity_id", Code: "not_an_attendee", Message: "only an attendee of the meeting can say they are ready for it",
+			Field: fieldMeetingID, Code: "not_an_attendee", Message: "only an attendee of the meeting can say they are ready for it",
 		}
 	}
-	current.facts = preparationFactsOf(startsAt, precision, agenda, people)
+	current.facts = preparationFactsOf(startsAt, precision, agenda, guests)
 	current.revision = current.facts.Revision()
 	return current, nil
 }
@@ -258,12 +261,12 @@ func readPreparations(
 			id                       ids.UUID
 			startsAt                 time.Time
 			precision, invite        string
-			people                   []string
+			roster                   []string
 			revision, agenda, guests *string
 			confirmedAt              *time.Time
 			confirmedOnDay           *bool
 		)
-		if err := rows.Scan(&id, &startsAt, &precision, &invite, &people,
+		if err := rows.Scan(&id, &startsAt, &precision, &invite, &roster,
 			&revision, &confirmedAt, &confirmedOnDay, &agenda, &guests); err != nil {
 			return nil, fmt.Errorf("activities: reading a meeting preparation: %w", err)
 		}
@@ -273,7 +276,7 @@ func readPreparations(
 				StartsAt: confirmedAt.UTC(), StartsOnDay: *confirmedOnDay, Agenda: *agenda, Participants: *guests,
 			}}
 		}
-		out[id] = preparationAt(id, preparationFactsOf(startsAt, precision, invite, people), stored)
+		out[id] = preparationAt(id, preparationFactsOf(startsAt, precision, invite, roster), stored)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("activities: reading meeting preparations: %w", err)

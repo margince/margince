@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 type preparationWire struct {
@@ -47,7 +49,7 @@ func decodePreparation(t *testing.T, raw json.RawMessage) preparationWire {
 
 func TestAnAgentConfirmsReadinessAtTheRevisionItReadOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "ready-doors", "read", "write")
-	start := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Minute)
+	start := clocktest.Now(t).UTC().Add(2 * time.Hour).Truncate(time.Minute)
 	meeting := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Pricing review", "body": "Agenda: the renewal terms",
 		"occurred_at": start.Format(time.RFC3339), "meeting_status": "booked", "source": "manual",

@@ -46720,7 +46720,7 @@ type MeetingPrep struct {
 	// confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
 	// new revision, so a confirmed meeting needs review again. A brief written about the
 	// meeting is not a preparation fact: generating it again changes nothing here. For an
-	// agent, the caller is the person it acts for.
+	// agent, the caller is the user it acts for.
 	Preparation *MeetingPreparation `json:"preparation,omitempty"`
 }
 
@@ -46728,7 +46728,7 @@ type MeetingPrep struct {
 // confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
 // new revision, so a confirmed meeting needs review again. A brief written about the
 // meeting is not a preparation fact: generating it again changes nothing here. For an
-// agent, the caller is the person it acts for.
+// agent, the caller is the user it acts for.
 type MeetingPreparation struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 

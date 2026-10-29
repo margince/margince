@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 9,
-    "tool_catalog_bytes": 137265,
+    "tool_catalog_bytes": 137610,
     "resource_catalog_bytes": 3541,
-    "approx_wire_tokens_total": 35201,
+    "approx_wire_tokens_total": 35287,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 34271,
-      "input_schema_bytes": 65626,
+      "description_bytes": 34366,
+      "input_schema_bytes": 65876,
       "output_schema_bytes": 28225,
-      "description_plus_input_schema_bytes": 99897
+      "description_plus_input_schema_bytes": 100242
     }
   },
   "tools": {
@@ -792,22 +792,24 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink moves one activity to another record; relink_many moves a named set. relink and relink_many wait for a human when they file under a project, and run at once anywhere else. attach checks the record first; read list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to come, and change_state with move_deal when the same event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its arguments for relink, relink_many; requires passport scope \"write\".)",
+        "description": "Log, plan and file activities. log records an email, call, meeting, note or message that already happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink moves one activity to another record; relink_many moves a named set. ready says the user is ready for a meeting they attend; unready takes it back. relink and relink_many wait for a human when they file under a project, and run at once anywhere else. attach checks the record first; read list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to come, and change_state with move_deal when the same event moves a deal, so move and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for attach, log, ready, task, unready; decided per call from its arguments for relink, relink_many; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set",
+              "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back",
               "enum": [
                 "attach",
                 "log",
+                "ready",
                 "relink",
                 "relink_many",
-                "task"
+                "task",
+                "unready"
               ],
               "type": "string"
             },
             "activity_id": {
-              "description": "relink only: The captured activity to re-associate",
+              "description": "ready, relink, unready only: The meeting",
               "format": "uuid",
               "type": "string"
             },
@@ -975,6 +977,12 @@
                 "instant",
                 "day"
               ]
+            },
+            "preparation_revision": {
+              "description": "ready, unready only: The preparation revision read_context with about=meeting answered",
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
             },
             "replace_existing_of_type": {
               "default": false,

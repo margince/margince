@@ -14,8 +14,8 @@ import (
 
 var prepStart = time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC)
 
-func prepFacts(start time.Time, agenda string, people ...string) PreparationFacts {
-	return preparationFactsOf(start, "instant", agenda, people)
+func prepFacts(start time.Time, agenda string, guests ...string) PreparationFacts {
+	return preparationFactsOf(start, "instant", agenda, guests)
 }
 
 func TestTheRevisionIgnoresParticipantOrder(t *testing.T) {

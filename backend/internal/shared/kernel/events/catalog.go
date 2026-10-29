@@ -228,7 +228,7 @@ var catalog = map[string]struct {
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
 	// One attendee said they are ready for a meeting, or took it back. Its
-	// own type because it is one person's state, not a change to the meeting.
+	// own type because it is one attendee's state, not a change to the meeting.
 	"activity.readiness_recorded": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
