@@ -244,10 +244,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	switch {
-	// An auto-execute call may still carry approval_id: the retry of a per-field
-	// precedence staging (interfaces.md §2.1) admits at the auto-execute tier, so
-	// its asserted authority is consumed by redeemPresented — validated against
-	// the identical-call hash, never ignored.
+	// An auto-execute call may still carry approval_id: the retry of a staged
+	// call can resolve at the auto-execute tier, so its asserted authority is
+	// consumed by redeemPresented — validated against the identical-call hash,
+	// never ignored.
 	case err == nil, !res.ApprovalID.IsZero() && errors.Is(err, apperrors.ErrRequiresApproval) && r.approvals != nil:
 		return r.runClaimed(ctx, t, spec, res)
 	case !errors.Is(err, apperrors.ErrRequiresApproval) || r.approvals == nil:

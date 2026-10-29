@@ -194,8 +194,8 @@ func (c *CaptureClassifier) classifyBatch(ctx context.Context, batch []unlabeled
 	return labeled + solo, err
 }
 
-// classifyEach asks about each message in its own call, which escalates the
-// ladder (L-S → C-C), and commits a label above the floor. A message every
+// classifyEach asks about each message in its own call, which starts at the
+// first rung and moves up only after a provider error or two refused answers, and commits a label above the floor. A message every
 // rung declines is that message's outcome: it is recorded declined, which takes
 // it out of the backlog for this pass and every later one, and the next
 // message is asked.

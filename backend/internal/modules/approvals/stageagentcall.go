@@ -37,7 +37,7 @@ import (
 // telling the agent to wait for a human and telling it to spend what it holds.
 //
 // It is the one entry point every agent-gate stager uses — the MCP registry's
-// refusal branch, the per-field split on both doors, and the REST gate's — so
+// refusal branch and the REST gate's — so
 // the invariant is a property of the engine rather than of the callers that
 // remembered. Engine stagers (a website read, a nightly sweep) keep Stage: they
 // propose a CHANGE a human accepts, not a call an agent retries, and nothing

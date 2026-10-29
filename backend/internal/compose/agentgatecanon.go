@@ -7,8 +7,7 @@ package compose
 //
 // Split from agentgate.go on the 500-line cap, along a boundary already
 // implicit in the file: agentgate.go decides admission, and this is the one
-// thing both stageOrRedeem (agentgatestaging.go) and splitHumanOwnedUpdate
-// (agentsplit.go) hash a call through — kept together because a caller that
+// thing stageOrRedeem (agentgatestaging.go) hashes a call through — kept together because a caller that
 // diverges on operation, path, headers or body diverges on the identity a
 // staged approval binds to.
 
@@ -42,22 +41,12 @@ const (
 	// (idempotency.go), so the key is still the caller's to present.
 	keyBindsTheRetry idempotencyKeyBinding = true
 
-	// keySettledByThisCall is the field-ownership split's residue
-	// (applyAutoExecuteAndStageResidue, agentsplit.go), and the name is the
-	// reason: the auto-execute half of this same request ALREADY answered
-	// 2xx under the caller's key, which settles that claim for good.
+	// keySettledByThisCall leaves the key out of the identity, for a call
+	// whose key an earlier 2xx already settled. Its retry cannot present the
+	// key again, so hashing it would make the approval unredeemable.
 	//
-	// The approved retry therefore cannot present the key again. Re-using it
-	// never reaches the gate at all — the idempotency middleware sits
-	// outside it (routes.go) and answers the retry's residue body as a
-	// digest mismatch, 409. Presenting no key, which is what the staging
-	// note instructs, is then the only retry that can arrive; hashing a key
-	// it cannot carry would make the human's approval permanently
-	// unredeemable and the withheld field permanently unwritable.
-	//
-	// This is the same judgment canonicalHeaders already makes for If-Match
-	// below — a member that makes the retry impossible protects nothing —
-	// applied to the one path where it is the key that becomes impossible.
+	// This is the same judgment canonicalHeaders makes for If-Match below: a
+	// member that makes the retry impossible protects nothing.
 	keySettledByThisCall idempotencyKeyBinding = false
 )
 
@@ -70,11 +59,8 @@ const (
 // If-Match is deliberately NOT here, though it is also execution-relevant.
 // On the redemption path the gate OVERWRITES the caller's If-Match with the
 // server-side version pin taken at staging time (agentgatestaging.go,
-// redeemIfPresented) before the handler ever reads it, and on the
-// field-ownership split path (agentsplit.go) the auto-execute half can
-// advance the record's version between staging and redemption while the
-// staged residue's hash must still match on retry — hashing If-Match would
-// make that retry unredeemable by the version the agent just saw, without
+// redeemIfPresented) before the handler ever reads it. Hashing If-Match would
+// make the retry unredeemable by the version the agent just saw, without
 // protecting anything the server-side pin does not already protect.
 //
 // Every other header (Authorization, User-Agent, tracing headers, …) is
