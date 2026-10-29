@@ -131,9 +131,8 @@ export function Popover({
   const panel = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const triggerId = useId();
-  // From the trigger's leading edge by default: a popover is opened by words
-  // as often as by a chip, and a panel hung off the end of a full-width
-  // sentence lands at the margin with nothing under it.
+  // The leading edge by default, since words open a popover as often as a chip
+  // does. A panel hung off the end of a full-width sentence lands at the margin.
   const at = useAnchoredToTrigger(open, trigger, panel, align);
 
   // Focus, shared with the evidence mark's own portalled panel: into the panel

@@ -38,7 +38,7 @@ type FrameProps = Readonly<{
 
 /**
  * The chosen set as removable tokens, and the whole list behind one add
- * trigger, so a list of forty never stretches the form it sits in.
+ * trigger. A list of forty never stretches the form it sits in.
  */
 export function SetPickerFrame({
   chosen,
@@ -114,14 +114,14 @@ type SetPickerProps = Readonly<{
   doneLabel: string;
   /** What the panel says when there is nothing to choose at all. */
   empty?: ReactNode;
-  /** Offers the typed name as a new value when nothing matches it exactly. */
+  /** Offers the typed name as a new value when no value carries that name. */
   create?: Create;
   disabled?: boolean;
 }>;
 
 /**
- * Many of a listed set, for a set too long to show at rest: the chosen values
- * as tokens, and a searchable list of ticks behind "Add".
+ * Many of a listed set that is too long to show at rest. The chosen values
+ * show as tokens, with a searchable list of ticks behind "Add".
  */
 export function SetPicker(props: SetPickerProps) {
   const { legend, options, values, onChange, disabled } = props;
