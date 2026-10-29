@@ -129,6 +129,7 @@ export function useContactAboutSections(
                 kind="email"
                 value={email}
                 record={record}
+                readOnly={Boolean(contact.archived_at)}
                 label={t("compose.writeEmail")}
                 reasonId={writeRefusalId}
               />

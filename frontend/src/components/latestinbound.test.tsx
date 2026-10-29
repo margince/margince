@@ -124,6 +124,17 @@ describe("the Just in panel", () => {
     ).toBeTruthy();
   });
 
+  it("keeps a chat message's own characters, which are not markdown", () => {
+    const chat = activity("chat", {
+      kind: "message",
+      body: "> 10 units\nby Friday",
+    });
+    withProviders(
+      <LatestInboundPanel latest={{ activity: chat, kind: "message" }} />,
+    );
+    expect(screen.getByText("> 10 units · by Friday")).toBeTruthy();
+  });
+
   it("reads a quoted website form as the words the visitor sent", () => {
     const form = activity("form", {
       kind: "note",

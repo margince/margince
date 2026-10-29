@@ -133,7 +133,11 @@ function lineAt(lines: string[], i: number): string {
 
 /** `first` is the 1-based source line that `lines[0]` is, so a blockquote's
  *  inner blocks keep the line numbers the document counts, not their own. */
-function parseBlocks(lines: string[], first: number): Block[] {
+// Each quote level is one level of recursion. Past this depth the rest reads as
+// text, so no stored body can exhaust the call stack.
+const MAX_QUOTE_DEPTH = 32;
+
+function parseBlocks(lines: string[], first: number, depth = 0): Block[] {
   const blocks: Block[] = [];
   let i = 0;
   while (i < lines.length) {
@@ -144,14 +148,19 @@ function parseBlocks(lines: string[], first: number): Block[] {
       i++;
       continue;
     }
-    const taken = takeBlock(lines, i, first);
+    const taken = takeBlock(lines, i, first, depth);
     blocks.push(taken.block);
     i = taken.next;
   }
   return blocks;
 }
 
-function takeBlock(lines: string[], i: number, first: number): Taken {
+function takeBlock(
+  lines: string[],
+  i: number,
+  first: number,
+  depth: number,
+): Taken {
   const line = lineAt(lines, i);
   if (FENCE.test(line)) return takeFence(lines, i, first);
   if (HEADING.test(line)) return takeHeading(lines, i, first);
@@ -161,7 +170,7 @@ function takeBlock(lines: string[], i: number, first: number): Taken {
       next: i + 1,
     };
   }
-  if (QUOTE.test(line)) return takeQuote(lines, i, first);
+  if (QUOTE.test(line)) return takeQuote(lines, i, first, depth);
   if (BULLET.test(line) || ORDERED.test(line)) return takeList(lines, i, first);
   if (startsTable(lines, i)) return takeTable(lines, i, first);
   return takeParagraph(lines, i, first);
@@ -216,7 +225,12 @@ function takeHeading(lines: string[], i: number, first: number): Taken {
   };
 }
 
-function takeQuote(lines: string[], i: number, first: number): Taken {
+function takeQuote(
+  lines: string[],
+  i: number,
+  first: number,
+  depth: number,
+): Taken {
   let j = i;
   const inner: string[] = [];
   while (j < lines.length && QUOTE.test(lineAt(lines, j))) {
@@ -228,7 +242,17 @@ function takeQuote(lines: string[], i: number, first: number): Taken {
       kind: "quote",
       // The inner lines sit one-for-one over the outer ones, so the nested
       // blocks carry the document's own line numbers.
-      blocks: parseBlocks(inner, first + i),
+      blocks:
+        depth < MAX_QUOTE_DEPTH
+          ? parseBlocks(inner, first + i, depth + 1)
+          : [
+              {
+                kind: "paragraph",
+                run: { nodes: parseInline(inner.join("\n")) },
+                line: first + i,
+                endLine: first + j - 1,
+              },
+            ],
       line: first + i,
       endLine: first + j - 1,
     },
