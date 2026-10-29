@@ -306,6 +306,11 @@ public.activity_meeting_history.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_history.activity_meeting_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_meeting_history.activity_meeting_history_pkey PRIMARY KEY (id)
 public.activity_meeting_history.activity_meeting_history_source_pairing CHECK (((source_id IS NULL) = (source_system IS NULL)))
+public.activity_meeting_history.activity_meeting_history_start_precision CHECK (
+CASE
+    WHEN (scheduled_start IS NULL) THEN (scheduled_precision IS NULL)
+    ELSE (scheduled_precision = ANY (ARRAY['instant'::text, 'day'::text]))
+END) NOT VALID
 public.activity_meeting_history.activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
 public.activity_meeting_history.actor text NOT NULL gen=- def=-
 public.activity_meeting_history.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -314,6 +319,7 @@ public.activity_meeting_history.effective_at timestamp with time zone NOT NULL g
 public.activity_meeting_history.host_id_at_change uuid gen=- def=-
 public.activity_meeting_history.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_meeting_history.partial_pre_history boolean NOT NULL gen=- def=false
+public.activity_meeting_history.scheduled_precision text gen=- def=-
 public.activity_meeting_history.scheduled_start timestamp with time zone gen=- def=-
 public.activity_meeting_history.source_id text gen=- def=-
 public.activity_meeting_history.source_system text gen=- def=-

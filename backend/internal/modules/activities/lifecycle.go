@@ -168,10 +168,10 @@ func updateActivityInTx(
 	// already holds is somebody saving a form, and recording it would make
 	// "booked twice" a countable event.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:     in.recordedAt,
-		ActivityID:     id,
-		Status:         changedMeetingStatus(current, out),
-		ScheduledStart: &out.OccurredAt,
+		RecordedAt: in.recordedAt,
+		ActivityID: id,
+		Status:     changedMeetingStatus(current, out),
+		Scheduled:  scheduledAs(out.OccurredAt, string(out.OccurredPrecision)),
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}

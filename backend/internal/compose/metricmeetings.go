@@ -23,11 +23,16 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	var b reportingBindings
 	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
-	// The history keeps no precision. Its start reads as the meeting's precision
-	// only while it is the meeting's time, so a later change to a day cannot move it.
+	// A transition says whether its start was a time or a date, so a day
+	// meeting moved later stays on the day it was held. A row recorded before
+	// it said so reads as the meeting's precision only while it is the
+	// meeting's time; otherwise as an instant.
 	start := "COALESCE(held.scheduled_start,a.occurred_at)"
-	precision := "CASE WHEN held.scheduled_start IS NULL OR held.scheduled_start = a.occurred_at THEN a.occurred_precision ELSE 'instant' END"
+	precision := "COALESCE(held.scheduled_precision,CASE WHEN held.scheduled_start IS NULL OR held.scheduled_start = a.occurred_at THEN a.occurred_precision ELSE 'instant' END)"
 	placed := occurredday.StartAtSQL(start, precision)
+	// Only a noon UTC start can be a date's anchor. On a row with no recorded
+	// precision that reading is a guess, and the coverage says so.
+	unknownDay := "(held.scheduled_precision IS NULL AND held.scheduled_start IS NOT NULL AND " + occurredday.IsAnchorSQL("held.scheduled_start") + ")"
 	// Every colleague the attendance evidence credits counts the meeting in
 	// their own figures; a team counts it once, because it is one row here.
 	// The row is listed under the first credited seat in the population. A
@@ -59,7 +64,7 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	visible += " AND " + fieldScope
 	query := `SELECT COALESCE(held.id,a.id)::text,a.id,COALESCE(a.subject,` + b.add(reporting.ExplanationCopy(frame).Say(reportingLabelWords.Meeting)) + `),` + owner + `,COALESCE(u.display_name,''),` + start + `,` + precision + `,` + placed + `,
- CASE WHEN ` + legacy + ` THEN 'current_meeting' ELSE 'held_transition' END
+ CASE WHEN ` + legacy + ` THEN 'current_meeting' WHEN ` + unknownDay + ` THEN 'held_transition_day_unknown' ELSE 'held_transition' END
  FROM activity a LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(frame.EvaluatedAt) + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true
  LEFT JOIN app_user u ON u.id=(` + owner + `)
  WHERE a.kind='meeting' AND a.archived_at IS NULL
@@ -67,12 +72,26 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
  AND COALESCE(held.status,a.meeting_status)='held' AND (` + eligible + `)
  AND ` + occurredday.WithinAtSQL(start, precision, b.add(reportingEarliest(frame)), b.add(frame.EvaluatedAt)) + " AND " + population + " AND " + visible + " ORDER BY COALESCE(held.id,a.id) LIMIT " + b.add(reportingFactLimit+1)
 	facts, coverage, err := readOutcomeFacts(ctx, tx, frame, reportingMeetingsHeld, string(recordTypeActivity), query, b)
-	for _, fact := range facts {
-		if fact.Provenance == "current_meeting" {
-			coverage = reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LegacyMeetings))
-			break
-		}
-	}
+	coverage = meetingHistoryCoverage(frame, facts, coverage)
 	coverage.Withheld = withheld
 	return facts, coverage, err
+}
+
+// meetingHistoryCoverage marks the reading partial when an older meeting is
+// attributed from today's record. It also does so when a day rests on a start
+// with no recorded precision. Attribution is named first, because it moves a
+// meeting to another colleague, and the day only to its neighbour.
+func meetingHistoryCoverage(frame crmcontracts.ReportingContext, facts []reporting.Fact, coverage crmcontracts.ReportingCoverage) crmcontracts.ReportingCoverage {
+	var legacy, unknownDay bool
+	for _, fact := range facts {
+		legacy = legacy || fact.Provenance == "current_meeting"
+		unknownDay = unknownDay || fact.Provenance == "held_transition_day_unknown"
+	}
+	switch {
+	case legacy:
+		return reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LegacyMeetings))
+	case unknownDay:
+		return reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LegacyMeetingDay))
+	}
+	return coverage
 }

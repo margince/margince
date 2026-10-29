@@ -129,7 +129,7 @@ func moveCapturedMeetingTx(
 		}
 	}
 	return true, recordMeetingTransition(ctx, tx, meetingTransition{
-		ActivityID: id, Status: changedStatus(deref(stored.status), deref(moved.status)), ScheduledStart: &moved.start,
+		ActivityID: id, Status: changedStatus(deref(stored.status), deref(moved.status)), Scheduled: scheduledAs(moved.start, moved.precision),
 	})
 }
 
