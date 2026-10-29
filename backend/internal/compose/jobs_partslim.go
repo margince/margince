@@ -7,11 +7,14 @@ package compose
 // batch per run. It registers itself — worker and schedule together — so
 // jobs.go grows one line as this surface does.
 //
-// The cadence is the high-water mark of the duplication it removes. Capture
+// The pass is the high-water mark of the duplication it removes. Capture
 // writes the provider original with the attachment's octets still in it, and
-// this takes them back out once the object store can vouch for them, so a
-// backfill running at a gigabyte an hour leaves at most one cadence of that on
-// disk.
+// this takes them back out once the object store can vouch for them. One batch
+// per cadence is a fixed rate, though, and a mailbox backfill outruns it by an
+// order of magnitude: the originals it writes would sit on disk whole for
+// hours. So a pass keeps taking batches while they come back full, until its
+// drain budget runs out, and the rate follows the backlog rather than the
+// clock.
 //
 // It registers only where an object store is configured. Without one the sweep
 // can prove nothing, and a pass that read the table anyway would either stamp
@@ -22,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
@@ -39,8 +43,17 @@ const capturePartSlimQueue = "capture_part_slim"
 
 // capturePartSlimMaxWorkers is one. The sweep is bounded by the object store
 // and by the pool every other job shares, so a second buys contention rather
-// than throughput — and the backlog drains at a batch per cadence either way.
+// than throughput — and one worker draining batch after batch is what clears a
+// backlog.
 const capturePartSlimMaxWorkers = 1
+
+// capturePartSlimDrainBudget bounds how long one pass keeps taking batches.
+//
+// Under the cadence, so a pass that drains a backlog has finished before the
+// next one is due rather than queueing behind it, and far under the job's
+// timeout, which also has to cover the one batch already running when the
+// budget is spent. It is checked BETWEEN batches, never inside one.
+const capturePartSlimDrainBudget = 4 * time.Minute
 
 // addCapturePartSlimJobs registers the worker and returns its schedule.
 //
@@ -69,7 +82,8 @@ func addCapturePartSlimJobs(
 	return periodicFor(cfg, CapturePartSlimArgs{})
 }
 
-// CapturePartSlimArgs drains one batch of unconsidered provider originals.
+// CapturePartSlimArgs drains unconsidered provider originals, a batch at a
+// time, for at most capturePartSlimDrainBudget.
 type CapturePartSlimArgs struct{}
 
 // Kind names the job in the census.
@@ -94,7 +108,7 @@ func partSlimJobActor(ctx context.Context) context.Context {
 	return principal.SystemActing(ctx, "capture_part_slim_worker")
 }
 
-// Work drains one batch.
+// Work drains the backlog, a batch at a time, within the drain budget.
 //
 // The counts are logged rather than kept silent because this is the only place
 // an operator can watch the backlog drain, and "considered but not slimmed" is
@@ -102,7 +116,10 @@ func partSlimJobActor(ctx context.Context) context.Context {
 // whose encodings simply cannot be located.
 func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePartSlimArgs]) error {
 	ctx = partSlimJobActor(ctx)
-	got, err := w.slim(InstallationDB(w.pool)).SlimBatch(ctx, capture.PartSlimBatch)
+	store := w.slim(InstallationDB(w.pool))
+	got, batches, err := drainPartSlim(ctx, func(ctx context.Context) (capture.PartSlimResult, error) {
+		return store.SlimBatch(ctx, capture.PartSlimBatch)
+	}, capturePartSlimDrainBudget, time.Now)
 	if err != nil {
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_part_slim: slimming a batch: %w", err))
 	}
@@ -113,7 +130,42 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 		return nil
 	}
 	w.log.InfoContext(ctx, "raw capture part sweep",
-		"considered", got.Considered, "slimmed", got.Slimmed,
+		"batches", batches, "considered", got.Considered, "slimmed", got.Slimmed,
 		"unproved_parts", got.Unproved, "payload_bytes_freed", got.Freed)
 	return nil
+}
+
+// drainPartSlim takes batches until one comes back short, one reports a part
+// the store could not vouch for, or the budget is spent, and sums what they did.
+//
+// A short batch means the backlog is drained. An unproved part stops the pass
+// because a row whose parts the store would not vouch for is stamped as
+// considered all the same: while the store is not answering, every further
+// batch would spend backlog it could not slim, so the pass falls back to one
+// batch a cadence until the store answers again.
+func drainPartSlim(
+	ctx context.Context,
+	batch func(context.Context) (capture.PartSlimResult, error),
+	budget time.Duration, now func() time.Time,
+) (capture.PartSlimResult, int, error) {
+	var total capture.PartSlimResult
+	start := now()
+	for batches := 1; ; batches++ {
+		got, err := batch(ctx)
+		total.Considered += got.Considered
+		total.Slimmed += got.Slimmed
+		total.Freed += got.Freed
+		total.Unproved += got.Unproved
+		if err != nil {
+			return total, batches, err
+		}
+		if got.Considered < capture.PartSlimBatch || got.Unproved > 0 || now().Sub(start) >= budget {
+			return total, batches, nil
+		}
+		// Asked before the next batch rather than left to it, so a stopping
+		// worker does not open one more object read it will not finish.
+		if err := ctx.Err(); err != nil {
+			return total, batches, err
+		}
+	}
 }

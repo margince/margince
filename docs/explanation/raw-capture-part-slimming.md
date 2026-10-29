@@ -59,6 +59,20 @@ A later sweep can *prove* the bytes are safe before it removes anything. The sam
 through rows captured before the sweep existed. One path, no change of order, and no window in which
 the only copy is removed.
 
+## How fast it drains
+
+Until the sweep reaches a row, the row holds its attachments in full. So the rows still waiting, not
+the size after slimming, set how much disk new mail needs.
+
+A pass (`compose/jobs_partslim.go`) runs every five minutes and takes batches of `PartSlimBatch`
+rows. It keeps taking them while they come back full, for up to four minutes. A quiet mailbox leaves
+the sweep with one short batch a pass. A mailbox backfill can write many large messages in an hour.
+The pass keeps up with it rather than leave them whole for hours.
+
+A pass stops early when the object store cannot prove a part. Such a row is still marked as looked
+at, so more batches while the store is not answering would use up rows they cannot slim. The pass
+goes back to one batch every five minutes until the store answers again.
+
 ## Why match bytes, and not parse the MIME
 
 Reading the message with `go-message` and writing it out again is not safe for this table:
