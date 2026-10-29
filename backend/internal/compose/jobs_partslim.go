@@ -114,10 +114,11 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 		return store.SlimBatch(ctx, capture.PartSlimBatch)
 	}, capturePartSlimDrainBudget, time.Now)
 	if err != nil {
-		w.log.WarnContext(ctx, "raw capture part sweep stopped on a fault",
-			"batches", batches, "considered", got.Considered, "slimmed", got.Slimmed,
-			"unproved_parts", got.Unproved, "payload_bytes_freed", got.Freed)
-		return jobs.FaultContext(ctx, fmt.Errorf("capture_part_slim: slimming a batch: %w", err))
+		// The counts ride on the fault, so a pass that stops mid-drain still
+		// says how far it got.
+		return jobs.FaultContext(ctx, fmt.Errorf(
+			"capture_part_slim: slimming batch %d after %d considered, %d slimmed: %w",
+			batches, got.Considered, got.Slimmed, err))
 	}
 	if got.Considered == 0 {
 		// The backlog is drained. Said at debug so a quiet installation does
