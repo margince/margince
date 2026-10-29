@@ -121,6 +121,7 @@ const (
 	companionContactField = "contact_id"
 	companionCompanyField = "company_id"
 	companionLeadField    = "lead_id"
+	wrappedContactID      = "contact.id"
 
 	objectOffer         = "offer"
 	objectPipeline      = "pipeline"
@@ -170,14 +171,18 @@ var replayableOperations = map[string]replayTarget{
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/contacts": {object: tableContact, table: tableContact, idPath: "id"},
+	"POST /v1/contacts/{id}/employer": {
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
+		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
+	},
 	"POST /v1/contacts/quick-capture": {
-		object: tableContact, table: tableContact, idPath: "contact.id",
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
 		companions: []companionRef{{table: tableCompany, idPath: companionCompanyField}},
 	},
 	"PATCH /v1/contacts/{id}":      {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/contacts/{id}/merge": {object: tableContact, table: tableContact, idPath: "id"},
 	"POST /v1/leads/{id}/promote": {
-		object: tableContact, table: tableContact, idPath: "contact.id",
+		object: tableContact, table: tableContact, idPath: wrappedContactID,
 		companions: []companionRef{
 			{table: tableLead, idPath: companionLeadField},
 			{table: tableDeal, idPath: dealIDField},
@@ -186,6 +191,15 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/link-contacts": {
+		object: tableCompany, table: tableCompany, pathParam: "id",
+		companions: []companionRef{
+			{table: tableContact, idPath: "data[]." + companionContactField},
+			{table: tableCompany, idPath: "data[]." + companionCompanyField},
+			{table: tableDeal, idPath: "data[]." + dealIDField},
+			{table: tableProject, idPath: "data[].project_id"},
+		},
+	},
 	// The rejection answers the archived company alongside the domain decision
 	// it recorded, so the replayed record is the company and the gate
 	// resolves against its own row — the admission carries no authority of its

@@ -11,6 +11,7 @@ import { Button } from "./button";
 import { CallAction, linkVerb } from "./callaction";
 import { CopyAction } from "./clipboardcopy";
 import "./contactlink.css";
+import { IconAction } from "./iconaction";
 import { useTruncationTooltip } from "./tooltip";
 
 // An address or a number a reader can ACT on — an address opens the product's
@@ -78,7 +79,25 @@ type ContactVerb = {
   readOnly?: boolean;
 };
 
-type Contact = Readonly<ContactValue | ContactVerb>;
+// The square glyph beside a value, from the same decision as the value, so the
+// two cannot open different things. Nothing for a value with nothing to open.
+type ContactIcon = {
+  appearance: "icon";
+  value: string;
+  // The verb's name and hover tip.
+  label: string;
+} & (
+  | { kind: "phone"; record: CallRecord }
+  | {
+      kind: "email";
+      record: WriteToRecord;
+      readOnly?: boolean;
+      // The id of a sentence on the page that refuses writing to this contact.
+      reasonId?: string;
+    }
+);
+
+type Contact = Readonly<ContactValue | ContactVerb | ContactIcon>;
 
 export function ContactLink(props: Contact) {
   const writeTo = useWriteTo();
@@ -100,6 +119,9 @@ export function ContactLink(props: Contact) {
         {props.label}
       </Button>
     );
+  }
+  if (props.appearance === "icon") {
+    return <ContactIconAction {...props} />;
   }
   const { value, children, className = "link-button", textClassName } = props;
   const body = children ?? value;
@@ -141,6 +163,42 @@ export function ContactLink(props: Contact) {
     >
       {body}
     </button>
+  );
+}
+
+function ContactIconAction(props: Readonly<ContactIcon>) {
+  const writeTo = useWriteTo();
+  if (props.kind === "phone") {
+    return (
+      <CallAction
+        appearance="icon"
+        number={props.value}
+        record={props.record}
+        label={props.label}
+        inline
+      />
+    );
+  }
+  const address = mailbox(props.value);
+  if (!address || props.readOnly) {
+    return null;
+  }
+  const face = {
+    label: props.label,
+    icon: <Mail aria-hidden="true" />,
+    inline: true,
+  };
+  if (props.reasonId !== undefined) {
+    return <IconAction {...face} reasonId={props.reasonId} />;
+  }
+  if (!writeTo) {
+    return <IconAction {...face} href={`mailto:${address}`} />;
+  }
+  return (
+    <IconAction
+      {...face}
+      onClick={() => writeTo({ ...props.record, address })}
+    />
   );
 }
 

@@ -79,9 +79,12 @@ describe("the reader's own node on the contact page", () => {
     mount("network", view, [], networkRoutes);
 
     await user.click(await readerNode());
-    await user.click(
-      await screen.findByRole("button", { name: en["compose.writeEmail"] }),
-    );
+    // The address in the details carries the same verb; this one is the map's.
+    const [onMap] = (
+      await screen.findAllByRole("button", { name: en["compose.writeEmail"] })
+    ).filter((button) => !button.closest(".record-aside"));
+    if (!onMap) throw new Error("the map offered no write");
+    await user.click(onMap);
 
     expect(
       await screen.findByRole("dialog", { name: /New email/ }),
