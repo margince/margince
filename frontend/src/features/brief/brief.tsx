@@ -42,6 +42,7 @@ import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
+import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
@@ -204,17 +205,17 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  // Useful: the day's work is on screen, rows or a confirmed empty day.
-  // Complete: the brief, the handled receipts and the overnight receipt beside
-  // it have answered too. A section that failed leaves the page incomplete.
   const magic = useMagic();
   const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
   useEffect(() => {
-    if (state === "failed") markJourney("home:failed");
-    if (state !== "ready" || !day) return;
-    markJourney("home:useful");
-    if (settled) markJourney("home:complete");
-  }, [state, day, settled]);
+    const marks = homeJourneyMarks({
+      state,
+      day,
+      settled,
+      receipt: magic.data,
+    });
+    for (const mark of marks) markJourney(mark);
+  }, [state, day, settled, magic.data]);
   return (
     <>
       {/* The brief and the work it names in one column; beside it, the
