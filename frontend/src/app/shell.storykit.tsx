@@ -26,17 +26,19 @@ export const SHELL_ROUTES: RouteMap = {
 // company without a declared icon gets, and the case worth framing.
 export function SeedInstallation({
   children,
+  displayName = "Gradion GmbH",
   logoUrl,
   logoIconUrl,
 }: Readonly<{
   children: ReactNode;
+  displayName?: string;
   logoUrl?: string;
   logoIconUrl?: string;
 }>) {
   return (
     <WithInstallationBrand
       brand={{
-        display_name: "Gradion GmbH",
+        display_name: displayName,
         logo_url: logoUrl,
         logo_icon_url: logoIconUrl,
       }}
