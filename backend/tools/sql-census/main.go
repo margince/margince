@@ -100,8 +100,7 @@ func runRank(args []string) error {
 	}
 	stmts = slices.DeleteFunc(stmts, func(s *statement) bool { return !explainable.MatchString(s.sql) })
 	measureAll(*dsn, stmts, *workers)
-	report(os.Stdout, stmts, *flagMB*1024)
-	return nil
+	return report(os.Stdout, stmts, *flagMB*1024)
 }
 
 // load merges every process's file. One statement sent from several places
@@ -125,12 +124,12 @@ func load(dir string) ([]*statement, error) {
 	return stmts, nil
 }
 
-func loadFile(name string, byHash map[string]*statement) error {
-	f, err := os.Open(name)
+func loadFile(name string, byHash map[string]*statement) (err error) {
+	f, err := os.Open(name) //nolint:gosec // a census file from the directory the developer passed
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { err = errors.Join(err, f.Close()) }()
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1<<20), 64<<20)
 	for sc.Scan() {
@@ -170,12 +169,12 @@ func measureAll(dsn string, stmts []*statement, workers int) {
 // measure plans s on a connection of its own, so the growth of the backend's
 // high-water mark is this statement's alone. A generic plan needs no argument
 // values, and EXPLAIN without ANALYZE runs nothing.
-func measure(ctx context.Context, dsn string, s *statement) error {
+func measure(ctx context.Context, dsn string, s *statement) (err error) {
 	conn, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		return err
 	}
-	defer conn.Close(ctx)
+	defer func() { err = errors.Join(err, conn.Close(ctx)) }()
 	if _, err := conn.Exec(ctx, `SET jit = off`); err != nil {
 		return err
 	}

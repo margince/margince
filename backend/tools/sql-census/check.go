@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -83,14 +82,18 @@ func judge(w io.Writer, repeats []repeat, allow map[string]string) error {
 		refused = append(refused, worst[sender])
 	}
 	if len(refused) == 0 {
-		fmt.Fprintf(w, "sql-census check: ok, %d repeated-gate statements, all from allowlisted senders\n", len(repeats))
-		return nil
+		_, err := fmt.Fprintf(w, "sql-census check: ok, %d repeated-gate statements, all from allowlisted senders\n", len(repeats))
+		return err
 	}
-	fmt.Fprintln(w, "A statement carries the activity content gate more than once. Postgres plans every copy,")
-	fmt.Fprintln(w, "and a pooled connection keeps that memory. Gate the activities once, in a CTE, and test")
-	fmt.Fprintln(w, "membership in that set (compose/assurancesignalread.go is a worked example).")
+	var out strings.Builder
+	fmt.Fprintln(&out, "A statement carries the activity content gate more than once. Postgres plans every copy,")
+	fmt.Fprintln(&out, "and a pooled connection keeps that memory. Gate the activities once, in a CTE, and test")
+	fmt.Fprintln(&out, "membership in that set (compose/assurancesignalread.go is a worked example).")
 	for _, r := range refused {
-		fmt.Fprintf(w, "  %s: %d copies, %.0f KB of SQL\n", r.sender, r.copies, r.sqlKB)
+		fmt.Fprintf(&out, "  %s: %d copies, %.0f KB of SQL\n", r.sender, r.copies, r.sqlKB)
+	}
+	if _, err := io.WriteString(w, out.String()); err != nil {
+		return err
 	}
 	return fmt.Errorf("check: %d statement senders repeat the content gate", len(refused))
 }
@@ -111,15 +114,15 @@ func senderKey(chain []string) string {
 // readAllow reads "file func reason" lines. A reason is required: an entry
 // with none is a waiver nobody can judge.
 func readAllow(path string) (map[string]string, error) {
-	f, err := os.Open(path)
+	body, err := os.ReadFile(path) //nolint:gosec // the allowlist path is a flag the developer or the lane passed
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 	allow := map[string]string{}
-	sc := bufio.NewScanner(f)
-	for n := 1; sc.Scan(); n++ {
-		line := strings.TrimSpace(sc.Text())
+	n := 0
+	for raw := range strings.Lines(string(body)) {
+		n++
+		line := strings.TrimSpace(raw)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
@@ -129,7 +132,7 @@ func readAllow(path string) (map[string]string, error) {
 		}
 		allow[fields[0]+" "+fields[1]] = strings.Join(fields[2:], " ")
 	}
-	return allow, sc.Err()
+	return allow, nil
 }
 
 func writeSeen(path string, repeats []repeat) error {
@@ -137,7 +140,7 @@ func writeSeen(path string, repeats []repeat) error {
 	for _, r := range repeats {
 		senders[r.sender] = true
 	}
-	return os.WriteFile(path, []byte(strings.Join(slices.Sorted(maps.Keys(senders)), "\n")+"\n"), 0o644)
+	return os.WriteFile(path, []byte(strings.Join(slices.Sorted(maps.Keys(senders)), "\n")+"\n"), 0o600)
 }
 
 // runStale fails on an allowlist entry no run saw repeat. Its statement was
@@ -158,7 +161,7 @@ func runStale(args []string) error {
 	}
 	seen := map[string]bool{}
 	for _, name := range fs.Args() {
-		body, err := os.ReadFile(name)
+		body, err := os.ReadFile(name) //nolint:gosec // a seen file the lane names on the command line
 		if err != nil {
 			return err
 		}
