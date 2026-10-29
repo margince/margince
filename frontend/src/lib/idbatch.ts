@@ -76,9 +76,8 @@ export function idBatcher<T>(
   };
 }
 
-// A page that failed, whether refused or never answered, is held against its
-// own ids rather than rejecting the shared batch, which would lose what another
-// page already read.
+// A page that failed, refused or never answered, is held against its own ids.
+// Rejecting the shared batch would lose what another page already read.
 class Refusal {
   constructor(readonly cause: unknown) {}
 }
