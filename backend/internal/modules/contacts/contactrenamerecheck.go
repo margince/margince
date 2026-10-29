@@ -84,12 +84,8 @@ func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, cu
 }
 
 // recheckContactForDuplicates scores an edited contact against the rest of the
-// workspace and files the pairs the review lanes name. It takes the lane locks
-// in the create's order, so an edit and a create cannot both miss each other.
-//
-// The exact lanes are skipped: the contact holds its own addresses and phones,
-// so they would name itself. A claimed address cannot arrive by an edit at all,
-// because contact_email is unique on the address.
+// workspace. Name and email lanes share the create's locks; the nightly scan
+// also catches phone writes that race a create.
 func recheckContactForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactID, source, by string) error {
 	subject, found, err := readContactSubject(ctx, tx, id)
 	if err != nil {

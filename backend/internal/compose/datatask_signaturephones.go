@@ -16,7 +16,7 @@ import (
 
 func signaturePhonesDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1793267775_signature_phones_without_evidence", Version: 1,
+		ID: "core/1793267775_signature_phones_without_evidence", Version: 2,
 		Title: "Taking back signature numbers without evidence", Requires: []string{introductionValidationMigration},
 		Steps: []datatask.Step{{
 			Name: "signature_phones", Limit: 200, MinLimit: 10,

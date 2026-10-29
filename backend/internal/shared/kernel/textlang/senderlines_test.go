@@ -18,10 +18,13 @@ func TestSenderLinesStopAtAnUnmarkedQuote(t *testing.T) {
 	reply := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n\n" +
 		"Thanks, works for me.\n\nBest\nAlex\n+49 89 7654321\n\n"
 	for name, header := range map[string]string{
-		"outlook": "From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n",
-		"german":  "Von: Sam Seller <sam@example.org>\nGesendet: Montag\nAn: Alex Buyer <contact@example.com>\nBetreff: Next steps\n\n",
-		"gmail":   "On Mon, 2 Jun 2026 at 10:00, Sam Seller <sam@example.org> wrote:\n\n",
-		"forward": "---------- Forwarded message ---------\nFrom: Sam Seller <sam@example.org>\n\n",
+		"bold_outlook":        "*From:* Sam Seller <sam@example.org>\n*Sent:* Monday\n\n",
+		"double_bold_outlook": "**From:** Sam Seller <sam@example.org>\n**Sent:** Monday\n\n",
+		"bold_german":         "*Von:* Sam Seller <sam@example.org>\n*Gesendet:* Montag\n\n",
+		"outlook":             "From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n",
+		"german":              "Von: Sam Seller <sam@example.org>\nGesendet: Montag\nAn: Alex Buyer <contact@example.com>\nBetreff: Next steps\n\n",
+		"gmail":               "On Mon, 2 Jun 2026 at 10:00, Sam Seller <sam@example.org> wrote:\n\n",
+		"forward":             "---------- Forwarded message ---------\nFrom: Sam Seller <sam@example.org>\n\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := strings.Join(textlang.SenderLines(reply+header+quotedSellerSignature), "\n")
