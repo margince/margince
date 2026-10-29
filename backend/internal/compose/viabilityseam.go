@@ -20,13 +20,15 @@ import (
 // The check stores it on the receipt, and the forecast compares it with the
 // deal's current one: any difference means the evidence moved since the check.
 // Work the product filed itself is left out, so the review's own task does not
-// make its receipt stale.
+// make its receipt stale. Archiving an activity drops it from the count, which
+// changes the fingerprint too.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
 		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
-		  WHERE fl.deal_id = ` + deal + `.id AND ` + relstrength.OriginIsEngagementSQL("fa") + `)))`
+		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` +
+		relstrength.OriginIsEngagementSQL("fa") + `)))`
 }
 
 // viabilityQualificationSQL is one deal's treatment in the qualified forecast.
@@ -34,7 +36,7 @@ func viabilityFingerprintSQL(deal string) string {
 // Eligible needs a CURRENT receipt: this policy, not past its validity, judged
 // on the evidence the deal still carries. Without one the deal is unknown, even
 // with no finding open, because no finding is not the same as judged and fine.
-// A judged deal with an open review is excluded; one whose review a person
+// A judged deal with an open review is excluded; one whose review somebody
 // resolved or overrode counts again.
 func viabilityQualificationSQL(deal string, arg func(any) int) string {
 	return fmt.Sprintf(`(CASE

@@ -247,7 +247,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 // that read its sources finds it absent everywhere it walked.
 //
 // A review type never clears in absence. A reply ends the silence and not the
-// review: only a person's validated outcome, or the deal leaving, closes it.
+// review: only somebody's validated answer, or the deal leaving, closes it.
 func clearableTypes(coverage []SourceCoverage) []string {
 	read := sourcesRead(coverage)
 	var out []string

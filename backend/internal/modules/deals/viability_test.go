@@ -96,8 +96,9 @@ func TestAViabilityAssessmentJudgesSilenceApartFromTheCloseDate(t *testing.T) {
 				return in
 			},
 			outcome: viability.OutcomeReviewRequired,
-			reasons: []viability.Reason{viability.ReasonRequalificationPending,
-				viability.ReasonCloseDateUnsupported, viability.ReasonNoNextStep},
+			reasons: []viability.Reason{
+				viability.ReasonRequalificationPending, viability.ReasonCloseDateUnsupported, viability.ReasonNoNextStep,
+			},
 		},
 		"evidence dated in the future is not progress": {
 			change: func(in ViabilityInput) ViabilityInput {

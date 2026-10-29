@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -125,12 +126,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 	t.Helper()
-	return subjectsAt(t, e, time.Now().UTC())
-}
-
-// subjectsAt reads the subjects as a pass at asOf would, with every source read.
-func subjectsAt(t *testing.T, e *integration.Env, asOf time.Time) []assurance.Subject {
-	t.Helper()
+	asOf := clocktest.Now(t)
 	var out []assurance.Subject
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error

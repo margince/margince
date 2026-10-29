@@ -247,11 +247,6 @@ func TestTheLastTouchReadersIgnoreAFutureDatedEmail(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, s := range subjectsAt(t, f.e, f.now) {
-		if s.DealID == deal.String() && (s.Viability == nil || s.Viability.SilentDays != 30) {
-			t.Errorf("the assurance check's viability = %+v, want 30 days since the past email", s.Viability)
-		}
-	}
 
 	contact := f.e.SeedContact(t, "Reader Contact", nil)
 	f.logOn(t, "email", onRecord("contact", contact), past)

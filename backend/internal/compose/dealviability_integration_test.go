@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -38,15 +39,16 @@ type viabilityEnv struct {
 	closeDate time.Time
 	silent    ids.UUID
 	supported ids.UUID
+	buyer     ids.UUID
 }
 
 func setupViability(t *testing.T) *viabilityEnv {
 	t.Helper()
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	v := &viabilityEnv{
-		Env: e, now: now,
+		Env: e, now: now, buyer: e.SeedContact(t, "Buyer", nil),
 		closeDate: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 94),
 		worker: &assuranceSweepWorker{
 			pool: e.Pool, now: func() time.Time { return now }, log: slog.New(slog.DiscardHandler),
@@ -99,12 +101,15 @@ func (v *viabilityEnv) commitDeal(
 	return deal
 }
 
+// customerWrites logs a call with the buyer on the deal: the customer moving it.
 func (v *viabilityEnv) customerWrites(t *testing.T, deal ids.UUID, at time.Time) {
 	t.Helper()
-	subject, inbound := "Re: proposal", "inbound"
+	subject := "Call with the buyer"
 	if _, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
-		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+		Kind: "call", Subject: &subject, OccurredAt: &at, Source: "manual",
+		Links: []activities.ActivityLinkInput{
+			{EntityType: "deal", EntityID: deal}, {EntityType: "contact", EntityID: v.buyer},
+		},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +170,8 @@ func TestASilentDealWithAFarCloseDateLeavesTheQualifiedForecastAndGetsOneReview(
 			before.EvidenceMinor)
 	}
 
+	// A call dated three days ahead has not happened, so it is no progress.
+	v.customerWrites(t, v.silent, v.now.AddDate(0, 0, 3))
 	v.check(t)
 	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
 		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
@@ -208,7 +215,7 @@ func TestACompletedReviewTaskIsNotMintedAgainAndAReplyAloneKeepsTheReview(t *tes
 	}
 	// Settled now rather than at the fixture's clock: the task was written after
 	// that instant, and a completion dated before it is refused as stale.
-	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](task), time.Now().UTC()); err != nil || !done {
+	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](task), clocktest.Now(t)); err != nil || !done {
 		t.Fatalf("completing the review task: done=%v err=%v", done, err)
 	}
 	v.check(t)
@@ -223,7 +230,7 @@ func TestACompletedReviewTaskIsNotMintedAgainAndAReplyAloneKeepsTheReview(t *tes
 	v.check(t)
 	if got := v.WsCount(t, `SELECT count(*) FROM assurance_exception
 		WHERE type = $1 AND status = 'open' AND subject_id = $2`, assurance.TypeDealViability, v.silent); got != 1 {
-		t.Fatalf("a reply closed the review (%d open) — only a person's outcome may", got)
+		t.Fatalf("a reply closed the review (%d open) — only somebody's answer may", got)
 	}
 	if got := v.WsScalar(t, `SELECT array_to_string(reasons, ',') FROM assurance_deal_receipt
 		WHERE deal_id = $1`, v.silent); got == "" || hasReason(got, "customer_silent") || !hasReason(got, "requalification_pending") {

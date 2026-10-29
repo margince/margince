@@ -334,7 +334,8 @@ func noEconomicBuyer() Rule {
 // a silent prospect weekly keeps last_activity_at fresh while the customer has
 // not answered, and the close date is no evidence either way.
 func dealViability() Rule {
-	return Rule{Type: TypeDealViability, Version: viability.PolicyVersion, Needs: []string{sourceMail},
+	return Rule{
+		Type: TypeDealViability, Version: viability.PolicyVersion, Needs: []string{sourceMail},
 		Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 			if s.Viability == nil || s.Viability.Outcome != viability.OutcomeReviewRequired {
 				return nil
@@ -345,7 +346,8 @@ func dealViability() Rule {
 				Observed:      map[string]any{"reasons": s.Viability.Reasons, "silent_days": s.Viability.SilentDays},
 				AffectedMinor: s.AmountMinor, Currency: s.Currency,
 			}
-		}}
+		},
+	}
 }
 
 // A committed deal with no price on it. It is counted as eligible pipeline and

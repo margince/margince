@@ -10,11 +10,11 @@ and a task do not count.
 After 60 days with no word from the customer, the deal gets a review in
 **Checks before the call** on the **Forecast** section of **Analytics**. The
 review is named **Customer has gone quiet**, and the owner of the deal gets one
-task. The close date plays no part: a deal three months from its close date gets
-the same review.
+task. The close date does not change this: a deal three months from its close
+date gets the same review.
 
 A reply from the customer does not end the review. The review stays until
-somebody answers it, so that a person checks the next step and the close date.
+somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
 same review.
 

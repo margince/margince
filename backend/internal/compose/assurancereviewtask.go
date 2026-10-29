@@ -7,7 +7,7 @@ package compose
 //
 // An ordinary finding re-asks after its task is done, because the condition
 // being true again after a rep acted is a new question. A review is different:
-// completing its task does not answer it. Only a person's outcome on the finding
+// completing its task does not answer it. Only somebody's answer on the finding
 // does. So the episode remembers the task it was delivered as, and while that
 // episode lasts no second task is minted, done or not.
 
@@ -113,7 +113,7 @@ func linkEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID, epis
 		return ids.UUID{}, err
 	}
 	if linked == nil {
-		return ids.UUID{}, fmt.Errorf("compose: the review's episode moved while its task was delivered; the next pass delivers it")
+		return ids.UUID{}, errors.New("compose: the review's episode moved while its task was delivered; the next pass delivers it")
 	}
 	return *linked, nil
 }

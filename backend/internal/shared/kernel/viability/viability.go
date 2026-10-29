@@ -49,8 +49,8 @@ const (
 	ReasonCloseDateUnsupported Reason = "close_date_unsupported"
 	// ReasonNoNextStep: nobody wrote down what happens next.
 	ReasonNoNextStep Reason = "no_next_step"
-	// ReasonRequalificationPending: a review is open, and stays open until a
-	// person validates the next step and the date. A reply clears the silence
+	// ReasonRequalificationPending: a review is open, and stays open until
+	// somebody validates the next step and the date. A reply clears the silence
 	// but not this.
 	ReasonRequalificationPending Reason = "requalification_pending"
 	// ReasonCustomerWait: the customer asked us to wait, until a stated day.

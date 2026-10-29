@@ -29,8 +29,8 @@ type ViabilityInput struct {
 	// MailCovered is true when every mailbox was read on time. Without it no
 	// silence is observed, because "nothing arrived" would mean "nothing was read".
 	MailCovered bool
-	// OpenReview is true while a viability review on this deal is open. Only a
-	// person's validated outcome closes it; a reply alone does not.
+	// OpenReview is true while a viability review on this deal is open. Only
+	// somebody's validated answer closes it; a reply alone does not.
 	OpenReview bool
 }
 
@@ -117,7 +117,7 @@ func silenceReason(progress *time.Time) viability.Reason {
 	return viability.ReasonCustomerSilent
 }
 
-// dateAndStepReasons names what a person must validate before support returns.
+// dateAndStepReasons names what somebody must validate before support returns.
 // An unset provisional flag is not a confirmation: a date the customer has
 // been silent about is unsupported whatever the flag says.
 func dateAndStepReasons(in ViabilityInput, silent bool, asOf time.Time, zone *time.Location) []viability.Reason {

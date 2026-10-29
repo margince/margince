@@ -212,13 +212,16 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	return out, nil
 }
 
-// customerProgressSQL admits a row that is the CUSTOMER moving the deal: mail
-// they wrote, or a meeting with them that took place. Our own mail, a task, a
-// field edit, a canceled meeting and a machine's mail never do. Mail from a
-// colleague is outbound, so internal correspondence is not progress either.
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal: a
+// message a contact on it wrote, or a meeting or call with them that took
+// place. Our own mail, a colleague's reply, a task, a field edit, a canceled
+// meeting and a machine's mail never do.
 func customerProgressSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias) + " AND ((" + alias + ".direction = 'inbound' AND " +
-		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind = 'meeting' AND " +
+	theyWrote := "EXISTS (SELECT 1 FROM (SELECT cp.contact_id FROM activity_participant cp WHERE cp.activity_id = " +
+		alias + ".id UNION SELECT cl.contact_id FROM activity_link cl WHERE cl.activity_id = " + alias +
+		".id) who WHERE who.contact_id IS NOT NULL AND " + relstrength.TheyWroteSQL("who.contact_id", alias) + ")"
+	return "(" + relstrength.DirectionClockSQL(alias) + " AND ((" + theyWrote + " AND " +
+		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 
