@@ -147,6 +147,8 @@ export function CompanyNextBar({
     const defer = momentDefer(moment, deferOf);
     return (
       <RecordNextBar
+        // A company moment is an owed promise, which outranks a new mail.
+        urgent
         about={moment.evidence.map((item) => item.id)}
         // The task the moment cites is the thing to do; the headline is the
         // server's sentence about it, kept for a moment that cites none.
