@@ -131,9 +131,11 @@ describe("the records a message is filed against", () => {
     );
 
     const contact = await screen.findByText("Ana Sommer");
-    expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
+    expect(contact.getAttribute("href")).toBe(
+      `/r/contacts/${ANA}#/contacts/${ANA}`,
+    );
     const account = await screen.findByText("Brandt Automotive");
-    expect(account.getAttribute("href")).toBe(`#/companies/${BRANDT}`);
+    expect(account.getAttribute("href")).toBe(`/#/companies/${BRANDT}`);
   });
 
   it("opens beside the message rather than over it", async () => {

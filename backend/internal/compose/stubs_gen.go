@@ -3023,6 +3023,10 @@ func (stubs) GetPublicProposalAvailability(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "GetPublicProposalAvailability")
 }
 
+func (stubs) GetPublicRecordPreview(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetPublicRecordPreview")
+}
+
 func (stubs) ListBuyerRoomDocuments(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListBuyerRoomDocuments")
 }

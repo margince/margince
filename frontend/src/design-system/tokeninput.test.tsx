@@ -351,7 +351,7 @@ describe("a named token", () => {
       within(card)
         .getByRole("link", { name: "Dana Ellwanger" })
         .getAttribute("href"),
-    ).toBe("#/contacts/c-dana");
+    ).toBe("/#/contacts/c-dana");
   });
 
   it("draws an address no offer names as itself, with no card", async () => {

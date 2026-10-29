@@ -5,6 +5,7 @@ import { Bell } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNoticeRead } from "../components/taskactions";
+import { AppLink } from "../design-system/applink";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -291,13 +292,13 @@ function NoticeRow({
     <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
       <div className="notifrow-head">
         {href ? (
-          <a
+          <AppLink
             className="entity-link notifrow-subject"
             href={href}
             onClick={onActivate}
           >
             {headline}
-          </a>
+          </AppLink>
         ) : (
           // A kind this app has no page for is NAMED and not linked. A link
           // into nothing is worse than no link: it promises a page the product

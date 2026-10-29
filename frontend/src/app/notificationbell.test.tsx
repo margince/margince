@@ -383,7 +383,7 @@ describe("NotificationBell", () => {
       name: "A lead is past its deadline",
     });
     expect(link.getAttribute("href")).toBe(
-      "#/leads/11111111-1111-4111-8111-111111111111",
+      "/#/leads/11111111-1111-4111-8111-111111111111",
     );
   });
 
@@ -409,7 +409,7 @@ describe("NotificationBell", () => {
       name: "Is boris@customer.example a contact worth keeping?",
     });
     expect(link.getAttribute("href")).toBe(
-      "#/home?approval=22222222-2222-4222-8222-222222222222",
+      "/#/home?approval=22222222-2222-4222-8222-222222222222",
     );
   });
 

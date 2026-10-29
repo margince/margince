@@ -3,6 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
@@ -297,11 +298,14 @@ export function DecisionsSection({
         listCap={LISTED}
         listRest={(hidden) => (
           <p className="ddeck-list-rest">
-            <a className="entity-link" href={worklistLaneHref("decisions")}>
+            <AppLink
+              className="entity-link"
+              href={worklistLaneHref("decisions")}
+            >
               {plural("brief.deck.rest", hidden, {
                 count: formatNumber(hidden, locale),
               })}
-            </a>
+            </AppLink>
           </p>
         )}
         labels={{

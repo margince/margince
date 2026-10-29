@@ -412,7 +412,7 @@ test("a task filed under a deal and its company names the deal first", async () 
   const names = screen.getAllByRole("link").map((link) => link.textContent);
   expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
   // Opened in place: following the record is leaving the panel for it.
-  expect(deal.getAttribute("href")).toBe("#/deals/deal-1");
+  expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
   expect(deal.getAttribute("target")).toBeNull();
 });
 
@@ -530,7 +530,7 @@ test("a task from a call offers Call, Email and Open contact", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.getAttribute("href")).toBe("tel:+49301234567");
-  expect(openContact()?.getAttribute("href")).toBe("#/contacts/c-1");
+  expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
   await user.click(
     screen.getByRole("button", { name: en["record.verb.email"] }),
   );

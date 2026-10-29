@@ -72,7 +72,7 @@ describe("the delivery section", () => {
       await screen.findByText(formatMoney(400000, "EUR", "en")),
     ).toBeTruthy();
     const link = await screen.findByRole("link", { name: "Rollout Nord" });
-    expect(link.getAttribute("href")).toBe("#/projects/p1");
+    expect(link.getAttribute("href")).toBe("/#/projects/p1");
     expect(
       screen.getByText("No project in delivery has gone quiet."),
     ).toBeTruthy();
@@ -102,7 +102,7 @@ describe("the delivery section", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
     const link = await screen.findByRole("link", { name: "Rollout Süd" });
-    expect(link.getAttribute("href")).toBe("#/projects/p9");
+    expect(link.getAttribute("href")).toBe("/#/projects/p9");
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     expect(
       (

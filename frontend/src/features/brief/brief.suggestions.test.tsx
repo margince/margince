@@ -34,7 +34,7 @@ it("opens the stored run without turning suggestions into work or loading names 
     (await screen.findByRole("link", { name: "Acme rollout" })).getAttribute(
       "href",
     ),
-  ).toBe("#/deals/d-1");
+  ).toBe("/#/deals/d-1");
   expect(screen.getByText(/Buyer asked to revisit rollout/)).toBeTruthy();
   expect(container.textContent).not.toMatch(
     /0\.74|winnability|Ranked|Done|Mark handled/,

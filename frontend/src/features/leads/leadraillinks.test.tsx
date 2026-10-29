@@ -270,7 +270,7 @@ describe("LeadScreen: the Deals tab's deal and project verbs", () => {
     const link = await within(tab).findByRole("link", {
       name: "Nordwind Renewal",
     });
-    expect(link.getAttribute("href")).toBe("#/deals/d-9");
+    expect(link.getAttribute("href")).toBe("/#/deals/d-9");
     expect(
       within(tab).queryByRole("button", { name: en["lead.promote"] }),
     ).toBeNull();

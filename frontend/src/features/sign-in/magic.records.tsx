@@ -15,6 +15,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChangeList } from "../../components/changelist";
 import { ReceiptReview } from "../../components/receiptreview";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -149,7 +150,7 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   return (
     <li className="magic-record">
       <div className="magic-record-head">
-        {href ? <a href={href}>{label}</a> : <span>{label}</span>}
+        {href ? <AppLink href={href}>{label}</AppLink> : <span>{label}</span>}
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>

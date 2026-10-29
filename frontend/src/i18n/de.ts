@@ -1901,6 +1901,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Von Margince für ein Teammitglied gesendet",
   "trust.relaySent": "Von Margince gesendet",
   "trust.relayFrom": "Absendeadresse: {address}",
+  "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",

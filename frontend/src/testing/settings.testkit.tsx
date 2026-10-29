@@ -343,7 +343,9 @@ export function offeredPages(): string[] {
   const seen = new Set(
     screen
       .getAllByRole("link")
-      .map((link) => link.getAttribute("href") ?? "")
+      .map(
+        (link) => new URL(link.getAttribute("href") ?? "", location.href).hash,
+      )
       .filter((href) => href.startsWith("#/settings/"))
       .map((href) => href.slice("#/settings/".length)),
   );

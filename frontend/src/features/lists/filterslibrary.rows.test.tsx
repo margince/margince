@@ -63,11 +63,11 @@ describe("a row", () => {
     const view = await rowOf(BERLIN.name);
     expect(
       within(view).getByRole("link", { name: BERLIN.name }),
-    ).toHaveAttribute("href", "#/filters/contacts/v1");
+    ).toHaveAttribute("href", "/#/filters/contacts/v1");
     const list = await rowOf(liveList.name);
     expect(
       within(list).getByRole("link", { name: liveList.name }),
-    ).toHaveAttribute("href", `#/lists/${LIVE_ID}`);
+    ).toHaveAttribute("href", `/#/lists/${LIVE_ID}`);
   });
 
   it("says a view's kind in a neutral badge, marks a Live List alone as live, and counts only a list's records", async () => {
