@@ -751,7 +751,8 @@ export * from "@core-original/src/app/shellrail";
 ```
 
 Only files under `src/app/`, `src/components/` and `src/features/` can be replaced; the sidebar menu is
-`src/app/shellrail.tsx`. Each replacement needs a line in `frontend/overrides.lock`:
+`src/app/shellrail.tsx`. The files that take a password, a secret or a consent stay core's, and
+`unreplaceable` in `overrides.go` lists them. Each replacement needs a line in `frontend/overrides.lock`:
 
 ```text
 src/app/shellrail.tsx sha256:<hash of core's file>
@@ -760,8 +761,9 @@ src/app/shellrail.tsx sha256:<hash of core's file>
 A missing line fails `make composition`, and the error prints the line to add. When core changes that
 file, the hash no longer matches and the build fails until you read the new file, update yours and
 the lock line. The composed typecheck holds your file to every export of the file it replaces. Two
-units cannot replace one file. Only a file under `frontend/overrides/` may import `@core-original/`;
-`frontend/scripts/ext-imports.test.ts` refuses it anywhere else.
+units cannot replace one file. A replacement may import `@core-original/` only for the one file it replaces. An added screen and every
+other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse
+it.
 
 ## Own scheduled jobs
 

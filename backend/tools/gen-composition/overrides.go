@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -33,18 +34,29 @@ const (
 	// absolute paths in them never reach a digest.
 	composedOverridesFile  = "build/composition-frontend/overrides.json"
 	composedOverridesCheck = "build/composition-frontend/overrides.check.ts"
-	// composedScreensDir is where extscreens.gen.ts is written; an added screen
-	// is imported by a path relative to it.
-	composedScreensDir = "build/composition/frontend"
+	// extScreensGenFile is the screen registry's key in composedFiles; an added
+	// screen is imported by a path relative to it.
+	extScreensGenFile = "frontend/extscreens.gen.ts"
 )
 
 // replaceableRoots keeps replacements to UI code. The API client, auth, the
 // router and the generated composition stay core's alone.
 var replaceableRoots = []string{"src/app/", "src/components/", "src/features/"}
 
-// addedScreenPath is the one shape of file a unit may add rather than replace:
-// a screen in core's fork folder, which app/custom.ts gives #/x/<key> and, with
-// nav, a sidebar row. The folder follows the unit-name grammar.
+// unreplaceable are the UI files inside those roots that take a password, a
+// secret or a consent, or set the data layer's policy. A replacement there
+// would see what the user typed before core does.
+var unreplaceable = []string{
+	"src/app/queryclient.ts",
+	"src/components/auth-core.tsx",
+	"src/features/privacy/",
+	"src/features/settings/settings-passports.tsx",
+	"src/features/settings/webhooks.secret.tsx",
+	"src/features/sign-in/",
+}
+
+// addedScreenPath is the one file a unit may add rather than replace. It is a
+// screen in core's fork folder, which app/custom.ts serves at #/x/<key>.
 var addedScreenPath = regexp.MustCompile(`^src/custom/([a-z0-9]+(?:-[a-z0-9]+)*)/screen\.tsx$`)
 
 // fileOverride is one core frontend file a unit replaces.
@@ -66,9 +78,9 @@ type frontendOverrides struct {
 	Added    []addedScreen
 }
 
-// collectOverrides refuses what the build cannot stand behind: a replacement
-// outside replaceableRoots, unlocked, or locked to a core file that has since
-// changed; a new file that is not an added screen; one file claimed by two units.
+// collectOverrides refuses what the build cannot stand behind. A replacement
+// must sit under replaceableRoots and be locked to core's current file. A new
+// file must be an added screen. No file has two owners.
 func collectOverrides(root string, units []extensionUnit) (frontendOverrides, error) {
 	frontendDir := filepath.Join(root, "frontend")
 	owner := map[string]string{}
@@ -134,8 +146,12 @@ func unitOverrides(root string, u extensionUnit, frontendDir string) (frontendOv
 			return fmt.Errorf("extensions/%s: %s/%s names frontend/%s, which this core does not have — a new page goes at %s/src/custom/<folder>/screen.tsx", u.Name, overridesLayer, target, target, overridesLayer)
 		case err != nil:
 			return err
-		case !slices.ContainsFunc(replaceableRoots, func(r string) bool { return strings.HasPrefix(target, r) }):
+		case addedScreenPath.MatchString(target):
+			return fmt.Errorf("extensions/%s: %s/%s: core's fork already has frontend/%s — add the screen under another folder", u.Name, overridesLayer, target, target)
+		case !hasPrefixIn(replaceableRoots, target):
 			return fmt.Errorf("extensions/%s: %s/%s: only files under frontend/%s can be replaced", u.Name, overridesLayer, target, strings.Join(replaceableRoots, ", frontend/"))
+		case hasPrefixIn(unreplaceable, target):
+			return fmt.Errorf("extensions/%s: %s/%s: frontend/%s takes a credential or a consent, and stays core's", u.Name, overridesLayer, target, target)
 		}
 		want, locked := lock[target]
 		delete(lock, target)
@@ -158,6 +174,10 @@ func unitOverrides(root string, u extensionUnit, frontendDir string) (frontendOv
 	return found, nil
 }
 
+func hasPrefixIn(prefixes []string, target string) bool {
+	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(target, p) })
+}
+
 // readOverridesLock reads "<target> sha256:<hex>" lines; # starts a comment.
 func readOverridesLock(file string) (map[string]string, error) {
 	raw, err := os.ReadFile(file) // #nosec G304 -- a unit's own lock at a fixed path
@@ -177,6 +197,9 @@ func readOverridesLock(file string) (map[string]string, error) {
 		}
 		if len(fields) != 2 {
 			return nil, fmt.Errorf("%s:%d: want <path> sha256:<hex>", overridesLockFile, line)
+		}
+		if _, twice := lock[fields[0]]; twice {
+			return nil, fmt.Errorf("%s:%d: %s is pinned twice", overridesLockFile, line, fields[0])
 		}
 		lock[fields[0]] = fields[1]
 	}
@@ -199,12 +222,12 @@ func emitOverrides(root string, replaced []fileOverride) error {
 	if err := os.MkdirAll(filepath.Dir(mapFile), 0o755); err != nil { // #nosec G301 -- build output stays readable to another UID
 		return err
 	}
+	if replaced == nil {
+		replaced = []fileOverride{}
+	}
 	encoded, err := json.MarshalIndent(replaced, "", "  ")
 	if err != nil {
 		return err
-	}
-	if replaced == nil {
-		encoded = []byte("[]")
 	}
 	if err := os.WriteFile(mapFile, append(encoded, '\n'), 0o644); err != nil { // #nosec G306 -- build output
 		return err
@@ -214,8 +237,8 @@ func emitOverrides(root string, replaced []fileOverride) error {
 	b.WriteString("// core file it replaces, with a type core's callers still accept.\n")
 	b.WriteString("export type Keeps<_Override extends Original, Original> = true;\n")
 	for i, o := range replaced {
-		fmt.Fprintf(&b, "import type * as Original%d from %q;\n", i, "@core-original/"+strings.TrimSuffix(o.Target, filepath.Ext(o.Target)))
-		fmt.Fprintf(&b, "import type * as Override%d from %q;\n", i, strings.TrimSuffix(o.Source, filepath.Ext(o.Source)))
+		fmt.Fprintf(&b, "import type * as Original%d from %s;\n", i, tsString("@core-original/"+strings.TrimSuffix(o.Target, filepath.Ext(o.Target))))
+		fmt.Fprintf(&b, "import type * as Override%d from %s;\n", i, tsString(strings.TrimSuffix(o.Source, filepath.Ext(o.Source))))
 		fmt.Fprintf(&b, "export type Check%d = Keeps<typeof Override%d, typeof Original%d>;\n", i, i, i)
 	}
 	return os.WriteFile(filepath.Join(root, filepath.FromSlash(composedOverridesCheck)), []byte(b.String()), 0o644) // #nosec G306 -- build output
@@ -223,6 +246,7 @@ func emitOverrides(root string, replaced []fileOverride) error {
 
 // addedScreenSpecifier is the import extscreens.gen.ts reaches an added screen by.
 func addedScreenSpecifier(a addedScreen) string {
-	up := strings.Repeat("../", strings.Count(composedScreensDir, "/")+1)
+	dir := path.Join("build/composition", path.Dir(extScreensGenFile))
+	up := strings.Repeat("../", strings.Count(dir, "/")+1)
 	return up + strings.TrimSuffix(a.Source, ".tsx")
 }

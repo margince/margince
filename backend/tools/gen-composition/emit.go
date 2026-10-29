@@ -262,7 +262,7 @@ func composedFiles(root string) (composition, error) {
 		"backend/go.mod":             composedGoMod(goVersion),
 		"backend/extensions_gen.go":  wiring,
 		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts": extScreensGen(units, manifestPanels(manifests), overrides.Added),
+		extScreensGenFile:            extScreensGen(units, manifestPanels(manifests), overrides.Added),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With

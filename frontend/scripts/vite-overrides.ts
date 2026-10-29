@@ -15,15 +15,24 @@ export type FileOverride = {
 
 const CORE_ORIGINAL = "@core-original/";
 
+const stripExtension = (path: string) => path.replace(/\.[cm]?[jt]sx?$/, "");
+
 // readFileOverrides is empty unless a composed lane asks, so the vanilla bundle
-// stays core's own.
+// stays core's own. gen-composition always writes the file, so a composed lane
+// without it would ship core's files in place of every replacement.
 export function readFileOverrides(
   file: string,
   composed: boolean,
 ): FileOverride[] {
-  return composed && existsSync(file)
-    ? (JSON.parse(readFileSync(file, "utf8")) as FileOverride[])
-    : [];
+  if (!composed) {
+    return [];
+  }
+  if (!existsSync(file)) {
+    throw new Error(
+      `${file} is missing — run 'make -C backend composition' before building the composed frontend lane`,
+    );
+  }
+  return JSON.parse(readFileSync(file, "utf8")) as FileOverride[];
 }
 
 // overrideCoreFiles resolves every import of a replaced core file to the unit's
@@ -40,16 +49,33 @@ export function overrideCoreFiles(
       o.source,
     ]),
   );
+  // A replacement may reach core's copy of the one file it replaces, and nothing
+  // else; ext-imports refuses the rest before a build gets here.
+  const originalOf = new Map(
+    overrides.map((o) => [
+      realpathSync(o.source),
+      resolve(frontendRoot, o.target),
+    ]),
+  );
+  const coreOriginal = (source: string, importer: string | undefined) => {
+    const original =
+      importer && existsSync(importer)
+        ? originalOf.get(realpathSync(importer))
+        : undefined;
+    const wanted = join(frontendRoot, source.slice(CORE_ORIGINAL.length));
+    if (!original || stripExtension(original) !== stripExtension(wanted)) {
+      throw new Error(
+        `${importer ?? "an entry"} imports '${source}' — only a replacement may, and only core's copy of the file it replaces`,
+      );
+    }
+    return original;
+  };
   return {
     name: "margince-core-overrides",
     enforce: "pre",
     async resolveId(source, importer, options) {
       if (source.startsWith(CORE_ORIGINAL)) {
-        return this.resolve(
-          join(frontendRoot, source.slice(CORE_ORIGINAL.length)),
-          importer,
-          { ...options, skipSelf: true },
-        );
+        return coreOriginal(source, importer);
       }
       if (byTarget.size === 0) {
         return null;

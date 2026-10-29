@@ -26,7 +26,7 @@ const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
 // Core frontend files a unit replaces, checked against its overrides.lock by
 // gen-composition. Only a composed lane applies them.
 const fileOverrides = readFileOverrides(
-  join(frontendRoot, "..", "build", "composition-frontend", "overrides.json"),
+  join(frontendRoot, "..", "build/composition-frontend/overrides.json"),
   Boolean(composedComposition),
 );
 const compositionDir = composedComposition

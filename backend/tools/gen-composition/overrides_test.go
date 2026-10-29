@@ -26,15 +26,15 @@ func writeTreeFile(t *testing.T, path, content string) {
 	}
 }
 
-// overrideTree is a core with one menu file and a unit "acme" that replaces it,
-// locked with lockLine.
-func overrideTree(t *testing.T, lockLine string) (string, extensionUnit) {
+// overrideTree is a core with a sidebar rail and a unit "acme" that replaces
+// it, locked to core's current file.
+func overrideTree(t *testing.T) (string, extensionUnit) {
 	t.Helper()
 	root := t.TempDir()
 	writeTreeFile(t, filepath.Join(root, "frontend", railTarget), coreRail)
 	u := overrideUnit(t, root, "acme")
 	writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, railTarget), "export * from \"@core-original/src/app/shellrail\";\n")
-	writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockLine+"\n")
+	writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 	return root, u
 }
 
@@ -57,8 +57,7 @@ func lockedRail(t *testing.T, root string) string {
 }
 
 func TestOverrideLockedToTheCurrentCoreFileReplacesIt(t *testing.T) {
-	root, u := overrideTree(t, "")
-	writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
+	root, u := overrideTree(t)
 
 	got, err := collectOverrides(root, []extensionUnit{u})
 	if err != nil {
@@ -90,12 +89,14 @@ func TestOverrideRefusals(t *testing.T) {
 		want string
 	}{
 		"no lock line": {
-			edit: func(_ *testing.T, _ string, u extensionUnit) []extensionUnit { return []extensionUnit{u} },
+			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), "")
+				return []extensionUnit{u}
+			},
 			want: "names no hash for " + railTarget,
 		},
 		"core file changed since the lock": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 				writeTreeFile(t, filepath.Join(root, "frontend", railTarget), coreRail+"// changed\n")
 				return []extensionUnit{u}
 			},
@@ -103,7 +104,6 @@ func TestOverrideRefusals(t *testing.T) {
 		},
 		"a new file that is not a custom screen": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 				writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, "src/app/gone.tsx"), "")
 				return []extensionUnit{u}
 			},
@@ -111,7 +111,6 @@ func TestOverrideRefusals(t *testing.T) {
 		},
 		"a custom folder outside the name grammar": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 				writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, "src/custom/Desk/screen.tsx"), "")
 				return []extensionUnit{u}
 			},
@@ -128,7 +127,6 @@ func TestOverrideRefusals(t *testing.T) {
 		"two units, one file": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
 				line := lockedRail(t, root) + "\n"
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), line)
 				other := overrideUnit(t, root, "beta")
 				writeTreeFile(t, filepath.Join(other.Dir, overridesLayer, railTarget), "")
 				writeTreeFile(t, filepath.Join(other.Dir, overridesLockFile), line)
@@ -138,7 +136,6 @@ func TestOverrideRefusals(t *testing.T) {
 		},
 		"two units, one added screen": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 				writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, "src/custom/desk/screen.tsx"), "")
 				other := overrideUnit(t, root, "beta")
 				writeTreeFile(t, filepath.Join(other.Dir, overridesLayer, "src/custom/desk/screen.tsx"), "")
@@ -153,6 +150,21 @@ func TestOverrideRefusals(t *testing.T) {
 			},
 			want: "pins src/app/old.tsx",
 		},
+		"a lock pinning one file twice": {
+			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n"+railTarget+" sha256:00\n")
+				return []extensionUnit{u}
+			},
+			want: railTarget + " is pinned twice",
+		},
+		"a screen core's fork already has": {
+			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
+				writeTreeFile(t, filepath.Join(root, "frontend/src/custom/desk/screen.tsx"), "")
+				writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, "src/custom/desk/screen.tsx"), "")
+				return []extensionUnit{u}
+			},
+			want: "core's fork already has frontend/src/custom/desk/screen.tsx",
+		},
 		"a unit with no frontend package": {
 			edit: func(_ *testing.T, _ string, u extensionUnit) []extensionUnit {
 				u.Frontend = nil
@@ -163,7 +175,7 @@ func TestOverrideRefusals(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			root, u := overrideTree(t, "")
+			root, u := overrideTree(t)
 			_, err := collectOverrides(root, tc.edit(t, root, u))
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("err = %v, want one containing %q", err, tc.want)
@@ -172,8 +184,38 @@ func TestOverrideRefusals(t *testing.T) {
 	}
 }
 
-// The screen registry imports an added screen by a path relative to where it
-// is written, and keys it by its file so a key clash names the unit.
+// The registry imports an added screen relative to where it is written. It
+// keys the screen by its file, so a key clash names the unit.
+// Each file that takes a credential or a consent is refused by name, so
+// widening replaceableRoots fails this test before it admits one.
+func TestCredentialAndConsentFilesStayCores(t *testing.T) {
+	for _, target := range []string{
+		"src/app/queryclient.ts",
+		"src/components/auth-core.tsx",
+		"src/features/privacy/erasure.tsx",
+		"src/features/settings/settings-passports.tsx",
+		"src/features/settings/webhooks.secret.tsx",
+		"src/features/sign-in/auth-login.tsx",
+		"src/features/sign-in/installation-setup.ai-key.tsx",
+	} {
+		t.Run(target, func(t *testing.T) {
+			root := t.TempDir()
+			writeTreeFile(t, filepath.Join(root, "frontend", target), coreRail)
+			u := overrideUnit(t, root, "acme")
+			writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, target), "")
+			sum, err := fileSHA256(filepath.Join(root, "frontend", target))
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), target+" "+sum+"\n")
+			_, err = collectOverrides(root, []extensionUnit{u})
+			if err == nil || !strings.Contains(err.Error(), "stays core's") {
+				t.Fatalf("err = %v, want %s refused", err, target)
+			}
+		})
+	}
+}
+
 func TestExtScreensGenRegistersEachAddedScreen(t *testing.T) {
 	got := string(extScreensGen(nil, nil, []addedScreen{
 		{Unit: "acme", Target: "src/custom/desk/screen.tsx", Source: "extensions/acme/frontend/overrides/src/custom/desk/screen.tsx"},
@@ -192,8 +234,7 @@ func TestExtScreensGenRegistersEachAddedScreen(t *testing.T) {
 }
 
 func TestEmitOverridesWritesTheBundlerMapAndTheExportCheck(t *testing.T) {
-	root, u := overrideTree(t, "")
-	writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
+	root, u := overrideTree(t)
 	got, err := collectOverrides(root, []extensionUnit{u})
 	if err != nil {
 		t.Fatal(err)
@@ -222,6 +263,23 @@ func TestEmitOverridesWritesTheBundlerMapAndTheExportCheck(t *testing.T) {
 	} {
 		if !strings.Contains(string(check), want) {
 			t.Errorf("type check is missing %q:\n%s", want, check)
+		}
+	}
+}
+
+// The frontend reads what emitOverrides writes, at paths it spells on its own
+// side; this holds the two spellings together.
+func TestFrontendReadsTheOverridesFilesWhereTheyAreWritten(t *testing.T) {
+	for file, want := range map[string]string{
+		"frontend/vite.config.ts":         composedOverridesFile,
+		"frontend/tsconfig.composed.json": composedOverridesCheck,
+	} {
+		raw, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(file)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("%s does not name %s, which gen-composition writes", file, want)
 		}
 	}
 }

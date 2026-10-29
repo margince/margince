@@ -507,6 +507,30 @@ describe("the extension-import detector sees what it claims to", () => {
       },
     },
     {
+      name: "a replacement reaching a core file other than the one it replaces",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'import { api } from "@core-original/src/api/client";',
+      },
+    },
+    {
+      name: "an added screen reaching a core file",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/custom/desk/screen.tsx":
+          'import { NAV } from "@core-original/src/app/nav";',
+      },
+    },
+    {
+      name: "a replacement climbing out of core with ..",
+      want: "only the one file it replaces",
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'import x from "@core-original/../extensions/other/frontend/x";',
+      },
+    },
+    {
       name: "a core file reached from outside overrides/",
       want: "only a replacement under frontend/overrides/",
       files: {

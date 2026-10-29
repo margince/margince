@@ -11,7 +11,11 @@ import { overrideCoreFiles, readFileOverrides } from "./vite-overrides";
 
 // A core with a menu that main.ts imports, and a unit file replacing the menu
 // that wraps core's own copy.
-function coreAndUnit(): { core: string; unitFile: string; cleanup: () => void } {
+function coreAndUnit(): {
+  core: string;
+  unitFile: string;
+  cleanup: () => void;
+} {
   const root = mkdtempSync(join(tmpdir(), "margince-overrides-"));
   const core = join(root, "frontend");
   mkdirSync(join(core, "src", "app"), { recursive: true });
@@ -85,8 +89,13 @@ describe("overrideCoreFiles", () => {
   });
 
   it("reads no replacement outside a composed lane", () => {
-    expect(readFileOverrides(join(tmpdir(), "absent.json"), true)).toEqual([]);
     expect(readFileOverrides(__filename, false)).toEqual([]);
+  });
+
+  it("refuses a composed lane whose overrides file was never written", () => {
+    expect(() =>
+      readFileOverrides(join(tmpdir(), "absent-overrides.json"), true),
+    ).toThrow("make -C backend composition");
   });
 
   it("is part of the SPA build", () => {

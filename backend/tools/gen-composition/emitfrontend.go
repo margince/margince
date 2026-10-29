@@ -154,9 +154,6 @@ func frontendGen(manifests []derivedManifest, verbs []declaredVerb, merged map[s
 // The same import also brings in each panel a unit declares, by its named
 // export. A declared panel the package does not export then fails the composed
 // typecheck rather than drawing nothing.
-//
-// extensionCustomScreens is every screen units add under core's src/custom/,
-// keyed by its file, for app/custom.ts to register beside the fork's own.
 func extScreensGen(units []extensionUnit, panels map[string][]declaredPanel, added []addedScreen) []byte {
 	var imports, entries, panelEntries strings.Builder
 	for _, u := range units {
