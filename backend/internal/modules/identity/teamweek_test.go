@@ -22,14 +22,22 @@ func TestMeSaysWhichTeamWeeksTheCallerMayOpen(t *testing.T) {
 		seat principal.Permissions
 		want string
 	}{
-		{"rep", principal.Permissions{RowScope: principal.RowScopeOwn,
-			Objects: map[string]principal.ObjectGrant{"deal": read}}, "none"},
-		{"team lead", principal.Permissions{RowScope: principal.RowScopeTeam,
-			Objects: map[string]principal.ObjectGrant{"deal": read, "team_lead": read}}, "teams_led"},
-		{"management", principal.Permissions{RowScope: principal.RowScopeAll,
-			Objects: map[string]principal.ObjectGrant{"deal": read, "team_oversight": read}}, "every_team"},
-		{"lead without deal read", principal.Permissions{RowScope: principal.RowScopeTeam,
-			Objects: map[string]principal.ObjectGrant{"team_lead": read}}, "none"},
+		{"rep", principal.Permissions{
+			RowScope: principal.RowScopeOwn,
+			Objects:  map[string]principal.ObjectGrant{"deal": read},
+		}, "none"},
+		{"team lead", principal.Permissions{
+			RowScope: principal.RowScopeTeam,
+			Objects:  map[string]principal.ObjectGrant{"deal": read, "team_lead": read},
+		}, "teams_led"},
+		{"management", principal.Permissions{
+			RowScope: principal.RowScopeAll,
+			Objects:  map[string]principal.ObjectGrant{"deal": read, "team_oversight": read},
+		}, "every_team"},
+		{"lead without deal read", principal.Permissions{
+			RowScope: principal.RowScopeTeam,
+			Objects:  map[string]principal.ObjectGrant{"team_lead": read},
+		}, "none"},
 	}
 	for _, tc := range cases {
 		id := Identity{Email: "seat@example.com", SeatType: "full", Permissions: tc.seat}

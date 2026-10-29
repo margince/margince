@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { en } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BriefDeliveryPanel } from "./briefdelivery";
 
 // A pick is a draft that the page's one save bar sends.
@@ -103,4 +104,41 @@ it("decides the team choices from /me and never assembles the worklist to do it"
   expect(calls.filter((call) => call.path.startsWith("/worklist"))).toEqual(
     [],
   );
+});
+
+const ledTeam = { id: "00000000-0000-4000-8000-000000000001", name: "Berlin" };
+const otherTeam = { id: "00000000-0000-4000-8000-000000000002", name: "Hanoi" };
+
+async function teamChoices(teamWeek: string, myTeams: string[]) {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: teamWeek, teams: myTeams }),
+    "GET /teams": () => jsonResponse({ data: [ledTeam, otherTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () => jsonResponse({ routine_mail_scope: "team" }),
+  });
+  render(<Page />);
+  const row = await screen.findByTestId("delivery-team");
+  await userEvent.setup().click(await within(row).findByRole("combobox"));
+  return (await screen.findAllByRole("option")).map((o) => o.textContent);
+}
+
+it("offers a team lead only the teams they are on", async () => {
+  expect(await teamChoices("teams_led", [ledTeam.id])).toEqual(["Berlin"]);
+});
+
+it("offers management every team", async () => {
+  expect(await teamChoices("every_team", [])).toEqual(["Berlin", "Hanoi"]);
+});
+
+it("says the team list failed instead of offering an empty choice", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
+    "GET /teams": () => jsonResponse({ title: "Unavailable", status: 503 }, 503),
+    "GET /me/brief-delivery": () => jsonResponse({ routine_mail_scope: "team" }),
+  });
+  render(<Page />);
+  const row = await screen.findByTestId("delivery-team");
+  expect(await within(row).findByRole("alert")).toBeTruthy();
+  expect(within(row).queryByRole("combobox")).toBeNull();
 });

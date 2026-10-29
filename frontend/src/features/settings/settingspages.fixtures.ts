@@ -144,7 +144,7 @@ export const NOTIFICATION_ROUTES: RouteMap = {
   "GET /me/notification-preferences": () =>
     jsonResponse(NOTIFICATION_PREFERENCES),
   "GET /me/brief-delivery": () => jsonResponse({}),
-  "GET /teams": () => jsonResponse({ data: [] }),
+  "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
 };
 
 // Every page story routes all of these: a card can sit on more than one page.

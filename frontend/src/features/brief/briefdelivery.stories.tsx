@@ -16,7 +16,7 @@ function story(delivery: Record<string, string>, routes: RouteMap = {}) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /teams": () => jsonResponse({ data: [] }),
+      "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
       "GET /me/brief-delivery": () => jsonResponse(delivery),
       ...routes,
     });

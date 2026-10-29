@@ -25,7 +25,7 @@ export const Personal: Story = {
   render: (args) => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /teams": () => jsonResponse({ data: [] }),
+      "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
     });
     return (
       <StoryProviders>
