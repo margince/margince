@@ -9,7 +9,7 @@ import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge, Modal } from "./atoms";
-import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
+import { DrawerBody, DrawerHead } from "./drawerbands";
 import { moveLabel } from "./emailentry";
 import { emailDetailKey, readEmailPresentation } from "./emailmessage";
 import { EmailThread, threadOrder } from "./emailthread";
@@ -27,7 +27,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
  * show is an authorization result only the server's answer knows.
  *
  * What needs another API call arrives as a render prop: record names, the
- * audience editor and the verbs in the foot.
+ * audience editor and each message's actions.
  */
 export function EmailDetail({
   activityId,
@@ -64,12 +64,12 @@ export function EmailDetail({
    */
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
   /**
-   * The verbs for the conversation, in the foot: reply, forward and the rest.
+   * The actions under each expanded message: reply, forward and the rest.
    * Passed in because each one is a write the app performs.
    */
   renderActions?: (presentation: EmailPresentation) => ReactNode;
   renderRelated?: () => ReactNode;
-  /** A line under the last message, such as the word that a reply was added. */
+  /** A status above the thread, such as confirmation that a reply was added. */
   notice?: string;
 }>) {
   const t = useT();
@@ -128,15 +128,11 @@ export function EmailDetail({
           read={read}
           formatWhen={formatWhen}
           renderRecords={renderRecords}
+          renderActions={renderActions}
           related={renderRelated}
           notice={notice}
         />
       </DrawerBody>
-      {read.data && renderActions && (
-        <DrawerFoot className="emaildetail__foot">
-          {renderActions(read.data)}
-        </DrawerFoot>
-      )}
     </Modal>
   );
 }
@@ -146,6 +142,7 @@ function ThreadState({
   read,
   formatWhen,
   renderRecords,
+  renderActions,
   related,
   notice,
 }: Readonly<{
@@ -157,6 +154,7 @@ function ThreadState({
   }>;
   formatWhen: ActivityWhenFormatter;
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  renderActions?: (presentation: EmailPresentation) => ReactNode;
   related?: () => ReactNode;
   notice?: string;
 }>) {
@@ -200,9 +198,11 @@ function ThreadState({
   }
   return (
     <EmailThread
+      key={read.data.id}
       presentation={read.data}
       formatWhen={formatWhen}
       renderRecords={renderRecords}
+      renderActions={renderActions}
       related={related}
       notice={notice}
     />

@@ -28,7 +28,7 @@ import (
 // removed is the opposite of finishing. Home still shows what was answered,
 // which is where a rep looks to see what she did.
 func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
-	defer timeStage("this_morning")()
+	defer timeStage(ctx, "this_morning")()
 	queue, ran, asOf, err := s.briefing.Queue(ctx)
 	if err != nil {
 		return theNight{}, err

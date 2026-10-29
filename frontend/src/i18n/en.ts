@@ -4119,8 +4119,9 @@ export const en = {
     "The text below is the forwarded mail, not words the sender wrote.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
-  "email.thread.textUnassessed":
-    "Margince has not yet checked whether it read all of this mail’s text.",
+  "email.thread.textUnassessed": "Email text not verified",
+  "email.thread.textUnassessedHint":
+    "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
   "email.thread.textUnreadable": "The text of this mail could not be read.",
   "email.thread.textUnreadableHint": "Open it in your mail program to see it.",
   "email.thread.replied": "Sent and added to this thread.",
