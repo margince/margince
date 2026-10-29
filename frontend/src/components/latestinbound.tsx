@@ -7,6 +7,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { markdownLines } from "../design-system/markdown-parse";
 import { Panel } from "../design-system/panel";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
@@ -148,13 +149,10 @@ function itemWords(activity: Activity): {
   return { subject, excerpt: excerpt || undefined };
 }
 
-// A form's note is one answer per line; the row reads them as one line.
+// A form's note is markdown with one answer per line, read the way the
+// timeline renders it so its quote marks never show as text.
 function oneLine(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(" · ");
+  return markdownLines(text).join(" · ");
 }
 
 function When({ activity }: Readonly<{ activity: Activity }>) {

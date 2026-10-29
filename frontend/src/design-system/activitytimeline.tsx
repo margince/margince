@@ -12,6 +12,7 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
+import { markdownLines } from "./markdown-parse";
 import { provenanceOf } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
@@ -72,16 +73,26 @@ function timelineTitle(activity: Activity): string {
   // titling the row from the raw body puts the From/To preamble, or a sign-off,
   // where the reason for the mail should be.
   const raw = activity.body ?? "";
-  const body =
-    activity.kind === "email"
-      ? emailSummaryText(raw)
-      : raw.replace(/\s+/g, " ").trim();
+  const body = titleText(activity, raw);
   if (!body) {
     return activity.kind;
   }
   return body.length > TIMELINE_TITLE_MAX
     ? `${body.slice(0, TIMELINE_TITLE_MAX - 1)}…`
     : body;
+}
+
+// A written body is markdown, so its title is the text it renders, not its
+// syntax.
+function titleText(activity: Activity, raw: string): string {
+  if (activity.kind === "email") return emailSummaryText(raw);
+  const written = writtenAsMarkdown({
+    kind: timelineKind(activity.kind),
+    transcript: isTranscriptActivity(activity),
+  });
+  return written
+    ? markdownLines(raw).join(" ")
+    : raw.replace(/\s+/g, " ").trim();
 }
 
 // The deal a row is filed against, as a chip. Absent when the row names none,

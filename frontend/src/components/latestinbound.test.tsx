@@ -123,6 +123,23 @@ describe("the Just in panel", () => {
       screen.getByText("We run 45 field reps. · Team size: 40-60"),
     ).toBeTruthy();
   });
+
+  it("reads a quoted website form as the words the visitor sent", () => {
+    const form = activity("form", {
+      kind: "note",
+      source: "web_form",
+      subject: "Website form: Contact form",
+      body: "> We would like a demo next week\n>\n> Name: Pat Quill\n> Email: pat@example.test",
+    });
+    withProviders(
+      <LatestInboundPanel latest={{ activity: form, kind: "web_form" }} />,
+    );
+    expect(
+      screen.getByText(
+        "We would like a demo next week · Name: Pat Quill · Email: pat@example.test",
+      ),
+    ).toBeTruthy();
+  });
 });
 
 describe("the Just in line in the record's head", () => {
