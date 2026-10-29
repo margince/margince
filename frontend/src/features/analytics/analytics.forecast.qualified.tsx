@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
-import { type Locale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
@@ -10,13 +10,13 @@ type Readings = components["schemas"]["ForecastReadings"];
 export function QualifiedAnswer({
   readings,
   money,
-  locale,
 }: Readonly<{
   readings: Readings;
   money: (minor: number | null | undefined) => string;
-  locale: Locale;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const qualified = readings.qualified;
   if (!qualified) {
     return null;
@@ -31,7 +31,7 @@ export function QualifiedAnswer({
       </p>
       {qualified.excluded_count > 0 && (
         <p className="t-caption">
-          {t("forecast.qualifiedLeftOut", {
+          {plural("forecast.qualifiedLeftOut", qualified.excluded_count, {
             count: formatNumber(qualified.excluded_count, locale),
             amount: money(qualified.excluded_minor),
           })}
@@ -39,7 +39,7 @@ export function QualifiedAnswer({
       )}
       {qualified.unknown_count > 0 && (
         <p className="t-caption">
-          {t("forecast.qualifiedUnknown", {
+          {plural("forecast.qualifiedUnknown", qualified.unknown_count, {
             count: formatNumber(qualified.unknown_count, locale),
             amount: money(qualified.unknown_minor),
           })}

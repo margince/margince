@@ -432,11 +432,11 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
   const answer = await screen.findByText(/the customer still supports/i);
   expect(answer.textContent).toContain("600.00");
   expect(
-    (await screen.findByText(/while their review is open/i)).textContent,
-  ).toContain(": 3 (");
+    (await screen.findByText(/while their reviews are open/i)).textContent,
+  ).toContain("3 deals (");
   expect(
-    (await screen.findByText(/could not judge them/i)).textContent,
-  ).toContain(": 1 (");
+    (await screen.findByText(/could not judge it/i)).textContent,
+  ).toContain("1 deal (");
 });
 
 // While enforcement is off the server sends no qualified block, and the screen

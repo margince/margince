@@ -287,7 +287,7 @@ function ForecastAnswer({
           {call && (
             <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
           )}
-          <QualifiedAnswer readings={readings} money={money} locale={locale} />
+          <QualifiedAnswer readings={readings} money={money} />
         </PanelBody>
       </Panel>
 

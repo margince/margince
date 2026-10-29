@@ -7108,12 +7108,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
   "review.dealViability": "Kunde meldet sich nicht mehr",
+  "forecast.qualifiedLeftOut_one":
+    "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} Deals ({amount}) bleiben draußen, solange ihre Prüfung offen ist.",
+  "forecast.qualifiedUnknown_one":
+    "{count} Deal ({amount}) zählt nicht, weil die letzte Prüfung ihn nicht beurteilen konnte.",
+  "forecast.qualifiedUnknown_other":
+    "{count} Deals ({amount}) zählen nicht, weil die letzte Prüfung sie nicht beurteilen konnte.",
   "forecast.qualifiedAnswer":
     "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
-  "forecast.qualifiedLeftOut":
-    "Deals, die ausgelassen sind, solange ihre Prüfung offen ist: {count} ({amount}).",
-  "forecast.qualifiedUnknown":
-    "Deals, die nicht zählen, weil die letzte Prüfung sie nicht beurteilen konnte: {count} ({amount}).",
   "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
   "review.enforcementHint":
     "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",

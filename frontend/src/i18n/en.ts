@@ -7141,12 +7141,16 @@ export const en = {
   "review.noEconomicBuyer": "No signer identified",
   "review.buyerSilent": "Buyer has gone quiet",
   "review.dealViability": "Customer has gone quiet",
+  "forecast.qualifiedLeftOut_one":
+    "{count} deal ({amount}) is left out while its review is open.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} deals ({amount}) are left out while their reviews are open.",
+  "forecast.qualifiedUnknown_one":
+    "{count} deal ({amount}) is not counted because the last check could not judge it.",
+  "forecast.qualifiedUnknown_other":
+    "{count} deals ({amount}) are not counted because the last check could not judge them.",
   "forecast.qualifiedAnswer":
     "Won plus confirmed commits the customer still supports: {evidence}. Weighted: {weighted}.",
-  "forecast.qualifiedLeftOut":
-    "Deals left out while their review is open: {count} ({amount}).",
-  "forecast.qualifiedUnknown":
-    "Deals not counted because the last check could not judge them: {count} ({amount}).",
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",

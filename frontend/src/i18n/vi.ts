@@ -6934,15 +6934,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
   "review.dealViability": "Khách hàng đã im lặng",
+  "forecast.qualifiedLeftOut_one":
+    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
+  "forecast.qualifiedUnknown_one":
+    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
+  "forecast.qualifiedUnknown_other":
+    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
   "forecast.qualifiedAnswer":
     "Deal đã chốt và Commit đã xác nhận mà khách hàng vẫn ủng hộ: {evidence}. Có trọng số: {weighted}.",
-  "forecast.qualifiedLeftOut":
-    "Số deal bị loại ra khi việc xem xét còn mở: {count} ({amount}).",
-  "forecast.qualifiedUnknown":
-    "Số deal không được tính vì lần kiểm tra gần nhất không đánh giá được: {count} ({amount}).",
   "review.enforcementLabel": "Chỉ tính deal được khách hàng ủng hộ",
   "review.enforcementHint":
-    "Deal có khách hàng đã im lặng sẽ ra khỏi dự báo đã xác thực cho đến khi có người xem xét. Các số liệu khác không đổi.",
+    "Deal có khách hàng ngừng trả lời sẽ ra khỏi dòng các deal được khách hàng ủng hộ cho đến khi được xem xét. Các số liệu khác không đổi.",
   "review.enforcementOn": "Dự báo đã xác thực đang bật.",
   "review.enforcementOff": "Dự báo đã xác thực đang tắt.",
   "review.enforcementAdminOnly": "Chỉ admin mới đổi được mục này.",
