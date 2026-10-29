@@ -17,10 +17,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -252,5 +254,51 @@ func TestIndividualPerformanceOffWithholdsEveryColleaguesFact(t *testing.T) {
 	if facts[0].OwnerWithheld || !facts[1].OwnerWithheld || facts[2].OwnerWithheld {
 		t.Errorf("with the switch off, withheld = own %v, colleague %v, unowned %v; want false, true, false",
 			facts[0].OwnerWithheld, facts[1].OwnerWithheld, facts[2].OwnerWithheld)
+	}
+}
+
+// exportShare downloads a frozen share's CSV as reader.
+func (e *forecastEnv) exportShare(t *testing.T, reader context.Context, token string) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/v1/forecast/shared/"+token+"/export.csv", nil).WithContext(reader)
+	rec := httptest.NewRecorder()
+	e.shareRoutes().ExportForecastShare(rec, req, token)
+	return rec.Code, rec.Body.String()
+}
+
+// A frozen company forecast's CSV lists each deal's owner. With the switch off
+// it keeps the reader's own and names no colleague, on the same resolver the
+// screen reads through.
+func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) {
+	e := setupForecast(t)
+	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
+	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
+	for _, owner := range append([]ids.UUID{e.Rep3}, members...) {
+		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
+	}
+	id := e.freezeWorkspace(t)
+	_, token := e.issue(e.writerCtx(t), t, NewShare{
+		Kind: shareKindSnapshot, Target: "someone@example.test",
+		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace}, SnapshotID: &id,
+		ExpiresAt: time.Now().UTC().Add(24 * time.Hour),
+	})
+	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
+
+	status, body := e.exportShare(t, reader, token)
+	if status != http.StatusOK || !strings.Contains(body, e.Rep3.String()) {
+		t.Fatalf("with the switch on the export = %d and names the colleague %v, want 200 and yes", status, strings.Contains(body, e.Rep3.String()))
+	}
+	e.showIndividualPerformance(t, false)
+	status, body = e.exportShare(t, reader, token)
+	if status != http.StatusOK {
+		t.Fatalf("with the switch off the export = %d, want 200", status)
+	}
+	if !strings.Contains(body, e.Rep1.String()) {
+		t.Error("with the switch off the export dropped the reader's own owner id")
+	}
+	for _, colleague := range append([]ids.UUID{e.Rep3}, members...) {
+		if strings.Contains(body, colleague.String()) {
+			t.Errorf("with the switch off the export names colleague %s", colleague)
+		}
 	}
 }
