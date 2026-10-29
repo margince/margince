@@ -64,6 +64,9 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	if err != nil {
 		return nil, err
 	}
+	// A window short of its limit holds everything the read may reach below
+	// its bound. See coverThreadStart for why that has to reach the cursor.
+	covered := len(messages) < extractThreadMessages
 	// Nothing older LEFT is not the same as nothing to read. A thread grows at
 	// the same instant as its newest message — the count moves and the clock
 	// does not — and one whose history is fully covered has an empty older
@@ -76,10 +79,36 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 		}
 	}
 	messages = finishThreadWindow(ctx, thread, messages)
+	if covered {
+		coverThreadStart(thread)
+	}
 	if olderThan != nil {
 		return withCurrentThreadContext(ctx, tx, thread.Key, messages)
 	}
 	return messages, nil
+}
+
+// coverThreadStart lowers this read's cursor to the thread's own oldest
+// message, once nothing older is left that the read may reach.
+//
+// The window reads one correspondence on the thread and only mail open to
+// automatic reading, while threadHasMoved holds the cursor against EVERY
+// message on the key. Mail of another correspondence on the same key, or
+// older mail the window may not show, therefore stays below the cursor for
+// good: the thread is due again every pass, the older window is empty every
+// time, and the newest window is read again on the fallback, unchanged and at
+// full price, for as long as the thread exists. Those messages are not this
+// reading's to read in any pass, so covering them records nothing it skipped.
+func coverThreadStart(thread *settledThread) {
+	if thread.Oldest == nil || thread.OldestID == nil {
+		return
+	}
+	if thread.ReadFromNow != nil && thread.ReadFromIDNow != nil &&
+		(thread.ReadFromNow.Before(*thread.Oldest) ||
+			(thread.ReadFromNow.Equal(*thread.Oldest) && thread.ReadFromIDNow.String() <= thread.OldestID.String())) {
+		return
+	}
+	thread.ReadFromNow, thread.ReadFromIDNow = thread.Oldest, thread.OldestID
 }
 
 // threadWindow reads one window, oldest first. olderThan bounds it above; nil
