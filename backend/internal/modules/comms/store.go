@@ -328,12 +328,13 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		// branch.
 		var args []any
 		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
-		return tx.QueryRow(ctx, `
+		query := `
 			UPDATE comms_outbound
-			   SET status = 'sent', provider_message_id = `+arg(receipt.ProviderMessageID)+`, sent_at = `+arg(s.now().UTC())+`,
-			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(`+arg(receipt.FromAddress)+`, ''), from_address)
-			 WHERE id = `+arg(id)+` AND status = 'pending'
-			RETURNING activity_id, coalesce(message_id, '')`, args...).Scan(&activityID, &staged)
+			   SET status = 'sent', provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
+			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
+			 WHERE id = ` + arg(id) + ` AND status = 'pending'
+			RETURNING activity_id, coalesce(message_id, '')`
+		return tx.QueryRow(ctx, query, args...).Scan(&activityID, &staged)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, "", ErrTerminal
