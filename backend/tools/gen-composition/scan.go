@@ -43,40 +43,34 @@ type extensionUnit struct {
 	Frontend *unitFrontend
 }
 
-// scanExtensions reads the enabled set. A capability layer this composer
-// cannot compose yet is a hard error, not a silent drop — an extension
-// shipping one must not build until its composition slice exists. There are
-// none left today (unbuiltCapabilityLayers is empty); the rule outlives the
-// list.
+// scanExtensions reads the enabled set: the extensions the instance's go.mod
+// requires (instanceUnits). A folder under extensions/ that go.mod does not
+// require is not turned on. A capability layer this composer cannot compose
+// yet is a hard error, not a silent drop. None are left today
+// (unbuiltCapabilityLayers is empty), and the rule outlives the list.
 func scanExtensions(root string) ([]extensionUnit, error) {
-	entries, err := os.ReadDir(filepath.Join(root, "extensions"))
+	sources, err := instanceUnits(root)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
-	var units []extensionUnit
-	for _, entry := range entries {
-		if entry.Type()&fs.ModeSymlink != 0 {
-			// IsDir() is false for a symlink, so without this check a
-			// symlinked unit would silently drop out of the composed
-			// binary while sitting visibly under extensions/.
-			return nil, fmt.Errorf("extensions/%s: a symlinked entry is not composable — an enabled unit is a plain directory tree", entry.Name())
-		}
-		if !entry.IsDir() {
-			continue // approvals.lock, .gitkeep
-		}
-		name := entry.Name()
+	units := make([]extensionUnit, 0, len(sources))
+	for _, src := range sources {
 		// The ONE unit-name rule, published on the seam: scan-time
 		// acceptance must never drift from boot-time validation.
-		if err := extension.Name(name).Validate(); err != nil {
-			return nil, fmt.Errorf("extensions/%s: %w", name, err)
+		if err := extension.Name(src.name).Validate(); err != nil {
+			return nil, fmt.Errorf("%s: %w", src.modulePath, err)
 		}
-		dir := filepath.Join(root, "extensions", name)
-		unit, err := scanUnit(name, dir)
+		if _, err := os.Stat(src.dir); src.fetched && os.IsNotExist(err) {
+			return nil, fmt.Errorf("%s@%s is not fetched yet; run make composition", src.modulePath, src.version)
+		}
+		unit, err := scanUnit(src.name, src.dir)
 		if err != nil {
 			return nil, err
+		}
+		// A downloaded go.mod may name any module. Composed under another path,
+		// it would stand in for that module everywhere, core's imports included.
+		if src.fetched && unit.ModulePath != src.modulePath {
+			return nil, fmt.Errorf("%s@%s declares module %q in its go.mod; refused, since it would replace that module in the whole build", src.modulePath, src.version, unit.ModulePath)
 		}
 		units = append(units, unit)
 	}
@@ -149,7 +143,7 @@ func scanUnit(name, dir string) (extensionUnit, error) {
 		// but a dependency tree, and "no Go module" sends whoever removed the
 		// unit looking for a go.mod they deliberately deleted.
 		if empty, err := holdsOnlyInstalledOutput(dir); err == nil && empty {
-			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not, and presence under extensions/ IS enablement; remove the directory (`rm -rf extensions/%s`) and re-run `pnpm install` to prune the workspace member", name, name)
+			return extensionUnit{}, fmt.Errorf("extensions/%s holds nothing but installed dependencies — its source is gone but the directory is not; remove its require from the instance's go.mod, or restore its source", name)
 		}
 		return extensionUnit{}, fmt.Errorf("extensions/%s: nothing to compose (no Go module)", name)
 	case err != nil:
@@ -385,6 +379,13 @@ func coreDigest(root string) (string, error) {
 		// go.sum may legitimately be absent (a dependency-free member);
 		// absence digests as empty, so appearing registers as a change.
 		if err := h.addFileOrEmpty(member + "/go.sum"); err != nil {
+			return "", err
+		}
+	}
+	// The instance's go.mod and go.sum decide which unit, at which version, is
+	// composed; a changed require must restale the fast probe too.
+	for _, rel := range []string{instanceDirName + "/go.mod", instanceDirName + "/go.sum"} {
+		if err := h.addFileOrEmpty(rel); err != nil {
 			return "", err
 		}
 	}

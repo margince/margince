@@ -149,10 +149,12 @@ jobs:
               - 'frontend/src/mcp-apps/forbidden.json'
               # The dev compose stack the DB-backed lanes boot.
               - 'docker-compose.dev.yml'
+              - 'go.mod'
               - 'go.work'
               - 'go.work.sum'
               - 'Makefile'
               - 'scripts/**'
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -246,6 +248,7 @@ jobs:
               # or edits a fragment skips this job entirely, which is a lane
               # skipping generation and passing silently: exactly the failure
               # mode the composed lane exists to catch.
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -289,6 +292,7 @@ jobs:
               - 'docker-compose.dev.yml'
               # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -571,7 +575,7 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       # Reads the `plain` flavour: this lane builds the untagged tree twice (once
-      # with extensions/ emptied, once composed), so it is the biggest single
+      # with no extension required, once composed), so it is the biggest single
       # beneficiary after the shards.
       - name: Restore the Go build cache
         uses: ./.github/actions/go-build-cache
@@ -580,29 +584,29 @@ jobs:
       # working-directory: . on the root-level steps — the workflow default
       # (backend) would resolve fixtures/ and extensions/ under backend/.
       #
-      # The EMPTY installation stays a supported, proven state: with the
-      # tracked first-party units (extensions/de) moved aside, the
-      # composed wiring must be byte-identical to the committed vanilla
-      # stub and the composed build must pass — otherwise a regression
-      # that only breaks "remove the directory to disable" could merge,
-      # since the normal gates always see {de}.
-      - name: Vanilla lane (empty extensions/)
+      # The EMPTY installation stays a supported, proven state: composed
+      # from an instance whose go.mod requires no extension, the wiring must
+      # be byte-identical to the committed vanilla stub and the composed
+      # build must pass, since the normal gates always see instance/go.mod's
+      # set.
+      - name: Vanilla lane (an instance that requires no extension)
         working-directory: .
         run: |
-          stash="$RUNNER_TEMP/ext-stash"
-          mkdir -p "$stash"
-          find extensions -mindepth 1 -maxdepth 1 -type d -exec mv {} "$stash"/ \;
+          cp instance/go.mod "$RUNNER_TEMP/instance.go.mod"
+          printf 'module vanilla.local/instance\n\ngo 1.27.3\n' > instance/go.mod
           make -C backend composition build
           cmp build/composition/backend/extensions_gen.go composition/extensions_gen.go
-          find "$stash" -mindepth 1 -maxdepth 1 -exec mv {} extensions/ \;
+          cp "$RUNNER_TEMP/instance.go.mod" instance/go.mod
+      # Requiring a unit in instance/go.mod is what turns it on, from the folder
+      # it already sits in.
       - name: Enable the reference extension
         working-directory: .
-        run: cp -R fixtures/extensions/crm-hello extensions/
+        run: printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
       - name: Composed build + unit lane
         working-directory: .
         run: make -C backend build test check-composition
       # Tree-derived: every enabled unit's own module lane (the committed
-      # first-party extensions AND the copied-in reference fixture). The
+      # first-party extensions AND the required reference fixture). The
       # same run emits the merged coverage profile the sonarcloud job
       # consumes — extension units are their own modules, unreachable by
       # the shard profiles, and this job runs PARALLEL to the shard

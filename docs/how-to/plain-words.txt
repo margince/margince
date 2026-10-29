@@ -873,7 +873,6 @@ prefer
 prefix
 prepare
 prerequisite
-presence
 present
 preset
 press

@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -109,23 +110,33 @@ func TestEmittedWiringIsCanonicalGoSource(t *testing.T) {
 	})
 }
 
-// writeUnit lays out one extension dir under a temp extensions/ root.
+// writeUnit lays out one extension dir under a temp extensions/ root. It also
+// requires the unit in the root's instance go.mod, which is what turns it on.
 func writeUnit(t *testing.T, root, name string, files map[string]string) {
 	t.Helper()
+	requireUnit(t, root, name)
 	dir := filepath.Join(root, "extensions", name)
-	for rel, content := range files {
-		path := filepath.Join(dir, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
 	}
-	if len(files) == 0 {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			t.Fatal(err)
-		}
+	writeTree(t, dir, files)
+}
+
+// requireUnit adds extensions/<name> to the root's instance go.mod.
+func requireUnit(t *testing.T, root, name string) {
+	t.Helper()
+	goMod := filepath.Join(root, instanceDirName, "go.mod")
+	raw, err := os.ReadFile(goMod)
+	if os.IsNotExist(err) {
+		raw, err = []byte("module example.test/instance\n"), os.MkdirAll(filepath.Dir(goMod), 0o755)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	modPath := "example.test/ext/" + name
+	line := fmt.Sprintf("require %s v0.0.0\nreplace %s => ../extensions/%s\n", modPath, modPath, name)
+	if err := os.WriteFile(goMod, append(raw, line...), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -230,24 +241,6 @@ func TestScanExtensions(t *testing.T) {
 		}
 	})
 
-	t.Run("missing extensions dir is vanilla", func(t *testing.T) {
-		units, err := scanExtensions(t.TempDir())
-		if err != nil || units != nil {
-			t.Fatalf("units, err = %v, %v — want the empty set", units, err)
-		}
-	})
-
-	t.Run("symlinked unit is refused, not skipped", func(t *testing.T) {
-		root := t.TempDir()
-		writeUnit(t, root, "real", map[string]string{"go.mod": goMod, "a.go": "package a\n"})
-		if err := os.Symlink(filepath.Join(root, "extensions", "real"), filepath.Join(root, "extensions", "linked")); err != nil {
-			t.Fatal(err)
-		}
-		_, err := scanExtensions(root)
-		if err == nil || !strings.Contains(err.Error(), "symlinked entry") {
-			t.Fatalf("err = %v, want the symlink refusal", err)
-		}
-	})
 }
 
 func TestComposedWorkListsMembersSorted(t *testing.T) {

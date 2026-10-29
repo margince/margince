@@ -31,7 +31,7 @@ package gates
 // only manifests would report a clean sweep over capabilities it cannot see.
 // The declaration the manifest is generated FROM carries all of them.
 //
-// A staged fixture counts as a declarer. CI copies it into the tier and runs the
+// A staged fixture counts as a declarer. CI requires it in instance/go.mod and runs the
 // composed build, the unit lane and its self-tests over it. The workflow's own
 // staging step names it; a fixture nothing stages is walked by nobody.
 
@@ -65,8 +65,8 @@ const (
 	ciWorkflow = "../.github/workflows/ci.yml"
 )
 
-// stagingStep matches a workflow step copying one fixture unit into the tier.
-var stagingStep = regexp.MustCompile(`cp -R fixtures/extensions/([\w-]+) extensions/`)
+// stagingStep matches a workflow step requiring one fixture unit from its folder.
+var stagingStep = regexp.MustCompile(`=> \.\./fixtures/extensions/([\w-]+)`)
 
 // identityFields are the two fields of extension.Extension that name the unit
 // rather than granting it anything. They are excluded by NAME, and their
@@ -292,8 +292,8 @@ func readUnit(t *testing.T, dir, name string) (unit, bool) {
 	return unit{name: name, capabilities: declaredCapabilities(t, dir), layers: shippedLayers(t, dir)}, true
 }
 
-// stagedFixtures reads every fixture unit the CI workflow copies into the tier.
-// A staged name with no unit behind it fails: the step would copy nothing.
+// stagedFixtures reads every fixture unit the CI workflow requires.
+// A staged name with no unit behind it fails: the step would require nothing.
 func stagedFixtures(t *testing.T) []unit {
 	t.Helper()
 	var units []unit
