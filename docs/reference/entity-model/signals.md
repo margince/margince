@@ -21,7 +21,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | `entity_unkeyed` | `boolean`, default `false` | yes |  |
 | `evidence` | `jsonb`, default `'[]'::jsonb` | yes | Per-claim evidence; a claim without evidence is omitted. |
 | `fingerprint` | `text` |  |  |
-| `kind` | `text` | yes | The first six are what a human files by hand. |
+| `kind` | `text` | yes | One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `raw_ref` | `text` |  | Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention. |
 | `resolution_confidence` | `numeric` |  |  |
@@ -61,7 +61,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 - `signal_entity_project_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_project_id IS DISTINCT FROM CASE WHEN (entity_type = 'project') THEN entity_id ELSE NULL::uuid END))))`
 - `signal_entity_shape`: `CHECK ((entity_unkeyed OR (entity_id IS NULL) OR (num_nonnulls(entity_deal_id, entity_company_id, entity_contact_id, entity_project_id) = 1)))`
 - `signal_entity_type_check`: `CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal', 'company', 'contact', 'project'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
-- `signal_kind_check`: `CHECK ((kind = ANY (ARRAY['stalled_deal', 'champion_left', 'reengagement', 'buying_intent', 'risk', 'other', 'contract_ended', 'new_opportunity', 'commitment_made', 'ghosted_thread', 'project_gone_quiet', 'funding', 'leadership_change', 'expansion', 'product_launch', 'technical_change'])))`
+- `signal_kind_check`: `CHECK (((kind = ANY (ARRAY['stalled_deal', 'champion_left', 'reengagement', 'buying_intent', 'risk', 'other', 'contract_ended', 'new_opportunity', 'commitment_made', 'ghosted_thread', 'project_gone_quiet', 'funding', 'leadership_change', 'expansion', 'product_launch', 'technical_change'])) OR (kind ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `signal_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `signal_resolution_confidence_check`: `CHECK (((resolution_confidence IS NULL) OR ((resolution_confidence >= (0)::numeric) AND (resolution_confidence <= (1)::numeric))))`
 - `signal_resolution_state_check`: `CHECK ((resolution_state = ANY (ARRAY['resolved', 'low_confidence', 'unresolved', 'dropped'])))`

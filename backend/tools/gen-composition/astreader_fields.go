@@ -25,6 +25,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.RecordKinds, err = r.readRecordKindDecls(kv.Value, file, extension.Name(r.unit))
 	case "ReportCounts", "ReportBreakdowns":
 		err = r.readReportsInto(m, name, kv.Value, file)
+	case "SignalTypes":
+		m.SignalTypes, err = r.readSignalTypes(kv.Value, file)
 	case "Panels":
 		m.Panels, err = r.readPanels(kv.Value, file)
 	case "Inbound":

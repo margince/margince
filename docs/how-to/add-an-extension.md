@@ -753,6 +753,50 @@ The reference page
 [an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-report-breakdowns-and-counts)
 lists what each part does.
 
+## Declare a signal type
+
+A unit can add its own kinds of signal. Each has an evidence layout, which says what a signal of that kind may carry.
+
+```go
+SignalTypes: []extension.SignalTypeDeclaration{{
+	Kind:  "ledger_loss",
+	Label: "Loss reported on a ledger account",
+	Evidence: []extension.SignalEvidenceField{
+		{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
+		{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+	},
+}},
+```
+
+| Field | Meaning |
+|---|---|
+| `Kind` | The short name, written like a record kind name. The stored kind is `ext:<unit>:<kind>`. |
+| `Label` | What a screen shows. It is also the summary of a signal that gives none. |
+| `Evidence` | The members a signal may carry. Each has a name, a label, a type (`SignalFieldText`, `SignalFieldNumber` or `SignalFieldBool`), and two flags. |
+| `Required` | A signal without the member is refused. |
+| `Personal` | The member holds personal data. It is removed when the contact the signal is about is erased or anonymized. |
+
+File a signal from a handler with the core port:
+
+```go
+sig, created, err := tx.Core().Signals().Create(ctx, "ledger_loss",
+	extension.SignalSubject{Type: "company", ID: companyID},
+	extension.SignalEvidence{Fields: map[string]any{"amount": 120.5}},
+	"ledger:acct-7:2026-10")
+```
+
+The subject is a deal, company, contact or project. The fingerprint is required. A second call with the same fingerprint
+files nothing and answers the signal already filed, with `created` false. A feed and a colleague who report the same
+event with the same fingerprint therefore leave one signal. The second call is still a read, so the row scope of the
+signed-in seat applies to it.
+
+Core adds a `provenance` member with the unit and the signed-in seat. You cannot set it. A scheduled job or a bus
+delivery cannot file a signal, because no seat stands behind it.
+
+The reference page
+[an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-signal-types-with-structured-evidence)
+lists what each part does.
+
 ## Draw a panel on a core page
 
 A unit with a frontend package can draw its own part of a page inline on a core page. Declare one

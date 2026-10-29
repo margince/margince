@@ -291,6 +291,11 @@ type Extension struct {
 	// They are data too, and core builds the only query that reads the field.
 	ReportBreakdowns []ReportBreakdown
 
+	// SignalTypes are the kinds of signal this unit adds beside core's own,
+	// each with an evidence layout declared as data. The unit files them
+	// through Core.Signals().Create.
+	SignalTypes []SignalTypeDeclaration
+
 	// FinanceSources are the accounting systems this unit can read into the
 	// core's finance mirror. Read only: nothing on the surface writes back to
 	// an accounting system. A provider may be supplied by one unit only.

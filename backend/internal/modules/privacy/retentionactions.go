@@ -216,6 +216,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 	if err == nil {
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
+	if err == nil {
+		err = redactSubjectExtensionSignals(ctx, tx, ids.From[ids.ContactKind](id))
+	}
 	return err
 }
 

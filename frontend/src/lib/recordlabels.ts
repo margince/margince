@@ -47,7 +47,12 @@ export function signalKindLabel(
   const key = Object.hasOwn(SIGNAL_KIND_LABELS, kind)
     ? SIGNAL_KIND_LABELS[kind]
     : undefined;
-  return key ? t(key) : kind.replaceAll("_", " ");
+  if (key) return t(key);
+  // An extension's kind reads `ext:<unit>:<kind>`; the unit prefix is plumbing.
+  const name = kind.startsWith("ext:")
+    ? kind.slice(kind.lastIndexOf(":") + 1)
+    : kind;
+  return name.replaceAll("_", " ");
 }
 
 // How serious a signal is, in the strip's own vocabulary of tones. `info` is

@@ -17043,17 +17043,14 @@ components:
         id: {type: string, format: uuid}
         kind:
           type: string
-          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other, contract_ended, new_opportunity, commitment_made, ghosted_thread, project_gone_quiet, funding, leadership_change, expansion, product_launch, technical_change]
+          pattern: '^([a-z_]+|ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31})$'
           description: |-
-            The first six are what a human files by hand. The rest are what the producers
-            raise: `contract_ended`, `new_opportunity` and `commitment_made` are read
-            out of a settled conversation by the `signal_extract` site, each citing the message
-            it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
-            interaction is ours, nobody answered it, and the account is one worth chasing;
-            `project_gone_quiet` is the same kind of comparison on a project — it is being
-            pursued or delivered and nothing has been filed against it for 30 days (the
-            `projects-gone-quiet` report's own rule). Its subject is the project
-            (`entity_type: project`), attributed to the project's company.
+            One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+            A client must treat a value it does not know as a kind of its own, never as an error.
+            Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+            `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+            `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+            `product_launch` and `technical_change`.
         source_channel:
           type: string
           enum: [derived, inbound, web, social, deal_room_engagement]
@@ -17134,6 +17131,21 @@ components:
         workstream:
           type: string
           description: The engagement named in the cited words, when present. Never inferred from the company name.
+        fields:
+          type: object
+          additionalProperties: true
+          description: |-
+            The members of an extension signal type's evidence layout. Only core writes it, when an
+            extension files a signal. A request that carries it is refused.
+        provenance:
+          $ref: '#/components/schemas/SignalProvenance'
+    SignalProvenance:
+      type: object
+      required: [unit, captured_by]
+      description: Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+      properties:
+        unit: {type: string, description: The extension that filed the signal.}
+        captured_by: {type: string, description: The user or agent whose invocation filed it.}
     SignalListResponse:
       type: object
       required: [data, page]

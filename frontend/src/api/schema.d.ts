@@ -38111,7 +38111,14 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description The first six are what a human files by hand. The rest are what the producers
+             * @description One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+             *     A client must treat a value it does not know as a kind of its own, never as an error.
+             *     Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+             *     `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+             *     `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+             *     `product_launch` and `technical_change`.
+             *
+             *     Among core's, the first six are what a human files by hand. The rest are what the producers
              *     raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
              *     out of a settled conversation by the `signal_extract` site, each citing the message
              *     it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -38120,9 +38127,8 @@ export interface components {
              *     pursued or delivered and nothing has been filed against it for 30 days (the
              *     `projects-gone-quiet` report's own rule). Its subject is the project
              *     (`entity_type: project`), attributed to the project's company.
-             * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch" | "technical_change";
+            kind: string;
             /**
              * @description Where the raw signal came from.
              * @default derived
@@ -38242,6 +38248,21 @@ export interface components {
             lifecycle_scope?: "company" | "workstream" | "unknown";
             /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
             workstream?: string;
+            /**
+             * @description The members of an extension signal type's evidence layout. Only core writes it, when an
+             *     extension files a signal. A request that carries it is refused.
+             */
+            fields?: {
+                [key: string]: unknown;
+            };
+            provenance?: components["schemas"]["SignalProvenance"];
+        };
+        /** @description Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused. */
+        SignalProvenance: {
+            /** @description The extension that filed the signal. */
+            unit: string;
+            /** @description The user or agent whose invocation filed it. */
+            captured_by: string;
         };
         /** @description One rep's statement about one contact, answering one refusal. */
         RecordCommunicationContextRequest: {

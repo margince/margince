@@ -86,10 +86,10 @@ func TestACorrectedSignalKeepsItsOldKindAndEvidenceInTheAudit(t *testing.T) {
 		t.Fatalf("setting a producer kind returned %v, want InvalidSignalKindError", err)
 	}
 
-	kind := crmcontracts.SignalKind("buying_intent")
+	kind := "buying_intent"
 	evidence := []crmcontracts.SignalEvidence{{Snippet: "three unanswered mails"}}
 	updated, err := store.UpdateSignal(ctx, ids.From[ids.SignalKind](ids.UUID(made.Id)), UpdateSignalInput{
-		Kind: (*string)(&kind), Evidence: &evidence,
+		Kind: &kind, Evidence: &evidence,
 	})
 	if err != nil {
 		t.Fatalf("correcting the signal: %v", err)

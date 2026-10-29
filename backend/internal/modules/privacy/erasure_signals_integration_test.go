@@ -11,11 +11,14 @@ package privacy
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/signaltypes"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
@@ -64,5 +67,53 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 	}
 	if served() != 0 {
 		t.Error("the old evidence in the correction's audit row is still served after the contact was erased")
+	}
+}
+
+func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
+	ctx := context.Background()
+	tx := subjectColumnsTx(ctx, t)
+	signaltypes.Register("erasetest", []extension.SignalTypeDeclaration{{
+		Kind: "loss", Label: "Loss",
+		Evidence: []extension.SignalEvidenceField{
+			{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber},
+			{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+		},
+	}})
+	subject, other := ids.New[ids.ContactKind](), ids.New[ids.ContactKind]()
+	for _, c := range []ids.ContactID{subject, other} {
+		mustExec(ctx, t, tx,
+			`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Someone', 'manual', 'human:test')`, c)
+	}
+	seed := func(kind string, about ids.ContactID) ids.UUID {
+		id := ids.NewV7()
+		mustExec(ctx, t, tx,
+			`INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolution_state, severity,
+			                     summary, evidence, status, detected_at, source, captured_by)
+			 VALUES ($1, $2, 'derived', 'contact', $3, 'resolved', 'info', 'Hedda reported a loss',
+			         '[{"snippet":"Hedda reported a loss","fields":{"amount":12,"reporter":"Hedda"},"provenance":{"unit":"erasetest","captured_by":"human:x"}}]'::jsonb,
+			         'open', now(), 'erasetest', 'test')`, id, kind, about)
+		return id
+	}
+	declared, undeclared, theirs := seed("ext:erasetest:loss", subject), seed("ext:erasetest:gone", subject), seed("ext:erasetest:loss", other)
+
+	if err := redactSubjectExtensionSignals(ctx, tx, subject); err != nil {
+		t.Fatal(err)
+	}
+	read := func(id ids.UUID) (summary, evidence string) {
+		if err := tx.QueryRow(ctx, `SELECT summary, evidence::text FROM signal WHERE id = $1`, id).Scan(&summary, &evidence); err != nil {
+			t.Fatal(err)
+		}
+		return summary, evidence
+	}
+	summary, evidence := read(declared)
+	if strings.Contains(summary+evidence, "Hedda") || !strings.Contains(evidence, `"amount": 12`) || !strings.Contains(evidence, `"unit": "erasetest"`) {
+		t.Errorf("a declared signal reads %q %s, want the name gone and the amount and provenance kept", summary, evidence)
+	}
+	if summary, evidence = read(undeclared); strings.Contains(summary+evidence, "Hedda") || strings.Contains(evidence, "amount") {
+		t.Errorf("a signal of an undeclared kind reads %q %s, want every member removed", summary, evidence)
+	}
+	if summary, evidence = read(theirs); !strings.Contains(summary+evidence, "Hedda") {
+		t.Errorf("a signal about another contact was redacted: %q %s", summary, evidence)
 	}
 }
