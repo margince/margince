@@ -227,6 +227,10 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// An extension proposed a record a message may belong to, or a reader decided
+	// one. Its own type because activity.updated carries a closed set of changed
+	// fields, and a proposal changes none of the message.
+	"activity.link_suggestion_changed": {activityStreamEntity, 1},
 	// A rep set a lapsed CONTACT aside so their own decay lane stops raising
 	// them, or put them back. The entity is the contact, which is what the
 	// judgement is about, the relationship's silence is a fact about them

@@ -62,6 +62,8 @@ type Core interface {
 	CustomFields() CustomFieldRepo
 	// Notices returns the door for telling a member about a record; see notices.go.
 	Notices() NoticeRepo
+	// LinkSuggestions returns the door for proposing where a message belongs; see linksuggestion.go.
+	LinkSuggestions() LinkSuggestionRepo
 }
 
 // ActivityRepo reads and writes the shared timeline, the record every other

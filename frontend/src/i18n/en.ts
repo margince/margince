@@ -2131,6 +2131,7 @@ export const en = {
   "history.field.cohort_promoted": "Messages attributed",
   "history.field.corrected": "Result corrected",
   "history.field.disposition": "Disposition",
+  "history.field.link_suggestion": "Suggested link",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Merged in from",
   "history.field.merged_into_id": "Merged into",
@@ -14491,6 +14492,22 @@ export const en = {
   "webhooks.event.activity.marked_handled.label": "Worklist item marked done",
   "webhooks.event.activity.marked_handled.when":
     "Someone marks a Worklist item done because they dealt with it another way.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Suggested link proposed or decided",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "An extension suggests which record a message belongs to, or someone accepts or rejects a suggestion.",
+  "linkSuggestions.title": "Suggested links",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} to {record} ({kind})",
+  "linkSuggestions.noSubject": "A message with no subject",
+  "linkSuggestions.kind.contact": "contact",
+  "linkSuggestions.kind.company": "company",
+  "linkSuggestions.kind.deal": "deal",
+  "linkSuggestions.kind.project": "project",
+  "linkSuggestions.accept": "File it there",
+  "linkSuggestions.reject": "Not there",
+  "linkSuggestions.unavailable":
+    "The suggested links could not be read. Try again later.",
   "webhooks.event.engagement.reply.label": "Reply received",
   "webhooks.event.engagement.reply.when":
     "An inbound message arrives in a thread you wrote in first.",

@@ -13015,6 +13015,51 @@ func (e LifecyclePreviewEvidenceScope) Valid() bool {
 	}
 }
 
+// Defines values for LinkSuggestionEntityType.
+const (
+	LinkSuggestionEntityTypeCompany LinkSuggestionEntityType = "company"
+	LinkSuggestionEntityTypeContact LinkSuggestionEntityType = "contact"
+	LinkSuggestionEntityTypeDeal    LinkSuggestionEntityType = "deal"
+	LinkSuggestionEntityTypeProject LinkSuggestionEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the LinkSuggestionEntityType enum.
+func (e LinkSuggestionEntityType) Valid() bool {
+	switch e {
+	case LinkSuggestionEntityTypeCompany:
+		return true
+	case LinkSuggestionEntityTypeContact:
+		return true
+	case LinkSuggestionEntityTypeDeal:
+		return true
+	case LinkSuggestionEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LinkSuggestionStatus.
+const (
+	LinkSuggestionStatusAccepted LinkSuggestionStatus = "accepted"
+	LinkSuggestionStatusPending  LinkSuggestionStatus = "pending"
+	LinkSuggestionStatusRejected LinkSuggestionStatus = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the LinkSuggestionStatus enum.
+func (e LinkSuggestionStatus) Valid() bool {
+	switch e {
+	case LinkSuggestionStatusAccepted:
+		return true
+	case LinkSuggestionStatusPending:
+		return true
+	case LinkSuggestionStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LinkedInReachFunction.
 const (
 	LinkedInReachFunctionFinance     LinkedInReachFunction = "finance"
@@ -44000,6 +44045,40 @@ type LinkFinanceSourceCustomerRequest struct {
 type LinkLeadCompanyRequest struct {
 	// CompanyId The company to link. The caller must be able to open it.
 	CompanyId openapi_types.UUID `json:"company_id"`
+}
+
+// LinkSuggestion defines model for LinkSuggestion.
+type LinkSuggestion struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// ActivitySubject The subject of the message. Empty when the message has none.
+	ActivitySubject *string            `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time          `json:"created_at"`
+	EntityId        openapi_types.UUID `json:"entity_id"`
+
+	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
+	EntityName *string                  `json:"entity_name,omitempty"`
+	EntityType LinkSuggestionEntityType `json:"entity_type"`
+	Id         openapi_types.UUID       `json:"id"`
+
+	// Reason One short sentence from the extension on why.
+	Reason string               `json:"reason"`
+	Score  float32              `json:"score"`
+	Status LinkSuggestionStatus `json:"status"`
+
+	// Unit The extension that proposed it.
+	Unit string `json:"unit"`
+}
+
+// LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
+type LinkSuggestionEntityType string
+
+// LinkSuggestionStatus defines model for LinkSuggestion.Status.
+type LinkSuggestionStatus string
+
+// LinkSuggestionList defines model for LinkSuggestionList.
+type LinkSuggestionList struct {
+	Data []LinkSuggestion `json:"data"`
 }
 
 // LinkedInAccount defines model for LinkedInAccount.
@@ -78772,6 +78851,15 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// (GET /link-suggestions)
+	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
+	// Accept a suggestion, which files the message under the record it names.
+	// (POST /link-suggestions/{id}/accept)
+	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+	// (POST /link-suggestions/{id}/reject)
+	RejectLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// The filters a record list may be narrowed by, for each record type.
 	// (GET /list-filters)
 	DescribeListFilters(w http.ResponseWriter, r *http.Request)
@@ -83359,6 +83447,24 @@ func (_ Unimplemented) DecideLegalReview(w http.ResponseWriter, r *http.Request,
 // Take back an open request.
 // (POST /legal-reviews/{id}/withdraw)
 func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records an extension suggests messages belong to, waiting for a reader to decide.
+// (GET /link-suggestions)
+func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a suggestion, which files the message under the record it names.
+// (POST /link-suggestions/{id}/accept)
+func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+// (POST /link-suggestions/{id}/reject)
+func (_ Unimplemented) RejectLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110624,6 +110730,90 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListLinkSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkSuggestions(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptLinkSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptLinkSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectLinkSuggestion operation middleware
+func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectLinkSuggestion(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeListFilters operation middleware
 func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 
@@ -126484,6 +126674,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/legal-reviews/{id}/withdraw", wrapper.WithdrawLegalReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/link-suggestions", wrapper.ListLinkSuggestions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/link-suggestions/{id}/accept", wrapper.AcceptLinkSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/link-suggestions/{id}/reject", wrapper.RejectLinkSuggestion)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/list-filters", wrapper.DescribeListFilters)

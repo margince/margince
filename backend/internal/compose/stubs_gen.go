@@ -2419,6 +2419,18 @@ func (stubs) WithdrawLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "WithdrawLegalReview")
 }
 
+func (stubs) ListLinkSuggestions(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLinkSuggestions")
+}
+
+func (stubs) AcceptLinkSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcceptLinkSuggestion")
+}
+
+func (stubs) RejectLinkSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RejectLinkSuggestion")
+}
+
 func (stubs) DescribeListFilters(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeListFilters")
 }

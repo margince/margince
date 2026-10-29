@@ -22,6 +22,7 @@ import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
 import { HiddenBacklogPanel } from "./worklist.hidden";
+import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
 import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import type {
@@ -343,6 +344,7 @@ export function WorklistBody({
           acts above it are safe to take, and a receipt folded shut is one
           nobody checks. */}
           <OptionalRelationships day={day} owner={owner} />
+          <LinkSuggestionsPanel />
           <HandledForYouPanel />
         </div>
       </div>
