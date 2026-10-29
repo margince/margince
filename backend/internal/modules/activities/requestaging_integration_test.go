@@ -165,10 +165,9 @@ func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 	t.Fatal("human-held task disappeared from its assignee's current tasks")
 }
 
-// A request whose reminder its assignee pinned is still held past the horizon,
-// so it stays on a colleague's queue. Completing the reminder settles it, and
-// the request leaves.
-func TestAPinnedRequestStaysPastTheHorizonUntilItsReminderIsDone(t *testing.T) {
+// A reminder its assignee pinned holds its request past the horizon: the aged
+// pass leaves it open and it stays the assignee's task, not a colleague's wait.
+func TestAPinnedReminderHoldsItsRequestPastTheHorizon(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	id := seedEmailRequest(t, e, "Please send the pricing", "commitment", OwedVerdictAsksUs)
@@ -180,22 +179,26 @@ func TestAPinnedRequestStaysPastTheHorizonUntilItsReminderIsDone(t *testing.T) {
 		`SELECT id, assignee_id FROM activity WHERE source_activity_id = $1`, id).Scan(&reminder, &assignee); err != nil {
 		t.Fatalf("reading the reminder the pass filed: %v", err)
 	}
+	if assignee != e.rep {
+		t.Fatalf("the pass filed the reminder for %s, want the addressed rep", assignee)
+	}
 	if err := store.PinWorklistRow(e.asSeat(assignee), WorklistRowRef{Source: "task", RowID: reminder.String()}); err != nil {
 		t.Fatalf("pinning the reminder: %v", err)
 	}
-	reader := e.asSeat(e.other)
-	if assignee == e.other {
-		reader = e.asSeat(e.rep)
-	}
 
-	if !e.waitingAt(reader, t, pastTheHorizon)[id] {
-		t.Fatal("a request its assignee pinned left the queue 200 days later: the horizon dropped a held request")
+	if err := store.CaptureEmailRequests(asClassifier(e), pastTheHorizon); err != nil {
+		t.Fatal(err)
 	}
-	done := true
-	if _, err := store.UpdateActivity(e.asSeat(assignee), ids.From[ids.ActivityKind](reminder), UpdateActivityInput{IsDone: &done}); err != nil {
-		t.Fatalf("completing the reminder: %v", err)
+	var archived bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT archived_at IS NOT NULL FROM activity WHERE id = $1`, reminder).Scan(&archived); err != nil {
+		t.Fatal(err)
 	}
-	if e.waitingAt(reader, t, pastTheHorizon)[id] {
-		t.Error("a request whose reminder was completed is still on the queue")
+	if archived {
+		t.Fatal("the aged pass retired a reminder its assignee pinned")
 	}
+	if e.waitingAt(e.asSeat(e.other), t, pastTheHorizon)[id] {
+		t.Error("a pinned request also appeared as a colleague's wait")
+	}
+	assertCurrentHeldRequest(t, e, reminder)
 }
