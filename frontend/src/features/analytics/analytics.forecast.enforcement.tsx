@@ -31,10 +31,18 @@ export function EnforcementSwitch() {
   });
   const preview = state.data?.preview;
   const flip = useMutation({
-    mutationFn: async (enabled: boolean) =>
+    // The digest rides with the click, so it is the one on screen when the
+    // admin pressed, not one an earlier render captured.
+    mutationFn: async ({
+      enabled,
+      digest,
+    }: {
+      enabled: boolean;
+      digest?: string;
+    }) =>
       unwrap(
         await api.PUT("/forecast/assurance/enforcement", {
-          body: { enabled, preview_digest: preview?.digest },
+          body: { enabled, preview_digest: digest },
         }),
       ),
     onError: async () => {
@@ -85,7 +93,9 @@ export function EnforcementSwitch() {
             checked={state.data.state === "enforcing"}
             pending={flip.isPending}
             reason={reason}
-            onChange={(next) => flip.mutate(next)}
+            onChange={(next) =>
+              flip.mutate({ enabled: next, digest: preview?.digest })
+            }
           />
         }
       />
