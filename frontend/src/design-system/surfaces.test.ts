@@ -33,8 +33,7 @@ import {
 } from "../../scripts/lib/surface-ladder";
 import { blocks, resolve, themes } from "./tokens-testing";
 
-// A rule outside surfaces.css that names a rung or paints a member overrules the
-// ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
+// A rule outside surfaces.css that names a rung or paints a member overrules the ladder. The ledger holds what predates it; the ceiling keeps it shrinking.
 const LEDGER_CEILING = { spellings: 78, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
@@ -48,8 +47,7 @@ const ledgerPath = join(here, "surfaces.ledger.txt");
 const tokensPath = join(here, "tokens.css");
 const TOKEN_SHEETS = new Set([tokensPath, join(here, "brand.css")]);
 
-// Probes name properties no sheet defines; spelling the call through this keeps
-// the undefined-property gate from reading a fixture as shipped CSS.
+// Probes name properties no sheet defines; spelling the call through this keeps the undefined-property gate from reading a fixture as shipped CSS.
 const ref = (property: string) => `var(${property})`;
 const VAR = /var\((--[\w-]+)\)/g;
 const ALIAS = /^var\((--[\w-]+)\)$/;
@@ -78,8 +76,7 @@ function declarations(body: string): Declaration[] {
 
 const oneLine = (selector: string) => selector.replace(/\s+/g, " ");
 
-// The selectors tokens.css states its palette under: rules that name no
-// element and hold tokens only.
+// The selectors tokens.css states its palette under: rules that name no element and hold tokens only.
 const THEME_ROOTS = new Set(
   rulesOf([tokensPath])
     .filter(
@@ -107,8 +104,7 @@ const tokenDefinitions = rulesOf([...TOKEN_SHEETS]).flatMap((rule) =>
   ),
 );
 
-// The rungs and every alias of one, either way and in either theme: --paneEdge
-// picks level 1 as surely as --ladder1Edge does. Not a mix: it derives a new colour.
+// The rungs and every alias of one, either way and in either theme: --paneEdge picks level 1 as surely as --ladder1Edge does. Not a mix: it derives a new colour.
 function rungTokens(definitions: readonly Declaration[]): Set<string> {
   const rungs = new Set(
     [...PAGE_RUNGS, OVERLAY_RUNG].flatMap((rung) =>
@@ -137,7 +133,6 @@ const NAMES_A_RUNG = new RegExp(
 const spelling = (rule: Rule, { property, value }: Declaration) =>
   `${relative(frontendRoot, rule.file)}: ${oneLine(rule.selector)} { ${property}: ${value} }`;
 
-/** Every declaration outside the ladder that names a rung, one line each. */
 function cssSpellings(rules: readonly Rule[]): string[] {
   return rules.flatMap((rule) => {
     if (rule.file === ladderPath) return [];
@@ -148,7 +143,6 @@ function cssSpellings(rules: readonly Rule[]): string[] {
   });
 }
 
-/** Every string a script holds that names a rung, or builds a var() a gate cannot read. */
 function scriptSpellings(path: string, text: string): string[] {
   const found: string[] = [];
   const walk = (node: ts.Node) => {
@@ -232,8 +226,7 @@ const within = (
   ...wholes: readonly ReadonlySet<string>[]
 ) => [...part].every((name) => wholes.some((whole) => whole.has(name)));
 
-// A rule touches a member when its subject may be that element. It names the
-// member's class, or names a classless member's element in its context.
+// A rule touches a member when its subject may be that element: it names the member's class, or a classless member's element in its context.
 function touches(rule: Written, member: Written): boolean {
   if (member.own.size === 0) {
     return rule.type === member.type && within(member.context, rule.context);
@@ -357,7 +350,6 @@ function covers(
   );
 }
 
-/** Every paint outside the ladder that outranks it on a member, one line each. */
 function memberPaints(
   rules: readonly Rule[],
   members: readonly Written[],
@@ -629,8 +621,7 @@ describe("a pane's ground is its depth", () => {
     );
   }
 
-  // The scenarios run on a short list: the sheet is ladderSheet's output
-  // (asserted above), and the two tests at the end hold every entry.
+  // The scenarios run on a short list: the sheet is ladderSheet's output (asserted above), and the two tests at the end hold every entry.
   const used = [
     ".panel",
     ".card",
@@ -789,8 +780,7 @@ describe("a pane's ground is its depth", () => {
     }, outer);
   }
 
-  // jsdom stops matching a long :where() pair past 47 of the ladder's entries
-  // (measured), and sooner for longer names, so the full lists run in chunks.
+  // jsdom stops matching a long :where() pair past 47 of the ladder's entries (measured), and sooner for longer names, so the full lists run in chunks.
   const CHUNK = 12;
   const chunks = (list: readonly string[]) =>
     Array.from({ length: Math.ceil(list.length / CHUNK) }, (_, at) =>
@@ -888,8 +878,7 @@ const paintsAGradient = ({ property, value }: Declaration) =>
     ),
   );
 
-// A pseudo-element lies under its host's content, an element under its
-// parent's, and a gradient under its own element's.
+// A pseudo-element lies under its host's content, an element under its parent's, and a gradient under its own element's.
 function underlayHosts(rules: readonly Rule[]): string[] {
   const values = customValues(rules);
   const outside = rules.filter((rule) => rule.file !== ladderPath);
