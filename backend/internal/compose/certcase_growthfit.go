@@ -286,7 +286,7 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if spoken := firstPersonText(kept); spoken != "" {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
-			Detail: fmt.Sprintf("a claim speaks as I: %q", spoken),
+			Detail: fmt.Sprintf("a claim or reason speaks as I: %q", spoken),
 		}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
@@ -317,27 +317,18 @@ func firstPersonText(kept companydossier.GrowthFitClaims) string {
 	return ""
 }
 
-// speaksAsI splits on whitespace alone, so "I/O-heavy" and "i.e." stay one word
-// each and never read as the pronoun.
+// speaksAsI splits on whitespace and on em and en dashes, never on "/" or "-".
+// A pronoun after a dash is found, and "I/O-heavy" stays one word.
 func speaksAsI(text string) bool {
-	words := strings.Fields(strings.ReplaceAll(text, "’", "'"))
-	for i, field := range words {
-		word := strings.TrimFunc(field, unicode.IsPunct)
-		if firstPersonSingular[word] && (word != "I" || !namesANumeral(words, i)) {
+	words := strings.FieldsFunc(strings.ReplaceAll(text, "’", "'"), func(r rune) bool {
+		return unicode.IsSpace(r) || r == '—' || r == '–'
+	})
+	for _, field := range words {
+		if firstPersonSingular[strings.TrimFunc(field, unicode.IsPunct)] {
 			return true
 		}
 	}
 	return false
-}
-
-// namesANumeral reads a bare "I" after a capitalised word mid-sentence as the
-// numeral in "Series I". At a sentence's start that "I" is the pronoun.
-func namesANumeral(words []string, i int) bool {
-	if i < 2 || strings.ContainsAny(words[i-2][len(words[i-2])-1:], ".!?:") {
-		return false
-	}
-	before := []rune(words[i-1])
-	return unicode.IsUpper(before[0]) && unicode.IsLetter(before[len(before)-1])
 }
 
 func (c *growthFitCase) bandAccepted(band crmcontracts.GrowthFitBand) bool {

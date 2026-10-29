@@ -28,7 +28,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
-	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -57,23 +56,21 @@ positive_factors and negative_factors are why they do or do not fit. whitespace 
 Our offering is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
-Write one claim per sentence.`
-
-// growthFitClaimVoice is composed after promptvoice.Rule: of two instructions
-// that disagree, a model keeps the later one.
-const growthFitClaimVoice = `Claims have no speaker. This overrides the VOICE block's line on saying "I": in every claim's text and every sub-score reason, never refer to yourself, so no "I", "me" or "my" in whatever language you write. State the finding itself. Write a recommendation as the move: "Focus on their plant managers", never "I suggest you focus on their plant managers". "We" and "our" still name the company the reader works for.`
+Write one claim per sentence.
+Every claim's text and every sub-score reason is a plain statement with no speaker: no "I", "me" or "my", in whatever language you write. State the finding itself. Write a recommendation as the move: "Focus on their plant managers", never "I suggest you focus on their plant managers". "We" and "our" name the company the reader works for.`
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
 // The assessment is filed on the company and read by whoever opens it, so it
 // takes the installation's shared language.
 func growthFitSystemFor(fence promptfence.Fence, lang string) string {
-	return growthFitSystem + "\n" + promptvoice.Rule + "\n" + growthFitClaimVoice + "\n" +
-		promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
+	return growthFitSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
 }
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case
 // measures the request production actually sends rather than a copy of it.
+//
+//promptvoice:exempt the reply is labelled, cited claims that read as statements with no speaker; the voice's "say I", "address the reader as you" and "say what you could not see" lines go against that and against returning an empty whitespace list.
 func GrowthFitRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{

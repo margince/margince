@@ -296,6 +296,26 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 				reason: "In my reading their buyers are hard to reach."},
 			speaker: "my reading",
 		},
+		"a pronoun after a name inside the sentence": {
+			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
+				angle: "In Germany I suggest focusing on plant managers."},
+			speaker: "Germany I suggest",
+		},
+		"a pronoun joined to a word by a dash": {
+			lane: voiceLane{angle: plain.angle, reason: plain.reason,
+				whitespace: "Their rollout is stalled—I suggest a pilot."},
+			speaker: "stalled—I",
+		},
+		"a conditional contraction with a curly apostrophe": {
+			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
+				angle: "I’d lead with SAP."},
+			speaker: "I’d lead",
+		},
+		"a perfect-tense contraction with a curly apostrophe": {
+			lane: voiceLane{angle: plain.angle, reason: plain.reason,
+				whitespace: "They lack middleware, as I’ve seen in their stack."},
+			speaker: "I’ve seen",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			prepared := prepareGrowthFit(t, `{"cites":["their_offer"],"bands":["strong"]}`)
@@ -314,8 +334,8 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 	}
 }
 
-// "We" and "our" name the reader's company. A capital I inside a word or a
-// numeral is no speaker either.
+// "We" and "our" name the reader's company, and a capital I inside a word is
+// no speaker either.
 func TestAGrowthFitClaimWithoutASingularSpeakerIsAccepted(t *testing.T) {
 	for name, lane := range map[string]voiceLane{
 		"our platform and we": {
@@ -323,14 +343,9 @@ func TestAGrowthFitClaimWithoutASingularSpeakerIsAccepted(t *testing.T) {
 			angle:      "Show how we cut their SAP integration time.",
 			reason:     "Their buyers are hard to reach.",
 		},
-		"I/O and i.e. inside words": {
-			whitespace: "Their I/O-heavy plants run no integration layer, i.e. no middleware.",
+		"I/O inside a word": {
+			whitespace: "Their I/O-heavy plants run no integration layer.",
 			angle:      "Focus on their I/O bottleneck.",
-			reason:     "Their buyers are hard to reach.",
-		},
-		"a numeral after a capitalised word": {
-			whitespace: "They closed a Series I round without an integration partner.",
-			angle:      "Pitch the Phase I rollout.",
 			reason:     "Their buyers are hard to reach.",
 		},
 	} {
