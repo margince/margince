@@ -73,9 +73,10 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 ## The reporting sections
 
-When sales reporting is turned on, **Reports**, **Targets** and **Definitions**
-join the Performance tabs, which lead with graphs. Saving, scheduling and
-comparisons of editions are in [Sales reporting](sales-reporting.md).
+When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and
+**Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads
+and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in
+[Sales reporting](sales-reporting.md).
 
 Two sections appear only for some seats, and when they are missing, that means
 something:

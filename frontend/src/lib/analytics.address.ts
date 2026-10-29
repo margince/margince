@@ -65,11 +65,13 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
 // Performance once held its four views behind one switch, named by `?view=`.
 // Each is a tab of its own now, and an address that still names one through the
 // switch opens it. Sales stayed under the old name, so it needs no entry.
-const SECTION_OF_VIEW: Readonly<Record<string, Section>> = {
-  sdr: "sdr",
-  leads: "leads",
-  partners: "partners",
-};
+// A Map, because the key is whatever the address carries: an object literal
+// would answer `?view=constructor` with an inherited function.
+const SECTION_OF_VIEW: ReadonlyMap<string, Section> = new Map([
+  ["sdr", "sdr"],
+  ["leads", "leads"],
+  ["partners", "partners"],
+]);
 
 export function sectionFromAddress(
   segment: string | undefined,
@@ -77,7 +79,7 @@ export function sectionFromAddress(
   view: string | null = null,
 ): Section {
   if ((segment === undefined || segment === "performance") && view) {
-    const named = SECTION_OF_VIEW[view];
+    const named = SECTION_OF_VIEW.get(view);
     if (named) return named;
   }
   if (isSection(segment)) {

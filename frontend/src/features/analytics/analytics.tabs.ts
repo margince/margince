@@ -25,7 +25,7 @@ type ScopeKind =
 /**
  * The open section, the tab row, and the menus beside it.
  *
- * Which section is open is an ADDRESS, so a reader can link to one. Back then
+ * Which section is open is part of the address, so a reader can link to one. Back then
  * steps between the sections they looked at.
  * `landing` is set while the bare address waits on the framework to know its
  * tab. The screen draws that wait instead of a body.

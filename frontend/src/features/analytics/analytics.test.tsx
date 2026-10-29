@@ -524,6 +524,9 @@ describe("sectionFromAddress", () => {
     expect(sectionFromAddress("forecast", "performance", "sdr")).toBe(
       "forecast",
     );
+    expect(
+      sectionFromAddress("performance", "performance", "constructor"),
+    ).toBe("performance");
   });
 
   // A segment is whatever a reader typed. Anything unrecognized lands on the
