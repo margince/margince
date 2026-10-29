@@ -114,6 +114,7 @@ func (s *Sink) moveOnReplay(
 	}
 	_, err := s.moveMeeting(ctx, tx, id, connector.MeetingSlot{
 		Start: fields.OccurredAt, Duration: StorableDuration(fields.DurationSeconds), AllDay: fields.DateOnly,
+		Agenda: fields.AgendaFingerprint,
 	})
 	return err
 }

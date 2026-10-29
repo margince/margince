@@ -43,6 +43,7 @@ const SPOKEN_BY_THE_READER = new Set<string>([
   "commitment.takeOver",
   "directSend.acknowledge",
   "book.consentWording",
+  "worklist.ready.confirm",
   "prefs.wordingGeneric",
   // The sentence an admin types to confirm a risky change.
   "confirmPhrase.risk",

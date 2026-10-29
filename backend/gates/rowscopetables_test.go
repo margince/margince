@@ -608,5 +608,10 @@ const (
 	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
 	// audit unsupported signature numbers. Its caller requires the system actor;
 	// the workspace repair returns a count, never contacts to a reader.
-	modulesTierUnscopedCeiling = 146
+	//
+	// 147-148: activities.lockMeetingFacts and readPreparations read a meeting's
+	// participant contact ids only to hash them into the guest-list fingerprint
+	// of the preparation revision. The meeting itself is content-gated first.
+	// No id is returned.
+	modulesTierUnscopedCeiling = 148
 )

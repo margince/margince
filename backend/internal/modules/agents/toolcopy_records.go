@@ -150,6 +150,25 @@ var relinkActivityCopy = toolCopy{
 	Retain: "Set replace_existing_of_type to move rather than associate.",
 }
 
+var confirmMeetingReadyCopy = toolCopy{
+	Purpose: "Say the user is ready for a meeting they attend, so their Worklist stops asking " +
+		"them to prepare it.",
+	Limits: "Only for a meeting the user attends, and only at the preparation revision " +
+		"prep_for_meeting answered: a meeting that changed since answers a conflict. It holds " +
+		"for the user alone, and a new start, agenda or guest list asks them again.",
+	Instead: "prep_for_meeting reads the meeting and its current preparation revision; " +
+		"undo_meeting_ready takes the confirmation back.",
+	Retain: "Keep the revision you confirmed; the undo sends it.",
+}
+
+var undoMeetingReadyCopy = toolCopy{
+	Purpose: "Take back the user's \"I'm ready\" for a meeting.",
+	Limits: "Removes the confirmation only while it is the one given at the revision you send, " +
+		"so a newer confirmation stays.",
+	Instead: "confirm_meeting_ready records readiness.",
+	Retain:  "The answer is the user's preparation after the undo.",
+}
+
 var relinkThreadCopy = toolCopy{
 	Purpose: "Move one whole conversation (by thread_key) onto a record, in one transaction.",
 	Limits: "Refused for an assistant, at every destination and however it is called: a thread " +

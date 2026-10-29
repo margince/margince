@@ -223,6 +223,7 @@ var tableOwners = map[string]string{
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
 	"worklist_done":            "internal/modules/activities",
+	"meeting_readiness":        "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.

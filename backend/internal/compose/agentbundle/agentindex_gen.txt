@@ -339,6 +339,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `PUT /worklist/ready` | confirmMeetingReady | Say you are ready for a meeting you attend. | Change records | at once |
+| `POST /worklist/ready/undo` | undoMeetingReady | Take back your "I'm ready" for a meeting — the undo behind it. | Change records | at once |
 | `GET /brief` | getMorningBrief | The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). | Read records | at once |
 | `PUT /brief/annotations` | annotateMorningBrief | Write the overnight pass's findings onto the acting rep's own brief for today. | Change records | at once |
 

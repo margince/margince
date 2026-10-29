@@ -12309,6 +12309,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/worklist/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say you are ready for a meeting you attend.
+         * @description The answer the `confirm_meeting_ready` agent tool gives, run by the same tool on both
+         *     doors. It records that the caller, or the user an agent acts for, is ready for the
+         *     meeting at `preparation_revision`. Reading the brief does not do this; only this call
+         *     does.
+         *
+         *     PER ATTENDEE. It changes nobody else's preparation. Only an attendee may call it:
+         *     anyone else answers 422 `not_an_attendee`.
+         *
+         *     A revision the meeting has moved past answers 409. Read the meeting's `preparation`
+         *     again and confirm its new revision. Confirming the current revision again is the same
+         *     success. `PUT /worklist/ready` is undone by `POST /worklist/ready/undo`.
+         */
+        put: operations["confirmMeetingReady"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/worklist/ready/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back your "I'm ready" for a meeting — the undo behind it.
+         * @description The answer the `undo_meeting_ready` agent tool gives, run by the same tool on both
+         *     doors. It removes the caller's confirmation only while it is still the one given at
+         *     `preparation_revision`. A newer confirmation stays. A meeting with no such
+         *     confirmation is the same success.
+         */
+        post: operations["undoMeetingReady"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/worklist/team": {
         parameters: {
             query?: never;
@@ -32614,6 +32667,7 @@ export interface components {
         MeetingPrep: {
             brief?: components["schemas"]["AgentMeetingBrief"];
             briefing: components["schemas"]["AgentAssembledContext"];
+            preparation?: components["schemas"]["MeetingPreparation"];
             meeting_focus: {
                 /** Format: uuid */
                 record_id: string;
@@ -36465,6 +36519,44 @@ export interface components {
         WorklistDoneRequest: {
             /** @description The rows, each named by its lane and its id, as a pin names one. */
             rows: components["schemas"]["WorklistPinRequest"][];
+        };
+        MeetingReadyRequest: {
+            /**
+             * Format: uuid
+             * @description The meeting, as the Worklist row or `prep_for_meeting` names it.
+             */
+            activity_id: string;
+            /**
+             * @description The `revision` of the meeting's `preparation`, as last read. A confirmation sends
+             *     the revision it was shown, and a meeting that has moved past it answers 409. An
+             *     undo sends the revision it confirmed, and takes back only that confirmation.
+             */
+            preparation_revision: string;
+            /** @description Same key, same result. A key reused with other arguments is refused. */
+            idempotency_key?: string;
+        };
+        /**
+         * @description The caller's own preparation for one meeting. `ready` holds only for the attendee who
+         *     confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
+         *     new revision, so a confirmed meeting needs review again. A brief written about the
+         *     meeting is not a preparation fact: generating it again changes nothing here. For an
+         *     agent, the caller is the user it acts for.
+         */
+        MeetingPreparation: {
+            /** Format: uuid */
+            activity_id: string;
+            /**
+             * @description `ready` when the caller confirmed this revision; `needs_review` otherwise.
+             * @enum {string}
+             */
+            state: "needs_review" | "ready";
+            /** @description The current preparation revision, which a confirmation sends back. */
+            revision: string;
+            /**
+             * @description What changed since the caller confirmed an older revision. Empty when the caller
+             *     never confirmed, or confirmed this revision.
+             */
+            changed: ("start_time" | "agenda" | "participants")[];
         };
         RelationshipNudgeState: {
             /**
@@ -48999,6 +49091,12 @@ export interface components {
             /** @description The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read. */
             relationship_decay_more_available?: boolean;
             /**
+             * @description The meetings lane read or kept fewer meetings than today holds.
+             *     True means `meetings` is a lower bound. Absent when meetings could
+             *     not be read.
+             */
+            meetings_more_available?: boolean;
+            /**
              * @description The unread notice scan reached its limit before equivalent decision
              *     announcements were folded. When true, an empty notices array does
              *     not prove that no other notices remain. Absent when notices could
@@ -49178,6 +49276,8 @@ export interface components {
             source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
+            /** @description On a meeting the reader attends, their own preparation for it. Absent otherwise. */
+            preparation?: components["schemas"]["MeetingPreparation"];
             /**
              * @description The server's own sentence for this item, when it has one — an approval
              *     summary is composed at staging time out of the proposal's own facts.
@@ -50844,6 +50944,12 @@ export interface components {
             /** @description The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source. */
             contact_case?: components["schemas"]["AttentionContactCase"];
             move?: components["schemas"]["WorklistMove"];
+            /**
+             * @description On a `meeting` row the reader attends, their own preparation for it. Absent when the
+             *     reader does not attend the meeting or may not read its content; absent is never
+             *     ready.
+             */
+            preparation?: components["schemas"]["MeetingPreparation"];
             /**
              * Format: uuid
              * @description Whose record a `meeting` row's brief is read on, carried out from
@@ -72116,6 +72222,96 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    confirmMeetingReady: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingReadyRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's preparation after the confirmation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingPreparation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoMeetingReady: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+                 *     It is held for 24h per caller and tool, not per path: the same key on two records of one
+                 *     tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+                 */
+                "Idempotency-Key"?: components["parameters"]["ToolIdempotencyKey"];
+                /**
+                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
+                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
+                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
+                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+                 *     human's direct call is itself the approval.
+                 */
+                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeetingReadyRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's preparation after the undo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeetingPreparation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
