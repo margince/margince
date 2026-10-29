@@ -126,8 +126,8 @@ const inboxBatch = 200
 
 // PendingScanCap bounds how many staged rows PendingForTarget scans for one
 // record. Decidability is a per-row probe, so an unbounded target would make
-// a single record page pay for the whole backlog. A caller that counts must
-// read a full result as "this many or more" rather than as an exact total.
+// a single record page pay for the whole backlog. A caller that counts a capped
+// result must read a full one as "this many or more"; CountPending is exact.
 const PendingScanCap = inboxBatch
 
 // statusPending is the status column value a staged, undecided row carries.
@@ -207,12 +207,9 @@ func (in ListInput) targeted() bool { return in.TargetType != nil && in.TargetID
 // from a complete answer, AND to ask for the rest. has_more without a cursor
 // would only tell them rows are missing.
 func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page, error) {
-	if err := actingForAHuman(ctx); err != nil {
+	p, in, err := admitInboxRead(ctx, in)
+	if err != nil {
 		return nil, storekit.Page{}, err
-	}
-	p, _ := principal.Actor(ctx)
-	if !in.IncludeMuted && !p.UserID.IsZero() {
-		in.mutedFor = &p.UserID
 	}
 	if in.FailedForDecider {
 		if p.UserID.IsZero() {
@@ -264,36 +261,59 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 //
 // It fills one row PAST the display limit so has_more is a fact rather than a
 // guess; that row is then dropped, and its existence is what the flag reports.
-//
-// start is the caller's cursor: the scan begins after the last row the previous
-// page returned, so the batches walk forward through the table instead of
-// re-filtering the newest rows on every request.
 func scanInbox(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, start *keysetStart) ([]row, storekit.Page, error) {
-	decide := func(a row) (bool, error) {
-		if !requestedInScope(a, p.UserID, in) {
-			return false, nil
-		}
-		return decidable(ctx, tx, p, a)
-	}
+	decide := inboxProbe(ctx, tx, p, in)
 	var out []row
+	err := walkInbox(ctx, tx, in, start, func(batch []row) (full bool, err error) {
+		out, full, err = appendDecidable(batch, out, in.Limit+1, decide)
+		return full, err
+	})
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return capPage(out, in.Limit, nil)
+}
+
+// walkInbox hands visit each newest-first keyset batch under in's filters,
+// until visit reports it has enough or the table is exhausted.
+func walkInbox(ctx context.Context, tx pgx.Tx, in ListInput, start *keysetStart, visit func([]row) (bool, error)) error {
 	from := start
 	for {
 		q, args := approvalPageQuery(in, from)
 		batch, err := collect(ctx, tx, q, args)
 		if err != nil {
-			return nil, storekit.Page{}, err
+			return err
 		}
-		var full bool
-		out, full, err = appendDecidable(batch, out, in.Limit+1, decide)
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		if full || len(batch) < inboxBatch {
-			break // a row past the display limit is in hand, or the table is exhausted
+		done, err := visit(batch)
+		if err != nil || done || len(batch) < inboxBatch {
+			return err
 		}
 		from = after(batch[len(batch)-1])
 	}
-	return capPage(out, in.Limit, nil)
+}
+
+// inboxProbe is the per-row eligibility every inbox read asks: the row is in
+// the requested scope, and p could decide it now.
+func inboxProbe(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput) func(row) (bool, error) {
+	return func(a row) (bool, error) {
+		if !requestedInScope(a, p.UserID, in) {
+			return false, nil
+		}
+		return decidable(ctx, tx, p, a)
+	}
+}
+
+// admitInboxRead admits a human-backed caller and binds their mutes, so every
+// read of the inbox, and every count of it, hides the same rows.
+func admitInboxRead(ctx context.Context, in ListInput) (principal.Principal, ListInput, error) {
+	if err := actingForAHuman(ctx); err != nil {
+		return principal.Principal{}, in, err
+	}
+	p, _ := principal.Actor(ctx)
+	if !in.IncludeMuted && !p.UserID.IsZero() {
+		in.mutedFor = &p.UserID
+	}
+	return p, in, nil
 }
 
 // A shared target can carry both live-record work and a reversal of an archived
@@ -308,13 +328,7 @@ func listForTarget(ctx context.Context, tx pgx.Tx, p principal.Principal, in Lis
 	if len(batch) == PendingScanCap {
 		scanned = &batch[len(batch)-1]
 	}
-	granted := func(a row) (bool, error) {
-		if !requestedInScope(a, p.UserID, in) {
-			return false, nil
-		}
-		return decidable(ctx, tx, p, a)
-	}
-	out, _, err := appendDecidable(batch, nil, in.Limit+1, granted)
+	out, _, err := appendDecidable(batch, nil, in.Limit+1, inboxProbe(ctx, tx, p, in))
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

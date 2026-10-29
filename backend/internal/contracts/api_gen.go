@@ -28885,6 +28885,18 @@ type ApprovalListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ApprovalPendingCount defines model for ApprovalPendingCount.
+type ApprovalPendingCount struct {
+	// AsOf The server's clock when it counted.
+	AsOf time.Time `json:"as_of"`
+
+	// Count Pending approvals this caller could decide now.
+	Count int `json:"count"`
+
+	// NextExpiryAt When the first counted approval expires. Absent when none of them can expire.
+	NextExpiryAt *time.Time `json:"next_expiry_at,omitempty"`
+}
+
 // ApprovalPreference defines model for ApprovalPreference.
 type ApprovalPreference struct {
 	// Kind A kind the server permits this reader to mute.
@@ -78786,6 +78798,9 @@ type ServerInterface interface {
 	// The approval inbox — list staged 🟡 actions awaiting human decision.
 	// (GET /approvals)
 	ListApprovals(w http.ResponseWriter, r *http.Request, params ListApprovalsParams)
+	// How many approvals wait for the caller, exactly.
+	// (GET /approvals/pending-count)
+	CountPendingApprovals(w http.ResponseWriter, r *http.Request)
 	// Get a single approval item (full proposed diff + evidence).
 	// (GET /approvals/{id})
 	GetApproval(w http.ResponseWriter, r *http.Request, id Id)
@@ -82002,6 +82017,12 @@ func (_ Unimplemented) RejectApprovalBundle(w http.ResponseWriter, r *http.Reque
 // The approval inbox — list staged 🟡 actions awaiting human decision.
 // (GET /approvals)
 func (_ Unimplemented) ListApprovals(w http.ResponseWriter, r *http.Request, params ListApprovalsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many approvals wait for the caller, exactly.
+// (GET /approvals/pending-count)
+func (_ Unimplemented) CountPendingApprovals(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92665,6 +92686,26 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListApprovals(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CountPendingApprovals operation middleware
+func (siw *ServerInterfaceWrapper) CountPendingApprovals(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CountPendingApprovals(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126976,6 +127017,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/approvals", wrapper.ListApprovals)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/approvals/pending-count", wrapper.CountPendingApprovals)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/approvals/{id}", wrapper.GetApproval)

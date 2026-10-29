@@ -4020,8 +4020,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.textForwarded":
     "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
   "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
-  "email.thread.textUnassessed":
-    "Margince chưa kiểm tra xem đã đọc hết nội dung của thư này hay chưa.",
+  "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
+  "email.thread.textUnassessedHint":
+    "Margince không thể nhận diện yêu cầu hoặc cam kết ở đây. Đọc email gốc trong ứng dụng email nếu thiếu nội dung; tự thêm việc cần làm nếu cần.",
   "email.thread.textUnreadable": "Không đọc được nội dung của thư này.",
   "email.thread.textUnreadableHint": "Hãy mở thư trong ứng dụng thư để xem.",
   "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",

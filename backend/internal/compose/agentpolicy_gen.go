@@ -256,6 +256,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/analytics/targets/{id}":                                        {Op: "getReportingTarget", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/vocabulary":                                          {Op: "describeAnalyticsVocabulary", Access: "tool", Tool: "describe_analytics_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"GET /v1/approvals":                                                     {Op: "listApprovals", Access: "tool", Tool: "list_approvals", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/approvals/pending-count":                                       {Op: "countPendingApprovals", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/approvals/{id}":                                                {Op: "getApproval", Access: "tool", Tool: "read_approval", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/assistant/profile":                                             {Op: "getAssistantProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/attachments":                                                   {Op: "listAttachments", Access: "tool", Tool: "list_documents", RecordType: "", Tier: "auto_execute", Scope: "read"},

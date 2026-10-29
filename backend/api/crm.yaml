@@ -21619,6 +21619,30 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /approvals/pending-count:
+    get:
+      tags: [Approvals]
+      operationId: countPendingApprovals
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How many approvals wait for the caller, exactly.
+      description: |
+        The number of items `listApprovals?status=pending` would return to this caller with the
+        wire status `pending`, across every page: the same visibility checks, the same mutes and
+        the same lazy expiry. It answers one number instead of every page.
+
+        `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+        then without any event, so a client that shows it reads it again at that moment. Measure
+        the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+      responses:
+        '200':
+          description: The count.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPendingCount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /approvals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -61020,6 +61044,24 @@ components:
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
+
+    ApprovalPendingCount:
+      type: object
+      additionalProperties: false
+      required: [count, as_of]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Pending approvals this caller could decide now.
+        next_expiry_at:
+          type: string
+          format: date-time
+          description: When the first counted approval expires. Absent when none of them can expire.
+        as_of:
+          type: string
+          format: date-time
+          description: The server's clock when it counted.
 
     ApprovalListResponse:
       type: object

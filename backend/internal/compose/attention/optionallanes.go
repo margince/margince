@@ -55,7 +55,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	if !l.bound {
 		return named
 	}
-	defer timeStage(l.name)()
+	defer timeStage(ctx, l.name)()
 	var items []crmcontracts.AttentionItem
 	err := s.degradable(ctx, laneBudget, func(context.Context) error {
 		var err error

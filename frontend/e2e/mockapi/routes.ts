@@ -308,7 +308,17 @@ export const routes: readonly MockRoute[] = [
     path: /^\/brief\/items\/([^/]+)\/(act|dismiss)$/,
     handle: work.markBriefItem,
   },
-  { path: "/approvals", handle: reply(page([approval])) },
+  // The fixture approval names no record, so a record page's own read is empty.
+  {
+    path: "/approvals",
+    handle: ({ url, json }) =>
+      json(page(url.searchParams.has("target_entity_id") ? [] : [approval])),
+  },
+  {
+    method: "GET",
+    path: "/approvals/pending-count",
+    handle: reply({ count: 1, as_of: "2026-07-06T08:00:00Z" }),
+  },
   {
     method: "GET",
     path: "/worklist",
