@@ -11,8 +11,11 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -141,5 +144,47 @@ func TestThisWeekCountsMeetingsFromLocalMondayAndTheMonthTargetCountsTheMonth(t 
 	}
 	if metric.TargetActual == nil || *metric.TargetActual != 4 {
 		t.Errorf("the month target counts %v, want all four October meetings", metric.TargetActual)
+	}
+}
+
+// A row written now must say how much of its start is known. IN over a NULL
+// is NULL, which a CHECK would let through, so the rule names NULL itself.
+func TestANewTransitionWithAStartAndNoPrecisionIsRefused(t *testing.T) {
+	m := setupMeetingWeeks(t)
+	meeting := m.held(t, time.Date(2026, 10, 6, 9, 15, 0, 0, time.UTC), activities.PrecisionInstant)
+	_, err := m.e.owner.Exec(context.Background(), `INSERT INTO activity_meeting_history
+		(activity_id, status, scheduled_start, actor, effective_at) VALUES ($1, 'held', $2, 'test', now())`,
+		meeting.UUID, time.Date(2026, 10, 6, 9, 15, 0, 0, time.UTC))
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23514" || pgErr.ConstraintName != "activity_meeting_history_start_precision" {
+		t.Fatalf("inserting a start without a precision answered %v, want the precision rule to refuse it", err)
+	}
+}
+
+// An old date-only Sunday, 31 January, stored at noon UTC: as a date it is
+// Sunday, as an instant it is Monday 01:00 in Auckland. Its unrecorded
+// precision reads it as the Sunday, outside this week and this month. The
+// week starting that Monday is still partial, because the meeting may be in it.
+func TestAnOldNoonStartTaintsThePeriodItsGuessLeftOut(t *testing.T) {
+	m := setupMeetingWeeks(t)
+	cutoff := time.Date(2027, 2, 3, 0, 0, 0, 0, time.UTC)
+	m.clock = func() time.Time { return cutoff }
+	sunday := m.held(t, occurredday.Anchor(time.Date(2027, 1, 31, 0, 0, 0, 0, time.UTC)), activities.PrecisionDay)
+	forgetMeetingPrecision(t, m.e.owner, sunday)
+
+	result, err := newReportingService(m.e.Pool, m.clock).Evaluate(m.human, crmcontracts.ReportingSelection{
+		Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_week", TargetBasis: "month", CloseWindow: "all_open",
+		Metrics: []crmcontracts.ReportingMetricID{"meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	metric := result.Metrics[0]
+	if metric.Value == nil || *metric.Value != 0 {
+		t.Errorf("this week counts %v meetings, want 0: the guess puts the meeting on the Sunday before", metric.Value)
+	}
+	want := reportingCoverageWords.LegacyMeetingDay.En
+	if metric.Coverage.Status != reportingPartial || metric.Coverage.Reason == nil || *metric.Coverage.Reason != want {
+		t.Errorf("coverage %+v, want partial with %q rather than a complete zero", metric.Coverage, want)
 	}
 }

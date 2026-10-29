@@ -12,7 +12,8 @@ ALTER TABLE activity_meeting_history ADD COLUMN scheduled_precision text;
 -- NOT VALID, and no later migration validates it: the existing rows hold a
 -- start whose precision nobody recorded. Postgres still checks every row
 -- written from now on, so a new transition with a start says how much of it
--- is known.
+-- is known. The IS NOT NULL is load-bearing: IN over a NULL is NULL, and a
+-- CHECK lets NULL through.
 ALTER TABLE activity_meeting_history ADD CONSTRAINT activity_meeting_history_start_precision
   CHECK (CASE WHEN scheduled_start IS NULL THEN scheduled_precision IS NULL
-              ELSE scheduled_precision IN ('instant', 'day') END) NOT VALID;
+              ELSE scheduled_precision IS NOT NULL AND scheduled_precision IN ('instant', 'day') END) NOT VALID;

@@ -407,7 +407,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `activity_meeting_history_source_pairing`: `CHECK (((source_id IS NULL) = (source_system IS NULL)))`
-- `activity_meeting_history_start_precision`: `CHECK ( CASE WHEN (scheduled_start IS NULL) THEN (scheduled_precision IS NULL) ELSE (scheduled_precision = ANY (ARRAY['instant', 'day'])) END) NOT VALID`
+- `activity_meeting_history_start_precision`: `CHECK ( CASE WHEN (scheduled_start IS NULL) THEN (scheduled_precision IS NULL) ELSE ((scheduled_precision IS NOT NULL) AND (scheduled_precision = ANY (ARRAY['instant', 'day']))) END) NOT VALID`
 - `activity_meeting_history_status_check`: `CHECK ((status = ANY (ARRAY['booked', 'held', 'no_show', 'canceled'])))`
 
 **Indexes**

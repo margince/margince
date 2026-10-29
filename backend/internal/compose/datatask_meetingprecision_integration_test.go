@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -48,12 +49,19 @@ func (f noonFixture) precisions(id ids.ActivityID) []string {
 
 // forgetMeetingPrecision makes the meetings' history rows look as they did
 // before the precision column existed. The column's rule binds only new rows,
-// so the edit drops it and adds it back unvalidated, as the migration left it.
+// so the edit drops it and adds its own definition back, as the migration
+// left it.
 func forgetMeetingPrecision(t *testing.T, conn *pgx.Conn, meetings ...ids.ActivityID) {
 	t.Helper()
+	ctx := context.Background()
 	keys := make([]ids.UUID, 0, len(meetings))
 	for _, meeting := range meetings {
 		keys = append(keys, meeting.UUID)
+	}
+	var definition string
+	if err := conn.QueryRow(ctx, `SELECT pg_get_constraintdef(oid) FROM pg_constraint
+		WHERE conname = 'activity_meeting_history_start_precision'`).Scan(&definition); err != nil {
+		t.Fatalf("reading the precision rule: %v", err)
 	}
 	for _, step := range []struct {
 		sql  string
@@ -61,11 +69,9 @@ func forgetMeetingPrecision(t *testing.T, conn *pgx.Conn, meetings ...ids.Activi
 	}{
 		{`ALTER TABLE activity_meeting_history DROP CONSTRAINT activity_meeting_history_start_precision`, nil},
 		{`UPDATE activity_meeting_history SET scheduled_precision = NULL WHERE activity_id = ANY($1)`, []any{keys}},
-		{`ALTER TABLE activity_meeting_history ADD CONSTRAINT activity_meeting_history_start_precision
-		   CHECK (CASE WHEN scheduled_start IS NULL THEN scheduled_precision IS NULL
-		               ELSE scheduled_precision IN ('instant', 'day') END) NOT VALID`, nil},
+		{`ALTER TABLE activity_meeting_history ADD CONSTRAINT activity_meeting_history_start_precision ` + definition, nil},
 	} {
-		if _, err := conn.Exec(context.Background(), step.sql, step.args...); err != nil {
+		if _, err := conn.Exec(ctx, step.sql, step.args...); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -122,8 +128,10 @@ func TestThePrecisionTaskProvesOnlyStartsTheNoonRepairRestored(t *testing.T) {
 	task := meetingHistoryPrecisionDataTask()
 	runMachineAddressTask(ctx, t, e, task)
 
-	if got := f.precisions(damaged); !slices.Equal(got, []string{"instant", "instant"}) {
-		t.Errorf("the repaired meeting's precisions = %v, want both rows proved instants", got)
+	// The booking was written before the outcome save, so the repair never
+	// touched it, though it holds the same instant.
+	if got := f.precisions(damaged); !slices.Equal(got, []string{"unknown", "instant"}) {
+		t.Errorf("the repaired meeting's precisions = %v, want the booking unknown and the restored hold an instant", got)
 	}
 	if got := f.historyStart(damaged); got != "2026-07-15T07:00:00.123Z" {
 		t.Errorf("the repaired meeting's held start moved to %s", got)
@@ -148,7 +156,39 @@ func TestThePrecisionTaskProvesOnlyStartsTheNoonRepairRestored(t *testing.T) {
 
 	noShow := string(crmcontracts.ActivityMeetingStatusNoShow)
 	f.move(e.Admin(), damaged, bookedAtMorning, &noShow)
-	if got := f.precisions(damaged); !slices.Equal(got, []string{"instant", "instant", "instant"}) {
+	if got := f.precisions(damaged); !slices.Equal(got, []string{"unknown", "instant", "instant"}) {
 		t.Errorf("after a later edit the precisions are %v, want the new transition to record its own", got)
+	}
+}
+
+// A date-only edit after the repair, on the date whose noon UTC anchor is the
+// restored instant, writes a row that holds that same start. The repair never
+// wrote it, so it stays unknown while the restored hold is proved.
+func TestThePrecisionTaskLeavesALaterDayEditOnTheRestoredInstantUnknown(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	e.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, noonZone)
+	f := noonFixture{t: t, e: e}
+	// 12:00 UTC is 14:00 in Berlin, a time the repair puts back.
+	afternoon := time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC)
+	meeting := f.book(afternoon, f.contact("Day Edit Contact"))
+	f.save(meeting, berlinNoon)
+	f.cutoffNow()
+	runMachineAddressTask(ctx, t, e, meetingNoonStartsDataTask())
+	if got := f.historyStart(meeting); got != "2026-07-15T12:00:00.000Z" {
+		t.Fatalf("the repair restored %s, want the 12:00 UTC start", got)
+	}
+
+	day, noShow := activities.PrecisionDay, string(crmcontracts.ActivityMeetingStatusNoShow)
+	if _, err := e.Activities.UpdateActivity(e.Admin(), meeting, activities.UpdateActivityInput{
+		OccurredAt: &afternoon, OccurredPrecision: &day, MeetingStatus: &noShow,
+	}); err != nil {
+		t.Fatalf("making the meeting a day entry: %v", err)
+	}
+	forgetMeetingPrecision(t, integration.OwnerConn(t), meeting)
+	runMachineAddressTask(ctx, t, e, meetingHistoryPrecisionDataTask())
+
+	if got := f.precisions(meeting); !slices.Equal(got, []string{"unknown", "instant", "unknown"}) {
+		t.Errorf("precisions = %v, want the booking and the later day edit unknown and only the restored hold proved", got)
 	}
 }
