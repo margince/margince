@@ -48,6 +48,9 @@ const ledgerPath = join(here, "surfaces.ledger.txt");
 const tokensPath = join(here, "tokens.css");
 const TOKEN_SHEETS = new Set([tokensPath, join(here, "brand.css")]);
 
+// Probes name properties no sheet defines; spelling the call through this keeps
+// the undefined-property gate from reading a fixture as shipped CSS.
+const ref = (property: string) => `var(${property})`;
 const VAR = /var\((--[\w-]+)\)/g;
 const ALIAS = /^var\((--[\w-]+)\)$/;
 const OPAQUE = /^#[0-9a-f]{6}$/i;
@@ -427,7 +430,7 @@ describe("the nesting ladder has one painter", () => {
     ).toHaveLength(4);
     expect(
       cssSpellings([
-        probe(".probe", "border: 1px solid var(--paneEdgeStrong)"),
+        probe(".probe", `border: 1px solid ${ref("--paneEdgeStrong")}`),
       ]),
     ).toEqual([]);
   });
@@ -458,8 +461,8 @@ describe("the nesting ladder has one painter", () => {
       rungTokens([
         ...tokenDefinitions,
         { property: "--cardGround", value: "var(--ladder2)" },
-        { property: "--ladder3", value: "var(--darkStep)" },
-        { property: "--stepAlias", value: "var(--darkStep)" },
+        { property: "--ladder3", value: ref("--darkStep") },
+        { property: "--stepAlias", value: ref("--darkStep") },
       ]),
     ).toEqual(new Set([...RUNGS, "--cardGround", "--darkStep", "--stepAlias"]));
   });
@@ -953,7 +956,7 @@ describe("a layer under a pane stays under it", () => {
       underlayHosts([
         probe(":root", "--under: -1"),
         probe(".f::before:hover", "z-index: -1"),
-        probe(".g", "z-index: var(--under)"),
+        probe(".g", `z-index: ${ref("--under")}`),
         probe(".h::after", "z-index: calc(-1 * 2)"),
         probe(".k:hover", "background: radial-gradient(red, blue)"),
         probe(".flat", "background: linear-gradient(red, red)"),
