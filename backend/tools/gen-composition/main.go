@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 )
 
@@ -188,7 +189,15 @@ func generate(root string) error {
 	if err := emitOverrides(root, composed.Overrides.Replaced); err != nil {
 		return err
 	}
-	for _, warning := range composed.Overrides.Warnings {
+	units := make([]extensionUnit, 0, len(composed.Manifests))
+	for _, m := range composed.Manifests {
+		units = append(units, m.Unit)
+	}
+	overlayWarnings, err := composeOverlays(root, units)
+	if err != nil {
+		return err
+	}
+	for _, warning := range slices.Concat(composed.Overrides.Warnings, overlayWarnings) {
 		fmt.Fprintln(os.Stderr, "gen-composition: warning:", warning)
 	}
 	m, err := currentManifest(root, composed.Files)

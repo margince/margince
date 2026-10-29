@@ -88,7 +88,10 @@ export MARGINCE_ENV          ?= dev
 # composition is never built; gen-composition itself runs under the ROOT
 # workspace — it must work before the composition exists.
 COMPOSITION_DIR := $(abspath ../build/composition)
-GOWORK_COMPOSED := GOWORK=$(COMPOSITION_DIR)/go.work
+# Every composed go command reads the overlay gen-composition always writes:
+# units' overlays/ compiled into core's packages, or an empty map.
+OVERLAY_FILE := $(abspath ../build/overlay/overlay.json)
+GOWORK_COMPOSED := GOWORK=$(COMPOSITION_DIR)/go.work GOFLAGS="$(GOFLAGS) -overlay=$(OVERLAY_FILE)"
 # The root workspace, which is what every backend/tools generator runs under:
 # the tools are a separate module, and their resolution must not depend on
 # what the caller exported.

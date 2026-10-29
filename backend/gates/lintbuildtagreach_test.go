@@ -179,6 +179,10 @@ func TestEveryGoFileIsCompiledAndAnalysedBySomePass(t *testing.T) {
 		}
 		switch {
 		case compiled && analysed:
+		case overlayFile(rel):
+			// A unit's overlay compiles into core through the overlay map every
+			// composed lane passes, and golangci reads no overlay, so vet and
+			// gosec never see it. That is the cost of the overlay level.
 		case unreadFiles.Waived(t, rel):
 		case compiled:
 			t.Errorf("%s is compiled but ANALYSED by nothing: only a pass that builds without linting admits it, "+

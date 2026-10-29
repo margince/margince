@@ -99,5 +99,11 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
 		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
 		auth.AuthzRule(p, entityType, action), batchOf(ctx))
-	return id, err
+	if err != nil {
+		return id, err
+	}
+	// The masked images, so a hook reads what the audit log shows and no more.
+	return id, runWriteHook(ctx, tx, AuditedWrite{
+		Action: action, EntityType: entityType, EntityID: entityID, Before: beforeJSON, After: afterJSON,
+	})
 }

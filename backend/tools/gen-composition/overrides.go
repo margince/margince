@@ -123,7 +123,7 @@ func unitOverrides(root string, u extensionUnit, frontendDir string) (frontendOv
 	if u.Frontend == nil {
 		return frontendOverrides{}, fmt.Errorf("extensions/%s: %s/ needs %s/package.json — an override resolves its own imports through the unit's package", u.Name, overridesLayer, frontendLayer)
 	}
-	lock, err := readOverridesLock(filepath.Join(u.Dir, filepath.FromSlash(overridesLockFile)))
+	lock, err := readLock(u.Dir, overridesLockFile)
 	if err != nil {
 		return frontendOverrides{}, fmt.Errorf("extensions/%s: %w", u.Name, err)
 	}
@@ -182,9 +182,9 @@ func hasPrefixIn(prefixes []string, target string) bool {
 	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(target, p) })
 }
 
-// readOverridesLock reads "<target> sha256:<hex>" lines; # starts a comment.
-func readOverridesLock(file string) (map[string]string, error) {
-	raw, err := os.ReadFile(file) // #nosec G304 -- a unit's own lock at a fixed path
+// readLock reads a unit's "<target> sha256:<hex>" lines; # starts a comment.
+func readLock(unitDir, name string) (map[string]string, error) {
+	raw, err := os.ReadFile(filepath.Join(unitDir, filepath.FromSlash(name))) // #nosec G304 -- a unit's own lock at a fixed path
 	if errors.Is(err, fs.ErrNotExist) {
 		return map[string]string{}, nil
 	}
@@ -200,10 +200,10 @@ func readOverridesLock(file string) (map[string]string, error) {
 			continue
 		}
 		if len(fields) != 2 {
-			return nil, fmt.Errorf("%s:%d: want <path> sha256:<hex>", overridesLockFile, line)
+			return nil, fmt.Errorf("%s:%d: want <path> sha256:<hex>", name, line)
 		}
 		if _, twice := lock[fields[0]]; twice {
-			return nil, fmt.Errorf("%s:%d: %s is pinned twice", overridesLockFile, line, fields[0])
+			return nil, fmt.Errorf("%s:%d: %s is pinned twice", name, line, fields[0])
 		}
 		lock[fields[0]] = fields[1]
 	}
@@ -215,8 +215,12 @@ func fileSHA256(file string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return bytesSHA256(raw), nil
+}
+
+func bytesSHA256(raw []byte) string {
 	sum := sha256.Sum256(raw)
-	return "sha256:" + hex.EncodeToString(sum[:]), nil
+	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
 // emitOverrides writes the bundler's map and the type check, replacing both so

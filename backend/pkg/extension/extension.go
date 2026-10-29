@@ -316,6 +316,12 @@ type Extension struct {
 	// checked against. See EventHandler.
 	Subscriptions []Subscription
 
+	// WriteHooks run after core's audited writes, inside their transactions,
+	// and OperationHooks before core's contract operations. Both are derived
+	// into manifest.generated.json, so an operator sees what a unit intercepts.
+	WriteHooks     []WriteHook
+	OperationHooks []OperationHook
+
 	// Ingress are the providers this unit brings records IN from, and the
 	// record kinds it lands through the core's own capture pipeline.
 	//

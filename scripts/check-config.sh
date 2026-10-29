@@ -46,7 +46,7 @@ fi
 bin="$(mktemp -d)"
 trap 'rm -rf "$bin"' EXIT
 make -s -C backend composition >/dev/null
-( cd backend && GOWORK="$root/build/composition/go.work" go build -o "$bin/" ./cmd/api ./cmd/worker )
+( cd backend && GOWORK="$root/build/composition/go.work" GOFLAGS="-overlay=$root/build/overlay/overlay.json" go build -o "$bin/" ./cmd/api ./cmd/worker )
 
 failed=()
 for program in api worker; do

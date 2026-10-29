@@ -105,12 +105,12 @@ ARG TARGETARCH
 # same release by construction, and it applies the schema rather than joining
 # the set the guard compares.
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+    GOWORK=/src/build/composition/go.work GOFLAGS=-overlay=/src/build/overlay/overlay.json CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="-s -w \
             -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
             -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
         -o /bin/margince-api ./cmd/api \
-    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+    && GOWORK=/src/build/composition/go.work GOFLAGS=-overlay=/src/build/overlay/overlay.json CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="-s -w" -o /bin/margince-migrate ./cmd/migrate
 
 # ── worker: build ─────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ FROM gobase AS worker-build
 ARG MARGINCE_RELEASE_VERSION=dev
 ARG TARGETARCH
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+    GOWORK=/src/build/composition/go.work GOFLAGS=-overlay=/src/build/overlay/overlay.json CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="-s -w \
             -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
         -o /bin/margince-worker ./cmd/worker

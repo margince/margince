@@ -1172,7 +1172,7 @@ jobs:
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
           GOWORK="$PWD/../go.work" go run ./tools/gen-composition
-          GOWORK="$PWD/../build/composition/go.work" \
+          GOWORK="$PWD/../build/composition/go.work" GOFLAGS="-overlay=$PWD/../build/overlay/overlay.json" \
             go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
             --config "$RUNNER_TEMP/margince.yaml" \
             > "$RUNNER_TEMP/api.log" 2>&1 &
