@@ -19256,14 +19256,15 @@ export interface paths {
         get: operations["getForecastAssuranceEnforcement"];
         /**
          * Switch the qualified forecast's enforcement on or off.
-         * @description Admin only. Switching on changes the qualified forecast figures for every reader,
-         *     so it is refused with `409 input_check_not_started` until a check has judged a
-         *     deal: before that the qualified forecast would count nothing. A setting fixed by
-         *     the environment is refused with `409 setting_locked`.
+         * @description Admin only. A setting fixed by the environment is refused with
+         *     `409 setting_locked_by_boot_source`.
          *
-         *     Switching on also sends `preview_digest`, the `digest` of the preview the admin
-         *     saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
-         *     so nobody switches on a picture that is no longer true.
+         *     Switching on changes the qualified forecast figures for every reader. It sends
+         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
+         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
+         *     on a picture that is no longer true. It is then refused with
+         *     `409 input_check_not_started` until a check has judged a deal: before that the
+         *     qualified forecast would count nothing.
          *
          *     Switching off takes effect at once. The reviews, their tasks and their history
          *     stay; only the qualified readings disappear, and the baseline readings never
