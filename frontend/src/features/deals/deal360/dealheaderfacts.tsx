@@ -32,6 +32,7 @@ import { writtenByLabel } from "../../../lib/leadorigins";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { waitHolds } from "./dealstanding";
 import {
   LostReasonFact,
   type WonWithoutContract,
@@ -246,7 +247,7 @@ export function closeWords(
   if (deal.forecast_category) {
     parts.push(forecastLabel(deal.forecast_category, t));
   }
-  if (deal.wait_until) {
+  if (waitHolds(deal.wait_until, zone, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
         date: formatDayMonth(deal.wait_until, locale, zone),

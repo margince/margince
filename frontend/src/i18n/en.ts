@@ -18365,6 +18365,9 @@ export const en = {
   "deal.verdict.onHold": "On hold",
   "deal.verdict.onHoldUntil":
     "The deal is paused until {date}, as agreed with the buyer.",
+  "deal.verdict.waitOver": "Follow-up overdue",
+  "deal.verdict.waitOverSince":
+    "The buyer asked us to wait until {date}. That day has come, so get back in touch.",
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",

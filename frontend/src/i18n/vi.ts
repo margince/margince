@@ -18024,6 +18024,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.onHold": "Tạm dừng",
   "deal.verdict.onHoldUntil":
     "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.waitOver": "Quá hạn liên hệ lại",
+  "deal.verdict.waitOverSince":
+    "Khách hàng hẹn chờ đến {date}. Đã đến ngày, hãy liên hệ lại.",
   "deal.verdict.overdueToClose": "Quá hạn chốt",
   "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
   "deal.verdict.notStarted": "Chưa bắt đầu",
