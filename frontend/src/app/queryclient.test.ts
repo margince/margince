@@ -183,7 +183,9 @@ describe("the query client defaults", () => {
     };
     const home = new QueryObserver(client, options);
     const stopHome = home.subscribe(() => {});
-    await vi.waitFor(() => expect(home.getCurrentResult().fetchStatus).toBe("idle"));
+    await vi.waitFor(() =>
+      expect(home.getCurrentResult().fetchStatus).toBe("idle"),
+    );
     expect(fetched).toBe(1);
     const drawer = new QueryObserver(client, options);
     const stopDrawer = drawer.subscribe(() => {});

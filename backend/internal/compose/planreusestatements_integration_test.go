@@ -9,13 +9,13 @@ import (
 	"context"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,7 +50,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 	defer pool.Close()
 	contact := e.SeedContact(t, "Planned Once", &e.Rep1)
-	subject, body, direction, at := "Following up", "Any news?", "outbound", time.Now()
+	subject, body, direction, at := "Following up", "Any news?", "outbound", clocktest.Now(t)
 	mail, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at, Source: "manual",
 		EmailFrom: "rep@ourco.test", EmailTo: []string{"buyer@customer.test"},
