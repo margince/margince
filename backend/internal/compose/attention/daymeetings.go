@@ -15,36 +15,41 @@ import (
 )
 
 // meetingsAhead is the meetings lane: what starts between asOf and the day's
-// end, and the day meetings dated today, which the zone says.
-func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) ([]Meeting, error) {
+// end, and the day meetings dated today, which the zone says. more says a
+// meeting was read and cut, or a read filled its ceiling.
+func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kept []Meeting, more bool, err error) {
 	loc, err := s.location(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	today := occurredday.AnchorIn(asOf, loc)
 	window := MeetingWindow{From: asOf, Until: until, DaysFrom: today, DaysUntil: today.AddDate(0, 0, 1)}
-	read, err := s.meetings.Today(ctx, window, meetingsPrepCeiling, s.taskScope, s.taskOwner)
+	read, full, err := s.meetings.Today(ctx, window, meetingsPrepCeiling, s.taskScope, s.taskOwner)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return plannedAndUnprepared(read, plannedCap), nil
+	kept = plannedAndUnprepared(read, plannedCap)
+	return kept, full || len(kept) < len(read), nil
 }
 
 // meetingsPrepCeiling is how many of today's day meetings, and of its timed
 // meetings, the lane reads. The timed ones past plannedCap stay only when the
-// reader still has to prepare them, so a full day never hides one; a day with
-// more than this reports the lane as full.
+// reader still has to prepare them, so a full day never hides one.
 const meetingsPrepCeiling = 4 * plannedCap
 
-// plannedAndUnprepared keeps every day meeting read, the first limit timed
-// meetings, and every later timed one the reader has not confirmed ready for.
-// A day meeting has no start to be near, so it never takes a timed one's place.
+// plannedAndUnprepared keeps the first limit day meetings, the first limit
+// timed meetings, and every later timed one the reader has not confirmed ready
+// for. A day meeting has no start to be near, so it never takes a timed one's
+// place and never needs preparing before one.
 func plannedAndUnprepared(read []Meeting, limit int) []Meeting {
-	kept := make([]Meeting, 0, min(len(read), limit))
-	timed := 0
+	kept := make([]Meeting, 0, min(len(read), 2*limit))
+	days, timed := 0, 0
 	for _, meeting := range read {
 		if meeting.Precision == crmcontracts.OccurredPrecisionOccurredPrecisionDay {
-			kept = append(kept, meeting)
+			days++
+			if days <= limit {
+				kept = append(kept, meeting)
+			}
 			continue
 		}
 		timed++

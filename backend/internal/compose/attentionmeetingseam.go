@@ -32,18 +32,19 @@ var soonestFirst = "occurred_at"
 func (m attentionMeetings) Today(
 	ctx context.Context, window attention.MeetingWindow, limit int,
 	scope attention.TaskScope, owner ids.UUID,
-) ([]attention.Meeting, error) {
+) ([]attention.Meeting, bool, error) {
 	days := attention.MeetingWindow{From: window.From, Until: window.From, DaysFrom: window.DaysFrom, DaysUntil: window.DaysUntil}
 	rows, err := m.openIn(ctx, days, limit, scope, owner)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	timed := attention.MeetingWindow{From: window.From, Until: window.Until, DaysFrom: window.DaysUntil, DaysUntil: window.DaysUntil}
 	hours, err := m.openIn(ctx, timed, limit, scope, owner)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return m.named(ctx, append(rows, hours...))
+	ahead, err := m.named(ctx, append(rows, hours...))
+	return ahead, len(rows) >= limit || len(hours) >= limit, err
 }
 
 // openIn reads the open meetings of one window, soonest first, up to limit.
@@ -63,7 +64,6 @@ func (m attentionMeetings) openIn(
 	return rows, err
 }
 
-// named turns the lane's rows into meetings, each with who it is with.
 // named turns the lane's rows into meetings, each with who it is with and the
 // reader's own preparation for it.
 func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activity) ([]attention.Meeting, error) {

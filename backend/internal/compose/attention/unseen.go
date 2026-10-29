@@ -95,10 +95,11 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// itself complete while the twelfth pushed a thirteenth off the page — the
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
-	// The forward lane keeps the same bound, soonest first, plus the reader's
-	// own meetings still to prepare, so a page at the bound may have cut a
-	// later meeting the reader does not have to prepare.
-	atCap(sourceMeeting, day.Meetings, plannedCap)
+	// The forward lane keeps more than its bound when the reader still has
+	// meetings to prepare, so its length cannot say whether it cut one.
+	if day.Meetings != nil {
+		bounded[sourceMeeting] = day.MeetingsMoreAvailable == nil || *day.MeetingsMoreAvailable
+	}
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
 		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable

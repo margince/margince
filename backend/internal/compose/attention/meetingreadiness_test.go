@@ -129,3 +129,46 @@ func TestAnImminentMeetingTheReaderIsReadyForIsAReminderNotUrgentWork(t *testing
 		}
 	}
 }
+
+func TestTheMeetingsLaneKeepsNoMoreDayMeetingsThanItsCap(t *testing.T) {
+	var read []Meeting
+	for i := range plannedCap + 3 {
+		read = append(read, Meeting{ID: ids.NewV7(), Subject: fmt.Sprintf("Fair %d", i), StartsAt: readInstant, Precision: crmcontracts.OccurredPrecisionOccurredPrecisionDay})
+	}
+	if got := len(plannedAndUnprepared(read, plannedCap)); got != plannedCap {
+		t.Errorf("the lane kept %d day meetings, want its cap %d", got, plannedCap)
+	}
+}
+
+// The lane may hold more than its cap, so only what it read and cut says
+// whether a meeting is missing from the page.
+func TestTheMeetingsLaneSaysMoreOnlyWhenItLeftAMeetingOut(t *testing.T) {
+	prepared := func(n int, ready bool) []Meeting {
+		var read []Meeting
+		for i := range n {
+			read = append(read, timedMeeting(i, ownPreparation(ready)))
+		}
+		return read
+	}
+	for _, tc := range []struct {
+		name string
+		read []Meeting
+		full bool
+		want bool
+	}{
+		{"a day exactly at the cap", prepared(plannedCap, true), false, false},
+		{"a day past the cap, all still to prepare", prepared(plannedCap+3, false), false, false},
+		{"a day past the cap, the later ones ready", prepared(plannedCap+1, true), false, true},
+		{"a read that filled its ceiling", prepared(2, false), true, true},
+	} {
+		svc := meetingPrepService(nil)
+		svc.meetings = &stubMeetings{rows: tc.read, full: tc.full}
+		day, err := svc.Assemble(meetingPrepReader())
+		if err != nil {
+			t.Fatalf("%s: attention: %v", tc.name, err)
+		}
+		if got := boundedSources(day)[sourceMeeting]; got != tc.want {
+			t.Errorf("%s: the meetings lane said more available %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}

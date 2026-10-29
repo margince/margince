@@ -18,7 +18,8 @@ import (
 
 // Meetings is today's booked meetings that have not happened yet: the day
 // meetings first, as a calendar's all-day row, then the timed ones by start,
-// each up to limit.
+// each up to limit. full says either read filled its limit, so a later meeting
+// may exist that was not read.
 // Optional: nil means this feed does not read meetings, which is not a day with
 // none in it.
 //
@@ -26,7 +27,7 @@ import (
 // calendar, or naming them as a participant. Answering it unscoped puts one
 // seat's appointments in every colleague's brief.
 type Meetings interface {
-	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) (meetings []Meeting, full bool, err error)
 }
 
 // MeetingWindow is the stretch a meetings read covers: a timed meeting starting

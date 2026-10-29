@@ -66202,6 +66202,12 @@ components:
         relationship_decay_more_available:
           type: boolean
           description: The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read.
+        meetings_more_available:
+          type: boolean
+          description: |
+            The meetings lane read or kept fewer meetings than today holds.
+            True means `meetings` is a lower bound. Absent when meetings could
+            not be read.
         notices_more_available:
           type: boolean
           description: |

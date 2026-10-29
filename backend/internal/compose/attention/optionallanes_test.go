@@ -283,13 +283,15 @@ type stubMeetings struct {
 	from *time.Time
 	// limit records how many meetings the lane asked for.
 	limit int
+	// full is the seam's answer that a read filled its limit.
+	full bool
 }
 
-func (s *stubMeetings) Today(_ context.Context, window MeetingWindow, limit int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
+func (s *stubMeetings) Today(_ context.Context, window MeetingWindow, limit int, _ TaskScope, _ ids.UUID) ([]Meeting, bool, error) {
 	s.from = &window.From
 	s.limit = limit
 	s.calls++
-	return s.rows, s.err
+	return s.rows, s.full, s.err
 }
 
 // The lane asks from the READ INSTANT, not from midnight. A meeting that ended

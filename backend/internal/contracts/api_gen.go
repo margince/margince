@@ -29652,6 +29652,11 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
+	// MeetingsMoreAvailable The meetings lane read or kept fewer meetings than today holds.
+	// True means `meetings` is a lower bound. Absent when meetings could
+	// not be read.
+	MeetingsMoreAvailable *bool `json:"meetings_more_available,omitempty"`
+
 	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
 	// longest unanswered first. The counterpart of `meetings`: that lane is what to
 	// prepare for, this is what to close off.

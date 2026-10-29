@@ -49091,6 +49091,12 @@ export interface components {
             /** @description The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read. */
             relationship_decay_more_available?: boolean;
             /**
+             * @description The meetings lane read or kept fewer meetings than today holds.
+             *     True means `meetings` is a lower bound. Absent when meetings could
+             *     not be read.
+             */
+            meetings_more_available?: boolean;
+            /**
              * @description The unread notice scan reached its limit before equivalent decision
              *     announcements were folded. When true, an empty notices array does
              *     not prove that no other notices remain. Absent when notices could
