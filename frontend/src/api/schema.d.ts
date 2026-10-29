@@ -14447,6 +14447,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/pending-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many approvals wait for the caller, exactly.
+         * @description The number of items `listApprovals?status=pending` would return to this caller with the
+         *     wire status `pending`, across every page: the same visibility checks, the same mutes and
+         *     the same lazy expiry. It answers one number instead of every page.
+         *
+         *     `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+         *     then without any event, so a client that shows it reads it again at that moment. Measure
+         *     the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+         */
+        get: operations["countPendingApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approvals/{id}": {
         parameters: {
             query?: never;
@@ -44195,6 +44221,20 @@ export interface components {
             };
             /** @description Why, in the approver's own words. Recorded with the decision, as a rejection's reason is. */
             reason?: string;
+        };
+        ApprovalPendingCount: {
+            /** @description Pending approvals this caller could decide now. */
+            count: number;
+            /**
+             * Format: date-time
+             * @description When the first counted approval expires. Absent when none of them can expire.
+             */
+            next_expiry_at?: string;
+            /**
+             * Format: date-time
+             * @description The server's clock when it counted.
+             */
+            as_of: string;
         };
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
@@ -74018,6 +74058,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    countPendingApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The count. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPendingCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getApproval: {

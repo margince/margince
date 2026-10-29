@@ -1,4 +1,5 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { QueryLike } from "../design-system/querystates";
@@ -44,12 +45,10 @@ export type BundleDecision = components["schemas"]["ApprovalBundleDecision"];
 export type BundleOutcome =
   components["schemas"]["ApprovalBundleMember"]["outcome"];
 
-// A single page tops out at 50 (the server's page cap) — a 51st pending
-// approval, or decided history past 50 rows, must still be reachable. The
-// pending/decided partition below (and the expired salvage inside it) needs
-// the FULL set to sort/filter correctly, not a manually-paged slice, so this
-// walks every page via the API's opaque `next_cursor` and merges them into
-// one collection before the query resolves.
+// A page tops out at 50, and the pending/decided partition below needs the
+// whole set to sort and filter correctly. So this walks every page by
+// `next_cursor` before the query resolves. A surface that only needs how many
+// are waiting reads usePendingApprovalCount instead.
 async function fetchAllApprovals(
   status: ApprovalStatus,
   target?: { entityType?: string; entityId?: string; bundleId?: string },
@@ -94,6 +93,45 @@ export function useApprovals(status: ApprovalStatus, enabled = true) {
       data: await fetchAllApprovals(status),
     }),
   });
+}
+
+export type PendingApprovalCount =
+  components["schemas"]["ApprovalPendingCount"];
+
+// Under ["approvals", "pending"], so every approval mutation and every pending
+// invalidation refreshes it, and the client treats it as a live read.
+export const pendingApprovalCountKey = ["approvals", "pending", "count"];
+
+// The longest delay setTimeout honours; a longer one fires at once.
+const MAX_TIMER_MS = 2_147_483_647;
+
+// The server still counts a row AT its expiry instant, so read just after it.
+const PAST_EXPIRY_MS = 1_000;
+
+/** How long until the count drops by itself, measured on the server's clock. */
+export function untilNextExpiry(count: PendingApprovalCount): number | null {
+  if (!count.next_expiry_at) return null;
+  const wait = Date.parse(count.next_expiry_at) - Date.parse(count.as_of);
+  return Math.min(Math.max(wait, 0) + PAST_EXPIRY_MS, MAX_TIMER_MS);
+}
+
+// How many approvals wait for the reader, counted by the server over the rows
+// the Pending tab lists. An expiry lowers the number with no event, so the
+// hook reads it again when the first counted approval expires.
+export function usePendingApprovalCount() {
+  const query = useQuery({
+    queryKey: pendingApprovalCountKey,
+    queryFn: async (): Promise<PendingApprovalCount> =>
+      unwrap(await api.GET("/approvals/pending-count")),
+  });
+  const { data, refetch } = query;
+  useEffect(() => {
+    const wait = data ? untilNextExpiry(data) : null;
+    if (wait === null) return;
+    const timer = setTimeout(() => void refetch(), wait);
+    return () => clearTimeout(timer);
+  }, [data, refetch]);
+  return query;
 }
 
 // The Pending tab: status=pending, but a lazily-expired row (wire

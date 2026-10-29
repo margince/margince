@@ -4126,8 +4126,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
   "email.thread.textPartial":
     "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
-  "email.thread.textUnassessed":
-    "Margince hat noch nicht geprüft, ob der ganze Text dieser Mail gelesen wurde.",
+  "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
+  "email.thread.textUnassessedHint":
+    "Margince kann hier keine Anfragen oder Zusagen erkennen. Lies bei fehlendem Text das Original in deinem E-Mail-Programm; erstelle nötige Aufgaben selbst.",
   "email.thread.textUnreadable":
     "Der Text dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnreadableHint":

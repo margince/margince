@@ -72,6 +72,20 @@ func (h Handlers) ListApprovals(w http.ResponseWriter, r *http.Request, params c
 	})
 }
 
+// CountPendingApprovals answers how many approvals the caller's pending list holds.
+func (h Handlers) CountPendingApprovals(w http.ResponseWriter, r *http.Request) {
+	count, err := h.svc.CountPending(r.Context(), ListInput{})
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ApprovalPendingCount{
+		Count:        count.Count,
+		NextExpiryAt: count.NextExpiry,
+		AsOf:         count.AsOf,
+	})
+}
+
 // pageInfo puts the store's page on the wire. next_cursor is omitted rather
 // than sent empty: an empty token is not a page a caller could ask for.
 func pageInfo(p storekit.Page) crmcontracts.PageInfo {
