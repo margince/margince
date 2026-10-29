@@ -53,6 +53,9 @@ func (s *Service) Worklist(
 		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
 		return err
 	})
+	if err == nil {
+		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
+	}
 	return out, err
 }
 
