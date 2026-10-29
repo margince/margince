@@ -9,8 +9,7 @@ import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
 import {
-  ENTITY_NAME_KEY,
-  fetchEntityName,
+  entityNameQuery,
   type NameReading,
   readingOf,
   usableName,
@@ -36,6 +35,7 @@ import { type RosterKind, useRosterWalk } from "./roster";
 
 export {
   ENTITY_NAME_KEY,
+  entityNameQuery,
   fetchEntityName,
   useEntityName,
 } from "./entityref.queries";
@@ -274,12 +274,8 @@ function RecordRef({
   // switches the read off is the same value that gets rendered.
   const supplied = usableName(name);
   const query = useQuery({
-    queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id),
+    ...entityNameQuery(kind, id),
     enabled: supplied == null,
-    // References change rarely relative to the pages that render them; a short
-    // cache keeps a 360 from re-fetching the same name on every hover/refetch.
-    staleTime: 60_000,
   });
   // Only a resolved name is a safe link target; a reference with no name —
   // still loading, refused, or a record that carries none — never becomes one.

@@ -13,6 +13,7 @@ import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { DealBulkBar } from "../deals/dealbulk";
 
 type Deal = components["schemas"]["Deal"];
@@ -88,12 +89,11 @@ describe("EntityRef", () => {
   it("renders the resolved name and backlinks to the record's 360 on click", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (request: Request) => {
-        if (request.url.includes("/companies/o-1")) {
-          return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
-        }
-        return jsonResponse({}, 404);
-      }),
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "o-1": "Brandt GmbH" }) ??
+          jsonResponse({}, 404),
+      ),
     );
     render(<EntityRef kind="company" id="o-1" />);
 
@@ -163,7 +163,9 @@ describe("EntityRef", () => {
     // reading the id belongs to, and the answer has to come back for it.
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => jsonResponse({ id: "o-nameless" })),
+      vi.fn(async () =>
+        jsonResponse({ data: [{ id: "o-nameless" }], next_cursor: null }),
+      ),
     );
     render(<EntityRef kind="company" id="o-nameless" />);
     await waitFor(() => expect(screen.getByText("o-nameless")).toBeTruthy());
@@ -230,7 +232,7 @@ describe("EntityRef", () => {
     expect(screen.queryByText("o-slow")).toBeNull();
 
     for (const resolve of answer) {
-      resolve(jsonResponse({ id: "o-slow" }));
+      resolve(jsonResponse({ data: [{ id: "o-slow" }], next_cursor: null }));
     }
 
     // Settled, the id is what is left, and it is a fact a reader can trace —
@@ -374,12 +376,11 @@ describe("EntityRef", () => {
   it("looks the record up when the supplied name is only whitespace, rather than linking a label nobody can read", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (request: Request) => {
-        if (request.url.includes("/companies/o-1")) {
-          return jsonResponse({ id: "o-1", display_name: "Brandt GmbH" });
-        }
-        return jsonResponse({}, 404);
-      }),
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "o-1": "Brandt GmbH" }) ??
+          jsonResponse({}, 404),
+      ),
     );
     render(<EntityRef kind="company" id="o-1" name="   " />);
 

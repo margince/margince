@@ -76,7 +76,7 @@ function servingHistory(
 ) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);
-    if (url.includes("/companies/")) {
+    if (new URL(url).pathname.startsWith("/v1/companies")) {
       if (!onOtherLookup) {
         throw new Error(`unexpected endpoint lookup: ${url}`);
       }

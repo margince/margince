@@ -9,7 +9,8 @@ import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { leadIdentityName } from "../format/leadname";
 import type { EntityKind } from "../lib/entity";
-import { throwProblem } from "../lib/problem";
+import { idBatcher } from "../lib/idbatch";
+import { ProblemError, throwProblem } from "../lib/problem";
 
 /**
  * What a read that carried no name is allowed to mean.
@@ -31,6 +32,36 @@ function unnamedOrThrow(error: unknown, response: Response): null {
   throwProblem(error);
 }
 
+// The company list's own `id` bound.
+const COMPANY_IDS_PER_READ = 100;
+
+// A report, the deals table and a project list name many companies at once,
+// so every company named within one tick shares one list read. It asks for
+// what `GET /companies/{id}` answers, archived rows and this installation's
+// own company included; a company the reader may not see is left out, which
+// reads as that endpoint's 404.
+const companyNameOf = idBatcher<string | null>(
+  COMPANY_IDS_PER_READ,
+  async (page) => {
+    const { data, error } = await api.GET("/companies", {
+      params: {
+        query: {
+          id: [...page],
+          limit: page.length,
+          include_archived: true,
+          include_anchor: true,
+        },
+      },
+    });
+    if (error) {
+      throw new ProblemError(error);
+    }
+    return new Map(
+      data.data.map((company) => [company.id, company.display_name ?? null]),
+    );
+  },
+);
+
 // Each entity endpoint names its display field differently. Missing names
 // resolve to null because React Query rejects undefined query results.
 const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
@@ -42,13 +73,7 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
       if (error) return unnamedOrThrow(error, response);
       return data.full_name ?? null;
     },
-    company: async (id) => {
-      const { data, error, response } = await api.GET("/companies/{id}", {
-        params: { path: { id } },
-      });
-      if (error) return unnamedOrThrow(error, response);
-      return data.display_name ?? null;
-    },
+    company: (id) => companyNameOf(id),
     lead: async (id) => {
       const { data, error, response } = await api.GET("/leads/{id}", {
         params: { path: { id } },
@@ -77,6 +102,25 @@ export function fetchEntityName(
   id: string,
 ): Promise<string | null> {
   return NAME_READERS[kind](id);
+}
+
+/**
+ * The query every reader of one record's name shares: the same key, reader and
+ * freshness, so a name one surface read costs another nothing.
+ *
+ * A batched read does not retry on its own. Each retry opens its own window
+ * after the batch closed, so one refused batch would come back as one request
+ * per name; it is asked again on the next invalidation instead.
+ */
+export function entityNameQuery(kind: EntityKind, id: string) {
+  return {
+    queryKey: [kind, ENTITY_NAME_KEY, id],
+    queryFn: () => fetchEntityName(kind, id),
+    // References change rarely relative to the pages that render them; a short
+    // cache keeps a 360 from re-fetching the same name on every hover/refetch.
+    staleTime: 60_000,
+    ...(kind === "company" ? { retry: false } : {}),
+  } as const;
 }
 
 /**
@@ -137,9 +181,9 @@ export function useEntityName(
   id: string | null | undefined,
 ): { name: string | null; reading: NameReading } {
   const query = useQuery({
+    ...entityNameQuery(kind, id ?? ""),
     queryKey: [kind, ENTITY_NAME_KEY, id],
     queryFn: id ? () => fetchEntityName(kind, id) : skipToken,
-    staleTime: 60_000,
   });
   // The reading travels with the name, because a caller handed only `null`
   // cannot tell a name that is still coming from one that will never come, and
