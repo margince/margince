@@ -375,10 +375,7 @@ func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
 // whose work stays in the team's view until somebody takes it over.
 func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ranked {
 	team := make(map[ids.UUID]bool, len(roster)+len(former))
-	for _, member := range roster {
-		team[member.UserID] = true
-	}
-	for _, id := range former {
+	for _, id := range teamSeats(roster, former) {
 		team[id] = true
 	}
 	kept := make([]ranked, 0, len(rows))
@@ -392,6 +389,16 @@ func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ran
 		}
 	}
 	return kept
+}
+
+// teamSeats is every seat whose work a team view keeps: the live roster and
+// the former teammates. The row filter and the narrowed reads share it.
+func teamSeats(roster []TeamMember, former []ids.UUID) []ids.UUID {
+	seats := make([]ids.UUID, 0, len(roster)+len(former))
+	for _, member := range roster {
+		seats = append(seats, member.UserID)
+	}
+	return append(seats, former...)
 }
 
 // answersTo resolves only named responsibility, using the card's owner resolver.

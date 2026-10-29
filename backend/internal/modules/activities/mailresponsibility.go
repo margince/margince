@@ -29,6 +29,24 @@ func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(
 		storekit.DirectMailActivitiesSQL(identities, seat), soleDirectSeatSQL(identities), seat)
 }
 
+// mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
+// one seat's own, or the mail one of a set of seats answers for. The zero
+// value reads every mail somebody answers for.
+type mailSeats struct {
+	owner      *ids.UUID
+	answeredBy []ids.UUID
+	bySeats    bool
+}
+
+// responsibilitySQL keeps a set's share of the unnarrowed read. Mail that no
+// seat or several seats answer for is nobody's, so no set reaches it.
+func (m mailSeats) responsibilitySQL(identities string, arg func(any) int) string {
+	if m.owner != nil || !m.bySeats {
+		return personalMailResponsibilitySQL(m.owner, identities, arg)
+	}
+	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
+}
+
 // soleDirectSeatSQL decides who answers an inbound mail `a`
 // (storekit.SoleDirectMailSeatSQL). The waiting queue and the reminder writer
 // both read it.
