@@ -571,6 +571,9 @@ func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
 		if want := "empty; " + c.note; specs[0].note != want {
 			t.Errorf("note %q, want %q", specs[0].note, want)
 		}
+		if specs[0].firstP95 != 152*time.Millisecond {
+			t.Errorf("first p95 kept as %s, want 152ms: the strict lane judges the round the second one replaced", specs[0].firstP95)
+		}
 	}
 }
 
