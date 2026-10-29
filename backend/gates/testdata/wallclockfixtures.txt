@@ -339,6 +339,7 @@ internal/modules/ai/ratelane_integration_test.go 2
 internal/modules/approvals/batcheligibility_integration_test.go 1
 internal/modules/approvals/lapsemark_integration_test.go 1
 internal/modules/approvals/pendingcount_integration_test.go 2
+internal/modules/approvals/pendingtargetcount_integration_test.go 1
 internal/modules/approvals/sameagent_test.go 2
 internal/modules/assurance/preview_integration_test.go 8
 internal/modules/assurance/runmembership_integration_test.go 2

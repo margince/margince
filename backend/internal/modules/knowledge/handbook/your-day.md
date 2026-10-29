@@ -340,9 +340,10 @@ Refresh updates the totals when work arrives or leaves the list.
 The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
 
 - **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
-- "{kinds} may have more items than this list shows", such as "Approvals (200+)": no share,
-  because nobody knows the total. Each load checks a fixed number per category; **Load more** stops
-  there. A filter with no counts says "Some categories may have more items than this list shows."
+- "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no
+  share, because nobody knows the total. Each load checks a fixed number per category; **Load
+  more** stops there. Approvals are counted in full in every view but Team, so Decisions can show
+  the total. A filter with no counts says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
