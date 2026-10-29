@@ -327,7 +327,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		responsibility := seats.responsibilitySQL(identities, arg)
-		with, err := waitingWithSQL(ctx, waitingCandidatesSQL(fmt.Sprintf("$%d", instant), responsibility, horizon), arg)
+		with, err := waitingWithSQL(ctx, waitingCandidatesSQL(fmt.Sprintf("$%d", instant), fmt.Sprintf("$%d", reader), responsibility, horizon), arg)
 		if err != nil {
 			return err
 		}

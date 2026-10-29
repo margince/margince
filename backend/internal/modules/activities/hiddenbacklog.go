@@ -312,15 +312,15 @@ func (s *Store) waitingStatement(
 		return "", "", err
 	}
 	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg)
-	at := fmt.Sprintf("$%d", instant)
+	at, reader := fmt.Sprintf("$%d", instant), arg(relax.reader)
 	// The reply that may LIFT a snooze takes the gate too: the row reappearing
 	// on the reader's day is itself the disclosure that it arrived.
-	return waitingCandidatesSQL(at, responsibility, horizon), fmt.Sprintf(waitingRepliesSQL, instant, waitingReadableSQL("a"), linkVisible, WaitingScanCap,
+	return waitingCandidatesSQL(at, fmt.Sprintf("$%d", reader), responsibility, horizon), fmt.Sprintf(waitingRepliesSQL, instant, waitingReadableSQL("a"), linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
-		arg(relax.reader),
+		reader,
 		responsibility,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
