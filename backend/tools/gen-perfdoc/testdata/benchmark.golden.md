@@ -10,7 +10,8 @@ many tries, and the time shown is one that nearly every try beat.
 |---|---|
 | 🟢 Fast | Within the time we promise. |
 | 🟡 Slower than we promise | Over the promise, and we are working on it: the issue is linked. |
-| 🔴 Too slow | Over the promise with no fix under way yet, or some tries failed. |
+| 🔴 Too slow | Over the promise with no fix under way yet. |
+| 🔴 Failed | Some tries got no answer, so no time can be trusted. |
 | ⚪ Not measured | The screen had nothing to show yet, or the run cannot prove it. |
 
 <details>
@@ -38,7 +39,7 @@ How a case is chosen and added: [design-a-bench-case.md](../how-to/design-a-benc
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | Opening the app | 🟢 Under a quarter of a second | ⚪ Not measured | Fast. |
-| The Worklist | 🟡 About 3.1 seconds | ⚪ Not measured | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). |
+| The Worklist | 🟡 About 3.1 seconds | ⚪ Not measured | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). We promise under 1 second. |
 | Home | ⚪ Not measured | ⚪ Not measured | Not measured yet. |
 
 The first open after a restart is slower, because nothing is warmed up yet:
@@ -71,4 +72,4 @@ Every rep and manager opens the app, the Worklist, Home and a few records at the
 
 | Moment | Whole team | In plain words |
 |---|---|---|
-| A small request while everyone starts | 🟡 Under a quarter of a second | Slower than we promise: we are working on it ([#7068](https://github.com/margince/margince/issues/7068)). |
+| A small request while everyone starts | 🟡 About 0.2 seconds | Slower than we promise: we are working on it ([#7068](https://github.com/margince/margince/issues/7068)). We promise under 0.2 seconds. |
