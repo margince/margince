@@ -241,7 +241,7 @@ too.
 
 ## Colour
 
-The app shell is **an opaque pane over the light ground**, as
+The app shell has a panel rail and a clear top bar over the theme ground, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
