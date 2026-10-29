@@ -253,7 +253,7 @@ func backlogSizes(t *testing.T) []int {
 		return []int{100, 1_000, 10_000}
 	}
 	var sizes []int
-	for _, field := range strings.Split(raw, ",") {
+	for field := range strings.SplitSeq(raw, ",") {
 		size, err := strconv.Atoi(strings.TrimSpace(field))
 		if err != nil || size <= 0 || (len(sizes) > 0 && size <= sizes[len(sizes)-1]) {
 			t.Fatalf("%s=%q: set increasing positive counts, such as 100,1000,10000,100000", backlogSizesEnv, raw)

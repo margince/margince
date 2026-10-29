@@ -130,6 +130,7 @@ internal/compose/integration/controllerpayloadsweep_integration_test.go 2
 internal/compose/integration/customfields/customfields_vocab_http_integration_test.go 1
 internal/compose/integration/customfields_vocab_integration_test.go 1
 internal/compose/integration/daily_approvals_bench_test.go 1
+internal/compose/integration/daily_backlog_bench_test.go 3
 internal/compose/integration/daily_bench_test.go 1
 internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
