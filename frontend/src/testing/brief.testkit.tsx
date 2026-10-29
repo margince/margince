@@ -43,11 +43,14 @@ export function render(ui: ReactNode): RenderResult & { client: QueryClient } {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const result = rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  // A wrapper rather than a wrapped tree, so `rerender` keeps the providers.
+  const result = rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
   return { ...result, client };
 }
 

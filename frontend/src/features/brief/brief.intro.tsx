@@ -26,13 +26,23 @@ import "./brief.intro.css";
 export const SHOW_MS = 4500;
 /** How long it takes to lift away and draw up off the page. */
 export const LEAVE_MS = 900;
+/** How long the day's figures stand when the read lands late in the greeting. */
+export const FIGURES_STAND_MS = 2000;
+// Where the choreography places the night's line and the first figure, from
+// the moment the curtain rises (brief.intro.css).
+const READ_AT_MS = 950;
+const FIGURES_AT_MS = 1400;
+const FIGURE_STEP_MS = 150;
 
 /**
  * The morning's greeting, over the whole page, once a local day.
  *
- * It waits for the day's read, so its figures are the page's own, and it
- * never plays for a reader who asked for less motion. Any key or press ends it
- * at once; the page under it is already drawn, so nothing waits on it.
+ * Whether it plays is known on the first render, from the stored day and the
+ * reader's motion setting, so it rises with the page and never after it. The
+ * day's figures join it when the day's read lands, and only a read from today,
+ * so its figures are the page's own. It never plays for a reader who asked for
+ * less motion. Any key or press ends it at once; the page under it is drawn
+ * all along, so nothing waits on it.
  */
 export function BriefIntro({
   firstName,
@@ -49,38 +59,51 @@ export function BriefIntro({
   const [due] = useState(
     () => readStored(STORAGE_KEYS.briefIntroShown) !== today,
   );
+  const [startedAt] = useState(() => Date.now());
   const [ended, setEnded] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  // A read from an earlier day would greet with yesterday's figures and spend
-  // today's greeting on them, so only today's read plays it.
+  // A read from an earlier day would greet with yesterday's figures, so the
+  // curtain shows figures only from today's read.
   const fresh =
     day !== undefined && dayInZone(Date.parse(day.as_of), zone) === today;
-  const showing = due && !reduced && !ended && fresh;
+  const showing = due && !reduced && !ended;
 
   useEffect(() => {
     if (!showing) return;
     writeStored(STORAGE_KEYS.briefIntroShown, today);
+    // A key is a reader who wants the page now, so it ends the greeting at once.
     const end = () => setEnded(true);
-    // Left alone it lifts away; a key or a press is a reader who wants the
-    // page now, so those end it at once.
-    const lift = setTimeout(() => setLeaving(true), SHOW_MS);
-    const timer = setTimeout(end, SHOW_MS + LEAVE_MS);
     globalThis.addEventListener("keydown", end);
-    return () => {
-      clearTimeout(lift);
-      clearTimeout(timer);
-      globalThis.removeEventListener("keydown", end);
-    };
+    return () => globalThis.removeEventListener("keydown", end);
   }, [showing, today]);
+
+  // Left alone it lifts away after SHOW_MS. Figures that land late still stand
+  // long enough to be read; a read that never lands does not hold it up.
+  useEffect(() => {
+    if (!showing || leaving) return;
+    const elapsed = Date.now() - startedAt;
+    const hold = fresh
+      ? Math.max(SHOW_MS - elapsed, FIGURES_STAND_MS)
+      : SHOW_MS - elapsed;
+    const lift = setTimeout(() => setLeaving(true), hold);
+    return () => clearTimeout(lift);
+  }, [showing, leaving, fresh, startedAt]);
+
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = setTimeout(() => setEnded(true), LEAVE_MS);
+    return () => clearTimeout(timer);
+  }, [leaving]);
 
   if (!showing) return null;
   // On the body, over every layer the shell stacks, the phone's tab bar too.
   return createPortal(
     <IntroCurtain
       firstName={firstName}
-      day={day}
+      day={fresh ? day : undefined}
       now={now}
       zone={zone}
+      startedAt={startedAt}
       leaving={leaving}
       onEnd={() => setEnded(true)}
     />,
@@ -93,40 +116,22 @@ function IntroCurtain({
   day,
   now,
   zone,
+  startedAt,
   leaving,
   onEnd,
 }: Readonly<{
   firstName: string | null;
-  day: Worklist;
+  day: Worklist | undefined;
   now: Date;
   zone: string;
+  startedAt: number;
   leaving: boolean;
   onEnd: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const plural = usePlural();
   const digest = useMorningDigest();
-  // A calendar that is not connected or not readable counts nothing, so its
-  // zero is left out rather than shown as a measured day.
-  const calendar = calendarDay(day);
-  const meetings =
-    calendar.state === "not_connected" || calendar.state === "unreadable"
-      ? null
-      : meetingsReading(day, calendar).meetings;
   const emails = digest.data?.capture.messages_synced;
-  const figures = [
-    { label: t("brief.intro.waiting"), value: day.summary.total, tone: "" },
-    {
-      label: t("brief.intro.urgent"),
-      value: day.summary.urgent,
-      tone: day.summary.urgent > 0 ? "warning" : "",
-    },
-    { label: t("brief.intro.meetings"), value: meetings, tone: "" },
-  ].filter(
-    (figure): figure is { label: string; value: number; tone: string } =>
-      typeof figure.value === "number",
-  );
   const greeting = greetingText(firstName, hourInZone(now, zone), t);
   return (
     // Named by its own text, so a screen reader hears the greeting and its
@@ -168,32 +173,102 @@ function IntroCurtain({
           ))}
         </span>
         {typeof emails === "number" && emails > 0 && (
-          <span className="brief-intro-read">
-            {plural("brief.intro.read", emails, {
-              count: formatNumber(emails, locale),
-            })}
-          </span>
+          <IntroRead emails={emails} startedAt={startedAt} />
         )}
         <span className="brief-intro-rule" aria-hidden="true" />
-        <span className="brief-intro-figures">
-          {figures.map((figure) => (
-            <span className="brief-intro-figure" key={figure.label}>
-              <span
-                className="brief-intro-value t-num"
-                data-tone={figure.tone || undefined}
-              >
-                {formatNumber(figure.value, locale)}
+        {day ? (
+          <IntroFigures day={day} startedAt={startedAt} />
+        ) : (
+          // Holds the figures' row while the read is on its way, so the
+          // greeting does not jump when they land.
+          <span className="brief-intro-figures" data-pending aria-hidden="true">
+            <span className="brief-intro-figure">
+              <span className="brief-intro-value t-num">0</span>
+              <span className="brief-intro-label">
+                {t("brief.intro.waiting")}
               </span>
-              <span className="brief-intro-label">{figure.label}</span>
             </span>
-          ))}
-        </span>
+          </span>
+        )}
       </span>
       <span className="t-caption brief-intro-skip">
         {t("brief.intro.skip")}
       </span>
     </button>
   );
+}
+
+function IntroRead({
+  emails,
+  startedAt,
+}: Readonly<{ emails: number; startedAt: number }>) {
+  const { locale } = useLocale();
+  const plural = usePlural();
+  const delay = useCueDelay(startedAt, READ_AT_MS);
+  return (
+    <span className="brief-intro-read" style={{ animationDelay: `${delay}ms` }}>
+      {plural("brief.intro.read", emails, {
+        count: formatNumber(emails, locale),
+      })}
+    </span>
+  );
+}
+
+function IntroFigures({
+  day,
+  startedAt,
+}: Readonly<{ day: Worklist; startedAt: number }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const delay = useCueDelay(startedAt, FIGURES_AT_MS);
+  // A calendar that is not connected or not readable counts nothing, so its
+  // zero is left out rather than shown as a measured day.
+  const calendar = calendarDay(day);
+  const meetings =
+    calendar.state === "not_connected" || calendar.state === "unreadable"
+      ? null
+      : meetingsReading(day, calendar).meetings;
+  const figures = [
+    { label: t("brief.intro.waiting"), value: day.summary.total, tone: "" },
+    {
+      label: t("brief.intro.urgent"),
+      value: day.summary.urgent,
+      tone: day.summary.urgent > 0 ? "warning" : "",
+    },
+    { label: t("brief.intro.meetings"), value: meetings, tone: "" },
+  ].filter(
+    (figure): figure is { label: string; value: number; tone: string } =>
+      typeof figure.value === "number",
+  );
+  return (
+    <span className="brief-intro-figures">
+      {figures.map((figure, index) => (
+        <span
+          className="brief-intro-figure"
+          key={figure.label}
+          style={{ animationDelay: `${delay + index * FIGURE_STEP_MS}ms` }}
+        >
+          <span
+            className="brief-intro-value t-num"
+            data-tone={figure.tone || undefined}
+          >
+            {formatNumber(figure.value, locale)}
+          </span>
+          <span className="brief-intro-label">{figure.label}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * How long a part that mounts now waits for its place in the choreography.
+ * A part whose read lands after its cue arrives at once instead of waiting a
+ * second full delay from its own mount.
+ */
+function useCueDelay(startedAt: number, cueMs: number): number {
+  const [delay] = useState(() => Math.max(0, cueMs - (Date.now() - startedAt)));
+  return delay;
 }
 
 /** The greeting's words, each keyed by itself and how often it came before. */
