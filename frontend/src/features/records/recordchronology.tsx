@@ -17,6 +17,7 @@ import {
   TIMELINE_FILTERS,
   type TimelineFilter,
 } from "../../lib/timelinefilter";
+import { extensionTimeline, useExtensionHistory } from "./extensionhistory";
 import { changeTimeline, useFieldHistory } from "./history";
 
 // A record's History, for every record page. All is what was said: threads,
@@ -193,6 +194,14 @@ export function useRecordChronology({
       ? { ...entry, onOpenEmail: () => onOpenEmail(entry.id) }
       : entry,
   );
+  // What installed extensions add rides with the exchanges: the Changes cut is
+  // the record's own edits and stays that.
+  const extensionHistory = useExtensionHistory(
+    kind,
+    recordId,
+    readsExchangesOnly(filter),
+  );
+  const extensionEntries = extensionTimeline(extensionHistory.data?.data ?? []);
   // historyFieldLabel, not coldFieldLabel: changeRows is the same
   // FieldHistoryEntry feed the Changes tab renders, and COLD_FIELD_LABELS
   // names a different vocabulary (site-read/enrichment fields) that has no
@@ -207,7 +216,11 @@ export function useRecordChronology({
   if (readsExchangesOnly(filter)) {
     // The renderer, not this hook, narrows these rows to threads.
     return {
-      entries: activityEntries,
+      entries: mergeNewestFirst(
+        activityEntries,
+        extensionEntries,
+        activitiesHaveMore,
+      ),
       // A capped list that says nothing reads as the whole history: a reader
       // at the oldest of 25 rows takes it for the day the relationship began.
       truncated: activitiesHaveMore,
@@ -227,6 +240,30 @@ export function useRecordChronology({
     readsChanges: wantsChanges,
     activities: undefined,
   };
+}
+
+/**
+ * mergeNewestFirst places each extra entry before the first older one, so the
+ * activities keep the order the server gave them. While the activity feed has
+ * a next page, an extra older than the oldest loaded activity waits: shown
+ * now, it would sit above activities not loaded yet.
+ */
+function mergeNewestFirst(
+  base: TimelineEntry[],
+  extra: TimelineEntry[],
+  baseHasMore: boolean,
+): TimelineEntry[] {
+  const merged = [...base];
+  const oldest = base.length ? Date.parse(base[base.length - 1].atIso) : 0;
+  for (const entry of extra) {
+    const at = Date.parse(entry.atIso);
+    if (baseHasMore && at < oldest) {
+      continue;
+    }
+    const next = merged.findIndex((row) => Date.parse(row.atIso) < at);
+    merged.splice(next < 0 ? merged.length : next, 0, entry);
+  }
+  return merged;
 }
 
 /**

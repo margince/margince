@@ -6,6 +6,7 @@ package extension
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -65,6 +66,61 @@ type RecordKindDeclaration struct {
 	Defaults []RbacDefault
 	// DeletePolicy defaults to DeleteArchiveOnly.
 	DeletePolicy DeletePolicy
+	// Timeline, when set, puts the kind's rows into the History of the core
+	// record they reference. Core builds the entry; the unit names three columns.
+	Timeline *RecordKindTimeline
+}
+
+// RecordKindTimeline says how a row of a kind reads as a History entry.
+type RecordKindTimeline struct {
+	// LabelField is the declared field whose text is the entry's title.
+	LabelField string
+	// AtColumn is the timestamptz column that places the entry in time.
+	AtColumn string
+	// Subjects are the core records a row can reference, one column each.
+	Subjects []TimelineSubject
+}
+
+// TimelineSubject is one core record a row references.
+type TimelineSubject struct {
+	// Entity is `contact`, `company` or `deal`.
+	Entity string
+	// Column is the uuid column of the unit's table that holds that record's id.
+	Column string
+}
+
+// timelineEntities are the core records a History is read for. A lead or a
+// project has no extension rows today.
+var timelineEntities = map[string]bool{"contact": true, "company": true, "deal": true}
+
+func (k RecordKindDeclaration) validateTimeline() error {
+	tl := k.Timeline
+	if tl == nil {
+		return nil
+	}
+	if !slices.ContainsFunc(k.Fields, func(f RecordKindField) bool { return f.Name == tl.LabelField }) {
+		return fmt.Errorf("record kind %q timeline label names %q, which is not a declared field", k.Kind, tl.LabelField)
+	}
+	if !recordKindGrammar.MatchString(tl.AtColumn) {
+		return fmt.Errorf("record kind %q timeline time %q is not a column name", k.Kind, tl.AtColumn)
+	}
+	if len(tl.Subjects) == 0 {
+		return fmt.Errorf("record kind %q timeline names no core record", k.Kind)
+	}
+	seen := map[string]bool{}
+	for _, s := range tl.Subjects {
+		if !timelineEntities[s.Entity] {
+			return fmt.Errorf("record kind %q timeline names %q, which is not contact, company or deal", k.Kind, s.Entity)
+		}
+		if !recordKindGrammar.MatchString(s.Column) {
+			return fmt.Errorf("record kind %q timeline column %q is not a column name", k.Kind, s.Column)
+		}
+		if seen[s.Entity] {
+			return fmt.Errorf("record kind %q timeline names %q twice", k.Kind, s.Entity)
+		}
+		seen[s.Entity] = true
+	}
+	return nil
 }
 
 // RecordKindName is the stored and wire form of a unit's kind. It is the one
@@ -118,6 +174,9 @@ func (k RecordKindDeclaration) Validate(unit Name) error {
 		return fmt.Errorf("record kind %q names table %q, which is not in the unit's own namespace %s_<table>", k.Kind, k.Table, ns)
 	}
 	if err := k.validateFields(); err != nil {
+		return err
+	}
+	if err := k.validateTimeline(); err != nil {
 		return err
 	}
 	switch k.DeletePolicy {

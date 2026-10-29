@@ -4005,6 +4005,8 @@ export const en = {
   "timeline.kind.task": "Task",
   "timeline.kind.message": "Message",
   "timeline.kind.change": "Record",
+  "timeline.kind.extension": "Extension",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing: the last delivery was refused and none has succeeded since. Send anyway, or use another address.",

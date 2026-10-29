@@ -7948,6 +7948,41 @@ paths:
               schema: { $ref: '#/components/schemas/RecordKindDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /extension-history:
+    get:
+      tags: [Extensions]
+      operationId: listExtensionHistory
+      security: [ { cookieAuth: [] } ]   # the record page's History reads it; an agent reads the signal and the record kinds themselves
+      x-agent-access: human-only
+      summary: What installed extensions add to one core record's History.
+      description: |
+        Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
+        row of an extension's own table that references the record, as far as the extension declared
+        a timeline for its kind. A `signal` entry is a signal of an extension kind (`ext:<unit>:<kind>`)
+        that is about the record. Core builds both, so an extension writes no timeline entry.
+
+        A kind the caller holds no read right on is left out, and a signal outside the caller's row
+        scope is left out. A record outside the caller's row scope answers 404, like every
+        single-record read. Each source is capped at 50 entries. Empty when nothing applies.
+      parameters:
+        - name: entity_type
+          in: query
+          required: true
+          schema: { type: string, enum: [contact, company, deal] }
+        - name: entity_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The entries, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionHistoryResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /extension-reports:
     get:
       tags: [Extensions]
@@ -49154,6 +49189,25 @@ components:
         unit:
           type: string
           description: The extension that declared the type.
+    ExtensionHistoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ExtensionHistoryEntry' }
+    ExtensionHistoryEntry:
+      type: object
+      required: [id, source, kind, title, at]
+      properties:
+        id: { type: string, format: uuid, description: "The row's own id in the extension's table, or the signal's id." }
+        source: { type: string, enum: [record, signal] }
+        kind:
+          type: string
+          pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
+          description: The record kind of a `record` entry, or the signal kind of a `signal` entry.
+        title: { type: string, description: "The declared label field of the row, or the signal's summary." }
+        at: { type: string, format: date-time, description: "The declared time column of the row, or the signal's detection time." }
     ExtensionReportDirectory:
       type: object
       description: The counts and breakdowns installed extensions add that this caller may read, ordered by name.

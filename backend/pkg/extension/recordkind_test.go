@@ -56,6 +56,40 @@ func TestParseRecordKindName(t *testing.T) {
 	}
 }
 
+func TestRecordKindTimelineValidate(t *testing.T) {
+	with := func(f func(*RecordKindTimeline)) kindDecl {
+		k := validKind()
+		k.Timeline = &RecordKindTimeline{
+			LabelField: "site", AtColumn: "visited_at",
+			Subjects: []TimelineSubject{{Entity: "contact", Column: "contact_id"}},
+		}
+		f(k.Timeline)
+		return k
+	}
+	cases := []struct {
+		name string
+		in   kindDecl
+		ok   bool
+	}{
+		{"complete", with(func(*RecordKindTimeline) {}), true},
+		{"no timeline", validKind(), true},
+		{"label names no field", with(func(tl *RecordKindTimeline) { tl.LabelField = "nope" }), false},
+		{"time column is not a column name", with(func(tl *RecordKindTimeline) { tl.AtColumn = "visited at" }), false},
+		{"no subject", with(func(tl *RecordKindTimeline) { tl.Subjects = nil }), false},
+		{"subject is not a core record", with(func(tl *RecordKindTimeline) { tl.Subjects[0].Entity = "lead" }), false},
+		{"subject column is not a column name", with(func(tl *RecordKindTimeline) { tl.Subjects[0].Column = "a;b" }), false},
+		{"one subject twice", with(func(tl *RecordKindTimeline) { tl.Subjects = append(tl.Subjects, tl.Subjects[0]) }), false},
+		{"two subjects", with(func(tl *RecordKindTimeline) {
+			tl.Subjects = append(tl.Subjects, TimelineSubject{Entity: "company", Column: "company_id"})
+		}), true},
+	}
+	for _, c := range cases {
+		if err := c.in.Validate("visit-log"); (err == nil) != c.ok {
+			t.Errorf("%s: Validate() = %v, want ok=%v", c.name, err, c.ok)
+		}
+	}
+}
+
 func TestRecordKindValidate(t *testing.T) {
 	mutate := func(f func(*kindDecl)) kindDecl {
 		k := validKind()

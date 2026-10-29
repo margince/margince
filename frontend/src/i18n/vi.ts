@@ -3919,6 +3919,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Việc cần làm",
   "timeline.kind.message": "Tin nhắn",
   "timeline.kind.change": "Hồ sơ",
+  "timeline.kind.extension": "Tiện ích mở rộng",
+  "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
   "compose.deadRecipients":
     "Thư gửi đến {addresses} đang bị trả lại: lần gửi gần nhất bị từ chối và từ đó chưa lần nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",

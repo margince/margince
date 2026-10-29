@@ -350,3 +350,120 @@ describe("useRecordChronology", () => {
     expect(screen.getByText(/Some data did not load/)).toBeTruthy();
   });
 });
+
+// What installed extensions add to a record's History: rows of their own kinds
+// that reference it, and their signals. They are read apart from the activities
+// and merged in time order, under every cut that reads the exchanges.
+describe("useRecordChronology with extension entries", () => {
+  const activities = [
+    activity({
+      id: "a-1",
+      kind: "email",
+      subject: "Fleet renewal",
+      occurred_at: "2026-08-11T12:00:00Z",
+    }),
+  ];
+
+  function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{children}</LocaleProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  function hook(kind: EntityKind, filter: TimelineFilter, hasMore = false) {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        urls.push(url);
+        if (url.includes("/extension-history")) {
+          return jsonResponse({
+            data: [
+              {
+                id: "r-1",
+                source: "record",
+                kind: "ext:visits:visit",
+                title: "Berlin site",
+                at: "2026-08-12T09:00:00Z",
+              },
+              {
+                id: "s-1",
+                source: "signal",
+                kind: "ext:visits:late_payment",
+                title: "Paid late",
+                at: "2026-08-10T09:00:00Z",
+              },
+            ],
+          });
+        }
+        return jsonResponse({ data: [], page: { has_more: false } });
+      }),
+    );
+    const rendered = renderHook(
+      () =>
+        useRecordChronology({
+          kind,
+          recordId: "p-1",
+          filter,
+          activities,
+          activitiesHaveMore: hasMore,
+          values: { currency: null, locale: "en", zone: "UTC" },
+        }),
+      { wrapper },
+    );
+    return {
+      ...rendered,
+      historyRead: () => urls.some((u) => u.includes("/extension-history")),
+    };
+  }
+
+  it("merges extension rows and signals with the activities, newest first", async () => {
+    const { result } = hook("contact", "all");
+
+    await waitFor(() => expect(result.current.entries).toHaveLength(3));
+    expect(
+      result.current.entries.map((entry) => [
+        entry.id,
+        entry.kind,
+        entry.title,
+      ]),
+    ).toEqual([
+      ["extension:r-1", "extension", "Berlin site"],
+      ["a-1", "email", "Fleet renewal"],
+      ["signal:s-1", "signal", "Paid late"],
+    ]);
+  });
+
+  it("holds back an entry older than the loaded activities while more are to come", async () => {
+    const { result, historyRead } = hook("contact", "all", true);
+
+    await waitFor(() => expect(historyRead()).toBe(true));
+    await waitFor(() =>
+      expect(result.current.entries.map((entry) => entry.id)).toEqual([
+        "extension:r-1",
+        "a-1",
+      ]),
+    );
+  });
+
+  it("leaves them out of Changes and does not read them there", () => {
+    const { result, historyRead } = hook("contact", "changes");
+
+    expect(historyRead()).toBe(false);
+    expect(
+      result.current.entries.every((entry) => entry.kind === "change"),
+    ).toBe(true);
+  });
+
+  it("asks only for a record kind that has an extension read", () => {
+    const { historyRead } = hook("lead", "all");
+
+    expect(historyRead()).toBe(false);
+  });
+});
