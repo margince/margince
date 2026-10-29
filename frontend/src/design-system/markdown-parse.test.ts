@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { markdownLines } from "./markdown-parse";
+import { markdownLines } from "./markdown-text";
 
 describe("a body's lines as a reader sees them", () => {
   it("drops the quote marks and keeps one entry per line", () => {

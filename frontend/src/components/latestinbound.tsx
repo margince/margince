@@ -7,7 +7,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { markdownLines } from "../design-system/markdown-parse";
+import { markdownLines } from "../design-system/markdown-text";
 import { Panel } from "../design-system/panel";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
-import { markdownLines } from "./markdown-parse";
+import { markdownLines } from "./markdown-text";
 import {
   type ContactOn,
   contactsOn,
