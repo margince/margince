@@ -27,7 +27,7 @@ A review takes four answers:
   from the customer, a confirmed close date and a planned next step. Until then
   it is refused, and the refusal says what is missing. The deal counts again
   after the next check.
-- **The customer asked us to wait** records the day on the deal. The review stays
+- **The customer asked to wait** records the day on the deal. The review stays
   open and the deal is not counted until that day. Then the review comes back.
 - **Value is correct** keeps the deal counted until a date you choose, at most
   90 days from today, and asks for a reason. When it ends, the deal is not

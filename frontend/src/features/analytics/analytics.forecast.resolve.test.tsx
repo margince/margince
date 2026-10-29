@@ -497,7 +497,7 @@ it("sends a customer review's wait and lost answers to the routes that move the 
   let sheet = await screen.findByRole("dialog");
   for (const answer of [
     /customer is back/,
-    /asked us to wait/,
+    /asked to wait/,
     /Close as lost/,
   ]) {
     expect(within(sheet).getByRole("radio", { name: answer })).toBeTruthy();
@@ -515,7 +515,7 @@ it("sends a customer review's wait and lost answers to the routes that move the 
   await user.click(await answerButton(FIRST_DEAL));
   sheet = await screen.findByRole("dialog");
   await user.click(
-    within(sheet).getByRole("radio", { name: /asked us to wait/ }),
+    within(sheet).getByRole("radio", { name: /asked to wait/ }),
   );
   await user.type(
     within(sheet).getByRole("textbox", { name: "Wait until" }),

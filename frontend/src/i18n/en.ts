@@ -7205,7 +7205,7 @@ export const en = {
   "review.revive": "The customer is back",
   "review.reviveHelp":
     "Counts the deal again once the customer has written or met with you, the close date is confirmed and a next step is planned.",
-  "review.wait": "The customer asked us to wait",
+  "review.wait": "The customer asked to wait",
   "review.waitHelp":
     "Records the wait on the deal. The deal stays out until then, and the review comes back on that day.",
   "review.waitUntil": "Wait until",
