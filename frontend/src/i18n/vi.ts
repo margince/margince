@@ -7515,6 +7515,34 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentClients.methods.alwaysOn": "Luôn bật",
   "agentClients.methods.readOnly":
     "Chỉ quản trị viên mới có thể thay đổi các mục này.",
+  "agentClients.experiments.title": "Thử nghiệm",
+  "agentClients.experiments.sub":
+    "Các tính năng dùng thử, có thể thay đổi hoặc bị bỏ. Tắt cho tất cả cho đến khi quản trị viên bật ở đây.",
+  "agentClients.experiments.clientCheck": "Kiểm tra công cụ AI hỗ trợ gì",
+  "agentClients.experiments.clientCheckHint":
+    "Thêm công cụ check_client chỉ dành cho quản trị viên. Khi quản trị viên nhờ công cụ AI chạy nó, Margince hiện một biểu mẫu nhỏ và báo công cụ có trả lời được hay không. Không thay đổi dữ liệu. Đặc tả: MCP elicitation",
+  "agentClients.experiments.about": "Về thử nghiệm này",
+  "agentClients.experiments.whyTitle": "Vì sao",
+  "agentClients.experiments.why":
+    "Một số thao tác chờ ai đó duyệt trong Margince. Các công cụ AI mới hơn có thể hiện một biểu mẫu nhỏ ngay trong cuộc trò chuyện. Phép kiểm tra này cho biết công cụ AI nào của bạn làm được điều đó.",
+  "agentClients.experiments.howTitle": "Cách kiểm tra",
+  "agentClients.experiments.step1": "Bật mục này.",
+  "agentClients.experiments.step2":
+    "Trong công cụ AI, kết nối lại Margince để nó tải công cụ mới.",
+  "agentClients.experiments.step3": "Hỏi nó:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Dùng công cụ check_client của Margince để kiểm tra xem công cụ AI này có trả lời được biểu mẫu xác nhận của Margince không.",
+  "agentClients.experiments.clientCheckQuestionLabel":
+    "Câu hỏi để hỏi công cụ AI",
+  "agentClients.experiments.copy": "Sao chép câu hỏi",
+  "agentClients.experiments.copied": "Đã sao chép",
+  "agentClients.experiments.copyRemedy":
+    "Trình duyệt từ chối việc sao chép. Hãy chọn câu hỏi và sao chép thủ công.",
+  "agentClients.experiments.step4":
+    "Nếu có biểu mẫu yêu cầu chọn một màu, công cụ có hỗ trợ. Nếu không, câu trả lời nêu tên công cụ, phiên bản và lý do.",
+  "agentClients.experiments.safeTitle": "An toàn khi thử",
+  "agentClients.experiments.safe":
+    "Chỉ quản trị viên thấy công cụ này. Nó không đọc hay thay đổi dữ liệu. Không công cụ AI nào khác thấy gì mới. Hãy tắt khi bạn dùng xong.",
   "agentClients.title": "MCP client",
   "agentClients.sub":
     "Mỗi ứng dụng mà công cụ AI dùng để đăng nhập, và cách ứng dụng đó được tạo.",

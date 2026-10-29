@@ -89,7 +89,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
-	opts = append(opts, withContractTierFloor(),
+	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))),
@@ -167,6 +167,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)
 	agents.RegisterMeetingInvitationTool(registry, newCommsAdapter(pool, drafter, send), provider)
+	agents.RegisterClientCheckTool(registry, log)
 	agents.RegisterRouters(registry)
 	registerComposedTools(registry)
 	return registry

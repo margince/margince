@@ -34066,7 +34066,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo, mcp_client_check]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
@@ -34117,6 +34117,11 @@ components:
           description: |
             Show a Zalo link next to a contact's phone number that starts with a country
             code. On by default. The link opens the chat in Zalo and sends the number to its website.
+        mcp_client_check:
+          type: boolean
+          description: |
+            True when admins' AI tools are offered the `check_client` tool. Off by default. Change it
+            with `PATCH /installation/settings`, which needs `agent_client` update.
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -34324,6 +34329,12 @@ components:
             Accept a client ID that is the URL of the tool's published metadata document (CIMD).
             Off stops new sign-ins through such a client; connections already made keep renewing.
             Needs `agent_client` update. The deployment file can hold it off.
+        mcp_client_check:
+          type: boolean
+          description: |
+            Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+            answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+            update. Read from the settings answer, because it is not a way to sign in.
         oidc_group_role_map:
           type: object
           maxProperties: 64

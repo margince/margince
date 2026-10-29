@@ -30,6 +30,7 @@ const SETTINGS: InstallationSettings = {
   call_whatsapp: true,
   call_telegram: true,
   call_zalo: true,
+  mcp_client_check: false,
   base_currency_locked_reason:
     "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },

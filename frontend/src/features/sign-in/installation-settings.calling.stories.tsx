@@ -74,6 +74,7 @@ const FULL: InstallationSettings = {
   timezone: meFixture().user.timezone,
   base_currency: "EUR",
   base_currency_locked: false,
+  mcp_client_check: false,
   ...ALL_ON,
 };
 

@@ -21,6 +21,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
+import { AgentClientExperimentsCard } from "./agent-client-experiments";
 import { AgentClientMethodsCard } from "./agent-client-methods";
 import {
   AgentClientValuesDialog,
@@ -364,6 +365,7 @@ export function McpCards() {
   return (
     <>
       <AgentClientMethodsCard />
+      <AgentClientExperimentsCard />
       <AgentClientsCard />
       <AgentConnectionsCard />
     </>

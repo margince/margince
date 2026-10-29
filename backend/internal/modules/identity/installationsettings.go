@@ -38,6 +38,8 @@ type InstallationSettings struct {
 	CallWhatsApp bool
 	CallTelegram bool
 	CallZalo     bool
+	// McpClientCheck is the admin switch for the check_client tool.
+	McpClientCheck bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -104,6 +106,7 @@ type InstallationPatch struct {
 	// leaves the switch unchanged.
 	DynamicClientRegistration *bool
 	MetadataDocumentClients   *bool
+	McpClientCheck            *bool
 	CallWhatsApp              *bool
 	CallTelegram              *bool
 	CallZalo                  *bool
@@ -281,6 +284,9 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err := s.readCallMessengers(ctx, &out); err != nil {
 		return InstallationSettings{}, err
 	}
+	if out.McpClientCheck, err = readClientCheck(ctx, s.config); err != nil {
+		return InstallationSettings{}, err
+	}
 	return out, nil
 }
 
@@ -388,7 +394,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites} {
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.clientCheckWrites} {
 		writes, err := group()
 		if err != nil {
 			return nil, err

@@ -123,6 +123,13 @@ type ToolSpec struct {
 	// listed tool replaces it. It still runs when called by name. Its name is
 	// the approval kind it stages and the key of its tier floor and retry claims.
 	Unlisted bool
+	// Gated marks an Unlisted tool that the registry's tool gate offers to some
+	// callers. For every other caller it does not exist: it is not listed and a
+	// call by its name gets the unknown-tool answer.
+	Gated bool
+	// ProtocolOnly marks a tool that measures the MCP protocol itself and has no
+	// REST route, because REST callers cannot answer what it asks.
+	ProtocolOnly bool
 	// ConfirmsInConversation marks a tool whose confirmation happens in the
 	// conversation that asked for it, never in the approval inbox. An exhausted
 	// volume budget refuses such a call outright instead of asking the connecting

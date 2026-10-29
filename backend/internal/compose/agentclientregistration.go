@@ -16,7 +16,7 @@ import (
 
 // clientRegistrationReadActor names the switch read in the audit trail: no
 // human asked for it, a tool asked to sign someone in.
-const clientRegistrationReadActor = "system:client_registration_read"
+const clientRegistrationReadActor = identity.ClientRegistrationReadActor
 
 // WithClientRegistrationLimit carries the deployment file's
 // mcp.client_registration: which automatic methods admins may turn on at all.

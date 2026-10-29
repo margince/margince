@@ -74,6 +74,8 @@ type Registry struct {
 	// tierFloor carries the contract's per-record-type tier declarations, which
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
+	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
+	toolGate ToolGate
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -181,6 +183,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	spec := r.specs[name]
 	r.mu.RUnlock()
 	if !ok {
+		return nil, 0, &UnknownToolError{Name: name}
+	}
+
+	if spec.Gated && !r.offersGated(ctx, spec) {
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 

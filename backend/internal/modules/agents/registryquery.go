@@ -164,7 +164,7 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 			out = append(out, words.listed(r.asSeenBy(ctx, spec)))
 		}
 	}
-	return out
+	return append(out, r.gatedFor(ctx, all)...)
 }
 
 // Runnable is what a Surface-B run may choose among: every tool this caller may
@@ -174,7 +174,7 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
-		if invocableByCaller(ctx, spec) {
+		if !spec.Gated && invocableByCaller(ctx, spec) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}

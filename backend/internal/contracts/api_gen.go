@@ -43648,6 +43648,10 @@ type InstallationSettings struct {
 	// little room rather than compare a file against it exactly.
 	MaxUploadBytes int64 `json:"max_upload_bytes"`
 
+	// McpClientCheck True when admins' AI tools are offered the `check_client` tool. Off by default. Change it
+	// with `PATCH /installation/settings`, which needs `agent_client` update.
+	McpClientCheck bool `json:"mcp_client_check"`
+
 	// Name The company's display name. An administrator saving the anchor company's `display_name`
 	// (`PUT /company`, a profile-field correction or a company edit) sets it in the same
 	// transaction; before the first save it is the name the installation was configured with.
@@ -55196,6 +55200,11 @@ type UpdateInstallationSettingsRequest struct {
 
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
 	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
+
+	// McpClientCheck Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+	// answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+	// update. Read from the settings answer, because it is not a way to sign in.
+	McpClientCheck *bool `json:"mcp_client_check,omitempty"`
 
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.
