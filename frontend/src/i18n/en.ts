@@ -2202,6 +2202,7 @@ export const en = {
   "history.field.owner_id": "Owner",
   "history.field.provider_claims_received": "Provider claims received",
   "history.field.reachability": "Reachable",
+  "history.field.readiness": "Ready for the meeting",
   "history.field.reply_verdict": "Reply result",
   "history.field.reply_verdict_by": "Reply result by",
   "history.field.research_claims_accepted": "Research claims accepted",

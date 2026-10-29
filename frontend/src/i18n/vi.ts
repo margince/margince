@@ -2216,6 +2216,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.owner_id": "Người chịu trách nhiệm",
   "history.field.provider_claims_received": "Thông tin đã nhận từ nhà cung cấp",
   "history.field.reachability": "Liên lạc được",
+  "history.field.readiness": "Sẵn sàng cho cuộc họp",
   "history.field.reply_verdict": "Kết quả thư trả lời",
   "history.field.reply_verdict_by": "Nguồn kết quả thư trả lời",
   "history.field.research_claims_accepted": "Thông tin tìm hiểu đã chấp nhận",
