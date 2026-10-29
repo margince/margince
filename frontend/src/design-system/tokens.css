@@ -33,6 +33,9 @@
    * segmented strip, the trough of a meter. Translucent, so it reads one step
    * deeper than any rung it lands on, an inset plate included. */
   --bgChip: rgba(16, 23, 20, 0.03);
+  /* A pressed segment's raised face: the brightest face on its chip track, at
+   * any depth. */
+  --segmentPressed: #fcfffe;
   --bgHover: #d7ede5;
   /* A band that lies on the ground rather than being it, so it must not vanish
    * into the page the way a pre-paint or a frame should. */
@@ -776,6 +779,7 @@
   --bgElevated: #161d1a;
   --bgInset: #1a211e;
   --bgChip: rgba(239, 247, 244, 0.09);
+  --segmentPressed: #3d4441;
   --bgHover: #172823;
   --bgStrip: #0a1713;
   --hoverShade: #1a493b;
@@ -938,6 +942,7 @@
     --bgElevated: #161d1a;
     --bgInset: #1a211e;
     --bgChip: rgba(239, 247, 244, 0.09);
+    --segmentPressed: #3d4441;
     --bgHover: #172823;
     --bgStrip: #0a1713;
     --hoverShade: #1a493b;

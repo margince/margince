@@ -71,6 +71,8 @@ export function HowItStands({
     "--standing-ink":
       verdict.tone === "neutral" ? "var(--textPrimary)" : colours.ink,
   };
+  // An unjudged verdict keeps a plain edge, as it keeps a plain ground.
+  if (verdict.tone !== "neutral") vars["--standing-edge"] = colours.ink;
   return (
     <div className="standing-sheet" style={vars}>
       <Panel

@@ -847,7 +847,7 @@
   background: var(--groundHover);
 }
 .segmented button[aria-pressed="true"] {
-  background: var(--bgElevated);
+  background: var(--segmentPressed);
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
   box-shadow: var(--shadow-rest);
@@ -2357,7 +2357,7 @@ span.error-line {
    off one host and invisible on the next. --bgElevated is the one ground in the
    ladder that is a step off the track on every host. */
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgElevated);
+  background-color: var(--segmentPressed);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

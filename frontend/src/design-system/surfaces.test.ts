@@ -22,6 +22,7 @@ import {
   ladderSheet,
   OVERLAY_RUNG,
   PAGE_RUNGS,
+  PINNED_RUNGS,
 } from "../../scripts/lib/surface-ladder";
 import { parseBlock, tokenDecls } from "./tokens-testing";
 
@@ -217,7 +218,11 @@ describe("the ladder's lists", () => {
         compounds(rule.selector).flatMap((part) => [...classesOf(part)]),
       ),
     );
-    const named = [...lists.surfaces, ...lists.overlays].flatMap((selector) =>
+    const named = [
+      ...lists.surfaces,
+      ...lists.overlays,
+      ...PINNED_RUNGS.map((pin) => pin.selector),
+    ].flatMap((selector) =>
       compounds(selector).flatMap((part) => [...classesOf(part)]),
     );
     expect(named.filter((name) => !styled.has(name))).toEqual([]);
@@ -233,7 +238,13 @@ describe("a pane's ground is its depth", () => {
   // jsdom stops matching a :where() past about fifty selectors; the sheet is
   // ladderSheet's output (asserted above), so a short list runs the same rules.
   const { surfaces, overlays } = ladderLists(ladderText);
-  const used = [".panel", ".card", ".record-card", ".record-split-sheet"];
+  const used = [
+    ".panel",
+    ".card",
+    ".record-card",
+    ".record-split-sheet",
+    '.stat-strip[data-density="plate"]',
+  ];
   const sheet = ladderSheet(
     surfaces.filter(
       (selector) => used.includes(selector) || selector.startsWith(".lt"),
@@ -317,6 +328,27 @@ describe("a pane's ground is its depth", () => {
     expect(seams.slice(1)).toEqual(
       PAGE_RUNGS.slice(1).map((rung) => rung.edge),
     );
+  });
+
+  it("keeps a pinned part on its rung at any depth", () => {
+    const [tools, strip] = PINNED_RUNGS.map((pin) => PAGE_RUNGS[pin.level - 1]);
+    const markup = `
+      <section class="panel"><div class="lt-tools" id="t1"></div>
+        <div class="card"><div class="panel">
+          <div class="lt-tools" id="t4"></div>
+          <section class="stat-strip" data-density="plate" id="s4"></section>
+        </div></div>
+      </section>`;
+    expect(groundsOf(markup)).toEqual({
+      t1: tools.ground,
+      t4: tools.ground,
+      s4: four,
+    });
+    expect(groundsOf(markup, "--groundEdge")).toEqual({
+      t1: tools.edge,
+      t4: tools.edge,
+      s4: strip.edge,
+    });
   });
 
   it("counts again from an overlay, wherever the overlay sits", () => {

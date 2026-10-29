@@ -45,6 +45,12 @@ export const OVERLAY_RUNG = {
   seam: "var(--borderSubtle)",
 } as const;
 
+// A part that keeps one rung wherever it nests: the whole rung, or its edge alone.
+export const PINNED_RUNGS = [
+  { selector: ".lt-tools", level: 3, takes: "ground" },
+  { selector: '.stat-strip[data-density="plate"]', level: 2, takes: "edge" },
+] as const;
+
 // From level 2 the house hairline fades into the ground, so a seam takes the edge.
 type Rung = Readonly<{
   ground: string;
@@ -91,11 +97,15 @@ const SHADES = [
   )
   .join("");
 
+function declarations(rung: Rung): string {
+  return `  --ground: ${rung.ground};\n  --groundEdge: ${rung.edge};\n  --groundSeam: ${rung.seam};\n${SHADES}  background-color: ${rung.paint};\n`;
+}
+
 function rule(chain: readonly (readonly string[])[], rung: Rung): string {
   const selector = chain
     .map((list, at) => compound(list, at, chain.length))
     .join("\n");
-  return `${selector} {\n  --ground: ${rung.ground};\n  --groundEdge: ${rung.edge};\n  --groundSeam: ${rung.seam};\n${SHADES}  background-color: ${rung.paint};\n}\n`;
+  return `${selector} {\n${declarations(rung)}}\n`;
 }
 
 export function ladderSheet(
@@ -108,7 +118,21 @@ export function ladderSheet(
   const overlay = PAGE_RUNGS.slice(1).map((rung, depth) =>
     rule([overlays, ...Array(depth + 1).fill(surfaces)], rung),
   );
-  return [HEADER, ...page, rule([overlays], OVERLAY_RUNG), ...overlay].join("");
+  const pinned = PINNED_RUNGS.map(({ selector, level, takes }) => {
+    const rung = PAGE_RUNGS[level - 1];
+    const body =
+      takes === "ground"
+        ? declarations(rung)
+        : `  --groundEdge: ${rung.edge};\n`;
+    return `:where(${selector}) {\n${body}}\n`;
+  });
+  return [
+    HEADER,
+    ...page,
+    rule([overlays], OVERLAY_RUNG),
+    ...overlay,
+    ...pinned,
+  ].join("");
 }
 
 // The lists as the sheet states them, read from the level-1 rule and the

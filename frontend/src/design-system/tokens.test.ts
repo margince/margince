@@ -351,6 +351,25 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(failures.join("\n")).toBe("");
     });
 
+    it("lifts a pressed segment above its chip track on every level", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const ground of [
+          "--bgPage",
+          "--bgElevated",
+          "--ladder1Solid",
+          "--ladder2",
+          "--ladder3",
+          "--ladder4",
+        ]) {
+          const track = composite(pal["--bgChip"], pal[ground]);
+          expect(
+            luminanceOf(pal["--segmentPressed"]),
+            `${theme} on ${ground}`,
+          ).toBeGreaterThan(luminanceOf(track));
+        }
+      }
+    });
+
     it("makes level 1 opaque without moving it", () => {
       for (const pal of Object.values(themes)) {
         expect(luminanceOf(pal["--ladder1Solid"])).toBe(
@@ -423,6 +442,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ...Object.fromEntries(
           calloutWashes.map((ground) => [ground, ["--textPrimary"]]),
         ),
+        "--segmentPressed": ["--textPrimary"],
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
         "--textPrimary": ["--bgPage"],

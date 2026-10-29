@@ -12,8 +12,6 @@ src/design-system/ambient-waves.tsx: "--bgElevated"
 src/design-system/atoms.css: .actions-split > .btn:last-child { border-inline-start: 1px solid var(--bgElevated) }
 src/design-system/atoms.css: .field-shell { background: var(--bgElevated) }
 src/design-system/atoms.css: .input { background: var(--bgElevated) }
-src/design-system/atoms.css: .segmented button:active:not(:disabled) { background-color: var(--bgElevated) }
-src/design-system/atoms.css: .segmented button[aria-pressed="true"] { background: var(--bgElevated) }
 src/design-system/atoms.css: .textarea { background: var(--bgElevated) }
 src/design-system/avatarstack.css: .avatar-stack-item { box-shadow: 0 0 0 2px var(--bgElevated) }
 src/design-system/base.css: .btn-federated { background: var(--bgElevated) }

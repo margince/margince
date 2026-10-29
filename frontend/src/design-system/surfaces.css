@@ -40,7 +40,6 @@
   .real-card,
   .dcard[data-layout="deck"],
   .rail,
-  .rail.expanded .railhead,
   .topbar,
   .backfill-estimate,
   .agents-guide-command,
@@ -135,7 +134,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -215,7 +213,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -310,7 +307,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -390,7 +386,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -470,7 +465,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -565,7 +559,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -645,7 +638,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -725,7 +717,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -805,7 +796,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -953,7 +943,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1067,7 +1056,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1147,7 +1135,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1261,7 +1248,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1341,7 +1327,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1421,7 +1406,6 @@
     .real-card,
     .dcard[data-layout="deck"],
     .rail,
-    .rail.expanded .railhead,
     .topbar,
     .backfill-estimate,
     .agents-guide-command,
@@ -1484,4 +1468,23 @@
     var(--ground)
   );
   background-color: var(--ladder4);
+}
+:where(.lt-tools) {
+  --ground: var(--ladder3);
+  --groundEdge: var(--ladder3Edge);
+  --groundSeam: var(--ladder3Edge);
+  --groundHover: color-mix(
+    in srgb,
+    var(--hoverShade) var(--hoverShare),
+    var(--ground)
+  );
+  --groundStrip: color-mix(
+    in srgb,
+    var(--stripShade) var(--stripShare),
+    var(--ground)
+  );
+  background-color: var(--ladder3);
+}
+:where(.stat-strip[data-density="plate"]) {
+  --groundEdge: var(--ladder2Edge);
 }
