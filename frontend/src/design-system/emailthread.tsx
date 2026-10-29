@@ -130,11 +130,12 @@ export function threadOrder(
   const others = (presentation.thread?.members ?? []).filter(
     (member) => member.activity_id !== presentation.id,
   );
-  return [...others, presentation.summary].sort(
-    (a, b) =>
-      Date.parse(b.occurred_at) - Date.parse(a.occurred_at) ||
-      b.activity_id.localeCompare(a.activity_id),
-  );
+  return [...others, presentation.summary].sort((a, b) => {
+    const byTime = Date.parse(b.occurred_at) - Date.parse(a.occurred_at);
+    if (byTime !== 0) return byTime;
+    if (a.activity_id === b.activity_id) return 0;
+    return a.activity_id < b.activity_id ? 1 : -1;
+  });
 }
 
 // Another message of the thread, read when the reader opens it.
