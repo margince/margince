@@ -13,6 +13,11 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import {
+  recordProfileFieldVerdict,
+  type ShownValue,
+  shownValueOf,
+} from "./profilefieldverdict";
 import "./contactcorrections.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -29,7 +34,7 @@ const SOURCE_PHRASE: Readonly<Record<string, MessageKey>> = {
   human_restore: "contact.enriched.source.human_restore",
 };
 
-function sourcePhrase(source: string, t: Translator): string {
+export function sourcePhrase(source: string, t: Translator): string {
   return t(SOURCE_PHRASE[source] ?? "contact.enriched.source.other");
 }
 
@@ -117,39 +122,23 @@ function EnrichedField({
   // what was there when the reader started typing. Submitting the CURRENT
   // field's value and stamp would name a sentence the reader never saw, and the
   // server would then apply their correction to it.
-  const [shown, setShown] = useState<{ value: string; capturedAt: string }>({
-    value: field.value,
-    capturedAt: field.captured_at,
-  });
+  const [shown, setShown] = useState<ShownValue>(() => shownValueOf(field));
   const queryClient = useQueryClient();
 
   const record = useMutation({
-    mutationFn: async (input: {
+    mutationFn: (input: {
       verdict: "corrected" | "confirmed";
       value?: string;
-    }) => {
-      unwrap(
-        await api.POST("/ai/feedback", {
-          body: {
-            subject_type: "contact",
-            subject_id: contactId,
-            claim_kind: "profile_field",
-            // The server's own key for this claim, echoed back, not rebuilt here. A
-            // path spelled differently would file the verdict against a claim nothing
-            // reads.
-            claim_path: field.claim_key ?? `profile_field:${field.field}`,
-            verdict: input.verdict,
-            corrected_value: input.value,
-            // What the reader was looking at, snapshotted when the editor opened. It
-            // lets the ledger check that the verdict applies to the value the human
-            // saw. Read live, it would fail when something else writes the field while
-            // the page is open and the correction is submitted afterwards.
-            value_shown: shown.value,
-            value_captured_at: shown.capturedAt,
-          },
-        }),
-      );
-    },
+    }) =>
+      recordProfileFieldVerdict({
+        contactId,
+        field,
+        // Snapshotted when the editor opened. Read live, it would fail when
+        // something else writes the field while the correction is typed.
+        shown,
+        verdict: input.verdict,
+        correctedValue: input.value,
+      }),
     onSuccess: () => {
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] });
@@ -274,10 +263,7 @@ function EnrichedField({
               <Button
                 onClick={() => {
                   setDraft(field.value);
-                  setShown({
-                    value: field.value,
-                    capturedAt: field.captured_at,
-                  });
+                  setShown(shownValueOf(field));
                   setEditing(true);
                 }}
               >

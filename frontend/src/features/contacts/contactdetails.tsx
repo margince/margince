@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS } from "../../components/companyform";
@@ -40,6 +40,8 @@ import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { type ProfileField, proposedEmployer } from "./employerproposal";
+import { ProposedEmployerRow } from "./employerproposalrow";
 import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
@@ -74,6 +76,9 @@ export function useContactAboutSections(
     .filter(Boolean)
     .join(", ");
   const employer = currentEmployer(view.employments?.data);
+  const proposed = employer
+    ? undefined
+    : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const record = { entityType: "contact", entityId: contact.id } as const;
   // Every row but the employer changes in place; an empty one still folds.
@@ -112,9 +117,9 @@ export function useContactAboutSections(
         {
           key: "employer",
           term: t("contact.rail.employer"),
-          value: employer ? <EmployerCard employment={employer} /> : notSet,
-          empty: !employer,
-          block: Boolean(employer),
+          value: employerValue(view, employer, proposed, notSet),
+          empty: !employer && !proposed,
+          block: Boolean(employer ?? proposed),
         },
         field("email", t("create.email"), Boolean(email), {
           keys: ["emails"],
@@ -220,6 +225,17 @@ export function useContactAboutSections(
       ],
     },
   ];
+}
+
+function employerValue(
+  view: Contact360,
+  employer: Employment | undefined,
+  proposed: ProfileField | undefined,
+  notSet: string,
+): ReactNode {
+  if (employer) return <EmployerCard employment={employer} />;
+  if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
+  return notSet;
 }
 
 /**
