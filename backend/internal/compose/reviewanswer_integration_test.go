@@ -22,6 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -120,5 +121,33 @@ func TestClosingLostClosesTheDealAndTheReview(t *testing.T) {
 	}
 	if v.openReviews(t, v.silent) != 0 {
 		t.Errorf("the review stayed open after its deal was closed lost")
+	}
+}
+
+func TestAReviewOfADealClosedSinceMovesNothing(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	review := v.reviewOf(t, v.silent)
+	lost, err := ids.Parse(v.WsScalar(t, `SELECT st.id::text FROM stage st JOIN deal d ON d.pipeline_id = st.pipeline_id
+		WHERE d.id = $1 AND st.semantic = 'lost' ORDER BY st.position LIMIT 1`, v.silent))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reason := "Budget cut"
+	if _, err := v.Deals.AdvanceDeal(v.Admin(), ids.From[ids.DealKind](v.silent), deals.AdvanceDealInput{
+		ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+	}); err != nil {
+		t.Fatalf("closing the deal outside the review: %v", err)
+	}
+
+	if rec := v.postAnswer(t, review, "wait", map[string]any{"until": clocktest.Now(t).AddDate(0, 0, 30).Format(time.DateOnly)}); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("a wait on a closed deal answered %d %s, want 422", rec.Code, rec.Body)
+	}
+	if err := v.reviewStore().Resolve(v.Admin(), review, assurance.Resolution{Outcome: assurance.OutcomeFixedRecord},
+		clocktest.Now(t)); err == nil {
+		t.Errorf("a closed deal was revived")
+	}
+	if got := v.WsScalar(t, `SELECT coalesce(wait_until::text, '') FROM deal WHERE id = $1`, v.silent); got != "" {
+		t.Errorf("the closed deal got a wait %q", got)
 	}
 }

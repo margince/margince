@@ -43,12 +43,17 @@ func AssuranceReviewCheck(ctx context.Context, tx pgx.Tx, deal ids.UUID, outcome
 	switch {
 	case outcome == assurance.OutcomeNotRelevant && status == string(deals.DealOpen):
 		return httperr.Validation("outcome", "deal_open", "Close the deal as lost to answer the review this way.")
-	case outcome != assurance.OutcomeFixedRecord || status != string(deals.DealOpen):
+	case outcome != assurance.OutcomeFixedRecord:
 		return nil
+	case status != string(deals.DealOpen):
+		return httperr.Validation("outcome", "deal_closed", "The deal is closed, so there is nothing to revive.")
 	}
 	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), &deal)
-	if err != nil || len(subjects) == 0 || subjects[0].Viability == nil {
+	if err != nil {
 		return err
+	}
+	if len(subjects) == 0 || subjects[0].Viability == nil {
+		return errors.New("compose: the open deal under review was not read back")
 	}
 	judged := subjects[0].Viability
 	if judged.Outcome == viability.OutcomeEligible || judged.Outcome == viability.OutcomeWaiting {
@@ -169,6 +174,15 @@ func (h reviewAnswerHandlers) answer(
 		}
 		if err := auth.EnsureWritable(ctx, tx, "deal", deal); err != nil {
 			return err
+		}
+		// The deal may have been won or lost since the review was shown; neither
+		// answer may move a closed deal.
+		var status string
+		if err := tx.QueryRow(ctx, `SELECT status FROM deal WHERE id = $1 FOR UPDATE`, deal).Scan(&status); err != nil {
+			return fmt.Errorf("compose: reading the reviewed deal: %w", err)
+		}
+		if status != string(deals.DealOpen) {
+			return httperr.Validation("outcome", "deal_closed", "The deal was closed since the review was shown.")
 		}
 		return write(ctx, tx, ids.From[ids.DealKind](deal), active)
 	})
