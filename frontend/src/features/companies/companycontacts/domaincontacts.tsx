@@ -175,7 +175,10 @@ export function DomainContactsDialog({
           query={candidates}
           rows={rows}
           ticked={chosen}
-          onTick={setTicked}
+          onTick={(ids) => {
+            setTicked(ids);
+            renew();
+          }}
         />
         {!changed && <ErrorLine error={link.error} />}
       </div>

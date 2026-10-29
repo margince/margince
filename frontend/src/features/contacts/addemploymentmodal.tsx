@@ -184,13 +184,15 @@ export function AddEmploymentModal({
           variant="primary"
           disabled={!company || !validDateEntry(start)}
           pending={create.isPending}
-          onClick={() => {
+          onClick={async () => {
             if (!company) {
               return;
             }
             const started = datePatch(start);
-            create.mutate(
-              {
+            // Awaited rather than a mutate callback: the link can replace the
+            // row that holds this dialog, and an unmounted observer drops those.
+            const linked = await create
+              .mutateAsync({
                 kind: "employment",
                 contact_id: contactId,
                 company_id: company.id,
@@ -203,14 +205,16 @@ export function AddEmploymentModal({
                 // to say "ui", which named the screen rather than the origin,
                 // and would have re-created the spelling the backfill removed.
                 source: "manual",
-              },
-              {
-                onSuccess: () => {
-                  onLinked?.();
-                  close();
-                },
-              },
-            );
+              })
+              .then(
+                () => true,
+                // A refusal stays on screen through `create.error`.
+                () => false,
+              );
+            if (linked) {
+              onLinked?.();
+              close();
+            }
           }}
         >
           {t("create.save")}

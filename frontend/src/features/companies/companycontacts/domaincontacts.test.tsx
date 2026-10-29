@@ -417,6 +417,40 @@ describe("A refused link", () => {
     expect(sent[1].key).not.toBe(sent[0].key);
   });
 
+  it("sends a new key once the ticks change after a failed link", async () => {
+    let attempts = 0;
+    const { sent } = stubApi({
+      link: () => {
+        attempts += 1;
+        return attempts === 1
+          ? problem(500, { detail: "" })
+          : json({ data: [] }, 201);
+      },
+    });
+    mount(<CompanyContactsList companyId={COMPANY_ID} />);
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Review contacts" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("checkbox", { name: /Anja/ }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Link 1 contact" }),
+    );
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("checkbox", { name: /Mira/ }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "Link 2 contacts" }),
+    );
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1].body).toEqual({
+      contact_ids: [candidates[0].contact_id, candidates[2].contact_id],
+    });
+    expect(sent[1].key).not.toBe(sent[0].key);
+  });
+
   it("names a refused write in words, not the raw response", async () => {
     stubApi({
       link: () => problem(403, { code: "permission_denied" }),

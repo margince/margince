@@ -18,6 +18,7 @@ import { RecordDetails } from "../../design-system/recorddetails";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { useContact360 } from "./contact360";
 import { useContactAboutSections } from "./contactdetails";
 import { Employers } from "./contactemployers";
 
@@ -77,6 +78,7 @@ function json(body: unknown, status = 200) {
 // The employer write answers with `employer`; every other write succeeds.
 function stubApi({
   grants = ALL_GRANTS,
+  relationship,
   employer = () =>
     json(
       {
@@ -91,6 +93,8 @@ function stubApi({
 }: {
   grants?: GrantSpec;
   employer?: () => Response;
+  // Answers the employment write, for a test that holds the answer back.
+  relationship?: () => Promise<Response>;
 } = {}) {
   const sent: Sent[] = [];
   vi.stubGlobal(
@@ -108,6 +112,10 @@ function stubApi({
       }
       if (url.pathname.endsWith("/me"))
         return json(meFixture({ allow: grants }));
+      if (url.pathname.endsWith(`/contacts/${CONTACT_ID}/360`)) {
+        const linked = sent.some((write) => write.path === "/relationships");
+        return json(linked ? employedView() : contactView());
+      }
       if (url.pathname.endsWith("/employer")) return employer();
       if (
         url.pathname.endsWith("/companies/7c4b2e90-1d3a-4f58-b6e2-9a0c5d8f1e23")
@@ -128,6 +136,9 @@ function stubApi({
           page: { has_more: false },
         });
       }
+      if (relationship && url.pathname.endsWith("/relationships")) {
+        return relationship();
+      }
       if (request.method === "POST") return json({}, 201);
       return json({ data: [], page: { has_more: false } });
     }),
@@ -139,9 +150,33 @@ function AboutRail({ view }: Readonly<{ view: Contact360 }>) {
   return <RecordDetails sections={useContactAboutSections(view)} />;
 }
 
+// The rail as the contact page draws it: from the 360 read, which a write
+// refetches.
+function LiveRail() {
+  const view = useContact360(CONTACT_ID).data;
+  return view ? <AboutRail view={view} /> : null;
+}
+
+// The contact once the picked company is linked as their current employer.
+function employedView(): Contact360 {
+  return contactView({
+    employments: {
+      data: [
+        {
+          relationship_id: "e5a2d9c4-7b13-4f60-8c2e-1a9f3d6b0e74",
+          company_id: "7c4b2e90-1d3a-4f58-b6e2-9a0c5d8f1e23",
+          company_name: "Nordlicht Logistik AG",
+          is_current_primary: true,
+        },
+      ],
+      page: { has_more: false },
+    },
+  });
+}
+
 const COMPANIES_LIST = ["companies", {}];
 
-function mount(view: Contact360, place: "card" | "rail" = "card") {
+function mount(view: Contact360, place: "card" | "rail" | "live" = "card") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -150,11 +185,9 @@ function mount(view: Contact360, place: "card" | "rail" = "card") {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          {place === "card" ? (
-            <Employers view={view} />
-          ) : (
-            <AboutRail view={view} />
-          )}
+          {place === "card" && <Employers view={view} />}
+          {place === "rail" && <AboutRail view={view} />}
+          {place === "live" && <LiveRail />}
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -429,6 +462,42 @@ describe("The signature’s company in the rail’s About section", () => {
       ],
       ["/ai/feedback", expect.objectContaining({ verdict: "confirmed" })],
     ]);
+  });
+
+  it("confirms a company linked through the picker after the row gives way", async () => {
+    let answer: (response: Response) => void = () => {};
+    const sent = stubApi({
+      relationship: () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const client = mount(contactView(), "live");
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Link" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", {
+        name: "Nordlicht Logistik AG",
+      }),
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(sent.map((write) => write.path)).toEqual(["/relationships"]),
+    );
+    await client.refetchQueries({ queryKey: ["contact360", CONTACT_ID] });
+    await waitFor(() => expect(screen.queryByText(PROPOSAL)).toBeNull());
+
+    answer(json({ id: "e5a2d9c4-7b13-4f60-8c2e-1a9f3d6b0e74" }, 201));
+
+    await waitFor(() =>
+      expect(sent.map((write) => write.path)).toEqual([
+        "/relationships",
+        "/ai/feedback",
+      ]),
+    );
+    expect(sent[1]).toMatchObject({ body: { verdict: "confirmed" } });
   });
 
   it("folds the empty employer row when no company was read", async () => {
