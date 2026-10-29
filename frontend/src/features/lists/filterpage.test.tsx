@@ -91,7 +91,7 @@ describe("the calm start", () => {
     expect(
       screen.getByRole("heading", { name: "Build it condition by condition" }),
     ).toBeTruthy();
-    // The one emerald control on the page.
+    // The one accent control on the page.
     expect(document.querySelectorAll(".btn-primary")).toHaveLength(1);
     expect(screen.getByText(START_HINT)).toBeTruthy();
     // No count, no rows, no save and no export before a condition exists —
@@ -420,7 +420,7 @@ describe("keeping and exporting", () => {
     expect(
       screen.getByRole("button", { name: en["filters.footMore"] }),
     ).toBeTruthy();
-    // From here the emerald belongs to Save, and to nothing else.
+    // From here the accent belongs to Save, and to nothing else.
     const primary = document.querySelectorAll(".btn-primary");
     expect(primary).toHaveLength(1);
     expect(primary[0]?.textContent).toBe(SAVE);

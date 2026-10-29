@@ -71,7 +71,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
 | `archive_record` | 🟢 | `write` | no | Archive a record |
 | `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
-| `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢)</details> |
+| `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `ready` (`confirm_meeting_ready`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢) `unready` (`undo_meeting_ready`, 🟢)</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
 | `change_record_parts` | 🟢 | `write` | no | Change the parts of a record |
 | `change_reports` | 🟢 | `write` | no | 🔀 Write a draft of a saved report for a human to publish <details><summary>actions</summary>`draft` (`draft_report`, 🟢)</details> |

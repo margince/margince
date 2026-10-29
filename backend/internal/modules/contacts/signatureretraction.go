@@ -184,7 +184,7 @@ func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value
+		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value, f.value_key
 		  FROM contact_profile_field f
 		 WHERE f.id = ANY($1) AND f.source = $2
 		   AND NOT EXISTS (
@@ -249,6 +249,7 @@ type retractedField struct {
 	Field      string
 	Value      string
 	Superseded *string
+	ValueKey   string
 }
 
 // withdrawValue takes the field's value off the contact, as a compare and swap
@@ -260,7 +261,7 @@ type retractedField struct {
 // the one this read added is archived, and the number it replaced comes back.
 func (f retractedField) withdrawValue(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if f.Field == fieldPhone {
-		return true, withdrawSignatureNumber(ctx, tx, f.ContactID, f.Value)
+		return true, withdrawSignatureNumber(ctx, tx, f.ContactID, f.ValueKey)
 	}
 	column, mirrored := observedFieldColumn(f.Field)
 	if !mirrored {
@@ -308,8 +309,8 @@ func restoreSignatureDisplayTx(ctx context.Context, tx pgx.Tx, contactID ids.Con
 }
 
 // withdrawSignatureNumber archives the live number a signature read added, and
-// revives the number it replaced. A number a human has since saved by hand
-// carries their source and stays.
+// revives a supported predecessor. Without evidence, an older machine value
+// would put the unsupported number back as soon as the replacement is removed.
 func withdrawSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phone string) error {
 	replaced, err := archiveSignatureNumber(ctx, tx, contactID, phone)
 	if err != nil {
@@ -319,8 +320,16 @@ func withdrawSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		if id == nil {
 			continue
 		}
-		if _, err := revivePhoneTx(ctx, tx, contactID, *id); err != nil {
-			return err
+		var supported bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact_phone p
+			WHERE p.id = @id AND p.contact_id = @contact AND `+supportedSignaturePhone+`)`,
+			pgx.StrictNamedArgs{"id": id, "contact": contactID}).Scan(&supported); err != nil {
+			return fmt.Errorf("contacts: checking the replaced number's evidence: %w", err)
+		}
+		if supported {
+			if _, err := revivePhoneTx(ctx, tx, contactID, *id); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

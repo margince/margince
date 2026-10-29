@@ -136,7 +136,7 @@ func (changeActivities) Spec() mcp.ToolSpec {
 		Name: "change_activities", Title: "Log, plan and file activities", Version: toolVersionV1,
 		Description: changeActivitiesCopy.render(), Instead: changeActivitiesCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set"}}}`),
+			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back"}}}`),
 	}
 }
 
@@ -146,6 +146,7 @@ func (changeActivities) routeTargets() map[string]string {
 	return map[string]string{
 		"log": "log_activity", resultTypeTask: "create_task", "attach": "attach_document",
 		"relink": relinkActivityTool, "relink_many": relinkActivitiesTool,
+		"ready": confirmMeetingReadyTool, "unready": undoMeetingReadyTool,
 	}
 }
 

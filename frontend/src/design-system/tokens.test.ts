@@ -187,7 +187,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     }
   });
 
-  it("is Ledger Green — not Gradion orange, not Dispact warm-stone", () => {
+  it("keeps the deep-teal accent — not Gradion orange, not Dispact warm-stone", () => {
     expect(normalize(light["--accent"])).toBe("#045647");
     expect(normalize(light["--bgInkField"])).toBe("#13231d");
     const all = normalize(Object.values(light).join(" "));

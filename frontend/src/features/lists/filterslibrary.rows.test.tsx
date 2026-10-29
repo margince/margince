@@ -87,8 +87,8 @@ describe("a row", () => {
       en["lists.type.contact"],
     );
     const list = await rowOf(liveList.name);
-    // Info rather than emerald or indigo: those say the one primary action and
-    // an agent's proposal, and a list that keeps itself current is neither.
+    // Info, not the accent or indigo: those say the one primary action and an
+    // agent's proposal. A list that keeps itself current is neither.
     const live = within(list)
       .getByText(en["lists.kind.live"])
       .closest(".badge");

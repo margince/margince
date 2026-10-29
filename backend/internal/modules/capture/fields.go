@@ -55,6 +55,9 @@ type ActivityFields struct {
 	// CredentialsMasked says masking changed this record's subject or body. Only
 	// then may equal text fail to prove one message (replaymaskedproof.go).
 	CredentialsMasked bool
+	// AgendaFingerprint is a meeting invite's own description, fingerprinted as
+	// the calendar sent it. Empty for anything that is not a calendar meeting.
+	AgendaFingerprint string
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.

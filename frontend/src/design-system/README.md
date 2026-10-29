@@ -132,8 +132,8 @@ one, or one in an inline style.
 
 **Two neutral inks.** `--textPrimary` carries a heading, a record's name and body prose.
 `--textSecondary` supports: a placeholder first, and each other role is decided at the element. Dark
-lifts both. `--textPrimary` goes to `#fff`, and `--textSecondary` goes to `lch(63.304% 1.425 272)`
-from the light `lch(40% 1 282)`. Anything quieter than the second uses the same ink at a smaller
+lifts both. `--textPrimary` goes from `#182c28` to `#edf6f4`, and `--textSecondary` from `#55645f`
+to `#9aa8a3`. Anything quieter than the second uses the same ink at a smaller
 size or a lighter weight; there is no third neutral.
 
 `Foundations/Typography` in Storybook draws the body levels, the heading ladder and the pairs.

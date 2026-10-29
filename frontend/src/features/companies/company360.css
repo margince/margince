@@ -1188,8 +1188,9 @@
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as
    the aside it is, and the row keeps exactly one control that looks pressable
-   for the thing it wants done. */
-.co-move-defer {
+   for the thing it wants done. Two classes, so it outranks .btn-ghost in any
+   sheet order. */
+.btn.co-move-defer {
   border-color: transparent;
   background: none;
 }

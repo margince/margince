@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { emailSummaryText, splitEmailBody } from "./emailtext";
 
 describe("splitEmailBody", () => {
+  it.each(["*", "**"])(
+    "folds an Outlook quote with %s bold headers",
+    (mark) => {
+      const header = `${mark}From:${mark} Sam <sam@example.org>\n${mark}Sent:${mark} Monday`;
+      const parts = splitEmailBody(
+        `Works for me.\n\n${header}\n\nSam Seller\n+49 30 1111111`,
+      );
+      expect(parts.main).toBe("Works for me.");
+      expect(parts.trimmed).toContain(header);
+    },
+  );
+
   it("peels the From/To preamble capture folds into the body", () => {
     const parts = splitEmailBody(
       "From: anna@kunde.de\nTo: lars@gradion.com\n\nKönnen wir Dienstag sprechen?",

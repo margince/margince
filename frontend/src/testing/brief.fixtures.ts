@@ -569,6 +569,12 @@ export function meetingRow(
     because: prepared ? [] : [{ kind: "meeting_unprepared" }],
     consequence: prepared ? "none" : "meeting_unprepared",
     actions: ["open"],
+    preparation: {
+      activity_id: id,
+      state: prepared ? "ready" : "needs_review",
+      revision: "rev-1",
+      changed: [],
+    },
   };
 }
 

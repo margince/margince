@@ -65,8 +65,8 @@ const RECORD_TYPE_LABEL: Record<ListRecordType, MessageKey> = {
 
 /**
  * What a list is, in the reader's words rather than the wire's. A Live List
- * keeps itself current, so it alone wears info's tint and the breathing dot;
- * emerald stays the page's one primary action and indigo an agent's proposal.
+ * keeps itself current, so it alone wears info's tint and the breathing dot.
+ * The accent stays the page's one primary action, and indigo an agent's proposal.
  */
 export function ListKindBadge({
   list,

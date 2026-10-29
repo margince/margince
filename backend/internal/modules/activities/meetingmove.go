@@ -28,11 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// auditFieldOccurredAt and auditFieldDuration are the audit image's keys for the
-// two columns a move writes.
+// The audit image's keys for the columns a move writes.
 const (
 	auditFieldOccurredAt = "occurred_at"
 	auditFieldDuration   = "duration_seconds"
+	auditFieldAgenda     = "agenda_fingerprint"
 )
 
 // MoveCapturedMeetingFor sets a captured meeting's start, length and precision
@@ -51,8 +51,8 @@ const (
 // separates that attendee from a connection that simply stated it. holds
 // (SeatStanding) is what does, decided under the row's own lock.
 //
-// An unchanged start and length write nothing, so a resynced calendar costs no
-// audit row and no event. A whole-day move lands on its date's anchor. An
+// An unchanged start, length and invite description write nothing, so a
+// resynced calendar costs no audit row and no event. A whole-day move lands on its date's anchor. An
 // outcome the new start has not reached goes back to booked.
 func MoveCapturedMeetingFor(holds SeatStanding) func(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, slot connector.MeetingSlot,
@@ -73,10 +73,11 @@ func moveCapturedMeetingTx(
 	var stored meetingPlace
 	var holdsSlot bool
 	err := tx.QueryRow(ctx, `
-		SELECT a.occurred_at, a.duration_seconds, a.occurred_precision, a.meeting_status, `+occupiesHostSlotSQL+` FROM activity a
+		SELECT a.occurred_at, a.duration_seconds, a.occurred_precision, a.meeting_status, COALESCE(a.agenda_fingerprint, ''),
+		       `+occupiesHostSlotSQL+` FROM activity a
 		 WHERE a.id = $1
 		   AND a.kind = 'meeting' AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &holdsSlot)
+		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &stored.agenda, &holdsSlot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -92,19 +93,26 @@ func moveCapturedMeetingTx(
 		return false, nil
 	}
 	// The column keeps microseconds, so the move judges, audits and announces the start it will store.
-	moved := meetingPlace{start: slot.Start.UTC().Truncate(time.Microsecond), duration: slot.Duration, precision: PrecisionInstant}
+	moved := meetingPlace{
+		start: slot.Start.UTC().Truncate(time.Microsecond), duration: slot.Duration, precision: PrecisionInstant, agenda: stored.agenda,
+	}
 	if slot.AllDay {
 		moved.start, moved.precision = occurredday.Anchor(slot.Start), PrecisionDay
 	}
-	if stored.start.Equal(moved.start) && sameDuration(stored.duration, moved.duration) && stored.precision == moved.precision {
+	if slot.Agenda != "" {
+		moved.agenda = slot.Agenda
+	}
+	if stored.start.Equal(moved.start) && sameDuration(stored.duration, moved.duration) && stored.precision == moved.precision &&
+		stored.agenda == moved.agenda {
 		return false, nil
 	}
 	if moved.status, err = statusAfterMove(ctx, tx, stored.status, moved.start, moved.precision, nil); err != nil {
 		return false, err
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE activity SET occurred_at = $2, duration_seconds = $3, occurred_precision = $4, meeting_status = $5
-		 WHERE id = $1`, id, moved.start, moved.duration, moved.precision, moved.status); err != nil {
+		UPDATE activity SET occurred_at = $2, duration_seconds = $3, occurred_precision = $4, meeting_status = $5,
+		       agenda_fingerprint = NULLIF($6, '')
+		 WHERE id = $1`, id, moved.start, moved.duration, moved.precision, moved.status, moved.agenda); err != nil {
 		return false, fmt.Errorf("activities: moving the captured meeting %s: %w", id, err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, stored.image(moved), moved.image(stored))
@@ -132,6 +140,7 @@ type meetingPlace struct {
 	duration  *int
 	precision string
 	status    *string
+	agenda    string
 }
 
 // image is p's audit image; it names the status only where other differs.
@@ -141,6 +150,9 @@ func (p meetingPlace) image(other meetingPlace) map[string]any {
 	}
 	if deref(other.status) != deref(p.status) {
 		image[auditFieldMeetingStatus] = deref(p.status)
+	}
+	if other.agenda != p.agenda {
+		image[auditFieldAgenda] = p.agenda
 	}
 	return image
 }
@@ -159,7 +171,11 @@ func (p meetingPlace) changedFields(before meetingPlace) (crmcontracts.PublicEve
 	if status := changedStatus(deref(before.status), deref(p.status)); status != "" {
 		fields.MeetingStatus = new(crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(status))
 	}
-	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil || fields.MeetingStatus != nil
+	if before.agenda != p.agenda {
+		fields.AgendaChanged = new(true)
+	}
+	return fields, fields.OccurredAt != nil || fields.OccurredPrecision != nil || fields.MeetingStatus != nil ||
+		fields.AgendaChanged != nil
 }
 
 func sameDuration(a, b *int) bool {

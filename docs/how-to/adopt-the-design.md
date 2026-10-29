@@ -107,7 +107,7 @@ say any of them looks wrong.
 
 | Part | Change |
 |---|---|
-| `Button` | Flat. `primary`: `--accent` fill, `--textOnAccent`, 36px, 10px radius, `font-weight` 500. `ghost`: `--pane` fill, `--line2` outline. Small: 32px. Icon only: 36×36 (the more button). The agent's fill for Accept on a staged row is the `variant="ai"` that exists. No gradient, no `3D`. |
+| `Button` | Flat. `primary`: `--accent` fill, `--textOnAccentControl`, 36px, 10px radius, `font-weight` 500. `ghost`: `--pane` fill, `--line2` outline. Small: 32px. Icon only: 36×36 (the more button). The agent's fill for Accept on a staged row is the `variant="ai"` that exists. No gradient, no `3D`. |
 | `Badge` | One part, one size (20px: an 18px line inside a 1px edge), no capital letters, no dot by default. `soft` is the default: the colour of the tone with its Text ink and a hairline in the tone, for a status beside text and down a column. `primary` is the full fill with a clear edge, for a count, and for the one status that must not be missed. Six tone values (`default`, `accent`, `success`, `warn`, `danger`, `ai`). `ai` always draws Sparkles. Others may take an icon left of the label, or `live` for a dot that pulses in the same place. |
 | `Card` | Keep it as it is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card. The eyebrow is its label, with a 26px number in the display font, tabular (down to 20px where five share a narrow row). Then a 12.5px basis, `--pane` ground, 18px radius and `min-height` 138px. `numeric` for numbers. |

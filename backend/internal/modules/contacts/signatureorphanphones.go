@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SignaturePhoneRepairPage advances over phone rows, including those a human kept.
+// SignaturePhoneRepairPage advances over the unsupported phone rows selected for repair.
 type SignaturePhoneRepairPage struct {
 	Scanned []ids.UUID
 	Changed int
@@ -34,7 +34,11 @@ const signaturePhoneWithoutEvidence = `NOT EXISTS (SELECT 1 FROM ai_feedback
 		  AND claim_kind = 'profile_field' AND verdict = 'corrected'
 		  AND claim_key = encode(sha256('profile_field:phone'::bytea), 'hex'))
 	AND NOT EXISTS (SELECT 1 FROM contact_profile_field f
-		WHERE f.contact_id = p.contact_id AND f.field = 'phone' AND f.value = p.phone)`
+		WHERE f.contact_id = p.contact_id AND f.field = 'phone' AND f.value_key = p.phone)`
+
+// Whole-contact restores replay an archive journal rather than a replacement,
+// so they share this predicate with the signature retraction's revival.
+const supportedSignaturePhone = `NOT (p.source = '` + enrichSource + `' AND ` + signaturePhoneWithoutEvidence + `)`
 
 const unsupportedSignaturePhone = signaturePhoneSubjects + ` AND ` + signaturePhoneWithoutEvidence
 
@@ -59,7 +63,7 @@ func RetractUnsupportedSignaturePhonesTx(ctx context.Context, tx pgx.Tx, after i
 		return SignaturePhoneRepairPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT p.id FROM contact_phone p
-		WHERE `+signaturePhoneSubjects+` AND p.id > @after ORDER BY p.id LIMIT @limit`,
+		WHERE `+unsupportedSignaturePhone+` AND p.id > @after ORDER BY p.id LIMIT @limit`,
 		pgx.StrictNamedArgs{auditKeySource: enrichSource, "after": after, signaturePhoneLimitParam: limit})
 	if err != nil {
 		return SignaturePhoneRepairPage{}, fmt.Errorf("contacts: paging signature numbers: %w", err)
@@ -100,7 +104,7 @@ func retractUnsupportedPhones(ctx context.Context, tx pgx.Tx, scanned []ids.UUID
 	}
 	removed := make([]ids.UUID, 0, len(numbers))
 	for _, n := range numbers {
-		if err := withdrawUnsupportedSignatureNumber(ctx, tx, n.ContactID, n.Phone); err != nil {
+		if err := withdrawSignatureNumber(ctx, tx, n.ContactID, n.Phone); err != nil {
 			return 0, err
 		}
 		removed = append(removed, n.ID)
@@ -112,31 +116,4 @@ func retractUnsupportedPhones(ctx context.Context, tx pgx.Tx, scanned []ids.UUID
 	}
 	count, err := auditRetractions(ctx, tx, rows, "signature number has no supporting evidence")
 	return int(count), err
-}
-
-func withdrawUnsupportedSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phone string) error {
-	replaced, err := archiveSignatureNumber(ctx, tx, contactID, phone)
-	if err != nil {
-		return err
-	}
-	for _, id := range replaced {
-		if id == nil {
-			continue
-		}
-		// A predecessor whose evidence is also gone must not become a new
-		// orphan behind the repair's cursor.
-		var supported bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact_phone p
-			WHERE p.id = @id AND p.contact_id = @contact
-			  AND NOT (p.source = @source AND `+signaturePhoneWithoutEvidence+`))`,
-			pgx.StrictNamedArgs{"id": id, "contact": contactID, auditKeySource: enrichSource}).Scan(&supported); err != nil {
-			return fmt.Errorf("contacts: checking the replaced number's evidence: %w", err)
-		}
-		if supported {
-			if _, err := revivePhoneTx(ctx, tx, contactID, *id); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }

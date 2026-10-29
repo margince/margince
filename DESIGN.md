@@ -222,8 +222,8 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 
 ### Dark
 
-The same room with the lights down. The ground is `--bgPage #0c1311`, a small step above the `#0a100e` of the
-mock. So the hover step of the sidebar still has room under the page. Each pane is
+The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and only
+`--ladder4` lifts past the hover step. Each pane is
 `rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
 
 A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is
@@ -883,7 +883,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, white text, `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#07221d` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |
