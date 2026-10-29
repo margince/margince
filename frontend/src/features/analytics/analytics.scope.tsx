@@ -49,9 +49,8 @@ export function AnalyticsScopePicker({
           onChange={(next) => {
             const picked = scopes.find((scope) => scopeKey(scope) === next);
             // A value that matches no option cannot come from this list, so it
-            // is ignored rather than guessed at: guessing would measure a
-            // population the reader did not choose and label it with one
-            // they did.
+            // is ignored. A guess would measure a population the reader did
+            // not choose, under a label they did.
             if (picked) {
               onSelect(picked);
             }
