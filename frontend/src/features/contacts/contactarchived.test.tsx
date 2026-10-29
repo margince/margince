@@ -69,7 +69,7 @@ describe("the contact page on an archived row", () => {
     expect(asked).toEqual([]);
   });
 
-  it("refuses the record's verbs in the header and in the menu", async () => {
+  it("refuses the write verbs in the header and in the menu", async () => {
     const user = userEvent.setup();
     mount(archivedContactRoutes());
 
@@ -78,9 +78,12 @@ describe("the contact page on an archived row", () => {
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toContain(reason.id);
     };
-    refused(
-      screen.getByRole("button", { name: en["contact.action.meetings"] }),
-    );
+    for (const verb of [
+      en["contact.action.write"],
+      en["contact.action.meetings"],
+    ]) {
+      refused(screen.getByRole("button", { name: verb }));
+    }
     await user.click(
       screen.getByRole("button", { name: en["record.moreActions"] }),
     );

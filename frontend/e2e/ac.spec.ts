@@ -3447,14 +3447,14 @@ test.describe("calling a contact", () => {
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
 
-  test("the Call icon beside the number dials the primary of two numbers", async ({
+  test("the number in the details dials the primary of two numbers", async ({
     page,
   }) => {
     await page.goto(`/#/contacts/${CALLED_CONTACT}`);
     await expectShellRendered(page);
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
-    ).toHaveAttribute("href", tel);
+      page.locator(".record-aside").locator(`a[href="${tel}"]`),
+    ).toBeVisible();
   });
 
   test("a contact with no number offers no Call at all", async ({ page }) => {

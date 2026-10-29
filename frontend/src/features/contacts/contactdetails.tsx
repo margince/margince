@@ -53,10 +53,7 @@ type Employment = components["schemas"]["Contact360Employment"];
  * lists has a row; an empty one folds behind "Show N empty fields" with the
  * word for its empty state. The rows read; the Research tab's details change them.
  */
-export function useContactAboutSections(
-  view: Contact360,
-  writeRefusalId?: string,
-): DetailSection[] {
+export function useContactAboutSections(view: Contact360): DetailSection[] {
   const t = useT();
   const contact = view.contact;
   const edit = useContactEdit(contact);
@@ -129,15 +126,6 @@ export function useContactAboutSections(
               <ContactLink kind="email" value={email} record={record}>
                 <EmailFace address={email} />
               </ContactLink>
-              <ContactLink
-                appearance="icon"
-                kind="email"
-                value={email}
-                record={record}
-                readOnly={Boolean(contact.archived_at)}
-                label={t("compose.writeEmail")}
-                reasonId={writeRefusalId}
-              />
               <BoughtMark
                 bought={emailRow && bought.get(`email:${emailRow.id}`)}
                 subject={email}
@@ -152,13 +140,6 @@ export function useContactAboutSections(
           reading: phone && (
             <>
               <ContactLink kind="phone" value={phone.phone} record={record} />
-              <ContactLink
-                appearance="icon"
-                kind="phone"
-                value={phone.phone}
-                record={record}
-                label={t("contact.action.call")}
-              />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
