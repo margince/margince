@@ -67,7 +67,7 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 		repID := ids.MustParse(rep.UserID)
 		agent := dailyRepAgent(t, users, ws, repID)
 		for i, deal := range dailyOpenDeals(t, e, repID, pending+applied+expired) {
-			id := stageDailyCloseDate(t, svc, sweep, deal, i)
+			id := stageDailyCloseDate(sweep, t, svc, deal, i)
 			switch {
 			case i < applied:
 				made.toApply = append(made.toApply, dailyApply{agent, id})
@@ -145,7 +145,7 @@ func dailyOpenDeals(t *testing.T, e *apptest.AppEnv, rep ids.UUID, n int) []ids.
 
 // stageDailyCloseDate stages one "is this date right" card for a deal; the
 // i-th card proposes a date i days out, so no two cards carry one diff.
-func stageDailyCloseDate(t *testing.T, svc *approvals.Service, sweep context.Context, deal ids.UUID, i int) ids.ApprovalID {
+func stageDailyCloseDate(sweep context.Context, t *testing.T, svc *approvals.Service, deal ids.UUID, i int) ids.ApprovalID {
 	t.Helper()
 	raw, err := json.Marshal(deals.CloseDateCorrection{
 		DealID:            ids.From[ids.DealKind](deal),
