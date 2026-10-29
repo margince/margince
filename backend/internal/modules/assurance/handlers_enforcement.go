@@ -75,6 +75,13 @@ func (h Handlers) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// The lock first: a setting the environment fixes says so, rather than
+	// asking for a preview that would not unlock it either.
+	if _, err := config.LockedChange(h.settings, QualifiedForecastEnforced,
+		func(boot bool) bool { return boot == req.Enabled }); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if req.Enabled {
 		if err := h.ensurePreviewCurrent(r.Context(), req.PreviewDigest); err != nil {
 			httperr.Write(w, r, err)
