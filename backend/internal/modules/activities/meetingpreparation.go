@@ -29,7 +29,8 @@ const (
 
 // PreparationFacts is what a revision is computed from. The agenda and the
 // participants travel as fingerprints, so the stored row keeps no copy of the
-// meeting's text or of who sat in it.
+// meeting's text or of who sat in it. The agenda is the calendar invite's own
+// description, so notes typed into the meeting here never reset readiness.
 type PreparationFacts struct {
 	StartsAt     time.Time
 	StartsOnDay  bool
@@ -46,17 +47,18 @@ type MeetingPreparation struct {
 	Changed    []PreparationFact
 }
 
-// preparationFactsOf derives the facts from what the meeting row holds.
-// Subject and body together are the agenda; each participant is named by its
-// identity, so the order rows come back in changes nothing.
-func preparationFactsOf(startsAt time.Time, precision, subject, body string, participants []string) PreparationFacts {
+// preparationFactsOf derives the facts from what the meeting row holds. agenda
+// is the fingerprint capture stored, empty for a meeting with no invite. Each
+// participant is named by its identity, so the order rows come back in changes
+// nothing.
+func preparationFactsOf(startsAt time.Time, precision, agenda string, participants []string) PreparationFacts {
 	people := slices.Clone(participants)
 	slices.Sort(people)
 	people = slices.Compact(people)
 	return PreparationFacts{
 		StartsAt:     startsAt.UTC().Truncate(time.Second),
 		StartsOnDay:  precision == precisionDay,
-		Agenda:       fingerprint(strings.TrimSpace(subject), strings.TrimSpace(body)),
+		Agenda:       agenda,
 		Participants: fingerprint(people...),
 	}
 }

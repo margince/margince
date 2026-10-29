@@ -58,17 +58,17 @@ func (s *Store) ConfirmMeetingReady(ctx context.Context, id ids.ActivityID, revi
 			return false, fmt.Errorf("activities: the meeting changed since its preparation was read: %w", apperrors.ErrVersionSkew)
 		}
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO meeting_readiness (attendee_id, activity_id, occurrence_key, revision, starts_at, starts_on_day,
+			INSERT INTO meeting_readiness (attendee_id, activity_id, revision, starts_at, starts_on_day,
 			                               agenda_fingerprint, participants_fingerprint, captured_by, confirmed_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT (attendee_id, activity_id) DO UPDATE
-			   SET occurrence_key = EXCLUDED.occurrence_key, revision = EXCLUDED.revision,
+			   SET revision = EXCLUDED.revision,
 			       starts_at = EXCLUDED.starts_at, starts_on_day = EXCLUDED.starts_on_day,
 			       agenda_fingerprint = EXCLUDED.agenda_fingerprint,
 			       participants_fingerprint = EXCLUDED.participants_fingerprint,
 			       captured_by = EXCLUDED.captured_by, confirmed_at = EXCLUDED.confirmed_at
 			 WHERE meeting_readiness.revision <> EXCLUDED.revision`,
-			attendee, id, current.occurrenceKey, revision, current.facts.StartsAt, current.facts.StartsOnDay,
+			attendee, id, revision, current.facts.StartsAt, current.facts.StartsOnDay,
 			current.facts.Agenda, current.facts.Participants, by, s.now().UTC())
 		if err != nil {
 			return false, fmt.Errorf("activities: recording that the attendee is ready: %w", err)
@@ -184,9 +184,8 @@ func readinessAttendee(ctx context.Context) (ids.UUID, error) {
 
 // meetingFacts is a meeting's current facts as the write reads them.
 type meetingFacts struct {
-	facts         PreparationFacts
-	revision      string
-	occurrenceKey *string
+	facts    PreparationFacts
+	revision string
 }
 
 // lockMeetingFacts reads the meeting the attendee confirms, holding the row so
@@ -194,19 +193,18 @@ type meetingFacts struct {
 // that is not a meeting, or not one the attendee attends, answers 422.
 func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (meetingFacts, error) {
 	var (
-		kind, precision, subject, body string
-		startsAt                       time.Time
-		attends                        bool
-		people                         []string
-		current                        meetingFacts
+		kind, precision, agenda string
+		startsAt                time.Time
+		attends                 bool
+		people                  []string
+		current                 meetingFacts
 	)
 	query := storekit.SQLf(`
-		SELECT a.kind, a.occurred_at, a.occurred_precision, COALESCE(a.subject, ''), COALESCE(a.body, ''),
-		       %s, %s, %s
+		SELECT a.kind, a.occurred_at, a.occurred_precision, COALESCE(a.agenda_fingerprint, ''), %s, %s
 		  FROM activity a WHERE a.id = $1 AND `+activityLive+`
-		   FOR SHARE OF a`, participantsSQL, occurrenceKeySQL, storekit.MeetingResponsibilitySQL("a", "$2"))
+		   FOR SHARE OF a`, participantsSQL, storekit.MeetingResponsibilitySQL("a", "$2"))
 	if err := tx.QueryRow(ctx, query, id, attendee).Scan(
-		&kind, &startsAt, &precision, &subject, &body, &people, &current.occurrenceKey, &attends); err != nil {
+		&kind, &startsAt, &precision, &agenda, &people, &attends); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return meetingFacts{}, apperrors.ErrNotFound
 		}
@@ -222,7 +220,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 			Field: "activity_id", Code: "not_an_attendee", Message: "only an attendee of the meeting can say they are ready for it",
 		}
 	}
-	current.facts = preparationFactsOf(startsAt, precision, subject, body, people)
+	current.facts = preparationFactsOf(startsAt, precision, agenda, people)
 	current.revision = current.facts.Revision()
 	return current, nil
 }
@@ -256,13 +254,13 @@ func readPreparations(
 		var (
 			id                       ids.UUID
 			startsAt                 time.Time
-			precision, subject, body string
+			precision, invite        string
 			people                   []string
 			revision, agenda, guests *string
 			confirmedAt              *time.Time
 			confirmedOnDay           *bool
 		)
-		if err := rows.Scan(&id, &startsAt, &precision, &subject, &body, &people,
+		if err := rows.Scan(&id, &startsAt, &precision, &invite, &people,
 			&revision, &confirmedAt, &confirmedOnDay, &agenda, &guests); err != nil {
 			return nil, fmt.Errorf("activities: reading a meeting preparation: %w", err)
 		}
@@ -272,7 +270,7 @@ func readPreparations(
 				StartsAt: confirmedAt.UTC(), StartsOnDay: *confirmedOnDay, Agenda: *agenda, Participants: *guests,
 			}}
 		}
-		out[id] = preparationAt(id, preparationFactsOf(startsAt, precision, subject, body, people), stored)
+		out[id] = preparationAt(id, preparationFactsOf(startsAt, precision, invite, people), stored)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("activities: reading meeting preparations: %w", err)
@@ -283,7 +281,7 @@ func readPreparations(
 // preparationsQuery reads each meeting's facts beside the attendee's stored
 // confirmation, for meetings the attendee attends.
 const preparationsQuery = `
-	SELECT a.id, a.occurred_at, a.occurred_precision, COALESCE(a.subject, ''), COALESCE(a.body, ''), %s,
+	SELECT a.id, a.occurred_at, a.occurred_precision, COALESCE(a.agenda_fingerprint, ''), %s,
 	       r.revision, r.starts_at, r.starts_on_day, r.agenda_fingerprint, r.participants_fingerprint
 	  FROM activity a
 	  LEFT JOIN meeting_readiness r ON r.activity_id = a.id AND r.attendee_id = %s
@@ -295,9 +293,3 @@ const preparationsQuery = `
 const participantsSQL = `COALESCE((SELECT array_agg(COALESCE('a:' || lower(p.address), 'u:' || p.user_id::text,
 	                                  'c:' || p.contact_id::text, 'h:' || p.channel_user_id))
 	           FROM activity_participant p WHERE p.activity_id = a.id), '{}')`
-
-// occurrenceKeySQL is the calendar occurrence identity that resolved to this
-// meeting, NULL for a meeting booked by hand.
-const occurrenceKeySQL = `(SELECT i.identity_key FROM activity_identity i
-	   WHERE i.activity_id = a.id AND i.identity_kind = '` + IdentityKindMeeting + `'
-	   ORDER BY i.identity_key LIMIT 1)`

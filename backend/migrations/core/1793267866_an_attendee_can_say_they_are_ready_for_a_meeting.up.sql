@@ -9,8 +9,6 @@ SET LOCAL lock_timeout = '3s';
 CREATE TABLE meeting_readiness (
   attendee_id uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
   activity_id uuid NOT NULL REFERENCES activity(id) ON DELETE CASCADE,
-  -- The calendar occurrence identity, NULL for a meeting with none.
-  occurrence_key text,
   revision text NOT NULL,
   starts_at timestamptz NOT NULL,
   starts_on_day boolean NOT NULL,
@@ -27,3 +25,7 @@ CREATE INDEX idx_meeting_readiness_activity ON meeting_readiness (activity_id);
 
 COMMENT ON TABLE meeting_readiness IS
     'One attendee''s confirmation that they are ready for one meeting, at the preparation revision they confirmed.';
+
+-- A fingerprint of the description the calendar provider sent, taken before
+-- capture renders or masks it. NULL for a meeting with no calendar invite.
+ALTER TABLE activity ADD COLUMN agenda_fingerprint text;

@@ -53,6 +53,7 @@ public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) RE
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.activity.agenda_fingerprint text gen=- def=-
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
@@ -5870,7 +5871,6 @@ public.meeting_readiness.meeting_readiness_activity_id_fkey FOREIGN KEY (activit
 public.meeting_readiness.meeting_readiness_attendee_id_fkey FOREIGN KEY (attendee_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.meeting_readiness.meeting_readiness_pkey PRIMARY KEY (attendee_id, activity_id)
 public.meeting_readiness.meeting_readiness_revision_present CHECK ((revision <> ''::text))
-public.meeting_readiness.occurrence_key text gen=- def=-
 public.meeting_readiness.participants_fingerprint text NOT NULL gen=- def=-
 public.meeting_readiness.revision text NOT NULL gen=- def=-
 public.meeting_readiness.starts_at timestamp with time zone NOT NULL gen=- def=-

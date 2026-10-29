@@ -4,3 +4,4 @@
 SET LOCAL lock_timeout = '3s';
 
 DROP TABLE IF EXISTS meeting_readiness;
+ALTER TABLE activity DROP COLUMN IF EXISTS agenda_fingerprint;

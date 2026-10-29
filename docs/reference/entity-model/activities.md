@@ -6,11 +6,12 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-68 columns · primary key `(id)` · referenced by 40 foreign keys
+69 columns · primary key `(id)` · referenced by 40 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `agenda_fingerprint` | `text` |  |  |
 | `assignee_id` | `uuid` |  | Task only. |
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
 | `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). |
@@ -1035,7 +1036,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_readiness
 
-10 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
+9 columns · primary key `(attendee_id, activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1043,7 +1044,6 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 | `agenda_fingerprint` | `text` | yes |  |
 | `attendee_id` | `uuid` | yes | Points at `app_user.id`. |
 | `confirmed_at` | `timestamp with time zone` | yes |  |
-| `occurrence_key` | `text` |  |  |
 | `participants_fingerprint` | `text` | yes |  |
 | `revision` | `text` | yes |  |
 | `starts_at` | `timestamp with time zone` | yes |  |

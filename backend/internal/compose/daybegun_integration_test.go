@@ -229,7 +229,7 @@ func TestABusyDayKeepsTheDayMeetingOnTheLane(t *testing.T) {
 		From: laneDay, Until: laneDay.Truncate(24 * time.Hour).Add(24 * time.Hour),
 		DaysFrom: occurredday.Anchor(laneDay), DaysUntil: occurredday.Anchor(laneDay).AddDate(0, 0, 1),
 	}
-	rows, err := lane.Today(e.Admin(), window, 12, attention.TasksVisible, ids.UUID{})
+	rows, _, err := lane.Today(e.Admin(), window, 12, attention.TasksVisible, ids.UUID{})
 	if err != nil {
 		t.Fatalf("reading the meeting lane: %v", err)
 	}
