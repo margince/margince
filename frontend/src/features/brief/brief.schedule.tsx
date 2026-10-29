@@ -13,14 +13,10 @@ import {
 import { activityTimeOfDay } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import {
-  isUnprepared,
-  itemTitle,
-  moveHref,
-  rowHref,
-} from "../worklist/worklist.copy";
+import { itemTitle, moveHref, rowHref } from "../worklist/worklist.copy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
   type CalendarDay,
@@ -68,9 +64,9 @@ function answered(state: SectionState): boolean {
 /**
  * The day's schedule, in the order the server ranked it.
  *
- * A meeting with nothing prepared for it carries the badge here as well as in
- * the queue — the same `isUnprepared` the readings strip counts, so the figure
- * in the strip, the badge in the queue and the badge here are one answer.
+ * A meeting not confirmed ready carries the badge here as well as in the queue.
+ * All three places read `isUnprepared`, so the strip's figure and both badges
+ * are one answer.
  */
 export function SchedulePanel({
   day,

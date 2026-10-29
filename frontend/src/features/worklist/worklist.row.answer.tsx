@@ -31,6 +31,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
 import { replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
@@ -181,6 +182,10 @@ export function rowAnswer(
         move={item.move}
       />
     ) : undefined;
+  // The brief stays the way in; "I'm ready" stands beside it, never instead.
+  if (needsReadiness(item)) {
+    return { primary, equals: <MeetingReadyVerb item={item} /> };
+  }
   // A suggestion's acknowledgment never replaces the supported deal move.
   if (item.source === "brief_item" && !item.batch) {
     return {

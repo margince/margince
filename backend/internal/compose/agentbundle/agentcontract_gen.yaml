@@ -6009,6 +6009,74 @@ paths:
                     page: {next_cursor: null, has_more: false}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /worklist/ready:
+    put:
+      tags: [Brief]
+      operationId: confirmMeetingReady
+      security: [{bearerAuth: []}]
+      summary: Say you are ready for a meeting you attend.
+      description: |-
+        The answer the `confirm_meeting_ready` agent tool gives, run by the same tool on both
+        doors. It records that the caller, or the user an agent acts for, is ready for the
+        meeting at `preparation_revision`. Reading the brief does not do this; only this call
+        does.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MeetingReadyRequest'}
+      responses:
+        '200':
+          description: The caller's preparation after the confirmation.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MeetingPreparation'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /worklist/ready/undo:
+    post:
+      tags: [Brief]
+      operationId: undoMeetingReady
+      security: [{bearerAuth: []}]
+      summary: Take back your "I'm ready" for a meeting — the undo behind it.
+      description: |-
+        The answer the `undo_meeting_ready` agent tool gives, run by the same tool on both
+        doors. It removes the caller's confirmation only while it is still the one given at
+        `preparation_revision`. A newer confirmation stays. A meeting with no such
+        confirmation is the same success.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MeetingReadyRequest'}
+      responses:
+        '200':
+          description: The caller's preparation after the undo.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MeetingPreparation'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /dedupe/candidates:
     get:
       tags: [Contacts]
@@ -13466,6 +13534,7 @@ components:
       properties:
         brief: {$ref: '#/components/schemas/AgentMeetingBrief'}
         briefing: {$ref: '#/components/schemas/AgentAssembledContext'}
+        preparation: {$ref: '#/components/schemas/MeetingPreparation'}
         meeting_focus:
           type: array
           items:
@@ -16236,6 +16305,51 @@ components:
       enum: [instant, day]
       description: >-
         How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+    MeetingReadyRequest:
+      type: object
+      additionalProperties: false
+      required: [activity_id, preparation_revision]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+          description: The meeting, as the Worklist row or `prep_for_meeting` names it.
+        preparation_revision:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |-
+            The `revision` of the meeting's `preparation`, as last read. A confirmation sends
+            the revision it was shown, and a meeting that has moved past it answers 409. An
+            undo sends the revision it confirmed, and takes back only that confirmation.
+        idempotency_key: {type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.'}
+    MeetingPreparation:
+      type: object
+      additionalProperties: false
+      required: [activity_id, state, revision, changed]
+      description: |-
+        The caller's own preparation for one meeting. `ready` holds only for the attendee who
+        confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
+        new revision, so a confirmed meeting needs review again. A brief written about the
+        meeting is not a preparation fact: generating it again changes nothing here. For an
+        agent, the caller is the user it acts for.
+      properties:
+        activity_id: {type: string, format: uuid}
+        state:
+          type: string
+          enum: [needs_review, ready]
+          description: '`ready` when the caller confirmed this revision; `needs_review` otherwise.'
+        revision:
+          type: string
+          description: The current preparation revision, which a confirmation sends back.
+        changed:
+          type: array
+          items:
+            type: string
+            enum: [start_time, agenda, participants]
+          description: |-
+            What changed since the caller confirmed an older revision. Empty when the caller
+            never confirmed, or confirmed this revision.
     AudienceMember:
       type: object
       description: |-

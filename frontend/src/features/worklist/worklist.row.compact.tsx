@@ -9,7 +9,7 @@ import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
-import { isUnprepared } from "./worklist.copy";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import type { WorklistItem } from "./worklist.queries";
 import { RowName } from "./worklist.rowname";
 import { VerdictLine } from "./worklist.verdict";

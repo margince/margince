@@ -77,8 +77,8 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
  * `warning` is deliberately narrow. Neutral ink is the default for every figure on
  * the plate, because a row where four numbers are coloured is a traffic light
  * rather than a comparison. It is spent only where the reading counts something
- * that is BREACHING — somebody waiting, a promise going, a meeting starting
- * with nothing prepared — and never on a figure that is merely large.
+ * that is BREACHING, and never on a figure that is merely large. Breaching means
+ * somebody waiting, a promise going, or a meeting starting not confirmed ready.
  */
 type Reading = Readonly<{
   label: string;

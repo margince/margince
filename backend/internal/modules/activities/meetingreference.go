@@ -74,7 +74,7 @@ func EnsureMeetingReference(ctx context.Context, tx pgx.Tx, ref ids.UUID) error 
 	}
 	if kind != KindMeeting {
 		return &values.ParseError{
-			Field: "reopen_ref", Code: "not_a_meeting",
+			Field: "reopen_ref", Code: codeNotAMeeting,
 			Message: "a snooze waiting for a meeting names a meeting",
 		}
 	}

@@ -14395,6 +14395,45 @@ func (e MeetingPlanUnknownKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingPreparationChanged.
+const (
+	MeetingPreparationChangedAgenda       MeetingPreparationChanged = "agenda"
+	MeetingPreparationChangedParticipants MeetingPreparationChanged = "participants"
+	MeetingPreparationChangedStartTime    MeetingPreparationChanged = "start_time"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPreparationChanged enum.
+func (e MeetingPreparationChanged) Valid() bool {
+	switch e {
+	case MeetingPreparationChangedAgenda:
+		return true
+	case MeetingPreparationChangedParticipants:
+		return true
+	case MeetingPreparationChangedStartTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingPreparationState.
+const (
+	MeetingPreparationStateNeedsReview MeetingPreparationState = "needs_review"
+	MeetingPreparationStateReady       MeetingPreparationState = "ready"
+)
+
+// Valid indicates whether the value is a known member of the MeetingPreparationState enum.
+func (e MeetingPreparationState) Valid() bool {
+	switch e {
+	case MeetingPreparationStateNeedsReview:
+		return true
+	case MeetingPreparationStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	MeetingResponseAccepted    MeetingResponse = "accepted"
@@ -29613,6 +29652,11 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not read meetings.
 	Meetings *[]AttentionItem `json:"meetings,omitempty"`
 
+	// MeetingsMoreAvailable The meetings lane read or kept fewer meetings than today holds.
+	// True means `meetings` is a lower bound. Absent when meetings could
+	// not be read.
+	MeetingsMoreAvailable *bool `json:"meetings_more_available,omitempty"`
+
 	// MeetingsUnreported Meetings that have already started and whose result nobody has recorded,
 	// longest unanswered first. The counterpart of `meetings`: that lane is what to
 	// prepare for, this is what to close off.
@@ -30095,6 +30139,9 @@ type AttentionItem struct {
 	// BOTH sides — the queue's own both-sides-visible rule decides that, and an
 	// item the reader may not fully see is not offered as a decision at all.
 	Pair *AttentionPair `json:"pair,omitempty"`
+
+	// Preparation On a meeting the reader attends, their own preparation for it. Absent otherwise.
+	Preparation *MeetingPreparation `json:"preparation,omitempty"`
 
 	// PromiseRecipients Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
 	PromiseRecipients *[]WorklistPromiseRecipient `json:"promise_recipients,omitempty"`
@@ -46668,7 +46715,39 @@ type MeetingPrep struct {
 		RecordId openapi_types.UUID `json:"record_id"`
 		Summary  string             `json:"summary"`
 	} `json:"meeting_focus"`
+
+	// Preparation The caller's own preparation for one meeting. `ready` holds only for the attendee who
+	// confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
+	// new revision, so a confirmed meeting needs review again. A brief written about the
+	// meeting is not a preparation fact: generating it again changes nothing here. For an
+	// agent, the caller is the user it acts for.
+	Preparation *MeetingPreparation `json:"preparation,omitempty"`
 }
+
+// MeetingPreparation The caller's own preparation for one meeting. `ready` holds only for the attendee who
+// confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
+// new revision, so a confirmed meeting needs review again. A brief written about the
+// meeting is not a preparation fact: generating it again changes nothing here. For an
+// agent, the caller is the user it acts for.
+type MeetingPreparation struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Changed What changed since the caller confirmed an older revision. Empty when the caller
+	// never confirmed, or confirmed this revision.
+	Changed []MeetingPreparationChanged `json:"changed"`
+
+	// Revision The current preparation revision, which a confirmation sends back.
+	Revision string `json:"revision"`
+
+	// State `ready` when the caller confirmed this revision; `needs_review` otherwise.
+	State MeetingPreparationState `json:"state"`
+}
+
+// MeetingPreparationChanged defines model for MeetingPreparation.Changed.
+type MeetingPreparationChanged string
+
+// MeetingPreparationState `ready` when the caller confirmed this revision; `needs_review` otherwise.
+type MeetingPreparationState string
 
 // MeetingProposal defines model for MeetingProposal.
 type MeetingProposal struct {
@@ -46705,6 +46784,20 @@ type MeetingProposalRequest struct {
 
 	// VideoCall Add a video call link when the guest books. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
+}
+
+// MeetingReadyRequest defines model for MeetingReadyRequest.
+type MeetingReadyRequest struct {
+	// ActivityId The meeting, as the Worklist row or `prep_for_meeting` names it.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// IdempotencyKey Same key, same result. A key reused with other arguments is refused.
+	IdempotencyKey *string `json:"idempotency_key,omitempty"`
+
+	// PreparationRevision The `revision` of the meeting's `preparation`, as last read. A confirmation sends
+	// the revision it was shown, and a meeting that has moved past it answers 409. An
+	// undo sends the revision it confirmed, and takes back only that confirmation.
+	PreparationRevision string `json:"preparation_revision"`
 }
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
@@ -58169,6 +58262,11 @@ type WorklistItem struct {
 	// look, which is the hand-off this queue exists to remove.
 	Pair *AttentionPair `json:"pair,omitempty"`
 
+	// Preparation On a `meeting` row the reader attends, their own preparation for it. Absent when the
+	// reader does not attend the meeting or may not read its content; absent is never
+	// ready.
+	Preparation *MeetingPreparation `json:"preparation,omitempty"`
+
 	// PrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
 	// reader arriving at a row should not have to weigh three equally-drawn
 	// controls to find the step the ranking already implies.
@@ -66326,6 +66424,38 @@ type UnpinWorklistRowParams struct {
 	RowId string `form:"row_id" json:"row_id"`
 }
 
+// ConfirmMeetingReadyParams defines parameters for ConfirmMeetingReady.
+type ConfirmMeetingReadyParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// UndoMeetingReadyParams defines parameters for UndoMeetingReady.
+type UndoMeetingReadyParams struct {
+	// IdempotencyKey The retry key of the agent tool this route runs, taken as the tool's `idempotency_key`.
+	// It is held for 24h per caller and tool, not per path: the same key on two records of one
+	// tool answers `409 conflict`, and a key spent on the tool over MCP replays that answer here.
+	IdempotencyKey *ToolIdempotencyKey `json:"Idempotency-Key,omitempty"`
+
+	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
+	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
+	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
+	// not yet used, and within 15 minutes of the decision. Anything else is refused with
+	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
+	// human's direct call is itself the approval.
+	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
@@ -67464,6 +67594,12 @@ type ReopenWorklistRowsJSONRequestBody = WorklistDoneRequest
 
 // PinWorklistRowJSONRequestBody defines body for PinWorklistRow for application/json ContentType.
 type PinWorklistRowJSONRequestBody = WorklistPinRequest
+
+// ConfirmMeetingReadyJSONRequestBody defines body for ConfirmMeetingReady for application/json ContentType.
+type ConfirmMeetingReadyJSONRequestBody = MeetingReadyRequest
+
+// UndoMeetingReadyJSONRequestBody defines body for UndoMeetingReady for application/json ContentType.
+type UndoMeetingReadyJSONRequestBody = MeetingReadyRequest
 
 // QueryWorkspaceJSONRequestBody defines body for QueryWorkspace for application/json ContentType.
 type QueryWorkspaceJSONRequestBody = WorkspaceQueryRequest
@@ -81427,6 +81563,12 @@ type ServerInterface interface {
 	// Put a row at the top of your own day, above what the ranking chose.
 	// (PUT /worklist/pins)
 	PinWorklistRow(w http.ResponseWriter, r *http.Request)
+	// Say you are ready for a meeting you attend.
+	// (PUT /worklist/ready)
+	ConfirmMeetingReady(w http.ResponseWriter, r *http.Request, params ConfirmMeetingReadyParams)
+	// Take back your "I'm ready" for a meeting — the undo behind it.
+	// (POST /worklist/ready/undo)
+	UndoMeetingReady(w http.ResponseWriter, r *http.Request, params UndoMeetingReadyParams)
 	// How fast the workspace answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
@@ -87079,6 +87221,18 @@ func (_ Unimplemented) UnpinWorklistRow(w http.ResponseWriter, r *http.Request, 
 // Put a row at the top of your own day, above what the ranking chose.
 // (PUT /worklist/pins)
 func (_ Unimplemented) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say you are ready for a meeting you attend.
+// (PUT /worklist/ready)
+func (_ Unimplemented) ConfirmMeetingReady(w http.ResponseWriter, r *http.Request, params ConfirmMeetingReadyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back your "I'm ready" for a meeting — the undo behind it.
+// (POST /worklist/ready/undo)
+func (_ Unimplemented) UndoMeetingReady(w http.ResponseWriter, r *http.Request, params UndoMeetingReadyParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -126766,6 +126920,142 @@ func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ConfirmMeetingReady operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmMeetingReady(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ConfirmMeetingReadyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmMeetingReady(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoMeetingReady operation middleware
+func (siw *ServerInterfaceWrapper) UndoMeetingReady(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoMeetingReadyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey ToolIdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	// ------------- Optional header parameter "X-Approval-Token" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
+		var XApprovalToken ApprovalToken
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
+			return
+		}
+
+		params.XApprovalToken = &XApprovalToken
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoMeetingReady(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetResponseMetrics operation middleware
 func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *http.Request) {
 
@@ -129798,6 +130088,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/worklist/pins", wrapper.PinWorklistRow)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/worklist/ready", wrapper.ConfirmMeetingReady)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/worklist/ready/undo", wrapper.UndoMeetingReady)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/worklist/response", wrapper.GetResponseMetrics)
