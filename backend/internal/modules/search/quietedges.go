@@ -129,29 +129,32 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
+	// The exclusions are judged per contact, so they leave each contact's
+	// strongest edge alone and run after it, only for the candidates the clock
+	// reaches. Strongest first, the clock stops once the limit is filled and its
+	// last count is complete.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH strongest AS MATERIALIZED (
 		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id,
 		           e.last_inbound_at, e.last_outbound_at, e.count_90d, e.in_count_90d,
 		           e.out_count_90d, e.count_total, o.id AS live_owner
-		      FROM graph_interaction_edge e
 		      %s
-		      JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
 		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
 		     WHERE e.count_total >= $%d
-		       AND (%s)
+		       AND p.archived_at IS NULL
 		       AND (%s)
 		       AND (%s)
 		     ORDER BY e.contact_id, e.count_total DESC, e.user_id
 		)
 		SELECT e.user_id, e.contact_id, x.touched, e.last_inbound_at, e.last_outbound_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total, e.live_owner
-		  FROM strongest e
+		  FROM (SELECT * FROM strongest ORDER BY count_total DESC) e
 		  JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
+		 WHERE (%s)
 		 ORDER BY e.count_total DESC, x.touched ASC, e.contact_id
-		 LIMIT $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"),
-		exchangedPos, owned, scope, excluded,
-		liveExchangeClock(asOf), beforePos, afterPos, limitPos), args...)
+		 LIMIT $%d`, quietEdgeSource(read), workforce.LiveMemberSQL("o"),
+		exchangedPos, owned, scope,
+		liveExchangeClock(asOf), beforePos, afterPos, excluded, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}
@@ -159,12 +162,29 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	return scanQuietContacts(rows)
 }
 
+// quietEdgeSource is the candidates' FROM: live colleagues' edges and their
+// contact. One owner's read starts from that owner's contacts and reaches their
+// edges through a fenced lateral. Planned freely, it put the few live
+// colleagues outermost and rescanned the owner's contacts once per colleague.
+func quietEdgeSource(read QuietRead) string {
+	if !read.Owner.IsZero() {
+		return `FROM contact p
+		      CROSS JOIN LATERAL (SELECT e.* FROM graph_interaction_edge e
+		              ` + liveMemberJoin + `
+		             WHERE e.contact_id = p.id OFFSET 0) e`
+	}
+	return `FROM graph_interaction_edge e
+		      ` + liveMemberJoin + `
+		      JOIN contact p ON p.id = e.contact_id`
+}
+
 // quietOwnerClause narrows the candidates to one live owner, to contacts with
-// none, or to neither; `o` is the contact's live owner join.
+// none, or to neither; `o` is the contact's live owner join. The owner is read
+// off the contact so the owner index can serve it.
 func quietOwnerClause(read QuietRead, arg func(any) int) string {
 	switch {
 	case !read.Owner.IsZero():
-		return fmt.Sprintf("o.id = $%d", arg(read.Owner))
+		return fmt.Sprintf("p.owner_id = $%d AND o.id IS NOT NULL", arg(read.Owner))
 	case read.Unowned:
 		return "o.id IS NULL"
 	default:
