@@ -11,7 +11,7 @@ in [Every setting](configuration.md#every-setting). The least a production insta
 | Feature | Settings | Read by | When one is missing |
 |---|---|---|---|
 | The database | `dsn`; `owner_dsn` for migrations | api, worker, migrate | The program refuses to start. |
-| The event bus | `redis`, and `redis_password` where the server needs one | api, worker | While the bus cannot be reached, the api refuses to start, because a write would leave its event with nothing to send it. An api with `inline_relay` set to false starts anyway, and its readiness check waits on the database alone. |
+| The event bus | `redis`, and `redis_password` where the server needs one | api, worker | While the bus cannot be reached, the api refuses to start, because a write would leave its event with nothing to send it. An api with `inline_relay` set to false starts anyway, and its readiness check leaves Redis out. |
 | A license, outside `dev` and `test` | `license.token` (variable `MARGINCE_LICENSE`), or `license.token_file` | api, worker | The program refuses to start in production. |
 | The first company and admin | `workspace`, `bootstrap_admin` | api | The api prints a one-time setup token, and the first user enters both. |
 | Mail that leaves at all | a running `cmd/worker` | worker | A send is accepted and stays `pending`. |

@@ -156,7 +156,7 @@ reference to it.
 
 | Credential | Sources, first match wins | When no source has a value |
 |---|---|---|
-| SMTP password | `email.smtp.password` → the file `email.smtp.password_file` names → a copy an earlier release sealed in the vault; `${none}` deletes that copy | The relay is used with no password. |
+| SMTP password | `email.smtp.password` → the file `email.smtp.password_file` names → a copy an earlier release sealed in the vault; `${none}` deletes that copy, [when it may](storage-secrets-and-license.md#the-vault-may-hold-copies-of-the-two-deployment-credentials) | The relay is used with no password. |
 | License | `license.token` (variable `MARGINCE_LICENSE`) → the file the older `license.token_file` names → a copy an earlier release sealed in the vault | Production refuses to boot; `dev` and `test` run with no license. |
 
 ### Seeds
@@ -556,7 +556,8 @@ is passed as a flag, because a flag outranks `.env.local`.
 Of the settings, the stack passes three as flags: `--addr` (the api only), `--dsn` and `--redis`. So
 `MARGINCE_ADDR` and `MARGINCE_REDIS` in `.env.local` have no effect. The script reads `MARGINCE_DSN`
 and `MARGINCE_OWNER_DSN` from `.env.local` before it builds `--dsn`. It keeps their user, password,
-host, port and query, and puts the stack's own database name in place of theirs.
+host, port and query, and puts the stack's own database name in place of theirs. The script reads
+`.env.local` as shell, so put a value that holds `$`, a space or a quote in single quotes.
 
 When `.env.local` is missing, `make dev` copies [`.env.example`](../../.env.example) to it, with
 every line commented out.

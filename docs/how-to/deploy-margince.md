@@ -12,7 +12,8 @@ in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting 
 ## The least production needs
 
 - `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
-- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`).
+- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`) or
+  `license.token_file`.
 - For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
   `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
 
