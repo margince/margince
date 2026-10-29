@@ -212,8 +212,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 5. The timeline accumulates what is filed under the project: relink the
   // deal's note to the project and it appears here with the coverage count.
   await page.goto("/#/deals/d-fleet");
-  // Relink sits in the row's "More actions" menu, which is portalled out of
-  // the row, so the item is looked up on the page once the menu is open.
+  // Relink sits in the row's "More actions" menu. The menu is portalled out of
+  // the row, so the item is found on the page.
   const noteVerbs = timeline
     .locator("li", { hasText: "Kickoff mit Brandt IT" })
     .first()
