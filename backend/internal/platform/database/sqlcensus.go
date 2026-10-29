@@ -20,10 +20,11 @@ import (
 // records each distinct statement it sends, with the Go call chain that sent it.
 const SQLCensusDirEnv = "MARGINCE_SQL_CENSUS_DIR"
 
-// censusMinBytes skips the statements too small to plan expensively. Over the
-// integration lane, every statement that grew a backend by 64 MB was over 18 KB.
-// The median statement is under 200 bytes.
-const censusMinBytes = 8 << 10
+// CensusMinBytes skips the statements too small to plan expensively. Over the
+// integration lane, every statement that grew a backend by 64 MB was over 18 KB,
+// and the median statement is under 200 bytes. One activity content gate
+// renders larger than this, so the census sees every statement that holds one.
+const CensusMinBytes = 8 << 10
 
 type censusRecord struct {
 	Hash   string   `json:"hash"`
@@ -75,7 +76,7 @@ func newSQLCensus(dir string) (*sqlCensus, error) {
 // record runs inside a statementTracer hook, so three frames up is the pgx call
 // the product made. A nil census records nothing.
 func (c *sqlCensus) record(sql string) {
-	if c == nil || len(sql) < censusMinBytes {
+	if c == nil || len(sql) < CensusMinBytes {
 		return
 	}
 	var pcs [64]uintptr

@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Command sql-census ranks the statements an integration run sent by what they
-// cost Postgres to plan. A pooled backend keeps that memory until its
-// connection closes. So a statement that plans large costs memory long after it
-// returns, and a result test on small data cannot see it.
+// Command sql-census reads the statements an integration run sent, from the
+// JSONL files a run writes when MARGINCE_SQL_CENSUS_DIR is set. Postgres plans
+// every copy of a clause a statement carries. A pooled backend keeps that
+// memory until its connection closes, so a result test on small data cannot
+// see the cost.
 //
-// It reads the JSONL files a run writes when MARGINCE_SQL_CENSUS_DIR is set,
-// and plans each statement once on a fresh connection to a migrated database:
+//	go run ./tools/sql-census check -census DIR -allow FILE [-seen FILE]
+//	go run ./tools/sql-census stale -allow FILE SEEN...
+//	go run ./tools/sql-census rank -census DIR -dsn SUPERUSER_DSN > report.md
 //
-//	go run ./tools/sql-census -census DIR -dsn SUPERUSER_DSN > report.md
-//
-// The DSN must be a superuser's, because the peak memory is read from the
-// backend's own /proc status through pg_read_file.
+// check fails on a statement that carries the activity content gate more than
+// once, unless its sender is in the allowlist. stale fails on an allowlist entry
+// that no run saw repeat, so the list only shrinks. rank plans each statement
+// once and orders them by the planner memory they cost. It reads the peak from
+// the backend's /proc status, so it needs a superuser. It is a diagnosis, not a
+// gate: the figure moves a few MB between runs.
 package main
 
 import (
@@ -22,9 +26,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,22 +60,48 @@ var (
 )
 
 func main() {
-	dir := flag.String("census", "", "directory of census-*.jsonl files")
-	dsn := flag.String("dsn", "", "superuser DSN of a migrated database")
-	flagMB := flag.Int("flag-mb", 64, "flag a statement whose planning grows the backend by this many MB")
-	workers := flag.Int("workers", 1, "statements planned at once; each can hold hundreds of MB")
-	flag.Parse()
-	if *dir == "" || *dsn == "" {
-		fmt.Fprintln(os.Stderr, "sql-census: -census and -dsn are both required")
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "sql-census: name a command: check, stale or rank")
 		os.Exit(2)
 	}
-	stmts, err := load(*dir)
+	var err error
+	switch cmd, args := os.Args[1], os.Args[2:]; cmd {
+	case "check":
+		err = runCheck(args)
+	case "stale":
+		err = runStale(args)
+	case "rank":
+		err = runRank(args)
+	default:
+		fmt.Fprintf(os.Stderr, "sql-census: unknown command %q: use check, stale or rank\n", cmd)
+		os.Exit(2)
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "sql-census:", err)
 		os.Exit(1)
 	}
+}
+
+func runRank(args []string) error {
+	fs := flag.NewFlagSet("rank", flag.ExitOnError)
+	dir := fs.String("census", "", "directory of census-*.jsonl files")
+	dsn := fs.String("dsn", "", "superuser DSN of a migrated database")
+	flagMB := fs.Int("flag-mb", 64, "flag a statement whose planning grows the backend by this many MB")
+	workers := fs.Int("workers", 1, "statements planned at once; each can hold hundreds of MB")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *dir == "" || *dsn == "" {
+		return errors.New("rank: -census and -dsn are both required")
+	}
+	stmts, err := load(*dir)
+	if err != nil {
+		return err
+	}
+	stmts = slices.DeleteFunc(stmts, func(s *statement) bool { return !explainable.MatchString(s.sql) })
 	measureAll(*dsn, stmts, *workers)
 	report(os.Stdout, stmts, *flagMB*1024)
+	return nil
 }
 
 // load merges every process's file. One statement sent from several places
@@ -88,12 +120,7 @@ func load(dir string) ([]*statement, error) {
 			return nil, err
 		}
 	}
-	stmts := make([]*statement, 0, len(byHash))
-	for _, s := range byHash {
-		if explainable.MatchString(s.sql) {
-			stmts = append(stmts, s)
-		}
-	}
+	stmts := slices.Collect(maps.Values(byHash))
 	sort.Slice(stmts, func(i, j int) bool { return stmts[i].hash < stmts[j].hash })
 	return stmts, nil
 }
