@@ -215,7 +215,7 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 	}
 	at := fmt.Sprintf("$%d", instant)
 	held := meetingHeldSQL("a", at)
-	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held, narrowed)
+	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), reader,
@@ -225,13 +225,14 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 }
 
 // meetingCandidatesSQL is the meetings the lane may report: held, inside the
-// window, and the reader took part. Its terms are ones meetingFollowUpsSQL also
-// tests. follow_from is where a later contact starts to count.
-func meetingCandidatesSQL(asOf, window, reader, held, narrowed string) string {
+// window, and the reader took part. The caller's narrowing stays out, since it
+// may name the attendees or an outer row. follow_from is where a later contact
+// starts to count.
+func meetingCandidatesSQL(asOf, window, reader, held string) string {
 	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, ` + followUpFromSQL + ` AS follow_from
 	  FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND NOT ` + ImportedHistorySQL + `
-	   AND ` + held + ` AND ` + narrowed + `
+	   AND ` + held + `
 	   AND ` + meetingEndSQL + ` <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
 	   AND ` + meetingEndSQL + fmt.Sprintf(` >= %s::timestamptz - make_interval(days => %s::int + %d)`, asOf, window, AwaitingReplyLookbackDays) + `
 	   AND ` + storekit.MeetingResponsibilitySQL("a", reader)
