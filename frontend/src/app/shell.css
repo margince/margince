@@ -33,10 +33,9 @@
 
 /* App shell — a labeled sidebar collapsing to the canonical 56px rail, and the
  * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
- * §6), not §2b's deep ink-green field: the sidebar and the strip are the page's
- * own pane with a blur behind it, so rail icons read as ordinary theme tokens
- * rather than white-alpha on a dark ground. The ink-green field keeps the
- * marketing surfaces. */
+ * §6), never a dark green column: the sidebar and the strip are the page's own
+ * pane with a blur behind it, so rail icons read as ordinary theme tokens
+ * rather than white-alpha on a dark ground. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -345,10 +344,9 @@
 }
 
 /* ===== sidebar =====
- * The ground is the pane — glass over the emerald light — in BOTH states. The
- * collapsed state matches the canonical rail's geometry — 56px, the logomark
- * chip, the same rows — but not its ink-green field: a sidebar that changed
- * colour on collapse would read as two shells.
+ * The ground is the pane — glass over the emerald light — in BOTH states, so
+ * collapsing to 56px changes the width and never the colour: a sidebar that
+ * changed colour on collapse would read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
@@ -808,8 +806,8 @@
   top: 50%;
   transform: translateY(-50%);
   margin-left: 8px;
-  background: var(--bgRail);
-  color: var(--railIconActive);
+  background: var(--bgInkField);
+  color: var(--textOnInkField);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
   white-space: nowrap;
@@ -1247,13 +1245,13 @@
   background: var(--bgPage);
 }
 .client-bar {
-  background: var(--bgRail);
+  background: var(--bgInkField);
   padding: var(--space-3) var(--space-4);
   position: sticky;
   top: 0;
 }
 .client-back {
-  color: var(--railIconActive);
+  color: var(--textOnInkField);
   text-decoration: none;
   display: inline-flex;
   align-items: center;

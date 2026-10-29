@@ -232,8 +232,8 @@ then `[data-theme="dark"]`.
 
 ### How colour is spent
 
-- **The two glows are the chrome**. The sidebar is glass over the emerald light; there is no
-  coloured bar on any screen.
+- **The two glows are the chrome**. The sidebar is glass over the emerald light, and the light is a
+  faint tint, never a green column; there is no coloured bar on any screen.
 - **At most one filled control in view**, in emerald: the move the page names. Every other button is
   a pane with an outline.
 - **The indigo tint marks the agent's work**. The agent's read is a row on `--aiBg`. A staged change is a row
@@ -369,7 +369,7 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
 │  glow) │ tabs ──────────────────────────────────────────── [Details] │
-│ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (300) ────┐│
+│ Home   │ ┌ THE 360 ─────────────────────────────┐ ┌ details (300) ────┐│
 │ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
 │ WORK   │ │ readings ┊ readings ┊ readings        ││ │ Contacts / Seats    ││
@@ -380,17 +380,26 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar**: 224px open, 64px folded, and folded is the default. It is glass over the emerald
-  glow, with a hairline on its right. The workspace name and the fold control sit at the top. Then come the
-  product's own rows in its own order: Brief; Records (Contacts, Companies, Leads, Filters & views);
-  Work (Worklist, Pipeline, Projects); `Intelligence` (Reports, Ask Margince).
+- **The sidebar is light, never green**. It is glass: the white `--pane` with `blur(20px)` over the
+  lit page, one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour
+  open and folded, and in dark it is the same pane with the lights down. No screen, mock or
+  prototype paints it dark green or in the accent: the dark green plate (`--bgInkField`) is only for
+  what passes over the page, such as a toast or a tooltip. The only green in the column is the
+  workspace mark of a company that has no logo of its own.
+- **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
+  At the top is the workspace head: the company's mark in a 40px square, its name, and the line on
+  what it runs on, drawn as one bordered card while open. Then the rows, 32px each with an 18px
+  icon, in the order `frontend/src/app/nav.ts` holds: Home; Records (Contacts, Companies, Leads,
+  Deals); Work (Projects, Filters and views); Insights (Analytics). The group labels are quiet sentence
+  case. The current row is a neutral `--bgInset` pill in medium weight, never an accent fill. The
+  agent's orb is pinned to the foot.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
   subject groups. It has its own width and its own head. It is the same column showing a
   different list. The level names itself with the heading over its first group, and the way out of
   it reads "Back to app". The agent's orb stays at the foot.
-- **Top bar**: 48px, glass, with a hairline under it. The breadcrumb is on the left, the command
+- **Top bar**: 50px, glass, with a hairline under it. The breadcrumb is on the left, the command
   field in the middle (`⌘K`), and the reader's monogram on the right. It is the app's one bar, and
   every screen has it. Nothing of a record sits in it: the record's head and details are in
   the page.
@@ -711,7 +720,7 @@ claim from "an agent did this".
 
 ### The shell around every record
 
-The sidebar folds to a 64px icon rail, and that is the default. Labels come back on hover as
+The sidebar folds to a 56px icon rail when the reader folds it. Labels come back on hover as
 tooltips, and the agent's orb stays at the foot. The details panel sits on the left, under the record
 head, and the sheet sits on the right.
 
