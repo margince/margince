@@ -224,7 +224,7 @@ func overdueTasksBy(
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (l.%[1]s)
 		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), `+storekit.TaskDueSQL("a")+`,
 		       coalesce((%[5]s), false) AS visible,
@@ -238,7 +238,8 @@ func overdueTasksBy(
 		   AND %[6]s AND %[7]s
 		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, `+storekit.TaskDueSQL("a")+`, a.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
-		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...)
+		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}

@@ -288,6 +288,12 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `analytics.performance_enabled` | `MARGINCE_ANALYTICS_PERFORMANCE_ENABLED` | — | `bool` | `false` | api, worker | Ignored; kept so existing files load. |
 
+### `assurance`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories. |
+
 ### `auth`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -335,6 +341,7 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
+| `contacts.shared_merge_reviews` | `MARGINCE_CONTACTS_SHARED_MERGE_REVIEWS` | — | `bool`, stored | `false` | api, worker | Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant. |
 | `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | The email signature of the workspace, used in place of the own signature of each sender; empty means none. |
 | `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
 

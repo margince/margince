@@ -4,9 +4,9 @@
 import { api } from "../../api/client";
 import type { CreateField } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
+import { useOwnerPicker } from "../../components/recordowners";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useOwnerPicker } from "../records/recordreferences";
 import { mapProjectCreate, type Project, projectFields } from "./projects.form";
 
 // The one create-project form both call sites open: the core fields, the

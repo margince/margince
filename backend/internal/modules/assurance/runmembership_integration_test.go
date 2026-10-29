@@ -270,7 +270,9 @@ func TestTheNightlyScanRecordsWhatItSaw(t *testing.T) {
 		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}
 	scanner := NewScanner(e.store,
-		func(context.Context, pgx.Tx) ([]Subject, error) { return []Subject{sick}, nil },
+		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) {
+			return []Subject{sick}, nil
+		},
 		checkedCoverage, DefaultConfig())
 
 	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)

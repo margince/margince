@@ -251,9 +251,8 @@ func companyReadablePredicate(ctx context.Context, tx pgx.Tx, nodes []companyTre
 	for i, n := range nodes {
 		nodeIDs[i] = n.id
 	}
-	rows, err := tx.Query(ctx,
-		fmt.Sprintf(`SELECT id FROM company WHERE id = ANY($%d) AND %s`, arg(nodeIDs), clause),
-		args...)
+	query := fmt.Sprintf(`SELECT id FROM company WHERE id = ANY($%d) AND %s`, arg(nodeIDs), clause)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

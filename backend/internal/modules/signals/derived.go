@@ -159,17 +159,17 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		return fmt.Sprintf("$%d", len(args))
 	}
 	var signalID ids.UUID
-	err = tx.QueryRow(ctx, `
+	query := `
 		INSERT INTO signal
 		  (kind, entity_type, entity_id, resolved_company_id, summary, summary_params,
 		   evidence, fingerprint, source_channel, resolution_state, severity,
 		   status, detected_at, source, captured_by, visibility, owner_id)
-		VALUES (`+arg(in.Kind)+`, `+arg(subjectType)+`, `+arg(subjectID)+`, `+arg(in.CompanyID)+`, `+arg(in.Summary)+`, `+arg(in.SummaryParams)+`,
-		        `+arg(evidence)+`, `+arg(in.Fingerprint)+`, `+arg(channel)+`, 'resolved', `+arg(in.Severity)+`,
-		        'open', `+arg(detectedAt)+`, `+arg(source)+`, `+arg(by)+`, `+arg(visibility)+`, `+arg(nullableOwner(in.PrivateTo))+`)
+		VALUES (` + arg(in.Kind) + `, ` + arg(subjectType) + `, ` + arg(subjectID) + `, ` + arg(in.CompanyID) + `, ` + arg(in.Summary) + `, ` + arg(in.SummaryParams) + `,
+		        ` + arg(evidence) + `, ` + arg(in.Fingerprint) + `, ` + arg(channel) + `, 'resolved', ` + arg(in.Severity) + `,
+		        'open', ` + arg(detectedAt) + `, ` + arg(source) + `, ` + arg(by) + `, ` + arg(visibility) + `, ` + arg(nullableOwner(in.PrivateTo)) + `)
 		ON CONFLICT DO NOTHING
-		RETURNING id`,
-		args...).Scan(&signalID)
+		RETURNING id`
+	err = tx.QueryRow(ctx, query, args...).Scan(&signalID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -318,8 +318,9 @@ func settleSignalTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source, o
 	// their judgement stands.
 	var args []any
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-	tag, err := tx.Exec(ctx, `
- UPDATE signal SET status = `+arg(outcome)+` WHERE id = `+arg(signalID)+` AND status = 'open' AND archived_at IS NULL`, args...)
+	query := `
+ UPDATE signal SET status = ` + arg(outcome) + ` WHERE id = ` + arg(signalID) + ` AND status = 'open' AND archived_at IS NULL`
+	tag, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return false, fmt.Errorf("settle the signal: %w", err)
 	}
@@ -330,9 +331,9 @@ func settleSignalTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID, source, o
 	// triage endpoint writes — the outcome is a human's, whoever's hands the
 	// write passed through.
 	args = nil
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO signal_resolution (id, signal_id, outcome, resolved_by, source, captured_by)
- VALUES (`+arg(ids.NewV7())+`, `+arg(signalID)+`, `+arg(outcome)+`, `+arg(storekit.UUIDOrNil(actor.UserID))+`, `+arg(source)+`, `+arg(actor.ID)+`)`, args...); err != nil {
+	statement := `INSERT INTO signal_resolution (id, signal_id, outcome, resolved_by, source, captured_by)
+ VALUES (` + arg(ids.NewV7()) + `, ` + arg(signalID) + `, ` + arg(outcome) + `, ` + arg(storekit.UUIDOrNil(actor.UserID)) + `, ` + arg(source) + `, ` + arg(actor.ID) + `)`
+	if _, err := tx.Exec(ctx, statement, args...); err != nil {
 		return false, fmt.Errorf("append the signal outcome: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", "signal", signalID,

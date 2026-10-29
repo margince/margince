@@ -98,7 +98,8 @@ func (s *Service) materializeSchedule(ctx context.Context, tx pgx.Tx, schedule c
 	before := schedule
 	schedule.NextDueAt = periods.Next
 	var b bindings
-	if _, err := tx.Exec(ctx, "UPDATE report_schedule SET next_due_at="+b.add(periods.Next)+" WHERE id="+b.add(schedule.Id), b.values...); err != nil {
+	query := "UPDATE report_schedule SET next_due_at=" + b.add(periods.Next) + " WHERE id=" + b.add(schedule.Id)
+	if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 		return 0, err
 	}
 	return len(dates), recordChange(ctx, tx, "report_schedule", ids.UUID(schedule.Id), "schedule", &before, schedule)

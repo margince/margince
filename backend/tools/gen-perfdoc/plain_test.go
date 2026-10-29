@@ -76,11 +76,20 @@ func TestATimeIsRoundedTheWayItIsSaidAloud(t *testing.T) {
 func TestAServerErrorIsRedEvenWithinBudget(t *testing.T) {
 	failed := measurement{Name: "contact_360", Seat: "rep", P95Ms: 40, BudgetMs: 300, Samples: 30, Verdict: storedWithin, Status5xx: 2}
 	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{failed}}})
-	if !strings.Contains(page, "| A contact's whole story | 🔴 Under a quarter of a second | ⚪ Not measured | Too slow: some tries failed. |") {
+	if !strings.Contains(page, "| A contact's whole story | 🔴 Some tries failed | ⚪ Not measured | Failed: some tries got no answer, so no time can be trusted. |") {
 		t.Errorf("a 5xx must turn the moment red:\n%s", page)
 	}
 	if got := verdict(failed); got != "**FAILED**: 2 server errors" {
 		t.Errorf("budgets page verdict %q, want the failure named", got)
+	}
+}
+
+func TestARedTimeNeverReadsFasterThanItsPromise(t *testing.T) {
+	slow := measurement{Name: "company_360", Seat: "manager", P95Ms: 528, BudgetMs: 300, Samples: 30, Verdict: storedOver}
+	page := renderPlain(map[string]record{dailyTarget: {Target: dailyTarget, Budgets: []measurement{slow}}})
+	want := "| A company's whole page | ⚪ Not measured | 🔴 About 0.5 seconds | Too slow, and nobody is working on it yet. We promise under 0.3 seconds. |"
+	if !strings.Contains(page, want) {
+		t.Errorf("a time over the promise must not be rounded into a faster band:\n%s", page)
 	}
 }
 
@@ -137,5 +146,20 @@ func TestAnAllowedServerErrorOnAListedRowRendersAgainstItsIssue(t *testing.T) {
 	unallowed.Allowed5xx = false
 	if got := verdict(unallowed); got != "**FAILED**: 1 server errors" {
 		t.Errorf("verdict %q; a 5xx no entry allows must still read as a failure", got)
+	}
+}
+
+func TestARefusedRowRendersAsAFailureUnlessItsIssueAllowsIt(t *testing.T) {
+	refused := measurement{
+		Name: "analytics_evaluate", Flow: "analytics_evaluate", Seat: "rep", P95Ms: 6, BudgetMs: 1000, Samples: 30,
+		Verdict: storedWithin, Status422: 30,
+	}
+	if got := verdict(refused); got != "**FAILED**: 30 refused (422)" {
+		t.Errorf("verdict %q; a row every request of which was refused must not read as within budget", got)
+	}
+	allowed := refused
+	allowed.Verdict, allowed.KnownIssue, allowed.Allowed422 = storedOverKnown, 7037, true
+	if got := verdict(allowed); got != "over budget (#7037)" {
+		t.Errorf("verdict %q; a refusal the listed issue allows renders against that issue", got)
 	}
 }

@@ -129,7 +129,8 @@ func (s *Service) frameworkRevision(ctx context.Context, tx pgx.Tx, revision int
 		return out, nil
 	}
 	var b bindings
-	err := tx.QueryRow(ctx, "SELECT definition,effective_at FROM reporting_framework_revision WHERE revision="+b.add(revision), b.values...).Scan(&out.Definition, &out.EffectiveAt)
+	query := "SELECT definition,effective_at FROM reporting_framework_revision WHERE revision=" + b.add(revision)
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&out.Definition, &out.EffectiveAt)
 	return out, storedError(err)
 }
 

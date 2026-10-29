@@ -1,10 +1,9 @@
 {
   "scenario": "case1_log_it",
   "criteria": [
-    8,
-    14
+    8
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -13,10 +12,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 84746,
-    "output_tokens": 7077,
+    "input_tokens": 113543,
+    "output_tokens": 7960,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 772608,
+    "cache_read_input_tokens": 1099392,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null

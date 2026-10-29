@@ -347,6 +347,10 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
+func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiUsageSummary")
+}
+
 func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsContext")
 }
@@ -545,6 +549,10 @@ func (stubs) RejectApprovalBundle(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) ListApprovals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListApprovalsParams) {
 	httperr.NotImplemented(w, r, "ListApprovals")
+}
+
+func (stubs) CountPendingApprovals(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CountPendingApprovals")
 }
 
 func (stubs) GetApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1847,6 +1855,30 @@ func (stubs) UndoDedupeDisposition(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UndoDedupeDisposition")
 }
 
+func (stubs) ListContactCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListContactCasesParams) {
+	httperr.NotImplemented(w, r, "ListContactCases")
+}
+
+func (stubs) GetContactCase(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetContactCase")
+}
+
+func (stubs) MergeContactCase(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "MergeContactCase")
+}
+
+func (stubs) PreviewContactCaseMerge(w nethttp.ResponseWriter, r *nethttp.Request, contactId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewContactCaseMerge")
+}
+
+func (stubs) GetContactCaseSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetContactCaseSettings")
+}
+
+func (stubs) UpdateContactCaseSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdateContactCaseSettings")
+}
+
 func (stubs) GetMorningDigest(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMorningDigestParams) {
 	httperr.NotImplemented(w, r, "GetMorningDigest")
 }
@@ -1973,6 +2005,14 @@ func (stubs) GetForecast(w nethttp.ResponseWriter, r *nethttp.Request, params cr
 
 func (stubs) GetForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetForecastAssurance")
+}
+
+func (stubs) GetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastAssuranceEnforcement")
+}
+
+func (stubs) SetForecastAssuranceEnforcement(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetForecastAssuranceEnforcement")
 }
 
 func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListInputChecksParams) {

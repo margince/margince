@@ -126,7 +126,7 @@ func appShellCalls(dailyInput) []dailyCall {
 		{Name: "installation_settings", Path: "/v1/installation/settings"},
 		{Name: "onboarding_state", Path: "/v1/onboarding/state", Optional: true},
 		{Name: "connectors", Path: "/v1/connectors"},
-		{Name: "approvals", Path: "/v1/approvals?status=pending&limit=50"},
+		{Name: "approvals", Path: "/v1/approvals/pending-count"},
 		{Name: "assistant_profile", Path: "/v1/assistant/profile"},
 		{Name: "ai_activity", Path: dailyAIActivityPath()},
 		{Name: "voice_profiles", Path: "/v1/voice-profiles"},
@@ -144,7 +144,7 @@ func adminRailCalls(dailyInput) []dailyCall {
 		{Name: "company", Path: "/v1/company"},
 		{Name: "installation_license", Path: "/v1/installation/license"},
 		{Name: "ai_calls", Path: "/v1/ai/calls?limit=10"},
-		{Name: "ai_usage", Path: "/v1/ai/usage"},
+		{Name: "ai_usage", Path: "/v1/ai/usage/summary"},
 		{Name: "ai_budget", Path: "/v1/ai/budget"},
 		{Name: "embed_reindex_identities", Path: "/v1/embeddings/reindex/identities"},
 	}

@@ -123,9 +123,9 @@ func (s *Store) ListSavedViews(ctx context.Context, resource *string, archived s
 		if archived != storekit.IncludeArchived {
 			where = append(where, "archived_at IS NULL")
 		}
-		rows, err := tx.Query(ctx,
-			selectSavedView+strings.Join(where, " AND ")+
-				fmt.Sprintf(" ORDER BY name, id LIMIT $%d", arg(catalogCap+1)), args...)
+		query := selectSavedView + strings.Join(where, " AND ") +
+			fmt.Sprintf(" ORDER BY name, id LIMIT $%d", arg(catalogCap+1))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

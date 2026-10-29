@@ -80,6 +80,13 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // A duplicate case asks whether two contacts are the same human being.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
     // A booking guest is a human, not the CRM contact record type.
     "scheduling.personalLinksFoot",
     "scheduling.whenTitle",
@@ -162,6 +169,16 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
     // The meeting host and a booking guest are humans, not the CRM contact
     // record type.
     "scheduling.personalLinksFoot",
@@ -275,6 +292,25 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.refused",
+    "contactCase.pair.refused",
+    "contactCase.noOwner",
+    "contactCase.ownerLabel",
+    "contactCase.ownerHint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.member.owner",
+    "contactCase.notAllowed.ownersOnly",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
+    "worklist.contactCase.owners",
+    "sharedMergeReviews.switch",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.
     "companyReach.sub",

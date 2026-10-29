@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck -->
+<!-- describes: frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx -->
 # Contacts, companies, leads, deals and projects
 
 Margince holds five kinds of record: contacts, companies, leads, deals and projects.
@@ -19,13 +19,11 @@ Margince holds five kinds of record: contacts, companies, leads, deals and proje
 Next to these are **activities** (the timeline of emails, calls, meetings, notes and tasks) and **documents**. Each has its own page.
 
 ### What is the difference between a lead and a deal?
-A lead in Margince is someone you have not qualified yet. A deal is one
-piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can open a deal in the same step.
+A lead in Margince is someone you have not qualified yet. A deal is one piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can open a deal in the same step.
 Also called: prospect versus opportunity.
 
 ### What is the difference between a contact and a company?
-A contact in Margince is a single human you do business with. A company is the
-business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact.
+A contact in Margince is a single human you do business with. A company is the business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact.
 Also called: account, client or customer for a company.
 
 ## What connects to what
@@ -110,8 +108,14 @@ To merge two duplicate contacts in Margince, open the contact you want to remove
 3. Choose **Merge**. Margince opens the contact you kept.
 The contact you merged away is archived, not deleted. A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?", and Margince merges the other lead into it.
 
-Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays.
-Also called: combine, deduplicate, remove a duplicate.
+Anyone the merged-away contact was shared with can open the contact you kept. Of their two shares, the higher access stays. The owner of the merged-away contact, when another colleague, keeps access too: edit access with a full seat, read with a read seat. A share they already held keeps its end date.
+
+Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist. A contact a colleague keeps private is not in your group, and only they can merge it.
+1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
+2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one.
+3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
+The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. To merge contacts you cannot edit, see **Shared merge reviews** in [Seats, roles and who can see what](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
+Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
 To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity only dials. A call logged this way is not linked to the task and does not complete it.
@@ -149,19 +153,15 @@ To check a VAT number with the EU VAT register, type it into **Register / VAT ID
 1. Open the company, and find **Register / VAT ID** under **Registration** in **Details**.
 2. Type the number as it is written, and press Enter.
 3. Press the mark beside the number to read the answer.
-The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more.
-The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
+The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
 Also called: VIES check, check a VAT ID, tax number check.
 
 ### What does the VAT check answer mean?
-The mark opens the receipt: **Register result**, **Number consulted**, **Registered to**, **Registered address**, **Consulted on** and **Consultation number**.
-**Valid** means the number is real, not that it belongs to this company. Read **Registered to**: a number copied from a website often belongs to another company.
+The mark opens the receipt: **Register result**, **Number consulted**, **Registered to**, **Registered address**, **Consulted on** and **Consultation number**. **Valid** means the number is real, not that it belongs to this company. Read **Registered to**: a number copied from a website often belongs to another company.
 
-**Consultation number** is the proof a tax office accepts. It reads "None issued." until your own VAT ID is filled in on **Settings → Company profile**.
-When the number changed after a check, the receipt says "The number on this record changed after this check." Press **Check again**.
+**Consultation number** is the proof a tax office accepts. It reads "None issued." until your own VAT ID is filled in on **Settings → Company profile**. When the number changed after a check, the receipt says "The number on this record changed after this check." Press **Check again**.
 
-A grey question mark means the answer could not be loaded; press it to try again.
-If a check says "This installation does not consult the VAT register.", an administrator has to turn it on.
+A grey question mark means the answer could not be loaded; press it to try again. If a check says "This installation does not consult the VAT register.", an administrator has to turn it on.
 Also called: VAT ID valid, VAT receipt, Registered to.
 
 ### How do I change the owner of a contact or company?

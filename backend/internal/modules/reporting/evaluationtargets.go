@@ -115,7 +115,8 @@ func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, reach targetReach
 // owner who sold nothing still stands against a target.
 func addUnmeasuredOwners(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT id,display_name FROM app_user WHERE id=ANY("+b.add(frame.MemberIds)+") ORDER BY display_name,id", b.values...)
+	query := "SELECT id,display_name FROM app_user WHERE id=ANY(" + b.add(frame.MemberIds) + ") ORDER BY display_name,id"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}

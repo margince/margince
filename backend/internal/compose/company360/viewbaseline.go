@@ -154,12 +154,12 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 	// activities.CompanyLinkedActivityExists, so a mail filed against a contact at
 	// the account is new here exactly when the page lists it as new. EXISTS
 	// gives one row per activity, so the plain count needs no DISTINCT.
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg)),
-		args...).Scan(&out.NewActivities); err != nil {
+		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&out.NewActivities); err != nil {
 		return out, fmt.Errorf("count new activities: %w", err)
 	}
 

@@ -56,6 +56,19 @@ ONLY="${SCENARIO:-}"
 # pinned the model then: neither is a baseline for a bridge number.
 CANDIDATE="${E2E_LLM_CANDIDATE:-claude}"
 VIA="${E2E_LLM_VIA:-api}"
+# THE DOOR the assistant works through. mcp (the default) offers the product's own
+# MCP tools. rest offers the installed skill and one HTTP tool over /v1 with the
+# same passport, which is the other way an assistant is given the product. It runs
+# the same scenarios, and each REST call is graded as the verb its operation runs.
+DOOR="${E2E_LLM_DOOR:-mcp}"
+case "$DOOR" in
+  mcp) ;;
+  rest)
+    [[ "$VIA" = cli ]] || { echo "E2E_LLM_DOOR=rest needs E2E_LLM_VIA=cli: a CLI is what holds the skill" >&2; exit 1; }
+    export E2E_LLM_DOOR=rest
+    ;;
+  *) echo "E2E_LLM_DOOR=$DOOR is not mcp or rest" >&2; exit 1 ;;
+esac
 export E2E_LLM_JUDGE_VIA="${E2E_LLM_JUDGE_VIA:-cli}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
@@ -93,7 +106,9 @@ eval "$ROUTE"
 # the records tree, in a folder named for the model that produced it, because a
 # pass rate belongs to the model it was measured on and nothing else about a
 # result survives being read as another model's.
-VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/mcp_e2e/$FOLDER}"
+VERDICT_TREE=mcp_e2e
+[[ "$DOOR" = rest ]] && VERDICT_TREE=mcp_e2e_rest
+VERDICT_DIR="${E2E_LLM_VERDICTS:-$ROOT/backend/internal/compose/aicert/records/$VERDICT_TREE/$FOLDER}"
 SYSTEM_PROMPT=mcp-instructions
 [[ "$VIA" = cli ]] && SYSTEM_PROMPT=cli-default
 SELF_JUDGED=false
@@ -231,11 +246,33 @@ MCP_SERVER=margince_e2e_llm
 # restart below re-asks for the stack's address and calls this again: a stop
 # releases the port claim, and the stack may come back on another one.
 write_mcp_config() {
+  if [[ "$DOOR" = rest ]]; then
+    python3 -c 'import json,sys
+cfg = {"mcpServers": {sys.argv[6]: {"command": "python3", "args": [sys.argv[1]], "env": {
+       "MARGINCE_REST_SKILL_DIR": sys.argv[2], "MARGINCE_REST_BASE": sys.argv[3] + "/v1",
+       "MARGINCE_REST_TOKEN": sys.argv[4]}}}}
+open(sys.argv[5], "w").write(json.dumps(cfg))' \
+      "$ROOT/e2e/llm/restshim.py" "$SKILL_DIR" "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+    return
+  fi
   python3 -c 'import json,sys
 cfg = {"mcpServers": {sys.argv[4]: {"type": "http", "url": sys.argv[1] + "/mcp",
        "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
 open(sys.argv[3], "w").write(json.dumps(cfg))' \
     "$APP_BASE" "$PASSPORT" "$MCP_CONFIG" "$MCP_SERVER"
+}
+
+# fetch_skill downloads the skill an assistant on the REST door reads, the way a
+# user installing it does. The download is a human act, so it is made with the
+# admin's session and not with the passport.
+SKILL_DIR="$WORK/skill/margince"
+fetch_skill() {
+  mkdir -p "$WORK/skill"
+  curl -sS -b "$COOKIES" -o "$WORK/skill.zip" "$APP_BASE/v1/agent-bundle"
+  python3 -c 'import sys, zipfile
+zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' "$WORK/skill.zip" "$WORK/skill" ||
+    { echo "HARNESS: the skill download is not a ZIP" >&2; exit 2; }
+  [[ -f "$SKILL_DIR/INDEX.md" ]] || { echo "HARNESS: the skill has no INDEX.md" >&2; exit 2; }
 }
 
 # use_passport points the assistant at the narrow credential (read, write) or the
@@ -280,6 +317,7 @@ try: print(json.load(sys.stdin).get("token",""))
 except Exception: print("")')"
   [[ -n "$PASSPORT_WIDE" ]] || { echo "could not mint the draft+send passport" >&2; exit 1; }
 
+  [[ "$DOOR" = rest ]] && fetch_skill
   write_mcp_config
 
   # A config the CLI cannot connect with produces an assistant with no tools,
@@ -488,14 +526,29 @@ for line in open(sys.argv[1]):
 # not run it at all — a harness stop, never a score. drive.py reads the
 # passport from the variable it is named, so it reaches no command line.
 run_once() {
-  local prompt_file="$1" out="$2" status=0
+  local status=0
+  drive_once "$@" || status=$?
+  # On the REST door the run holds http calls; they are rewritten to the verbs
+  # they ran, and the tools it was offered are the MCP surface's own, so the
+  # checker reads the run as it reads one made over MCP.
+  if [[ "$DOOR" = rest && "$status" -eq 0 ]]; then
+    MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/restmap.py" "$2" \
+      --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN 2>>"$2.err" || return 3
+  fi
+  return "$status"
+}
+
+drive_once() {
+  local prompt_file="$1" out="$2" status=0 door_args=()
   if [[ "$WIRE" = claude-cli ]]; then
     run_claude "$prompt_file" "$out"
     return
   fi
+  [[ "$DOOR" = rest ]] && door_args=(--rest-skill-dir "$SKILL_DIR" --rest-base "$APP_BASE/v1")
   MARGINCE_E2E_TOKEN="$PASSPORT" python3 "$ROOT/e2e/llm/drive.py" \
     --candidate "$CANDIDATE" --via "$VIA" --model "$MODEL" --folder "${FOLDER%@*}" --effort "$EFFORT" \
     --mcp-url "$APP_BASE/mcp" --token-env MARGINCE_E2E_TOKEN \
+    ${door_args[@]+"${door_args[@]}"} \
     --prompt-file "$prompt_file" --out "$out" 2>"$out.err" || status=$?
   if [[ "$status" -eq 3 ]]; then
     return 3

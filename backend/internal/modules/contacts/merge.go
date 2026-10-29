@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -167,6 +168,13 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
 func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+	out, _, err := s.mergeContactCarryingTx(ctx, tx, sourceID, targetID, ifVersion, active)
+	return out, err
+}
+
+// mergeContactCarryingTx is mergeContactTx answering what it did about the
+// merged-away contact's owner, for a caller that reports it.
+func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, *authz.OwnerAccessCarry, error) {
 	// BEFORE LockPair, because recording a stop takes consent's lock and then
 	// reads the contact row. Locking the rows first and reaching for consent's
 	// lock later (inside carryStopsTx, below) inverts the order between the two
@@ -174,32 +182,53 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
 		commsauthz.ContactStopSubject(sourceID),
 		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, err
+		return crmcontracts.Contact{}, nil, err
 	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
 	if err != nil {
-		return crmcontracts.Contact{}, err
+		return crmcontracts.Contact{}, nil, err
 	}
 	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
-		return crmcontracts.Contact{}, err
+		return crmcontracts.Contact{}, nil, err
 	}
 	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
 	if err != nil {
-		return crmcontracts.Contact{}, err
+		return crmcontracts.Contact{}, nil, err
 	}
 	if err := s.carryContactSatellitesTx(ctx, tx, sourceID, targetID); err != nil {
-		return crmcontracts.Contact{}, err
+		return crmcontracts.Contact{}, nil, err
+	}
+	carry, err := s.carryOwnerAccessTx(ctx, tx, targetID, (*ids.UUID)(tgt.OwnerId), (*ids.UUID)(src.OwnerId), sourceID.UUID)
+	if err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	// A third contact's open pair with the merged-away one now names the
+	// survivor, so a human still sees it.
+	if err := moveDedupeCandidates(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, nil, err
 	}
 	p := buildSurvivorshipPatch(tgt, src)
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
-			return crmcontracts.Contact{}, fmt.Errorf("apply survivorship fill: %w", err)
+			return crmcontracts.Contact{}, nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
 	}
 	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("retire merged-away contact: %w", err)
+		return crmcontracts.Contact{}, nil, fmt.Errorf("retire merged-away contact: %w", err)
 	}
+	if err := auditContactMerge(ctx, tx, sourceID, targetID, counts, p); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Contact{}, nil, fmt.Errorf("read surviving contact: %w", err)
+	}
+	return out, carry, nil
+}
+
+// auditContactMerge records the merge on both rows and emits contact.merged.
+func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch) error {
 	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{
@@ -208,12 +237,12 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 			auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
 		})
 	if err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge: %w", err)
+		return fmt.Errorf("audit contact merge: %w", err)
 	}
 	// One event, its own verb: the context graph collapses two nodes,
 	// which neither contact.updated nor contact.archived can say.
 	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
+		return fmt.Errorf("emit contact.merged: %w", err)
 	}
 	// Each filled column is its own top-level key, as in an update row. The
 	// history read masks by key, so a nested value would pass the mask.
@@ -225,13 +254,9 @@ func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetI
 	maps.Copy(before, p.Before())
 	maps.Copy(after, p.After())
 	if _, err := storekit.Audit(ctx, tx, "merge", contactEntity, targetID.UUID, before, after); err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge on the survivor: %w", err)
+		return fmt.Errorf("audit contact merge on the survivor: %w", err)
 	}
-	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
-	if err != nil {
-		return crmcontracts.Contact{}, fmt.Errorf("read surviving contact: %w", err)
-	}
-	return out, nil
+	return nil
 }
 
 // carryContactSatellitesTx moves what other modules keep about the merged-away

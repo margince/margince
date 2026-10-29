@@ -180,6 +180,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reopenconditionparity_test.go` | H3 | What a snooze may wait for is spelled in four places, and all four must agree. |
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
+| `reviewoutcomes_test.go` | H3 | The answer sheet offers a customer review only the outcomes the server accepts. |
 | `riskverdictretention_test.go` | H1 | The queue's recorded verdicts live as long as the figure that reads them, and no longer. |
 | `rowscopetables_test.go` | H2 | Which table a row-scope call bounds, and which column names a reference to one. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be total over the column it reads. |
@@ -306,6 +307,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `exactseatmatch_test.go` | H2 | TestEveryExactSeatMatchFoldsTheDomain holds every SQL comparison of a seat's login to storekit.SeatLoginIsSQL. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
+| `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
@@ -520,6 +522,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has one spelling, and it is draftfloor.AIProvenanceNotice. |
 | `approvalsameagent_test.go` | H2 | "Is this the agent that staged the proposal" has one spelling, and it is not passport equality. |
 | `arch_test.go` | H2 | The boundary rules between packages hold as a plain `go test`, with the package list derived from the tree so a new package is enrolled the moment it exists. |
+| `argspread_test.go` | H2 | A call never grows the slice it also spreads. |
 | `artifactuploadretry_test.go` | H2 | Every artifact upload goes through the wrapper that retries it. |
 | `audiencelockorder_test.go` | H2 | Several activity audiences are recomputed in one agreed order, or two transactions deadlock. |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |

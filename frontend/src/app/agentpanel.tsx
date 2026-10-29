@@ -4,6 +4,7 @@ import type { MarginceCoreState } from "../design-system/margince-core";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useCan } from "../lib/capability";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import type { PanelFrame } from "./agentpanelframe";
@@ -209,6 +210,10 @@ export function AgentPanel({
 }>) {
   const { locale } = useLocale();
   const t = useT();
+  // The log opens Settings, which serves the AI usage page only to a seat that
+  // may read diagnostics. A link a rep cannot follow is a dead end, so it is
+  // not offered.
+  const mayOpenLog = useCan("ai_diagnostics", "read");
   return (
     <section
       className="arpanel"
@@ -277,9 +282,11 @@ export function AgentPanel({
         action={
           // A verb, beside the title rather than inside it. Inside the heading,
           // it took the heading's weight and read as a second title.
-          <a className="link-button" href={AI_SETTINGS_HREF}>
-            {t("agent.panel.fullLog")}
-          </a>
+          mayOpenLog ? (
+            <a className="link-button" href={AI_SETTINGS_HREF}>
+              {t("agent.panel.fullLog")}
+            </a>
+          ) : undefined
         }
       >
         <Recap settled={settled} />

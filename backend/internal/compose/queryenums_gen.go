@@ -133,6 +133,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "entity_type", Values: []string{"contact", "company", "lead"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "merged", "not_a_duplicate"}, Array: false, Explode: true},
 	},
+	"GET /v1/dedupe/contact-cases": {
+		{Name: "scope", Values: []string{"mine", "unassigned", "all"}, Array: false, Explode: true},
+	},
 	"GET /v1/field-history": {
 		{Name: "actor_type", Values: []string{"human", "agent", "system", "connector", "buyer"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -369,6 +372,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/dedupe/candidates": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/dedupe/contact-cases": {
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/field-history": {

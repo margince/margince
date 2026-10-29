@@ -51,10 +51,11 @@ func (s *Store) CompaniesCarryingLiveProjects(
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		rows, err := tx.Query(ctx, storekit.SQLf(`
+		query := storekit.SQLf(`
 			SELECT DISTINCT c.company_id
 			  `+liveProjectEdge+`
-			   AND c.company_id = ANY($%d)`, arg(companyIDs)), args...)
+			   AND c.company_id = ANY($%d)`, arg(companyIDs))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("contacts: reading which companies carry live projects: %w", err)
 		}

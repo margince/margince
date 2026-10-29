@@ -134,7 +134,8 @@ func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, erro
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var days int
-	err := tx.QueryRow(ctx, "SELECT "+storekit.WaitingHorizonSQL(asOf, arg), args...).Scan(&days)
+	query := "SELECT " + storekit.WaitingHorizonSQL(asOf, arg)
+	err := tx.QueryRow(ctx, query, args...).Scan(&days)
 	if err != nil {
 		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
 	}
@@ -188,13 +189,13 @@ func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.
 	}
 	var spread waitingHorizonSpread
 	var slowMinutes int64
-	if err := tx.QueryRow(ctx, fmt.Sprintf(firstResponseSQL,
+	query := fmt.Sprintf(firstResponseSQL,
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
-		slowPercentile),
-		args...).Scan(&spread.Answered, &slowMinutes); err != nil {
+		slowPercentile)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
 		return 0, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
 	}
 	spread.Slow = time.Duration(slowMinutes) * time.Minute

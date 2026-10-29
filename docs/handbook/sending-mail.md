@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
 [Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
@@ -41,8 +41,8 @@ To send a follow-up email in Margince, open the contact's **History** tab and pr
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
-To reply to one message in Margince, open the composer from the record and pick the thread under **Threads**. Then click the message under the thread.
-The thread you picked is marked. The line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent.
+To reply to one message in Margince, open the email reader and press **Reply** below that message. Select an older message first to show its text and **Reply**. The newest message appears first and opens with the one you came from. Close the composer to return to the thread.
+You can also pick a message under **Threads** in the composer. The line above the recipients says which message you answer.
 
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 

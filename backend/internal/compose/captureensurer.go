@@ -20,10 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -55,19 +52,12 @@ func newCounterpartyStoreAt(pool *pgxpool.Pool, now func() time.Time) *contacts.
 	// resolved, and a meeting the capture limiter held for having no record is
 	// no longer that record-less thing once it does. activities owns the
 	// derivation, contacts may not import it, so compose hands it over.
-	return contacts.NewStore(InstallationDB(pool)).
+	return withContactMergeCarriers(InstallationDB(pool), contacts.NewStore(InstallationDB(pool))).
 		WithLeadQualifyTasks(tasks).
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).
-		WithGeocodeEnqueue(boundGeocodeEnqueue).
-		// A captured contact can take a lead over (promoteheld.go), and a
-		// promotion carries the lead's stops and consent links or refuses —
-		// wired as the server's store wires them (serverassembly.go).
-		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
-		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool)))
+		WithGeocodeEnqueue(boundGeocodeEnqueue)
 }
 
 // contactsEnsurer adapts the contacts module's auto-create engine onto

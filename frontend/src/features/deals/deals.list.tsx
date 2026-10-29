@@ -15,6 +15,7 @@ import {
 } from "../../components/listquery";
 import { useOwnerChips } from "../../components/ownerdials";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
+import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
 import { currencyOptions } from "../../format/currencychoices";
@@ -37,7 +38,6 @@ import { useReReadMeWhen } from "../../lib/refusedfilters";
 import { useViewerId } from "../../lib/session";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
-import { useOwnerPicker } from "../records/recordreferences";
 import {
   type ClosedDeal,
   CloseReviewOffer,

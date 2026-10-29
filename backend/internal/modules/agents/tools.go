@@ -77,7 +77,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
-	r.Register(mergeRecords{p: p, language: r.language})
+	r.Register(mergeRecords{p: p, language: r.language, cases: r.contactCases})
 }
 
 // schema turns a hand-written JSON schema into the wire form, COMPACTED.

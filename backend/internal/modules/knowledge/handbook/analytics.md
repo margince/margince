@@ -349,6 +349,9 @@ pipeline with all it needs:
 Neither the landing nor this figure is shown under **My teams**. A total of
 teams that made their own calls would describe none of them.
 
+A deal whose customer stopped answering gets a review here, whatever its close
+date: see [Deals the customer still supports](deals-the-customer-supports.md).
+
 ### The receipt
 
 **Data and evidence checked**, the forecast receipt, shows four counts. The last

@@ -94,5 +94,5 @@ func TestTheLanesRoutingTableIsPublished(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the routing table: %v", err)
 	}
-	syncMCPToolCoverage(t, e2eLLMRoutesFile, append(body, '\n'))
+	syncMCPToolCoverage(t, e2eLLMRoutesFile, append(body, '\n'), mcpToolCoverageCommand)
 }

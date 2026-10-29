@@ -72,6 +72,9 @@ ai:
 analytics:
   performance_enabled: false
 
+assurance:
+  qualified_forecast_enforced: false
+
 auth:
   password:
     enabled: true
@@ -105,6 +108,7 @@ consent:
 contacts:
   first_response_enabled: false
   first_response_target_minutes: 240
+  shared_merge_reviews: false
   signature_template: null
   unassigned_escalation_user_id: null
 

@@ -104,11 +104,12 @@ func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (m
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	candidatesPos := arg(candidates)
-	rows, err := tx.Query(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		`SELECT u.owner_id FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = ANY($%d)) u WHERE %s`,
-		candidatesPos, AssigneeEligibleSQL(p, "u", arg)), args...)
+		candidatesPos, AssigneeEligibleSQL(p, "u", arg))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("ask which seats may own records: %w", err)
 	}
@@ -139,6 +140,12 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
+	// An owner a case admission names already holds a merged contact. So the
+	// caller's scope is not asked of them, and the seat half still is.
+	if admittedCaseGrantee(ctx, dest) {
+		p.Permissions.RowScope = principal.RowScopeAll
+		eligible = AssigneeEligibleSQL
+	}
 	status := "status"
 	if consolidatingInto(ctx, dest) {
 		if err := Require(ctx, "user_admin", principal.ActionDelete); err != nil {
@@ -147,11 +154,12 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		status = "CASE WHEN status IN ('invited','deactivated') THEN 'active' ELSE status END AS status"
 	}
 	var permitted bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, %s, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d AND removed_at IS NULL FOR KEY SHARE) u WHERE %s)`,
-		status, destPos, eligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
+		status, destPos, eligible(p, "u", arg))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&permitted); err != nil {
 		return err
 	}
 	return refuseIneligibleAssignee(permitted)

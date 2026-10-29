@@ -23,9 +23,6 @@ package openchannel
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -101,7 +98,7 @@ func receive(ctx context.Context, rt extension.Runtime, req extension.InboundReq
 	// The comparison runs for every request, including the ones already decided
 	// against — see absentEndpointKey. Its result is combined with the target
 	// afterwards rather than short-circuiting on it.
-	presented := verified(secret, req)
+	presented := req.SignatureHolds(secret)
 	if target == nil || !presented {
 		return extension.InboundUnauthenticated, nil
 	}
@@ -166,21 +163,6 @@ func admittingSecret(ctx context.Context, rt extension.Runtime, target *inboundT
 		return nil, err
 	}
 	return secret, nil
-}
-
-// verified reports whether the presented signature is the one this secret
-// produces over the material the sender signed.
-func verified(secret []byte, req extension.InboundRequest) bool {
-	mac := hmac.New(sha256.New, secret)
-	// SignedPayload, and nothing else. A verifier that re-spelled the
-	// concatenation would one day spell it differently from the sender, and the
-	// failure would look like a wrong secret rather than a rule that moved.
-	mac.Write(req.SignedPayload())
-	expected := signaturePrefix + hex.EncodeToString(mac.Sum(nil))
-	// hmac.Equal, never ==: it does not return on the first differing byte.
-	// Both operands are the fixed-length hex of a 32-byte digest under a fixed
-	// prefix, so the comparison leaks neither content nor length.
-	return hmac.Equal([]byte(expected), []byte(req.Signature))
 }
 
 // enqueue records one verified request, or says why it will not.

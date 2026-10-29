@@ -193,12 +193,13 @@ func (s *Store) queryAwaitingReplies(
 		return nil, err
 	}
 	reader := arg(readerOrNobody(ctx))
-	rows, err := tx.Query(ctx, fmt.Sprintf(awaitingRepliesSQL,
+	query := fmt.Sprintf(awaitingRepliesSQL,
 		instant, g.content, g.links, arg(readerAddresses), arg(windowDays),
 		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
 		reader, messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), g.back),
 		g.customer, AwaitingReplyScanCap,
-	), args...)
+	)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading replies the reader is waiting for: %w", err)
 	}

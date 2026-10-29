@@ -1329,6 +1329,14 @@ paths:
             `true` returns only rows with no owner. Unassigned rows are visible at every row scope
             (AAD-ROLE-2), so this names the unowned queue rather than widening what the caller sees.
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
+        - name: shared_with_me
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` returns only contacts someone else owns that the caller holds a live record grant
+            on, directly or through one of their teams. A merge that kept a former owner's access
+            puts the remaining contact here. Mutually exclusive with `owner_id`, `owner_team_id` and
+            `unassigned`; combining them is `422`.
         - name: q
           in: query
           schema: { type: string }
@@ -11022,14 +11030,14 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409':
           description: |
-            A live lead already owns this email (`duplicate_email`).
+            A live lead already owns this email (`duplicate_email`), or a live contact holds the
+            email or the LinkedIn profile (`contact_holds_email`). `existing_id` names the contact and
+            `field` the key that matched, only when the caller can read the contact.
 
-            `contact_holds_email` answers when a live contact holds the email or the LinkedIn profile:
-            somebody is a lead or a contact, never both, so no lead is written. A new opportunity
-            with a contact is a deal on that contact. `existing_id` names the contact and `field`
-            the key that matched, only when the caller can read the contact; otherwise the 409
-            names neither. `owner_notified` is true when the contact's owner was given a Worklist
-            task about the arrival, which is not filed when the caller owns the contact.
+            `contact_holds_email` means somebody is a lead or a contact, never both, so no lead is
+            written. A new opportunity with a contact is a deal on that contact. `owner_notified` is
+            true when the contact's owner was given a Worklist task about the arrival, which is not
+            filed when the caller owns the contact.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -11249,6 +11257,14 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Lead' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            A live contact holds the new email or LinkedIn profile (`contact_holds_email`).
+            `existing_id` names the contact and `field` the key that matched, only when the caller
+            can read the contact.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Leads]
@@ -11492,7 +11508,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Lead was never promoted, has already been demoted, or a live lead now holds its email (`duplicate_email`).
+          description: Lead was never promoted, has already been demoted, a live lead now holds its email (`duplicate_email`), or a live contact now holds its email or profile (`contact_holds_email`, with `existing_id` and `field` when the caller can read that contact).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -16173,9 +16189,8 @@ paths:
       tags: [Companies]
       operationId: putAnchorCompany
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      # This save IS the 🟡 confirmation of a read-back: an agent may PROPOSE the company
-      # (POST /coldstart/preview) but never make it true, exactly as it may stage an approval
-      # and never approve it.
+      # This save IS the 🟡 confirmation of a read-back. A human reads the company back
+      # (POST /coldstart/preview) and confirms it here: this save takes a human session.
       x-agent-access: human-only
       summary: Save the installation's own company — the human's confirm-first write.
       description: |
@@ -20334,6 +20349,27 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/usage/summary:
+    get:
+      tags: [AI]
+      operationId: getAiUsageSummary
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: What AI cost this month so far, as one figure.
+      description: |
+        The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
+        (the first day of the current UTC month through now), computed the same way and admitted
+        by the same grant. For a page that shows only the month's total and needs none of the
+        report's lines, budget or decisions.
+      responses:
+        '200':
+          description: The month's spend.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiUsageSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/agent-usage:
     get:
       tags: [AI]
@@ -21067,6 +21103,169 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  # A contact case is every live contact reachable over open duplicate pairs the caller can see,
+  # read off dedupe_candidate and never stored. Each live owner of a member sees it in their own
+  # Worklist; the first merge that commits settles it for all of them.
+  /dedupe/contact-cases:
+    get:
+      tags: [Contacts]
+      operationId: listContactCases
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: The open contact duplicate cases, strongest first.
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [mine, unassigned, all], default: mine }
+          description: '`mine`: cases with a member the caller owns. `unassigned`: cases where no member has a live owner. `all`: every case the caller can see.'
+        - { name: cursor, in: query, schema: { type: string }, description: Opaque keyset cursor. }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 25 } }
+      responses:
+        '200':
+          description: One page of cases.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCaseListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /dedupe/contact-cases/{contact_id}:
+    parameters:
+      - { name: contact_id, in: path, required: true, schema: { type: string, format: uuid }, description: Any member of the case. }
+    get:
+      tags: [Contacts]
+      operationId: getContactCase
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: The duplicate case this contact belongs to.
+      description: |
+        `404` when the contact is in no open case and was not merged away. A contact that was merged
+        away answers `status: resolved` with the contact it went into, so a reviewer holding an old
+        tab sees who settled it.
+      responses:
+        '200':
+          description: The case.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCase' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /dedupe/contact-cases/{contact_id}/preview:
+    parameters:
+      - { name: contact_id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Contacts]
+      operationId: previewContactCaseMerge
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      x-mcp-tool: { verb: merge_records, record_type: contact, tier: auto_execute, scope: write }
+      summary: What merging these members would do, without writing anything.
+      description: |
+        Runs the merge itself in a transaction that is rolled back, so the answer is the one the
+        merge would give. Refuses exactly as the merge refuses. An agent asks it through
+        `merge_records` with `preview: true`, so the merge's tier holds for the preview too.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactCaseDecisionRequest' }
+      responses:
+        '200':
+          description: The outcome the merge would have, with `committed` false.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCaseOutcome' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /dedupe/contact-cases/{contact_id}/merge:
+    parameters:
+      - { name: contact_id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Contacts]
+      operationId: mergeContactCase
+      x-mcp-tool: { verb: merge_records, record_type: contact, tier: auto_execute, scope: write }
+      summary: Merge the selected members of a case into one contact. Not reversible.
+      description: |
+        In one transaction: every selected member merges into `survivor_id`, the pairs between them
+        are marked merged, `owner_id` becomes the owner, and every other live owner of a selected
+        member keeps access through a record grant (write for a full seat, read for a read seat).
+        Pairs a merged-away member had with an unselected contact move onto the survivor and stay
+        open. Either all of it commits or none of it does.
+
+        Authority: the caller may change every selected member, or the workspace has
+        `contacts.shared_merge_reviews` on and the caller is a live full-seat owner of a selected
+        member. `409 case_changed` when the revision is stale; `422 dismissed_pair_selected`,
+        `not_connected`, `owner_not_eligible` or `too_large` for a selection the case cannot take.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactCaseDecisionRequest' }
+      responses:
+        '200':
+          description: The committed outcome.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCaseOutcome' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /dedupe/settings:
+    get:
+      tags: [Contacts]
+      operationId: getContactCaseSettings
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Whether any owner of a duplicate may merge the whole case.
+      description: |
+        Off by default (`contacts.shared_merge_reviews`). Read by every seat, because the review
+        shows who may settle a case by it. Needs `installation_settings.read`.
+      responses:
+        '200':
+          description: The switch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCaseSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Contacts]
+      operationId: updateContactCaseSettings
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: Let any owner of a duplicate merge the whole case, or not.
+      description: |
+        Admin only. On: a live full-seat owner of one member of a case may merge the other members
+        of that case even when they belong to colleagues, and the colleagues keep access to the
+        remaining contact through a record grant. It widens nothing else: no other contact, no
+        mail, no files. Off: a merge needs write authority over every member, as before. Merges
+        already made and the grants they made stay when the switch is turned off.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContactCaseSettings' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContactCaseSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---------------------------- /approvals ----------------------------------
   /autonomy:
     get:
@@ -21237,6 +21436,30 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /approvals/pending-count:
+    get:
+      tags: [Approvals]
+      operationId: countPendingApprovals
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How many approvals wait for the caller, exactly.
+      description: |
+        The number of items `listApprovals?status=pending` would return to this caller with the
+        wire status `pending`, across every page: the same visibility checks, the same mutes and
+        the same lazy expiry. It answers one number instead of every page.
+
+        `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+        then without any event, so a client that shows it reads it again at that moment. Measure
+        the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+      responses:
+        '200':
+          description: The count.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPendingCount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /approvals/{id}:
     parameters:
@@ -27966,6 +28189,62 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /forecast/assurance/enforcement:
+    get:
+      tags: [Reports]
+      operationId: getForecastAssuranceEnforcement
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Whether the qualified forecast applies the viability reviews.
+      description: |
+        `state` is `not_enrolled` before the input check has ever run, `observing` once it
+        runs and raises reviews and tasks but the forecast figures are unchanged, and
+        `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
+        forecast reading carry `qualified`, and only then does the close-date sweep stop
+        lowering forecast categories.
+      responses:
+        '200':
+          description: The installation's enforcement state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastAssuranceEnforcement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    put:
+      tags: [Reports]
+      operationId: setForecastAssuranceEnforcement
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Switch the qualified forecast's enforcement on or off.
+      description: |
+        Admin only. Switching on changes the qualified forecast figures for every reader,
+        so it is refused with `409 input_check_not_started` until a check has judged a
+        deal: before that the qualified forecast would count nothing. A setting fixed by
+        the environment is refused with `409 setting_locked`.
+
+        Switching off takes effect at once. The reviews, their tasks and their history
+        stay; only the qualified readings disappear, and the baseline readings never
+        changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+              additionalProperties: false
+      responses:
+        '200':
+          description: The state after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ForecastAssuranceEnforcement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/coverage:
     get:
       tags: [Reports]
@@ -37006,7 +37285,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object
@@ -37379,15 +37658,7 @@ components:
         evidence:
           type: array
           description: 'Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.'
-          items:
-            type: object
-            required: [field, left_value, right_value, signal]
-            properties:
-              field: { type: string, description: 'full_name, company, domain, …' }
-              left_value: { type: [string, 'null'] }
-              right_value: { type: [string, 'null'] }
-              signal: { type: string, description: 'agree | collide | one_sided' }
-              score: { type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).' }
+          items: { $ref: '#/components/schemas/DedupeEvidence' }
         status: { type: string, enum: [open, merged, not_a_duplicate] }
         can_decide:
           type: boolean
@@ -37404,6 +37675,10 @@ components:
             who can see a duplicate is the contact best placed to notice it; this
             says whether the buttons will work, which the client should gate on
             rather than discovering through a 403 after the POST.
+
+            With `contacts.shared_merge_reviews` on, an owner of one end of a
+            contact pair may dismiss it and undo that, though not merge it. That
+            answer is the pair's `can_dismiss` in its contact case.
         disposed_by: { type: [string, 'null'], format: uuid }
         disposed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
@@ -37419,6 +37694,164 @@ components:
       properties:
         disposition: { type: string, enum: [merge, not_a_duplicate] }
         winner_id: { type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.' }
+    DedupeEvidence:
+      type: object
+      description: One field of a pair's detection-time evidence.
+      required: [field, left_value, right_value, signal]
+      properties:
+        field: { type: string, description: 'full_name, company, domain, …' }
+        left_value: { type: [string, 'null'] }
+        right_value: { type: [string, 'null'] }
+        signal: { type: string, description: 'agree | collide | one_sided' }
+        score: { type: [number, 'null'], description: 'The field''s contribution where scored (e.g. name_sim).' }
+    ContactCase:
+      type: object
+      description: |
+        One group of contacts that may be duplicates of one another: every live contact reachable from the
+        addressed contact over open duplicate pairs the caller can see. A case is read off the
+        pairs and is never stored, so dismissing, re-opening or merging a pair re-shapes it at once.
+        `anchor_id` is the lowest member id; every member id addresses the same case. A case of
+        more than 25 contacts is `too_large` and shows the 25 nearest the addressed contact over
+        its pairs, the addressed contact among them.
+      required: [anchor_id, revision, status, members, edges, owners, confidence, too_large, policy_enabled, can_merge, merge_mode]
+      properties:
+        anchor_id: { type: string, format: uuid }
+        revision: { type: string, description: 'Changes whenever a member, its version, its owner or that owner''s seat, a pair, a share on a member or the policy changes. Preview and merge refuse a stale one with 409 case_changed.' }
+        status: { type: string, enum: [open, resolved], description: '`resolved` when the addressed contact was merged away; `resolution` says into which contact.' }
+        members: { type: array, items: { $ref: '#/components/schemas/ContactCaseMember' } }
+        edges: { type: array, items: { $ref: '#/components/schemas/ContactCaseEdge' } }
+        owners:
+          type: array
+          description: The live owners of the members. Each of them sees the case in their own Worklist.
+          items: { $ref: '#/components/schemas/ContactCaseOwner' }
+        confidence: { type: number, minimum: 0, maximum: 1, description: 'The strongest open pair in the case.' }
+        too_large: { type: boolean, description: 'The case has more members than one review may merge (25). The pairs still decide one by one.' }
+        policy_enabled: { type: boolean, description: 'Whether the workspace lets any owner of a member merge the case (`contacts.shared_merge_reviews`).' }
+        can_merge: { type: boolean, description: 'Whether this caller may merge at least two members of this case.' }
+        merge_mode:
+          type: string
+          enum: [ordinary, delegated, none]
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.'
+        reason:
+          type: [string, 'null']
+          enum: [no_write_authority, too_large, resolved, null]
+          description: Why `can_merge` is false.
+        resolution:
+          allOf: [ { $ref: '#/components/schemas/ContactCaseResolution' } ]
+          description: |
+            Present when `status` is `resolved` and the caller can see the surviving contact.
+            A caller who cannot see it reads `resolved` with no `resolution`.
+    ContactCaseMember:
+      type: object
+      required: [id, name, version, owner_id, owner_name, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: [string, 'null'], description: The primary email address. }
+        title: { type: [string, 'null'] }
+        company_name: { type: [string, 'null'], description: The current employer. }
+        owner_id: { type: [string, 'null'], format: uuid }
+        owner_name: { type: [string, 'null'] }
+        version: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+    ContactCaseEdge:
+      type: object
+      description: One duplicate pair between two members, with the evidence it was filed on.
+      required: [pair_id, left_id, right_id, confidence, status, evidence, can_dismiss, can_merge]
+      properties:
+        pair_id: { type: string, format: uuid }
+        left_id: { type: string, format: uuid }
+        right_id: { type: string, format: uuid }
+        confidence: { type: number, minimum: 0, maximum: 1 }
+        status: { type: string, enum: [open, not_a_duplicate], description: '`not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.' }
+        evidence: { type: array, items: { $ref: '#/components/schemas/DedupeEvidence' } }
+        can_dismiss:
+          type: boolean
+          description: |
+            Whether this caller may mark an open pair `not_a_duplicate`, or undo that mark,
+            through the pair's own decision route. True with write access to both ends, and,
+            when the case's `policy_enabled` is on, for a full-seat owner of either end.
+        can_merge:
+          type: boolean
+          description: |
+            Whether this caller may merge this one open pair through the pair's own decision
+            route. True only with write access to both ends. `policy_enabled` does not widen it:
+            the policy admits a merge of the whole case, never of a single pair.
+    ContactCaseOwner:
+      type: object
+      required: [user_id, name, seat, member_ids]
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string }
+        seat: { type: string, enum: [full, read] }
+        member_ids: { type: array, items: { type: string, format: uuid } }
+    ContactCaseResolution:
+      type: object
+      required: [survivor_id, resolved_at]
+      properties:
+        survivor_id: { type: string, format: uuid }
+        resolved_by: { type: [string, 'null'], format: uuid }
+        resolved_by_name: { type: [string, 'null'] }
+        resolved_at: { type: string, format: date-time }
+    ContactCaseListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ContactCase' } }
+        page: { $ref: '#/components/schemas/PageInfo' }
+    ContactCaseDecisionRequest:
+      type: object
+      required: [revision, member_ids, survivor_id, owner_id]
+      properties:
+        revision: { type: string, description: The case revision the reviewer looked at. }
+        member_ids:
+          type: array
+          minItems: 2
+          maxItems: 25
+          uniqueItems: true
+          description: The members the reviewer says are duplicates of one another. They must be connected by open pairs, and no two of them may carry a `not_a_duplicate` pair.
+          items: { type: string, format: uuid }
+        survivor_id: { type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.' }
+        owner_id: { type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.' }
+    ContactCaseOutcome:
+      type: object
+      description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
+      required: [committed, survivor_id, merged_ids, owner_id, mode, shares, skipped]
+      properties:
+        committed: { type: boolean, description: '`false` for a preview: nothing was written.' }
+        survivor_id: { type: string, format: uuid }
+        merged_ids: { type: array, items: { type: string, format: uuid } }
+        owner_id: { type: string, format: uuid }
+        mode: { type: string, enum: [ordinary, delegated] }
+        shares:
+          type: array
+          description: The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
+          items: { $ref: '#/components/schemas/ContactCaseShare' }
+        skipped:
+          type: array
+          description: Owners who get no new grant, and why.
+          items: { $ref: '#/components/schemas/ContactCaseSkippedOwner' }
+        survivor: { $ref: '#/components/schemas/Contact' }
+    ContactCaseShare:
+      type: object
+      required: [user_id, name, access]
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string }
+        access: { type: string, enum: [read, write] }
+    ContactCaseSkippedOwner:
+      type: object
+      required: [user_id, name, reason]
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string }
+        reason: { type: string, enum: [inactive, already_owner, already_granted] }
+    ContactCaseSettings:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
     AiHealth:
       type: object
       required: [window_hours, rungs]
@@ -37781,6 +38214,19 @@ components:
             because the metered calls above count attempts and cannot give a rate. Empty when no
             call in the window consulted a decision model.
           items: { $ref: '#/components/schemas/AiDecisionSummary' }
+    AiUsageSummary:
+      type: object
+      description: The month's AI spend so far, summed from the lines GET /ai/usage prices.
+      required: [currency, computed_at]
+      properties:
+        cost_est_minor:
+          type: integer
+          description: >-
+            Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of
+            `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the
+            month cost, which is not the same as a month that cost nothing.
+        currency: { type: string, description: 'ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).' }
+        computed_at: { type: string, format: date-time, description: The instant the window ends at and the figure was computed. }
     AiDecisionSummary:
       type: object
       description: One task's decision-model pass and fallback counts over the usage window.
@@ -38431,6 +38877,7 @@ components:
       properties:
         name:        { type: string, description: 'The mapping target: a core field, or a custom field''s `cf_` key.' }
         label:       { type: string, description: 'A custom field''s label. Absent for a core column.' }
+        field_label: { type: string, description: 'What the mapping step calls the field the column is mapped onto, in the caller''s language. Present for a core column.' }
         description: { type: string, description: 'What goes in the column.' }
         example:     { type: string, description: 'An example value, or several separated by " · ".' }
         required_on_new_row: { type: boolean, description: 'Whether a row that creates a record needs this column filled.' }
@@ -55225,6 +55672,48 @@ components:
             Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers
             a different population. Empty when nothing was frozen, and always empty for
             `managed_teams`, which nothing is frozen against.
+        qualified: { $ref: '#/components/schemas/ForecastQualifiedReadings' }
+      additionalProperties: false
+    ForecastQualifiedReadings:
+      type: object
+      description: >-
+        The readings restricted to deals the customer still supports, present only while the
+        installation enforces viability reviews (`assurance.qualified_forecast_enforced`).
+        Absent means no qualified reading exists, never that it equals the baseline.
+
+        A deal under an open viability review is excluded. A deal the input check could not
+        judge on current evidence, because the mailbox was unread, the deal is new, or the
+        evidence changed since the check, is unknown. The two are counted apart: an unknown
+        deal is a gap in what was checked, not in the pipeline. Every figure is a subset of
+        the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+      required:
+        - evidence_minor
+        - best_case_minor
+        - weighted_minor
+        - excluded_minor
+        - unknown_minor
+        - excluded_count
+        - unknown_count
+      properties:
+        evidence_minor: { type: integer, format: int64 }
+        best_case_minor: { type: integer, format: int64 }
+        weighted_minor: { type: integer, format: int64 }
+        excluded_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals under an open viability review.
+        unknown_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals the check could not judge on current evidence.
+        excluded_count: { type: integer }
+        unknown_count: { type: integer }
+        amounts_partial:
+          type: boolean
+          description: >-
+            True when an excluded or unknown deal had no amount the reader can see: unpriced,
+            no exchange rate, or masked. The two subtotals are then lower than the money those
+            deals carry, and are not the full figure.
       additionalProperties: false
     ForecastSnapshotRef:
       type: object
@@ -55502,6 +55991,16 @@ components:
       required: [status]
       properties:
         status: { type: string, enum: [enqueued], x-enum-varnames: [AssuranceRunEnqueued] }
+      additionalProperties: false
+    ForecastAssuranceEnforcement:
+      type: object
+      description: Whether the qualified forecast applies the viability reviews.
+      required: [state]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        state:
+          type: string
+          enum: [not_enrolled, observing, enforcing]
       additionalProperties: false
     ForecastAssurance:
       type: object
@@ -60398,6 +60897,24 @@ components:
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
+
+    ApprovalPendingCount:
+      type: object
+      additionalProperties: false
+      required: [count, as_of]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Pending approvals this caller could decide now.
+        next_expiry_at:
+          type: string
+          format: date-time
+          description: When the first counted approval expires. Absent when none of them can expire.
+        as_of:
+          type: string
+          format: date-time
+          description: The server's clock when it counted.
 
     ApprovalListResponse:
       type: object
@@ -65427,7 +65944,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:
@@ -65551,6 +66068,8 @@ components:
           $ref: '#/components/schemas/NoticeAcquisition'
         pair:
           $ref: '#/components/schemas/AttentionPair'
+        contact_case:
+          $ref: '#/components/schemas/AttentionContactCase'
         deal:
           $ref: '#/components/schemas/AttentionDealFacts'
         assignee_id:
@@ -65795,6 +66314,24 @@ components:
           type: string
           enum: [collide, one_sided, exact_conflict, lane_split]
           description: 'What the detector made of the comparison. Mirrors the detector''s own vocabulary, held by a gate that fails in both directions: a signal missing here costs its evidence row the whole card, and one listed here that nothing writes is a phrase every locale carries for a row that never arrives.'
+    AttentionContactCase:
+      type: object
+      description: |
+        A group of contacts that may be duplicates of one another, as a `contact_case` row shows it. Sent
+        only for `source: contact_case`. The row's id is the case's `anchor_id`; the full case,
+        with evidence, is `GET /dedupe/contact-cases/{anchor_id}`.
+      required: [anchor_id, revision, members, owners, can_merge, merge_mode]
+      properties:
+        anchor_id: { type: string, format: uuid }
+        revision: { type: string }
+        members: { type: array, items: { $ref: '#/components/schemas/AttentionPairSide' } }
+        owners:
+          type: array
+          description: The names of the members' live owners. Each of them sees this row in their own Worklist.
+          items: { type: string }
+        can_merge: { type: boolean }
+        merge_mode: { type: string, enum: [ordinary, delegated, none] }
+        too_large: { type: boolean }
     AttentionPairSide:
       type: object
       description: "One side of a proposed merge, named and weighed so a reader can tell which record to keep."
@@ -66079,7 +66616,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -67094,7 +67631,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -67213,6 +67750,9 @@ components:
             both-sides-visible rule decides that, and an item arriving without it offers
             no merge. A row that named neither record could only ask a reader to go and
             look, which is the hand-off this queue exists to remove.
+        contact_case:
+          allOf: [{ $ref: '#/components/schemas/AttentionContactCase' }]
+          description: The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source.
         move: { $ref: '#/components/schemas/WorklistMove' }
         with_contact:
           type: string

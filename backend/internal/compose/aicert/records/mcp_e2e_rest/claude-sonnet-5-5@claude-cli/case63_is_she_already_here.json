@@ -1,0 +1,24 @@
+{
+  "scenario": "case63_is_she_already_here",
+  "criteria": [
+    1
+  ],
+  "passed": 0,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 1674,
+    "cache_creation_input_tokens": 29003,
+    "cache_read_input_tokens": 128110,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1456
+  }
+}

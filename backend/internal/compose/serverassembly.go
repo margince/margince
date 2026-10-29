@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/magic"
-	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -38,11 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
-	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -63,7 +59,7 @@ import (
 // contacts→deals edge (leadDealOpener) — both injected here for the same
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
-	return contacts.NewHandlers(InstallationDB(pool)).
+	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
@@ -71,22 +67,6 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
-		// A merge carries the retiring subject's stops, or it refuses. consent
-		// owns communication_suppression; contacts owns the merge; neither
-		// imports the other, so the edge is injected here. The consent links
-		// and the introduction asks ride the same way.
-		WithStopCarrier(consent.NewStore(InstallationDB(pool))).
-		WithSatelliteCarriers(consent.NewStore(InstallationDB(pool)),
-			introductions.NewStore(InstallationDB(pool), time.Now)).
-		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
-		WithProviderRunReader(integrations.ReadRunForContactTx).
-		WithMergeSignalReader(signals.PreviewSignalCarry(signalSummaryWords)).
-		WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
-		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
-		WithMergeContentReader(activities.NewStore(InstallationDB(pool))).
-		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
-		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
-		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
 		WithShareRequests(contactShareRequests(pool)).
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithInstallationRenamer(installationRenamer(pool))

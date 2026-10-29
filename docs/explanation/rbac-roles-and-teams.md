@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/identity/internal/policy/defaults.go backend/internal/platform/auth/rbac.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/tableclass.go backend/internal/platform/auth/writescope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/teams.go backend/internal/modules/identity/grants.go -->
+<!-- describes: backend/internal/modules/identity/internal/policy/defaults.go backend/internal/platform/auth/rbac.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/tableclass.go backend/internal/platform/auth/writescope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/teams.go backend/internal/modules/identity/grants.go backend/internal/modules/identity/ownercarry.go -->
 # Roles, teams, and record sharing
 
 This page goes with [authorization.md](authorization.md). That page says **where** the access check
@@ -129,6 +129,13 @@ team above reaches the members of a team below it only by being in that team too
 
 A record grant may still name a **team**, so sharing with a group is one act, not one per member.
 It stays the way to reach across teams, and the way for every seat other than `manager`.
+
+A contact case merge is the one exception, and it is off by default. With the setting
+`contacts.shared_merge_reviews` on, the owner of one contact in a case may merge it with other
+contacts of that case. This holds also for those a colleague owns. The owner must be live and hold a
+full seat. The write check then passes for the selected contacts and no other row.
+Where the check is, and what it leaves in place, is in
+[authorization.md](authorization.md#a-contact-case-merge-and-the-one-write-check-it-lets-pass).
 
 A row with **no owner** (`owner_id IS NULL`) is nobody's to change until someone claims it
 (`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`). Claiming makes the claimer the
@@ -305,6 +312,15 @@ How it works with everything above:
 - **A grant cannot go past its granter.** The server refuses a grant wider than the
   own access of the granter to that record (shown as `approval_required` / 422 in the UI). So sharing
   cannot be a way to get more access than you have.
+- **A contact merge keeps the former owner's access.** A merge keeps one contact and folds the
+  other into it. When the folded contact has an owner other than the kept one's, that owner gets a
+  `record_grant` on the kept contact. A full seat gets `write` and a `read` seat gets `read`, with
+  no end date. A live grant the owner already holds keeps its end date, reason and
+  granter. Only its access may go up, from `read` to `write`.
+
+  A colleague who has left gets nothing. This runs inside every contact merge (`CarryOwnerAccessTx` in `identity/ownercarry.go`). That
+  covers the pair queue, a case review and an agent. A case merge that hands the kept contact to a
+  new owner keeps the old owner's access the same way.
 
 In SQL, a read over a table you can share is `ownerPredicate OR liveGrantExists`. The grant is
 a second way in, checked in the same statement as the scope filter (`VisiblePredicate` in

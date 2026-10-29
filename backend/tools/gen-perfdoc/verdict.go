@@ -43,9 +43,14 @@ type judgement struct {
 //
 // A server error is a failure unless the bench marked it allowed on a row it
 // recorded against a known issue; only then does the issue's verdict stand.
+// A refusal (422) is judged the same way, as the daily gate judges it: a
+// refused request was not served, so its timing proves no budget.
 func judge(m measurement) judgement {
 	if m.Status5xx > 0 && (!m.Allowed5xx || m.Verdict != storedOverKnown) {
 		return judgement{fmt.Sprintf("**FAILED**: %d server errors", m.Status5xx), sevFailed}
+	}
+	if m.Status422 > 0 && !m.Allowed422 {
+		return judgement{fmt.Sprintf("**FAILED**: %d refused (422)", m.Status422), sevFailed}
 	}
 	switch m.Verdict {
 	case "":

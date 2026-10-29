@@ -37,7 +37,8 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	}
 	b = bindings{}
 	var redacted *time.Time
-	err = tx.QueryRow(ctx, "SELECT manifest,redacted_at FROM report_edition WHERE id="+b.add(id), b.values...).Scan(&out, &redacted)
+	query := "SELECT manifest,redacted_at FROM report_edition WHERE id=" + b.add(id)
+	err = tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
 	if err != nil {
 		return out, nil, storedError(err)
 	}
@@ -45,7 +46,8 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 		return out, nil, err
 	}
 	b = bindings{}
-	rows, err := tx.Query(ctx, "SELECT fact FROM report_edition_contribution WHERE edition_id="+b.add(id)+" ORDER BY metric,context_id,contribution_key", b.values...)
+	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
+	rows, err := tx.Query(ctx, statement, b.values...)
 	if err != nil {
 		return out, nil, err
 	}
