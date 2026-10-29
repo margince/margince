@@ -448,3 +448,22 @@ it("does not print an exact pill total over a failed or withheld source", () => 
   page.sources_unavailable = [];
   expect(pillCount(page, "tasks")).toBe(0);
 });
+
+it("prints the server's exact total over a category read short of it", () => {
+  const page = day([
+    {
+      category: "decisions",
+      considered: 200,
+      shown: 25,
+      more_available: true,
+      total: 340,
+    },
+    { category: "tasks", considered: 3, shown: 3, more_available: false },
+  ]);
+  expect(pillCount(page, "decisions")).toBe(340);
+  expect(pillCount(page, "all")).toBe(343);
+
+  page.counts[0] = { ...page.counts[0], total: undefined };
+  expect(pillCount(page, "decisions")).toBeUndefined();
+  expect(pillCount(page, "all")).toBeUndefined();
+});

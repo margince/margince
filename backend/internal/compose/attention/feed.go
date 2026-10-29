@@ -34,9 +34,8 @@ const needsYouPage = 10
 // The lane feed's page is a prefetch for a surface that answers one at a time;
 // this is a census for a row that answers a group.
 //
-// Bounded by the approvals engine's own scan cap rather than by a number chosen
-// here — past that the count reads "200+", which is the same message to a reader
-// as the true figure.
+// Whether the read reached every approval is judged against the engine's exact
+// count (Counts.ApprovalsOpen), never against this depth.
 const batchScanDepth = 200
 
 // plannedCap bounds today's agreed work for the same reason. Higher than the
@@ -321,6 +320,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
+		out.Counts.ApprovalsOpen = &count.approvals
 		if count.duplicates > 0 {
 			open := count.duplicates
 			out.Counts.DuplicatesOpen = &open
@@ -375,6 +375,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 type laneCount struct {
 	items      int
 	duplicates int
+	approvals  int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
 	suggestions, tagSuggestions *int
@@ -454,7 +455,7 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	count := laneCount{items: openCases + openPairs + openStaged, duplicates: openCases + openPairs}
+	count := laneCount{items: openCases + openPairs + openStaged, duplicates: openCases + openPairs, approvals: openStaged}
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
 	// Cases lead each round, so a reader's own case is never behind a pile of
 	// other pairs.

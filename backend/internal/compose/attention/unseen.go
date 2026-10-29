@@ -109,13 +109,12 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		bounded[sourceDecay] = bounded[sourceDecay] || *day.RelationshipDecayMoreAvailable
 	}
 	atCap("conversation_claim", day.Commitments, doneCap)
-	// The decision lane is read deeper than the rest, because a batch row
-	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Filling that bound says the LANE was truncated, so
-	// the staged proposals sharing it cannot claim to be complete — the
-	// conservative reading, since the alternative is telling a rep there are no
-	// more of a kind when there are.
-	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
+	// Approvals know their exact total too, counted under the same query the
+	// lane listed. The lane's length cannot answer this: pairs and suggestions
+	// share its depth, so a full lane says nothing about the approvals in it.
+	if day.Counts.ApprovalsOpen != nil {
+		bounded[crmcontracts.WorklistItemSourceApproval] = shownFrom(day.NeedsYou, string(crmcontracts.WorklistItemSourceApproval)) < *day.Counts.ApprovalsOpen
+	}
 	// The duplicate pairs know their own TOTAL, so they do not guess from the
 	// page, and the difference is not academic. Their read is bounded twice:
 	// once by the census depth above, and again by the page the dedupe queue

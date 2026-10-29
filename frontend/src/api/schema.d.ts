@@ -49182,6 +49182,8 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
+            /** @description Every pending approval this read's scope holds that the caller may decide, counted by the approvals engine behind `GET /v1/approvals/pending-count` rather than from the bounded lane. Absent when the lane was not read. */
+            approvals_open?: number;
             /** @description Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`. */
             deal_suggestions_open?: number;
             /** @description Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`. */
@@ -50283,6 +50285,12 @@ export interface components {
              *     failure this flag exists to prevent.
              */
             more_available: boolean;
+            /**
+             * @description The exact number of admitted items in this category for this read's scope and
+             *     owner. Absent when that population has not been counted exactly; a client then
+             *     reads `considered` with `more_available` as today. Absent never means zero.
+             */
+            total?: number;
         };
         /**
          * @description The day in figures, for the one line above the queue. Every count is over the
