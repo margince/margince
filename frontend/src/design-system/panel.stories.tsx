@@ -517,9 +517,8 @@ const fullRowPress = {
 // three that report a reading stay put. Held together as one hover on every
 // row, a panel of readings claimed all five were targets.
 //
-// Check it in both themes: the fill is `--bgHover`, a mix off the canonical
-// surface token, so light and dark are two different distances from the row's
-// own ground.
+// Check it in both themes: `--bgHover` sits a different distance from the row's
+// ground in each.
 export const InteractiveRows: Story = {
   args: {
     title: "Quarterly target",

@@ -317,6 +317,11 @@ const ACCEPTED = new Map<string, string>([
     "a Button turned into a menu ROW — the fill, the border and the control " +
       "height all go, and what is left is the Select option's geometry",
   ],
+  [
+    "compose-choice",
+    "a Button turned into a thread ROW of two lines, as tall as its subject " +
+      "and its summary need",
+  ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
   ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],
   ["fdz", "a drop ZONE is an area to aim at, not a control"],

@@ -1,9 +1,9 @@
 /* Which thread the message goes into: the bar under the window's title, and
  * the list it opens. Tokens only (ds-purity). */
 
-/* The bar: one press target across the window, on the page ground so it reads
-   as the window's own band rather than a field. Marked in the accent tint
-   while the draft answers a thread. */
+/* The bar: one press target across the window, on a strip so it reads as the
+   window's own band rather than a field. Marked in the accent tint while the
+   draft answers a thread. */
 .compose-threadbar-wrap {
   flex: none;
   border-bottom: 1px solid var(--borderSubtle);
@@ -14,7 +14,7 @@
   gap: var(--space-2);
   inline-size: 100%;
   padding: var(--space-2) var(--space-4);
-  background: var(--bgPage);
+  background: var(--bgStrip);
   color: var(--textPrimary);
 }
 .compose-threadbar.popover-trigger:hover {
@@ -132,8 +132,9 @@
 }
 
 /* A thread read without its summary: the design system's button laid out as
-   a two-line row, stacked and as wide as the list. */
-.compose-choice {
+   a two-line row, stacked and as wide as the list. Two classes, so it outranks
+   .btn and .btn-ghost in any sheet order. */
+.btn.compose-choice {
   display: flex;
   flex-direction: column;
   align-items: stretch;

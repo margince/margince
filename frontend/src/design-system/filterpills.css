@@ -30,6 +30,7 @@
 }
 
 .filterpill:hover {
+  border-color: var(--accent);
   background: var(--bgHover);
   color: var(--textPrimary);
 }

@@ -2,16 +2,14 @@
    not a de-chromed app screen: its own centered reading column and ground,
    like the preference center. Tokens only (make ds-purity). */
 
-/* The same lit ground the app stands on (DESIGN.md §2). This page is outside
-   the shell that paints it — no rail, no top bar — and a flat panel colour under
-   it was the one surface in the product with no atmosphere at all, which is the
-   wrong one for it to be: it is the only page a client ever sees. */
+/* The ground the app stands on, though this page is outside the shell that
+   paints it. */
 .buyer-page {
   min-height: 100%;
   display: flex;
   justify-content: center;
   padding: var(--space-16) var(--space-5) var(--space-16);
-  background: var(--groundLit);
+  background: var(--bgPage);
 }
 
 /* The spec's frame for this page: wide enough for the gallery beside the

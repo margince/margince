@@ -12,7 +12,7 @@ import {
   subjectsOf,
 } from "../../scripts/lib/css-rules";
 
-// The sidebar is glass over the lit page, never a dark green column and never
+// The sidebar is glass over the page, never a dark green column and never
 // the accent (the shell in DESIGN.md). The dark plate (`--bgInkField`) is for
 // what passes over the page, and is easy to mistake for the sidebar's.
 
@@ -45,8 +45,6 @@ describe("the sidebar's ground", () => {
     const green = grounds.filter(({ value }) =>
       /--(bgInkField|accent)/.test(value),
     );
-    expect(green, "the sidebar is glass: `--pane` over the lit page").toEqual(
-      [],
-    );
+    expect(green, "the sidebar is glass: `--pane` over the page").toEqual([]);
   });
 });

@@ -17,7 +17,7 @@ import { type CSSProperties, useEffect, useRef } from "react";
  *
  * Flip the theme in the toolbar: each value is a token, so all of it re-resolves.
  * The selection pair was checked for contrast rather than eyeballed — --bgPage on
- * --accent is 5.21:1 in light and 5.37:1 in dark.
+ * --accent is 7.89:1 in light and 6.86:1 in dark.
  */
 const meta = {
   title: "Foundations/Color/Interaction colors",

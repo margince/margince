@@ -75,7 +75,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--accent);
-  color: var(--textOnAccent);
+  color: var(--textOnAccentControl);
   font-weight: var(--fontWeightMedium);
 }
 

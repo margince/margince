@@ -132,8 +132,8 @@ one, or one in an inline style.
 
 **Two neutral inks.** `--textPrimary` carries a heading, a record's name and body prose.
 `--textSecondary` supports: a placeholder first, and each other role is decided at the element. Dark
-lifts both. `--textPrimary` goes to `#fff`, and `--textSecondary` goes to `lch(63.304% 1.425 272)`
-from the light `lch(40% 1 282)`. Anything quieter than the second uses the same ink at a smaller
+lifts both. `--textPrimary` goes from `#182c28` to `#edf6f4`, and `--textSecondary` from `#55645f`
+to `#9aa8a3`. Anything quieter than the second uses the same ink at a smaller
 size or a lighter weight; there is no third neutral.
 
 `Foundations/Typography` in Storybook draws the body levels, the heading ladder and the pairs.
@@ -216,6 +216,10 @@ A selected view tab, a pressed button, the current record tab or the current row
 reader is. So it is neutral, like a pressed `FilterPills` pill. `selectedstate.test.ts` fails such a
 state in any shipped sheet when its ground, ink, edge or bar comes from an `--accent*` token.
 
+The current row of the side rail, and its cell in the phone bar, are the one exception: they are
+filled with `--accent`. That row marks where the reader is in the whole app, not one choice of
+several. The gate names these two rules and no other.
+
 `--ai` is provenance. A progress bar or a running step
 in that colour claims a model decided the figure. So work still running reads `--info*`: the ring
 of a spinner, a delivery in the queue, a stage under way.
@@ -242,7 +246,7 @@ Paint it where that is true and nowhere else. A card tinted indigo for looks tel
 that screen something false about who decided.
 
 It is a family of its own for the same reason the five states are: one meaning per colour.
-`--accent` (deep emerald) is the brand and the primary action. The state hues report how something
+`--accent` (deep teal) is the brand and the primary action. The state hues report how something
 went. None of them means "written by a model". The top of `tokens.css` states the split, and
 `tokens.test.ts` pins it.
 
