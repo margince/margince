@@ -7162,6 +7162,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
   "review.enforcementHint":
     "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
+  "review.enforcementPreviewLeftOut_one":
+    "Wenn du sie jetzt einschaltest, fällt {count} Deal aus dieser Zeile.",
+  "review.enforcementPreviewLeftOut_other":
+    "Wenn du sie jetzt einschaltest, fallen {count} Deals aus dieser Zeile.",
+  "review.enforcementPreviewUnknown_one":
+    "{count} Deal ist noch nicht beurteilt und zählt ebenfalls nicht.",
+  "review.enforcementPreviewUnknown_other":
+    "{count} Deals sind noch nicht beurteilt und zählen ebenfalls nicht.",
   "review.enforcementOn": "Die gestützte Prognose ist an.",
   "review.enforcementOff": "Die gestützte Prognose ist aus.",
   "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",

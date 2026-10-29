@@ -6985,6 +6985,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.enforcementLabel": "Chỉ tính deal được khách hàng ủng hộ",
   "review.enforcementHint":
     "Deal có khách hàng ngừng trả lời sẽ ra khỏi dòng các deal được khách hàng ủng hộ cho đến khi được xem xét. Các số liệu khác không đổi.",
+  "review.enforcementPreviewLeftOut_one":
+    "Nếu bật ngay bây giờ, {count} deal sẽ ra khỏi dòng này.",
+  "review.enforcementPreviewLeftOut_other":
+    "Nếu bật ngay bây giờ, {count} deal sẽ ra khỏi dòng này.",
+  "review.enforcementPreviewUnknown_one":
+    "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
+  "review.enforcementPreviewUnknown_other":
+    "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
   "review.enforcementOn": "Dự báo đã xác thực đang bật.",
   "review.enforcementOff": "Dự báo đã xác thực đang tắt.",
   "review.enforcementAdminOnly": "Chỉ admin mới đổi được mục này.",

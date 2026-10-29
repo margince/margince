@@ -7194,6 +7194,14 @@ export const en = {
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
+  "review.enforcementPreviewLeftOut_one":
+    "Turning it on now leaves {count} deal out of that line.",
+  "review.enforcementPreviewLeftOut_other":
+    "Turning it on now leaves {count} deals out of that line.",
+  "review.enforcementPreviewUnknown_one":
+    "{count} deal has not been judged yet and would not count either.",
+  "review.enforcementPreviewUnknown_other":
+    "{count} deals have not been judged yet and would not count either.",
   "review.enforcementOn": "The qualified forecast is on.",
   "review.enforcementOff": "The qualified forecast is off.",
   "review.enforcementAdminOnly": "Only an admin can change this.",
