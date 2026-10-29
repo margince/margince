@@ -188,6 +188,9 @@ func readinessAttendee(ctx context.Context) (ids.UUID, error) {
 // fieldMeetingID is the request field naming the meeting a readiness verb acts on.
 const fieldMeetingID = "activity_id"
 
+// codeNotAMeeting refuses a meeting-only verb on a row that is not a meeting.
+const codeNotAMeeting = "not_a_meeting"
+
 // meetingFacts is a meeting's current facts as the write reads them.
 type meetingFacts struct {
 	facts    PreparationFacts
@@ -218,7 +221,7 @@ func lockMeetingFacts(ctx context.Context, tx pgx.Tx, attendee, id ids.UUID) (me
 	}
 	if kind != KindMeeting {
 		return meetingFacts{}, &values.ParseError{
-			Field: fieldMeetingID, Code: "not_a_meeting", Message: "only a meeting has a preparation to be ready for",
+			Field: fieldMeetingID, Code: codeNotAMeeting, Message: "only a meeting has a preparation to be ready for",
 		}
 	}
 	if !attends {
