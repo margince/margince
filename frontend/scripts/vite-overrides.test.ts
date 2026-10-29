@@ -31,7 +31,7 @@ function coreAndUnit(): {
   mkdirSync(join(root, "unit"));
   writeFileSync(
     unitFile,
-    'import { items as core } from "@core-original/src/app/menu";\nexport const items = [...core, "unit row"];\n',
+    'import { items as core } from "@margince-core/src/app/menu";\nexport const items = [...core, "unit row"];\n',
   );
   return {
     core,

@@ -742,12 +742,12 @@ sidebar row in the group it names. The folder follows the unit-name grammar, and
 the same folder.
 
 To replace a core file, write it at the same path under `frontend/overrides/`. Your file stands in for
-core's for every importer. It reaches core's own copy as `@core-original/<path>`, so it can wrap the
+core's for every importer. It reaches core's own copy as `@margince-core/<path>`, so it can wrap the
 component instead of copying it:
 
 ```tsx
 // frontend/overrides/src/app/shellrail.tsx
-export * from "@core-original/src/app/shellrail";
+export * from "@margince-core/src/app/shellrail";
 ```
 
 Only files under `src/app/`, `src/components/` and `src/features/` can be replaced; the sidebar menu is
@@ -764,9 +764,9 @@ src/app/shellrail.tsx sha256:<hash of core's file>
 file you no longer replace. Each warning prints the line to write. A warning never fails the build, so a core
 upgrade still installs with your unit pinned. What does fail is the composed typecheck: it holds your file to
 every export of the file it replaces, so it stops a core change that removes or changes an export its
-callers use. A wrapper picks up the rest of core's change through `@core-original/`.
+callers use. A wrapper picks up the rest of core's change through `@margince-core/`.
 
-A replacement may import `@core-original/` only for the one file it replaces. An added screen and every
+A replacement may import `@margince-core/` only for the one file it replaces. An added screen and every
 other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse it.
 
 ## Own scheduled jobs

@@ -33,7 +33,7 @@ func overrideTree(t *testing.T) (string, extensionUnit) {
 	root := t.TempDir()
 	writeTreeFile(t, filepath.Join(root, "frontend", railTarget), coreRail)
 	u := overrideUnit(t, root, "acme")
-	writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, railTarget), "export * from \"@core-original/src/app/shellrail\";\n")
+	writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, railTarget), "export * from \"@margince-core/src/app/shellrail\";\n")
 	writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\n")
 	return root, u
 }
@@ -284,7 +284,7 @@ func TestEmitOverridesWritesTheBundlerMapAndTheExportCheck(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`import type * as Original0 from "@core-original/src/app/shellrail";`,
+		`import type * as Original0 from "@margince-core/src/app/shellrail";`,
 		"export type Check0 = Keeps<typeof Override0, typeof Original0>;",
 	} {
 		if !strings.Contains(string(check), want) {

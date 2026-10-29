@@ -68,7 +68,7 @@
       "@margince/frontend/app": ["./src/surface/index.ts"],
       "@margince-ext/*": ["../extensions/*/frontend"],
       // Core's own copy of a file a unit replaces, which the replacement wraps.
-      "@core-original/*": ["./*"]
+      "@margince-core/*": ["./*"]
     }
   },
   // The generated check that holds each replacement to the exports of the core

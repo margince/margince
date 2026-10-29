@@ -503,7 +503,7 @@ describe("the extension-import detector sees what it claims to", () => {
       want: null,
       files: {
         "overrides/src/app/shellrail.tsx":
-          'export * from "@core-original/src/app/shellrail";',
+          'export * from "@margince-core/src/app/shellrail";',
       },
     },
     {
@@ -511,7 +511,7 @@ describe("the extension-import detector sees what it claims to", () => {
       want: "only the one file it replaces",
       files: {
         "overrides/src/app/shellrail.tsx":
-          'import { api } from "@core-original/src/api/client";',
+          'import { api } from "@margince-core/src/api/client";',
       },
     },
     {
@@ -519,7 +519,7 @@ describe("the extension-import detector sees what it claims to", () => {
       want: "only the one file it replaces",
       files: {
         "overrides/src/custom/desk/screen.tsx":
-          'import { NAV } from "@core-original/src/app/nav";',
+          'import { NAV } from "@margince-core/src/app/nav";',
       },
     },
     {
@@ -527,14 +527,14 @@ describe("the extension-import detector sees what it claims to", () => {
       want: "only the one file it replaces",
       files: {
         "overrides/src/app/shellrail.tsx":
-          'import x from "@core-original/../extensions/other/frontend/x";',
+          'import x from "@margince-core/../extensions/other/frontend/x";',
       },
     },
     {
       name: "a core file reached from outside overrides/",
       want: "only a replacement under frontend/overrides/",
       files: {
-        "screen.tsx": 'import { NAV } from "@core-original/src/app/nav";',
+        "screen.tsx": 'import { NAV } from "@margince-core/src/app/nav";',
       },
     },
     {

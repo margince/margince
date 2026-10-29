@@ -13,7 +13,7 @@ export type FileOverride = {
   source: string;
 };
 
-const CORE_ORIGINAL = "@core-original/";
+const MARGINCE_CORE = "@margince-core/";
 
 const stripExtension = (path: string) => path.replace(/\.[cm]?[jt]sx?$/, "");
 
@@ -36,7 +36,7 @@ export function readFileOverrides(
 }
 
 // overrideCoreFiles resolves every import of a replaced core file to the unit's
-// file, whatever specifier reached it. "@core-original/<path>" always means
+// file, whatever specifier reached it. "@margince-core/<path>" always means
 // core's own file, so a replacement can wrap the component it replaces.
 export function overrideCoreFiles(
   frontendRoot: string,
@@ -62,7 +62,7 @@ export function overrideCoreFiles(
       importer && existsSync(importer)
         ? originalOf.get(realpathSync(importer))
         : undefined;
-    const wanted = join(frontendRoot, source.slice(CORE_ORIGINAL.length));
+    const wanted = join(frontendRoot, source.slice(MARGINCE_CORE.length));
     if (!original || stripExtension(original) !== stripExtension(wanted)) {
       throw new Error(
         `${importer ?? "an entry"} imports '${source}' — only a replacement may, and only core's copy of the file it replaces`,
@@ -74,7 +74,7 @@ export function overrideCoreFiles(
     name: "margince-core-overrides",
     enforce: "pre",
     async resolveId(source, importer, options) {
-      if (source.startsWith(CORE_ORIGINAL)) {
+      if (source.startsWith(MARGINCE_CORE)) {
         return coreOriginal(source, importer);
       }
       if (byTarget.size === 0) {

@@ -241,7 +241,7 @@ func emitOverrides(root string, replaced []fileOverride) error {
 	b.WriteString("// core file it replaces, with a type core's callers still accept.\n")
 	b.WriteString("export type Keeps<_Override extends Original, Original> = true;\n")
 	for i, o := range replaced {
-		fmt.Fprintf(&b, "import type * as Original%d from %s;\n", i, tsString("@core-original/"+strings.TrimSuffix(o.Target, filepath.Ext(o.Target))))
+		fmt.Fprintf(&b, "import type * as Original%d from %s;\n", i, tsString("@margince-core/"+strings.TrimSuffix(o.Target, filepath.Ext(o.Target))))
 		fmt.Fprintf(&b, "import type * as Override%d from %s;\n", i, tsString(strings.TrimSuffix(o.Source, filepath.Ext(o.Source))))
 		fmt.Fprintf(&b, "export type Check%d = Keeps<typeof Override%d, typeof Original%d>;\n", i, i, i)
 	}
