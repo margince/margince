@@ -213,6 +213,115 @@ describe("ContactLink's labelled email verb", () => {
   });
 });
 
+describe("ContactLink's icon beside a value", () => {
+  it("dials what the number itself dials", () => {
+    render(
+      <>
+        <ContactLink kind="phone" value="+33 6 12 44 08 91" record={dana} />
+        <ContactLink
+          kind="phone"
+          appearance="icon"
+          label="Call"
+          value="+33 6 12 44 08 91"
+          record={dana}
+        />
+      </>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(
+      screen
+        .getByRole("link", { name: "+33 6 12 44 08 91" })
+        .getAttribute("href"),
+    );
+  });
+
+  it("opens the composer on the record with the address", () => {
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactLink
+          kind="email"
+          appearance="icon"
+          label="Write email"
+          value=" dana@brandt.example "
+          record={dana}
+        />
+      </WriteToProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Write email" }));
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-1",
+      address: "dana@brandt.example",
+    });
+  });
+
+  it("hands the address to the reader's own client with no composer host", () => {
+    render(
+      <ContactLink
+        kind="email"
+        appearance="icon"
+        label="Write email"
+        value="dana@brandt.example"
+        record={dana}
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Write email" }).getAttribute("href"),
+    ).toBe("mailto:dana@brandt.example");
+  });
+
+  it("is refused by the page's sentence when nothing can carry the message", () => {
+    render(
+      <WriteToProvider writeTo={vi.fn()}>
+        <p id="no-transport">Nowhere to write to.</p>
+        <ContactLink
+          kind="email"
+          appearance="icon"
+          label="Write email"
+          value="dana@brandt.example"
+          record={dana}
+          reasonId="no-transport"
+        />
+      </WriteToProvider>,
+    );
+    const icon = screen.getByRole("button", { name: "Write email" });
+    expect(icon.hasAttribute("disabled")).toBe(true);
+    expect(icon.getAttribute("aria-describedby")).toContain("no-transport");
+  });
+
+  it("draws nothing for a refused value or a read-only record", () => {
+    const { container } = render(
+      <WriteToProvider writeTo={vi.fn()}>
+        <ContactLink
+          kind="phone"
+          appearance="icon"
+          label="Call"
+          value="call me maybe"
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="icon"
+          label="Write email"
+          value="dana@brandt.example?bcc=x"
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="icon"
+          label="Write email"
+          value="dana@brandt.example"
+          record={dana}
+          readOnly
+        />
+      </WriteToProvider>,
+    );
+    expect(container.childElementCount).toBe(0);
+  });
+});
+
 // A `mailto:` built from an address sends the message around the composer.
 // Only ContactLink may build one, for a reader with no mailbox. Every product
 // source file is read, so a new surface cannot slip by.

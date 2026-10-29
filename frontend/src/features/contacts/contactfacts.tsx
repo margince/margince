@@ -51,6 +51,8 @@ export function ContactFacts({
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones)?.phone;
+  const record = { entityType: "contact", entityId: contact.id } as const;
+  const readOnly = Boolean(contact.archived_at);
   return (
     <RecordFacts>
       {email && (
@@ -58,12 +60,20 @@ export function ContactFacts({
           <ContactLink
             kind="email"
             value={email}
-            record={{ entityType: "contact", entityId: contact.id }}
-            readOnly={Boolean(contact.archived_at)}
+            record={record}
+            readOnly={readOnly}
             className="pe-meta-link"
           >
             {email}
           </ContactLink>
+          <ContactLink
+            appearance="icon"
+            kind="email"
+            value={email}
+            record={record}
+            readOnly={readOnly}
+            label={t("compose.writeEmail")}
+          />
         </Fact>
       )}
       {phone && (
@@ -71,11 +81,18 @@ export function ContactFacts({
           <ContactLink
             kind="phone"
             value={phone}
-            record={{ entityType: "contact", entityId: contact.id }}
+            record={record}
             className="pe-meta-link"
           >
             {phone}
           </ContactLink>
+          <ContactLink
+            appearance="icon"
+            kind="phone"
+            value={phone}
+            record={record}
+            label={t("contact.action.call")}
+          />
         </Fact>
       )}
       {contact.address?.city && (

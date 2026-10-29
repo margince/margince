@@ -41,6 +41,12 @@ const assuranceSubjectsSQL = `
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
 		           AND %[2]s) AS last_customer_progress_at,
+		       (SELECT max(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND %[6]s) AS last_customer_refusal_at,
 		       (SELECT min(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
@@ -48,6 +54,7 @@ const assuranceSubjectsSQL = `
 		           AND a.archived_at IS NULL
 		           AND a.kind = 'meeting'
 		           AND %[3]s
+		           AND %[7]s
 		           AND EXISTS (SELECT 1 FROM activity_participant p
 		                        WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL
 		                          AND p.response = 'accepted')) AS confirmed_meeting_at,
@@ -158,9 +165,12 @@ func AssuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg),
+	// A task the product filed itself asks for a next step; it is not one.
+	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
+	query := fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
-		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"))
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
@@ -183,6 +193,7 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 		&out.ExpectedClose, &out.CloseProvisional, &category, &stage,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
+		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
 		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
@@ -212,17 +223,38 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	return out, nil
 }
 
-// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That
-// is a message a contact on it wrote, or a meeting or call with them that took
-// place. Our own mail, a colleague's reply, a task, a field edit, a canceled
-// meeting and a machine's mail never do.
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
+// a message a contact on it wrote, or a meeting or call with them that happened.
+// Our own mail, a task, a field edit and a machine's mail never count. Nor do a
+// message not every member may read, or a refusal. An unjudged message counts,
+// because every message from before the verdict existed is unjudged.
 func customerProgressSQL(alias, asOf string) string {
-	theyWrote := "EXISTS (SELECT 1 FROM (SELECT cp.contact_id FROM activity_participant cp WHERE cp.activity_id = " +
-		alias + ".id UNION SELECT cl.contact_id FROM activity_link cl WHERE cl.activity_id = " + alias +
-		".id) who WHERE who.contact_id IS NOT NULL AND " + relstrength.TheyWroteSQL("who.contact_id", alias) + ")"
-	return "(" + relstrength.DirectionClockSQL(alias) + " AND ((" + theyWrote + " AND " +
+	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) +
+		" AND ((" + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
+}
+
+// customerRefusalSQL admits a message a contact on the deal wrote that was
+// judged a refusal.
+func customerRefusalSQL(alias, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
+}
+
+// visibleToAllSQL admits an activity every member may read. The check runs as
+// the system and its answer reaches every reader of the forecast, so a limited
+// or restricted message must not move it.
+func visibleToAllSQL(alias string) string {
+	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+}
+
+// customerWroteSQL is a message one of the deal's contacts wrote.
+func customerWroteSQL(alias string) string {
+	return "EXISTS (SELECT 1 FROM (SELECT cp.contact_id FROM activity_participant cp WHERE cp.activity_id = " +
+		alias + ".id UNION SELECT cl.contact_id FROM activity_link cl WHERE cl.activity_id = " + alias +
+		".id) who WHERE who.contact_id IS NOT NULL AND " + relstrength.TheyWroteSQL("who.contact_id", alias) + ")"
 }
 
 // sourceChecked reports whether the run read one source on time.

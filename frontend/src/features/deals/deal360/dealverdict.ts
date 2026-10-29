@@ -6,7 +6,7 @@ import { formatNumber } from "../../../format/format";
 import { formatDayMonthNearYear } from "../../../format/format.dates";
 import { type Locale, type Translator, translatePlural } from "../../../i18n";
 import { closeWords } from "./dealheaderfacts";
-import { closeTone, type DealStandingInputs } from "./dealstanding";
+import { closeTone, type DealStandingInputs, waitHolds } from "./dealstanding";
 import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Words = Readonly<{ t: Translator; locale: Locale; zone: string }>;
@@ -58,11 +58,18 @@ function recordedVerdict(
       tone: "danger",
     };
   }
-  if (deal.wait_until) {
+  if (waitHolds(deal.wait_until, zone, new Date(asOf))) {
     return {
       word: t("deal.verdict.onHold"),
       sentence: t("deal.verdict.onHoldUntil", { date: day(deal.wait_until) }),
       tone: "neutral",
+    };
+  }
+  if (deal.wait_until) {
+    return {
+      word: t("deal.verdict.waitOver"),
+      sentence: t("deal.verdict.waitOverSince", { date: day(deal.wait_until) }),
+      tone: "warning",
     };
   }
   const closeDays = closeWords(deal, locale, zone, t).daysLeft;

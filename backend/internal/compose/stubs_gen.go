@@ -987,6 +987,10 @@ func (stubs) CreateCompany(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateCompany")
 }
 
+func (stubs) GetCompanyForAddress(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCompanyForAddressParams) {
+	httperr.NotImplemented(w, r, "GetCompanyForAddress")
+}
+
 func (stubs) ArchiveCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveCompanyParams) {
 	httperr.NotImplemented(w, r, "ArchiveCompany")
 }
@@ -1109,6 +1113,14 @@ func (stubs) ListIntroPaths(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftIntroRequest")
+}
+
+func (stubs) ListCompanyLinkCandidates(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCompanyLinkCandidates")
+}
+
+func (stubs) LinkCompanyContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LinkCompanyContactsParams) {
+	httperr.NotImplemented(w, r, "LinkCompanyContacts")
 }
 
 func (stubs) GetCompanyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1433,6 +1445,10 @@ func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 
 func (stubs) DraftContactEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftContactEmail")
+}
+
+func (stubs) LinkContactEmployer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LinkContactEmployerParams) {
+	httperr.NotImplemented(w, r, "LinkContactEmployer")
 }
 
 func (stubs) PreviewContactEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

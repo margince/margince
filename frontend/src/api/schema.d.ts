@@ -754,6 +754,16 @@ export interface paths {
          *     with the existing contact id. An email on the erasure list
          *     answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
          *     `contact.created` event.
+         *
+         *     `company_id` or `company_name` names the employer, and the contact, that company and
+         *     the current employment edge between them are written in one transaction: when any of
+         *     them is refused, nothing is written. `company_name` creates the company and needs
+         *     `company:create`; either needs `relationship:create` and `contact:update`. A
+         *     `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+         *     missing company and for one hidden by row scope. Sending both answers 422 naming
+         *     `company_name`. The answer's `employer` names the company. An agent sending either
+         *     is refused with 422 `employer_needs_a_human` naming it, and `create_record` does not
+         *     take them: an agent names an employer with a `relationship` write.
          */
         post: operations["createContact"];
         delete?: never;
@@ -784,6 +794,9 @@ export interface paths {
          *
          *     Provenance is `manual` with the capturing user as `captured_by`, and the profile
          *     URL is stored as given. Nothing here fetches that URL, now or ever.
+         *
+         *     A `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+         *     missing company and for one hidden by row scope.
          *
          *     Human-only, and not a `create_record` tool: quick capture is a form somebody
          *     types into while reading a profile, so there is no agent story for it and
@@ -930,6 +943,47 @@ export interface paths {
          *     took from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergeContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/employer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an employer to an existing contact, creating the company when it is new.
+         * @description `company_id` links an existing company; `company_name` creates one. Exactly one of
+         *     them. The company and the current employment edge are written in one transaction, so
+         *     a refusal leaves neither behind. The edge becomes the contact's primary employment
+         *     when they have no other current one.
+         *
+         *     A company created here is given the domain of the contact's work email (the primary
+         *     one first) only when that domain is not consumer mail for this workspace, not a domain
+         *     the workspace refused a company, and not a domain another company holds. When a company
+         *     the caller can read holds it, the answer is 409 `duplicate_domain` with
+         *     `details.existing_id` naming that company, and nothing is written: link that company
+         *     with `company_id` instead. A holder the caller cannot read is not named, and the new
+         *     company is created without the domain.
+         *
+         *     The contact must be one the caller can change: a contact they cannot see answers 404,
+         *     and a missing `contact:update` or `relationship:create` grant answers 403, as does
+         *     `company:create` when `company_name` creates a company. A `company_id` the caller
+         *     cannot read answers 422 naming `company_id`, the same for a missing company and for
+         *     one hidden by row scope. A company the contact already holds a current employment at
+         *     answers 409.
+         */
+        post: operations["linkContactEmployer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2048,6 +2102,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/for-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The company a contact at this email address would work at.
+         * @description Answers the live, unmerged company the caller can read whose live domain is the
+         *     address's domain or a parent of it, the narrowest such domain first. It matches as
+         *     the daily link reconcile and `listCompanyLinkCandidates` do: an address on
+         *     `eu.acme.example` answers the company on `acme.example`. Consumer mail for this
+         *     workspace and a domain refused a company never answer, even when a company carries
+         *     the domain. A company the caller cannot read is never named.
+         *
+         *     `company` is absent when no company answers, and for a value that is no address with
+         *     a hostname, so a form may ask while the address is still being typed. Needs read on
+         *     companies.
+         */
+        get: operations["getCompanyForAddress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}": {
         parameters: {
             query?: never;
@@ -2553,6 +2636,74 @@ export interface paths {
         get: operations["listCompanyContacts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/link-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Live contacts on this company's domains who do not work here yet.
+         * @description A contact is a candidate when it is live and not merged, the caller can read and
+         *     change it, one of its live email addresses is at one of this company's domains or a
+         *     subdomain of one, it is no workspace seat, and it holds no current employment at this
+         *     company. A domain that is consumer mail for this workspace never matches, even when
+         *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
+         *
+         *     A candidate with no current employer is also attached by the daily link reconcile,
+         *     so the list's lasting use is contacts who work elsewhere today.
+         *
+         *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
+         *     Needs read on companies, contacts and relationships. A caller without
+         *     `relationship:create` and `contact:update` gets no candidates. Reading the company is
+         *     mandatory: one the caller cannot see answers 404.
+         */
+        get: operations["listCompanyLinkCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/link-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link the chosen link candidates to this company as current employees.
+         * @description Writes one current employment edge from each named contact to this company, all in
+         *     one transaction. Every id must be a candidate `listCompanyLinkCandidates` would return
+         *     to this caller now; one that is not answers 422 naming `contact_ids` with code
+         *     `not_a_link_candidate` and `details.contact_id`, and nothing is written. A contact the
+         *     caller cannot read, or may read but not change, answers the same as any other
+         *     non-candidate. Each edge becomes the contact's primary employment when they have no
+         *     other current one.
+         *
+         *     Needs `relationship:create`, `contact:update`, and read on companies, contacts and
+         *     relationships; without the first two it answers 403. A company the caller cannot see
+         *     answers 404.
+         */
+        post: operations["linkCompanyContacts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -28386,6 +28537,13 @@ export interface components {
              *     `convert_needs_a_human`: an agent converts with `promote_lead`.
              */
             convert_lead_ids?: string[];
+            /**
+             * Format: uuid
+             * @description An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+             */
+            company_id?: string | null;
+            /** @description A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent. */
+            company_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -28438,6 +28596,64 @@ export interface components {
              * @default false
              */
             company_created: boolean;
+        };
+        /** @description The employer to attach. Exactly one of `company_id` and `company_name`. */
+        LinkContactEmployerRequest: {
+            /**
+             * Format: uuid
+             * @description An existing company to link.
+             */
+            company_id?: string | null;
+            /** @description A company to create and link. Must not be blank when sent. */
+            company_name?: string | null;
+            /** @description Their job title at this company, stored as the employment's `role`. */
+            title?: string | null;
+        };
+        /** @description The contact with its employer, and what this call wrote. */
+        LinkContactEmployerResult: {
+            contact: components["schemas"]["Contact"];
+            /**
+             * Format: uuid
+             * @description The employer now linked.
+             */
+            company_id: string;
+            /** @description True when this call created the company. */
+            company_created: boolean;
+            /** @description The domain a created company was given. Null when it was given none, and when the company already existed. */
+            company_domain?: string | null;
+            /**
+             * Format: uuid
+             * @description The employment edge written.
+             */
+            relationship_id: string;
+        };
+        /** @description The company a contact at the asked address would work at. */
+        CompanyForAddress: {
+            /** @description Absent when no company the caller can read is on the address's domain. */
+            company?: components["schemas"]["ContactEmployer"];
+        };
+        /** @description A contact on one of the company's domains who does not work there yet. */
+        CompanyLinkCandidate: {
+            /** Format: uuid */
+            contact_id: string;
+            full_name: string;
+            title?: string | null;
+            /** @description The address that matched, the contact's primary one first. */
+            email: string;
+            /** @description Where the contact works today. Absent when they work nowhere or the caller may not see that employer. */
+            employer?: components["schemas"]["ContactEmployer"];
+        };
+        CompanyLinkCandidateList: {
+            data: components["schemas"]["CompanyLinkCandidate"][];
+            /** @description True when more candidates exist than `data` carries. */
+            truncated: boolean;
+        };
+        LinkCompanyContactsRequest: {
+            /** @description The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`. */
+            contact_ids: string[];
+        };
+        LinkCompanyContactsResult: {
+            data: components["schemas"]["Relationship"][];
         };
         /** @description One entry per card in the file, in the order the file listed them. */
         VCardImportReport: {
@@ -40547,7 +40763,7 @@ export interface components {
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-         *     A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+         *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
          */
         ForecastQualifiedReadings: {
             /** Format: int64 */
@@ -40558,9 +40774,15 @@ export interface components {
             weighted_minor: number;
             /**
              * Format: int64
-             * @description Open baseline money on deals under an open viability review.
+             * @description Open baseline money on every deal left out: under an open viability review, or unsupported.
              */
             excluded_minor: number;
+            /**
+             * Format: int64
+             * @description The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
+             */
+            unsupported_minor: number;
+            unsupported_count: number;
             /**
              * Format: int64
              * @description Open baseline money on deals the check could not judge on current evidence.
@@ -53539,6 +53761,73 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    linkContactEmployer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkContactEmployerRequest"];
+            };
+        };
+        responses: {
+            /** @description The employer is attached. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkContactEmployerResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description `duplicate_domain`: a company the caller can read already holds the contact's work
+             *     domain, and `details.existing_id` names it. Or the contact already holds a current
+             *     employment at `company_id`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getContact360: {
         parameters: {
             query?: {
@@ -55025,6 +55314,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getCompanyForAddress: {
+        parameters: {
+            query: {
+                /** @description The address as typed. */
+                email: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, or none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyForAddress"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getCompany: {
         parameters: {
             query?: never;
@@ -55645,6 +55960,88 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listCompanyLinkCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The candidates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyLinkCandidateList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    linkCompanyContacts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkCompanyContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description The edges written, in the order the ids were sent. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkCompanyContactsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

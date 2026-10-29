@@ -10417,6 +10417,13 @@ components:
             into the contact in the same write, and a conversion the server refuses fails the
             whole write. An agent sending this field is refused with 422
             `convert_needs_a_human`: an agent converts with `promote_lead`.
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          description: An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+        company_name:
+          type: [string, 'null']
+          description: A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
       additionalProperties: true
     ContactEmailInput:
       type: object
@@ -19455,6 +19462,8 @@ components:
         - unknown_minor
         - excluded_count
         - unknown_count
+        - unsupported_minor
+        - unsupported_count
       properties:
         evidence_minor: {type: integer, format: int64}
         best_case_minor: {type: integer, format: int64}
@@ -19462,7 +19471,14 @@ components:
         excluded_minor:
           type: integer
           format: int64
-          description: Open baseline money on deals under an open viability review.
+          description: >-
+            Open baseline money on every deal left out: under an open viability review, or unsupported.
+        unsupported_minor:
+          type: integer
+          format: int64
+          description: >-
+            The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
+        unsupported_count: {type: integer}
         unknown_minor:
           type: integer
           format: int64

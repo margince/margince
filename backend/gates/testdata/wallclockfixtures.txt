@@ -129,6 +129,7 @@ internal/compose/integration/contract_lifecycle_integration_test.go 1
 internal/compose/integration/controllerpayloadsweep_integration_test.go 2
 internal/compose/integration/customfields/customfields_vocab_http_integration_test.go 1
 internal/compose/integration/customfields_vocab_integration_test.go 1
+internal/compose/integration/daily_approvals_bench_test.go 1
 internal/compose/integration/daily_bench_test.go 1
 internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
@@ -423,6 +424,7 @@ internal/modules/introductions/store_integration_test.go 2
 internal/modules/privacy/sarconsentlinks_integration_test.go 3
 internal/modules/search/graphedge_test.go 4
 internal/modules/search/graphtrust_test.go 2
+internal/platform/database/statementmeter_test.go 1
 internal/platform/events/bus_integration_test.go 1
 internal/platform/events/subscriberrecovery_integration_test.go 1
 internal/platform/jobs/deadwindow_integration_test.go 2

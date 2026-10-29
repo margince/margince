@@ -112,6 +112,23 @@ type corpus struct {
 	Activities int     `json:"activities"`
 	Reps       int     `json:"reps"`
 	Managers   int     `json:"managers"`
+	// The Home sources the corpus fills beyond the records themselves.
+	AICalls          int `json:"ai_calls,omitempty"`
+	PendingApprovals int `json:"pending_approvals,omitempty"`
+	AppliedApprovals int `json:"applied_approvals,omitempty"`
+	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+}
+
+// strictVerdict mirrors StrictVerdict in perfrecord.go: one strict Home cohort.
+type strictVerdict struct {
+	Requirement string  `json:"requirement"`
+	Name        string  `json:"name"`
+	Seat        string  `json:"seat"`
+	P95Ms       float64 `json:"p95_ms"`
+	BudgetMs    float64 `json:"budget_ms"`
+	Samples     int     `json:"samples"`
+	Pass        bool    `json:"pass"`
+	Failure     string  `json:"failure,omitempty"`
 }
 
 type record struct {
@@ -121,7 +138,8 @@ type record struct {
 	Budgets    []measurement `json:"budgets"`
 	Corpus     *corpus       `json:"corpus,omitempty"`
 	// Advisories mirrors PerfRecord's: known-issue entries the run found clear.
-	Advisories []string `json:"advisories,omitempty"`
+	Advisories []string        `json:"advisories,omitempty"`
+	StrictHome []strictVerdict `json:"strict_home,omitempty"`
 }
 
 const (

@@ -169,15 +169,15 @@ func worklistCalls(in dailyInput) []dailyCall {
 	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 }
 
-// homeCalls are what the Today view sends once the shell's gates clear. Every
-// seat has a brief, made in the brief step, so its 404 fails the run.
+// homeCalls are what a browser on Today sends once the shell's gates clear.
+// The weekly review is the Weekly view's read, which Today never sends. Every
+// seat has a brief from the brief step, so its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
 		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
-		{Name: "weekly_review_latest", Path: "/v1/weekly-reviews/latest", Optional: true},
 		{Name: "digest", Path: "/v1/digest", Optional: true},
 	}
 }
@@ -247,7 +247,11 @@ func dailyRowName(flow string, call dailyCall) string {
 // dailyTally counts what a row's responses answered, for the record and the gate.
 type dailyTally struct {
 	s5xx, s422 int
-	empty      bool
+	// incomplete counts 200 answers that named an unavailable source.
+	incomplete int
+	// lacking counts timed answers without the field strictHolds names.
+	lacking int
+	empty   bool
 	// emptyCalls names the calls of a composite row that answered empty.
 	emptyCalls []string
 	answer     []byte
@@ -267,6 +271,9 @@ type dailyResponse struct {
 func (f dailyFlow) admit(r dailyResponse, tally *dailyTally) error {
 	switch {
 	case r.status >= 200 && r.status < 300:
+		if unavailableSources(r.body) > 0 {
+			tally.incomplete++
+		}
 		return nil
 	case r.status >= 500:
 		if tally.s5xx++; tally.first5xx == "" {
@@ -485,9 +492,13 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 		if err != nil {
 			return nil, err
 		}
+		holds := strictHolds(name, s.Role)
 		for _, r := range answered {
 			if err := f.admit(r, tallied(&tally, counted)); err != nil {
 				return nil, err
+			}
+			if counted && holds != "" && r.status < 300 && !holdsData(r.body, holds) {
+				tally.lacking++
 			}
 		}
 		return []time.Duration{elapsed}, nil
@@ -595,7 +606,7 @@ func confirmBreaches(specs []dailyRowSpec, first [][]time.Duration, again func()
 		if stats.P95 >= specs[i].budget {
 			outcome = "confirmed"
 		}
-		kept[i] = second[i]
+		kept[i], specs[i].firstP95 = second[i], p95
 		specs[i].note = joinNotes(specs[i].note, fmt.Sprintf("first measurement p95 %d ms over budget; %s on a second measurement",
 			p95.Milliseconds(), outcome))
 	}
@@ -633,6 +644,8 @@ type dailyRowSpec struct {
 	flow, id, name, note string
 	budget               time.Duration
 	allow422, gated      bool
+	// firstP95 is the breached first round confirmBreaches replaced.
+	firstP95 time.Duration
 }
 
 func callNames(calls []dailyCall) []string {
@@ -677,7 +690,8 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 		Result: DailyResult{
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
-			P95: stats.P95, Budget: budget,
+			P95: stats.P95, Budget: budget, Samples: stats.Samples,
+			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Lacking: tally.lacking,
 		},
 		Empty:  tally.empty,
 		Answer: tally.answer,
@@ -799,12 +813,15 @@ func dailyAnalyticsTemplate(t *testing.T, e *apptest.AppEnv, s Seat) string {
 	return framework.Definition.Template
 }
 
-// dailyTemplateMetrics is the screen's metric filter and block wish list for a template.
+// dailyTemplateMetrics is the metric filter and block wish list of the view the
+// screen opens on for a template. METRIC_VIEW and VIEW_SHAPE in
+// frontend/src/features/analytics/reporting.views.ts hold the lists; a request
+// for more than eight metrics is refused, so one view is asked, never all.
 func dailyTemplateMetrics(template string) (func(id string) bool, []string) {
-	sdr := []string{"meetings_held", "accepted_opportunities"}
+	view := []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created"}
+	blocks := []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
 	if template == "sdr" {
-		return func(id string) bool { return slices.Contains(sdr, id) }, []string{"sdr_outcomes", "target_progress"}
+		view, blocks = []string{"meetings_held", "accepted_opportunities"}, []string{"sdr_outcomes", "target_progress"}
 	}
-	return func(id string) bool { return !slices.Contains(append(sdr, "forecast_landing"), id) },
-		[]string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
+	return func(id string) bool { return slices.Contains(view, id) }, blocks
 }

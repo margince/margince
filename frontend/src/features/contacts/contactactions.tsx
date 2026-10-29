@@ -7,9 +7,7 @@ import { useId } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { CallAction } from "../../design-system/callaction";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
-import { primaryPhone } from "../../format/contacturi";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
@@ -25,27 +23,15 @@ import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
 import { ContactRecordActions } from "./contactrecordactions";
 
-// The header's verbs on the contact record page (contactpage.tsx): writing,
-// calling, meeting, logging, and the menu that holds everything else.
+// The header's verbs on the contact record page (contactpage.tsx): meeting,
+// logging, and the menu. Writing and calling sit beside the address and the
+// number in the contact's details.
 
-// Why the lead verb may not be pressed, in the reader's words, or undefined
-// when it may.
-//
-// ONE fact refuses it: reachability. There is nowhere to write to, so the
-// composer would have nothing to send on and could only fail at the send.
-//
-// CONSENT IS NOT ASKED HERE, and that is the decision rather than a gap. A
-// consent verdict is reached per PURPOSE, and which purpose applies is a fact
-// about the MESSAGE — which this page does not have. Disabling the verb on one
-// purpose's verdict told a rep with a lawful service message to send that the
-// product would not let them write at all, with no way to see that only
-// marketing was refused. The composer asks, because the composer is where the
-// purpose is chosen.
-//
-// So the two facts never merge into one sentence because only one of them is a
-// sentence here. Held by "opens the composer even where no purpose currently
-// permits writing" (contactpage.test.tsx), which asserts the verb carries no
-// refusal at all for a consent-blocked contact who is reachable.
+// Why writing to the contact is refused, or undefined when it is not. Only
+// reachability refuses it: with nowhere to write to, a send could only fail.
+// Consent is the composer's to ask: it is decided per purpose, and the purpose
+// belongs to the message. contactpage.test.tsx holds this ("opens the composer
+// even where no purpose currently permits writing").
 function writeRefusal(
   state: Readonly<{ transports: readonly Transport[] }>,
   t: ReturnType<typeof useT>,
@@ -56,7 +42,7 @@ function writeRefusal(
   return undefined;
 }
 
-/** Why the Email verb may not be pressed, for the page's footnote. */
+/** Why the write icon may not be pressed, for the page's footnote. */
 export function useWriteRefusal(view: TransportSource): string | undefined {
   const t = useT();
   return writeRefusal({ transports: useTransports(view) }, t);
@@ -86,9 +72,8 @@ export function useActivityGate(): Readonly<{
   };
 }
 
-// The header's verbs, in the order every record page carries them: writing
-// first, then the record's other doors. None of them is filled — the move
-// worth doing is the one the call names, and that one carries the colour.
+// The header's verbs. None of them is filled: the move worth doing is the one
+// the call names, and that one carries the colour.
 export function ContactActions({
   view,
   contactId,
@@ -97,7 +82,6 @@ export function ContactActions({
   onLogActivity,
   onAddTask,
   activity,
-  writeRefusalId,
   refusedReasonId,
 }: Readonly<{
   view: TransportSource;
@@ -109,9 +93,6 @@ export function ContactActions({
   // The page's gate, whose refusal the page states. A host that passes none
   // (the archived page, whose own sentence refuses every verb) gets its own.
   activity?: ReturnType<typeof useActivityGate>;
-  // Where the page states why Email is refused, when it does. Absent, the
-  // verb states it under itself.
-  writeRefusalId?: string;
   // The page's one sentence about why this contact takes no changes, while
   // it does not. The verbs that write the RECORD — edit, merge, archive and
   // the grant Share asserts — are the ones refused by it; logging and mail
@@ -126,40 +107,9 @@ export function ContactActions({
   const archived = view.contact.archived_at ? refusedReasonId : undefined;
   const logRefused = archived ?? gate.refusedId;
   const logPending = !archived && gate.pending;
-  // The transports the composer would offer, read here so the button NAMES
-  // what pressing it does. The same reachability the drawer resolves: a label
-  // computed from anything else is a promise the composer then breaks.
-  const transports = useTransports(view);
-  const write = primaryTransportAction(transports, t);
-  const WriteIcon = write.icon;
-  const refusal = writeRefusal({ transports }, t);
   return (
     <>
-      {/* The shared Email verb, wearing the transport it will open when there
-          is exactly one, neutral when the composer will ask, and explaining
-          itself rather than merely dimming when it may not be pressed. */}
-      <EmailVerb
-        label={write.label}
-        icon={<WriteIcon size={15} aria-hidden="true" />}
-        reason={archived || writeRefusalId ? undefined : refusal}
-        reasonId={archived ?? (refusal ? writeRefusalId : undefined)}
-        onClick={onWrite}
-        word={t("record.verb.email")}
-      />
-      {/* Square, because a phone and a calendar are verbs a reader already
-          knows from the glyph — and five labelled buttons in a row is a header
-          that reads as a toolbar, with the one action the page is FOR no more
-          prominent than the rest of them. `IconAction` owes each one its name
-          on hover as well as to a screen reader. */}
-      <CallAction
-        appearance="icon"
-        number={primaryPhone(view.contact.phones)?.phone}
-        record={{ entityType: "contact", entityId: contactId }}
-        label={t("contact.action.call")}
-        word={t("record.verb.call")}
-        reason={t("contact.action.noPhone")}
-        reasonId={archived}
-      />
+      <ChatVerb view={view} onWrite={onWrite} refusedReasonId={archived} />
       <IconAction
         label={t("contact.action.meetings")}
         word={t("record.verb.meet")}
@@ -257,5 +207,35 @@ export function ContactActions({
         />
       </OverflowMenu>
     </>
+  );
+}
+
+// The write verb for a contact reached only on chat channels, named for the
+// channel it opens. An address carries its own icon in the details. A contact
+// with no channel at all gets the footnote's sentence instead.
+function ChatVerb({
+  view,
+  onWrite,
+  refusedReasonId,
+}: Readonly<{
+  view: TransportSource;
+  onWrite: () => void;
+  refusedReasonId: string | undefined;
+}>) {
+  const t = useT();
+  const transports = useTransports(view);
+  if (view.contact.primary_email || transports.length === 0) {
+    return null;
+  }
+  const write = primaryTransportAction(transports, t);
+  const WriteIcon = write.icon;
+  return (
+    <EmailVerb
+      label={write.label}
+      icon={<WriteIcon size={15} aria-hidden="true" />}
+      reasonId={refusedReasonId}
+      onClick={onWrite}
+      word={t("record.verb.email")}
+    />
   );
 }

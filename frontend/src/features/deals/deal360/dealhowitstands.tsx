@@ -183,7 +183,11 @@ export function dealDims(
   if (deal.status !== "open") {
     return [committee];
   }
-  return [momentumDim(deal, words), riskDim(inputs, words), committee];
+  return [
+    momentumDim(deal, new Date(inputs.asOf), words),
+    riskDim(inputs, words),
+    committee,
+  ];
 }
 
 // What the records already flag, counted rather than scored: nothing on the
@@ -248,8 +252,12 @@ export function riskDim(
   };
 }
 
-function momentumDim(deal: Deal, { t, locale, zone }: Words): StandingDim {
-  const momentum = momentumOf(deal);
+function momentumDim(
+  deal: Deal,
+  asOf: Date,
+  { t, locale, zone }: Words,
+): StandingDim {
+  const momentum = momentumOf(deal, zone, asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
   const base = {
     key: "momentum",

@@ -139,6 +139,9 @@ type ForecastQualifiedResult struct {
 	UnknownMinor  int64 `json:"unknown_minor"`
 	ExcludedCount int   `json:"excluded_count"`
 	UnknownCount  int   `json:"unknown_count"`
+	// The part of the excluded money with no review behind it.
+	UnsupportedMinor int64 `json:"unsupported_minor"`
+	UnsupportedCount int   `json:"unsupported_count"`
 	// AmountsPartial says some left-out deal had no amount the reader can see.
 	AmountsPartial bool `json:"amounts_partial"`
 }
