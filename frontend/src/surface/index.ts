@@ -36,6 +36,9 @@ export { formatBytes, formatDateTime, formatNumber } from "../format/format";
 // nothing useful. Exporting the provider is what lets a unit test its own
 // screen the way the app actually runs it.
 export { LocaleProvider, useLocale } from "../i18n";
+// A unit adds a page at frontend/overrides/src/custom/<folder>/screen.tsx,
+// exporting `screen: CustomScreen`; it gets #/x/<key> and, with `nav`, a rail row.
+export type { CustomLabel, CustomScreen } from "../app/custom";
 export { useCan, useCanWrite } from "../lib/capability";
 // The record an entry on a core screen opened the unit on, for prefill.
 export { type EntryRecord, useEntryContext } from "../lib/extensionentries";

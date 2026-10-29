@@ -23,7 +23,12 @@ import {
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
-import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
+import {
+  resolveTitle,
+  routeTitle,
+  sectionHead,
+  useRouteSubject,
+} from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import { SetupReminder } from "./setup-reminder";
 import "./topbar.css";
@@ -78,7 +83,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
     // keeps the filter the reader left it with.
     return [
       {
-        label: resolveTitle(route.screen, navItem?.labelKey, t),
+        label: routeTitle(route, navItem?.labelKey, locale, t),
         href: listAddress(route.screen),
       },
       { label: subject },
@@ -110,7 +115,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   if (filtersCrumbs) {
     return filtersCrumbs;
   }
-  return [{ label: resolveTitle(route.screen, navItem?.labelKey, t) }];
+  return [{ label: routeTitle(route, navItem?.labelKey, locale, t) }];
 }
 
 /**

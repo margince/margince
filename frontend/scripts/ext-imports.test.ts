@@ -496,6 +496,23 @@ describe("the extension-import detector sees what it claims to", () => {
     },
     // A `//` inside a string is not a comment — the residue the shell gate's
     // sibling had to answer by hand, and the parser answers for nothing.
+    // A replacement wraps core's own copy of the file it stands in for, so it
+    // may name it; the unit's other files may not.
+    {
+      name: "a replacement wrapping core's own file",
+      want: null,
+      files: {
+        "overrides/src/app/shellrail.tsx":
+          'export * from "@core-original/src/app/shellrail";',
+      },
+    },
+    {
+      name: "a core file reached from outside overrides/",
+      want: "only a replacement under frontend/overrides/",
+      files: {
+        "screen.tsx": 'import { NAV } from "@core-original/src/app/nav";',
+      },
+    },
     {
       name: "a URL in a string, whose // is not a comment",
       want: null,

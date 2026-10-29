@@ -730,6 +730,39 @@ page looks as it does without the tier.
 The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
 or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
+## Add a page or replace a core component: `frontend/overrides/`
+
+Your unit's `frontend/overrides/` tree mirrors core's `frontend/`. Only the composed lane applies it, and
+`gen-composition` (`backend/tools/gen-composition/overrides.go`) checks every file in it.
+
+To add a page, write `frontend/overrides/src/custom/<folder>/screen.tsx`. It exports `screen`, typed
+`CustomScreen` from `@margince/frontend/app`, the same shape a fork's screen has in `frontend/src/custom/`
+([its README](../../frontend/src/custom/README.md)). The page gets `#/x/<key>`, and a `nav` gives it a
+sidebar row in the group it names. The folder follows the unit-name grammar, and two units may not add
+the same folder.
+
+To replace a core file, write it at the same path under `frontend/overrides/`. Your file stands in for
+core's for every importer. It reaches core's own copy as `@core-original/<path>`, so it can wrap the
+component instead of copying it:
+
+```tsx
+// frontend/overrides/src/app/shellrail.tsx
+export * from "@core-original/src/app/shellrail";
+```
+
+Only files under `src/app/`, `src/components/` and `src/features/` can be replaced; the sidebar menu is
+`src/app/shellrail.tsx`. Each replacement needs a line in `frontend/overrides.lock`:
+
+```text
+src/app/shellrail.tsx sha256:<hash of core's file>
+```
+
+A missing line fails `make composition`, and the error prints the line to add. When core changes that
+file, the hash no longer matches and the build fails until you read the new file, update yours and
+the lock line. The composed typecheck holds your file to every export of the file it replaces. Two
+units cannot replace one file. Only a file under `frontend/overrides/` may import `@core-original/`;
+`frontend/scripts/ext-imports.test.ts` refuses it anywhere else.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.

@@ -207,6 +207,8 @@ export function throughLinks(target: string): string {
   return join(realpathSync(head), ...tail);
 }
 
+const CORE_ORIGINAL = "@core-original/";
+
 // judge applies the three rules to one file's specifiers. `file` is absolute
 // because rule 1 resolves against it; `shown` is what a reader is handed. A
 // repo-relative path would resolve against the working directory instead, and
@@ -226,7 +228,19 @@ export function judge(args: {
   // realpath syscall that would otherwise run per specifier.
   const realLayer = throughLinks(layer);
 
+  // A replacement under frontend/overrides/ wraps core's own file, so it alone
+  // may name one.
+  const overrides = join(realLayer, "overrides");
+  const replaces = throughLinks(file).startsWith(`${overrides}/`);
+
   return specifiers.flatMap((s) => {
+    if (s.text.startsWith(CORE_ORIGINAL)) {
+      return replaces
+        ? []
+        : [
+            `${where(s)}: '${s.text}' reaches core's own files — only a replacement under frontend/overrides/ may wrap one`,
+          ];
+    }
     if (s.text.startsWith(".")) {
       const resolved = throughLinks(resolve(dirname(file), s.text));
       // The layer itself, or something beneath it, so the separator matters.
