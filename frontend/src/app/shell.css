@@ -354,7 +354,7 @@
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
-  border-right: 1px solid var(--paneEdge);
+  border-right: 1px solid var(--groundEdge);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -439,7 +439,7 @@
    axis of their glyphs. */
 .rail.expanded .railhead {
   padding: var(--space-2);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
 }
 /* Collapsed the head is the mark and the marker under it, centred on the 56px
@@ -1010,7 +1010,7 @@
   cursor: pointer;
 }
 .pageswitch:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* Pressed, it says so before the sheet arrives — the one frame of feedback a
    touch control owes the thumb that is still on it. */
@@ -1138,7 +1138,7 @@
 }
 .palette-row.selected,
 .palette-row:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .palette-row .label,
@@ -1345,7 +1345,7 @@
        four sides, the pane's corner, and the one shadow a layer over the page
        may cast. The ground stays the same pane, so the bar is visibly the
        sidebar in its other shape rather than a second surface. */
-    border: 1px solid var(--paneEdge);
+    border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
@@ -1870,7 +1870,7 @@
    option through `aria-activedescendant` whichever input moved it. */
 .settingssearch-hit.active,
 .settingssearch-hit:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .settingssearch-empty {

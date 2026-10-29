@@ -37,7 +37,7 @@
   cursor: pointer;
 }
 .account .user:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .account .user:focus-visible {
   outline: var(--focus-ring);
@@ -159,7 +159,7 @@
   cursor: pointer;
 }
 .acctrow:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .acctrow:disabled {
@@ -275,7 +275,7 @@
   border-radius: var(--r-sm);
 }
 .accountsub .choicelist-choice:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 @keyframes accountsub-open {

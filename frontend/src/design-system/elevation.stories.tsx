@@ -66,16 +66,32 @@ const swatches: CSSProperties = {
   gap: "var(--space-3)",
 };
 
-// The rung each level paints, drawn straight from its token: the play below
-// holds every real pane against these.
+// The rung each level paints, drawn straight from its tokens: the play below
+// holds every real pane and its head against these.
 const RUNGS = [
-  { probe: "1", token: "--ladder1", usage: "Level 1: a pane on the page." },
-  { probe: "2", token: "--ladder2", usage: "Level 2: a pane in a pane." },
-  { probe: "3", token: "--ladder3", usage: "Level 3." },
-  { probe: "4", token: "--ladder4", usage: "Level 4 and deeper." },
+  {
+    probe: "1",
+    token: "--ladder1",
+    edge: "--ladder1Edge",
+    usage: "Level 1: a pane on the page.",
+  },
+  {
+    probe: "2",
+    token: "--ladder2",
+    edge: "--ladder2Edge",
+    usage: "Level 2: a pane in a pane.",
+  },
+  { probe: "3", token: "--ladder3", edge: "--ladder3Edge", usage: "Level 3." },
+  {
+    probe: "4",
+    token: "--ladder4",
+    edge: "--ladder4Edge",
+    usage: "Level 4 and deeper.",
+  },
   {
     probe: "overlay",
     token: "--bgElevated",
+    edge: "--ladder1Edge",
     usage: "An overlay's own surface.",
   },
 ] as const;
@@ -106,7 +122,11 @@ export const Surfaces: Story = {
           <div
             key={rung.probe}
             data-probe={rung.probe}
-            style={{ ...box, background: `var(${rung.token})` }}
+            style={{
+              ...box,
+              background: `var(${rung.token})`,
+              borderColor: `var(${rung.edge})`,
+            }}
           >
             <Label token={rung.token} usage={rung.usage} />
           </div>
@@ -135,19 +155,29 @@ export const Surfaces: Story = {
   play: async ({ canvasElement }) => {
     const paint = (element: Element | null) =>
       element === null ? "" : getComputedStyle(element).backgroundColor;
+    const edge = (element: Element | null) =>
+      element === null ? "" : getComputedStyle(element).borderTopColor;
+    const seam = (element: Element | null) =>
+      element === null ? "" : getComputedStyle(element).borderBottomColor;
     const probe = (name: string) =>
-      paint(canvasElement.querySelector(`[data-probe="${name}"]`));
-    const panes = (ladder: string) =>
-      [
-        ...canvasElement.querySelectorAll(
-          `[data-ladder="${ladder}"] section.panel`,
-        ),
-      ].map(paint);
-    await expect(panes("page")).toEqual(["1", "2", "3", "4", "4"].map(probe));
-    await expect(
-      paint(canvasElement.querySelector('[data-ladder="overlay"]')),
-    ).toBe(probe("overlay"));
-    await expect(panes("overlay")).toEqual(["2", "3"].map(probe));
+      canvasElement.querySelector(`[data-probe="${name}"]`);
+    const panes = (ladder: string) => [
+      ...canvasElement.querySelectorAll(
+        `[data-ladder="${ladder}"] section.panel`,
+      ),
+    ];
+    const heads = (ladder: string) =>
+      panes(ladder).map((pane) => pane.querySelector(":scope > .panel-head"));
+    const page = ["1", "2", "3", "4", "4"].map(probe);
+    await expect(panes("page").map(paint)).toEqual(page.map(paint));
+    await expect(panes("page").map(edge)).toEqual(page.map(edge));
+    await expect(heads("page").map(seam)).toEqual(page.map(edge));
+    const overlay = canvasElement.querySelector('[data-ladder="overlay"]');
+    await expect(paint(overlay)).toBe(paint(probe("overlay")));
+    const inOverlay = ["2", "3"].map(probe);
+    await expect(panes("overlay").map(paint)).toEqual(inOverlay.map(paint));
+    await expect(panes("overlay").map(edge)).toEqual(inOverlay.map(edge));
+    await expect(heads("overlay").map(seam)).toEqual(inOverlay.map(edge));
   },
 };
 
@@ -159,8 +189,8 @@ export const Pane: Story = {
   render: () => (
     <div className={specimenColumn} style={{ maxWidth: "880px" }}>
       <p className={specimenIntro}>
-        Use a pane for one zone over the page ground, with --paneEdge for its
-        hairline. A pane inside it takes the next level's ground by itself.
+        Use a pane for one zone over the page ground. A pane inside it takes the
+        next level's ground and hairline by itself.
       </p>
       <div style={ground}>
         <Level level="A zone on the page">

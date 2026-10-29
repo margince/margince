@@ -199,7 +199,7 @@
   padding: var(--space-3);
   border-radius: var(--r-md);
   corner-shape: round;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
 }
 .pn-hero-who {
   min-width: 0;

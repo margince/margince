@@ -4,13 +4,12 @@
  * Colours read tokens only; the conformance gate enforces it. */
 
 .card {
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-rest);
   padding: var(--padCard);
 }
 .card-inset {
-  border: 0;
   box-shadow: none;
 }
 
@@ -45,7 +44,7 @@
   cursor: default;
 }
 .table > tbody > tr:hover > td {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
    so the first column lines up with a PanelBody's text. A table opened from a
@@ -119,7 +118,7 @@
   background: var(--ground);
 }
 .table-scroll-sticky > .table > tbody > tr:hover > :first-child {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The edge shows only once a column has slid under it. */
 @container scroll-state(scrollable: inline-start) {
@@ -239,7 +238,7 @@
   padding: var(--space-5) var(--space-4);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .empty-plate-title {
   margin: 0;
@@ -809,7 +808,7 @@
 }
 
 .segmented {
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   margin: 0;
   display: inline-flex;
   /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
@@ -845,7 +844,7 @@
   user-select: none;
 }
 .segmented button:hover:where(:not(:disabled)) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
@@ -1895,7 +1894,7 @@ span.error-line {
    ring is drawn INSIDE the row — the panel's inset is --space-1, and an
    outline offset outward from a row would be clipped by it. */
 .overflow-menu-items .btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
   /* .btn-primary and .btn-danger lift a pixel on hover. A row in a list does
      not move under the pointer travelling down it. */
@@ -1948,7 +1947,7 @@ span.error-line {
   padding: var(--space-4);
   /* The pane's hairline, the edge every zone of a record uses, so a row of
      them reads as five panes of one page rather than five boxes on it. */
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   min-width: 0;

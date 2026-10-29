@@ -173,6 +173,7 @@ ol {
    never sent — it is a pane of its own. */
 .empty-alone {
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 

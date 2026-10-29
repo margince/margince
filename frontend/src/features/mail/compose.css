@@ -121,7 +121,7 @@
   cursor: pointer;
 }
 .schedule-preset:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .schedule-preset:focus-visible {
   outline: var(--focus-ring);
@@ -236,6 +236,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 .compose-reasons .chips {

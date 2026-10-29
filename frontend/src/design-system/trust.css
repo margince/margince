@@ -131,7 +131,7 @@ button.evidence-chip:hover {
 /* The persisted counterpart a resolved proposal settles into: a pane with a
    hairline, no shadow, now that the proposal is as real as the rest. */
 .real-card {
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-4) var(--space-5);
 }

@@ -264,7 +264,7 @@
 .ob-conv-artifact .ob-core-dialog {
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }

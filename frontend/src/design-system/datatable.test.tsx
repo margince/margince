@@ -492,7 +492,7 @@ it("gives a pinned cell an opaque ground at rest and under the pointer", () => {
     /\.table-scroll-sticky > table > \* > tr > :first-child \{[^}]*background: var\(--ground\);/,
   );
   expect(css).toContain(
-    ".table-scroll-sticky > .table > tbody > tr:hover > :first-child {\n  background: var(--bgHover);",
+    ".table-scroll-sticky > .table > tbody > tr:hover > :first-child {\n  background: var(--groundHover);",
   );
 });
 

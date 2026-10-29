@@ -209,7 +209,8 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 | `--bg` | `#f1f5f2` | The paper the page is read on. |
 | `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top right. Round fills of 900×620, and the only thing on the page that is there for looks. |
 | `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
-| `--ladder1` … `--ladder4` | `--pane`, `--bgWell`, `--bgInset`, `--bgElevated` | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
+| `--ladder1` … `--ladder4` | `--pane`, `#f9fbfb`, `#f1f3f3`, `#e3e7e8` | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
+| `--ladder1Edge` … `--ladder4Edge` | `--paneEdge`, `#e3e7e8`, `#d0d6d8`, `#b6bfc1` | The hairline of a pane and of its head, by the same depth. A pane reads its own as `--groundEdge`. |
 | `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the open sidebar row. |
 | `--bgChip` | `rgba(16,26,21,.07)` | The shipped name of the `--bg3` pill and keycap fill: the fill under a badge, a keycap, a segmented strip, the floor of a meter. It is see-through, so a chip reads one step deeper than any ground it lands on; a solid value would be lost on a plate of the same grey. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgInset`, the ground with the lowest contrast of the four a chip lands on, and `.08` would drop that to 4.49:1, under the floor. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; the outline of a control, the axis of the spine. |

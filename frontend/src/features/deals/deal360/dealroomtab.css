@@ -27,7 +27,7 @@
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--padPanel);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   background-image: radial-gradient(
     ellipse at 0% 0%,

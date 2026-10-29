@@ -39,7 +39,7 @@
   position: relative;
   z-index: 20;
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--paneEdge);
+  border-bottom: 1px solid var(--groundEdge);
 }
 /* Where you are, beside the control that widens the room you are in. */
 .topbar-lead {
@@ -87,7 +87,7 @@
   cursor: e-resize;
 }
 .topbar-toggle:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .topbar-toggle:focus-visible {
@@ -119,7 +119,7 @@
   font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
   background: var(--pane);
   text-align: left;

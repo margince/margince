@@ -29,9 +29,8 @@
 }
 
 /* A well inside the card, which is what --bgInset is for, and the list's own gap
-   is what separates two of them. `card-inset` states the same thing one tier up:
-   a recessed plate takes the fill and no border, because the outline would be a
-   second box drawn inside the box already around it. */
+   is what separates two of them. A recessed row takes the fill and no border:
+   an outline would be a second box drawn inside the box already around it. */
 .change {
   display: flex;
   flex-direction: column;

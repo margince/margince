@@ -36,7 +36,7 @@
 }
 
 .merge-side {
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-3);
   transition: border-color var(--dur-state) var(--ease-out);
@@ -70,7 +70,7 @@
   margin: 0;
   padding: var(--space-3);
   border-radius: var(--r-md);
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .merge-evidence-row {

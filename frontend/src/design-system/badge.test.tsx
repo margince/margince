@@ -217,7 +217,7 @@ describe("Badge", () => {
     });
 
     it("edges every soft tone in its own token, and primary in transparent", () => {
-      expect(declared(".badge", "border")).toBe("1px solid var(--paneEdge)");
+      expect(declared(".badge", "border")).toBe("1px solid var(--groundEdge)");
       const edges: Record<string, string> = {
         ".badge-info": "var(--infoBorder)",
         ".badge-success": "var(--successBorder)",

@@ -314,6 +314,7 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 .pe-meeting-lead .pe-meeting-actions {

@@ -36,12 +36,12 @@ const ledgerPath = join(here, "surfaces.ledger.txt");
 
 const VAR = /var\((--[\w-]+)\)/g;
 
-// The rungs, and the light tokens each stands for: --bgInset picks level 3 as
-// surely as --ladder3 does.
+// The rungs, and the light tokens each stands for: --paneEdge picks level 1 as
+// surely as --ladder1Edge does.
 function rungTokens(): Set<string> {
   const light = parseBlock(tokenDecls, ":root");
   const named = [...PAGE_RUNGS, OVERLAY_RUNG].flatMap((rung) =>
-    [rung.ground, rung.paint].flatMap((value) =>
+    [rung.ground, rung.paint, rung.edge].flatMap((value) =>
       [...value.matchAll(VAR)].map((match) => match[1]),
     ),
   );
@@ -140,17 +140,25 @@ describe("the nesting ladder has one painter", () => {
     }
     expect(scripts.length).toBeGreaterThan(500);
     expect([...RUNGS].sort()).toEqual(
-      expect.arrayContaining(["--bgInset", "--bgWell", "--pane", "--ladder2"]),
+      expect.arrayContaining([
+        "--bgElevated",
+        "--pane",
+        "--paneEdge",
+        "--ladder2",
+        "--ladder4Edge",
+      ]),
     );
   });
 
   it("finds a rung however it is spelled", () => {
     const planted: Rule[] = [
       ["background-image", "linear-gradient(var(--pane), var(--pane))"],
-      ["background", 'url("a.svg") no-repeat, var(--bgInset)'],
+      ["background", 'url("a.svg") no-repeat, var(--ladder2)'],
       ["--plate", "var(--bgElevated)"],
-      ["box-shadow", "0 0 0 100vw var(--bgWell)"],
+      ["box-shadow", "0 0 0 100vw var(--ladder4)"],
       ["background-color", "var(--ladder3)"],
+      ["border", "1px solid var(--paneEdge)"],
+      ["border-color", "var(--ladder3Edge)"],
     ].map(([property, value]) => ({
       file: join(here, "probe.css"),
       selector: ".probe",
@@ -160,7 +168,7 @@ describe("the nesting ladder has one painter", () => {
     expect(
       scriptSpellings(
         join(here, "probe.tsx"),
-        'const a = <div style={{ background: "var(--bgInset)" }} />; const b = `var(--pane)`;',
+        'const a = <div style={{ background: "var(--ladder2)" }} />; const b = `var(--pane)`;',
       ),
     ).toHaveLength(2);
     expect(
@@ -168,7 +176,7 @@ describe("the nesting ladder has one painter", () => {
         {
           file: join(here, "probe.css"),
           selector: ".probe",
-          body: "background: var(--bgInsetLine)",
+          body: "border: 1px solid var(--paneEdgeStrong)",
         },
       ]),
     ).toEqual([]);
@@ -185,7 +193,7 @@ describe("the nesting ladder has one painter", () => {
     expect(
       found.filter((line) => !kept.includes(line)),
       "paint a pane by joining the ladder (node scripts/surface-ladder.ts <selector>); " +
-        "a band or mark that must match its host reads var(--ground)",
+        "a band or mark that must match its host reads var(--ground) or var(--groundEdge)",
     ).toEqual([]);
     expect(
       kept.filter((line) => !found.includes(line)),
@@ -233,7 +241,10 @@ describe("a pane's ground is its depth", () => {
     overlays.filter((selector) => selector === ".modal"),
   );
 
-  function groundsOf(markup: string): Record<string, string> {
+  function groundsOf(
+    markup: string,
+    property = "--ground",
+  ): Record<string, string> {
     const style = document.createElement("style");
     style.textContent = sheet;
     document.head.append(style);
@@ -241,7 +252,7 @@ describe("a pane's ground is its depth", () => {
     return Object.fromEntries(
       [...document.querySelectorAll("[id]")].map((element) => [
         element.id,
-        getComputedStyle(element).getPropertyValue("--ground").trim(),
+        getComputedStyle(element).getPropertyValue(property).trim(),
       ]),
     );
   }
@@ -257,6 +268,55 @@ describe("a pane's ground is its depth", () => {
           </div></div>
         </div></section>`),
     ).toEqual({ p1: one, p2: two, p3: three, p4: four, p5: four });
+  });
+
+  it("hands each level its own edge, and a head inside a pane the pane's", () => {
+    const edges = PAGE_RUNGS.map((rung) => rung.edge);
+    expect(
+      groundsOf(
+        `
+        <section class="panel" id="p1"><div class="panel-head" id="h1"></div>
+          <div class="card" id="p2"><div class="panel" id="p3">
+            <div class="panel-head" id="h3"></div>
+            <div class="record-card" id="p4"></div>
+          </div></div>
+        </section>
+        <div class="modal" id="o"><div class="panel" id="o2"></div></div>`,
+        "--groundEdge",
+      ),
+    ).toEqual({
+      p1: edges[0],
+      h1: edges[0],
+      p2: edges[1],
+      p3: edges[2],
+      h3: edges[2],
+      p4: edges[3],
+      o: OVERLAY_RUNG.edge,
+      o2: edges[1],
+    });
+  });
+
+  it("seams a pane in the house hairline at level 1 and in its edge below", () => {
+    const seams = PAGE_RUNGS.map((rung) => rung.seam);
+    expect(
+      groundsOf(
+        `
+        <section class="panel" id="p1"><div class="card" id="p2">
+          <div class="panel" id="p3"><div class="record-card" id="p4"></div></div>
+        </div></section>
+        <div class="modal" id="o"></div>`,
+        "--groundSeam",
+      ),
+    ).toEqual({
+      p1: seams[0],
+      p2: seams[1],
+      p3: seams[2],
+      p4: seams[3],
+      o: OVERLAY_RUNG.seam,
+    });
+    expect(seams.slice(1)).toEqual(
+      PAGE_RUNGS.slice(1).map((rung) => rung.edge),
+    );
   });
 
   it("counts again from an overlay, wherever the overlay sits", () => {

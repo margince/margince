@@ -171,8 +171,14 @@ holds the list against the pseudo-elements the tree gives a corner to.
 
 A pane on the page is level 1 (`--ladder1`, the pane), a pane in it level 2, then level 3, and
 level 4 for anything deeper. `surfaces.css` paints every level, and a component never paints its
-own. A dialog, popover, menu or side sheet keeps its own surface, and a card in it starts again at
-level 2. `Foundations/Elevation` draws the ladder in both themes.
+own. Each level also has its hairline (`--ladder1Edge` to `--ladder4Edge`), stronger as it goes
+deeper. A pane's border and the rule under its head read it as `var(--groundEdge)`. A dialog,
+popover, menu or side sheet keeps its own surface, and a card in it starts again at level 2.
+`Foundations/Elevation` draws the ladder in both themes.
+
+Each level also sets the fills that sit on it. A row under the pointer reads `var(--groundHover)`.
+A band reads `var(--groundStrip)`, and a line between rows reads `var(--groundSeam)`. So each one
+stays a step off the level it sits on.
 
 A new kind of pane joins with `node scripts/surface-ladder.ts '<selector>'`, which writes the
 selector into every depth of `surfaces.css`. A band or mark that has to hide what passes under it

@@ -67,6 +67,9 @@
      boards those are is a fact about callers and changes without this file
      hearing about it, so the condition is the surface. */
   overflow-x: clip;
+  /* The edge sits inside the stage width the board lays out. */
+  box-sizing: border-box;
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   /* NO INSET ABOVE THE HEAD: the head carries it (below), so the band it draws
      reaches the column's top edge. An inset here is a strip of the scrollport
@@ -279,7 +282,7 @@
      the stuck column head's z-index and paint over it by coming later. */
   isolation: isolate;
   /* --shadow-rest is one layer under a hairline rather than a second edge. */
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-control);
   box-shadow: var(--shadow-rest);
   padding: var(--space-3) var(--space-4);
@@ -446,7 +449,7 @@
   gap: var(--space-3);
   margin-top: var(--space-1);
   padding-top: var(--space-2);
-  border-top: 1px solid var(--paneEdge);
+  border-top: 1px solid var(--groundEdge);
 }
 .deal-card .deal-foot-facts {
   display: flex;
@@ -505,7 +508,7 @@
   box-shadow: none;
 }
 .deal-card .deal-actions .btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The supporting ink goes on the GLYPH, never the button: a `.btn`'s ink is the
    control tier's, measured against every ground a button is drawn on. */
@@ -620,7 +623,7 @@
      rather than as the start of a list. The chronology's pane is the same pane
      every zone of the record stands on. */
   padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
 }
 
@@ -977,7 +980,7 @@
 .tl-group-members {
   margin-block-start: var(--space-2);
   padding-inline: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -1118,7 +1121,7 @@
   transition: background var(--dur-state) var(--ease-out);
 }
 .tl-msg-open:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .tl-msg-open:focus-visible {
   outline: var(--focus-ring);

@@ -20,7 +20,7 @@
 }
 .record-split-details,
 .record-split-sheet {
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   min-inline-size: 0;
@@ -197,7 +197,7 @@
   background: var(--borderSubtle);
 }
 .record-split-verbs .btn:not(.btn-primary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full

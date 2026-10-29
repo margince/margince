@@ -17,11 +17,11 @@
   column-gap: var(--space-3);
   row-gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 .record-card:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The mark and the name are ONE target. No hover on the card itself: it is a

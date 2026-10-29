@@ -14,11 +14,11 @@
   gap: var(--space-2);
   inline-size: 100%;
   padding: var(--space-2) var(--space-4);
-  background: var(--bgStrip);
+  background: var(--groundStrip);
   color: var(--textPrimary);
 }
 .compose-threadbar.popover-trigger:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .compose-threadbar > svg {
   flex: none;

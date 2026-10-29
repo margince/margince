@@ -77,7 +77,7 @@
   gap: var(--space-3);
   max-width: 44rem;
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -219,7 +219,7 @@
 .ob-team-form {
   max-width: 34rem;
   padding: var(--space-5);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 .ob-team-invited {
@@ -272,7 +272,7 @@
   min-block-size: 11rem;
   margin: 0;
   padding: var(--space-8) var(--space-6);
-  border: 1px dashed var(--borderSubtle);
+  border: 1px dashed var(--groundEdge);
   border-radius: var(--r-lg);
   text-align: center;
 }
@@ -327,7 +327,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   transition:
     border-color var(--dur-state) ease,
@@ -438,6 +438,7 @@
   gap: var(--space-1);
   margin-left: calc(20px + var(--space-3));
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
 }
 
@@ -546,7 +547,7 @@
   gap: var(--space-3);
   min-height: 16rem;
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   overflow: hidden;
 }
@@ -806,7 +807,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -864,7 +865,7 @@
 
 .ob-voice-speaker {
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -932,7 +933,7 @@
 
 .ob-voice-result-card {
   padding: var(--padPanel);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
 }
 
@@ -1102,6 +1103,7 @@
 .ob-voice-result-next {
   margin: 0;
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -1314,7 +1316,7 @@
   align-items: flex-start;
   gap: var(--space-4);
   padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
 }
 
@@ -1348,7 +1350,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -1604,7 +1606,7 @@
 }
 
 .ob-triage-nav-link:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -1724,7 +1726,7 @@
 }
 
 .ob-triage-nav-item:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -1795,7 +1797,7 @@
    its silhouette, only its height. */
 .ob-triage-rows > li {
   width: 100%;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   transition: background var(--dur-state) ease;
 }
@@ -1847,7 +1849,7 @@
 }
 
 .ob-triage-rows > li:has(.ob-triage-row-summary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The disclosure caret: purely the "there's more" affordance, since the
@@ -2043,7 +2045,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
 
@@ -2088,7 +2090,7 @@
 }
 
 .ob-triage-fact-type > .disclosure-summary:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -2145,7 +2147,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
 }
 
@@ -2373,7 +2375,7 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
 }
 

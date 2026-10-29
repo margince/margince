@@ -145,7 +145,7 @@
    One treatment for both, because they are one state: the popup tracks a single
    active option through `aria-activedescendant`, whichever input moved it. */
 .select-option.is-active {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The held option is marked by its tick and weight in the primary ink: a
    chosen value is where the reader is, so it stays neutral. */
