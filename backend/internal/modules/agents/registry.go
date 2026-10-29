@@ -245,8 +245,9 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	}
 	switch {
 	// An auto-execute call may still carry approval_id. The retry of a staged
-	// call can resolve at the auto-execute tier, so redeemPresented consumes
-	// its asserted authority. It is validated against the identical-call hash.
+	// call can resolve at the auto-execute tier, so a fresh run goes through
+	// redeemPresented, which validates the identical-call hash. A completed
+	// idempotent retry replays its recorded result before that.
 	case err == nil, !res.ApprovalID.IsZero() && errors.Is(err, apperrors.ErrRequiresApproval) && r.approvals != nil:
 		return r.runClaimed(ctx, t, spec, res)
 	case !errors.Is(err, apperrors.ErrRequiresApproval) || r.approvals == nil:

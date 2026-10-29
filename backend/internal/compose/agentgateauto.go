@@ -34,8 +34,9 @@ const ifMatchHeader = "If-Match"
 // A staged 🟡 call can resolve 🟢 on its retry because the record moved.
 // The asserted authority is then still an assertion. Left unread, the approval
 // stays pending in a human's inbox for work that already happened.
-// An invalid or replayed token is accepted by being ignored. The MCP door
-// redeems on this arm too (registry.go, runClaimed).
+// An invalid or replayed token is rejected: consumePresentedToken writes the
+// error and the handler does not run. The MCP door redeems on this arm too
+// (registry.go, runClaimed).
 //
 // A REDEEMED call goes straight to the handler: it carries exactly the change a
 // human released, whose identity the diff_hash already bound.
