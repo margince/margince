@@ -306,7 +306,9 @@ The sentence is asked for in the member's saved language, else the installation'
 
 `snapshotTeams` in `weeklyteamjobs.go` skips a team while any of its members failed on this run, so a team
 total never stands on a missing member. It reads the team as a member who has the rights to open it, trying each in turn. Not every member may read a team's week. A team with no live members gets no
-snapshot, because an empty week would claim the team did nothing.
+snapshot, because an empty week would claim the team did nothing. While the installation setting
+`installation.individual_performance` is off, `measureWorkspace` freezes no team week at all, and
+`mayReadTeam` refuses every stored one with `individual_performance_off`.
 
 `team_weekly_review` is written once per team and week (`teamreviewstore.go`). The one exception is a
 snapshot that counted zero members: its first real measure replaces it, keeps its id, and writes an audit

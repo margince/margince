@@ -190,7 +190,11 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		out.Rows = append(out.Rows, fact.Row)
+		row := fact.Row
+		if fact.OwnerWithheld {
+			row.OwnerId = nil
+		}
+		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
 }
@@ -200,7 +204,7 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 		return true
 	}
 	if after, ok := strings.CutPrefix(group, "owner:"); ok {
-		return fact.OwnerID.String() == after
+		return !fact.OwnerWithheld && fact.OwnerID.String() == after
 	}
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
 		return fact.StageID == after

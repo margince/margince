@@ -57,7 +57,7 @@ type derivationOutcome struct {
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(plan.scope), predicatesAsFilters(plan.predicates)); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(plan.scope), plan.groupBy, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
 		var args []any

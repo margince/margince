@@ -2728,6 +2728,8 @@ export const en = {
   // does not say the record may be missing: a row the reader may not see at all
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
+  "common.individualPerformanceOff":
+    "An administrator switched off individual performance. You can see your own figures, and the totals of teams of three or more members.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -13078,6 +13080,14 @@ export const en = {
   "installationSettings.callWhatsApp": "WhatsApp chat",
   "installationSettings.callTelegram": "Telegram chat",
   "installationSettings.callZalo": "Zalo chat",
+  "installationSettings.individualTitle": "Individual performance",
+  "installationSettings.individualPerformance": "Show individual performance",
+  "installationSettings.individualHint":
+    "Where a works council rules out assessing individual employees, switch this off. Everyone still sees their own figures, and teams keep their totals.",
+  "installationSettings.individualOn":
+    "Reports, forecasts and team reviews can show each colleague’s figures to those allowed to measure them.",
+  "installationSettings.individualOff":
+    "Nobody sees a colleague’s figures: breakdowns by owner or host, team weeks and totals of fewer than three members are withheld.",
   "installationSettings.callingHint":
     "While a switch is on, a link beside each phone number with a country code opens the chat in that app. The app receives the number.",
   "installationSettings.editField": "Edit {field}",

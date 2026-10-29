@@ -2789,6 +2789,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
+  "common.individualPerformanceOff":
+    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen und die Summen von Teams mit mindestens drei Mitgliedern.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -13080,6 +13082,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callWhatsApp": "WhatsApp-Chat",
   "installationSettings.callTelegram": "Telegram-Chat",
   "installationSettings.callZalo": "Zalo-Chat",
+  "installationSettings.individualTitle": "Einzelleistung",
+  "installationSettings.individualPerformance": "Einzelleistung anzeigen",
+  "installationSettings.individualHint":
+    "Schließt ein Betriebsrat die Bewertung einzelner Mitarbeitender aus, schalte dies aus. Alle sehen weiter ihre eigenen Zahlen, und Teams behalten ihre Summen.",
+  "installationSettings.individualOn":
+    "Berichte, Prognosen und Team-Wochen können die Zahlen jedes Teammitglieds denen zeigen, die sie messen dürfen.",
+  "installationSettings.individualOff":
+    "Niemand sieht die Zahlen anderer Teammitglieder: Aufteilungen nach Verantwortlichen, Team-Wochen und Summen über weniger als drei Mitglieder werden zurückgehalten.",
   "installationSettings.callingHint":
     "Solange ein Schalter aktiv ist, öffnet ein Link neben jeder Telefonnummer mit Ländervorwahl den Chat in dieser App. Die App erhält die Nummer.",
   "installationSettings.editField": "{field} bearbeiten",

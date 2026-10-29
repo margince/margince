@@ -81,11 +81,12 @@ func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (str
 }
 
 // targetReach is which targets a seat reads, resolved once so a read that
-// matches many targets asks for the seat's members once.
+// matches many targets asks for the seat's members once. every covers the
+// team and company targets; whose owner targets the seat reads is owners.
 type targetReach struct {
-	every   bool
-	members []ids.UUID
-	teams   []ids.UUID
+	every  bool
+	owners MeasurableOwners
+	teams  []ids.UUID
 }
 
 func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
@@ -93,24 +94,31 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if !ok {
 		return targetReach{}, apperrors.ErrPermissionDenied
 	}
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
+	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return targetReach{every: true}, nil
+		return targetReach{every: true, owners: owners}, nil
 	}
 	// Only a seat that reaches every team and owner may set the company's
 	// target, so it reads every target it may set.
 	every, err := s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace})
-	if err != nil || every {
-		return targetReach{every: every}, err
+	if every && !owners.IndividualOff {
+		owners.Every = true
 	}
-	members, err := s.authority.Members(ctx, tx)
-	return targetReach{members: members, teams: actor.TeamIDs}, err
+	return targetReach{every: every, owners: owners, teams: actor.TeamIDs}, err
 }
 
 func (r targetReach) clause(b *bindings) string {
-	if r.every {
+	if r.every && r.owners.Every {
 		return "TRUE"
 	}
-	return "(t.scope_kind='workspace' OR (t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
+	owner := "(t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.owners.Members) + "))"
+	if r.every {
+		return "(t.scope_kind<>'owner' OR " + owner + ")"
+	}
+	return "(t.scope_kind='workspace' OR " + owner + " OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
 }
 
 // writeReaches reports whether the seat may set a target on scope, under the

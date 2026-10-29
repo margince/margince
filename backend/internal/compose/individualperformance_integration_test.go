@@ -1,0 +1,238 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package compose
+
+// The "Show individual performance" switch through the real report engine, the
+// typed query, the scope resolver and the reporting framework's owner rule, in
+// both states. The switch is written through the audited settings writer and
+// read by the engine inside its own transaction, as a job reads it.
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// showIndividualPerformance writes the switch as an admin's settings change does.
+func (e *forecastEnv) showIndividualPerformance(t *testing.T, on bool) {
+	t.Helper()
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:settings-admin", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if err := config.Save(ctx, StoredConfig(e.Pool), identity.IndividualPerformance, on); err != nil {
+		t.Fatalf("switching individual performance to %v: %v", on, err)
+	}
+}
+
+// reportRefusal runs a report and answers its status and problem code.
+func (e *forecastEnv) reportRefusal(ctx context.Context, t *testing.T, report, body string) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/reports/"+report, strings.NewReader(body)).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	e.handlers.RunReport(rec, req, report)
+	code := ""
+	if rec.Code != http.StatusOK {
+		var problem struct {
+			Code string `json:"code"`
+		}
+		decodeWire(t, rec, rec.Code, &problem)
+		code = problem.Code
+	}
+	return rec.Code, code
+}
+
+// addMembers seats more live colleagues on a team. While the switch is off a
+// total covers three members or more. A suite measuring the whole company needs
+// them beside the harness's two reps.
+func (e *forecastEnv) addMembers(t *testing.T, team ids.UUID, emails ...string) {
+	t.Helper()
+	for _, email := range emails {
+		member := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Member')`, email)
+		if _, err := e.owner.Exec(context.Background(),
+			`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, member); err != nil {
+			t.Fatalf("adding a member to the team: %v", err)
+		}
+	}
+}
+
+const individualOffCode = "individual_performance_off"
+
+func requireRefusedIndividual(t *testing.T, what string, status int, code string) {
+	t.Helper()
+	if status != http.StatusForbidden || code != individualOffCode {
+		t.Errorf("%s with individual performance off = %d %q, want 403 %q", what, status, code, individualOffCode)
+	}
+}
+
+func TestIndividualPerformanceOffRefusesABreakdownByOwnerAndKeepsARepsOwn(t *testing.T) {
+	e := setupForecast(t)
+	seedWinsByThreeOwners(t, e)
+	e.addMembers(t, e.Team2, "third@forecast.test")
+	e.showIndividualPerformance(t, false)
+
+	status, code := e.reportRefusal(e.Admin(), t, "win-loss", winLossByOwner)
+	requireRefusedIndividual(t, "an admin's breakdown by owner", status, code)
+
+	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
+	got := wonByOwner(t, e.runReport(rep, t, "win-loss", winLossByOwner).Rows)
+	if len(got) != 2 || got[e.Rep1.String()] != 10000 || got[""] != 2000 {
+		t.Fatalf("a rep's own breakdown with the switch off = %v, want their own 10000 and the unowned 2000", got)
+	}
+
+	e.showIndividualPerformance(t, true)
+	if got := wonByOwner(t, e.runReport(e.Admin(), t, "win-loss", winLossByOwner).Rows); len(got) != 3 {
+		t.Fatalf("an admin's breakdown with the switch back on = %v, want all three owners", got)
+	}
+}
+
+func TestIndividualPerformanceOffRefusesAFilterOrScopeNamingAColleague(t *testing.T) {
+	e := setupForecast(t)
+	seedWinsByThreeOwners(t, e)
+	e.addMembers(t, e.Team2, "third@forecast.test")
+	admin := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
+	byColleague := `{"filters":{"owner_id":"` + e.Rep3.String() + `"}}`
+	ofColleague := `{"scope":{"kind":"owner","id":"` + e.Rep3.String() + `"}}`
+	ofSelf := `{"scope":{"kind":"owner","id":"` + e.Rep1.String() + `"}}`
+
+	for _, body := range []string{byColleague, ofColleague, ofSelf} {
+		if status, _ := e.reportRefusal(admin, t, "win-loss", body); status != http.StatusOK {
+			t.Fatalf("with the switch on, %s = %d, want 200", body, status)
+		}
+	}
+	e.showIndividualPerformance(t, false)
+	for _, body := range []string{byColleague, ofColleague} {
+		status, code := e.reportRefusal(admin, t, "win-loss", body)
+		requireRefusedIndividual(t, body, status, code)
+	}
+	if status, _ := e.reportRefusal(admin, t, "win-loss", ofSelf); status != http.StatusOK {
+		t.Errorf("an admin's own scope with the switch off = %d, want 200", status)
+	}
+}
+
+// A grouping by the seat a meeting is credited to is a breakdown by colleague too.
+func TestIndividualPerformanceOffRefusesAGroupingByMeetingHost(t *testing.T) {
+	e := setupForecast(t)
+	e.addMembers(t, e.Team2, "third@forecast.test")
+	reader := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Read: true}, "lead": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	byHost := `{"group_by":["host_user_id"]}`
+	if status, code := e.reportRefusal(reader, t, "meeting-conversion", byHost); status != http.StatusOK {
+		t.Fatalf("a breakdown by host with the switch on = %d %q, want 200", status, code)
+	}
+	e.showIndividualPerformance(t, false)
+	status, code := e.reportRefusal(reader, t, "meeting-conversion", byHost)
+	requireRefusedIndividual(t, "a breakdown by host", status, code)
+}
+
+func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for range 7 {
+		e.seedOpenDeal(t, "Deal", 20, &e.Rep1, &amount, nil)
+	}
+	e.addMembers(t, e.Team2, "third@forecast.test")
+	byOwner := analyticsquery.Query{
+		Entity: "open-deals-per-company", GroupBy: []string{"owner_id"},
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	}
+	if _, err := e.askAnalytics(e.reportReaderCtx(), t, byOwner); err != nil {
+		t.Fatalf("a typed breakdown by owner with the switch on: %v", err)
+	}
+	e.showIndividualPerformance(t, false)
+	if _, err := e.askAnalytics(e.reportReaderCtx(), t, byOwner); !errors.As(err, new(auth.IndividualPerformanceOffError)) {
+		t.Errorf("a typed breakdown by owner with the switch off = %v, want the individual-performance refusal", err)
+	}
+}
+
+// A team of one is one colleague's number, so its total waits for a third member.
+func TestIndividualPerformanceOffRefusesATotalOverFewerThanThreeMembers(t *testing.T) {
+	e := setupForecast(t)
+	seedWinsByThreeOwners(t, e)
+	ofTeam := `{"scope":{"kind":"team","id":"` + e.Team1.String() + `"}}`
+	e.showIndividualPerformance(t, false)
+
+	status, code := e.reportRefusal(e.Admin(), t, "win-loss", ofTeam)
+	requireRefusedIndividual(t, "a total over a team of one", status, code)
+
+	e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
+	if status, _ := e.reportRefusal(e.Admin(), t, "win-loss", ofTeam); status != http.StatusOK {
+		t.Errorf("a total over a team of three with the switch off = %d, want 200", status)
+	}
+}
+
+// A reader who asked for nothing and leads a team too small for a total still
+// opens on their own work.
+func TestIndividualPerformanceOffDefaultsASmallTeamsLeadToTheirOwnWork(t *testing.T) {
+	e := setupForecast(t)
+	e.showIndividualPerformance(t, false)
+	lead := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	var resolved ResolvedScope
+	err := InstallationDB(e.Pool).Tx(lead, func(tx pgx.Tx) error {
+		var err error
+		resolved, err = ResolveAnalyticsScope(lead, tx, RequestedScope{})
+		return err
+	})
+	if err != nil {
+		t.Fatalf("resolving a small team lead's default: %v", err)
+	}
+	if resolved.Kind != ScopeKindOwner || resolved.ID == nil || *resolved.ID != e.Rep1 {
+		t.Errorf("a small team lead's default with the switch off = %+v, want their own records", resolved)
+	}
+}
+
+// The reporting framework marks every colleague's fact withheld, on the rule
+// live readings, captured editions and evidence all share.
+func TestIndividualPerformanceOffWithholdsEveryColleaguesFact(t *testing.T) {
+	e := setupForecast(t)
+	admin := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
+	marked := func() []reporting.Fact {
+		t.Helper()
+		facts := []reporting.Fact{{OwnerID: e.Rep1}, {OwnerID: e.Rep3}, {}}
+		if err := InstallationDB(e.Pool).Tx(admin, func(tx pgx.Tx) error {
+			owners, err := readerMeasurableOwners(admin, tx)
+			if err == nil {
+				markOwnerWithheld(owners, facts)
+			}
+			return err
+		}); err != nil {
+			t.Fatalf("marking withheld owners: %v", err)
+		}
+		return facts
+	}
+	if facts := marked(); facts[1].OwnerWithheld {
+		t.Fatal("with the switch on, an admin may not measure a colleague")
+	}
+	e.showIndividualPerformance(t, false)
+	facts := marked()
+	if facts[0].OwnerWithheld || !facts[1].OwnerWithheld || facts[2].OwnerWithheld {
+		t.Errorf("with the switch off, withheld = own %v, colleague %v, unowned %v; want false, true, false",
+			facts[0].OwnerWithheld, facts[1].OwnerWithheld, facts[2].OwnerWithheld)
+	}
+}

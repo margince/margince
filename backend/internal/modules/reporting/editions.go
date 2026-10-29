@@ -208,18 +208,11 @@ func (s *Service) editionContextWithheld(ctx context.Context, tx pgx.Tx, scope c
 // not measure one by one. A company or team edition is open to every seat for
 // totals, but its owner list and targets are not.
 func (s *Service) rosterNarrowed(ctx context.Context, tx pgx.Tx, roster []openapi_types.UUID) (bool, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false, apperrors.ErrPermissionDenied
-	}
-	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return false, nil
-	}
-	members, err := s.authority.Members(ctx, tx)
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
 	if err != nil {
 		return false, err
 	}
 	return slices.ContainsFunc(roster, func(id openapi_types.UUID) bool {
-		return !slices.Contains(members, ids.UUID(id))
+		return !owners.Includes(ids.UUID(id))
 	}), nil
 }

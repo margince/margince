@@ -125,6 +125,9 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		out.Target = share.Target
 
 		if share.Kind == shareKindSnapshot {
+			if err := requireFrozenScopeMeasurable(ctx, tx, share.Scope); err != nil {
+				return err
+			}
 			return h.serveSnapshot(ctx, tx, share, &out)
 		}
 		return h.serveLive(ctx, tx, share, &out)

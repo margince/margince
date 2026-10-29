@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -121,6 +122,9 @@ func memberWeek(
 // yours" apart from "no such team" would let them enumerate the chart one id at
 // a time, the same reason a row-scope miss reads as 404 everywhere else.
 func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
+	if err := e.requireIndividualPerformance(ctx); err != nil {
+		return err
+	}
 	switch auth.TeamWeekReachOf(ctx) {
 	case auth.ReachesEveryTeam:
 		return nil
@@ -129,6 +133,26 @@ func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
 	default:
 		return apperrors.ErrPermissionDenied
 	}
+}
+
+// requireIndividualPerformance refuses every team's week while the installation shows no
+// individual performance, a week frozen before the switch included.
+func (e *Engine) requireIndividualPerformance(ctx context.Context) error {
+	allowed, bound := auth.IndividualPerformanceOf(ctx)
+	if !bound {
+		err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+			var err error
+			allowed, err = identity.IndividualPerformanceTx(ctx, tx)
+			return err
+		})
+		if err != nil {
+			return fmt.Errorf("weekly: reading whether individual performance is shown: %w", err)
+		}
+	}
+	if !allowed {
+		return auth.IndividualPerformanceOffError{}
+	}
+	return nil
 }
 
 // mayReadTeamLed asks whether a lead is on this team.

@@ -50,6 +50,11 @@ func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, scope crmcon
 	if !ok {
 		return false, apperrors.ErrPermissionDenied
 	}
+	// The allocation is the sum of owner targets, which the switch withholds.
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil || owners.IndividualOff {
+		return false, err
+	}
 	// A lead's own teams are the members the lead reads every target of.
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll || scope.Kind == reportingManagedTeams {
 		return true, nil

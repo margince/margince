@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -69,7 +70,9 @@ type Authority interface {
 	MembersFor(context.Context, pgx.Tx, crmcontracts.ReportingScope) ([]ids.UUID, error)
 	PublicationHuman(context.Context, pgx.Tx, ids.UUID) (context.Context, error)
 	Pipeline(context.Context, pgx.Tx, *ids.UUID) error
-	Members(context.Context, pgx.Tx) ([]ids.UUID, error)
+	// MeasurableOwnerSet answers whose figures the reader may see one by one.
+	// Resolve it once per evaluation and pass it down.
+	MeasurableOwnerSet(context.Context, pgx.Tx) (MeasurableOwners, error)
 	// MeasurableOwners answers which candidates the reader may measure one by
 	// one, the owner rule of Scope asked of many owners in one statement.
 	MeasurableOwners(context.Context, pgx.Tx, []ids.UUID) ([]ids.UUID, error)
@@ -80,6 +83,21 @@ type Authority interface {
 	// read of the totals does not.
 	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
 	Visible(context.Context, pgx.Tx, []Fact) ([]Fact, bool, error)
+}
+
+// MeasurableOwners is whose figures a reader may see one by one.
+type MeasurableOwners struct {
+	// Every is a reader who measures every owner. Members is then unused.
+	Every   bool
+	Members []ids.UUID
+	// IndividualOff is the installation's switch turned off: Members is the
+	// reader alone, whatever their row scope.
+	IndividualOff bool
+}
+
+// Includes answers whether the reader may see this owner's figures.
+func (m MeasurableOwners) Includes(owner ids.UUID) bool {
+	return m.Every || slices.Contains(m.Members, owner)
 }
 
 // Calendar defines the installation’s civil-time and money context.

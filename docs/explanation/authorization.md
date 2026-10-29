@@ -148,6 +148,16 @@ Otherwise the merge is refused. The decision reads the setting in its own transa
 shared lock, so a change to the setting waits for a merge in flight. The audit row of the merge
 records the mode (`ordinary` or `delegated`) and the setting.
 
+`auth.WithIndividualPerformance` (`platform/auth/individualperformance.go`) puts the installation
+setting `installation.individual_performance` on the context. The session and passport checks in
+`modules/identity/admission.go` bind it once per request, and the weekly job and a scheduled
+capture bind it once per run. `auth.MayMeasureSeat` is the rule every report check asks: the
+reader may always measure their own seat, and another seat only while the setting is on. While it
+is off, `auth.TeamWeekReachOf` reaches no team, and a refusal is `IndividualPerformanceOffError`
+(403, `individual_performance_off`). Setting a team's target or forecast asks `auth.TeamLeadReachOf`,
+which the setting leaves alone. Where nothing bound the setting, compose reads it inside the
+transaction it holds (`individualPerformance` in `compose/individualperformance.go`).
+
 ## Autonomy tiers — how agent actions are governed (🟢 / 🟡)
 
 An action's autonomy tier is declared once in the contract (`x-mcp-tool: { tier: … }`). It is checked

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/capture/purgefloor.go -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -24,6 +24,15 @@ Also called: DSGVO, data protection, works council, Betriebsrat, DPIA.
 ### Does Margince check that we signed a works agreement?
 No. Margince does not check that you signed any compliance paper, does not bring it up again, and does not stop working if you have not. Holding the papers is your company's duty. The templates are not legal advice; whoever signs them must be able to answer for them.
 Also called: compliance check, legal sign-off, is Margince compliant.
+
+### Can we stop Margince from showing each colleague's performance?
+Yes. Admin and Ops switch off **Show individual performance** on the **Installation** card under **Settings → Company**. The audit log records each change. While it is off:
+- No report, forecast, target, export or agent answer shows a colleague's figures. Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
+- A team or company total shows only if it covers three or more members. A smaller total minus your own figure would be one colleague's figure.
+- Team weeks are not made, and older ones cannot be opened. Each member's own week stays.
+- Everyone still sees their own figures.
+The switch does not yet cover the **Team** board on Home and its coaching suggestions. They still count each teammate's waiting mail and overdue tasks.
+Also called: works council, Betriebsrat, figures per rep, team figures.
 
 ## The four compliance documents, in order
 
@@ -66,6 +75,7 @@ passing around inside the company; the German versions are the ones to sign.
 | What was decided about the senders who write to me? | Settings → Capture activity → Senders, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
+| Can a manager see each colleague's sales figures? | Not while **Show individual performance** is off. Each member sees their own, and teams of three or more see totals |
 
 Margince cannot tell you whether your own way of working is within the law: the
 templates have blanks to fill in. For erasure, access requests, retention and consent inside Margince, see

@@ -31,6 +31,7 @@ const SETTINGS: InstallationSettings = {
   call_whatsapp: true,
   call_telegram: true,
   call_zalo: true,
+  individual_performance: true,
   max_upload_bytes: 25_000_000,
   sign_in_providers: [],
   operations: defaultOperations,

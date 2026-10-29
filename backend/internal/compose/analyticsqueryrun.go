@@ -88,6 +88,9 @@ func RunAnalyticsQuery(
 	if err := requireMeasurableTypedOwners(ctx, tx, spec, requestedFromQuery(q), q.Filters); err != nil {
 		return AnalyticsAnswer{}, err
 	}
+	if err := requireIndividualQuestion(ctx, tx, spec, requestedFromQuery(q), q.GroupBy, typedFilters(q.Filters)); err != nil {
+		return AnalyticsAnswer{}, err
+	}
 	var narrowed string
 	plan, err := analyticsquery.Compile(q, schema, analyticsScope(ctx, tx, spec, q, &narrowed))
 	if err != nil {

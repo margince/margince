@@ -56,6 +56,7 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     call_whatsapp: true,
     call_telegram: true,
     call_zalo: true,
+    individual_performance: true,
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),

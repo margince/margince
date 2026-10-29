@@ -111,7 +111,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(req.Scope), req.Filters); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(req.Scope), groupBy, req.Filters); err != nil {
 			return err
 		}
 		var args []any

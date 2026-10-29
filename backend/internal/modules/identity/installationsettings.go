@@ -38,6 +38,8 @@ type InstallationSettings struct {
 	CallWhatsApp bool
 	CallTelegram bool
 	CallZalo     bool
+	// IndividualPerformance is settingsindividualperformance.go's switch.
+	IndividualPerformance bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -107,6 +109,7 @@ type InstallationPatch struct {
 	CallWhatsApp              *bool
 	CallTelegram              *bool
 	CallZalo                  *bool
+	IndividualPerformance     *bool
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -281,6 +284,9 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err := s.readCallMessengers(ctx, &out); err != nil {
 		return InstallationSettings{}, err
 	}
+	if err := s.readIndividualPerformance(ctx, &out); err != nil {
+		return InstallationSettings{}, err
+	}
 	return out, nil
 }
 
@@ -388,7 +394,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites} {
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites} {
 		writes, err := group()
 		if err != nil {
 			return nil, err

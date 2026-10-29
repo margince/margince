@@ -162,40 +162,15 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	return clause, nil
 }
 
-// measurableOwners is who a reader may measure one by one. It is resolved
-// once per evaluation, so each metric and owner list asks a set.
-type measurableOwners struct {
-	every bool
-	set   map[ids.UUID]bool
-}
-
-func readerMeasurableOwners(ctx context.Context, tx pgx.Tx) (measurableOwners, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return measurableOwners{}, apperrors.ErrPermissionDenied
-	}
-	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return measurableOwners{every: true}, nil
-	}
-	members, err := (reportingAuthority{}).Members(ctx, tx)
-	if err != nil {
-		return measurableOwners{}, err
-	}
-	out := measurableOwners{set: make(map[ids.UUID]bool, len(members))}
-	for _, id := range members {
-		out.set[id] = true
-	}
-	return out, nil
-}
-
-func (m measurableOwners) admits(id ids.UUID) bool { return m.every || m.set[id] }
-
 // markOwnerWithheld sets OwnerWithheld on every fact whose owner falls
 // outside the owners the reader may measure. Live readings and frozen editions
 // share this rule. A total counts the fact and an owner breakdown skips it. A
 // fact with no owner names no owner, so nothing is withheld on it.
-func markOwnerWithheld(owners measurableOwners, facts []reporting.Fact) {
+func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact) {
+	if owners.Every {
+		return
+	}
 	for i := range facts {
-		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.admits(facts[i].OwnerID)
+		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.Includes(facts[i].OwnerID)
 	}
 }

@@ -163,6 +163,7 @@ installation:
   gmail_watch_scan_interval_seconds: 21600
   graph_watch_renew_within_hours: 24
   graph_watch_scan_interval_seconds: 21600
+  individual_performance: true
   name: null
   oauth_access_token_ttl_minutes: 43200
   retention_sweep_interval_seconds: 86400
