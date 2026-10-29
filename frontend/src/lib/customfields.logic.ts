@@ -12,7 +12,8 @@ export type CfType =
   | "currency"
   | "multiselect"
   | "picklist"
-  | "boolean";
+  | "boolean"
+  | "record";
 
 // Chip order is normative (AC-custom-fields-2), and the SET is the contract's:
 // CfObject is the generated `CustomField["object"]`, so this list cannot quietly
@@ -39,6 +40,7 @@ export const CF_TYPES: readonly CfType[] = [
   "picklist",
   "multiselect",
   "boolean",
+  "record",
 ];
 
 export function slug(label: string): string {
@@ -75,6 +77,8 @@ function storageNote(type: CfType, currency: string): string {
       return "enum";
     case "boolean":
       return "boolean";
+    case "record":
+      return "text";
   }
 }
 

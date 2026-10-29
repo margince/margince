@@ -3509,7 +3509,7 @@ public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['conta
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
 public.custom_field.custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
-public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text])))
+public.custom_field.custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text, 'record'::text])))
 public.custom_field.custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.custom_field.id uuid NOT NULL gen=- def=uuidv7()
 public.custom_field.label text NOT NULL gen=- def=-

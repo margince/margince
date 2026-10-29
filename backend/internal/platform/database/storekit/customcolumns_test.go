@@ -267,6 +267,11 @@ func TestSQLValue_RoundTrip(t *testing.T) {
 			wire: "red", wantBind: "red",
 			scanned: "red", wantWire: "red",
 		},
+		{
+			name: "record", typ: fieldcatalog.TypeRecord,
+			wire: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f", wantBind: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f",
+			scanned: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f", wantWire: "0f9e8d7c-6b5a-4c3d-8e2f-1a0b9c8d7e6f",
+		},
 	}
 	// The case table is hand-written, so what it covers is derived rather than
 	// trusted: a seventh catalog type with no case here would leave this test

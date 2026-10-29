@@ -82,6 +82,7 @@ export function customFieldToFormField(
         ],
       };
     case "text":
+    case "record":
       return { ...base, type: "text" };
     default:
       // Exhaustive at COMPILE time over the contract's closed set of six scalar

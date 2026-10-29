@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestValidate_UnsupportedObjectRejected(t *testing.T) {
@@ -54,6 +56,33 @@ func TestValidate_PicklistRequiresNonEmptyOptions(t *testing.T) {
 	}
 	if errs := Validate(FieldSpec{Object: "deal", Label: "Route", Type: TypePicklist, Options: []string{"direct"}, Source: "manual"}); len(errs) != 0 {
 		t.Fatalf("one option must pass (PARAM-5 minimum=1), got %+v", errs)
+	}
+}
+
+func TestValidate_RecordFieldNeedsOneRegisteredKind(t *testing.T) {
+	recordkinds.Reset()
+	t.Cleanup(recordkinds.Reset)
+	recordkinds.Register("alpha", []extension.RecordKindDeclaration{{
+		Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit",
+		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},
+		NaturalKey: []string{"code"},
+	}})
+	spec := func(options ...string) FieldSpec {
+		return FieldSpec{Object: "deal", Label: "Visit", Type: TypeRecord, Options: options, Source: "manual"}
+	}
+	for name, options := range map[string][]string{
+		"none": nil, "unregistered": {"ext:beta:visit"}, "core kind": {"contact"}, "two": {"ext:alpha:visit", "ext:alpha:visit"},
+	} {
+		if errs := Validate(spec(options...)); !hasFieldError(errs, "options", "invalid_record_kind") {
+			t.Errorf("%s: expected options/invalid_record_kind, got %+v", name, errs)
+		}
+	}
+	if errs := Validate(spec("ext:alpha:visit")); len(errs) != 0 {
+		t.Fatalf("a registered kind must pass, got %+v", errs)
+	}
+	ddl, err := BuildDDL("deal", "cf_visit", spec("ext:alpha:visit"))
+	if err != nil || !strings.Contains(ddl, `"cf_visit" text NULL`) || strings.Contains(ddl, "CHECK") {
+		t.Fatalf("ddl = %q, %v; want a bare nullable text column", ddl, err)
 	}
 }
 
@@ -325,7 +354,7 @@ func TestBuildOptionsDDL_LabelInjectionNeverReachesRawSQL(t *testing.T) {
 // constants are what the DDL admits, and a typo here is a column the catalog
 // cannot write.
 func TestFieldTypes_MatchesMigrationCheckSpelling(t *testing.T) {
-	want := []string{"text", "number", "date", "currency", "picklist", "multiselect", "boolean"}
+	want := []string{"text", "number", "date", "currency", "picklist", "multiselect", "boolean", "record"}
 	if len(FieldTypes) != len(want) {
 		t.Fatalf("FieldTypes = %v, want %v", FieldTypes, want)
 	}

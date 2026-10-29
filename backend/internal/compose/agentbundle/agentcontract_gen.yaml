@@ -17524,7 +17524,7 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain, distance]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, id, domain, distance]
           description: |-
             The six custom-field types, plus `id` for a reference to another record,
             `domain` for a host column and `distance` for a place on the earth. A `distance`
@@ -19553,8 +19553,8 @@ components:
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
-          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
         status:
           type: string
           enum: [active, retired]

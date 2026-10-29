@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // The closed type/object sets (CUSTOM-FIELDS-PARAM-1/PARAM-2). No cap,
@@ -42,11 +43,12 @@ const (
 	TypePicklist    = "picklist"
 	TypeMultiselect = "multiselect"
 	TypeBoolean     = "boolean"
+	TypeRecord      = "record"
 )
 
 // FieldTypes is the closed, ordered set of supported field types, spelled
 // the way the custom_field.type CHECK constraint spells them.
-var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean}
+var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean, TypeRecord}
 
 // FieldObjects is the closed, ordered set of core objects a custom field can
 // attach to. A member must satisfy BOTH properties, and neither is something the
@@ -106,7 +108,7 @@ var allowedObjects = func() map[string]bool {
 }()
 
 var allowedTypes = map[string]bool{
-	TypeText: true, TypeNumber: true, TypeDate: true, TypeCurrency: true, TypePicklist: true, TypeMultiselect: true, TypeBoolean: true,
+	TypeText: true, TypeNumber: true, TypeDate: true, TypeCurrency: true, TypePicklist: true, TypeMultiselect: true, TypeBoolean: true, TypeRecord: true,
 }
 
 // FieldSpec is a candidate custom-field definition — the only source the
@@ -209,6 +211,9 @@ func Validate(spec FieldSpec) []FieldError {
 			}
 		}
 	}
+	if spec.Type == TypeRecord && !namesOneRegisteredKind(spec.Options) {
+		errs = append(errs, FieldError{Field: fieldOptions, Code: "invalid_record_kind"})
+	}
 	if strings.TrimSpace(spec.Source) == "" {
 		errs = append(errs, FieldError{Field: fieldSource, Code: codeRequired})
 	}
@@ -293,6 +298,8 @@ func sqlType(fieldType string) (string, error) {
 		return "text", nil
 	case TypeBoolean:
 		return "boolean", nil
+	case TypeRecord:
+		return "text", nil
 	default:
 		return "", fmt.Errorf("customfields: unsupported type %q", fieldType)
 	}
@@ -430,6 +437,17 @@ func buildTypedOptionsDDL(object, columnName, fieldType string, options []string
 	}
 	return fmt.Sprintf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s, ADD CONSTRAINT %s %s",
 		quoteIdentifier(object), quoteIdentifier(checkName), quoteIdentifier(checkName), clause), nil
+}
+
+// namesOneRegisteredKind reports whether options is one kind some unit
+// declared and no other. A record field keeps that kind in its options, so the
+// catalog and the registry always agree about what the field points at.
+func namesOneRegisteredKind(options []string) bool {
+	if len(options) != 1 {
+		return false
+	}
+	_, ok := recordkinds.Lookup(options[0])
+	return ok
 }
 
 func hasOptions(fieldType string) bool {
