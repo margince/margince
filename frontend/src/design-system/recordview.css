@@ -163,6 +163,9 @@
   justify-content: center;
   gap: var(--space-1);
   inline-size: auto;
+  /* Overrides the 6rem floor every .btn carries, which otherwise held Log and
+     Task wider than their neighbours whenever base.css loaded last. */
+  min-inline-size: 0;
   min-block-size: var(--space-12);
   block-size: 100%;
   padding: var(--space-2) 0;
