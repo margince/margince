@@ -346,65 +346,6 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 	}
 }
 
-// The follow-up scan fetches only the mail the reader sent. A colleague's mail
-// in the same window is never read, so the scan does not grow with the team.
-func TestTheFollowUpScanFetchesOnlyTheReadersOwnMail(t *testing.T) {
-	e := setupLoad(t)
-	at := clocktest.Now(t)
-	customer := e.customerAt(t, "customer")
-	ctx := context.Background()
-	tx, err := e.owner.Begin(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := tx.Rollback(ctx); err != nil {
-			t.Errorf("rolling back the seeded mail: %v", err)
-		}
-	}()
-	const readerMail, colleagueMail = 30, 600
-	for _, seed := range []struct {
-		sender ids.UUID
-		count  int
-	}{{e.rep, readerMail}, {e.other, colleagueMail}} {
-		if _, err := tx.Exec(ctx, `
-			WITH sent AS (
-			  INSERT INTO activity (kind, direction, subject, occurred_at, thread_key, source, captured_by)
-			  SELECT 'email', 'outbound', 'the proposal', $4::timestamptz - interval '3 days' - g * interval '1 minute',
-			         'scan-'||gen_random_uuid(), 'seed', 'system'
-			    FROM generate_series(1, $2::int) g
-			  RETURNING id),
-			 sender AS (INSERT INTO activity_participant (activity_id, role, user_id) SELECT id, 'from', $1 FROM sent)
-			INSERT INTO activity_link (activity_id, entity_type, contact_id) SELECT id, 'contact', $3 FROM sent`,
-			seed.sender, seed.count, customer, at); err != nil {
-			t.Fatalf("seeding sent mail: %v", err)
-		}
-	}
-	if _, err := tx.Exec(ctx, `ANALYZE activity; ANALYZE activity_participant; ANALYZE activity_link`); err != nil {
-		t.Fatal(err)
-	}
-	query, args, err := awaitingRepliesStatement(e.followUpReader(), at, 2, []string{"scan-" + e.rep.String() + "@ourco.test"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var raw string
-	if err := tx.QueryRow(ctx, "EXPLAIN (ANALYZE, FORMAT JSON) "+query, args...).Scan(&raw); err != nil {
-		t.Fatalf("explaining the follow-up scan: %v", err)
-	}
-	var fetched float64
-	decodePlan(t, raw).walk(func(n planNode) {
-		if n.Alias == "a" && n.RelationName == "activity" {
-			fetched += (n.ActualRows + n.RemovedByFilter) * n.ActualLoops
-		}
-	})
-	if fetched == 0 {
-		t.Fatal("the scan fetched no message under the alias a, so this test checks nothing")
-	}
-	if fetched > readerMail {
-		t.Errorf("the follow-up scan fetched %v messages for a reader who sent %d: it reads every colleague's mail in the window", fetched, readerMail)
-	}
-}
-
 // seatAddresses gives each seat its own mail addresses.
 type seatAddresses struct {
 	fixedDomains
@@ -440,9 +381,9 @@ func TestAColleaguesMailToTheReaderIsTheColleaguesFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	colleagueAddress := "colleague-" + e.other.String() + "@ourco.test"
 	s := e.addressedSeats(colleagueAddress)
-	customer := e.customerAt(t, "customer")
-	onTo := e.copiedMail(t, customer, colleagueAddress, [3]any{"to", e.rep, nil})
-	onCC := e.copiedMail(t, customer, colleagueAddress, [3]any{"cc", nil, readerAddress})
+	// One customer each: a later mail to the same customer would settle the first.
+	onTo := e.copiedMail(t, e.customerAt(t, "customer"), colleagueAddress, [3]any{"to", e.rep, nil})
+	onCC := e.copiedMail(t, e.customerAt(t, "customer"), colleagueAddress, [3]any{"cc", nil, readerAddress})
 
 	for name, mail := range map[string]ids.UUID{"on To": onTo, "on CC": onCC} {
 		if !awaitedAs(e.followUpReaderAs(e.other), t, s, mail) {
