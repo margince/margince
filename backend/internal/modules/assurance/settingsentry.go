@@ -43,6 +43,11 @@ func (s *Store) SetQualifiedForecastEnforced(ctx context.Context, cfg *config.Co
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return err
 	}
+	// The lock first, so a setting the environment fixes says so rather than
+	// asking for a check that would not unlock it either.
+	if _, err := config.LockedChange(cfg, QualifiedForecastEnforced, func(boot bool) bool { return boot == on }); err != nil {
+		return err
+	}
 	if on {
 		judged, err := s.hasReceipts(ctx)
 		if err != nil {

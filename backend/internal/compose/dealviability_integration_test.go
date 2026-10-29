@@ -320,7 +320,10 @@ func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
 	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 0 || q.EvidenceMinor != 600_000 {
 		t.Fatalf("qualified readings %+v, want the overridden deal counted again", q)
 	}
-	v.WsExec(t, `UPDATE assurance_resolution SET expires_at = now() - interval '1 minute'
+	// An override cannot end before it was given, so the lapse is reached by
+	// moving the answer back in time rather than its end alone.
+	v.WsExec(t, `UPDATE assurance_resolution
+		SET created_at = now() - interval '2 days', expires_at = now() - interval '1 minute'
 		WHERE exception_id = $1`, review)
 	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 || q.UnknownMinor != 500_000 {
 		t.Fatalf("qualified readings %+v, want the deal unknown once its override ended", q)

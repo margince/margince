@@ -42,6 +42,7 @@ type Handlers struct {
 	// own clock rather than of whenever the process happened to start.
 	now      func() time.Time
 	settings *config.Config
+	locks    func(surface []config.Any) *[]crmcontracts.SettingLock
 }
 
 // NewHandlers binds the routes to the store and its scoped read.

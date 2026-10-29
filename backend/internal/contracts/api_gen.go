@@ -41502,6 +41502,9 @@ type ForecastAssuranceStatus string
 
 // ForecastAssuranceEnforcement Whether the qualified forecast applies the viability reviews.
 type ForecastAssuranceEnforcement struct {
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks                     `json:"locks,omitempty"`
 	State ForecastAssuranceEnforcementState `json:"state"`
 }
 

@@ -21,6 +21,12 @@ func (h Handlers) WithSettings(cfg *config.Config) Handlers {
 	return h
 }
 
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
 // GetForecastAssuranceEnforcement answers whether the qualified forecast
 // applies the viability reviews.
 func (h Handlers) GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request) {
@@ -78,5 +84,9 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 	case started:
 		state = crmcontracts.ForecastAssuranceEnforcementStateObserving
 	}
-	return crmcontracts.ForecastAssuranceEnforcement{State: state}, nil
+	out := crmcontracts.ForecastAssuranceEnforcement{State: state}
+	if h.locks != nil {
+		out.Locks = h.locks([]config.Any{QualifiedForecastEnforced})
+	}
+	return out, nil
 }

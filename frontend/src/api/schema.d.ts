@@ -18953,9 +18953,9 @@ export interface paths {
         /**
          * Switch the qualified forecast's enforcement on or off.
          * @description Admin only. Switching on changes the qualified forecast figures for every reader,
-         *     so it is refused with `409 input_check_not_started` until the input check has run
-         *     once: before that no deal has been judged, and the qualified forecast would count
-         *     nothing.
+         *     so it is refused with `409 input_check_not_started` until a check has judged a
+         *     deal: before that the qualified forecast would count nothing. A setting fixed by
+         *     the environment is refused with `409 setting_locked`.
          *
          *     Switching off takes effect at once. The reviews, their tasks and their history
          *     stay; only the qualified readings disappear, and the baseline readings never
@@ -40671,6 +40671,7 @@ export interface components {
         };
         /** @description Whether the qualified forecast applies the viability reviews. */
         ForecastAssuranceEnforcement: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             /** @enum {string} */
             state: "not_enrolled" | "observing" | "enforcing";
         };
@@ -81282,15 +81283,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
-            /** @description The input check has never run, so enforcement cannot start. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
         };
     };
