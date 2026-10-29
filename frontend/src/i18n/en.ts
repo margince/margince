@@ -954,7 +954,6 @@ export const en = {
   "retention.scopeReportEdition": "Saved report editions",
   "reporting.lastCapture": "Last successful capture {at}",
   "reporting.allocationDifference": "Team target minus allocated targets",
-  "reporting.view": "Performance view",
   "reporting.fromDate": "From",
   "reporting.throughDate": "Through",
   "reporting.chooseDates": "Choose a start and end date to view this period.",
@@ -1527,7 +1526,6 @@ export const en = {
   "contact.meetings.sentExpires": "Sent {sent} · expires {expires}",
   "contact.meetings.resend": "Resend",
   "contact.meetings.withdraw": "Withdraw",
-  "contact.meetings.moreFor": "More actions for {subject}",
   "contact.meetings.withdrawTitle": "Withdraw this invitation?",
   "contact.meetings.withdrawBody":
     "The link stops working and the guest can no longer book through it.",
@@ -1836,6 +1834,10 @@ export const en = {
   // system did its housekeeping" are different answers to "who do I ask".
   "trust.systemTag": "System task: {job}",
   "trust.systemUnnamed": "System task",
+  "trust.relayForYou": "Sent by Margince for you",
+  "trust.relayForColleague": "Sent by Margince for a colleague",
+  "trust.relaySent": "Sent by Margince",
+  "trust.relayFrom": "From {address}",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.ai_activity": "AI activity record",
@@ -2490,6 +2492,7 @@ export const en = {
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
+  "record.moreActionsFor": "More actions for {subject}",
   "record.fullHistory": "Full history",
 
   "share.title": "Share this record",
@@ -4119,8 +4122,9 @@ export const en = {
     "The text below is the forwarded mail, not words the sender wrote.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
-  "email.thread.textUnassessed":
-    "Margince has not yet checked whether it read all of this mail’s text.",
+  "email.thread.textUnassessed": "Email text not verified",
+  "email.thread.textUnassessedHint":
+    "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
   "email.thread.textUnreadable": "The text of this mail could not be read.",
   "email.thread.textUnreadableHint": "Open it in your mail program to see it.",
   "email.thread.replied": "Sent and added to this thread.",
@@ -4231,6 +4235,34 @@ export const en = {
   "co.contacts.neverInTouch": "No exchange yet",
   "co.contacts.theyWrote": "They wrote",
   "co.contacts.weWrote": "Your team wrote",
+  "co.domainContacts.dialogTitle": "Link contacts on this domain",
+  "co.domainContacts.intro":
+    "These contacts have an email address on this company’s domain. Contacts with no current employer are linked each day anyway; tick those who work here to link them now.",
+  "co.domainContacts.legend": "Who works here?",
+  "co.domainContacts.worksAt": "Works at {company}",
+  "co.domainContacts.truncated_one":
+    "Only the first {count} contact is listed.",
+  "co.domainContacts.truncated_other":
+    "Only the first {count} contacts are listed.",
+  "co.domainContacts.loading": "Loading contacts…",
+  "co.domainContacts.none": "No contacts on this domain are left to link.",
+  "co.domainContacts.changed":
+    "The list changed while it was open. Check the ticks and link again.",
+  "co.domainContacts.dismiss": "Not now",
+  "co.domainContacts.link_one": "Link {count} contact",
+  "co.domainContacts.link_other": "Link {count} contacts",
+  "co.domainContacts.linkNone": "Link contacts",
+  "co.domainContacts.linked_one": "{count} contact linked",
+  "co.domainContacts.linked_other": "{count} contacts linked",
+  "co.domainContacts.callout_one":
+    "{count} contact on this domain is not linked",
+  "co.domainContacts.callout_other":
+    "{count} contacts on this domain are not linked",
+  "co.domainContacts.calloutMore_one":
+    "More than {count} contact on this domain is not linked",
+  "co.domainContacts.calloutMore_other":
+    "More than {count} contacts on this domain are not linked",
+  "co.domainContacts.review": "Review contacts",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Any engagement",
   "co.contacts.band.wayIn": "Best route",
@@ -6054,6 +6086,8 @@ export const en = {
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
     "Creates a new company unless one is picked from the list.",
+  "create.companyPrefilled":
+    "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
@@ -7147,6 +7181,10 @@ export const en = {
     "{count} deal ({amount}) is left out while its review is open.",
   "forecast.qualifiedLeftOut_other":
     "{count} deals ({amount}) are left out while their reviews are open.",
+  "forecast.qualifiedUnsupported_one":
+    "{count} deal ({amount}) is left out because it has no confirmed close date or no next step.",
+  "forecast.qualifiedUnsupported_other":
+    "{count} deals ({amount}) are left out because they have no confirmed close date or no next step.",
   "forecast.qualifiedUnknown_one":
     "{count} deal ({amount}) is not counted because the last check could not judge it.",
   "forecast.qualifiedUnknown_other":
@@ -7156,6 +7194,23 @@ export const en = {
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
+  "review.enforcementPreviewLeftOut_one":
+    "Turning it on now leaves {count} deal out of that line.",
+  "review.enforcementPreviewLeftOut_other":
+    "Turning it on now leaves {count} deals out of that line.",
+  "review.enforcementPreviewUnknown_one":
+    "{count} deal has not been judged yet and would not count either.",
+  "review.enforcementPreviewUnknown_other":
+    "{count} deals have not been judged yet and would not count either.",
+  "review.revive": "The customer is back",
+  "review.reviveHelp":
+    "Counts the deal again once the customer has written or met with you, the close date is confirmed and a next step is planned.",
+  "review.wait": "The customer asked to wait",
+  "review.waitHelp":
+    "Records the wait on the deal. The deal stays out until then, and the review comes back on that day.",
+  "review.waitUntil": "Wait until",
+  "review.closeLost": "Close as lost",
+  "review.closeLostHelp": "Closes the deal as lost, with your reason.",
   "review.enforcementOn": "The qualified forecast is on.",
   "review.enforcementOff": "The qualified forecast is off.",
   "review.enforcementAdminOnly": "Only an admin can change this.",
@@ -8962,9 +9017,18 @@ export const en = {
   "notice.state.blocked": "Blocked",
   "notice.state.notRequired": "Not required",
   "notice.sendTitle": "Send privacy notice?",
-  "notice.sendBody":
-    "{contact} receives an email saying who holds their data and why.",
   "notice.sendConfirm": "Send notice",
+  "controllerMail.confirmTitle": "Send confirmation request?",
+  "controllerMail.confirmSend": "Send request",
+  "controllerMail.relayTitle": "Sent from the installation",
+  "controllerMail.relay":
+    "Margince sends this from the installation’s address, not from your mailbox.",
+  "controllerMail.language": "Language",
+  "controllerMail.defaultLanguage":
+    "The installation’s mail language is {language}.",
+  "controllerMail.noSender": "None named by the mail relay",
+  "controllerMail.loading": "Loading preview…",
+  "controllerMail.noPreview": "Nothing can be sent until the preview loads.",
   "notice.sentTo": "Privacy notice sent to {address}",
   "notice.overdue": "Overdue",
   "notifications.bell": "Notifications",
@@ -12393,6 +12457,14 @@ export const en = {
   "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",
   "users.noTeamsYet": "No teams yet.",
+  "users.teamsNone": "Not on a team yet.",
+  "users.teamsAdd": "Add teams",
+  "users.teamsSearch": "Search teams",
+  "users.teamsNoMatch": "No team matches.",
+  "users.teamsDone": "Done",
+  "users.teamsEmpty": "Type a name to create the first team.",
+  "users.teamsRemove": "Remove from {team}",
+  "users.teamsCreate": "Create team “{name}”",
   "users.teamMembersLabel": "Team members",
   "users.teamMembersAdminOnly": "Your role cannot see team members.",
   "users.teamNobodyToAdd": "No members to add.",
@@ -15233,6 +15305,23 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  "contact.proposal.title": "From {source}: {company}",
+  "contact.proposal.ask": "Link or create this company?",
+  "contact.proposal.link": "Link",
+  "contact.proposal.create": "Create and link",
+  "contact.proposal.dismiss": "Dismiss",
+  "contact.proposal.linkDenied":
+    "Your role cannot link companies to contacts. Ask an admin.",
+  "contact.proposal.createDenied":
+    "Your role cannot create companies. Ask an admin.",
+  "contact.proposal.duplicate":
+    "{company} already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.duplicateUnnamed":
+    "Another company already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.linkExisting": "Link that company",
+  "contact.proposal.created": "{company} created and linked",
+  "contact.proposal.createdWithDomain":
+    "{company} created with {domain} and linked",
   "contact.timeline.empty": "No activity logged with this contact yet.",
   "contact.deals.empty": "This contact is not on any deal.",
   "contact.deals.untitled": "Untitled deal",
@@ -15271,7 +15360,6 @@ export const en = {
   "contactLink.emailCopied": "Email address copied",
   "contactLink.copyEmailRemedy":
     "Select the address and copy it with your keyboard.",
-  "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
@@ -18301,7 +18389,6 @@ export const en = {
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
   "record.verb.log": "Log",
-  "record.verb.task": "Task",
   "record.verb.more": "More",
   "standing.timeline.more_one": "+{count} more",
   "standing.timeline.more_other": "+{count} more",
@@ -18365,6 +18452,9 @@ export const en = {
   "deal.verdict.onHold": "On hold",
   "deal.verdict.onHoldUntil":
     "The deal is paused until {date}, as agreed with the buyer.",
+  "deal.verdict.waitOver": "Follow-up overdue",
+  "deal.verdict.waitOverSince":
+    "The buyer asked to wait until {date}. That day has come, so get back in touch.",
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",

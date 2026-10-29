@@ -18,6 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -48,11 +49,14 @@ func (s *Service) Worklist(
 		return crmcontracts.Worklist{}, err
 	}
 	var out crmcontracts.Worklist
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+	err := s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
 		var err error
 		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
 		return err
 	})
+	if err == nil {
+		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
+	}
 	return out, err
 }
 
@@ -179,9 +183,8 @@ func (s *Service) worklistIn(
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	teamWeek := teamWeekFor(ctx)
-	out.TeamWeek = &teamWeek
-	defer timeStage("row_names")()
+	out.TeamWeek = new(identity.TeamWeekOf(ctx))
+	defer timeStage(ctx, "row_names")()
 	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -226,7 +229,7 @@ func (s *Service) worklistFrom(
 	// case where a tally would otherwise print a confident zero.
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
-	defer timeStage("rank")()
+	defer timeStage(ctx, "rank")()
 	if limit <= 0 {
 		limit = worklistPage
 	}

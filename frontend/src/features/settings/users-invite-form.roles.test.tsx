@@ -85,6 +85,9 @@ describe("InviteUserForm role", () => {
   // Only an admin puts a member on a team, so only an admin is asked which.
   it("asks an admin which teams the member joins, and nobody else", async () => {
     renderForm([FIELD_SALES]);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /add teams/i }),
+    );
     expect(await screen.findByRole("checkbox", { name: "Nord" })).toBeTruthy();
     cleanup();
 
@@ -93,6 +96,6 @@ describe("InviteUserForm role", () => {
     // form would pass for the wrong reason.
     await waitFor(() => expect(client.getQueryData(["me"])).toBeDefined());
     await screen.findByRole("combobox", { name: /role/i });
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Teams" })).toBeNull();
   });
 });

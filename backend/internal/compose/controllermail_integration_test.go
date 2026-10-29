@@ -58,6 +58,9 @@ func (v *sealingVault) Delete(context.Context, string) error {
 	return nil
 }
 
+// laneFromAddress is the relay sender the lane under test is configured with.
+const laneFromAddress = "notices@crm.example.test"
+
 // confirmLaneEnv is one subject with a live address and the real lane wired.
 type confirmLaneEnv struct {
 	e       *integration.Env
@@ -91,7 +94,7 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 		contact: contact,
 		vault:   vault,
 		store: consent.NewStore(InstallationDB(e.Pool)).
-			WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), vault, "https://crm.example.test"),
+			WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter, laneFromAddress), vault, "https://crm.example.test"),
 	}
 }
 
@@ -100,7 +103,7 @@ func setupConfirmLane(t *testing.T) *confirmLaneEnv {
 func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	issued, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact))
+	issued, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), "")
 	if err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
@@ -139,7 +142,7 @@ func TestAConfirmLinkStagesADeliveryADecisionAndATimelineRow(t *testing.T) {
 func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 
@@ -168,7 +171,7 @@ func TestTheEngineAllowsAConfirmationOnItsOwnEvidence(t *testing.T) {
 func TestTheStagedMessageCarriesNoLiveLink(t *testing.T) {
 	l := setupConfirmLane(t)
 
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 	if l.vault.sealed == "" {
@@ -285,7 +288,7 @@ func TestAOnePurposeUnsubscribeIsAcknowledgedThroughTheRealEngine(t *testing.T) 
 
 func TestControllerAlternativesAreStagedWithoutPersonalMaterial(t *testing.T) {
 	lane := setupConfirmLane(t)
-	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
 	}
 	var text, markup string
@@ -303,7 +306,7 @@ func (v *sealingVault) Get(context.Context, string) (string, error) { return v.s
 
 func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testing.T) {
 	lane := setupConfirmLane(t)
-	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
 	}
 	link := lane.vault.sealed
@@ -357,7 +360,7 @@ func TestControllerStagingReachesReceivedAlternativesAndRetiresItsLink(t *testin
 
 func TestControllerHTMLCannotChangeAfterStagingAuthorization(t *testing.T) {
 	lane := setupConfirmLane(t)
-	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+	if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 		t.Fatal(err)
 	}
 	var id ids.UUID

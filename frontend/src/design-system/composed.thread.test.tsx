@@ -93,10 +93,9 @@ describe("a thread's card", () => {
     ).toBeTruthy();
     // Each name once, however many messages it was on.
     expect(screen.getByText("Ida Keller, Marc Dubois")).toBeTruthy();
-    // Inside the card, on its head line, rather than in the row's own
-    // actions column outside it.
+    // In the row's own verb slot, where every other entry keeps its verbs.
     expect(
-      screen.getByRole("button", { name: "Reply" }).closest(".tl-thread"),
+      screen.getByRole("button", { name: "Reply" }).closest(".tl-actions"),
     ).toBeTruthy();
   });
 
@@ -367,7 +366,7 @@ describe("the files a thread carried", () => {
         ]}
       />,
     );
-    const card = document.querySelector(".tl-thread");
+    const card = document.querySelector(".tl-thread-messages")?.parentElement;
     expect(
       card?.querySelector(":scope > .tl-meta .emailentry__files")?.textContent,
     ).toBe("3 attachments");
@@ -424,7 +423,9 @@ describe("the files a thread carried", () => {
       />,
     );
     expect(
-      document.querySelector(".tl-thread > .tl-meta .emailentry__files")
+      document
+        .querySelector(".tl-thread-messages")
+        ?.parentElement?.querySelector(":scope > .tl-meta .emailentry__files")
         ?.textContent,
     ).toBe("2 attachments");
 

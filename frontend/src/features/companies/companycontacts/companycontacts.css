@@ -56,3 +56,11 @@
 .cp-intro-why {
   margin: 0 0 var(--space-1);
 }
+
+/* A domain contact's title, address and employer, one per line. An address
+ * has no space to break at, so it may break anywhere. */
+.cp-candidate {
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: anywhere;
+}

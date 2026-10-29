@@ -34,7 +34,7 @@ export const TeamPerformance: Story = {
     installFetchStub(reportingStoryRoutes());
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -44,7 +44,7 @@ export const ReadOnly: Story = {
     installFetchStub(reportingStoryRoutes(reportingStoryEvaluation, true));
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -62,7 +62,7 @@ export const NoObservations: Story = {
     installFetchStub(reportingStoryRoutes(evaluation));
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -85,7 +85,7 @@ export const MissingTargets: Story = {
     installFetchStub(reportingStoryRoutes(evaluation));
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -106,7 +106,7 @@ export const QueryError: Story = {
     });
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -119,7 +119,7 @@ export const Loading: Story = {
     });
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -165,7 +165,7 @@ function renderSdr(withTargets: boolean) {
   installFetchStub(routes);
   return (
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sdr" scope={reportingStoryScope} />
     </StoryProviders>
   );
 }
@@ -198,7 +198,7 @@ export const InvalidDateRange: Story = {
     });
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -229,7 +229,7 @@ export const CustomRangeThroughFutureMonthEnd: Story = {
     installFetchStub(reportingStoryRoutes(evaluation));
     return (
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>
     );
   },
@@ -244,7 +244,7 @@ export const InvalidDateRangeDark: Story = {
 };
 
 function renderView(view: "leads" | "partners") {
-  globalThis.location.hash = `#/analytics/performance?view=${view}`;
+  globalThis.location.hash = `#/analytics/${view}`;
   installFetchStub(
     reportingSectionRoutes(
       view === "leads" ? reportingLeadsEvaluation : reportingPartnersEvaluation,
@@ -252,7 +252,7 @@ function renderView(view: "leads" | "partners") {
   );
   return (
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view={view} scope={reportingStoryScope} />
     </StoryProviders>
   );
 }

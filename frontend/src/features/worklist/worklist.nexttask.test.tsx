@@ -304,3 +304,28 @@ describe("Next task on a record", () => {
     expect(window.location.hash).toBe("#/contacts/a");
   });
 });
+
+it("aborts its read when the reader leaves mid-press, and shows no failure for it", async () => {
+  const requests: Request[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      (input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          const request = new Request(input, init);
+          requests.push(request);
+          request.signal.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    ),
+  );
+  window.location.hash = "#/contacts/a";
+  const view = render(<NextTaskButton />);
+  await userEvent.setup().click(await nextTask());
+  await waitFor(() => expect(requests).toHaveLength(1));
+
+  view.unmount();
+
+  expect(requests[0].signal.aborted).toBe(true);
+});

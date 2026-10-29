@@ -177,7 +177,7 @@ func (s *Service) UnboundBoardSources() []string {
 func (s *Service) addWaiting(
 	ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time,
 ) error {
-	waiting, cut, err := s.waiting.Unanswered(ctx, asOf, nil)
+	waiting, cut, err := s.waiting.Unanswered(ctx, asOf, WaitingFor{})
 	if err != nil {
 		return err
 	}

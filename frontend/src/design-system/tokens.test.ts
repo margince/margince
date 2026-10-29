@@ -54,7 +54,7 @@ const canonical: Record<string, string> = {
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
   "--teal": "#0E7490",
-  "--bgRail": "#13231D",
+  "--bgInkField": "#13231D",
   "--ai": "#5B61D6",
   "--aiLight": "rgba(91,97,214,.08)",
   "--aiMed": "rgba(91,97,214,.30)",
@@ -189,12 +189,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
 
   it("is Ledger Green — not Gradion orange, not Dispact warm-stone", () => {
     expect(normalize(light["--accent"])).toBe("#045647");
-    expect(normalize(light["--bgRail"])).toBe("#13231d");
+    expect(normalize(light["--bgInkField"])).toBe("#13231d");
     const all = normalize(Object.values(light).join(" "));
     expect(all).not.toContain("#ff6b00"); // Gradion orange
   });
 
-  it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
+  it("keeps the brand teal and success grass-green tonally distinct (§2)", () => {
     expect(normalize(light["--accent"])).not.toBe(
       normalize(light["--success"]),
     );
@@ -545,8 +545,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(normalize(dark["--textSecondary"])).toBe("#9aa8a3");
     });
 
-    it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {
-      expect(dark["--bgRail"]).toBeUndefined();
+    it("keeps the ink field one plate in both themes", () => {
+      expect(dark["--bgInkField"]).toBeUndefined();
     });
 
     // A document nobody stamped — an MCP App view whose host stated no theme —

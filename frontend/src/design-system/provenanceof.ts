@@ -1,7 +1,8 @@
 import type { components } from "../api/schema";
-import type { Provenance, SourceAuthor } from "./trust";
+import type { Provenance, RelaySend, SourceAuthor } from "./trust";
 
 type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
+type ControllerSend = components["schemas"]["ControllerSend"];
 
 // captured_by is server-stamped from the authenticated principal, so it carries
 // that principal's kind. The contract lists four
@@ -110,6 +111,39 @@ export function withCreator(
     agent: createdBy.agent_client ?? provenance.agent,
     forName: createdBy.on_behalf_of_name ?? undefined,
   };
+}
+
+// A mail the installation's relay sent reads as the relay's, never as the
+// member's own; that member is "you" only when captured_by names the reader.
+export function withControllerSend(
+  provenance: Provenance,
+  send: ControllerSend | null | undefined,
+  viewerUserId?: string,
+): Provenance {
+  if (!send) {
+    return provenance;
+  }
+  const member = provenance.kind === "human" ? provenance.userId : undefined;
+  return relayProvenance(send, relayMemberFor(member, viewerUserId));
+}
+
+/** The relay arm for a caller that knows the member another way. */
+export function relayProvenance(
+  send: ControllerSend,
+  member: RelaySend["member"],
+): Provenance {
+  return { kind: "system", relay: { member, fromAddress: send.from_address } };
+}
+
+/** Whom a relay send was for: the reader only when the member is the reader. */
+export function relayMemberFor(
+  memberId: string | null | undefined,
+  viewerId: string | undefined,
+): RelaySend["member"] {
+  if (!memberId || !viewerId) {
+    return "unknown";
+  }
+  return memberId === viewerId ? "self" : "colleague";
 }
 
 // What an `agent:<rest>` principal is called on screen. A passport uuid names

@@ -93,3 +93,37 @@ it("keeps later source failures and limits visible across the frozen walk", () =
   expect(combined?.reach?.[0]?.more_available).toBe(true);
   expect(combined?.queue.map((item) => item.id)).toEqual(["one", "two"]);
 });
+
+// A fetch that hangs until its request is aborted, recording each request.
+function hangingFetch(requests: Request[]) {
+  return vi.fn(
+    (input: RequestInfo | URL, init?: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        request.signal.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        );
+      }),
+  );
+}
+
+it("aborts the day's read when the last screen observing it leaves, and not before", async () => {
+  const requests: Request[] = [];
+  vi.stubGlobal("fetch", hangingFetch(requests));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  const home = renderHook(() => useWorklist("mine", "all"), { wrapper });
+  const drawer = renderHook(() => useWorklist("mine", "all"), { wrapper });
+  await waitFor(() => expect(requests).toHaveLength(1));
+
+  drawer.unmount();
+  expect(requests[0].signal.aborted).toBe(false);
+
+  home.unmount();
+  await waitFor(() => expect(requests[0].signal.aborted).toBe(true));
+});

@@ -32,7 +32,7 @@
   block-size: calc(100dvh - var(--space-6));
 }
 
-/* The title bar: the rail's own dark field, in both themes, so the window
+/* The title bar: the dark ink field, in both themes, so the window
    reads as one object whatever the page behind it is. */
 .docked-head {
   flex: none;
@@ -42,8 +42,8 @@
   min-block-size: var(--controlHeight);
   padding-block: var(--space-1);
   padding-inline: var(--space-4) var(--space-1);
-  background: var(--bgRail);
-  color: var(--railIconActive);
+  background: var(--bgInkField);
+  color: var(--textOnInkField);
   /* The bar is the handle that slides the window along the bottom edge. */
   cursor: grab;
   touch-action: none;
@@ -128,8 +128,8 @@
   border: 0;
   border-start-start-radius: var(--r-sm);
   border-start-end-radius: var(--r-sm);
-  background: var(--bgRail);
-  color: var(--railIconActive);
+  background: var(--bgInkField);
+  color: var(--textOnInkField);
   box-shadow: var(--shadow-pop);
   font: inherit;
   font-weight: var(--fontWeightMedium);

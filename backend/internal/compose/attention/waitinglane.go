@@ -40,8 +40,8 @@ type Waiting interface {
 	// can be what is left of a full two hundred — and a hundred and eighty is
 	// also what a smaller, complete installation returns. A caller counting rows
 	// against the bound would read the truncated scan as complete.
-	// A named owner narrows mail to their direct recipient evidence before paging.
-	Unanswered(ctx context.Context, asOf time.Time, owner *ids.UUID) (rows []WaitingCustomer, cut bool, err error)
+	// WaitingFor narrows the mail before paging.
+	Unanswered(ctx context.Context, asOf time.Time, narrow WaitingFor) (rows []WaitingCustomer, cut bool, err error)
 	// Hidden answers what the queue's own hiding rules are keeping off this
 	// reader's page, one rule at a time.
 	//
@@ -219,7 +219,7 @@ type WaitingCustomer struct {
 func (s *Service) waitingCustomers(
 	ctx context.Context, asOf time.Time,
 ) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
-	defer timeStage("waiting_customers")()
+	defer timeStage(ctx, "waiting_customers")()
 	if s.waiting == nil {
 		return waitingRead{}, nil
 	}
@@ -227,16 +227,7 @@ func (s *Service) waitingCustomers(
 	var cut bool
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		var owner *ids.UUID
-		if s.taskScope == TasksMine {
-			value := readerOf(ctx)
-			owner = &value
-		}
-		if s.taskScope == TasksOwnedBy {
-			value := s.taskOwner
-			owner = &value
-		}
-		rows, cut, err = s.waiting.Unanswered(ctx, asOf, owner)
+		rows, cut, err = s.waiting.Unanswered(ctx, asOf, s.waitingFor(ctx))
 		return err
 	})
 	switch {
@@ -256,6 +247,34 @@ func (s *Service) waitingCustomers(
 	default:
 		return waitingRead{rows: rows, read: true, cut: cut}, nil
 	}
+}
+
+// WaitingFor is whose waiting mail one read answers. The zero value reads
+// every seat's.
+type WaitingFor struct {
+	// Owner is one seat's own queue, read as that seat.
+	Owner *ids.UUID
+	// Team keeps the read to the mail a seat in Seats answers for, the rows the
+	// team filter keeps. A message that is not mail answers to nobody and stays.
+	Team  bool
+	Seats []ids.UUID
+}
+
+// waitingFor narrows the scan the way narrowToScope narrows its rows, so the
+// scan bound is spent on rows the scope keeps.
+func (s *Service) waitingFor(ctx context.Context) WaitingFor {
+	switch s.taskScope {
+	case TasksMine:
+		reader := readerOf(ctx)
+		return WaitingFor{Owner: &reader}
+	case TasksOwnedBy:
+		owner := s.taskOwner
+		return WaitingFor{Owner: &owner}
+	}
+	if s.teamRoster != nil {
+		return WaitingFor{Team: true, Seats: s.teamRoster.seats()}
+	}
+	return WaitingFor{}
 }
 
 // waitingRead is what the who-is-waiting source answered, and whether it ran.

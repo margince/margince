@@ -4,7 +4,7 @@
 
 ## Where do I start my sales review?
 
-Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or **SDR** for meetings confirmed as held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
+Open **Analytics → Performance** for sales won, pipeline stages, sales by salesperson and time in stage. The **SDR outcomes** tab shows meetings confirmed as held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 

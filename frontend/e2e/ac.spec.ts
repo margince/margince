@@ -1333,6 +1333,56 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
+test("AC-create-3: a company created with a domain offers the contacts on it, none ticked", async ({
+  page,
+}) => {
+  // A reader who may link contacts to a company, which the shared admin is not.
+  await page.route(/\/v1\/me$/, (route) =>
+    route.fulfill({
+      json: meFixture({
+        allow: {
+          company: ["read", "create", "update"],
+          contact: ["read", "update"],
+          relationship: ["read", "create"],
+        },
+      }),
+    }),
+  );
+  await page.goto("/#/companies");
+  await page.getByRole("button", { name: de["create.company"] }).click();
+  await page
+    .getByLabel(`${de["create.displayName"]} *`)
+    .fill("Nordlicht Logistik GmbH");
+  await page.getByRole("button", { name: de["field.addDomain"] }).click();
+  await page
+    .getByLabel(`${de["field.domain"]} *`)
+    .fill("nordlicht-logistik.example");
+  await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+  await expect(page).toHaveURL(/#\/companies\/o-new$/);
+
+  const dialog = page.getByRole("dialog", {
+    name: de["co.domainContacts.dialogTitle"],
+  });
+  const ticks = dialog.getByRole("checkbox");
+  await expect(ticks).toHaveCount(2);
+  await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: de["co.domainContacts.linkNone"] }),
+  ).toBeDisabled();
+
+  await dialog.getByRole("checkbox", { name: /Anja Petersen/ }).check();
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/companies/o-new/link-contacts"),
+  );
+  await dialog
+    .getByRole("button", { name: copy(de["co.domainContacts.link_one"]) })
+    .click();
+  expect((await sent).postDataJSON()).toEqual({ contact_ids: ["p-anja"] });
+  await expect(dialog).toBeHidden();
+});
+
 test.describe("§3.8: 390px mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -3397,29 +3447,30 @@ test.describe("calling a contact", () => {
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
 
-  test("the header Call dials the primary of two numbers", async ({ page }) => {
+  test("the number in the details dials the primary of two numbers", async ({
+    page,
+  }) => {
     await page.goto(`/#/contacts/${CALLED_CONTACT}`);
     await expectShellRendered(page);
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
-    ).toHaveAttribute("href", tel);
+      page.locator(".record-aside").locator(`a[href="${tel}"]`),
+    ).toBeVisible();
   });
 
-  test("the header Call on a contact with no number is refused and says why", async ({
-    page,
-  }) => {
+  test("a contact with no number offers no Call at all", async ({ page }) => {
     await page.goto("/#/contacts/p-anna");
     await expectShellRendered(page);
-    const call = page.getByRole("button", {
-      name: de["contact.action.call"],
-      exact: true,
-    });
-    await expect(call).toBeDisabled();
-    await expect(call).toHaveAccessibleDescription(
-      de["contact.action.noPhone"],
-    );
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"] }),
+      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: de["contact.action.call"],
+        exact: true,
+      }),
     ).toHaveCount(0);
   });
 

@@ -50,6 +50,7 @@ src/design-system/report-charts.css: .report-chart-key-range::before { border-co
 src/design-system/report-charts.css: .report-chart-range-band { background: color-mix(in srgb, var(--accent) 35%, var(--bgElevated)) }
 src/design-system/richtext.css: .richtext { background: var(--bgElevated) }
 src/design-system/richtext.css: .richtext-foot { background: var(--bgElevated) }
+src/design-system/setpicker.css: .set-picker-frame { background: var(--bgElevated) }
 src/design-system/stageladder.css: .stage-ladder-bar.is-done .stage-ladder-track-bar { background: color-mix(in srgb, var(--accent) 40%, var(--bgElevated)) }
 src/design-system/standingtimeline.css: .standing-timeline-mark-count { color: var(--bgElevated) }
 src/design-system/standingtimeline.css: .standing-timeline-today { color: var(--bgElevated) }

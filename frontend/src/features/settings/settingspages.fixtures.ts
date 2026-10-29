@@ -7,7 +7,6 @@ import { agentClientList } from "../../testing/agent-clients.fixtures";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { allowance, status } from "../../testing/ai-admin.testkit";
 import { bookingProfile } from "../../testing/book.testkit";
-import { readingsDay } from "../../testing/brief.fixtures";
 import { formatFixture } from "../../testing/import.fixtures";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -145,9 +144,7 @@ export const NOTIFICATION_ROUTES: RouteMap = {
   "GET /me/notification-preferences": () =>
     jsonResponse(NOTIFICATION_PREFERENCES),
   "GET /me/brief-delivery": () => jsonResponse({}),
-  "GET /teams": () => jsonResponse({ data: [] }),
-  "GET /worklist": () =>
-    jsonResponse({ ...readingsDay({}, [], []), team_week: "none" }),
+  "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
 };
 
 // Every page story routes all of these: a card can sit on more than one page.

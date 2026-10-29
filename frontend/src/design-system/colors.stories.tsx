@@ -143,7 +143,8 @@ const ACCENT: readonly Entry[] = [
   { token: "--accentMed" },
   {
     token: "--accentBrand",
-    usage: "Brand emerald that stays put when the dark accent lightens.",
+    usage:
+      "The brand mark's fill, one value in both themes: the workspace chip, the app icon, the browser's title bar.",
   },
   {
     token: "--teal",
@@ -200,28 +201,29 @@ const AVATARS: readonly Entry[] = [
   { token: "--avatarInkC", paint: "--avatarInk" },
 ];
 
-const RAIL: readonly Entry[] = [
+const INK_FIELD: readonly Entry[] = [
   {
-    token: "--bgRail",
+    token: "--bgInkField",
     on: "--bgPage",
-    usage: "The dark green field of the rail, the same in both themes.",
+    usage:
+      "The dark green plate under a toast, a tooltip and a docked window's title bar, the same in both themes. Never the sidebar.",
   },
   {
-    token: "--railIconActive",
-    on: "--bgRail",
-    usage: "White icons and labels on the dark green field.",
+    token: "--textOnInkField",
+    on: "--bgInkField",
+    usage: "White text and icons on the ink field.",
   },
 ];
 
 const ONBOARDING: readonly Entry[] = [
   {
     token: "--obDialogGlass",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The translucent white fill of the onboarding dialog's dark glass.",
   },
   {
     token: "--obDialogInkQuiet",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The dialog's secondary text on the dark glass.",
   },
   {
@@ -675,7 +677,7 @@ export const Status: Story = {
           the rest is derived from it in tokens.css. Choose by what the colour
           is doing: the base for what is seen with nothing read on it, Text for
           ink, Surface for a badge, Bg for a wash, Border for a hairline.
-          Success stays a brighter green than the brand emerald on purpose.
+          Success stays a brighter green than the brand teal.
         </p>
         {THEMES.map((theme) => (
           <StatusPanel key={theme} theme={theme} values={values} />
@@ -685,12 +687,12 @@ export const Status: Story = {
   },
 };
 
-/** Emerald is brand and primary action, teal is identity. */
+/** The accent is brand and primary action, `--teal` is identity. */
 export const AccentAndBrand: Story = {
   name: "Accent and brand",
   render: () => (
     <Rows
-      intro="Emerald means primary action and brand, and nothing else: at most one filled control in view wears it, and a selected row takes its wash. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
+      intro="The accent means primary action and brand, and nothing else: at most one filled control in view wears it, and so does the current row of the side rail. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
       entries={ACCENT}
     />
   ),
@@ -736,13 +738,13 @@ export const Avatars: Story = {
   ),
 };
 
-/** The rail is the same in both themes. */
-export const RailAndWorkspaceChrome: Story = {
-  name: "Rail and workspace chrome",
+/** The ink field is the same in both themes. */
+export const InkField: Story = {
+  name: "Ink field",
   render: () => (
     <Rows
-      intro="The rail is deliberately unthemed: white-alpha icons on a dark green field in both themes, so the two columns match."
-      entries={RAIL}
+      intro="The ink field is the one dark plate, the same in both themes: a toast, the capture chip, a collapsed sidebar's tooltip, a docked window's title bar and the client surface's bar. The sidebar itself is not on it. The sidebar is glass: the --pane ground over the page, with a hairline on its right."
+      entries={INK_FIELD}
     />
   ),
 };

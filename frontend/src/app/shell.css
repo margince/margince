@@ -33,9 +33,8 @@
 
 /* App shell — a labeled sidebar collapsing to the canonical 56px rail, and the
  * content column beside it. The chrome is the pane over the page ground
- * (DESIGN.md §6), not §2b's deep ink-green field, so rail icons read as ordinary
- * theme tokens rather than white-alpha on a dark ground. The ink-green field
- * keeps the marketing surfaces. */
+ * (DESIGN.md §6), never a dark green column, so rail icons read as ordinary
+ * theme tokens rather than white-alpha on a dark ground. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -340,15 +339,15 @@
 }
 
 /* ===== sidebar =====
- * The ground is the pane in BOTH states. The collapsed state matches the
- * canonical rail's geometry — 56px, the logomark chip, the same rows — but not
- * its ink-green field: a sidebar that changed colour on collapse would read as
- * two shells.
+ * The ground is the pane in BOTH states, so collapsing to 56px changes the
+ * width and never the colour: a sidebar that changed colour on collapse would
+ * read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
+  background-color: var(--ground);
   /* The blur is for the phone bar, which floats over the page. */
   backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
@@ -494,7 +493,7 @@
   height: 40px;
   border-radius: var(--r-control);
   overflow: hidden;
-  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
+  /* Flat brand fill, no gradient and no lift: the mark is the one filled
      thing in the chrome. */
   background: var(--accentBrand);
   color: var(--textOnAccent);
@@ -503,7 +502,7 @@
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
    stands here is an icon drawn for its own background, or the monogram Avatar
-   tints from the record's identity, and either one on the brand emerald would
+   tints from the record's identity, and either one on the brand fill would
    be a second surface behind a finished mark. The avatar takes the chip's
    square, because a company's icon is drawn square and a circle crops it. */
 .rail .ws-chip-company {
@@ -528,11 +527,16 @@
    faded-out text keeps its intrinsic width and pushes the logomark off centre.
    It is one element, so animating its width is cheap and keeps the brand block
    closing in step with the column. */
+/* One line, whatever the name: an installation name runs to 200 characters,
+   and a head that grew with it pushed every destination below it down. The
+   whole name is the link's tooltip (shellrail.tsx). */
 .rail .ws-name {
   min-width: 0;
   width: auto;
   opacity: 1;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition:
     opacity var(--dur-state) var(--ease-in-out),
     width var(--dur-move) var(--ease-out);
@@ -546,10 +550,8 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
-/* Collapsed the name is gone in BOTH axes. Width alone left its block height
-   standing — a name that wraps to two lines expanded held that much air open in
-   the 56px column, so the head's height (and every row under it) depended on how
-   long the installation's name is on a rail nobody can read it in. */
+/* Collapsed the name is gone in BOTH axes. Width alone left its line box
+   standing, air held open under the mark in a column nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
   height: 0;
@@ -796,8 +798,8 @@
   top: 50%;
   transform: translateY(-50%);
   margin-left: 8px;
-  background: var(--bgRail);
-  color: var(--railIconActive);
+  background: var(--bgInkField);
+  color: var(--textOnInkField);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
   white-space: nowrap;
@@ -1234,13 +1236,13 @@
   background: var(--bgPage);
 }
 .client-bar {
-  background: var(--bgRail);
+  background: var(--bgInkField);
   padding: var(--space-3) var(--space-4);
   position: sticky;
   top: 0;
 }
 .client-back {
-  color: var(--railIconActive);
+  color: var(--textOnInkField);
   text-decoration: none;
   display: inline-flex;
   align-items: center;

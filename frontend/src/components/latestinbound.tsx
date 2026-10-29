@@ -7,6 +7,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { markdownLines } from "../design-system/markdown-text";
 import { Panel } from "../design-system/panel";
 import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
@@ -142,19 +143,20 @@ function itemWords(activity: Activity): {
   const summary = activity.email_summary;
   const subject = (summary?.subject ?? activity.subject)?.trim() || undefined;
   const raw = activity.body ?? "";
-  const excerpt =
-    summary?.preview ??
-    (activity.kind === "email" ? emailSummaryText(raw) : oneLine(raw));
+  const excerpt = summary?.preview ?? excerptOf(activity.kind, raw);
   return { subject, excerpt: excerpt || undefined };
 }
 
-// A form's note is one answer per line; the row reads them as one line.
-function oneLine(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(" · ");
+// A form's note is markdown with one answer per line, read the way the
+// timeline renders it so its quote marks never show as text. A chat is plain
+// text, where a leading ">" is the sender's own character.
+function excerptOf(kind: Activity["kind"], text: string): string {
+  if (kind === "email") return emailSummaryText(text);
+  const lines =
+    kind === "note"
+      ? markdownLines(text)
+      : text.split("\n").map((line) => line.trim());
+  return lines.filter(Boolean).join(" · ");
 }
 
 function When({ activity }: Readonly<{ activity: Activity }>) {

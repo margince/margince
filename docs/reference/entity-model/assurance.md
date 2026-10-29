@@ -36,7 +36,7 @@ The 8 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `assessed_at` | `timestamp with time zone` | yes |  |
 | `deal_id` | `uuid` | yes |  |
 | `input_fingerprint` | `text` | yes |  |
-| `outcome` | `text` | yes | One of `eligible`, `review_required`, `waiting`, `unknown`. |
+| `outcome` | `text` | yes | One of `eligible`, `review_required`, `unsupported`, `waiting`, `unknown`. |
 | `policy_version` | `text` | yes |  |
 | `reasons` | `text[]`, default `'{}'::text[]` | yes |  |
 | `run_id` | `uuid` | yes | Points at `assurance_run.id`. |
@@ -54,7 +54,7 @@ The 8 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `assurance_deal_receipt_outcome_check`: `CHECK ((outcome = ANY (ARRAY['eligible', 'review_required', 'waiting', 'unknown'])))`
+- `assurance_deal_receipt_outcome_check`: `CHECK ((outcome = ANY (ARRAY['eligible', 'review_required', 'unsupported', 'waiting', 'unknown'])))`
 - `assurance_deal_receipt_valid_after_assessed`: `CHECK ((valid_until >= assessed_at))`
 
 **Indexes**

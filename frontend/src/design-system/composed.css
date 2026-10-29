@@ -613,18 +613,12 @@
   margin-bottom: 0;
 }
 
-/* The card the chronology sits on. The same white ground, hairline and radius
-   every other body of the record uses — a list this long loose on the page
-   ground stopped reading as one of the record's sections. */
+/* The block the chronology sits in. It draws no card of its own: every place
+   it stands (a record's History panel, the record view's story card) is
+   already a card, and a second ground and hairline inside it would be a box
+   in a box. */
 .timeline-card {
   margin-top: var(--space-2);
-  /* Air on all four sides. With none at the top the first row's date and badge
-     sat on the card's own border, which reads as content clipped by the edge
-     rather than as the start of a list. The chronology's pane is the same pane
-     every zone of the record stands on. */
-  padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-lg);
 }
 
 .timeline {
@@ -641,12 +635,6 @@
   container-name: chronology;
 }
 
-/* An expanded conversation's members are a list INSIDE a row, not a second
-   card: the card is around the chronology, and one nested in it would draw a
-   box around three messages of a thread that is already boxed. */
-.timeline-card .tl-group-members {
-  padding-inline: 0;
-}
 /* Date, axis, and what happened. A grid rather than a flex row: the dates
    line up in a column of their own, which is how a chronology is actually
    read — down the left edge for "what happened in August" rather than along
@@ -753,8 +741,9 @@
   justify-self: end;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* A conversation's mark on the rail: the kind's icon rather than a dot,
@@ -974,14 +963,11 @@
   overflow-wrap: anywhere;
 }
 
-/* A thread's members are a card on the body side of the rail: the
-   conversation is one entry on the axis, and its messages sit inside it one
-   level down, each with its own mark, newest first. */
+/* An opened send's copies sit in its row under one hairline, not on a plate
+   of their own: the history is already a card. */
 .tl-group-members {
   margin-block-start: var(--space-2);
-  padding-inline: var(--space-3);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-md);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 
 /*
@@ -1027,31 +1013,11 @@
   margin-top: var(--space-1);
 }
 
-/* A conversation on the chronology: one card on the body side of the rail,
-   on the record's own pane with a stronger hairline than the row dividers
-   around it, so a thread reads as one event with its messages inside it
-   rather than as three rows that happen to share a subject. */
-.timeline .tl-thread {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-lg);
-}
-
-/* The thread's verbs sit at the end of its own head line — Reply belongs to
-   the conversation, and inside its card — rather than in the row's actions
-   column outside it. */
-.tl-thread-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
+/* A conversation's messages sit straight in its row, parted by hairlines: the
+   history is already a card, and a second one inside it would be a box in a box. */
 .tl-thread-messages {
   list-style: none;
-  margin: var(--space-2) 0 0;
+  margin: var(--space-1) 0 0;
   padding: 0;
 }
 .tl-thread-messages > li {

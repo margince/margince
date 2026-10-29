@@ -254,11 +254,8 @@ describe("a moment action that opens the composer", () => {
   });
 
   it("opens the same drawer for the generic verb, carrying no reason", async () => {
-    // ONE composer, two doors. The rung's labelled verb arrives carrying a
-    // reason and the header's generic one does not, and that is the whole of
-    // the difference: the surface, its thread pane and its conversations are
-    // the same either way. Two drawers is what this replaced — the half of the
-    // traffic that went to the older one got no thread beside the reply at all.
+    // One composer, two doors. The rung's verb carries a reason and the
+    // header's does not; the surface and its thread pane are the same.
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
 
@@ -315,10 +312,8 @@ describe("a moment action that opens the composer", () => {
 });
 
 describe("the header's writing verb", () => {
-  // The ONE sentence this verb's refusal can say. There is no consent sentence
-  // to hold beside it, and that is the claim rather than an omission: the
-  // composer asks about consent, because consent is answered per PURPOSE and
-  // the purpose is a fact about the message.
+  // The only sentence this verb's refusal can say. Consent is the composer's
+  // to ask, because it is answered per purpose and the purpose is the message's.
   const NO_TRANSPORT = "No address and no thread to reply to.";
 
   it("names mail when an address is the only way to reach them", async () => {
@@ -365,9 +360,8 @@ describe("the header's writing verb", () => {
   });
 
   it("refuses, and says why, when there is no way to write to them", async () => {
-    // The case the consent verdict cannot catch: the guard is happily `allowed`
-    // for a contact who has no address at all, so an enabled button would open
-    // a composer that can only fail at the send.
+    // The consent guard reads `allowed` for a contact with no address at all.
+    // An enabled button would open a composer that can only fail at the send.
     mount("overview", unreachable, [mailAllowed]);
 
     expect(await screen.findByText(NO_TRANSPORT)).toBeTruthy();
@@ -376,12 +370,9 @@ describe("the header's writing verb", () => {
     expect(lead.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  // WRITING IS ALWAYS AVAILABLE. A contact who stopped the newsletter can still
-  // be sent their invoice, and which purpose applies is a question about the
-  // MESSAGE — which this page does not have. Disabling the verb answered it
-  // anyway, and answered it wrong: a rep with a lawful service message to send
-  // was told the product would not let them write at all, with no way to see
-  // that only marketing was refused.
+  // Writing stays available. A contact who stopped the newsletter can still be
+  // sent their invoice. Which purpose applies belongs to the message, and the
+  // page has none.
   it("opens the composer even where no purpose currently permits writing", async () => {
     mount("overview", view, [mailBlocked]);
 
@@ -389,12 +380,8 @@ describe("the header's writing verb", () => {
     await waitFor(() => {
       expect(lead.disabled).toBe(false);
     });
-    // NO REFUSAL AT ALL, asserted on the control rather than by looking for a
-    // sentence. The sentence this used to look for was withdrawn from the copy
-    // catalogs with the behaviour, so `queryByText` for it could never find
-    // anything and the case passed whatever the button did. What cannot go
-    // vacuous is the button's own state: a refused verb is disabled and points
-    // at its reason, and this one does neither.
+    // No refusal at all, asserted on the control's own state: a refused verb
+    // is disabled and points at its reason, and this one does neither.
     expect(lead.getAttribute("aria-describedby")).toBeNull();
     // The verb still names the transport it opens.
     expect(lead.querySelector(".lucide-mail")).toBeTruthy();

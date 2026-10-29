@@ -39,6 +39,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
+ `+ControllerSendSQL+`,
  `+moveSQL(sentByReader, laterContent, mailKinds)+`, `+openRequestReminderSQL+`
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
  WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
@@ -51,7 +52,8 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
 		var id ids.UUID
 		var state EmailRowState
 		if err := rows.Scan(&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
-			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files, &state.Move,
+			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files,
+			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Move,
 			&state.RequestHasReminder); err != nil {
 			return nil, err
 		}

@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // ConfirmLinkVault holds the plaintext confirm link between staging and
@@ -63,6 +64,7 @@ type confirmMailInput struct {
 	leadID     ids.LeadID
 	recipient  string
 	kind       string
+	language   string
 	tokenRowID ids.UUID
 	link       string
 	expiresAt  time.Time
@@ -83,20 +85,7 @@ func (s *Store) stageConfirmMail(
 		// No lane wired: nothing was staged, and a zero id says so.
 		return ids.UUID{}, nil
 	}
-	language := s.mailLanguage(ctx, tx)
-	purpose := ""
-	if in.kind == LinkConsentConfirmation {
-		var err error
-		purpose, err = subscriptionPurposeLabel(ctx, tx, in.purposeID, mailcopy.For(language))
-		if err != nil {
-			return ids.UUID{}, err
-		}
-	}
-	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), in.expiresAt, language, purpose)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category)
+	rendered, category, err := s.renderConfirmMail(ctx, tx, in)
 	if err != nil {
 		return ids.UUID{}, err
 	}
@@ -123,6 +112,28 @@ func (s *Store) stageConfirmMail(
 		return ids.UUID{}, err
 	}
 	return deliveryID, nil
+}
+
+// renderConfirmMail is the wording a confirm link is sent with. The send and
+// its preview both call it, so the preview shows the words that will go.
+func (s *Store) renderConfirmMail(
+	ctx context.Context, tx pgx.Tx, in confirmMailInput,
+) (Rendered, commsauthz.Category, error) {
+	language := s.sendLanguage(ctx, tx, in.language)
+	purpose := ""
+	if in.kind == LinkConsentConfirmation {
+		var err error
+		purpose, err = subscriptionPurposeLabel(ctx, tx, in.purposeID, mailcopy.For(language))
+		if err != nil {
+			return Rendered{}, "", err
+		}
+	}
+	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), in.expiresAt, language, purpose)
+	if err != nil {
+		return Rendered{}, "", err
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category)
+	return rendered, category, err
 }
 
 // templateForLinkKind maps a token kind to the wording that carries it.
@@ -184,6 +195,29 @@ func (s *Store) canSendConfirm() bool {
 func (h Handlers) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLinkVault, base string) Handlers {
 	h.store = h.store.WithConfirmationLane(sender, vault, base)
 	return h
+}
+
+// sendLanguage is the language one controller mail goes out in: the one its
+// sender picked, else the installation's.
+func (s *Store) sendLanguage(ctx context.Context, tx pgx.Tx, picked string) string {
+	if picked != "" {
+		return picked
+	}
+	return s.mailLanguage(ctx, tx)
+}
+
+// requireMailLanguage refuses a picked language this build has no copy for;
+// "" picks none.
+func requireMailLanguage(picked string) error {
+	if picked == "" || mailcopy.Known(picked) {
+		return nil
+	}
+	carried := make([]string, 0, len(mailcopy.Languages()))
+	for _, language := range mailcopy.Languages() {
+		carried = append(carried, string(language))
+	}
+	return &ValidationError{Field: "language", Reason: "pick one of the languages the installation's mail is written in: " +
+		strings.Join(carried, ", ")}
 }
 
 // mailLanguage is the language this installation's controller mail is written

@@ -24,7 +24,7 @@ import (
 func (s *Service) planned(
 	ctx context.Context, asOf, until time.Time, loc *time.Location, scope TaskScope,
 ) ([]crmcontracts.AttentionItem, int, error) {
-	defer timeStage("planned")()
+	defer timeStage(ctx, "planned")()
 	open, err := s.tasks.OpenForViewer(ctx, asOf, until, plannedCap, scope, s.taskOwner)
 	if err != nil {
 		return nil, 0, err

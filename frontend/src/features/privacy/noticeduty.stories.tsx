@@ -2,8 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders, stubWithSession } from "../../testing/story-utils";
+import { userEvent, within } from "storybook/test";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
 import type { WorklistItem } from "../worklist/worklist.queries";
+import { mailPreview } from "./controllermail.fixtures";
 import { NoticeDuty } from "./noticeduty";
 
 // The privacy-notice duty on the worklist's pane: what the duty is, what its
@@ -50,7 +56,17 @@ const UNEVIDENCED: WorklistItem = { ...IMPORTED, acquisition: null };
 
 function duty(item: WorklistItem) {
   return () => {
-    stubWithSession({}, { contact: ["read", "update"] });
+    stubWithSession(
+      {
+        [`GET /contacts/${CONTACT}/consent/mail-preview`]: () =>
+          jsonResponse(
+            mailPreview("privacy_notice", "de", {
+              to_address: "steve@kps.test",
+            }),
+          ),
+      },
+      { contact: ["read", "update"] },
+    );
     return (
       <StoryProviders>
         <NoticeDuty item={item} contactId={CONTACT} />
@@ -84,4 +100,22 @@ export const ImportedPhone: Story = {
 export const ImportedDark: Story = {
   globals: { theme: "dark" },
   render: duty(IMPORTED),
+};
+
+/** Send privacy notice opens the mail first; nothing is sent until its confirm. */
+export const NoticePreview: Story = {
+  render: duty(IMPORTED),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Send privacy notice" }),
+    );
+    await within(canvasElement.ownerDocument.body).findByText("steve@kps.test");
+  },
+};
+
+export const NoticePreviewPhone: Story = {
+  ...NoticePreview,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

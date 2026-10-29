@@ -1427,6 +1427,16 @@ paths:
         with the existing contact id. An email on the erasure list
         answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
         `contact.created` event.
+
+        `company_id` or `company_name` names the employer, and the contact, that company and
+        the current employment edge between them are written in one transaction: when any of
+        them is refused, nothing is written. `company_name` creates the company and needs
+        `company:create`; either needs `relationship:create` and `contact:update`. A
+        `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+        missing company and for one hidden by row scope. Sending both answers 422 naming
+        `company_name`. The answer's `employer` names the company. An agent sending either
+        is refused with 422 `employer_needs_a_human` naming it, and `create_record` does not
+        take them: an agent names an employer with a `relationship` write.
       x-mcp-tool:
         verb: create_record
         record_type: contact
@@ -1518,6 +1528,9 @@ paths:
 
         Provenance is `manual` with the capturing user as `captured_by`, and the profile
         URL is stored as given. Nothing here fetches that URL, now or ever.
+
+        A `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+        missing company and for one hidden by row scope.
 
         Human-only, and not a `create_record` tool: quick capture is a form somebody
         types into while reading a profile, so there is no agent story for it and
@@ -1771,6 +1784,67 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/employer:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: linkContactEmployer
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Attach an employer to an existing contact, creating the company when it is new.
+      description: |
+        `company_id` links an existing company; `company_name` creates one. Exactly one of
+        them. The company and the current employment edge are written in one transaction, so
+        a refusal leaves neither behind. The edge becomes the contact's primary employment
+        when they have no other current one.
+
+        A company created here is given the domain of the contact's work email (the primary
+        one first) only when that domain is not consumer mail for this workspace, not a domain
+        the workspace refused a company, and not a domain another company holds. When a company
+        the caller can read holds it, the answer is 409 `duplicate_domain` with
+        `details.existing_id` naming that company, and nothing is written: link that company
+        with `company_id` instead. A holder the caller cannot read is not named, and the new
+        company is created without the domain.
+
+        The contact must be one the caller can change: a contact they cannot see answers 404,
+        and a missing `contact:update` or `relationship:create` grant answers 403, as does
+        `company:create` when `company_name` creates a company. A `company_id` the caller
+        cannot read answers 422 naming `company_id`, the same for a missing company and for
+        one hidden by row scope. A company the contact already holds a current employment at
+        answers 409.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkContactEmployerRequest' }
+            examples:
+              fromASignature:
+                summary: The company a signature named, created and linked
+                value:
+                  company_name: Acme GmbH
+                  title: Head of Procurement
+      responses:
+        '201':
+          description: The employer is attached.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkContactEmployerResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: |
+            `duplicate_domain`: a company the caller can read already holds the contact's work
+            domain, and `details.existing_id` names it. Or the contact already holds a current
+            employment at `company_id`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/360:
@@ -3311,6 +3385,40 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /companies/for-address:
+    get:
+      tags: [Companies]
+      operationId: getCompanyForAddress
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The company a contact at this email address would work at.
+      description: |
+        Answers the live, unmerged company the caller can read whose live domain is the
+        address's domain or a parent of it, the narrowest such domain first. It matches as
+        the daily link reconcile and `listCompanyLinkCandidates` do: an address on
+        `eu.acme.example` answers the company on `acme.example`. Consumer mail for this
+        workspace and a domain refused a company never answer, even when a company carries
+        the domain. A company the caller cannot read is never named.
+
+        `company` is absent when no company answers, and for a value that is no address with
+        a hostname, so a form may ask while the address is still being typed. Needs read on
+        companies.
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: The address as typed.
+          schema: { type: string, maxLength: 320 }
+      responses:
+        '200':
+          description: The company, or none.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyForAddress' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /companies/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -3957,6 +4065,80 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /companies/{id}/link-candidates:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: listCompanyLinkCandidates
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Live contacts on this company's domains who do not work here yet.
+      description: |
+        A contact is a candidate when it is live and not merged, the caller can read and
+        change it, one of its live email addresses is at one of this company's domains or a
+        subdomain of one, it is no workspace seat, and it holds no current employment at this
+        company. A domain that is consumer mail for this workspace never matches, even when
+        the company carries it. `linkCompanyContacts` accepts exactly these contacts.
+
+        A candidate with no current employer is also attached by the daily link reconcile,
+        so the list's lasting use is contacts who work elsewhere today.
+
+        Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
+        Needs read on companies, contacts and relationships. A caller without
+        `relationship:create` and `contact:update` gets no candidates. Reading the company is
+        mandatory: one the caller cannot see answers 404.
+      responses:
+        '200':
+          description: The candidates.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyLinkCandidateList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /companies/{id}/link-contacts:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Companies]
+      operationId: linkCompanyContacts
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Link the chosen link candidates to this company as current employees.
+      description: |
+        Writes one current employment edge from each named contact to this company, all in
+        one transaction. Every id must be a candidate `listCompanyLinkCandidates` would return
+        to this caller now; one that is not answers 422 naming `contact_ids` with code
+        `not_a_link_candidate` and `details.contact_id`, and nothing is written. A contact the
+        caller cannot read, or may read but not change, answers the same as any other
+        non-candidate. Each edge becomes the contact's primary employment when they have no
+        other current one.
+
+        Needs `relationship:create`, `contact:update`, and read on companies, contacts and
+        relationships; without the first two it answers 403. A company the caller cannot see
+        answers 404.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LinkCompanyContactsRequest' }
+      responses:
+        '201':
+          description: The edges written, in the order the ids were sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkCompanyContactsResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/dossier:
@@ -21437,6 +21619,30 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /approvals/pending-count:
+    get:
+      tags: [Approvals]
+      operationId: countPendingApprovals
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How many approvals wait for the caller, exactly.
+      description: |
+        The number of items `listApprovals?status=pending` would return to this caller with the
+        wire status `pending`, across every page: the same visibility checks, the same mutes and
+        the same lazy expiry. It answers one number instead of every page.
+
+        `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+        then without any event, so a client that shows it reads it again at that moment. Measure
+        the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+      responses:
+        '200':
+          description: The count.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPendingCount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /approvals/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23694,8 +23900,7 @@ paths:
       summary: Mail the subject a single-use link that confirms one marketing purpose.
       description: |
         Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-        primary address — `queued` reports whether it reached the lane, and an installation with
-        none still mints and answers 201. The purpose must be live and must itself require double
+        primary address. The purpose must be live and must itself require double
         opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
         confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
         authenticated operator, who could paste it straight back into `recordConsent` — a round
@@ -23710,10 +23915,8 @@ paths:
         authorization decision recording why the installation was allowed to send it, and a
         timeline entry — which is what makes it visible to a subject-access export and reachable by
         erasure. `queued` reports that the message was staged in the same transaction that minted
-        the link; `sendable` says whether this installation has a lane at all. An installation with
-        no lane still mints the token and answers 201, because the write happened and reporting it
-        as a failure would invite a second request that mints another token and supersedes the
-        first.
+        the link. An installation with no lane is refused with 409 before anything is minted,
+        because the link is mailed and never returned.
       requestBody:
         required: true
         content:
@@ -23732,6 +23935,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
           description: |
             The request named no purpose, named one no `consent_purpose` row holds, or the contact
@@ -23777,6 +23981,51 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/mail-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: previewControllerMail
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+      description: |
+        Renders the mail the matching send would stage now: its From and To addresses, subject and
+        text. The link is not minted, so the text carries a labelled marker where the send puts
+        the link. Nothing is written and nothing is sent.
+
+        It admits the same callers and contacts as the send, so it never shows a mail the send
+        would refuse.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema: { type: string, enum: [record_confirmation, privacy_notice] }
+          description: '`record_confirmation` previews `confirm-request`; `privacy_notice` previews `privacy-notice`.'
+        - name: language
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/MailLanguage' }
+          description: The language to render in. Absent means the installation's mail language.
+      responses:
+        '200':
+          description: The mail as the send would stage it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControllerMailPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
+        '422':
+          description: |
+            The contact carries no live email address, the installation's controller particulars
+            are incomplete, or the language is not one this build sends in.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /contacts/{id}/consent/privacy-notice:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -23806,6 +24055,11 @@ paths:
         The address is derived from the contact's own live primary email, never taken from the
         caller, and the token is never returned. Both properties are the same ones
         `confirm-request` rests on and for the same reasons.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ControllerMailSend' }
       responses:
         '201':
           description: Notice issued, and what became of the delivery.
@@ -23815,6 +24069,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /contacts/{id}/consent/confirm-request:
     parameters:
@@ -23846,9 +24101,13 @@ paths:
         row, an authorization decision recording why the installation was allowed to send it, and a
         timeline entry — which is what makes it visible to a subject-access export and reachable by
         erasure. `queued` reports that the message was staged, in the same transaction that minted
-        the link; `sendable` says whether this installation has a lane at all. An installation with
-        no lane still mints the token and answers 201, because the write happened and reporting it
-        as a failure would invite a second request that mints another token and supersedes the first.
+        the link. An installation with no lane is refused with 409 before anything is minted,
+        because the link is mailed and never returned.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ControllerMailSend' }
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -23858,8 +24117,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
-          description: The contact carries no live email address, so there is no mailbox a link could reach.
+          description: |
+            The contact carries no live email address, so there is no mailbox a link could reach,
+            or the language is not one this build sends in.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -28142,6 +28404,10 @@ paths:
         deal: before that the qualified forecast would count nothing. A setting fixed by
         the environment is refused with `409 setting_locked`.
 
+        Switching on also sends `preview_digest`, the `digest` of the preview the admin
+        saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
+        so nobody switches on a picture that is no longer true.
+
         Switching off takes effect at once. The reviews, their tasks and their history
         stay; only the qualified readings disappear, and the baseline readings never
         changed.
@@ -28154,6 +28420,9 @@ paths:
               required: [enabled]
               properties:
                 enabled: { type: boolean }
+                preview_digest:
+                  type: string
+                  description: The `digest` of the preview shown before switching on.
               additionalProperties: false
       responses:
         '200':
@@ -28302,6 +28571,78 @@ paths:
       responses:
         '204':
           description: The answer was recorded.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/assurance/exceptions/{id}/wait:
+    post:
+      tags: [Reports]
+      operationId: waitInputCheck
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Answer a customer review with the day the customer asked you to wait until.
+      description: |
+        For a `deal_viability` review only. One transaction records the customer's wait on
+        the deal (`wait_until`) and answers the review `remind_later` for the same day. The
+        review stays open and the deal stays out of the qualified forecast while it waits:
+        a wait is not support. The review comes back on that day.
+
+        404 when the finding is not an open customer review.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [until]
+              properties:
+                until: { type: string, format: date }
+              additionalProperties: false
+      responses:
+        '204':
+          description: The wait was recorded on the deal and the review.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /forecast/assurance/exceptions/{id}/close-lost:
+    post:
+      tags: [Reports]
+      operationId: closeLostInputCheck
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: Answer a customer review by closing its deal as lost.
+      description: |
+        For a `deal_viability` review only. One transaction moves the deal to its pipeline's
+        lost stage with the reason given, and answers the review `not_relevant` with that
+        reason. A review is never answered `not_relevant` while its deal is still open.
+
+        404 when the finding is not an open customer review. 422 when the pipeline has no
+        lost stage.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lost_reason]
+              properties:
+                lost_reason: { type: string, minLength: 1 }
+              additionalProperties: false
+      responses:
+        '204':
+          description: The deal was closed as lost and the review answered.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -33089,6 +33430,13 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    ControllerMailRefused:
+      description: |
+        The installation cannot send its own mail (`conflict`), or the consent engine refuses this
+        mail to this contact (`consent_not_granted`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     VersionConflict:
       description: 'Optimistic-lock failure — the entity changed since the version in If-Match (`code: version_skew`).'
       content:
@@ -36619,6 +36967,11 @@ components:
           description: |
             True when the message has blind recipients this caller may not see. The viewer says
             that they exist rather than showing an empty list that reads as none.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names.
         attachments:
           type: array
           items: { $ref: '#/components/schemas/EmailAttachmentSummary' }
@@ -40298,6 +40651,15 @@ components:
             into the contact in the same write, and a conversion the server refuses fails the
             whole write. An agent sending this field is refused with 422
             `convert_needs_a_human`: an agent converts with `promote_lead`.
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          description: An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+          x-agent-withheld: true
+        company_name:
+          type: [string, 'null']
+          description: A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
+          x-agent-withheld: true
       additionalProperties: true
       x-extension: true
 
@@ -40354,6 +40716,93 @@ components:
           description: |
             True when the employer is a record this call created. The surface says so
             rather than letting a typo silently become a second company.
+
+    LinkContactEmployerRequest:
+      type: object
+      description: The employer to attach. Exactly one of `company_id` and `company_name`.
+      properties:
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          description: An existing company to link.
+        company_name:
+          type: [string, 'null']
+          description: A company to create and link. Must not be blank when sent.
+        title:
+          type: [string, 'null']
+          description: Their job title at this company, stored as the employment's `role`.
+      additionalProperties: false
+
+    LinkContactEmployerResult:
+      type: object
+      required: [contact, company_id, company_created, relationship_id]
+      description: The contact with its employer, and what this call wrote.
+      properties:
+        contact: { $ref: '#/components/schemas/Contact' }
+        company_id: { type: string, format: uuid, description: The employer now linked. }
+        company_created:
+          type: boolean
+          description: True when this call created the company.
+        company_domain:
+          type: [string, 'null']
+          description: The domain a created company was given. Null when it was given none, and when the company already existed.
+        relationship_id: { type: string, format: uuid, description: The employment edge written. }
+
+    CompanyForAddress:
+      type: object
+      description: The company a contact at the asked address would work at.
+      properties:
+        company:
+          allOf: [{ $ref: '#/components/schemas/ContactEmployer' }]
+          description: Absent when no company the caller can read is on the address's domain.
+
+    CompanyLinkCandidate:
+      type: object
+      required: [contact_id, full_name, email]
+      description: A contact on one of the company's domains who does not work there yet.
+      properties:
+        contact_id: { type: string, format: uuid }
+        full_name: { type: string }
+        title: { type: [string, 'null'] }
+        email:
+          type: string
+          description: The address that matched, the contact's primary one first.
+        employer:
+          allOf: [{ $ref: '#/components/schemas/ContactEmployer' }]
+          description: Where the contact works today. Absent when they work nowhere or the caller may not see that employer.
+
+    CompanyLinkCandidateList:
+      type: object
+      required: [data, truncated]
+      properties:
+        data:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/CompanyLinkCandidate' }
+        truncated:
+          type: boolean
+          description: True when more candidates exist than `data` carries.
+
+    LinkCompanyContactsRequest:
+      type: object
+      required: [contact_ids]
+      properties:
+        contact_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`.
+      additionalProperties: false
+
+    LinkCompanyContactsResult:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Relationship' }
 
     VCardImportReport:
       type: object
@@ -44195,6 +44644,10 @@ components:
             What the receipt is evidence OF. The graph counts attendees and organizers as well
             as correspondents, so a meeting is as much a receipt here as a mail — and a citation
             that drew every one of them as an email would tell a reader a meeting was one.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`.
 
     ContactGraphRoute:
       type: object
@@ -49417,6 +49870,11 @@ components:
             Present exactly when `kind=email`. What the canonical email row renders, so a list
             does not have to fetch a message per visible line to draw one. Every other kind
             carries none, and a reader branches on its presence rather than on the kind word.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay. Absent on every other row.
         message_move:
           type: string
           enum: [needs_reply, waiting_for_them, none]
@@ -55385,6 +55843,7 @@ components:
         teams:
           type: array
           items: { type: string, format: uuid }
+        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
         authorization:
           $ref: '#/components/schemas/Authorization'
         settings_availability:
@@ -55580,9 +56039,11 @@ components:
         installation enforces viability reviews (`assurance.qualified_forecast_enforced`).
         Absent means no qualified reading exists, never that it equals the baseline.
 
-        A deal under an open viability review is excluded. A deal the input check could not
-        judge on current evidence, because the mailbox was unread, the deal is new, or the
-        evidence changed since the check, is unknown. The two are counted apart: an unknown
+        A deal under an open viability review is excluded. So is a deal the customer still
+        talks about but whose close date is provisional or overdue, or that has no next step; it
+        gets no review, and `unsupported_minor` and `unsupported_count` carry it apart.
+        A deal the input check could not judge on current evidence, because the mailbox was
+        unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown
         deal is a gap in what was checked, not in the pipeline. Every figure is a subset of
         the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
       required:
@@ -55593,6 +56054,8 @@ components:
         - unknown_minor
         - excluded_count
         - unknown_count
+        - unsupported_minor
+        - unsupported_count
       properties:
         evidence_minor: { type: integer, format: int64 }
         best_case_minor: { type: integer, format: int64 }
@@ -55600,7 +56063,17 @@ components:
         excluded_minor:
           type: integer
           format: int64
-          description: Open baseline money on deals under an open viability review.
+          description: >-
+            Open baseline money on every deal left out: under an open viability review, or
+            unsupported.
+        unsupported_minor:
+          type: integer
+          format: int64
+          description: >-
+            The part of `excluded_minor` on deals left out with no review: a close date that is
+            provisional or overdue, or no next step. A deal with no close date falls in no period,
+            so no reading counts it.
+        unsupported_count: { type: integer }
         unknown_minor:
           type: integer
           format: int64
@@ -55900,6 +56373,26 @@ components:
         state:
           type: string
           enum: [not_enrolled, observing, enforcing]
+        preview:
+          $ref: '#/components/schemas/ForecastEnforcementPreview'
+      additionalProperties: false
+    ForecastEnforcementPreview:
+      type: object
+      description: >-
+        What switching enforcement on would do now. Present only while `observing`, and only
+        to an admin: it counts every open deal. Switching on sends `digest` back, and is
+        refused when the deals' treatment changed since.
+      required: [left_out_count, unknown_count, digest]
+      properties:
+        left_out_count:
+          type: integer
+          description: Open deals the qualified forecast would leave out, under review or unsupported.
+        unknown_count:
+          type: integer
+          description: Open deals the last check could not judge on current evidence.
+        digest:
+          type: string
+          description: Names the policy version and every open deal's treatment this preview counted.
       additionalProperties: false
     ForecastAssurance:
       type: object
@@ -60298,6 +60791,60 @@ components:
             plaintext link is mailed and never returned, so one that cannot be sent is one
             nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
 
+    MailLanguage:
+      type: string
+      enum: [de, en, vi]
+      description: A language this build writes the installation's own mail in.
+
+    ControllerMailSend:
+      type: object
+      description: How to send a mail the installation writes as controller. An absent body sends in the installation's mail language.
+      properties:
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: |
+            The language of the mail and of the page its link opens. Absent means the
+            installation's mail language.
+
+    ControllerMailPreview:
+      type: object
+      description: The exact mail a controller send would stage now, with a marker where the link goes.
+      required: [kind, language, default_language, languages, from_address, to_address, subject, text]
+      properties:
+        kind: { type: string, enum: [record_confirmation, privacy_notice] }
+        language: { $ref: '#/components/schemas/MailLanguage' }
+        default_language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The installation's mail language, which a send with no language uses.
+        languages:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/MailLanguage' }
+          description: Every language this build can send the mail in, in a stable order.
+        from_address:
+          type: [string, 'null']
+          description: The address the relay sends from. Null when the installation names none.
+        to_address:
+          type: string
+          description: The contact's own live primary email, the only address the send mails.
+        subject: { type: string }
+        text:
+          type: string
+          description: |
+            The plain-text body as sent. Where the send puts the link, it carries a marker in the
+            mail's language instead of a URL.
+
+    ControllerSend:
+      type: object
+      description: |
+        Present on a mail sent through the installation's own relay rather than through a
+        member's mailbox. Its presence is the lane.
+      required: [from_address]
+      properties:
+        from_address:
+          type: [string, 'null']
+          description: The From address the mail left from, or was staged with while it waits. Null when the relay names none.
+
     CompanyVatCheck:
       type: object
       description: |
@@ -60742,6 +61289,24 @@ components:
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
+
+    ApprovalPendingCount:
+      type: object
+      additionalProperties: false
+      required: [count, as_of]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Pending approvals this caller could decide now.
+        next_expiry_at:
+          type: string
+          format: date-time
+          description: When the first counted approval expires. Absent when none of them can expire.
+        as_of:
+          type: string
+          format: date-time
+          description: The server's clock when it counted.
 
     ApprovalListResponse:
       type: object
@@ -61463,6 +62028,19 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/User' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+    TeamWeekReach:
+      type: string
+      enum: [none, teams_led, every_team]
+      description: |
+        Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+        answered by the rule that endpoint is served on. `every_team` for a seat holding
+        `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+        `none` for everyone else, a read-only seat included. Separate from a worklist's
+        `scope_options`, because the `team` worklist is the team's live work and the
+        week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+        carry it, from one rule. Absent from an older server, which a client reads as
+        `none`.
+
     TeamListResponse:
       type: object
       required: [data, page]
@@ -62339,6 +62917,9 @@ components:
           items:
             type: string
             enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     SubscriptionConfirmationPage:
       type: object
@@ -62360,6 +62941,9 @@ components:
           type: string
           enum: [unknown, granted, withdrawn]
           description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     RecordConfirmationPage:
       type: object
@@ -62385,6 +62969,9 @@ components:
           type: array
           description: 'Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.'
           items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     ConfirmFieldOrigin:
       type: object
@@ -66263,17 +66850,7 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week:
-          type: string
-          enum: [none, teams_led, every_team]
-          description: |
-            Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
-            answered by the rule that endpoint is served on. `every_team` for a seat holding
-            `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
-            `none` for everyone else, a read-only seat included. Separate from
-            `scope_options`, because the `team` worklist is the team's live work and the
-            week is a lead's verdict on named colleagues. Absent from an older server, which
-            a client reads as `none`.
+        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:

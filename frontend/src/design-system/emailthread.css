@@ -1,4 +1,4 @@
-/* EmailThread — a conversation in the email drawer, oldest message first. */
+/* EmailThread: a conversation in the email drawer, newest message first. */
 
 .emailthread {
   display: flex;
@@ -88,4 +88,17 @@
   inline-size: 1rem;
   block-size: 1rem;
   color: var(--success);
+}
+
+.emailthread__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+.emailthread__actions > .emaildetail__more {
+  margin-inline-start: auto;
+}
+.emailthread__actions:empty {
+  display: none;
 }

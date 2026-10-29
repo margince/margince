@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
+import { useActivityGate } from "../../components/activitygate";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -121,6 +122,7 @@ export function CompanyPage({
   // The daily brief's leading card opens the same drawer from its own verb, so
   // the header strip is not the only door into it.
   const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
+  const activity = useActivityGate();
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal. Keyed by
   // activity id rather than a boolean, because the modal reads that row.
@@ -203,6 +205,7 @@ export function CompanyPage({
             drawer={activityDrawer}
             onDrawer={setActivityDrawer}
             archivedReasonId={archivedReasonId}
+            activity={activity}
           />
           {/* Last in the row, after the verbs it holds the remainder of. A
             menu of everything else reads as the first thing to press when it
@@ -210,6 +213,8 @@ export function CompanyPage({
           <CompanyActionBadges
             company={company}
             archivedReasonId={archivedReasonId}
+            activity={activity}
+            onAddTask={() => setActivityDrawer("task")}
             onOpenHistory={() => setAuditOpen(true)}
             onSetUpPartner={() => onTab("partner")}
           />

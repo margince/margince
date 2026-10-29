@@ -248,3 +248,18 @@ button.evidence-chip:hover {
   background-color: var(--bgChip);
   transition-duration: var(--dur-tap);
 }
+
+/* A relay send's tag and its From line wrap as one unit in a narrow column,
+   so neither runs past the row's edge. */
+.provenance-relay {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.provenance-relay > .t-caption {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
