@@ -16,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
+const introductionValidationMigration = "core/1792842046"
+
 func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
 	return datatask.New(pool, dataTaskCatalog(pool, now), release, now, dataTaskFailureNotice(pool))
 }
@@ -57,5 +59,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		leadContactPairsDataTask(pool),
 		addressDomainFoldDataTask(),
 		geocodePointsDataTask(),
+		signaturePhonesDataTask(),
 	}
 }
