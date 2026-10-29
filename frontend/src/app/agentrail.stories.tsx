@@ -209,42 +209,14 @@ function story(
           ),
           tasks: [],
         }),
-      "GET /ai/usage": () =>
+      "GET /ai/usage/summary": () =>
         jsonResponse({
-          // One priced task and one the server could not price, which is the
-          // shape the month actually arrives in: the total is the priced lines
-          // and the unpriced one adds nothing to it.
-          days:
-            answers.pricedMinor === undefined
-              ? []
-              : [
-                  {
-                    date: "2026-08-01",
-                    tasks: [
-                      {
-                        task: "enrich",
-                        tier: "cheap_cloud",
-                        calls: 2,
-                        tokens_in: 100,
-                        tokens_out: 40,
-                        cost_est_minor: answers.pricedMinor,
-                      },
-                      {
-                        task: "summarize",
-                        tier: "cheap_cloud",
-                        calls: 1,
-                        tokens_in: 30,
-                        tokens_out: 10,
-                      },
-                    ],
-                  },
-                ],
-          budget: {
-            monthly_tokens: 0,
-            spent_tokens: 0,
-            band: "normal",
-            currency: "USD",
-          },
+          // A month the server could not price carries no figure at all.
+          ...(answers.pricedMinor === undefined
+            ? {}
+            : { cost_est_minor: answers.pricedMinor }),
+          currency: "USD",
+          computed_at: "2026-08-01T09:00:00Z",
         }),
       "GET /me/ai-activity": () =>
         jsonResponse({

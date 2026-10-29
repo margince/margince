@@ -18,11 +18,8 @@ export const COUNTS = { inbox: 12, tasks: 4 };
 
 // The routes the chrome itself reads on every page, under whatever the page asks.
 export const SHELL_ROUTES: RouteMap = {
-  "GET /ai/usage": () =>
-    jsonResponse({
-      days: [],
-      budget: { monthly_tokens: 100, spent_tokens: 20, band: "normal" },
-    }),
+  "GET /ai/usage/summary": () =>
+    jsonResponse({ currency: "USD", computed_at: "2026-08-01T09:00:00Z" }),
 };
 
 // No logo_url: Storybook serves no object store, so the monogram is what a
