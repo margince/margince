@@ -117,7 +117,7 @@ func (h analyticsShareHandlers) OpenForecastShare(
 ) {
 	var out crmcontracts.SharedForecastView
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, err := h.shares.Resolve(ctx, tx, token)
+		share, _, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -125,9 +125,6 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		out.Target = share.Target
 
 		if share.Kind == shareKindSnapshot {
-			if err := requireFrozenScopeMeasurable(ctx, tx, share.Scope); err != nil {
-				return err
-			}
 			return h.serveSnapshot(ctx, tx, share, &out)
 		}
 		return h.serveLive(ctx, tx, share, &out)
@@ -136,6 +133,27 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// resolveForReader resolves a share for the signed-in reader. Both the frozen
+// reading and its export pass it. A frozen share answers to the switch like a
+// live read: its population, the owners behind its figures, and no colleague
+// named on its rows.
+func (h analyticsShareHandlers) resolveForReader(
+	ctx context.Context, tx pgx.Tx, token string,
+) (Share, []SharedContribution, error) {
+	share, err := h.shares.Resolve(ctx, tx, token)
+	if err != nil || share.Kind != shareKindSnapshot || share.SnapshotID == nil {
+		return share, nil, err
+	}
+	rows, err := SharedSnapshotRows(ctx, tx, *share.SnapshotID)
+	if err != nil {
+		return Share{}, nil, err
+	}
+	if err := requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
+		return Share{}, nil, err
+	}
+	return share, rows, nil
 }
 
 // serveSnapshot re-sums a frozen state over the rows this caller may read.
@@ -317,7 +335,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 ) {
 	var rows []SharedContribution
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, err := h.shares.Resolve(ctx, tx, token)
+		share, frozen, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -327,8 +345,8 @@ func (h analyticsShareHandlers) ExportForecastShare(
 			// Refusing beats exporting a set assembled a second way here.
 			return apperrors.ErrNotFound
 		}
-		rows, err = SharedSnapshotRows(ctx, tx, *share.SnapshotID)
-		return err
+		rows = frozen
+		return nil
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return

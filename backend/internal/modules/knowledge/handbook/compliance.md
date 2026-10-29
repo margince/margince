@@ -27,11 +27,22 @@ Also called: compliance check, legal sign-off, is Margince compliant.
 
 ### Can we stop Margince from showing each colleague's performance?
 Yes. Admin and Ops switch off **Show individual performance** on the **Installation** card under **Settings → Company**. The audit log records each change. While it is off:
-- No report, forecast, target, export or agent answer shows a colleague's figures. Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
-- A team or company total shows only if it covers three or more members. A smaller total minus your own figure would be one colleague's figure.
-- Team weeks are not made, and older ones cannot be opened. Each member's own week stays.
+- Reports, analytics questions, forecasts, forecast shares, targets and editions show no colleague's figures. That holds for their exports and for agent answers about them too.
+- Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
+- A figure that holds a colleague's work shows only if it holds the work of at least two colleagues besides you who still work here.
+- Team weeks are not made, sent or opened. Each member's own week stays.
 - Everyone still sees their own figures.
-The switch does not yet cover the **Team** board on Home and its coaching suggestions. They still count each teammate's waiting mail and overdue tasks.
+
+What the switch does not cover yet:
+- the **Team** board on Home and its coaching moves;
+- a lead's view of a named member's queue;
+- the team section of the morning mail;
+- team weekly plans.
+
+What the switch cannot promise:
+- Records stay open to read. A list of deals still shows each deal's owner and amount.
+- Totals of teams that share members can be compared. Say you share one team with A and B, one with A and C, and one with B and C. The three totals together give each colleague's figure.
+
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
 ## The four compliance documents, in order
@@ -75,7 +86,7 @@ passing around inside the company; the German versions are the ones to sign.
 | What was decided about the senders who write to me? | Settings → Capture activity → Senders, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
-| Can a manager see each colleague's sales figures? | Not while **Show individual performance** is off. Each member sees their own, and teams of three or more see totals |
+| Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
 
 Margince cannot tell you whether your own way of working is within the law: the
 templates have blanks to fill in. For erasure, access requests, retention and consent inside Margince, see

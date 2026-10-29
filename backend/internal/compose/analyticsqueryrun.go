@@ -113,6 +113,9 @@ func RunAnalyticsQuery(
 	if err := refuseIfTheFilterHidesTooLittle(ctx, tx, frame, plan, floor); err != nil {
 		return AnalyticsAnswer{}, err
 	}
+	if err := requireNoLoneColleagueIn(ctx, tx, frame, plan.ContributorsSQL, plan.ContributorsArgs); err != nil {
+		return AnalyticsAnswer{}, err
+	}
 
 	pgRows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

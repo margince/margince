@@ -36,6 +36,10 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 		return nil, false, err
 	}
 	markOwnerWithheld(owners, facts)
+	facts, lone, err := withoutLoneColleagueMetrics(ctx, tx, facts)
+	if err != nil {
+		return nil, false, err
+	}
 	groups := map[reportingVisibilityKey][]ids.UUID{}
 	for _, fact := range facts {
 		if fact.SourceType != reportingForecastProjection {
@@ -65,7 +69,7 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 		}
 		out = append(out, fact)
 	}
-	return a.visibleForecastProjections(ctx, tx, out, projections, withheld)
+	return a.visibleForecastProjections(ctx, tx, out, projections, withheld || lone)
 }
 
 func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibilityKey, sourceIDs []ids.UUID) (map[ids.UUID]bool, error) {

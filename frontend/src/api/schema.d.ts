@@ -23136,11 +23136,14 @@ export interface components {
              */
             call_zalo: boolean;
             /**
-             * @description Show individual performance. On by default. Off, no report, forecast, target, export,
-             *     team week or tool answer carries a figure keyed to a colleague of the reader:
-             *     breakdowns and filters by owner or meeting host are refused, a colleague's scope is
-             *     refused, and a total over fewer than three members is refused. Each reader keeps
-             *     their own figures, and teams keep their totals.
+             * @description Show individual performance. On by default. Off, reports, analytics questions,
+             *     forecasts and forecast shares, targets, evidence, editions and their exports, and
+             *     team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+             *     by owner or meeting host are refused, a colleague's scope is refused, and a figure
+             *     that any colleague contributes to is refused unless at least two live colleagues
+             *     besides the reader do. Each reader keeps their own figures. The Team board, coaching
+             *     moves, a lead's view of a named member's queue, the morning mail's team section and
+             *     team weekly plans are not covered yet.
              */
             individual_performance: boolean;
             /**
@@ -52071,7 +52074,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or covers fewer than three members. */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;

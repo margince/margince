@@ -86,13 +86,6 @@ func ResolveAnalyticsScope(
 	if err != nil {
 		return ResolvedScope{}, err
 	}
-	if err := requireTotalOfEnough(ctx, tx, p, resolved); err != nil {
-		// A reader who asked for nothing still gets their own work.
-		if requested.Kind != "" || !errors.As(err, new(auth.IndividualPerformanceOffError)) {
-			return ResolvedScope{}, err
-		}
-		resolved = ownScope(p)
-	}
 	if err := labelScope(ctx, tx, &resolved); err != nil {
 		return ResolvedScope{}, err
 	}

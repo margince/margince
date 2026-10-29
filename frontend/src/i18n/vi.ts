@@ -2710,7 +2710,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.individualPerformanceOff":
-    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn và tổng của các nhóm từ ba thành viên trở lên.",
+    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn và các tổng có ít nhất hai thành viên khác đóng góp.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -12744,11 +12744,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.individualPerformance":
     "Hiển thị hiệu suất của từng thành viên",
   "installationSettings.individualHint":
-    "Nếu hội đồng lao động không cho phép đánh giá từng nhân viên, hãy tắt mục này. Mỗi thành viên vẫn thấy số liệu của bạn ấy, và các nhóm vẫn giữ tổng số.",
+    "Nếu hội đồng lao động không cho phép đánh giá từng nhân viên, hãy tắt mục này. Mỗi thành viên vẫn thấy số liệu của chính họ. Trang hướng dẫn về tuân thủ liệt kê những gì công tắc này chưa áp dụng.",
   "installationSettings.individualOn":
     "Báo cáo, dự báo và đánh giá tuần của nhóm có thể hiển thị số liệu của từng đồng nghiệp cho những ai được phép đo lường.",
   "installationSettings.individualOff":
-    "Không ai thấy số liệu của đồng nghiệp: phân tích theo từng thành viên, tuần của nhóm và tổng của dưới ba thành viên đều bị ẩn.",
+    "Báo cáo, dự báo và tuần của nhóm không hiển thị số liệu của đồng nghiệp, và tổng chỉ có một thành viên khác đóng góp sẽ bị ẩn. Chưa áp dụng cho: bảng Nhóm, gợi ý huấn luyện, chế độ xem danh sách việc của một thành viên, phần nhóm trong thư buổi sáng và kế hoạch tuần của nhóm.",
   "installationSettings.callingHint":
     "Khi công tắc đang bật, liên kết cạnh mỗi số điện thoại có mã quốc gia sẽ mở cuộc trò chuyện trong ứng dụng đó. Ứng dụng nhận được số điện thoại.",
   "installationSettings.editField": "Sửa {field}",

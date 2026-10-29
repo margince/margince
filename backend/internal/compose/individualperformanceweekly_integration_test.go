@@ -12,8 +12,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -110,5 +112,52 @@ func TestIndividualPerformanceOffRefusesATeamWeekFrozenBefore(t *testing.T) {
 	}
 	if reach := auth.TeamWeekReachOf(auth.WithIndividualPerformance(lead, false)); reach != auth.ReachesNoTeam {
 		t.Errorf("Home offers a team week with the switch off: reach %v", reach)
+	}
+}
+
+// preparedTeamWeekly builds a lead's weekly mail carrying their team's week,
+// with the switch on, the way the job prepares it before it submits.
+func preparedTeamWeekly(t *testing.T, e *mailEnv) (ids.UUID, weeklyMailCandidate, time.Time) {
+	t.Helper()
+	week := previewWeek(t)
+	now := reviewHour(week)
+	seedRecipientOutcomes(t, e, week)
+	scope := identity.RoutineTeam
+	if _, err := e.worker.users.SaveMyDelivery(e.repCtx, identity.Delivery{Scope: &scope, TeamID: &e.Team1}); err != nil {
+		t.Fatal(err)
+	}
+	review, _, err := e.worker.engine.AssembleFor(e.repCtx, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	members := []weekly.TeamMember{{UserID: e.Rep1, DisplayName: "Alex Example"}}
+	if _, _, err := e.worker.engine.AssembleTeamFor(e.repCtx, e.Team1, "Northstar sales", members, now); err != nil {
+		t.Fatal(err)
+	}
+	candidate, ready := e.worker.prepareWeeklyMail(e.repCtx, review.ID, now)
+	if !ready || !candidate.namesTeam {
+		t.Fatalf("the lead's weekly is ready %v and names the team %v, want both", ready, candidate.namesTeam)
+	}
+	return review.ID, candidate, now
+}
+
+// A switch turned off after the team's week was built, and before the mail
+// goes, stops the mail: the setting is read again at submission.
+func TestIndividualPerformanceOffBeforeSubmissionSendsNoTeamWeek(t *testing.T) {
+	e := setupWeeklyMail(t)
+	reviewID, candidate, now := preparedTeamWeekly(t, e)
+	showIndividualPerformanceIn(t, e.Env, false)
+	e.worker.sendWeeklyMail(e.repCtx, reviewID, candidate, now)
+	if got := e.relay.count(); got != 0 {
+		t.Fatalf("with the switch turned off before submission the relay was handed %d team weeks", got)
+	}
+}
+
+func TestATeamWeeklyStillGoesWhileIndividualPerformanceStaysOn(t *testing.T) {
+	e := setupWeeklyMail(t)
+	reviewID, candidate, now := preparedTeamWeekly(t, e)
+	e.worker.sendWeeklyMail(e.repCtx, reviewID, candidate, now)
+	if got := e.relay.count(); got != 1 {
+		t.Fatalf("with the switch on the relay was handed %d team weeks, want 1", got)
 	}
 }

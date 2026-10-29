@@ -122,8 +122,9 @@ func memberWeek(
 // yours" apart from "no such team" would let them enumerate the chart one id at
 // a time, the same reason a row-scope miss reads as 404 everywhere else.
 func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
-	if err := e.requireIndividualPerformance(ctx); err != nil {
-		return err
+	// The request's own answer, so a refusal says why rather than only that.
+	if allowed, bound := auth.IndividualPerformanceOf(ctx); bound && !allowed {
+		return auth.IndividualPerformanceOffError{}
 	}
 	switch auth.TeamWeekReachOf(ctx) {
 	case auth.ReachesEveryTeam:
@@ -135,19 +136,14 @@ func (e *Engine) mayReadTeam(ctx context.Context, teamID ids.UUID) error {
 	}
 }
 
-// requireIndividualPerformance refuses every team's week while the installation shows no
-// individual performance, a week frozen before the switch included.
-func (e *Engine) requireIndividualPerformance(ctx context.Context) error {
-	allowed, bound := auth.IndividualPerformanceOf(ctx)
-	if !bound {
-		err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-			var err error
-			allowed, err = identity.IndividualPerformanceTx(ctx, tx)
-			return err
-		})
-		if err != nil {
-			return fmt.Errorf("weekly: reading whether individual performance is shown: %w", err)
-		}
+// refuseWhileIndividualOff refuses a team's week, written or served, while
+// the installation shows no individual performance. It reads the setting in
+// the transaction that writes or serves the week. A switch turned off during a
+// run stops the next week from being written or sent.
+func refuseWhileIndividualOff(ctx context.Context, tx pgx.Tx) error {
+	allowed, err := identity.IndividualPerformanceTx(ctx, tx)
+	if err != nil {
+		return fmt.Errorf("weekly: reading whether individual performance is shown: %w", err)
 	}
 	if !allowed {
 		return auth.IndividualPerformanceOffError{}
@@ -274,6 +270,9 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 
 // readTeamReview is the frozen snapshot plus what needs attention now.
 func (e *Engine) readTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, error) {
+	if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+		return TeamReview{}, err
+	}
 	review, err := scanTeamReview(ctx, tx, row)
 	if err != nil {
 		return TeamReview{}, err

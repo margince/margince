@@ -158,6 +158,10 @@ is off, `auth.TeamWeekReachOf` reaches no team, and a refusal is `IndividualPerf
 which the setting leaves alone. Where nothing bound the setting, compose reads it inside the
 transaction it holds (`individualPerformance` in `compose/individualperformance.go`).
 
+While the setting is off, `requireNoLoneColleague` refuses a figure holding a colleague's work.
+It passes only when the figure holds the work of two or more live colleagues besides the reader. It counts the owners behind each group of
+the answer, after every filter.
+
 ## Autonomy tiers — how agent actions are governed (🟢 / 🟡)
 
 An action's autonomy tier is declared once in the contract (`x-mcp-tool: { tier: … }`). It is checked

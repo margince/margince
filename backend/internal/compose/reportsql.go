@@ -140,6 +140,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			out.excluded = &n
 			where = append(where, maskClauses...)
 		}
+		if err := requireNoLoneColleagueIn(ctx, tx, out.frame, contributorsSQL(spec, where, dimensionExprs(spec, groupBy)), args); err != nil {
+			return err
+		}
 		// Bound separately from `args`, which stays the unbound slice the count
 		// below binds its own statement from. Binding appends a value per token
 		// the statement names, so a second bind over an already-bound slice

@@ -64,15 +64,27 @@ func (e *forecastEnv) reportRefusal(ctx context.Context, t *testing.T, report, b
 // addMembers seats more live colleagues on a team. While the switch is off a
 // total covers three members or more. A suite measuring the whole company needs
 // them beside the harness's two reps.
-func (e *forecastEnv) addMembers(t *testing.T, team ids.UUID, emails ...string) {
+func (e *forecastEnv) addMembers(t *testing.T, team ids.UUID, emails ...string) []ids.UUID {
 	t.Helper()
+	members := make([]ids.UUID, 0, len(emails))
 	for _, email := range emails {
 		member := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Member')`, email)
 		if _, err := e.owner.Exec(context.Background(),
 			`INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, member); err != nil {
 			t.Fatalf("adding a member to the team: %v", err)
 		}
+		members = append(members, member)
 	}
+	return members
+}
+
+// seedWinIn plants one won deal in a currency, so a filter on the currency
+// can isolate who sold it.
+func (e *forecastEnv) seedWinIn(t *testing.T, owner ids.UUID, currency string) {
+	t.Helper()
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, status, closed_at, lost_reason, fx_rate_to_base, source, captured_by)
+		VALUES ($1, 'Win', $2, $3, $4, 1000, $5, 'won', '2026-01-15T10:00:00Z'::timestamptz, NULL, 1.0, 'manual', 'human:x')`,
+		e.pipeline, e.stages[60], owner, currency)
 }
 
 const individualOffCode = "individual_performance_off"
@@ -171,40 +183,46 @@ func TestIndividualPerformanceOffRefusesATypedQueryByOwner(t *testing.T) {
 	}
 }
 
-// A team of one is one colleague's number, so its total waits for a third member.
-func TestIndividualPerformanceOffRefusesATotalOverFewerThanThreeMembers(t *testing.T) {
+// A filter can leave a total that one colleague makes up, even on a team of
+// three. So the floor counts who contributes to the answer, not who is on the
+// team.
+func TestIndividualPerformanceOffRefusesAFilteredTotalOneColleagueMakesUp(t *testing.T) {
 	e := setupForecast(t)
-	seedWinsByThreeOwners(t, e)
-	ofTeam := `{"scope":{"kind":"team","id":"` + e.Team1.String() + `"}}`
+	members := e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
+	e.seedWinIn(t, e.Rep1, "EUR")
+	e.seedWinIn(t, members[0], "EUR")
+	e.seedWinIn(t, members[1], "EUR")
+	e.seedWinIn(t, members[0], "USD")
+	lead := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	team := `"scope":{"kind":"team","id":"` + e.Team1.String() + `"}`
 	e.showIndividualPerformance(t, false)
 
-	status, code := e.reportRefusal(e.Admin(), t, "win-loss", ofTeam)
-	requireRefusedIndividual(t, "a total over a team of one", status, code)
-
-	e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
-	if status, _ := e.reportRefusal(e.Admin(), t, "win-loss", ofTeam); status != http.StatusOK {
-		t.Errorf("a total over a team of three with the switch off = %d, want 200", status)
+	if status, code := e.reportRefusal(lead, t, "win-loss", `{`+team+`}`); status != http.StatusOK {
+		t.Fatalf("the team's total over two other contributors = %d %q, want 200", status, code)
 	}
+	status, code := e.reportRefusal(lead, t, "win-loss", `{`+team+`,"filters":{"currency":"USD"}}`)
+	requireRefusedIndividual(t, "a total only one colleague sold into", status, code)
+	status, code = e.reportRefusal(lead, t, "win-loss",
+		`{`+team+`,"group_by":["currency"],"aggregates":[{"fn":"sum","field":"amount_minor","as":"won"}]}`)
+	requireRefusedIndividual(t, "a breakdown with a group one colleague sold into", status, code)
 }
 
-// A reader who asked for nothing and leads a team too small for a total still
-// opens on their own work.
-func TestIndividualPerformanceOffDefaultsASmallTeamsLeadToTheirOwnWork(t *testing.T) {
+// A departed colleague's sales still belong to them, so they do not lift a
+// total over the floor.
+func TestIndividualPerformanceOffDoesNotCountADepartedColleague(t *testing.T) {
 	e := setupForecast(t)
+	members := e.addMembers(t, e.Team1, "two@forecast.test", "three@forecast.test")
+	e.seedWinIn(t, members[0], "EUR")
+	e.seedWinIn(t, members[1], "EUR")
+	team := `{"scope":{"kind":"team","id":"` + e.Team1.String() + `"}}`
 	e.showIndividualPerformance(t, false)
-	lead := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
-	var resolved ResolvedScope
-	err := InstallationDB(e.Pool).Tx(lead, func(tx pgx.Tx) error {
-		var err error
-		resolved, err = ResolveAnalyticsScope(lead, tx, RequestedScope{})
-		return err
-	})
-	if err != nil {
-		t.Fatalf("resolving a small team lead's default: %v", err)
+
+	if status, code := e.reportRefusal(e.Admin(), t, "win-loss", team); status != http.StatusOK {
+		t.Fatalf("a total over two live colleagues = %d %q, want 200", status, code)
 	}
-	if resolved.Kind != ScopeKindOwner || resolved.ID == nil || *resolved.ID != e.Rep1 {
-		t.Errorf("a small team lead's default with the switch off = %+v, want their own records", resolved)
-	}
+	e.deactivate(t, members[1])
+	status, code := e.reportRefusal(e.Admin(), t, "win-loss", team)
+	requireRefusedIndividual(t, "a total over one live and one departed colleague", status, code)
 }
 
 // The reporting framework marks every colleague's fact withheld, on the rule
