@@ -138,42 +138,50 @@ func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 // worklistStageMark is the stage collector at one moment, which
 // logWorklistStages later subtracts.
 type worklistStageMark struct {
-	durations map[string]httpserver.Histogram
-	costs     map[string]attention.StageCost
+	durations map[attention.StageKey]httpserver.Histogram
+	costs     map[attention.StageKey]attention.StageCost
 }
 
 func worklistStagesSoFar() worklistStageMark {
 	return worklistStageMark{durations: attention.StageTimings(), costs: attention.StageCosts()}
 }
 
-// logWorklistStages prints each worklist stage's mean over the latency step,
-// slowest first, with its statements, database time and Go time per read. A
-// slow worklist row then names its lane, and whether SQL or Go took the time.
-// The collector is process-wide, so the reads before the step are subtracted.
+// logWorklistStages prints each stage's mean over the latency step, by read
+// and slowest first. Beside it go its statements, pgx time, pool wait and the
+// rest per run. The collector is process-wide, so the reads before the step are
+// subtracted.
 func logWorklistStages(t *testing.T, before worklistStageMark) {
 	t.Helper()
 	now := worklistStagesSoFar()
 	// outside_stages has costs and no duration, so its runs come from the costs.
-	runs := func(stage string) uint64 {
-		return max(now.durations[stage].Count(), now.costs[stage].DB.Count()) -
-			max(before.durations[stage].Count(), before.costs[stage].DB.Count())
+	runs := func(key attention.StageKey) uint64 {
+		return max(now.durations[key].Count(), now.costs[key].DB.Count()) -
+			max(before.durations[key].Count(), before.costs[key].DB.Count())
 	}
-	mean := func(stage string) float64 {
-		return (now.durations[stage].Sum() - before.durations[stage].Sum()) / float64(max(1, runs(stage)))
+	perRun := func(key attention.StageKey, sum func(worklistStageMark) float64) float64 {
+		return (sum(now) - sum(before)) / float64(max(1, runs(key)))
 	}
-	names := slices.Collect(maps.Keys(now.costs))
-	for stage := range maps.Keys(now.durations) {
-		if !slices.Contains(names, stage) {
-			names = append(names, stage)
+	keys := slices.Collect(maps.Keys(now.costs))
+	for key := range maps.Keys(now.durations) {
+		if !slices.Contains(keys, key) {
+			keys = append(keys, key)
 		}
 	}
-	slices.SortFunc(names, func(a, b string) int { return cmp.Compare(mean(b), mean(a)) })
-	for _, stage := range names {
-		n := float64(max(1, runs(stage)))
-		statements := float64(now.costs[stage].Statements-before.costs[stage].Statements) / n
-		db := (now.costs[stage].DB.Sum() - before.costs[stage].DB.Sum()) / n
-		app := (now.costs[stage].App.Sum() - before.costs[stage].App.Sum()) / n
-		t.Logf("worklist stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms database %8.1f ms Go per read",
-			stage, mean(stage)*1000, runs(stage), statements, db*1000, app*1000)
+	mean := func(key attention.StageKey) float64 {
+		return perRun(key, func(m worklistStageMark) float64 { return m.durations[key].Sum() })
+	}
+	slices.SortFunc(keys, func(a, b attention.StageKey) int {
+		return cmp.Or(cmp.Compare(a.Read, b.Read), cmp.Compare(mean(b), mean(a)))
+	})
+	for _, key := range keys {
+		cost := func(read func(attention.StageCost) float64) float64 {
+			return perRun(key, func(m worklistStageMark) float64 { return read(m.costs[key]) })
+		}
+		t.Logf("%-15s stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms pgx %6.1f ms pool %8.1f ms rest per run",
+			key.Read, key.Stage, mean(key)*1000, runs(key),
+			cost(func(c attention.StageCost) float64 { return float64(c.Statements) }),
+			cost(func(c attention.StageCost) float64 { return c.DB.Sum() })*1000,
+			cost(func(c attention.StageCost) float64 { return c.PoolWait.Sum() })*1000,
+			cost(func(c attention.StageCost) float64 { return c.App.Sum() })*1000)
 	}
 }

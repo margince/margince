@@ -3,10 +3,10 @@
 
 package attention
 
-// How long each stage of an assembled day takes, and what its statements cost,
-// kept for /metrics. A slow worklist is one route total until it is split by
-// stage. The label is a stage or lane name fixed in this package, never
-// anything a request supplies.
+// How long each stage of an assembled day takes, and what its pgx calls cost,
+// kept for /metrics by composed read and stage. A slow worklist is one route
+// total until it is split by stage. Both labels are names fixed in this
+// package, never anything a request supplies.
 
 import (
 	"context"
@@ -24,77 +24,109 @@ import (
 // four-second budget a degradable lane may use.
 var stageBounds = []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 2, 4, 8}
 
+// The composed reads that meter their stages, one per entry point that opens
+// a snapshot. A read nested in another is charged to the outer one.
+const (
+	ReadWorklist       = "worklist"
+	ReadAttention      = "attention"
+	ReadTeamExceptions = "team_exceptions"
+	// ReadUnmetered is a stage timed outside every composed read.
+	ReadUnmetered = "unmetered"
+)
+
 // OutsideStages is the stage name for the statements a composed read runs
 // outside every timed stage, such as BEGIN and the scope checks.
 const OutsideStages = "outside_stages"
 
-// StageCost is what one stage's statements cost over every metered read since
-// process start. DB is database time as the client saw it. App is the stage's
-// own Go time: its duration less its statements, pool waits and inner stages.
+// StageKey names one series: the composed read and its stage.
+type StageKey struct{ Read, Stage string }
+
+// StageCost is what one stage's pgx calls cost over every metered read since
+// process start, each histogram one sample per run. App is the stage's time
+// less its DB, its PoolWait and its inner stages. Clipped counts runs where
+// those added up to more than the stage's time, so App read zero.
 type StageCost struct {
 	Statements int64
 	Failed     int64
+	Clipped    int64
 	DB         httpserver.Histogram
+	PoolWait   httpserver.Histogram
 	App        httpserver.Histogram
 }
 
 type stageCost struct {
-	statements, failed int64
-	db, app            *httpserver.Histogram
+	statements, failed, clipped int64
+	db, poolWait, app           *httpserver.Histogram
 }
 
 var stageTimings = struct {
 	mu       sync.Mutex
-	byStage  map[string]*httpserver.Histogram
-	costs    map[string]*stageCost
-	poolWait *httpserver.Histogram
+	byStage  map[StageKey]*httpserver.Histogram
+	costs    map[StageKey]*stageCost
+	poolWait map[string]*httpserver.Histogram
 }{
-	byStage:  map[string]*httpserver.Histogram{},
-	costs:    map[string]*stageCost{},
-	poolWait: httpserver.NewHistogram(stageBounds),
+	byStage:  map[StageKey]*httpserver.Histogram{},
+	costs:    map[StageKey]*stageCost{},
+	poolWait: map[string]*httpserver.Histogram{},
 }
 
 // timeStage starts timing one stage; call what it returns when the stage ends.
-// Under a metered read it also records what the stage's own statements cost.
+// Under a metered read it also records what the stage's own pgx calls cost.
 func timeStage(ctx context.Context, stage string) func() {
 	start := time.Now()
 	trail, metered := ctx.Value(stageTrailKey{}).(*stageTrail)
+	read := ReadUnmetered
 	var frame *stageFrame
 	if metered {
-		frame = trail.open()
+		read, frame = trail.read, trail.open()
 	}
 	return func() {
 		elapsed := time.Since(start)
-		var own database.StatementCost
-		var app time.Duration
+		var spent stageSpend
 		if metered {
-			own, app, _ = trail.close(frame, elapsed)
+			spent, _ = trail.close(frame, elapsed)
 		}
 		stageTimings.mu.Lock()
 		defer stageTimings.mu.Unlock()
-		h, ok := stageTimings.byStage[stage]
+		key := StageKey{Read: read, Stage: stage}
+		h, ok := stageTimings.byStage[key]
 		if !ok {
 			h = httpserver.NewHistogram(stageBounds)
-			stageTimings.byStage[stage] = h
+			stageTimings.byStage[key] = h
 		}
 		h.Observe(elapsed.Seconds())
 		if metered {
-			recordStageCost(stage, own, app)
+			recordStageCost(key, spent)
 		}
 	}
 }
 
-// recordStageCost adds one run of stage; the caller holds stageTimings.mu.
-func recordStageCost(stage string, own database.StatementCost, app time.Duration) {
-	c, ok := stageTimings.costs[stage]
+// stageSpend is one run of a stage: its own cost and the time left after it.
+type stageSpend struct {
+	own     database.StatementCost
+	app     time.Duration
+	clipped bool
+}
+
+// recordStageCost adds one run; the caller holds stageTimings.mu.
+func recordStageCost(key StageKey, spent stageSpend) {
+	c, ok := stageTimings.costs[key]
 	if !ok {
-		c = &stageCost{db: httpserver.NewHistogram(stageBounds), app: httpserver.NewHistogram(stageBounds)}
-		stageTimings.costs[stage] = c
+		c = &stageCost{
+			db:       httpserver.NewHistogram(stageBounds),
+			poolWait: httpserver.NewHistogram(stageBounds),
+			app:      httpserver.NewHistogram(stageBounds),
+		}
+		stageTimings.costs[key] = c
 	}
-	c.statements += own.Statements
-	c.failed += own.Failed
-	c.db.Observe(own.DBTime.Seconds())
-	c.app.Observe(app.Seconds())
+	c.statements += spent.own.Statements
+	c.failed += spent.own.Failed
+	if spent.clipped {
+		c.clipped++
+	}
+	c.db.Observe(spent.own.DBTime.Seconds())
+	c.poolWait.Observe(spent.own.PoolWait.Seconds())
+	c.app.Observe(spent.app.Seconds())
 }
 
 type stageTrailKey struct{}
@@ -103,6 +135,7 @@ type stageTrailKey struct{}
 // statement meter its context carries.
 type stageTrail struct {
 	mu     sync.Mutex
+	read   string
 	meter  *database.StatementMeter
 	frames []*stageFrame
 }
@@ -124,13 +157,16 @@ func (t *stageTrail) open() *stageFrame {
 }
 
 // close ends frame and charges it to the stage around it. It answers the
-// frame's own cost and Go time, and its cost with the inner stages included.
-func (t *stageTrail) close(frame *stageFrame, elapsed time.Duration) (database.StatementCost, time.Duration, database.StatementCost) {
+// frame's own spend, and its cost with the inner stages included.
+func (t *stageTrail) close(frame *stageFrame, elapsed time.Duration) (stageSpend, database.StatementCost) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	inclusive := t.meter.Cost().Minus(frame.began)
 	own := inclusive.Minus(frame.innerCost)
-	app := max(elapsed-frame.innerTime-own.DBTime-own.PoolWait, 0)
+	// A read's stages and pgx calls run one after another, so these fit in
+	// elapsed. Calls that overlapped would not, and the clip is counted.
+	app := elapsed - frame.innerTime - own.DBTime - own.PoolWait
+	spent := stageSpend{own: own, app: max(app, 0), clipped: app < 0}
 	if at := slices.Index(t.frames, frame); at >= 0 {
 		t.frames = slices.Delete(t.frames, at, at+1)
 		if at > 0 {
@@ -139,13 +175,13 @@ func (t *stageTrail) close(frame *stageFrame, elapsed time.Duration) (database.S
 			outer.innerCost = outer.innerCost.Plus(inclusive)
 		}
 	}
-	return own, app, inclusive
+	return spent, inclusive
 }
 
-// meteredStages runs fn with its stages metered, unless an outer read already
-// meters them. It records what fn spent outside every stage, and the pool wait
-// of the whole read, which is mostly the snapshot's one acquire.
-func meteredStages(ctx context.Context, fn func(context.Context) error) error {
+// meteredStages runs fn with its stages metered under read, unless an outer
+// read already meters them. It records what fn spent outside every stage, and
+// the pool wait of the whole read.
+func meteredStages(ctx context.Context, read string, fn func(context.Context) error) error {
 	if _, bound := ctx.Value(stageTrailKey{}).(*stageTrail); bound {
 		return fn(ctx)
 	}
@@ -153,44 +189,56 @@ func meteredStages(ctx context.Context, fn func(context.Context) error) error {
 	if !ok {
 		ctx, meter = database.WithStatementMeter(ctx)
 	}
-	trail := &stageTrail{meter: meter}
+	trail := &stageTrail{read: read, meter: meter}
 	start := time.Now()
 	outer := trail.open()
 	err := fn(context.WithValue(ctx, stageTrailKey{}, trail))
-	own, app, inclusive := trail.close(outer, time.Since(start))
+	spent, inclusive := trail.close(outer, time.Since(start))
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	recordStageCost(OutsideStages, own, app)
-	stageTimings.poolWait.Observe(inclusive.PoolWait.Seconds())
+	recordStageCost(StageKey{Read: read, Stage: OutsideStages}, spent)
+	h, seen := stageTimings.poolWait[read]
+	if !seen {
+		h = httpserver.NewHistogram(stageBounds)
+		stageTimings.poolWait[read] = h
+	}
+	h.Observe(inclusive.PoolWait.Seconds())
 	return err
 }
 
-// StageTimings answers a detached copy of every stage's histogram, by stage.
-func StageTimings() map[string]httpserver.Histogram {
+// StageTimings answers a detached copy of every stage's histogram.
+func StageTimings() map[StageKey]httpserver.Histogram {
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	out := make(map[string]httpserver.Histogram, len(stageTimings.byStage))
-	for stage, h := range maps.All(stageTimings.byStage) {
-		out[stage] = h.Snapshot()
+	out := make(map[StageKey]httpserver.Histogram, len(stageTimings.byStage))
+	for key, h := range maps.All(stageTimings.byStage) {
+		out[key] = h.Snapshot()
 	}
 	return out
 }
 
-// StageCosts answers a detached copy of every stage's statement cost, by stage,
-// OutsideStages included.
-func StageCosts() map[string]StageCost {
+// StageCosts answers a detached copy of every stage's cost, OutsideStages
+// included.
+func StageCosts() map[StageKey]StageCost {
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	out := make(map[string]StageCost, len(stageTimings.costs))
-	for stage, c := range maps.All(stageTimings.costs) {
-		out[stage] = StageCost{Statements: c.statements, Failed: c.failed, DB: c.db.Snapshot(), App: c.app.Snapshot()}
+	out := make(map[StageKey]StageCost, len(stageTimings.costs))
+	for key, c := range maps.All(stageTimings.costs) {
+		out[key] = StageCost{
+			Statements: c.statements, Failed: c.failed, Clipped: c.clipped,
+			DB: c.db.Snapshot(), PoolWait: c.poolWait.Snapshot(), App: c.app.Snapshot(),
+		}
 	}
 	return out
 }
 
-// PoolWaits answers a detached copy of the pool wait per metered read.
-func PoolWaits() httpserver.Histogram {
+// PoolWaits answers a detached copy of the pool wait per metered read, by read.
+func PoolWaits() map[string]httpserver.Histogram {
 	stageTimings.mu.Lock()
 	defer stageTimings.mu.Unlock()
-	return stageTimings.poolWait.Snapshot()
+	out := make(map[string]httpserver.Histogram, len(stageTimings.poolWait))
+	for read, h := range maps.All(stageTimings.poolWait) {
+		out[read] = h.Snapshot()
+	}
+	return out
 }

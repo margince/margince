@@ -57,21 +57,62 @@ func TestAFailedOrCancelledStatementCountsAsAFailure(t *testing.T) {
 	}
 }
 
-func TestABatchCountsEveryQueuedStatementAndOneFailure(t *testing.T) {
+func TestABatchCountsEachQueryPgxReadAndEachThatFailed(t *testing.T) {
 	t.Parallel()
 	tracer := statementTracer{now: steppedClock(2 * time.Millisecond)}
 	ctx, meter := WithStatementMeter(context.Background())
-	batch := &pgx.Batch{}
-	batch.Queue("SELECT 1")
-	batch.Queue("SELECT 2")
-	batch.Queue("SELECT 3")
+	failed := errors.New("second failed")
 
-	traced := tracer.TraceBatchStart(ctx, nil, pgx.TraceBatchStartData{Batch: batch})
-	tracer.TraceBatchQuery(traced, nil, pgx.TraceBatchQueryData{Err: errors.New("second failed")})
-	tracer.TraceBatchEnd(traced, nil, pgx.TraceBatchEndData{Err: errors.New("second failed")})
+	traced := tracer.TraceBatchStart(ctx, nil, pgx.TraceBatchStartData{})
+	tracer.TraceBatchQuery(traced, nil, pgx.TraceBatchQueryData{})
+	tracer.TraceBatchQuery(traced, nil, pgx.TraceBatchQueryData{Err: failed})
+	tracer.TraceBatchEnd(traced, nil, pgx.TraceBatchEndData{Err: failed})
 
-	if got := meter.Cost(); got != (StatementCost{Statements: 3, Failed: 1, DBTime: 2 * time.Millisecond}) {
-		t.Fatalf("cost = %+v, want three statements, one failure, one round trip of 2ms", got)
+	if got := meter.Cost(); got != (StatementCost{Statements: 2, Failed: 1, DBTime: 2 * time.Millisecond}) {
+		t.Fatalf("cost = %+v, want the two queries read, one failure, one round trip of 2ms", got)
+	}
+}
+
+func TestABatchThatFailsBeforeAnyQueryRunsCountsNoStatement(t *testing.T) {
+	t.Parallel()
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+
+	traced := tracer.TraceBatchStart(ctx, nil, pgx.TraceBatchStartData{})
+	tracer.TraceBatchEnd(traced, nil, pgx.TraceBatchEndData{Err: errors.New("cannot encode")})
+
+	if got := meter.Cost(); got.Statements != 0 || got.Failed != 1 {
+		t.Fatalf("cost = %+v, want no statement and the batch's one failure", got)
+	}
+}
+
+func TestAnExplicitPrepareCountsAndOneInsideAQueryDoesNot(t *testing.T) {
+	t.Parallel()
+	tracer := statementTracer{now: steppedClock(time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+
+	prepared := tracer.TracePrepareStart(ctx, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(prepared, nil, pgx.TracePrepareEndData{})
+	query := tracer.TraceQueryStart(ctx, nil, pgx.TraceQueryStartData{})
+	inner := tracer.TracePrepareStart(query, nil, pgx.TracePrepareStartData{})
+	tracer.TracePrepareEnd(inner, nil, pgx.TracePrepareEndData{})
+	tracer.TraceQueryEnd(query, nil, pgx.TraceQueryEndData{})
+
+	if got := meter.Cost(); got.Statements != 2 {
+		t.Fatalf("cost = %+v, want the explicit prepare and the query", got)
+	}
+}
+
+func TestACopyFromCountsOneStatement(t *testing.T) {
+	t.Parallel()
+	tracer := statementTracer{now: steppedClock(4 * time.Millisecond)}
+	ctx, meter := WithStatementMeter(context.Background())
+
+	traced := tracer.TraceCopyFromStart(ctx, nil, pgx.TraceCopyFromStartData{})
+	tracer.TraceCopyFromEnd(traced, nil, pgx.TraceCopyFromEndData{})
+
+	if got := meter.Cost(); got != (StatementCost{Statements: 1, DBTime: 4 * time.Millisecond}) {
+		t.Fatalf("cost = %+v, want one statement of 4ms", got)
 	}
 }
 
@@ -83,8 +124,8 @@ func TestAnAcquireRecordsPoolWaitAndNoStatement(t *testing.T) {
 	traced := tracer.TraceAcquireStart(ctx, nil, pgxpool.TraceAcquireStartData{})
 	tracer.TraceAcquireEnd(traced, nil, pgxpool.TraceAcquireEndData{Err: errors.New("pool closed")})
 
-	if got := meter.Cost(); got != (StatementCost{PoolWait: 3 * time.Millisecond}) {
-		t.Fatalf("cost = %+v, want 3ms of pool wait and nothing else", got)
+	if got := meter.Cost(); got != (StatementCost{Acquires: 1, PoolWait: 3 * time.Millisecond}) {
+		t.Fatalf("cost = %+v, want one acquire of 3ms and nothing else", got)
 	}
 }
 
@@ -117,6 +158,9 @@ func TestEveryPoolOfThisProductCarriesTheStatementTracer(t *testing.T) {
 	}
 	if _, ok := cfg.ConnConfig.Tracer.(pgxpool.AcquireTracer); !ok {
 		t.Fatal("the tracer does not trace acquires, so no pool wait reaches a meter")
+	}
+	if _, ok := cfg.ConnConfig.Tracer.(pgx.CopyFromTracer); !ok {
+		t.Fatal("the tracer does not trace CopyFrom, so a copy goes uncounted")
 	}
 }
 

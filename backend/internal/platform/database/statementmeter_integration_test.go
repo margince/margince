@@ -58,3 +58,61 @@ func TestThePoolMetersEveryWayAStatementIsSent(t *testing.T) {
 		t.Errorf("cost = %+v, want database time and pool wait both measured", got)
 	}
 }
+
+// A Query is recorded when its rows close, so its time holds the rows read.
+func TestAQueryIsRecordedWhenItsRowsClose(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	ctx, meter := database.WithStatementMeter(ctx)
+
+	rows, err := pool.Query(ctx, `SELECT generate_series(1, 3)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if open := meter.Cost(); open.Statements != 0 || open.DBTime != 0 {
+		t.Errorf("cost with the rows still open = %+v, want nothing yet", open)
+	}
+	rows.Close()
+	if closed := meter.Cost(); closed.Statements != 1 || closed.DBTime <= 0 {
+		t.Errorf("cost after Close = %+v, want the one statement and its time", closed)
+	}
+}
+
+// A batch whose arguments cannot be encoded never reaches the server.
+func TestABatchThatFailsBeforeSendCountsNoStatement(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	ctx, meter := database.WithStatementMeter(ctx)
+	batch := &pgx.Batch{}
+	batch.Queue(`SELECT $1::int`, make(chan int))
+
+	if err := pool.SendBatch(ctx, batch).Close(); err == nil {
+		t.Fatal("a batch with an argument no codec encodes succeeded")
+	}
+	if got := meter.Cost(); got.Statements != 0 || got.Failed != 1 {
+		t.Errorf("cost = %+v, want no statement and the batch's one failure", got)
+	}
+}
+
+// An explicit Prepare and a CopyFrom are each one statement.
+func TestAnExplicitPrepareAndACopyFromAreMetered(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(conn.Release)
+	if _, err := conn.Exec(ctx, `CREATE TEMP TABLE metered_copy (n int)`); err != nil {
+		t.Fatal(err)
+	}
+	ctx, meter := database.WithStatementMeter(ctx)
+
+	if _, err := conn.Conn().Prepare(ctx, "metered", `SELECT 1`); err != nil {
+		t.Fatal(err)
+	}
+	copied, err := conn.CopyFrom(ctx, pgx.Identifier{"metered_copy"}, []string{"n"}, pgx.CopyFromRows([][]any{{1}, {2}}))
+	if err != nil || copied != 2 {
+		t.Fatalf("copied %d rows: %v", copied, err)
+	}
+	if got := meter.Cost(); got.Statements != 2 || got.Failed != 0 {
+		t.Errorf("cost = %+v, want the prepare and the copy", got)
+	}
+}

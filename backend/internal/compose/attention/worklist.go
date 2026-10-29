@@ -48,7 +48,7 @@ func (s *Service) Worklist(
 		return crmcontracts.Worklist{}, err
 	}
 	var out crmcontracts.Worklist
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+	err := s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
 		var err error
 		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
 		return err

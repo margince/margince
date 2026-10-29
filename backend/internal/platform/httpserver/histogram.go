@@ -70,8 +70,10 @@ func (h Histogram) Sum() float64 { return h.sum }
 // Count is how many samples were observed.
 func (h Histogram) Count() uint64 { return h.count }
 
-// WriteSeries renders this histogram's three series groups under name. labels
-// is a rendered `k=v,k=v` fragment, or empty for a family with no labels.
+// WriteSeries renders this histogram's three series groups under name, with
+// labels already rendered as a non-empty `k=v,k=v` fragment. Every histogram in
+// this tree is keyed by something; a family with no labels of its own would
+// need the brace handling this deliberately does not carry.
 //
 // The +Inf bucket is written unconditionally and equals count by definition: a
 // histogram without its terminator is not a histogram, because every quantile
@@ -83,15 +85,15 @@ func (h Histogram) Count() uint64 { return h.count }
 // end of the scrape. Returning an error here would add a branch per bucket to
 // report what the writer already holds, and both callers would discard it.
 func (h Histogram) WriteSeries(w io.Writer, name, labels string) {
-	bucketLabels, ownLabels := "", ""
-	if labels != "" {
-		bucketLabels, ownLabels = labels+",", "{"+labels+"}"
-	}
 	for i, bound := range h.bounds {
-		WriteLine(w, "%s_bucket{%sle=%s} %d\n",
-			name, bucketLabels, Label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
+		WriteLine(w, "%s_bucket{%s,le=%s} %d\n",
+			name, labels, Label(strconv.FormatFloat(bound, 'g', -1, 64)), h.counts[i])
 	}
-	WriteLine(w, "%s_bucket{%sle=\"+Inf\"} %d\n", name, bucketLabels, h.count)
-	WriteLine(w, "%s_sum%s %g\n", name, ownLabels, h.sum)
-	WriteLine(w, "%s_count%s %d\n", name, ownLabels, h.count)
+	WriteLine(w, "%s_bucket{%s,le=\"+Inf\"} %d\n", name, labels, h.count)
+	WriteLine(w, "%s_sum{%s} %g\n", name, labels, h.sum)
+	WriteLine(w, "%s_count{%s} %d\n", name, labels, h.count)
 }
+
+// prefix answers labels with the separator a further label needs after it, so
+// a family with no labels of its own still renders `{le="..."}` correctly
+// rather than `{,le="..."}`.
