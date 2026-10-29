@@ -26,7 +26,7 @@ type PendingCount struct {
 // CountPending counts the rows the inbox would show the caller as pending: the
 // same filters, mutes, scope and decidability probe, and the same lazy expiry.
 //
-// Decidability is a per-row probe in Go (see scanInbox), so no SQL COUNT can
+// Decidability is asked of each batch (see scanInbox), so no SQL COUNT can
 // answer this. The count walks the stored-pending rows server-side in the
 // inbox's own keyset batches instead, which keeps it exact and keeps every row
 // off the wire. Status, Cursor and Limit in `in` are ignored.
@@ -46,12 +46,12 @@ func (s *Service) CountPending(ctx context.Context, in ListInput) (PendingCount,
 		out = PendingCount{AsOf: s.now()}
 		waiting := pendingEligible(ctx, tx, p, in, out.AsOf)
 		return walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
-			for _, a := range batch {
-				counted, err := waiting(a)
-				if err != nil {
-					return false, err
-				}
-				if counted {
+			counted, err := waiting(batch)
+			if err != nil {
+				return false, err
+			}
+			for i, a := range batch {
+				if counted[i] {
 					out.add(a)
 				}
 			}
@@ -77,12 +77,9 @@ func (c *PendingCount) add(a row) {
 
 // pendingEligible is "the caller has this row to decide": still pending at
 // now, in the requested scope, and decidable by p.
-func pendingEligible(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, now time.Time) func(row) (bool, error) {
+func pendingEligible(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, now time.Time) batchProbe {
 	probe := inboxProbe(ctx, tx, p, in)
-	return func(a row) (bool, error) {
-		if !a.PendingAt(now) {
-			return false, nil
-		}
-		return probe(a)
+	return func(batch []row) ([]bool, error) {
+		return askWhere(batch, func(a row) bool { return a.PendingAt(now) }, probe)
 	}
 }
