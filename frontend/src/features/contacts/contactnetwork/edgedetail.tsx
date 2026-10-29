@@ -14,6 +14,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Badge, Button, Card } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
+import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
@@ -76,6 +77,7 @@ export function EdgeDetail({
                 })
               : undefined;
         const receipts = edge.receipts ?? [];
+        const memberId = [node, otherNode].find((end) => end?.user_id)?.user_id;
         return (
           <div key={`${edge.from}->${edge.to}`}>
             <p className="pn-band">
@@ -90,7 +92,11 @@ export function EdgeDetail({
               })}
             </p>
             {receipts.length > 0 ? (
-              <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
+              <ReceiptList
+                receipts={receipts}
+                relayMember={relayMemberFor(memberId, viewerId)}
+                onOpenEmail={onOpenEmail}
+              />
             ) : (
               <p className="pn-counts t-sub">{t("contact.graph.countsOnly")}</p>
             )}

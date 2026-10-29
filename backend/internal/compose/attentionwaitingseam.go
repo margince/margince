@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -90,9 +91,9 @@ func (w attentionWaiting) Hidden(
 }
 
 func (w attentionWaiting) Unanswered(
-	ctx context.Context, asOf time.Time, owner *ids.UUID,
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor,
 ) ([]attention.WaitingCustomer, bool, error) {
-	kept, cut, err := w.waitingPages(ctx, asOf, owner)
+	kept, cut, err := w.waitingPages(ctx, asOf, narrow)
 	if err != nil {
 		return nil, false, err
 	}
@@ -209,17 +210,20 @@ const waitingRefillRounds = 3
 // only when the LAST page was also full, so a refill that reached the end of
 // the matching rows reports a complete scan rather than inheriting the first
 // page's truncation.
-func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]activities.WaitingReply, bool, error) {
+func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
 	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
 		var rows []activities.WaitingReply
 		var err error
-		if owner == nil {
+		switch {
+		case narrow.Owner != nil:
+			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *narrow.Owner)
+		case narrow.Team:
+			rows, err = w.store.WaitingRepliesAnsweredByBefore(ctx, asOf, before, narrow.Seats)
+		default:
 			rows, err = w.store.WaitingRepliesBefore(ctx, asOf, before)
-		} else {
-			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *owner)
 		}
 		if err != nil {
 			return nil, false, err
@@ -335,5 +339,20 @@ func (w attentionWaiting) emailRows(
 		// the same answer to that question as "no rows for you".
 		return map[ids.UUID]crmcontracts.EmailSummary{}, nil
 	}
-	return w.store.EmailSummariesByID(ctx, emailIDs)
+	return emailSummariesReusingPlans(ctx, w.store, emailIDs)
+}
+
+// emailSummariesReusingPlans reads the email rows behind a lane's rows. Its
+// statements key on the ids and spell kinds as literals, so the generic plan
+// serves. Planned at every call, they cost more to plan than to run.
+func emailSummariesReusingPlans(
+	ctx context.Context, store *activities.Store, activityIDs []ids.UUID,
+) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+	var summaries map[ids.UUID]crmcontracts.EmailSummary
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		summaries, err = store.EmailSummariesByID(ctx, activityIDs)
+		return err
+	})
+	return summaries, err
 }

@@ -11,6 +11,7 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
+import { mailPreview } from "./controllermail.fixtures";
 import { NoticeCasesCard } from "./noticecases";
 
 // The disclosure-duty queue: who we obtained without asking, whether anybody
@@ -228,6 +229,25 @@ export const EndingADuty: Story = {
     );
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText("Reason, in your own words");
+  },
+};
+
+// Sending the notice from a row: the mail it would send, read before the confirm.
+export const SendingANotice: Story = {
+  render: duties([OVERDUE], WORKS_DUTIES, {
+    [`GET /contacts/${OVERDUE.contact_id}/consent/mail-preview`]: () =>
+      jsonResponse(mailPreview("privacy_notice")),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: /^Actions for/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Send privacy notice" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByText("lena@kps.test");
   },
 };
 

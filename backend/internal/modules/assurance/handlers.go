@@ -43,6 +43,7 @@ type Handlers struct {
 	now      func() time.Time
 	settings *config.Config
 	locks    func(surface []config.Any) *[]crmcontracts.SettingLock
+	preview  PreviewFunc
 }
 
 // NewHandlers binds the routes to the store and its scoped read.

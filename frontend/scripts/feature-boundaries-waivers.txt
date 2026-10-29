@@ -99,7 +99,6 @@ reach features/brief/meetingbrief/header.tsx features/records/record360/index.ts
 reach features/brief/meetingbrief/plan.tsx features/records/record360/index.ts
 reach features/brief/meetingbrief/sections.tsx features/records/record360/index.ts
 reach features/brief/meetingbrief/view.stories.tsx features/contacts/contact360.css
-reach features/brief/routinedelivery.tsx features/worklist/worklist.queries.ts
 reach features/capture/capture-activity.tsx features/mail/openemaildrawer.tsx
 reach features/capture/connection-outcomes.tsx features/import/linkedin-reach.tsx
 reach features/capture/emailaccesseditor.tsx features/lists/audiencemembers.tsx

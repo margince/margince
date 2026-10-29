@@ -63,6 +63,20 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 
 - flow contact_360 is at or under 80% of its budget for every seat: remove the row for #7085
 
+## Strict Home acceptance
+
+Home's acceptance targets, judged without the known-issue list. A row fails when it was not measured,
+when any round's p95 reached its target, or when an answer was a server error, a refusal or named a
+source it could not read. A pass at 30 samples is exploratory, not a qualification.
+
+**Failed** on 2 of 3 rows.
+
+| requirement | measurement | seat | p95 | target | samples | verdict |
+|---|---|---|---|---|---|---|
+| R02 | `worklist` | rep | 2899 ms | 750 ms | 30 | **FAILED**: p95 2899 ms, over 750 ms |
+| R05 | `home_brief` | rep | 26.0 ms | 200 ms | 30 | pass |
+| R06 | `admin_rail_embed_reindex_identities` | admin |  | 100 ms | 0 | **FAILED**: no data |
+
 ## Machines
 
 A latency is only true of the machine that produced it.

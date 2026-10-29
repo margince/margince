@@ -759,9 +759,10 @@ bench-mobile:
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-## bench-home — R01: the first useful Home and its primary sections, on a
-## production build against a running stack's api, timed by the app's own
-## journey marks. BENCH_API_PORT is the api port that stack's banner prints.
+## bench-home — R01 and R07: a full load of Home, a return to it and a
+## refresh of it, on a production build against a running stack's api, timed
+## by the app's own journey marks and judged by the answers the page received.
+## BENCH_API_PORT is the api port that stack's banner prints.
 ## It records nothing and `pnpm e2e` does not collect its spec. BASE_URL and
 ## the mobile switch are cleared, so it always measures the build it made.
 bench-home:

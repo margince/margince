@@ -127,14 +127,16 @@
   --avatarBlobBC: 0.05;
   --avatarInkL: 0.43;
   --avatarInkC: 0.07;
-  --bgRail: #13231d;
-  /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
-   * (white-alpha icons on the dark green field in BOTH themes), and the
-   * workspace chip keeps one brand value even when the dark accent lightens. */
+  --bgInkField: #13231d;
+  /* The dark ink field: the one dark-green plate, the same in BOTH themes, for
+   * what passes over the page (a toast, the capture chip, a tooltip, a docked
+   * window's title bar, the client surface's bar). The sidebar is NOT on it:
+   * the sidebar is glass, `--pane` over the ground (shell.css `.rail`).
+   * The workspace chip keeps one brand value even when the dark accent lightens. */
   --overlayScrim: rgba(19, 35, 29, 0.4);
   --accentBrand: #045647;
-  --railIconActive: #fff;
-  /* The onboarding dialog's dark glass, unthemed like the rail it sits beside:
+  --textOnInkField: #fff;
+  /* The onboarding dialog's dark glass, unthemed like the ink field:
    * the hero is dark in both themes, so its fill, quiet ink and shadow tint are
    * fixed. */
   --obDialogGlass: rgba(255, 255, 255, 0.16);
@@ -765,7 +767,9 @@
 /*
  * Dark palette: the light block's hues, with the accent lifted so it reads on a
  * dark ground. Every component reads through the same custom properties, so
- * re-tuning the palette later touches only this block.
+ * re-tuning the palette later touches only this block. --bgInkField is
+ * unchanged: it is the same dark plate in both themes, deliberately not a theme
+ * token.
  */
 [data-theme="dark"] {
   --bgPage: #0c1311;
@@ -782,8 +786,8 @@
 
   --accent: #3aae94;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
-     fill that ISN'T --accent and doesn't lighten here (the rail toast on
-     --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
+     fill that ISN'T --accent and doesn't lighten here (a toast on
+     --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
      the Core's own glass) — dark ink there is a control-boundary failure,
      not a contrast fix, on backgrounds this palette never touches. The five
      state tones are NOT in that set: --textOnStatusControl is their ink, and
@@ -794,7 +798,7 @@
   --accentLight: rgba(58, 174, 148, 0.16);
   --accentMed: rgba(58, 174, 148, 0.28);
   /* Dark ink: white fails AA on the light dark-theme accent. Not --textOnAccent,
-     which still inks fills that stay dark here (--bgRail, --ai). */
+     which still inks fills that stay dark here (--bgInkField, --ai). */
   --textOnAccentControl: #07221d;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a

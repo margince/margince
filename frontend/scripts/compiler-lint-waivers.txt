@@ -71,7 +71,6 @@
 1 react-hooks/set-state-in-effect src/features/mail/composetarget.ts
 1 react-hooks/set-state-in-effect src/features/automations/connected-agents.tsx
 1 react-hooks/set-state-in-effect src/features/contacts/contactdrawers.tsx
-1 react-hooks/preserve-manual-memoization src/features/contacts/contactemployers.tsx
 2 react-hooks/refs src/features/contacts/contactpage.drawers.tsx
 1 react-hooks/refs src/features/projects/contractcustomseed.ts
 1 react-hooks/set-state-in-effect src/features/projects/contractform.tsx

@@ -23,6 +23,9 @@ import { currentParams } from "./urlstate";
 // missing there.
 export const SECTIONS = [
   "performance",
+  "sdr",
+  "leads",
+  "partners",
   "forecast",
   "reports",
   "targets",
@@ -59,10 +62,26 @@ const SECTION_OF_REPORT: Readonly<Record<string, Section>> = {
   "projects-gone-quiet": "delivery",
 };
 
+// Performance once held its four views behind one switch, named by `?view=`.
+// Each is a tab of its own now, and an address that still names one through the
+// switch opens it. Sales stayed under the old name, so it needs no entry.
+// A Map, because the key is whatever the address carries: an object literal
+// would answer `?view=constructor` with an inherited function.
+const SECTION_OF_VIEW: ReadonlyMap<string, Section> = new Map([
+  ["sdr", "sdr"],
+  ["leads", "leads"],
+  ["partners", "partners"],
+]);
+
 export function sectionFromAddress(
   segment: string | undefined,
   fallback: Section = "performance",
+  view: string | null = null,
 ): Section {
+  if ((segment === undefined || segment === "performance") && view) {
+    const named = SECTION_OF_VIEW.get(view);
+    if (named) return named;
+  }
   if (isSection(segment)) {
     return segment;
   }
@@ -82,7 +101,11 @@ export function sectionFromAddress(
  * holding the rows their figure was read from.
  */
 export function openAnalyticsSection(section: Section): void {
-  navigate({ screen: "analytics", id: section }, currentParams());
+  // The dials travel, so every tab reads the period the reader chose. The old
+  // view switch does not: the section is the view now.
+  const params = new Map(currentParams());
+  params.delete("view");
+  navigate({ screen: "analytics", id: section }, params);
 }
 
 /**

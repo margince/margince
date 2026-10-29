@@ -42,6 +42,7 @@ func render(records map[string]record) string {
 	renderTable(&b, records)
 	renderGaps(&b)
 	renderDaily(&b, records)
+	renderStrictHome(&b, records)
 	renderMachines(&b, records)
 	return b.String()
 }
@@ -165,6 +166,44 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 	}
 	b.WriteString("\n")
 	renderAdvisories(b, r.Advisories)
+}
+
+// renderStrictHome prints the strict Home lane: the acceptance targets, with
+// no known issue to excuse a row. It never failed the run that wrote it, so
+// the page is where a reader finds out whether Home is done.
+func renderStrictHome(b *strings.Builder, records map[string]record) {
+	r, ok := records[dailyTarget]
+	if !ok || len(r.StrictHome) == 0 {
+		return
+	}
+	failed := 0
+	for _, v := range r.StrictHome {
+		if !v.Pass {
+			failed++
+		}
+	}
+	b.WriteString("## Strict Home acceptance\n\n")
+	b.WriteString("Home's acceptance targets, judged without the known-issue list. A row fails when it was not measured,\n")
+	b.WriteString("when any round's p95 reached its target, or when an answer was a server error, a refusal or named a\n")
+	b.WriteString("source it could not read. A pass at 30 samples is exploratory, not a qualification.\n\n")
+	if failed == 0 {
+		fmt.Fprintf(b, "**Passed** on all %d rows.\n\n", len(r.StrictHome))
+	} else {
+		fmt.Fprintf(b, "**Failed** on %d of %d rows.\n\n", failed, len(r.StrictHome))
+	}
+	b.WriteString("| requirement | measurement | seat | p95 | target | samples | verdict |\n")
+	b.WriteString("|---|---|---|---|---|---|---|\n")
+	for _, v := range r.StrictHome {
+		verdict, p95 := "pass", millis(v.P95Ms)
+		if !v.Pass {
+			verdict = "**FAILED**: " + v.Failure
+		}
+		if v.Samples == 0 {
+			p95 = ""
+		}
+		fmt.Fprintf(b, "| %s | `%s` | %s | %s | %s | %d | %s |\n", v.Requirement, v.Name, v.Seat, p95, millis(v.BudgetMs), v.Samples, verdict)
+	}
+	b.WriteString("\n")
 }
 
 // renderAdvisories lists the known-issue entries the run found clear of their

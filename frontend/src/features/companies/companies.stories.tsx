@@ -8,8 +8,11 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
+import { offerDomainContacts } from "./companycontacts/domaincontacts";
+import { domainCandidates } from "./companycontacts/domaincontacts.fixtures";
 
 // CompanyScreen reads through the api client on mount — fixtures mirror
 // companies.test.tsx's `company`.
@@ -405,6 +408,33 @@ export const CompanyContacts: Story = {
     });
     return (
       <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// A company just created from the list, whose domain matches contacts not
+// linked to it: the page opens with them offered, nothing ticked.
+export const CompanyAfterCreate: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1";
+    installFetchStub({
+      "GET /me": meRoute({
+        company: ["read", "update"],
+        contact: ["read", "update"],
+        relationship: ["read", "create"],
+      }),
+      ...overviewRoutes,
+      "GET /companies/o-1/link-candidates": () =>
+        jsonResponse({ data: domainCandidates, truncated: false }),
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    const client = storyQueryClient();
+    offerDomainContacts(client, company);
+    return (
+      <StoryProviders client={client}>
         <CompanyScreen id="o-1" />
       </StoryProviders>
     );

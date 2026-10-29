@@ -311,16 +311,9 @@ func restoreSignatureDisplayTx(ctx context.Context, tx pgx.Tx, contactID ids.Con
 // revives the number it replaced. A number a human has since saved by hand
 // carries their source and stays.
 func withdrawSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phone string) error {
-	rows, err := tx.Query(ctx, `
-		UPDATE contact_phone SET archived_at = now()
-		 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND archived_at IS NULL
-		RETURNING superseded_phone_id`, contactID, phone, enrichSource)
+	replaced, err := archiveSignatureNumber(ctx, tx, contactID, phone)
 	if err != nil {
-		return fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
-	}
-	replaced, err := pgx.CollectRows(rows, pgx.RowTo[*ids.UUID])
-	if err != nil {
-		return fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
+		return err
 	}
 	for _, id := range replaced {
 		if id == nil {
@@ -331,6 +324,21 @@ func withdrawSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		}
 	}
 	return nil
+}
+
+func archiveSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phone string) ([]*ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		UPDATE contact_phone SET archived_at = now()
+		 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND archived_at IS NULL
+		RETURNING superseded_phone_id`, contactID, phone, enrichSource)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
+	}
+	replaced, err := pgx.CollectRows(rows, pgx.RowTo[*ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
+	}
+	return replaced, nil
 }
 
 // sourceRefActivityID is the activity a profile field's source_ref names, as a

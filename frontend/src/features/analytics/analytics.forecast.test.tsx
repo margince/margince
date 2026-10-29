@@ -424,6 +424,8 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
           unknown_minor: 7_000,
           excluded_count: 3,
           unknown_count: 1,
+          unsupported_minor: 0,
+          unsupported_count: 0,
         },
       }),
     }),
@@ -437,6 +439,37 @@ it("states the qualified figure and keeps unknown deals apart from left-out ones
   expect(
     (await screen.findByText(/could not judge it/i)).textContent,
   ).toContain("1 deal (");
+});
+
+// A deal left out with no review is said apart from one under review. The rep
+// fixes it on the deal, and no review will ask.
+it("says apart deals left out for a weak date or no next step", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        qualified: {
+          evidence_minor: 20_000,
+          best_case_minor: 30_000,
+          weighted_minor: 25_000,
+          excluded_minor: 100_000,
+          unknown_minor: 0,
+          excluded_count: 3,
+          unknown_count: 0,
+          unsupported_minor: 40_000,
+          unsupported_count: 1,
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  expect(
+    (await screen.findByText(/while their reviews are open/i)).textContent,
+  ).toContain("2 deals (€600.00)");
+  expect(
+    (await screen.findByText(/no confirmed close date or no next step/i))
+      .textContent,
+  ).toContain("1 deal (€400.00)");
 });
 
 // While enforcement is off the server sends no qualified block, and the screen

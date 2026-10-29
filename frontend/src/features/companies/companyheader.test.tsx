@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
@@ -333,15 +334,27 @@ describe("claiming an unowned account", () => {
 // STATE-4a decides absent-vs-disabled by CAUSE, and an archive is state: the
 // menu used to drop every verb on an archived account, leaving a reader unable
 // to tell a record that is closed from a build without an edit button.
+// The menu reads the page's activity gate for its Add task row.
+function MenuHost({ company }: Readonly<{ company: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <CompanyActionBadges
+      company={company}
+      activity={activity}
+      onAddTask={() => undefined}
+      onOpenHistory={() => undefined}
+      onSetUpPartner={() => undefined}
+    />
+  );
+}
+
 describe("an archived account's verbs", () => {
   it("stay in the menu, refused, each reachable from the one sentence naming the archive", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
     renderInApp(
-      <CompanyActionBadges
+      <MenuHost
         company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
       />,
     );
 
@@ -408,13 +421,7 @@ describe("setting up a partner program", () => {
       }).authorization,
     });
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
     );
@@ -437,20 +444,13 @@ describe("setting up a partner program", () => {
 });
 
 describe("the shape of the header's verbs", () => {
-  // The order every record type carries: the four verbs common to all of them
-  // first, then what is particular to an account, then the one verb a reader
-  // cannot walk back. A menu whose rows move between record types is a menu
-  // read from the top every time instead of aimed at.
+  // Every record type carries one order. Add task comes first, then the shared
+  // verbs, then the account's own, and last the one verb a reader cannot walk
+  // back. Rows that move between record types get read, not aimed at.
   it("lists the menu's verbs in the order every record carries them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
@@ -466,6 +466,7 @@ describe("the shape of the header's verbs", () => {
     expect(
       [...panel.querySelectorAll("button")].map((row) => row.textContent),
     ).toEqual([
+      en["log.addTask"],
       en["merge.company"],
       en["record.share"],
       en["record.fullHistory"],
@@ -481,13 +482,7 @@ describe("the shape of the header's verbs", () => {
   it("draws no glyph on any row of the menu", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();
-    renderInApp(
-      <CompanyActionBadges
-        company={COMPANY}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
-      />,
-    );
+    renderInApp(<MenuHost company={COMPANY} />);
 
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),

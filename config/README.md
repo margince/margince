@@ -12,9 +12,10 @@ yours is ignored by git. A secret file is ignored by git too, and holds one valu
 | [`margince.schema.json`](margince.schema.json) | generated | Leave it next to your file. An editor checks your file against it. |
 | [`margince.dev.yaml`](margince.dev.yaml) | tracked | What a dev stack does differently. `make dev` reads it over `margince.yaml`. |
 | [`presets/`](presets/README.md) | tracked | Copy a model binding (`seeds.ai_routing`) from it. No program reads the folder. |
-| `margince.yaml` | yours | Edit it. The api and the worker read it as the base file. |
-| `ai-routing.yaml` | yours | A model binding for the certification lanes, if you keep one. |
+| `margince.yaml` | yours | Edit it. The api, the worker and `cmd/migrate` read it as the base file. |
+| `ai-routing.yaml` | yours | A model binding for the certification lanes, if you keep one. Nothing reads it unless you name it, as in `make e2e-ai ROUTING=config/ai-routing.yaml`. |
 | `margince-admin-password` | secret | The first admin's password. `make dev` writes it on the first run, and `margince.yaml` names it. |
+| `margince-setup-token` | secret | The one-time setup token the api writes when it first boots on an empty database with no `bootstrap_admin`. |
 | `margince-license` | secret | A license token, if you keep one here. `license.token` names it as `${file:...}`. |
 
 ## The order a value is read in
@@ -25,5 +26,5 @@ flag each win over both files. The full order, and how a secret is written, is i
 [Where a value comes from](../docs/reference/configuration.md#where-a-value-comes-from).
 
 Name a second YAML file only through `--config-file`. A file such as `margince.dev.yaml` beside the
-base file stops the boot unless `--config-file` names it. So a copy left there by mistake is never
-read without a sign.
+base file stops the boot unless `--config-file` names it. So a copy left there by mistake stops the
+boot instead of being read.

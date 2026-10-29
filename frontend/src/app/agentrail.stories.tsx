@@ -161,12 +161,10 @@ function story(
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
         }),
-      "GET /approvals": () =>
+      "GET /approvals/pending-count": () =>
         jsonResponse({
-          data: Array.from({ length: answers.approvals }, (_, index) => ({
-            id: `approval-${index}`,
-            status: "pending",
-          })),
+          count: answers.approvals,
+          as_of: "2026-08-01T09:00:00Z",
         }),
       "GET /connectors": () =>
         answers.connectorsReadFails

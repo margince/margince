@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
+import { CalendarPlus, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
+import type { ActivityGate } from "../../components/activitygate";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
@@ -11,15 +12,13 @@ import { Button } from "../../design-system/atoms";
 import { VerbWord } from "../../design-system/iconaction";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
-import { useMe } from "../../lib/session";
 import { ComposeModal } from "../mail/compose";
 import { EmailVerb } from "../records/recordemail";
 
 // The account header's verbs, in the design's order. First the two that reach
-// the account (write, meet) and a hairline. Then the two that record (log,
-// task) and a hairline. Then the overflow menu (CompanyActionBadges).
+// the account (write, meet) and a hairline. Then Log and a hairline. Then the
+// overflow menu (CompanyActionBadges), which holds Add task.
 // No Call: neither the account nor its contacts carry a phone on this page.
 //
 // Named apart from companyactions.tsx, which is the account's own verbs (a
@@ -42,6 +41,7 @@ export function CompanyHeaderActions({
   drawer,
   onDrawer,
   archivedReasonId,
+  activity,
 }: Readonly<{
   company: Company;
   // The composer's open state belongs to the PAGE, not to this strip: the
@@ -58,25 +58,18 @@ export function CompanyHeaderActions({
   // groups in it refuse for the same reason on an archived record, so the
   // reason is the page's to say, not this component's to mint a second copy of.
   archivedReasonId?: string;
+  // The page's activity gate, which the overflow menu's Add task reads too.
+  activity: ActivityGate;
 }>) {
   const t = useT();
   const ownReasonId = useId();
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = company.archived_at ? reasonId : undefined;
-  // useCanWrite, not useCan: the two log verbs below issue a POST, and a read
-  // seat is refused before RBAC is consulted, the same rule contactactions.tsx
-  // states for the identical verb. Independent of `archived`: a live record a
-  // seat may not write to is refused for this reason, not that one.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefusedId = useId();
+  // Independent of `archived`: a live record a seat may not write to is
+  // refused for this reason, not that one.
   const bookRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet.
-  const logGrantKnown = me.data?.authorization !== undefined;
-  const logRefused =
-    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
-  const logPending = !archived && !logGrantKnown;
+  const logRefused = archived ?? activity.refusedId;
+  const logPending = !archived && activity.pending;
   return (
     <>
       {archived && !archivedReasonId && (
@@ -84,8 +77,8 @@ export function CompanyHeaderActions({
           {t("record.archivedReadOnly")}
         </p>
       )}
-      {!archived && logGrantKnown && !canLog && (
-        <p className="t-caption" id={logRefusedId}>
+      {!archived && activity.refusedId && (
+        <p className="t-caption" id={activity.sentenceId}>
           {t("record.logActivityRefused")}
         </p>
       )}
@@ -97,11 +90,11 @@ export function CompanyHeaderActions({
       />
       <CompanyBookMeeting
         companyId={company.id}
-        allowed={logGrantKnown && canLog && !archived}
+        allowed={!logPending && !logRefused}
         pending={logPending}
-        reasonId={archived ?? (logGrantKnown ? bookRefusedId : undefined)}
+        reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
       />
-      {!archived && logGrantKnown && !canLog && (
+      {!archived && activity.refusedId && (
         <p className="t-caption" id={bookRefusedId}>
           {t("scheduling.bookRefused")}
         </p>
@@ -114,15 +107,6 @@ export function CompanyHeaderActions({
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
-      </Button>
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        title={t("log.addTask")}
-        onClick={() => onDrawer("task")}
-      >
-        <CheckSquare aria-hidden="true" />
-        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
       </Button>
       <ExtensionEntries
         slot="record_header.company"

@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=./margince.schema.json
 # Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+#
+# Copy only the lines you change: a stored setting set in a file is locked in the app. A secret
+# shows a file reference in place of a default, so point it at a file that holds the value.
 
 version: 1
 

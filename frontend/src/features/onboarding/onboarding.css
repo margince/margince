@@ -193,17 +193,17 @@
 
 /* The dialog's two inks, named because the PLATE decides them and every text
    inside reads one of the two. On the onboarding hero it is dark glass and the
-   pair is the rail's own, white on a lit backdrop; hosted in the workbench it
+   pair is the ink field's, white on a lit backdrop; hosted in the workbench it
    is a light panel and the pair is the content inks. Declared once per plate
    below rather than as a colour override per child — the heading, the hint, the
    answer box, the back link and the footnote all landed on white-on-light the
    day the light arms were written and only the first two were overridden. */
 .ob-core-dialog {
-  --ob-dialog-ink: var(--railIconActive);
+  --ob-dialog-ink: var(--textOnInkField);
   --ob-dialog-ink-quiet: var(--obDialogInkQuiet);
   padding: var(--space-8) var(--space-6);
   color: var(--ob-dialog-ink);
-  border: 1px solid color-mix(in srgb, var(--railIconActive) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--textOnInkField) 10%, transparent);
   border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--obDialogGlass) 68%, transparent);
   box-shadow: 0 18px 46px
@@ -237,7 +237,7 @@
    design-system field and a screen does not re-space one. The box itself — its
    ground, its type, its ink, its placeholder's tone and its focus ring — is
    TextInput's and Textarea's; the rule that used to stand here spelled all of
-   them in rail tokens, which is what put white text in a white field the moment
+   them in ink-field tokens, which is what put white text in a white field the moment
    this board moved onto the workbench's light panel. */
 .ob-manual-question > p {
   margin-bottom: var(--space-4);

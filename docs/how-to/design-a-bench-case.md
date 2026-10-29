@@ -29,8 +29,9 @@ Leave out two kinds of call:
 
 - **Model-lane reads.** An endpoint that calls a model on a cache miss measures the model fallback on every
   sample instead of the screen's query. The deal status and the company dossier are out for this reason.
-- **Admin-only reads.** A call the screen makes only under an admin permission check is one a rep never
-  waits for.
+- **Admin-only reads in a rep's row.** A call the screen makes only under an admin permission check is one
+  a rep never waits for. The admin's own rail reads are timed in their own flow, `admin_rail`, under the
+  admin seat.
 
 ## 3. Choose the seats
 
@@ -45,8 +46,8 @@ differ where the screens ask them to:
 - owner-only contacts are visible to their owner alone.
 
 On activities, both scopes walk the activity links. An admin skips that walk, so an admin timing hides
-the cost the other two pay. The admin session runs only as background load in the morning pass and is
-never reported as a seat.
+the cost the other two pay. The admin seat is therefore reported only for its own rail reads. In the
+morning pass the admin session runs as background load.
 
 ## 4. Shape the corpus
 

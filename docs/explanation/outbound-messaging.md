@@ -327,7 +327,8 @@ So `Store.RecordSent` does two things in **two transactions**, and which fact si
 the rule that keeps it safe:
 
 1. **`commitReceipt`** writes the receipt alone (`status='sent'`, `provider_message_id`, `sent_at`,
-   `inflight_at=NULL`). Nothing else in that transaction could fail it, and it returns once durable.
+   `inflight_at=NULL`). A mail the installation's own relay sent also gets the `from_address` it left
+   from. Nothing else in that transaction could fail it, and it returns once durable.
 2. **`reconcileIdentity`** then moves the delivery and its timeline row onto the identity the provider
    set (`RFC822MessageID`). It runs in a transaction of its own, may fail, and reports nothing.
 

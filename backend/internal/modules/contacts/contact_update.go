@@ -173,7 +173,7 @@ func (s *Store) updateContactInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 		return out, fmt.Errorf("emit contact.updated: %w", err)
 	}
-	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails); err != nil {
+	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
 		return out, err
 	}
 	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {

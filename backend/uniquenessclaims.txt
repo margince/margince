@@ -305,7 +305,6 @@ internal/modules/approvals/expiry.go#func neverExpiringKinds
 internal/modules/approvals/inbox.go#func approvalWhere
 internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
-internal/modules/approvals/targetvisibility.go#func targetDecidable
 internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
 internal/modules/automation/engine.go#const systemSource

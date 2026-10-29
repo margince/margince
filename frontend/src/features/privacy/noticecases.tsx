@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useMemo, useState } from "react";
-import { api } from "../../api/client";
 import {
   EntityRef,
   RosterFailedLine,
@@ -18,7 +17,6 @@ import {
 } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { CellStack } from "../../design-system/cellstack";
-import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { type FilterPill, FilterPills } from "../../design-system/filterpills";
@@ -36,8 +34,9 @@ import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { ControllerMailDialog } from "./controllermail";
 import {
   acquisitionCaption,
   noticeRuleHint,
@@ -177,7 +176,7 @@ export function NoticeCasesCard() {
         pending={excuse.isPending}
         error={excuse.isError ? problemMessageOf(excuse.error, t) : null}
       />
-      <SendNoticeModal
+      <SendNoticeDialog
         key={`send-${sending?.id ?? "none"}`}
         duty={sending}
         onClose={() => setSending(null)}
@@ -202,8 +201,8 @@ function DutyRefusals({
   );
 }
 
-// Sending reaches the contact's own inbox, so it asks first.
-function SendNoticeModal({
+// Sending reaches the contact's own inbox, so the rep reads the mail first.
+function SendNoticeDialog({
   duty,
   onClose,
   onSent,
@@ -214,37 +213,22 @@ function SendNoticeModal({
 }>) {
   const t = useT();
   const toast = useToast();
-  const send = useMutation({
-    mutationFn: async (contactId: string) => {
-      return unwrap(
-        await api.POST("/contacts/{id}/consent/privacy-notice", {
-          params: { path: { id: contactId } },
-        }),
-      );
-    },
-    onSuccess: (issued) => {
-      onSent();
-      onClose();
-      toast.show(
-        issued.queued
-          ? t("notice.sentTo", { address: issued.delivered_to })
-          : t("noticeDuty.notSent", { address: issued.delivered_to }),
-        { tone: issued.queued ? "success" : "warning" },
-      );
-    },
-  });
   return (
-    <ConfirmModal
+    <ControllerMailDialog
+      contactId={duty?.contact_id ?? ""}
+      kind="privacy_notice"
       open={duty !== null}
       onClose={onClose}
-      title={t("notice.sendTitle")}
-      confirmLabel={t("notice.sendConfirm")}
-      onConfirm={() => duty && send.mutate(duty.contact_id)}
-      pending={send.isPending}
-      error={send.isError ? problemMessageOf(send.error, t) : null}
-    >
-      <p>{t("notice.sendBody", { contact: duty?.contact_name ?? "" })}</p>
-    </ConfirmModal>
+      onSent={(issued) => {
+        onSent();
+        toast.show(
+          issued.queued
+            ? t("notice.sentTo", { address: issued.delivered_to })
+            : t("noticeDuty.notSent", { address: issued.delivered_to }),
+          { tone: issued.queued ? "success" : "warning" },
+        );
+      }}
+    />
   );
 }
 

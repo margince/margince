@@ -29,7 +29,7 @@ it("shows the server cutoff when a custom range includes future days", async () 
   installFetchStub(reportingStoryRoutes(reportingStoryEvaluation));
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   expect(await screen.findByText(/^Results through /)).toHaveTextContent(
@@ -71,7 +71,7 @@ it.each([
     });
     render(
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>,
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
@@ -139,7 +139,7 @@ it("preserves the server explanation for a broken installation calendar", async 
   });
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   expect(

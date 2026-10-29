@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import type { Route } from "../lib/router";
@@ -36,6 +37,14 @@ function BrandBlock() {
     installation?.logo_icon_url,
     installation?.logo_url,
   );
+  // On the link, not the heading: the link already holds the tab stop, and the
+  // measure reaches into the heading it clips. Folded, the name has no width,
+  // so hovering the mark always shows it.
+  const {
+    ref: nameRef,
+    trigger: nameTrigger,
+    tip: nameTip,
+  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
   // never invented to fill the line.
@@ -73,12 +82,15 @@ function BrandBlock() {
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
+        ref={nameRef}
+        {...nameTrigger}
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
         <Heading size="small" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
+        {nameTip}
       </a>
       <span className="ws-company">
         <span className="ws-company-text">{t("shell.poweredBy")}</span>

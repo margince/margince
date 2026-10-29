@@ -109,6 +109,11 @@ export const COMPANY_360_VIEW = {
   },
 };
 
+/** The rail's approvals answer: how many wait, counted by the server. */
+export function pendingCount(count: number) {
+  return { count, as_of: "2026-06-01T08:00:00Z" };
+}
+
 export type FetchRoutes = {
   connectors?: () => Response | Promise<Response>;
   dedupe?: () => Response | Promise<Response>;
@@ -142,10 +147,10 @@ export function stubAgentRailApi(routes: FetchRoutes = {}) {
         ? routes.dedupe()
         : jsonResponse({ data: [], page: emptyPage });
     }
-    if (pathname.endsWith("/approvals")) {
+    if (pathname.endsWith("/approvals/pending-count")) {
       return routes.approvals
         ? routes.approvals()
-        : jsonResponse({ data: [], page: emptyPage });
+        : jsonResponse(pendingCount(0));
     }
     if (pathname.endsWith("/ai/calls")) {
       return routes.aiCalls

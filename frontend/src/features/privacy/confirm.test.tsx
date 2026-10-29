@@ -252,3 +252,48 @@ it("lets contact details be corrected without choosing marketing", async () => {
     { field: "full_name", value: "Anna Meyer" },
   ]);
 });
+
+describe("the page speaks the language the mail was sent in", () => {
+  const NOTICE = {
+    kind: "privacy_notice",
+    acquired_as: "purchased_or_imported",
+    rights: ["access", "erasure"],
+  };
+
+  it("renders a record link in the mail's language", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ ...RECORD, language: "vi" }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-vi" />);
+
+    expect(
+      await screen.findByText("Thông tin của quý khách"),
+    ).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("vi");
+    // Adopted, never stored as this reader's own pick.
+    expect(globalThis.localStorage.getItem("margince.locale")).toBeNull();
+  });
+
+  it("renders a privacy notice in the mail's language", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ ...NOTICE, language: "vi" }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-notice-vi" />);
+
+    expect(
+      await screen.findByText("Thông tin đang lưu về quý khách"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the reader's language when the server names none", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(NOTICE));
+
+    render(<ConfirmDetailsScreen token="tok-notice" />, "de");
+
+    expect(
+      await screen.findByText("Was wir über Sie gespeichert haben"),
+    ).toBeInTheDocument();
+  });
+});

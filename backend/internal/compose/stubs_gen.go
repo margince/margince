@@ -551,6 +551,10 @@ func (stubs) ListApprovals(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "ListApprovals")
 }
 
+func (stubs) CountPendingApprovals(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CountPendingApprovals")
+}
+
 func (stubs) GetApproval(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetApproval")
 }
@@ -983,6 +987,10 @@ func (stubs) CreateCompany(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateCompany")
 }
 
+func (stubs) GetCompanyForAddress(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCompanyForAddressParams) {
+	httperr.NotImplemented(w, r, "GetCompanyForAddress")
+}
+
 func (stubs) ArchiveCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveCompanyParams) {
 	httperr.NotImplemented(w, r, "ArchiveCompany")
 }
@@ -1105,6 +1113,14 @@ func (stubs) ListIntroPaths(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 
 func (stubs) DraftIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftIntroRequest")
+}
+
+func (stubs) ListCompanyLinkCandidates(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCompanyLinkCandidates")
+}
+
+func (stubs) LinkCompanyContacts(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LinkCompanyContactsParams) {
+	httperr.NotImplemented(w, r, "LinkCompanyContacts")
 }
 
 func (stubs) GetCompanyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -1407,6 +1423,10 @@ func (stubs) GetContactConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetContactConsentGuard")
 }
 
+func (stubs) PreviewControllerMail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewControllerMailParams) {
+	httperr.NotImplemented(w, r, "PreviewControllerMail")
+}
+
 func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SendPrivacyNotice")
 }
@@ -1425,6 +1445,10 @@ func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 
 func (stubs) DraftContactEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftContactEmail")
+}
+
+func (stubs) LinkContactEmployer(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.LinkContactEmployerParams) {
+	httperr.NotImplemented(w, r, "LinkContactEmployer")
 }
 
 func (stubs) PreviewContactEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -2011,8 +2035,16 @@ func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, param
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
+func (stubs) CloseLostInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CloseLostInputCheck")
+}
+
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
+}
+
+func (stubs) WaitInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "WaitInputCheck")
 }
 
 func (stubs) PreviewForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {

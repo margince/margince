@@ -201,28 +201,29 @@ const AVATARS: readonly Entry[] = [
   { token: "--avatarInkC", paint: "--avatarInk" },
 ];
 
-const RAIL: readonly Entry[] = [
+const INK_FIELD: readonly Entry[] = [
   {
-    token: "--bgRail",
+    token: "--bgInkField",
     on: "--bgPage",
-    usage: "The dark green field of the rail, the same in both themes.",
+    usage:
+      "The dark green plate under a toast, a tooltip and a docked window's title bar, the same in both themes. Never the sidebar.",
   },
   {
-    token: "--railIconActive",
-    on: "--bgRail",
-    usage: "White icons and labels on the dark green field.",
+    token: "--textOnInkField",
+    on: "--bgInkField",
+    usage: "White text and icons on the ink field.",
   },
 ];
 
 const ONBOARDING: readonly Entry[] = [
   {
     token: "--obDialogGlass",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The translucent white fill of the onboarding dialog's dark glass.",
   },
   {
     token: "--obDialogInkQuiet",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The dialog's secondary text on the dark glass.",
   },
   {
@@ -737,13 +738,13 @@ export const Avatars: Story = {
   ),
 };
 
-/** The rail is the same in both themes. */
-export const RailAndWorkspaceChrome: Story = {
-  name: "Rail and workspace chrome",
+/** The ink field is the same in both themes. */
+export const InkField: Story = {
+  name: "Ink field",
   render: () => (
     <Rows
-      intro="The rail is deliberately unthemed: white-alpha icons on a dark green field in both themes, so the two columns match."
-      entries={RAIL}
+      intro="The ink field is the one dark plate, the same in both themes: a toast, the capture chip, a collapsed sidebar's tooltip, a docked window's title bar and the client surface's bar. The sidebar itself is not on it. The sidebar is glass: the --pane ground over the page, with a hairline on its right."
+      entries={INK_FIELD}
     />
   ),
 };

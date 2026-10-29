@@ -32,7 +32,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	}
 	in.Emails, in.Phones = slices.Clone(in.Emails), slices.Clone(in.Phones)
 	creatorCtx := principal.WithActor(ctx, creator)
-	if err := refuseAgentConvert(creatorCtx, in.ConvertLeadIDs); err != nil {
+	if err := refuseAgentContactExtras(creatorCtx, in); err != nil {
 		return out, err
 	}
 	if _, err := s.readyContactCreate(creatorCtx, &in); err != nil {
@@ -78,6 +78,15 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	return out, nil
 }
 
+// refuseAgentContactExtras is what an agent's contact create may not carry, for
+// the preview and the write alike.
+func refuseAgentContactExtras(ctx context.Context, in CreateContactInput) error {
+	if err := refuseAgentConvert(ctx, in.ConvertLeadIDs); err != nil {
+		return err
+	}
+	return refuseAgentEmployer(ctx, in.Employer)
+}
+
 // admitAndDedupeContactCreate runs a typed create's identity refusals in order.
 // First a contact holding an address, then a live lead, then the ladder. It
 // answers the leads the create converts.
@@ -85,7 +94,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 // The lead check takes the identity locks before the ladder's subject locks.
 // So a LinkedIn lock is never taken after a subject lock.
 func admitAndDedupeContactCreate(ctx context.Context, tx pgx.Tx, in CreateContactInput) (ContactResolution, []ids.LeadID, error) {
-	if err := refuseAgentConvert(ctx, in.ConvertLeadIDs); err != nil {
+	if err := refuseAgentContactExtras(ctx, in); err != nil {
 		return ContactResolution{}, nil, err
 	}
 	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {

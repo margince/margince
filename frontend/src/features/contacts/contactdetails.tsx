@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
 import { ADDRESS_FIELDS } from "../../components/companyform";
@@ -40,6 +40,8 @@ import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { type ProfileField, proposedEmployer } from "./employerproposal";
+import { ProposedEmployerRow } from "./employerproposalrow";
 import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
@@ -71,7 +73,11 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     .filter(Boolean)
     .join(", ");
   const employer = currentEmployer(view.employments?.data);
+  const proposed = employer
+    ? undefined
+    : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
+  const record = { entityType: "contact", entityId: contact.id } as const;
   // Every row but the employer changes in place; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
@@ -108,20 +114,16 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
         {
           key: "employer",
           term: t("contact.rail.employer"),
-          value: employer ? <EmployerCard employment={employer} /> : notSet,
-          empty: !employer,
-          block: Boolean(employer),
+          value: employerValue(view, employer, proposed, notSet),
+          empty: !employer && !proposed,
+          block: Boolean(employer ?? proposed),
         },
         field("email", t("create.email"), Boolean(email), {
           keys: ["emails"],
           link: Boolean(email),
           reading: email && (
             <>
-              <ContactLink
-                kind="email"
-                value={email}
-                record={{ entityType: "contact", entityId: contact.id }}
-              >
+              <ContactLink kind="email" value={email} record={record}>
                 <EmailFace address={email} />
               </ContactLink>
               <BoughtMark
@@ -137,11 +139,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           link: Boolean(phone),
           reading: phone && (
             <>
-              <ContactLink
-                kind="phone"
-                value={phone.phone}
-                record={{ entityType: "contact", entityId: contact.id }}
-              />
+              <ContactLink kind="phone" value={phone.phone} record={record} />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
@@ -208,6 +206,17 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       ],
     },
   ];
+}
+
+function employerValue(
+  view: Contact360,
+  employer: Employment | undefined,
+  proposed: ProfileField | undefined,
+  notSet: string,
+): ReactNode {
+  if (employer) return <EmployerCard employment={employer} />;
+  if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
+  return notSet;
 }
 
 /**

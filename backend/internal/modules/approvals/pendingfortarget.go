@@ -39,19 +39,16 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	if err != nil {
 		return nil, err
 	}
+	// Lazy expiry: a row past its expiry is not a decision anyone still owes,
+	// so it must not appear as one on the record page.
+	visible, err := askWhere(batch, func(a row) bool { return a.PendingAt(now) },
+		func(rows []row) ([]bool, error) { return decidableRows(ctx, tx, p, rows) })
+	if err != nil {
+		return nil, err
+	}
 	out := make([]crmcontracts.Approval, 0, len(batch))
-	for i := range batch {
-		a := batch[i]
-		if a.effectiveStatus(now) != statusPending {
-			// Lazy expiry: a row past its expiry is not a decision anyone
-			// still owes, so it must not appear as one on the record page.
-			continue
-		}
-		visible, err := decidable(ctx, tx, p, a)
-		if err != nil {
-			return nil, err
-		}
-		if !visible {
+	for i, a := range batch {
+		if !visible[i] {
 			continue
 		}
 		out = append(out, wire(a, now))

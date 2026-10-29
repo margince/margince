@@ -329,6 +329,32 @@ export const CompanyMarksAtBothWidths: Story = {
 };
 
 /**
+ * A company name near the 200 characters the installation allows. The head
+ * keeps one line at every width and ends the name in an ellipsis; hovering or
+ * focusing the name shows the whole of it.
+ */
+export const LongCompanyName: Story = {
+  name: "sidebar — a very long company name",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation displayName="Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien, nachhaltige Technologien und die digitale Transformation e. V.">
+          <div style={{ display: "flex", height: "100vh" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed={false} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed />
+            </div>
+          </div>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
  * The foot with an entitlement read behind it.
  *
  * The foot is the agent and draws no licence posture: a refused licence is the

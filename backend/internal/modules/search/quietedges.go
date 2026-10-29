@@ -18,14 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// ExcludeEdges renders a predicate that removes candidates before the LIMIT,
-// over the alias `e` this projection gives the edge row.
+// ExcludeEdges renders a predicate that removes candidate contacts before the
+// LIMIT, over alias `e`, the contact's strongest edge. It judges the contact.
+// A test on one colleague's edge drops the contact; it promotes no other edge.
 //
-// A HOLE rather than a join, because the rows that decide it belong to another
-// module and this one never imports a sibling. The caller supplies the SQL and
-// the arguments through the same `arg` counter, so the fragment is numbered
-// against this statement's own list. It runs before the cut: a contact
-// filtered afterwards has already spent a slot.
+// A HOLE rather than a join: the deciding rows belong to another module. The
+// caller numbers its fragment through the same `arg` counter.
 type ExcludeEdges func(arg func(any) int) (string, error)
 
 // QuietRead is one ask of the quiet-relationship candidates.
@@ -126,32 +124,47 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 			excluded = got
 		}
 	}
+	// One owner's read starts from that owner's contacts and reaches their
+	// edges through a fenced lateral. Planned freely, it put the few live
+	// colleagues outermost and rescanned the owner's contacts once per colleague.
+	source := `FROM graph_interaction_edge e
+		      ` + liveMemberJoin + `
+		      JOIN contact p ON p.id = e.contact_id`
+	if !read.Owner.IsZero() {
+		source = `FROM contact p
+		      CROSS JOIN LATERAL (SELECT e.* FROM graph_interaction_edge e
+		              ` + liveMemberJoin + `
+		             WHERE e.contact_id = p.id OFFSET 0) e`
+	}
 	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
+	// The exclusions are judged per contact, so they leave each contact's
+	// strongest edge alone and run after it, only for the candidates the clock
+	// reaches. Strongest first, the clock stops once the limit is filled and its
+	// last count is complete.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH strongest AS MATERIALIZED (
 		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id,
 		           e.last_inbound_at, e.last_outbound_at, e.count_90d, e.in_count_90d,
 		           e.out_count_90d, e.count_total, o.id AS live_owner
-		      FROM graph_interaction_edge e
 		      %s
-		      JOIN contact p ON p.id = e.contact_id AND p.archived_at IS NULL
 		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
 		     WHERE e.count_total >= $%d
-		       AND (%s)
+		       AND p.archived_at IS NULL
 		       AND (%s)
 		       AND (%s)
 		     ORDER BY e.contact_id, e.count_total DESC, e.user_id
 		)
 		SELECT e.user_id, e.contact_id, x.touched, e.last_inbound_at, e.last_outbound_at,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total, e.live_owner
-		  FROM strongest e
+		  FROM (SELECT * FROM strongest ORDER BY count_total DESC) e
 		  JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
+		 WHERE (%s)
 		 ORDER BY e.count_total DESC, x.touched ASC, e.contact_id
-		 LIMIT $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"),
-		exchangedPos, owned, scope, excluded,
-		liveExchangeClock(asOf), beforePos, afterPos, limitPos), args...)
+		 LIMIT $%d`, source, workforce.LiveMemberSQL("o"),
+		exchangedPos, owned, scope,
+		liveExchangeClock(asOf), beforePos, afterPos, excluded, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}
@@ -160,11 +173,12 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 }
 
 // quietOwnerClause narrows the candidates to one live owner, to contacts with
-// none, or to neither; `o` is the contact's live owner join.
+// none, or to neither; `o` is the contact's live owner join. The owner is read
+// off the contact so the owner index can serve it.
 func quietOwnerClause(read QuietRead, arg func(any) int) string {
 	switch {
 	case !read.Owner.IsZero():
-		return fmt.Sprintf("o.id = $%d", arg(read.Owner))
+		return fmt.Sprintf("p.owner_id = $%d AND o.id IS NOT NULL", arg(read.Owner))
 	case read.Unowned:
 		return "o.id IS NULL"
 	default:

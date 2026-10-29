@@ -754,6 +754,16 @@ export interface paths {
          *     with the existing contact id. An email on the erasure list
          *     answers 422 naming `emails` with code `address_erased`. Writes one audit row + one
          *     `contact.created` event.
+         *
+         *     `company_id` or `company_name` names the employer, and the contact, that company and
+         *     the current employment edge between them are written in one transaction: when any of
+         *     them is refused, nothing is written. `company_name` creates the company and needs
+         *     `company:create`; either needs `relationship:create` and `contact:update`. A
+         *     `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+         *     missing company and for one hidden by row scope. Sending both answers 422 naming
+         *     `company_name`. The answer's `employer` names the company. An agent sending either
+         *     is refused with 422 `employer_needs_a_human` naming it, and `create_record` does not
+         *     take them: an agent names an employer with a `relationship` write.
          */
         post: operations["createContact"];
         delete?: never;
@@ -784,6 +794,9 @@ export interface paths {
          *
          *     Provenance is `manual` with the capturing user as `captured_by`, and the profile
          *     URL is stored as given. Nothing here fetches that URL, now or ever.
+         *
+         *     A `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
+         *     missing company and for one hidden by row scope.
          *
          *     Human-only, and not a `create_record` tool: quick capture is a form somebody
          *     types into while reading a profile, so there is no agent story for it and
@@ -930,6 +943,47 @@ export interface paths {
          *     took from A. Treat this as destructive and confirm before calling it.
          */
         post: operations["mergeContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/employer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an employer to an existing contact, creating the company when it is new.
+         * @description `company_id` links an existing company; `company_name` creates one. Exactly one of
+         *     them. The company and the current employment edge are written in one transaction, so
+         *     a refusal leaves neither behind. The edge becomes the contact's primary employment
+         *     when they have no other current one.
+         *
+         *     A company created here is given the domain of the contact's work email (the primary
+         *     one first) only when that domain is not consumer mail for this workspace, not a domain
+         *     the workspace refused a company, and not a domain another company holds. When a company
+         *     the caller can read holds it, the answer is 409 `duplicate_domain` with
+         *     `details.existing_id` naming that company, and nothing is written: link that company
+         *     with `company_id` instead. A holder the caller cannot read is not named, and the new
+         *     company is created without the domain.
+         *
+         *     The contact must be one the caller can change: a contact they cannot see answers 404,
+         *     and a missing `contact:update` or `relationship:create` grant answers 403, as does
+         *     `company:create` when `company_name` creates a company. A `company_id` the caller
+         *     cannot read answers 422 naming `company_id`, the same for a missing company and for
+         *     one hidden by row scope. A company the contact already holds a current employment at
+         *     answers 409.
+         */
+        post: operations["linkContactEmployer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2048,6 +2102,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/companies/for-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The company a contact at this email address would work at.
+         * @description Answers the live, unmerged company the caller can read whose live domain is the
+         *     address's domain or a parent of it, the narrowest such domain first. It matches as
+         *     the daily link reconcile and `listCompanyLinkCandidates` do: an address on
+         *     `eu.acme.example` answers the company on `acme.example`. Consumer mail for this
+         *     workspace and a domain refused a company never answer, even when a company carries
+         *     the domain. A company the caller cannot read is never named.
+         *
+         *     `company` is absent when no company answers, and for a value that is no address with
+         *     a hostname, so a form may ask while the address is still being typed. Needs read on
+         *     companies.
+         */
+        get: operations["getCompanyForAddress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}": {
         parameters: {
             query?: never;
@@ -2553,6 +2636,74 @@ export interface paths {
         get: operations["listCompanyContacts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/link-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Live contacts on this company's domains who do not work here yet.
+         * @description A contact is a candidate when it is live and not merged, the caller can read and
+         *     change it, one of its live email addresses is at one of this company's domains or a
+         *     subdomain of one, it is no workspace seat, and it holds no current employment at this
+         *     company. A domain that is consumer mail for this workspace never matches, even when
+         *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
+         *
+         *     A candidate with no current employer is also attached by the daily link reconcile,
+         *     so the list's lasting use is contacts who work elsewhere today.
+         *
+         *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
+         *     Needs read on companies, contacts and relationships. A caller without
+         *     `relationship:create` and `contact:update` gets no candidates. Reading the company is
+         *     mandatory: one the caller cannot see answers 404.
+         */
+        get: operations["listCompanyLinkCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/companies/{id}/link-contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Link the chosen link candidates to this company as current employees.
+         * @description Writes one current employment edge from each named contact to this company, all in
+         *     one transaction. Every id must be a candidate `listCompanyLinkCandidates` would return
+         *     to this caller now; one that is not answers 422 naming `contact_ids` with code
+         *     `not_a_link_candidate` and `details.contact_id`, and nothing is written. A contact the
+         *     caller cannot read, or may read but not change, answers the same as any other
+         *     non-candidate. Each edge becomes the contact's primary employment when they have no
+         *     other current one.
+         *
+         *     Needs `relationship:create`, `contact:update`, and read on companies, contacts and
+         *     relationships; without the first two it answers 403. A company the caller cannot see
+         *     answers 404.
+         */
+        post: operations["linkCompanyContacts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14447,6 +14598,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/approvals/pending-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many approvals wait for the caller, exactly.
+         * @description The number of items `listApprovals?status=pending` would return to this caller with the
+         *     wire status `pending`, across every page: the same visibility checks, the same mutes and
+         *     the same lazy expiry. It answers one number instead of every page.
+         *
+         *     `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+         *     then without any event, so a client that shows it reads it again at that moment. Measure
+         *     the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+         */
+        get: operations["countPendingApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/approvals/{id}": {
         parameters: {
             query?: never;
@@ -15939,8 +16116,7 @@ export interface paths {
         /**
          * Mail the subject a single-use link that confirms one marketing purpose.
          * @description Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-         *     primary address — `queued` reports whether it reached the lane, and an installation with
-         *     none still mints and answers 201. The purpose must be live and must itself require double
+         *     primary address. The purpose must be live and must itself require double
          *     opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
          *     confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
          *     authenticated operator, who could paste it straight back into `recordConsent` — a round
@@ -15955,10 +16131,8 @@ export interface paths {
          *     authorization decision recording why the installation was allowed to send it, and a
          *     timeline entry — which is what makes it visible to a subject-access export and reachable by
          *     erasure. `queued` reports that the message was staged in the same transaction that minted
-         *     the link; `sendable` says whether this installation has a lane at all. An installation with
-         *     no lane still mints the token and answers 201, because the write happened and reporting it
-         *     as a failure would invite a second request that mints another token and supersedes the
-         *     first.
+         *     the link. An installation with no lane is refused with 409 before anything is minted,
+         *     because the link is mailed and never returned.
          */
         post: operations["issueDoubleOptIn"];
         delete?: never;
@@ -16003,6 +16177,34 @@ export interface paths {
          *     carries the contact's mail and meetings across with it.
          */
         post: operations["publishCapturedContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/mail-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+         * @description Renders the mail the matching send would stage now: its From and To addresses, subject and
+         *     text. The link is not minted, so the text carries a labelled marker where the send puts
+         *     the link. Nothing is written and nothing is sent.
+         *
+         *     It admits the same callers and contacts as the send, so it never shows a mail the send
+         *     would refuse.
+         */
+        get: operations["previewControllerMail"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16084,9 +16286,8 @@ export interface paths {
          *     row, an authorization decision recording why the installation was allowed to send it, and a
          *     timeline entry — which is what makes it visible to a subject-access export and reachable by
          *     erasure. `queued` reports that the message was staged, in the same transaction that minted
-         *     the link; `sendable` says whether this installation has a lane at all. An installation with
-         *     no lane still mints the token and answers 201, because the write happened and reporting it
-         *     as a failure would invite a second request that mints another token and supersedes the first.
+         *     the link. An installation with no lane is refused with 409 before anything is minted,
+         *     because the link is mailed and never returned.
          */
         post: operations["requestDetailsConfirmation"];
         delete?: never;
@@ -18980,6 +19181,10 @@ export interface paths {
          *     deal: before that the qualified forecast would count nothing. A setting fixed by
          *     the environment is refused with `409 setting_locked`.
          *
+         *     Switching on also sends `preview_digest`, the `digest` of the preview the admin
+         *     saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
+         *     so nobody switches on a picture that is no longer true.
+         *
          *     Switching off takes effect at once. The reviews, their tasks and their history
          *     stay; only the qualified readings disappear, and the baseline readings never
          *     changed.
@@ -19090,6 +19295,56 @@ export interface paths {
          *     open.
          */
         post: operations["resolveInputCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/wait": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a customer review with the day the customer asked you to wait until.
+         * @description For a `deal_viability` review only. One transaction records the customer's wait on
+         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
+         *     review stays open and the deal stays out of the qualified forecast while it waits:
+         *     a wait is not support. The review comes back on that day.
+         *
+         *     404 when the finding is not an open customer review.
+         */
+        post: operations["waitInputCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/assurance/exceptions/{id}/close-lost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a customer review by closing its deal as lost.
+         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
+         *     lost stage with the reason given, and answers the review `not_relevant` with that
+         *     reason. A review is never answered `not_relevant` while its deal is still open.
+         *
+         *     404 when the finding is not an open customer review. 422 when the pipeline has no
+         *     lost stage.
+         */
+        post: operations["closeLostInputCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -24992,6 +25247,8 @@ export interface components {
              *     that they exist rather than showing an empty list that reads as none.
              */
             bcc_withheld: boolean;
+            /** @description Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names. */
+            readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             attachments: components["schemas"]["EmailAttachmentSummary"][];
             /** @description What the message is filed against, named for a reader. */
             links: components["schemas"]["ActivityLink"][];
@@ -28334,6 +28591,13 @@ export interface components {
              *     `convert_needs_a_human`: an agent converts with `promote_lead`.
              */
             convert_lead_ids?: string[];
+            /**
+             * Format: uuid
+             * @description An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+             */
+            company_id?: string | null;
+            /** @description A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent. */
+            company_name?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -28386,6 +28650,64 @@ export interface components {
              * @default false
              */
             company_created: boolean;
+        };
+        /** @description The employer to attach. Exactly one of `company_id` and `company_name`. */
+        LinkContactEmployerRequest: {
+            /**
+             * Format: uuid
+             * @description An existing company to link.
+             */
+            company_id?: string | null;
+            /** @description A company to create and link. Must not be blank when sent. */
+            company_name?: string | null;
+            /** @description Their job title at this company, stored as the employment's `role`. */
+            title?: string | null;
+        };
+        /** @description The contact with its employer, and what this call wrote. */
+        LinkContactEmployerResult: {
+            contact: components["schemas"]["Contact"];
+            /**
+             * Format: uuid
+             * @description The employer now linked.
+             */
+            company_id: string;
+            /** @description True when this call created the company. */
+            company_created: boolean;
+            /** @description The domain a created company was given. Null when it was given none, and when the company already existed. */
+            company_domain?: string | null;
+            /**
+             * Format: uuid
+             * @description The employment edge written.
+             */
+            relationship_id: string;
+        };
+        /** @description The company a contact at the asked address would work at. */
+        CompanyForAddress: {
+            /** @description Absent when no company the caller can read is on the address's domain. */
+            company?: components["schemas"]["ContactEmployer"];
+        };
+        /** @description A contact on one of the company's domains who does not work there yet. */
+        CompanyLinkCandidate: {
+            /** Format: uuid */
+            contact_id: string;
+            full_name: string;
+            title?: string | null;
+            /** @description The address that matched, the contact's primary one first. */
+            email: string;
+            /** @description Where the contact works today. Absent when they work nowhere or the caller may not see that employer. */
+            employer?: components["schemas"]["ContactEmployer"];
+        };
+        CompanyLinkCandidateList: {
+            data: components["schemas"]["CompanyLinkCandidate"][];
+            /** @description True when more candidates exist than `data` carries. */
+            truncated: boolean;
+        };
+        LinkCompanyContactsRequest: {
+            /** @description The candidates to link. An empty list answers 422 `required`, more than 50 `too_many`, and a repeated id `duplicate`. */
+            contact_ids: string[];
+        };
+        LinkCompanyContactsResult: {
+            data: components["schemas"]["Relationship"][];
         };
         /** @description One entry per card in the file, in the order the file listed them. */
         VCardImportReport: {
@@ -31262,6 +31584,8 @@ export interface components {
              * @enum {string}
              */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
+            /** @description Present only on a mail sent through the installation's own relay, as on `Activity`. */
+            controller_send?: components["schemas"]["ControllerSend"] | null;
         };
         /**
          * @description The warmest way in, chosen deterministically rather than scored by a model: the
@@ -35779,6 +36103,8 @@ export interface components {
             direction?: null | "inbound" | "outbound";
             /** @description Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
+            /** @description Present only on a mail sent through the installation's own relay. Absent on every other row. */
+            readonly controller_send?: components["schemas"]["ControllerSend"] | null;
             /**
              * @description Present exactly when `kind=message` and the reader may read it. Whose move the chat
              *     message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
@@ -40375,6 +40701,7 @@ export interface components {
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
+            team_week?: components["schemas"]["TeamWeekReach"];
             authorization?: components["schemas"]["Authorization"];
             settings_availability?: components["schemas"]["SettingsAvailability"];
             installation_brand?: components["schemas"]["InstallationBrand"];
@@ -40491,7 +40818,7 @@ export interface components {
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-         *     A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+         *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
          */
         ForecastQualifiedReadings: {
             /** Format: int64 */
@@ -40502,9 +40829,15 @@ export interface components {
             weighted_minor: number;
             /**
              * Format: int64
-             * @description Open baseline money on deals under an open viability review.
+             * @description Open baseline money on every deal left out: under an open viability review, or unsupported.
              */
             excluded_minor: number;
+            /**
+             * Format: int64
+             * @description The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
+             */
+            unsupported_minor: number;
+            unsupported_count: number;
             /**
              * Format: int64
              * @description Open baseline money on deals the check could not judge on current evidence.
@@ -40709,6 +41042,16 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /** @enum {string} */
             state: "not_enrolled" | "observing" | "enforcing";
+            preview?: components["schemas"]["ForecastEnforcementPreview"];
+        };
+        /** @description What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since. */
+        ForecastEnforcementPreview: {
+            /** @description Open deals the qualified forecast would leave out, under review or unsupported. */
+            left_out_count: number;
+            /** @description Open deals the last check could not judge on current evidence. */
+            unknown_count: number;
+            /** @description Names the policy version and every open deal's treatment this preview counted. */
+            digest: string;
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -43834,6 +44177,47 @@ export interface components {
             sendable: boolean;
         };
         /**
+         * @description A language this build writes the installation's own mail in.
+         * @enum {string}
+         */
+        MailLanguage: "de" | "en" | "vi";
+        /** @description How to send a mail the installation writes as controller. An absent body sends in the installation's mail language. */
+        ControllerMailSend: {
+            /**
+             * @description The language of the mail and of the page its link opens. Absent means the
+             *     installation's mail language.
+             */
+            language?: components["schemas"]["MailLanguage"];
+        };
+        /** @description The exact mail a controller send would stage now, with a marker where the link goes. */
+        ControllerMailPreview: {
+            /** @enum {string} */
+            kind: "record_confirmation" | "privacy_notice";
+            language: components["schemas"]["MailLanguage"];
+            /** @description The installation's mail language, which a send with no language uses. */
+            default_language: components["schemas"]["MailLanguage"];
+            /** @description Every language this build can send the mail in, in a stable order. */
+            languages: components["schemas"]["MailLanguage"][];
+            /** @description The address the relay sends from. Null when the installation names none. */
+            from_address: string | null;
+            /** @description The contact's own live primary email, the only address the send mails. */
+            to_address: string;
+            subject: string;
+            /**
+             * @description The plain-text body as sent. Where the send puts the link, it carries a marker in the
+             *     mail's language instead of a URL.
+             */
+            text: string;
+        };
+        /**
+         * @description Present on a mail sent through the installation's own relay rather than through a
+         *     member's mailbox. Its presence is the lane.
+         */
+        ControllerSend: {
+            /** @description The From address the mail left from, or was staged with while it waits. Null when the relay names none. */
+            from_address: string | null;
+        };
+        /**
          * @description One company's current VAT standing, and the evidence for it. The row keeps only the
          *     CURRENT consultation; what a re-check overwrote lives in the audit trail.
          */
@@ -44195,6 +44579,20 @@ export interface components {
             };
             /** @description Why, in the approver's own words. Recorded with the decision, as a rejection's reason is. */
             reason?: string;
+        };
+        ApprovalPendingCount: {
+            /** @description Pending approvals this caller could decide now. */
+            count: number;
+            /**
+             * Format: date-time
+             * @description When the first counted approval expires. Absent when none of them can expire.
+             */
+            next_expiry_at?: string;
+            /**
+             * Format: date-time
+             * @description The server's clock when it counted.
+             */
+            as_of: string;
         };
         ApprovalListResponse: {
             data: components["schemas"]["Approval"][];
@@ -44803,6 +45201,18 @@ export interface components {
             data: components["schemas"]["User"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+         *     answered by the rule that endpoint is served on. `every_team` for a seat holding
+         *     `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+         *     `none` for everyone else, a read-only seat included. Separate from a worklist's
+         *     `scope_options`, because the `team` worklist is the team's live work and the
+         *     week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+         *     carry it, from one rule. Absent from an older server, which a client reads as
+         *     `none`.
+         * @enum {string}
+         */
+        TeamWeekReach: "none" | "teams_led" | "every_team";
         TeamListResponse: {
             data: components["schemas"]["Team"][];
             page: components["schemas"]["PageInfo"];
@@ -45581,6 +45991,8 @@ export interface components {
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.
@@ -45605,6 +46017,8 @@ export interface components {
              * @enum {string}
              */
             state: "unknown" | "granted" | "withdrawn";
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -45630,6 +46044,8 @@ export interface components {
             marketing_state: "unknown" | "granted" | "withdrawn";
             /** @description Where each held value came from and when (Art. 14). Empty for a field nothing has stamped. */
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
+            /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
+            language?: components["schemas"]["MailLanguage"];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
         ConfirmFieldOrigin: {
@@ -49238,17 +49654,7 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
-            /**
-             * @description Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
-             *     answered by the rule that endpoint is served on. `every_team` for a seat holding
-             *     `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
-             *     `none` for everyone else, a read-only seat included. Separate from
-             *     `scope_options`, because the `team` worklist is the team's live work and the
-             *     week is a lead's verdict on named colleagues. Absent from an older server, which
-             *     a client reads as `none`.
-             * @enum {string}
-             */
-            team_week?: "none" | "teams_led" | "every_team";
+            team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
@@ -51524,6 +51930,18 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The installation cannot send its own mail (`conflict`), or the consent engine refuses this
+         *     mail to this contact (`consent_not_granted`).
+         */
+        ControllerMailRefused: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Optimistic-lock failure — the entity changed since the version in If-Match (`code: version_skew`). */
         VersionConflict: {
             headers: {
@@ -53410,6 +53828,73 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    linkContactEmployer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkContactEmployerRequest"];
+            };
+        };
+        responses: {
+            /** @description The employer is attached. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkContactEmployerResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /**
+             * @description `duplicate_domain`: a company the caller can read already holds the contact's work
+             *     domain, and `details.existing_id` names it. Or the contact already holds a current
+             *     employment at `company_id`.
+             */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getContact360: {
         parameters: {
             query?: {
@@ -54896,6 +55381,32 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getCompanyForAddress: {
+        parameters: {
+            query: {
+                /** @description The address as typed. */
+                email: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The company, or none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyForAddress"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getCompany: {
         parameters: {
             query?: never;
@@ -55516,6 +56027,88 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listCompanyLinkCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The candidates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyLinkCandidateList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    linkCompanyContacts: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkCompanyContactsRequest"];
+            };
+        };
+        responses: {
+            /** @description The edges written, in the order the ids were sent. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkCompanyContactsResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -74020,6 +74613,28 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    countPendingApprovals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The count. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalPendingCount"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getApproval: {
         parameters: {
             query?: never;
@@ -76153,6 +76768,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
              *     carries no live email address — so there is no mailbox a link could reach.
@@ -76192,6 +76808,50 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    previewControllerMail: {
+        parameters: {
+            query: {
+                /** @description `record_confirmation` previews `confirm-request`; `privacy_notice` previews `privacy-notice`. */
+                kind: "record_confirmation" | "privacy_notice";
+                /** @description The language to render in. Absent means the installation's mail language. */
+                language?: components["schemas"]["MailLanguage"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mail as the send would stage it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControllerMailPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
+            /**
+             * @description The contact carries no live email address, the installation's controller particulars
+             *     are incomplete, or the language is not one this build sends in.
+             */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     sendPrivacyNotice: {
         parameters: {
             query?: never;
@@ -76202,7 +76862,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ControllerMailSend"];
+            };
+        };
         responses: {
             /** @description Notice issued, and what became of the delivery. */
             201: {
@@ -76216,6 +76880,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ControllerMailRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -76229,7 +76894,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ControllerMailSend"];
+            };
+        };
         responses: {
             /** @description Link issued, and what became of the delivery. */
             201: {
@@ -76243,7 +76912,11 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description The contact carries no live email address, so there is no mailbox a link could reach. */
+            409: components["responses"]["ControllerMailRefused"];
+            /**
+             * @description The contact carries no live email address, so there is no mailbox a link could reach,
+             *     or the language is not one this build sends in.
+             */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -81325,6 +81998,8 @@ export interface operations {
             content: {
                 "application/json": {
                     enabled: boolean;
+                    /** @description The `digest` of the preview shown before switching on. */
+                    preview_digest?: string;
                 };
             };
         };
@@ -81429,6 +82104,67 @@ export interface operations {
         };
         responses: {
             /** @description The answer was recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    waitInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: date */
+                    until: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The wait was recorded on the deal and the review. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    closeLostInputCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    lost_reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The deal was closed as lost and the review answered. */
             204: {
                 headers: {
                     [name: string]: unknown;

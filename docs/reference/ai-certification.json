@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 49,
-    "sites_best_current": 35,
+    "sites_best_current": 34,
     "sites_best_partial": 1,
-    "sites_best_stale": 12,
+    "sites_best_stale": 13,
     "sites_absent": 1,
     "scenarios": 271,
     "records": 355,
@@ -367,7 +367,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -377,7 +377,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -1205,7 +1205,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1216,7 +1216,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -2171,7 +2171,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2182,7 +2182,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.6-flash",
@@ -3171,7 +3171,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -3181,7 +3181,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -3998,7 +3998,7 @@
             "env": "cloud_frontier"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4008,7 +4008,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -4825,7 +4825,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4835,7 +4835,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -5652,7 +5652,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -5662,7 +5662,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -6479,7 +6479,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -6489,7 +6489,7 @@
             },
             "same_model": true,
             "band": "not_supported",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -6960,7 +6960,7 @@
       "ready": 27,
       "usable_with_care": 15,
       "not_reliable_yet": 3,
-      "recheck_pending": 20,
+      "recheck_pending": 21,
       "models": [
         {
           "binding": {
@@ -6969,9 +6969,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 20,
+          "sites_current": 19,
           "sites_partial": 0,
-          "sites_stale": 24,
+          "sites_stale": 25,
           "runs": 786,
           "passed": 638,
           "reliability": 0.811704834605598,
@@ -7009,9 +7009,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 24,
+          "sites_current": 23,
           "sites_partial": 0,
-          "sites_stale": 19,
+          "sites_stale": 20,
           "runs": 594,
           "passed": 564,
           "reliability": 0.9494949494949495,
@@ -7313,7 +7313,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2
@@ -7664,7 +7664,7 @@
       "ready": 31,
       "usable_with_care": 10,
       "not_reliable_yet": 3,
-      "recheck_pending": 19,
+      "recheck_pending": 20,
       "models": [
         {
           "binding": {
@@ -7673,9 +7673,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 24,
+          "sites_current": 23,
           "sites_partial": 0,
-          "sites_stale": 17,
+          "sites_stale": 18,
           "runs": 576,
           "passed": 553,
           "reliability": 0.9600694444444444,
@@ -7693,9 +7693,9 @@
             "env": "cloud_frontier"
           },
           "sites": 38,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 15,
+          "sites_stale": 16,
           "runs": 462,
           "passed": 448,
           "reliability": 0.9696969696969697,
@@ -7713,9 +7713,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 24,
+          "sites_current": 23,
           "sites_partial": 0,
-          "sites_stale": 17,
+          "sites_stale": 18,
           "runs": 762,
           "passed": 694,
           "reliability": 0.910761154855643,
@@ -8017,7 +8017,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 3
@@ -8354,7 +8354,7 @@
       "ready": 30,
       "usable_with_care": 13,
       "not_reliable_yet": 1,
-      "recheck_pending": 13,
+      "recheck_pending": 14,
       "models": [
         {
           "binding": {
@@ -8363,9 +8363,9 @@
             "env": "cloud_frontier"
           },
           "sites": 42,
-          "sites_current": 29,
+          "sites_current": 28,
           "sites_partial": 1,
-          "sites_stale": 12,
+          "sites_stale": 13,
           "runs": 654,
           "passed": 642,
           "reliability": 0.981651376146789,
@@ -8384,9 +8384,9 @@
             "thinking_level": "low"
           },
           "sites": 38,
-          "sites_current": 27,
+          "sites_current": 26,
           "sites_partial": 1,
-          "sites_stale": 10,
+          "sites_stale": 11,
           "runs": 417,
           "passed": 414,
           "reliability": 0.9928057553956835,
@@ -8691,7 +8691,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2
@@ -9037,7 +9037,7 @@
       "ready": 24,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 19,
+      "recheck_pending": 20,
       "models": [
         {
           "binding": {
@@ -9046,9 +9046,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 16,
+          "sites_stale": 17,
           "runs": 537,
           "passed": 429,
           "reliability": 0.7988826815642458,
@@ -9086,9 +9086,9 @@
             "env": "cloud_frontier"
           },
           "sites": 38,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 15,
+          "sites_stale": 16,
           "runs": 561,
           "passed": 531,
           "reliability": 0.946524064171123,
@@ -9106,9 +9106,9 @@
             "env": "eu_hosted"
           },
           "sites": 38,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 0,
-          "sites_stale": 15,
+          "sites_stale": 16,
           "runs": 537,
           "passed": 507,
           "reliability": 0.9441340782122905,
@@ -9410,7 +9410,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 15,
           "passed": 15,
           "records": 3
@@ -9747,7 +9747,7 @@
       "ready": 9,
       "usable_with_care": 8,
       "not_reliable_yet": 27,
-      "recheck_pending": 28,
+      "recheck_pending": 29,
       "models": [
         {
           "binding": {
@@ -9756,9 +9756,9 @@
             "env": "sovereign"
           },
           "sites": 44,
-          "sites_current": 16,
+          "sites_current": 15,
           "sites_partial": 0,
-          "sites_stale": 28,
+          "sites_stale": 29,
           "runs": 747,
           "passed": 588,
           "reliability": 0.7871485943775101,
@@ -10060,7 +10060,7 @@
             "env": "sovereign"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 0,
           "records": 1
@@ -10398,9 +10398,9 @@
         "env": "cloud_frontier"
       },
       "sites": 45,
-      "sites_current": 31,
+      "sites_current": 30,
       "sites_partial": 1,
-      "sites_stale": 13,
+      "sites_stale": 14,
       "runs": 813,
       "passed": 784,
       "reliability": 0.964329643296433,
@@ -10439,9 +10439,9 @@
         "thinking_level": "low"
       },
       "sites": 40,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 0,
-      "sites_stale": 19,
+      "sites_stale": 20,
       "runs": 468,
       "passed": 468,
       "reliability": 1,
@@ -10459,9 +10459,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 24,
+      "sites_current": 23,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 684,
       "passed": 661,
       "reliability": 0.966374269005848,
@@ -10500,9 +10500,9 @@
         "thinking_level": "low"
       },
       "sites": 38,
-      "sites_current": 27,
+      "sites_current": 26,
       "sites_partial": 1,
-      "sites_stale": 10,
+      "sites_stale": 11,
       "runs": 417,
       "passed": 414,
       "reliability": 0.9928057553956835,
@@ -10520,9 +10520,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 20,
+      "sites_current": 19,
       "sites_partial": 0,
-      "sites_stale": 24,
+      "sites_stale": 25,
       "runs": 786,
       "passed": 638,
       "reliability": 0.811704834605598,
@@ -10560,9 +10560,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 24,
+      "sites_current": 23,
       "sites_partial": 0,
-      "sites_stale": 19,
+      "sites_stale": 20,
       "runs": 594,
       "passed": 564,
       "reliability": 0.9494949494949495,
@@ -10580,9 +10580,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 23,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 615,
       "passed": 488,
       "reliability": 0.7934959349593496,
@@ -10620,9 +10620,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 23,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 585,
       "passed": 555,
       "reliability": 0.9487179487179487,
@@ -10640,9 +10640,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 23,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 561,
       "passed": 531,
       "reliability": 0.946524064171123,
@@ -10680,9 +10680,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 24,
+      "sites_current": 23,
       "sites_partial": 0,
-      "sites_stale": 19,
+      "sites_stale": 20,
       "runs": 645,
       "passed": 616,
       "reliability": 0.9550387596899225,
@@ -10700,9 +10700,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 23,
+      "sites_current": 22,
       "sites_partial": 0,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 495,
       "passed": 474,
       "reliability": 0.9575757575757575,
@@ -10720,9 +10720,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 24,
+      "sites_current": 23,
       "sites_partial": 0,
-      "sites_stale": 19,
+      "sites_stale": 20,
       "runs": 840,
       "passed": 761,
       "reliability": 0.905952380952381,
@@ -10740,9 +10740,9 @@
         "env": "sovereign"
       },
       "sites": 44,
-      "sites_current": 16,
+      "sites_current": 15,
       "sites_partial": 0,
-      "sites_stale": 28,
+      "sites_stale": 29,
       "runs": 747,
       "passed": 588,
       "reliability": 0.7871485943775101,
@@ -18820,18 +18820,8 @@
       "key": "growth_fit/growth_fit",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.5-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "growth_fit_calls_a_company_outside_our_market_weak",
@@ -18853,9 +18843,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 9,
@@ -18868,7 +18858,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18877,9 +18877,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -18892,7 +18892,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18900,9 +18910,9 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 14,
@@ -18915,7 +18925,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18924,9 +18944,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -18939,7 +18959,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18947,9 +18977,9 @@
             "model": "gemma4:12b",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 10,
@@ -18962,7 +18992,17 @@
             "invalid": 0,
             "abstained": 3
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18970,9 +19010,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -18985,7 +19025,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -18993,9 +19043,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 16,
@@ -19008,7 +19058,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19016,9 +19076,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 15,
           "passed": 15,
@@ -19031,7 +19091,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19039,9 +19109,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 15,
           "passed": 15,
@@ -19054,7 +19124,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19062,9 +19142,9 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -19077,7 +19157,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19085,9 +19175,9 @@
             "model": "openai/gpt-6-sol",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -19100,7 +19190,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19108,9 +19208,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -19123,7 +19223,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -19131,9 +19241,9 @@
             "model": "mlx-community/Qwen3-14B-4bit",
             "env": "sovereign"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 0,
@@ -19146,7 +19256,17 @@
             "invalid": 0,
             "abstained": 1
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         }
       ]
     },

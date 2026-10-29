@@ -246,12 +246,11 @@ The app shell is **glass over the light page**, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The dark rail group in `tokens.css` (`--bgRail`, `--railIconActive`,
-`--overlayScrim`) is for the dark green field
-only. Its comment says it has no theme, `white-alpha` in both themes, which is
-correct for that field. That field is the tooltips the small rail shows, the bar
-of the client surface, and the surfaces for the web site and the deck. A new
-app panel styled from those tokens is styled, in error, as the public web site.
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
+`--overlayScrim`) is the one dark green field, the same in both themes. It is
+for what passes over the page, such as the tooltips the folded sidebar shows
+and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
+is styled in error.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
