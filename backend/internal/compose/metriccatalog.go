@@ -63,7 +63,11 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 }
 
 func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (reporting.Evaluation, error) {
-	frame, err := reportingContext(ctx, tx, selection, framework, at)
+	owners, err := readerMeasurableOwners(ctx, tx)
+	if err != nil {
+		return reporting.Evaluation{}, err
+	}
+	frame, err := reportingContext(ctx, tx, selection, framework, owners, at)
 	if err != nil {
 		return reporting.Evaluation{}, err
 	}
@@ -81,9 +85,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err != nil {
 			return out, err
 		}
-		if err := markOwnerWithheld(ctx, tx, facts); err != nil {
-			return out, err
-		}
+		markOwnerWithheld(owners, facts)
 		out.Facts = append(out.Facts, facts...)
 		out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, facts, coverage))
 	}

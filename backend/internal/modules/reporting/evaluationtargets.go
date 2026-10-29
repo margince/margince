@@ -5,7 +5,6 @@ package reporting
 
 import (
 	"context"
-	"errors"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -18,25 +17,92 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-//nolint:nilnil // An absent or unreadable target is a valid optional allocation.
-func (s *Service) matchingTarget(ctx context.Context, tx pgx.Tx, reach targetReach, frame crmcontracts.ReportingContext, scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetricID) (*crmcontracts.ReportingTarget, error) {
-	if frame.TargetInterval == nil || !auth.Allows(ctx, "sales_target", principal.ActionRead) {
-		return nil, nil
+// targetKey is one figure an evaluation may hold against a target: a metric
+// over a scope, inside the evaluation's pipeline and target interval.
+type targetKey struct {
+	metric  crmcontracts.ReportingMetricID
+	kind    crmcontracts.ReportingScopeKind
+	subject string
+}
+
+func keyFor(scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetricID) targetKey {
+	key := targetKey{metric: metric, kind: scope.Kind}
+	if scope.Id != nil {
+		key.subject = scope.Id.String()
 	}
-	if _, err := s.authority.Scope(ctx, tx, scope, false); err != nil {
+	return key
+}
+
+func ownerKey(owner openapi_types.UUID, metric crmcontracts.ReportingMetricID) targetKey {
+	return keyFor(crmcontracts.ReportingScope{Kind: reportingOwner, Id: &owner}, metric)
+}
+
+// heldTargets are the targets one evaluation matched, by the figure each holds.
+type heldTargets map[targetKey]crmcontracts.ReportingTarget
+
+// matchingTargets reads every target the keys name in one statement, so an
+// evaluation's target cost does not grow with its metrics or owners. A figure
+// is held against a target only when the reader may read the target and
+// measure its scope: the evaluation's scope, and each owner in owners.
+func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetReach, frame crmcontracts.ReportingContext, keys []targetKey, owners []openapi_types.UUID) (heldTargets, error) {
+	held := heldTargets{}
+	if frame.TargetInterval == nil || !auth.Allows(ctx, "sales_target", principal.ActionRead) || len(keys) == 0 {
+		return held, nil
+	}
+	if err := s.authorizeTargetScopes(ctx, tx, frame.Scope, owners); err != nil {
 		return nil, err
 	}
-	var b bindings
-	// A figure is held against a target only when the reader may read it.
-	where := reach.clause(&b) + " AND " + activeTarget + " AND t.metric=" + b.add(metric) + " AND t.scope_kind=" + b.add(scope.Kind) + " AND t.scope_id IS NOT DISTINCT FROM " + b.add(scope.Id) + "::uuid AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
-	out, err := scanTarget(tx.QueryRow(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where, b.values...))
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, nil
+	var metrics, kinds, subjects []string
+	seen := map[targetKey]bool{}
+	for _, key := range keys {
+		if !seen[key] {
+			seen[key] = true
+			metrics, kinds, subjects = append(metrics, string(key.metric)), append(kinds, string(key.kind)), append(subjects, key.subject)
+		}
 	}
+	var b bindings
+	where := reach.clause(&b) + " AND " + activeTarget + " AND (t.metric,t.scope_kind,COALESCE(t.scope_id::text,'')) IN (SELECT * FROM unnest(" + b.add(metrics) + "::text[]," + b.add(kinds) + "::text[]," + b.add(subjects) + "::text[])) AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
+	rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where, b.values...)
 	if err != nil {
 		return nil, err
 	}
-	return &out, nil
+	targets, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.ReportingTarget, error) { return scanTarget(row) })
+	if err != nil {
+		return nil, err
+	}
+	// A target's metric and scope never change after creation, so its
+	// definition names the figure it holds.
+	for _, target := range targets {
+		held[keyFor(target.Definition.Scope, target.Definition.Metric)] = target
+	}
+	return held, nil
+}
+
+// authorizeTargetScopes refuses the evaluation when the reader may not
+// measure its scope or one of the owners, as asking each scope alone would.
+func (s *Service) authorizeTargetScopes(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, owners []openapi_types.UUID) error {
+	if _, err := s.authority.Scope(ctx, tx, scope, false); err != nil {
+		return err
+	}
+	if len(owners) == 0 {
+		return nil
+	}
+	distinct := map[ids.UUID]bool{}
+	candidates := make([]ids.UUID, 0, len(owners))
+	for _, owner := range owners {
+		if !distinct[ids.UUID(owner)] {
+			distinct[ids.UUID(owner)] = true
+			candidates = append(candidates, ids.UUID(owner))
+		}
+	}
+	measurable, err := s.authority.MeasurableOwners(ctx, tx, candidates)
+	if err != nil {
+		return err
+	}
+	if len(measurable) != len(candidates) {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.ReportingEvaluation) error {
@@ -47,13 +113,39 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 			return err
 		}
 	}
-	for index := range out.Metrics {
-		metric := &out.Metrics[index]
-		target, err := s.matchingTarget(ctx, tx, reach, out.Context, out.Context.Scope, metric.Id)
+	keys := make([]targetKey, 0, len(out.Metrics))
+	for _, metric := range out.Metrics {
+		keys = append(keys, keyFor(out.Context.Scope, metric.Id))
+	}
+	pointOwners := map[int]map[int]openapi_types.UUID{}
+	var owners []openapi_types.UUID
+	for index := range out.Charts {
+		chart := &out.Charts[index]
+		if chart.Kind != reportingOwnerAttainment {
+			continue
+		}
+		points, takesTargets, err := ownerTargetPoints(ctx, tx, out.Context, chart)
 		if err != nil {
 			return err
 		}
-		if target == nil || metric.Coverage.Withheld {
+		if !takesTargets {
+			continue
+		}
+		pointOwners[index] = points
+		for _, owner := range points {
+			keys = append(keys, ownerKey(owner, chart.Metric))
+			owners = append(owners, owner)
+		}
+		keys = append(keys, keyFor(out.Context.Scope, chart.Metric))
+	}
+	held, err := s.matchingTargets(ctx, tx, reach, out.Context, keys, owners)
+	if err != nil {
+		return err
+	}
+	for index := range out.Metrics {
+		metric := &out.Metrics[index]
+		target, ok := held[keyFor(out.Context.Scope, metric.Id)]
+		if !ok || metric.Coverage.Withheld {
 			continue
 		}
 		value := float64(target.Definition.Value)
@@ -66,8 +158,9 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 	}
 	for index := range out.Charts {
 		chart := &out.Charts[index]
-		if chart.Kind == reportingOwnerAttainment {
-			if err := s.ownerTargets(ctx, tx, reach, out.Context, chart); err != nil {
+		if points, ok := pointOwners[index]; ok {
+			applyOwnerTargets(chart, points, held)
+			if err := s.ownerTargetAllocation(ctx, tx, out.Context, chart, held); err != nil {
 				return err
 			}
 		}
@@ -76,39 +169,42 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 	return nil
 }
 
-func (s *Service) ownerTargets(ctx context.Context, tx pgx.Tx, reach targetReach, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) error {
+// ownerTargetPoints fills in the owners an attainment chart stands against
+// and answers which point is which measurable owner. It answers false when
+// the chart takes no targets.
+func ownerTargetPoints(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) (map[int]openapi_types.UUID, bool, error) {
 	// A failed calculation has no members to fill in: a zero for each would
 	// read as measured sales.
 	if chart.Coverage.Withheld || chart.Coverage.Status == crmcontracts.ReportingStatusFailed {
-		return nil
+		return nil, false, nil
 	}
 	if err := addUnmeasuredOwners(ctx, tx, frame, chart); err != nil {
-		return err
+		return nil, false, err
 	}
 	if !targetAppliesToInterval(frame, chart.Interval) {
-		return nil
+		return nil, false, nil
 	}
-
-	for index := range chart.Points {
-		point := &chart.Points[index]
+	points := map[int]openapi_types.UUID{}
+	for index, point := range chart.Points {
 		parsed, err := ids.Parse(point.Key)
 		if err != nil {
-			return invalid("an attainment reading has no owner identity")
+			return nil, false, invalid("an attainment reading has no owner identity")
 		}
 		owner := openapi_types.UUID(parsed)
-		if parsed.IsZero() || !slices.Contains(frame.MemberIds, owner) {
-			continue
-		}
-		target, err := s.matchingTarget(ctx, tx, reach, frame, crmcontracts.ReportingScope{Kind: reportingOwner, Id: &owner}, chart.Metric)
-		if err != nil {
-			return err
-		}
-		if target != nil {
-			value := float64(target.Definition.Value)
-			point.Target = &value
+		if !parsed.IsZero() && slices.Contains(frame.MemberIds, owner) {
+			points[index] = owner
 		}
 	}
-	return s.ownerTargetAllocation(ctx, tx, reach, frame, chart)
+	return points, true, nil
+}
+
+func applyOwnerTargets(chart *crmcontracts.ReportingChart, points map[int]openapi_types.UUID, held heldTargets) {
+	for index, owner := range points {
+		if target, ok := held[ownerKey(owner, chart.Metric)]; ok {
+			value := float64(target.Definition.Value)
+			chart.Points[index].Target = &value
+		}
+	}
 }
 
 // addUnmeasuredOwners gives each member with no reading a zero point, so an
@@ -155,7 +251,7 @@ func applyChartTarget(frame crmcontracts.ReportingContext, metrics []crmcontract
 	}
 }
 
-func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, reach targetReach, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart) error {
+func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart, held heldTargets) error {
 	visible, err := s.allocationVisible(ctx, tx, frame.Scope)
 	if err != nil || !visible {
 		return err
@@ -171,11 +267,7 @@ func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, reach ta
 			return invalid("allocated targets exceed the exact reporting range")
 		}
 		chart.AllocatedTarget = &total
-		target, err := s.matchingTarget(ctx, tx, reach, frame, frame.Scope, chart.Metric)
-		if err != nil {
-			return err
-		}
-		if target != nil {
+		if target, ok := held[keyFor(frame.Scope, chart.Metric)]; ok {
 			difference := float64(target.Definition.Value) - total
 			chart.AllocationDifference = &difference
 		}
