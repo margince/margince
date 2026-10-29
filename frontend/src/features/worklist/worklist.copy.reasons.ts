@@ -77,7 +77,7 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
 /**
  * The reason kind that reads as a badge, not as a phrase in the line.
  *
- * "Nothing prepared" is a state of the meeting, as `overdue` is of a deadline,
+ * "Not confirmed ready" is a state of the meeting, as `overdue` is of a deadline,
  * and not one weighed fact among several. In a `because` line it reads as
  * background; a rep scanning a rail of meetings needs it at a glance.
  *
@@ -86,9 +86,11 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
  */
 const BADGED = "meeting_unprepared";
 
-/** Whether this row's meeting has nothing prepared for it. */
+/** Whether the reader attends this meeting and has not confirmed they are ready. */
 export function isUnprepared(item: WorklistItem): boolean {
-  return item.because.some((reason) => reason.kind === BADGED);
+  return (
+    item.source === "meeting" && item.preparation?.state === "needs_review"
+  );
 }
 
 /**

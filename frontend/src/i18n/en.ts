@@ -14603,8 +14603,10 @@ export const en = {
   "webhooks.event.activity.marked_handled.label": "Worklist item marked done",
   "webhooks.event.activity.marked_handled.when":
     "Someone marks a Worklist item done because they dealt with it another way.",
-  "webhooks.event.activity.readiness_recorded.label": "Meeting readiness changed",
-  "webhooks.event.activity.readiness_recorded.when": "Someone marks themselves ready for a meeting, or undoes it.",
+  "webhooks.event.activity.readiness_recorded.label":
+    "Meeting readiness changed",
+  "webhooks.event.activity.readiness_recorded.when":
+    "Someone marks themselves ready for a meeting, or undoes it.",
   "webhooks.event.engagement.reply.label": "Reply received",
   "webhooks.event.engagement.reply.when":
     "An inbound message arrives in a thread you wrote in first.",
@@ -16580,8 +16582,10 @@ export const en = {
   "worklist.ready.badge": "Ready",
   "worklist.ready.done": "Marked you ready for this meeting.",
   "worklist.ready.failed": "You were not marked ready. Retry.",
-  "worklist.ready.stale": "The meeting changed. Review it, then mark yourself ready.",
-  "worklist.ready.undoFailed": "Undo did not go through. You are still marked ready.",
+  "worklist.ready.stale":
+    "The meeting changed. Review it, then mark yourself ready.",
+  "worklist.ready.undoFailed":
+    "Undo did not go through. You are still marked ready.",
   "worklist.ready.changed": "Changed since you were ready: {facts}",
   "worklist.ready.fact.start_time": "start time",
   "worklist.ready.fact.agenda": "agenda",
@@ -16661,7 +16665,8 @@ export const en = {
   "worklist.consequence.deal_drifts": "The deal keeps drifting.",
   "worklist.consequence.deal_slips_past_close":
     "The deal slips past its close date.",
-  "worklist.consequence.meeting_unprepared": "The meeting starts unprepared.",
+  "worklist.consequence.meeting_unprepared":
+    "The meeting starts before you said you are ready.",
   "worklist.consequence.task_slips": "The task slips past its due date.",
   "worklist.consequence.work_blocked": "Work that waits on this stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -16951,7 +16956,7 @@ export const en = {
   "worklist.because.meeting_soon": "starting soon",
   "worklist.because.meeting_booked": "meeting booked",
   "worklist.because.meeting_booked.value": "meeting booked for {value}",
-  "worklist.because.meeting_unprepared": "nothing prepared",
+  "worklist.because.meeting_unprepared": "not confirmed ready",
   "worklist.because.outcome_unrecorded": "no outcome recorded",
   "worklist.because.you_wrote_last": "you wrote last",
   "worklist.because.no_reply_days": "no reply recorded",

@@ -189,9 +189,9 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row — overdue, or a meeting with
-  // nothing prepared. They ride on the title line, which is why it is drawn on
-  // a row that has no title of its own to draw.
+  // Whether the day put a state on this row — overdue, or a meeting the
+  // reader has not confirmed ready. They ride on the title line, which is
+  // why it is drawn on a row that has no title of its own to draw.
   const badged = item.overdue === true || isUnprepared(item);
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two

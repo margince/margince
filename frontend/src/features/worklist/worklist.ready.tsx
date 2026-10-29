@@ -12,6 +12,7 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemStatus, throwProblem } from "../../lib/problem";
+import { isUnprepared } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 type Preparation = NonNullable<WorklistItem["preparation"]>;
@@ -24,22 +25,27 @@ const FACT_KEY: Record<Preparation["changed"][number], MessageKey> = {
 
 /** Whether the row is the reader's own meeting still to confirm. */
 export function needsReadiness(item: WorklistItem): boolean {
-  return (
-    item.source === "meeting" &&
-    !item.batch &&
-    item.preparation?.state === "needs_review"
-  );
+  return !item.batch && isUnprepared(item);
+}
+
+type ReadyInput = { activityId: string; revision: string; undo?: boolean };
+
+function failure(error: Error, input: ReadyInput): MessageKey {
+  if (input.undo) {
+    return "worklist.ready.undoFailed";
+  }
+  return problemStatus(error) === 409
+    ? "worklist.ready.stale"
+    : "worklist.ready.failed";
 }
 
 /** Confirms, or with `undo` takes back, the reader's readiness at `revision`. */
 export function useMeetingReady() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
   return useMutation({
-    mutationFn: async (input: {
-      activityId: string;
-      revision: string;
-      undo?: boolean;
-    }) => {
+    mutationFn: async (input: ReadyInput) => {
       const body = {
         activity_id: input.activityId,
         preparation_revision: input.revision,
@@ -54,6 +60,10 @@ export function useMeetingReady() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
+    // On the mutation, not the press: the undo is pressed after the row turned
+    // ready and lost its button, and a press's own callbacks go with it.
+    onError: (error, input) =>
+      toast.show(t(failure(error, input)), { tone: "danger" }),
   });
 }
 
@@ -80,27 +90,9 @@ export function MeetingReadyVerb({ item }: Readonly<{ item: WorklistItem }>) {
               action: {
                 kind: "undo",
                 label: t("worklist.disposition.undo"),
-                onAct: () =>
-                  ready.mutate(
-                    { ...sent, undo: true },
-                    {
-                      onError: () =>
-                        toast.show(t("worklist.ready.undoFailed"), {
-                          tone: "danger",
-                        }),
-                    },
-                  ),
+                onAct: () => ready.mutate({ ...sent, undo: true }),
               },
             }),
-          onError: (error) =>
-            toast.show(
-              t(
-                problemStatus(error) === 409
-                  ? "worklist.ready.stale"
-                  : "worklist.ready.failed",
-              ),
-              { tone: "danger" },
-            ),
         })
       }
     >

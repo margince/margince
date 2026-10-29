@@ -120,6 +120,56 @@ describe("I'm ready on a meeting the reader still has to prepare", () => {
   });
 });
 
+describe("an undo that fails", () => {
+  it("says so after the row turned ready and lost its button", async () => {
+    const user = userEvent.setup();
+    const statuses = [200, 500];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        const status = statuses.shift() ?? 500;
+        return new Response(
+          status === 200 ? "{}" : '{"title":"Internal","status":500}',
+          { status, headers: { "content-type": "application/json" } },
+        );
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const page = (item: WorklistItem) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <WorklistRow item={item} position={1} owner="" />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(page(meetingRow("m1", false)));
+
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.ready.confirm"] }),
+    );
+    const undo = await screen.findByRole("button", {
+      name: en["worklist.disposition.undo"],
+    });
+    rerender(page(meetingRow("m1", true)));
+    expect(
+      screen.queryByRole("button", { name: en["worklist.ready.confirm"] }),
+    ).toBeNull();
+    await user.click(undo);
+
+    expect(
+      await screen.findByText(en["worklist.ready.undoFailed"]),
+    ).toBeTruthy();
+  });
+});
+
 describe("a meeting the reader is ready for", () => {
   it("stays as a reminder with no button and no Needs prep", () => {
     draw(meetingRow("m1", true));

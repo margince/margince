@@ -78,7 +78,7 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
  * the plate, because a row where four numbers are coloured is a traffic light
  * rather than a comparison. It is spent only where the reading counts something
  * that is BREACHING — somebody waiting, a promise going, a meeting starting
- * with nothing prepared — and never on a figure that is merely large.
+ * not confirmed ready — and never on a figure that is merely large.
  */
 type Reading = Readonly<{
   label: string;

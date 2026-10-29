@@ -40,7 +40,7 @@ export function RowText({
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
   emailOpener: ((activityId: string) => void) | undefined;
-  /** Whether the day put a state on this row: overdue, or nothing prepared. */
+  /** Whether the day put a state on this row: overdue, or not confirmed ready. */
   badged: boolean;
 }>) {
   const {

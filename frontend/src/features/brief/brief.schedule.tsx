@@ -68,7 +68,7 @@ function answered(state: SectionState): boolean {
 /**
  * The day's schedule, in the order the server ranked it.
  *
- * A meeting with nothing prepared for it carries the badge here as well as in
+ * A meeting not confirmed ready carries the badge here as well as in
  * the queue — the same `isUnprepared` the readings strip counts, so the figure
  * in the strip, the badge in the queue and the badge here are one answer.
  */
