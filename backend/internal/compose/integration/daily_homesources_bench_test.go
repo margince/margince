@@ -87,8 +87,8 @@ func dailyAIModel(tier ai.Tier) string { return "bench-" + string(tier) }
 // seedDailyAICalls records the month's model calls through the meters the
 // router itself writes with: one ai_call row and one ai_usage fold per call.
 // Both models are priced first, through the admin's rate form, so the spend
-// report sums a priced month.
-func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
+// report sums a priced month. It returns how many calls it recorded.
+func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) int {
 	t.Helper()
 	for _, tier := range []ai.Tier{ai.TierCheapCloud, ai.TierPremium} {
 		mustCall(t, e, "POST", "/v1/ai-model-rates", AnyMap{
@@ -118,6 +118,7 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
 		}
 	}
 	t.Logf("seed: %d AI calls recorded", n)
+	return n
 }
 
 // makeDailyBriefs assembles today's brief for every seat, the admin included,

@@ -86,6 +86,12 @@ type DailyResult struct {
 	P95, Budget     time.Duration
 	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
 	Allow422 bool
+	Samples  int
+	// FirstP95 is set when confirmBreaches replaced a breached first round;
+	// the strict lane judges it with the round that replaced it.
+	FirstP95 time.Duration
+	// Incomplete counts 200 answers that named an unavailable source.
+	Incomplete int
 }
 
 const dailyScaleEnv = "MARGINCE_BENCH_DAILY_SCALE"

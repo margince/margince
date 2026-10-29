@@ -169,15 +169,16 @@ func worklistCalls(in dailyInput) []dailyCall {
 	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 }
 
-// homeCalls are what the Today view sends once the shell's gates clear. Every
-// seat has a brief, made in the brief step, so its 404 fails the run.
+// homeCalls are what the Today view sends once the shell's gates clear, as a
+// browser on Today sends them; the weekly review is the Weekly view's read and
+// Today never asks for it. Every seat has a brief, made in the brief step, so
+// its 404 fails the run.
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
 		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
-		{Name: "weekly_review_latest", Path: "/v1/weekly-reviews/latest", Optional: true},
 		{Name: "digest", Path: "/v1/digest", Optional: true},
 	}
 }
@@ -247,6 +248,8 @@ func dailyRowName(flow string, call dailyCall) string {
 // dailyTally counts what a row's responses answered, for the record and the gate.
 type dailyTally struct {
 	s5xx, s422 int
+	// incomplete counts 200 answers that named an unavailable source.
+	incomplete int
 	empty      bool
 	// emptyCalls names the calls of a composite row that answered empty.
 	emptyCalls []string
@@ -267,6 +270,9 @@ type dailyResponse struct {
 func (f dailyFlow) admit(r dailyResponse, tally *dailyTally) error {
 	switch {
 	case r.status >= 200 && r.status < 300:
+		if unavailableSources(r.body) > 0 {
+			tally.incomplete++
+		}
 		return nil
 	case r.status >= 500:
 		if tally.s5xx++; tally.first5xx == "" {
@@ -595,7 +601,7 @@ func confirmBreaches(specs []dailyRowSpec, first [][]time.Duration, again func()
 		if stats.P95 >= specs[i].budget {
 			outcome = "confirmed"
 		}
-		kept[i] = second[i]
+		kept[i], specs[i].firstP95 = second[i], p95
 		specs[i].note = joinNotes(specs[i].note, fmt.Sprintf("first measurement p95 %d ms over budget; %s on a second measurement",
 			p95.Milliseconds(), outcome))
 	}
@@ -633,6 +639,8 @@ type dailyRowSpec struct {
 	flow, id, name, note string
 	budget               time.Duration
 	allow422, gated      bool
+	// firstP95 is the breached first round confirmBreaches replaced.
+	firstP95 time.Duration
 }
 
 func callNames(calls []dailyCall) []string {
@@ -677,7 +685,8 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 		Result: DailyResult{
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
-			P95: stats.P95, Budget: budget,
+			P95: stats.P95, Budget: budget, Samples: stats.Samples,
+			FirstP95: spec.firstP95, Incomplete: tally.incomplete,
 		},
 		Empty:  tally.empty,
 		Answer: tally.answer,

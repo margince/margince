@@ -139,6 +139,25 @@ type CorpusFacts struct {
 	Activities int     `json:"activities"`
 	Reps       int     `json:"reps"`
 	Managers   int     `json:"managers"`
+	// The Home sources the corpus fills beyond the records themselves.
+	AICalls          int `json:"ai_calls,omitempty"`
+	PendingApprovals int `json:"pending_approvals,omitempty"`
+	AppliedApprovals int `json:"applied_approvals,omitempty"`
+	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+}
+
+// StrictVerdict is one cohort of the strict Home acceptance lane. Its budget
+// is the acceptance target, not the published PERF row, and no known issue
+// excuses a failure.
+type StrictVerdict struct {
+	Requirement string  `json:"requirement"`
+	Name        string  `json:"name"`
+	Seat        string  `json:"seat"`
+	P95Ms       float64 `json:"p95_ms"`
+	BudgetMs    float64 `json:"budget_ms"`
+	Samples     int     `json:"samples"`
+	Pass        bool    `json:"pass"`
+	Failure     string  `json:"failure,omitempty"`
 }
 
 // PerfRecord is one target's whole run: the machine, the day, and every budget
@@ -154,6 +173,8 @@ type PerfRecord struct {
 	// Advisories are known-issue entries the daily bench found clear of their
 	// budget; the run passes, and the page lists them for somebody to remove.
 	Advisories []string `json:"advisories,omitempty"`
+	// StrictHome is the daily bench's strict Home lane. It never fails the run.
+	StrictHome []StrictVerdict `json:"strict_home,omitempty"`
 }
 
 // RecordingEnabled reports whether this run should leave a record.

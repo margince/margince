@@ -374,6 +374,10 @@ func renderPlainDetails(b *strings.Builder, r *record) {
 		fmt.Fprintf(b, "The test company has %s contacts at %s companies, %s deals, %s leads,\n%s projects and %s activities, owned by %d reps under %d managers.\n",
 			thousands(c.Contacts), thousands(c.Companies), thousands(c.Deals), thousands(c.Leads),
 			thousands(c.Projects), thousands(c.Activities), c.Reps, c.Managers)
+		if c.AICalls+c.PendingApprovals+c.AppliedApprovals > 0 {
+			fmt.Fprintf(b, "It also holds %s model calls this month, %s approvals waiting, %s applied today and %s expired.\n",
+				thousands(c.AICalls), thousands(c.PendingApprovals), thousands(c.AppliedApprovals), thousands(c.ExpiredApprovals))
+		}
 	}
 	b.WriteString("\n")
 	if r != nil {

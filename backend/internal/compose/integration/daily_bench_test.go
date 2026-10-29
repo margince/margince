@@ -39,6 +39,8 @@ func TestDailyUseBudgets(t *testing.T) {
 
 	var seats Seats
 	var corpus DailyCorpus
+	var made DailyApprovals
+	var aiCalls int
 	var rows []dailyRow
 	step := func(name string, run func(t *testing.T)) {
 		if !t.Run(name, run) {
@@ -62,8 +64,9 @@ func TestDailyUseBudgets(t *testing.T) {
 	})
 
 	step("home_sources", func(t *testing.T) {
+		made = seedDailyApprovals(t, e, seats, scale)
 		makeDailyBriefs(t, e, seats)
-		seedDailyAICalls(t, e, scale)
+		aiCalls = seedDailyAICalls(t, e, scale)
 	})
 
 	step("first_load", func(t *testing.T) {
@@ -114,10 +117,14 @@ func TestDailyUseBudgets(t *testing.T) {
 	}
 	record := newPerfRecord("bench-daily", benchPostgresVersion(e.Owner), measurements)
 	record.Corpus = dailyCorpusFacts(scale, seats)
+	record.Corpus.AICalls = aiCalls
+	record.Corpus.PendingApprovals, record.Corpus.AppliedApprovals, record.Corpus.ExpiredApprovals = made.Pending, made.Applied, made.Expired
 	record.Advisories = DailyAdvisories(results, scale)
 	for _, advisory := range record.Advisories {
 		t.Logf("advisory: %s", advisory)
 	}
+	record.StrictHome = JudgeStrictHome(results)
+	t.Logf("perfbench [daily]: %s", strictHomeSummary(record.StrictHome))
 	writePerfRecordTo(t, dailyRecordDir(t, scale), record)
 	if err := DailyGate(results, scale); err != nil {
 		t.Fatalf("daily-use budget gate is red: %v", err)
