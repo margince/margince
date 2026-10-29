@@ -66,6 +66,53 @@ func TestOverrideLockedToTheCurrentCoreFileReplacesIt(t *testing.T) {
 	if len(got.Replaced) != 1 || got.Replaced[0].Target != railTarget || got.Replaced[0].Unit != "acme" {
 		t.Fatalf("got %+v, want acme replacing %s", got.Replaced, railTarget)
 	}
+	if len(got.Warnings) != 0 {
+		t.Fatalf("warnings = %q, want none for a current lock", got.Warnings)
+	}
+}
+
+// A lock that does not match core warns and still composes: a pinned unit must
+// not stop a core upgrade.
+func TestLockDriftWarnsAndStillReplaces(t *testing.T) {
+	cases := map[string]struct {
+		edit func(t *testing.T, root string, u extensionUnit)
+		want string
+	}{
+		"no lock line": {
+			edit: func(t *testing.T, _ string, u extensionUnit) {
+				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), "")
+			},
+			want: "names no hash for " + railTarget,
+		},
+		"core file changed since the lock": {
+			edit: func(t *testing.T, root string, _ extensionUnit) {
+				writeTreeFile(t, filepath.Join(root, "frontend", railTarget), coreRail+"// a later core release\n")
+			},
+			want: "changed since the override was written",
+		},
+		"lock pins a file the unit does not replace": {
+			edit: func(t *testing.T, root string, u extensionUnit) {
+				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\nsrc/app/old.tsx sha256:00\n")
+			},
+			want: "pins src/app/old.tsx",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			root, u := overrideTree(t)
+			tc.edit(t, root, u)
+			got, err := collectOverrides(root, []extensionUnit{u})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Replaced) != 1 {
+				t.Fatalf("replaced = %+v, want the rail still replaced", got.Replaced)
+			}
+			if len(got.Warnings) != 1 || !strings.Contains(got.Warnings[0], tc.want) {
+				t.Fatalf("warnings = %q, want one containing %q", got.Warnings, tc.want)
+			}
+		})
+	}
 }
 
 func TestScreenUnderCustomIsAddedWithoutALock(t *testing.T) {
@@ -88,20 +135,6 @@ func TestOverrideRefusals(t *testing.T) {
 		edit func(t *testing.T, root string, u extensionUnit) []extensionUnit
 		want string
 	}{
-		"no lock line": {
-			edit: func(t *testing.T, _ string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), "")
-				return []extensionUnit{u}
-			},
-			want: "names no hash for " + railTarget,
-		},
-		"core file changed since the lock": {
-			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(root, "frontend", railTarget), coreRail+"// changed\n")
-				return []extensionUnit{u}
-			},
-			want: "changed since the override was written",
-		},
 		"a new file that is not a custom screen": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
 				writeTreeFile(t, filepath.Join(u.Dir, overridesLayer, "src/app/gone.tsx"), "")
@@ -142,13 +175,6 @@ func TestOverrideRefusals(t *testing.T) {
 				return []extensionUnit{u, other}
 			},
 			want: "acme and beta both override frontend/src/custom/desk/screen.tsx",
-		},
-		"lock pins a file the unit does not replace": {
-			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {
-				writeTreeFile(t, filepath.Join(u.Dir, overridesLockFile), lockedRail(t, root)+"\nsrc/app/old.tsx sha256:00\n")
-				return []extensionUnit{u}
-			},
-			want: "pins src/app/old.tsx",
 		},
 		"a lock pinning one file twice": {
 			edit: func(t *testing.T, root string, u extensionUnit) []extensionUnit {

@@ -25,8 +25,9 @@ const (
 	// overridesLayer mirrors core's frontend/: a unit file at
 	// frontend/overrides/src/app/x.tsx stands in for core's frontend/src/app/x.tsx.
 	overridesLayer = frontendLayer + "/overrides"
-	// overridesLockFile pins each replacement to the core file it was written
-	// against, by hash, so a core change to that file stops the build.
+	// overridesLockFile records the core file each replacement was written
+	// against, by hash. A drift warns and never fails: a pinned unit must not
+	// stop a core upgrade the composed typecheck accepts.
 	overridesLockFile = frontendLayer + "/overrides.lock"
 	// composedOverridesFile tells the bundler which unit file replaces which core
 	// file; composedOverridesCheck holds each replacement to the exports of the
@@ -76,11 +77,13 @@ type addedScreen struct {
 type frontendOverrides struct {
 	Replaced []fileOverride
 	Added    []addedScreen
+	// Warnings name each replacement whose lock line is missing or stale.
+	Warnings []string
 }
 
 // collectOverrides refuses what the build cannot stand behind. A replacement
-// must sit under replaceableRoots and be locked to core's current file. A new
-// file must be an added screen. No file has two owners.
+// must sit under replaceableRoots and name a file core has. A new file must be
+// an added screen. No file has two owners.
 func collectOverrides(root string, units []extensionUnit) (frontendOverrides, error) {
 	frontendDir := filepath.Join(root, "frontend")
 	owner := map[string]string{}
@@ -105,6 +108,7 @@ func collectOverrides(root string, units []extensionUnit) (frontendOverrides, er
 		}
 		all.Replaced = append(all.Replaced, found.Replaced...)
 		all.Added = append(all.Added, found.Added...)
+		all.Warnings = append(all.Warnings, found.Warnings...)
 	}
 	sort.Slice(all.Replaced, func(i, j int) bool { return all.Replaced[i].Target < all.Replaced[j].Target })
 	sort.Slice(all.Added, func(i, j int) bool { return all.Added[i].Target < all.Added[j].Target })
@@ -157,10 +161,10 @@ func unitOverrides(root string, u extensionUnit, frontendDir string) (frontendOv
 		delete(lock, target)
 		switch {
 		case !locked:
-			return fmt.Errorf("extensions/%s: %s names no hash for %s — after reading core's file, add the line:\n  %s %s", u.Name, overridesLockFile, target, target, core)
+			found.Warnings = append(found.Warnings, fmt.Sprintf("extensions/%s: %s names no hash for %s — after reading core's file, add the line:\n  %s %s", u.Name, overridesLockFile, target, target, core))
 		case want != core:
-			return fmt.Errorf("extensions/%s: core's frontend/%s changed since the override was written (%s, now %s) — re-read it, update %s/%s, then set the lock line to:\n  %s %s",
-				u.Name, target, want, core, overridesLayer, target, target, core)
+			found.Warnings = append(found.Warnings, fmt.Sprintf("extensions/%s: core's frontend/%s changed since the override was written — re-read it, check %s/%s, then set the lock line to:\n  %s %s",
+				u.Name, target, overridesLayer, target, target, core))
 		}
 		found.Replaced = append(found.Replaced, fileOverride{Unit: u.Name, Target: target, Source: p})
 		return nil
@@ -168,8 +172,8 @@ func unitOverrides(root string, u extensionUnit, frontendDir string) (frontendOv
 	if err != nil {
 		return frontendOverrides{}, err
 	}
-	if stale := slices.Sorted(maps.Keys(lock)); len(stale) > 0 {
-		return frontendOverrides{}, fmt.Errorf("extensions/%s: %s pins %s, but %s/ has no such file", u.Name, overridesLockFile, stale[0], overridesLayer)
+	for _, stale := range slices.Sorted(maps.Keys(lock)) {
+		found.Warnings = append(found.Warnings, fmt.Sprintf("extensions/%s: %s pins %s, but %s/ has no such file — remove the line", u.Name, overridesLockFile, stale, overridesLayer))
 	}
 	return found, nil
 }

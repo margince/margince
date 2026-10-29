@@ -188,6 +188,9 @@ func generate(root string) error {
 	if err := emitOverrides(root, composed.Overrides.Replaced); err != nil {
 		return err
 	}
+	for _, warning := range composed.Overrides.Warnings {
+		fmt.Fprintln(os.Stderr, "gen-composition: warning:", warning)
+	}
 	m, err := currentManifest(root, composed.Files)
 	if err != nil {
 		return err

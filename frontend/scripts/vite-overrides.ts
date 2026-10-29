@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import type { Plugin } from "vite";
 
 // One core frontend file a unit replaces, as gen-composition wrote it to
-// build/composition-frontend/overrides.json after checking the unit's lock.
+// build/composition-frontend/overrides.json.
 export type FileOverride = {
   unit: string;
   target: string;

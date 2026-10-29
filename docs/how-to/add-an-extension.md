@@ -752,18 +752,22 @@ export * from "@core-original/src/app/shellrail";
 
 Only files under `src/app/`, `src/components/` and `src/features/` can be replaced; the sidebar menu is
 `src/app/shellrail.tsx`. The files that take a password, a secret or a consent stay core's, and
-`unreplaceable` in `overrides.go` lists them. Each replacement needs a line in `frontend/overrides.lock`:
+`unreplaceable` in `overrides.go` lists them. Two units cannot replace one file.
+
+Record the core file each replacement was written against in `frontend/overrides.lock`, one line each:
 
 ```text
 src/app/shellrail.tsx sha256:<hash of core's file>
 ```
 
-A missing line fails `make composition`, and the error prints the line to add. When core changes that
-file, the hash no longer matches and the build fails until you read the new file, update yours and
-the lock line. The composed typecheck holds your file to every export of the file it replaces. Two
-units cannot replace one file. A replacement may import `@core-original/` only for the one file it replaces. An added screen and every
-other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse
-it.
+`make composition` warns when a line is missing, when core's file no longer matches it, or when it names a
+file you no longer replace. Each warning prints the line to write. A warning never fails the build, so a core
+upgrade still installs with your unit pinned. What does fail is the composed typecheck: it holds your file to
+every export of the file it replaces, so it stops a core change that removes or changes an export its
+callers use. A wrapper picks up the rest of core's change through `@core-original/`.
+
+A replacement may import `@core-original/` only for the one file it replaces. An added screen and every
+other file of the unit may not; `frontend/scripts/ext-imports.test.ts` and the Vite plugin both refuse it.
 
 ## Own scheduled jobs
 

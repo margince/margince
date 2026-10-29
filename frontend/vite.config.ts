@@ -23,8 +23,8 @@ import { TEST_TIMEOUT_MS } from "./vitest.budget.ts";
 // directory, exactly as GOWORK names the generated workspace for the Go lane.
 const frontendRoot = fileURLToPath(new URL(".", import.meta.url));
 const composedComposition = process.env.MARGINCE_COMPOSITION_FRONTEND;
-// Core frontend files a unit replaces, checked against its overrides.lock by
-// gen-composition. Only a composed lane applies them.
+// Core frontend files a unit replaces, as gen-composition accepted them. Only a
+// composed lane applies them.
 const fileOverrides = readFileOverrides(
   join(frontendRoot, "..", "build/composition-frontend/overrides.json"),
   Boolean(composedComposition),
