@@ -391,7 +391,7 @@ func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ran
 	return kept
 }
 
-// teamSeats is every seat whose work a team view keeps: the live roster and
+// teamSeats lists the seats whose work a team view keeps: the live roster and
 // the former teammates. The row filter and the narrowed reads share it.
 func teamSeats(roster []TeamMember, former []ids.UUID) []ids.UUID {
 	seats := make([]ids.UUID, 0, len(roster)+len(former))
