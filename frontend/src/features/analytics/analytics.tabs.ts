@@ -25,10 +25,10 @@ type ScopeKind =
 /**
  * The open section, the tab row, and the menus beside it.
  *
- * Which section is open is an ADDRESS, so a reader can link to one and Back
- * steps between the sections they looked at rather than leaving the screen.
- * `landing` is set while the bare address still waits on the framework to
- * know which tab it opens; the screen draws that wait instead of a body.
+ * Which section is open is an ADDRESS, so a reader can link to one. Back then
+ * steps between the sections they looked at.
+ * `landing` is set while the bare address waits on the framework to know its
+ * tab. The screen draws that wait instead of a body.
  */
 export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
   const route = useRoute();
@@ -96,9 +96,9 @@ const TAB_SECTIONS: readonly Section[] = [
   "delivery",
 ];
 
-// The Performance views this catalog lets the seat read, as tabs. Until the
-// catalog answers, and for a seat that reads none of them, the first tab
-// stands alone: its page says which of the two it is.
+// The Performance views this catalog lets the seat read, as tabs. The first
+// tab stands alone until the catalog answers, and for a seat that reads none.
+// Its page then says which of the two it is.
 function viewTabs(
   metrics: Parameters<typeof readableViews>[0] | undefined,
 ): Section[] {
@@ -109,9 +109,8 @@ function viewTabs(
 }
 
 // The section an address opens when the reader may not open the one it names.
-// A view this seat cannot read falls to the first one it can; one the catalog
-// has not answered for yet is held, so a link to SDR outcomes does not flash
-// Sales first.
+// A view this seat cannot read falls to the first one it can. A view is held
+// while the catalog is still loading, so SDR outcomes never flashes Sales.
 function landOn(
   requested: Section,
   available: readonly Section[],

@@ -6,9 +6,8 @@ import { reloadReportingFigures } from "../../lib/reportingfigures";
 
 export { reloadReportingFigures };
 
-// The workspace's reporting framework, under one key, so the screen that
-// picks the landing tab and the page that edits the framework read one answer
-// and one publish refreshes both.
+// The workspace's reporting framework, under one key. The landing tab and the
+// framework editor read one answer, and one publish refreshes both.
 export function useReportingFramework(enabled = true) {
   return useQuery({
     queryKey: ["reporting-framework"],

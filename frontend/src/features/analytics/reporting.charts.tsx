@@ -170,9 +170,9 @@ function itemKey(item: LaidOutItem): string {
     : `question:${item.question.id}`;
 }
 
-// One chart in its panel. The head holds the title alone; what the figure
-// covers and the door to the records behind it sit in the foot, so a row of
-// cards reads as a row of titles over a row of charts.
+// One chart in its panel. The head holds the title alone. What the figure
+// covers and the door to its records sit in the foot, so a row of cards reads
+// as titles over charts.
 export function ChartPanel({
   chart,
   wide,
