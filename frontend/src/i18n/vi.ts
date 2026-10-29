@@ -14278,6 +14278,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã đánh dấu xong việc trong Danh sách công việc",
   "webhooks.event.activity.marked_handled.when":
     "Có ai đó đánh dấu một việc trong Danh sách công việc là đã xong vì đã xử lý theo cách khác.",
+  "webhooks.event.activity.readiness_recorded.label": "Thay đổi trạng thái sẵn sàng cho cuộc họp",
+  "webhooks.event.activity.readiness_recorded.when": "Có ai đó đánh dấu mình sẵn sàng cho một cuộc họp, hoặc hoàn tác việc đó.",
   "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
   "webhooks.event.engagement.reply.when":
     "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",
@@ -16257,6 +16259,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Chỉ người có quyền sửa cả hai hồ sơ mới có thể xử lý cặp này: quản trị viên hoặc trưởng nhóm kinh doanh.",
   "worklist.needsPrep": "Cần chuẩn bị",
+  "worklist.ready.confirm": "Tôi đã sẵn sàng",
+  "worklist.ready.badge": "Sẵn sàng",
+  "worklist.ready.done": "Đã ghi nhận bạn sẵn sàng cho cuộc họp này.",
+  "worklist.ready.failed": "Chưa ghi nhận được bạn sẵn sàng. Thử lại.",
+  "worklist.ready.stale": "Cuộc họp đã thay đổi. Hãy xem lại rồi đánh dấu sẵn sàng.",
+  "worklist.ready.undoFailed": "Hoàn tác không thành công. Bạn vẫn được đánh dấu sẵn sàng.",
+  "worklist.ready.changed": "Đã thay đổi kể từ khi bạn sẵn sàng: {facts}",
+  "worklist.ready.fact.start_time": "giờ bắt đầu",
+  "worklist.ready.fact.agenda": "chương trình",
+  "worklist.ready.fact.participants": "khách mời",
   "worklist.pane.title": "Chi tiết hồ sơ",
   "worklist.pane.openRow": "Xem chi tiết việc {position}, {title}",
   "worklist.pane.loading": "Đang tải hồ sơ…",

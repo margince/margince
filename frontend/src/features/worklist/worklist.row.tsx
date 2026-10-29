@@ -47,6 +47,7 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
@@ -290,6 +291,7 @@ export function WorklistRow({
             />
           )}
           <RowAsk item={item} framed={framed} />
+          <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />

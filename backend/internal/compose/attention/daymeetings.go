@@ -10,6 +10,7 @@ import (
 	"context"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -22,7 +23,36 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) ([]M
 	}
 	today := occurredday.AnchorIn(asOf, loc)
 	window := MeetingWindow{From: asOf, Until: until, DaysFrom: today, DaysUntil: today.AddDate(0, 0, 1)}
-	return s.meetings.Today(ctx, window, plannedCap, s.taskScope, s.taskOwner)
+	read, err := s.meetings.Today(ctx, window, meetingsPrepCeiling, s.taskScope, s.taskOwner)
+	if err != nil {
+		return nil, err
+	}
+	return plannedAndUnprepared(read, plannedCap), nil
+}
+
+// meetingsPrepCeiling is how many of today's day meetings, and of its timed
+// meetings, the lane reads. The timed ones past plannedCap stay only when the
+// reader still has to prepare them, so a full day never hides one; a day with
+// more than this reports the lane as full.
+const meetingsPrepCeiling = 4 * plannedCap
+
+// plannedAndUnprepared keeps every day meeting read, the first limit timed
+// meetings, and every later timed one the reader has not confirmed ready for.
+// A day meeting has no start to be near, so it never takes a timed one's place.
+func plannedAndUnprepared(read []Meeting, limit int) []Meeting {
+	kept := make([]Meeting, 0, min(len(read), limit))
+	timed := 0
+	for _, meeting := range read {
+		if meeting.Precision == crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+			kept = append(kept, meeting)
+			continue
+		}
+		timed++
+		if timed <= limit || meeting.needsPreparation() {
+			kept = append(kept, meeting)
+		}
+	}
+	return kept
 }
 
 // meetingsOwingAnOutcome is the outcome lane: meetings since unansweredSince

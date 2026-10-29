@@ -17,7 +17,8 @@ import (
 )
 
 // Meetings is today's booked meetings that have not happened yet: the day
-// meetings first, as a calendar's all-day row, then by start, all within limit.
+// meetings first, as a calendar's all-day row, then the timed ones by start,
+// each up to limit.
 // Optional: nil means this feed does not read meetings, which is not a day with
 // none in it.
 //
@@ -95,19 +96,21 @@ type Meeting struct {
 	// then offers no verb rather than a link to a page picked at random.
 	ContactID ids.UUID
 
-	// True when nothing has been written down for a meeting about to happen.
-	// Three-state, with the guard below: a meeting whose content this reader may
-	// not read also arrives empty, and calling that "needs prep" would tell a rep
-	// to prepare a meeting they cannot see.
-	NeedsPrep bool
-
-	// Whether NeedsPrep was answerable at all; false when content is withheld.
-	PrepKnown bool
+	// The reader's own preparation for the meeting. Nil when the reader does
+	// not attend it or may not read its content: telling a rep to prepare a
+	// meeting they cannot open, or someone else's, is not theirs to act on.
+	Preparation *crmcontracts.MeetingPreparation
 
 	// Whose calendar this came off, and what the row names as its owner. Zero
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+}
+
+// needsPreparation says the reader attends the meeting and has not confirmed
+// they are ready for its current revision.
+func (m Meeting) needsPreparation() bool {
+	return m.Preparation != nil && m.Preparation.State != crmcontracts.MeetingPreparationStateReady
 }
 
 // precisionOf is a row's wire precision: what the lane said, else an instant.

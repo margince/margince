@@ -66,7 +66,8 @@ var changeActivitiesCopy = toolCopy{
 	Purpose: "Log, plan and file activities. log records an email, call, meeting, note or " +
 		"message that already happened, on its records. task creates a task for a seat. attach " +
 		"attaches a file to a record. relink moves one activity to another record; relink_many " +
-		"moves a named set.",
+		"moves a named set. ready says the user is ready for a meeting they attend; unready " +
+		"takes it back.",
 	Limits: "relink and relink_many wait for a human when they file under a project, and run at " +
 		"once anywhere else. attach checks the record first; read list_documents before " +
 		"attaching the same file again.",

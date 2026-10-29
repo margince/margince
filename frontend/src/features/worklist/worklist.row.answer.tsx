@@ -26,6 +26,7 @@ import {
 } from "./worklist.briefverbs";
 import { DomainQuestionAnswer } from "./worklist.domainquestion";
 import { PlanWorkActions } from "./worklist.plan";
+import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
 import {
   useNudgeDismissal,
   type WorklistItem,
@@ -181,6 +182,10 @@ export function rowAnswer(
         move={item.move}
       />
     ) : undefined;
+  // The brief stays the way in; "I'm ready" stands beside it, never instead.
+  if (needsReadiness(item)) {
+    return { primary, equals: <MeetingReadyVerb item={item} /> };
+  }
   // A suggestion's acknowledgment never replaces the supported deal move.
   if (item.source === "brief_item" && !item.batch) {
     return {

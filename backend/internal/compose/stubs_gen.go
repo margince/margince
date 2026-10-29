@@ -3783,6 +3783,14 @@ func (stubs) PinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PinWorklistRow")
 }
 
+func (stubs) ConfirmMeetingReady(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ConfirmMeetingReadyParams) {
+	httperr.NotImplemented(w, r, "ConfirmMeetingReady")
+}
+
+func (stubs) UndoMeetingReady(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.UndoMeetingReadyParams) {
+	httperr.NotImplemented(w, r, "UndoMeetingReady")
+}
+
 func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {
 	httperr.NotImplemented(w, r, "GetResponseMetrics")
 }

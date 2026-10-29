@@ -14650,6 +14650,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Worklist-Eintrag als erledigt markiert",
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.activity.readiness_recorded.label": "Bereitschaft für ein Meeting geändert",
+  "webhooks.event.activity.readiness_recorded.when": "Jemand markiert sich als bereit für ein Meeting oder nimmt das zurück.",
   "webhooks.event.engagement.reply.label": "Antwort eingegangen",
   "webhooks.event.engagement.reply.when":
     "Eine eingehende Nachricht kommt in einem Thread an, in dem du zuerst geschrieben hast.",
@@ -16679,6 +16681,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Klären kann das nur, wer beide Datensätze bearbeiten kann: Admins oder Vertriebsleitungen.",
   "worklist.needsPrep": "Vorbereitung nötig",
+  "worklist.ready.confirm": "Ich bin bereit",
+  "worklist.ready.badge": "Bereit",
+  "worklist.ready.done": "Als bereit für dieses Meeting markiert.",
+  "worklist.ready.failed": "Nicht als bereit markiert. Erneut versuchen.",
+  "worklist.ready.stale": "Das Meeting hat sich geändert. Prüfen Sie es und markieren Sie sich dann als bereit.",
+  "worklist.ready.undoFailed": "Rückgängig hat nicht geklappt. Sie sind weiter als bereit markiert.",
+  "worklist.ready.changed": "Geändert, seit Sie bereit waren: {facts}",
+  "worklist.ready.fact.start_time": "Startzeit",
+  "worklist.ready.fact.agenda": "Agenda",
+  "worklist.ready.fact.participants": "Gäste",
   "worklist.pane.title": "Datensatzdetails",
   "worklist.pane.openRow": "Details für {position}, {title} anzeigen",
   "worklist.pane.loading": "Datensatz wird geladen…",

@@ -982,6 +982,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/weekly-plans/commitments":                                     {Op: "addWeeklyPlanCommitment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/weekly-plans/current":                                         {Op: "startWeeklyPlan", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/worklist/done/undo":                                           {Op: "reopenWorklistRows", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/worklist/ready/undo":                                          {Op: "undoMeetingReady", Access: "tool", Tool: "undo_meeting_ready", RecordType: "", Tier: "auto_execute", Scope: "write", ServedBy: "registry"},
 	"POST /v1/workspace-queries":                                            {Op: "queryWorkspace", Access: "tool", Tool: "query_workspace", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},
 	"PUT /v1/activities/{id}/disposition":                                   {Op: "setActivityDisposition", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/budget":                                                     {Op: "replaceAiBudget", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
@@ -1043,6 +1044,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/weekly-plans/current/contract":                                 {Op: "setWeeklyPlanContract", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/worklist/done":                                                 {Op: "markWorklistRowsDone", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/worklist/pins":                                                 {Op: "pinWorklistRow", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/worklist/ready":                                                {Op: "confirmMeetingReady", Access: "tool", Tool: "confirm_meeting_ready", RecordType: "", Tier: "auto_execute", Scope: "write", ServedBy: "registry"},
 }
 
 // readViewQueries are the query parameters of each route read_view serves, so

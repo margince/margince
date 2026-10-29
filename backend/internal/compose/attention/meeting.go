@@ -71,16 +71,16 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	// down for this yet" is. Carried here rather than as a field of its own so
 	// the contract gains no vocabulary for a display hint.
 	//
-	// Set only when the answer is KNOWN. A meeting whose content this reader may
-	// not read arrives with an empty body for a reason that is not preparation,
-	// and `meetingPrep` refuses to guess; an absent kind is that refusal
-	// reaching the page, where it draws nothing.
-	if meeting.PrepKnown {
+	// Set only when the reader's own preparation is known. An absent kind draws
+	// nothing, which is right for a meeting the reader does not attend or may
+	// not read.
+	if meeting.Preparation != nil {
 		kind := "prepared"
-		if meeting.NeedsPrep {
+		if meeting.Preparation.State != crmcontracts.MeetingPreparationStateReady {
 			kind = meetingKindUnprepared
 		}
 		item.Kind = &kind
+		item.Preparation = meeting.Preparation
 	}
 	// Whose calendar it came off, where one claims it. Absent for a meeting
 	// booked in the app or captured before the host was recorded — the row then
@@ -108,7 +108,8 @@ const (
 	sourceMeetingOutcome = "meeting_outcome"
 )
 
-// meetingKindUnprepared marks a meeting with nothing written down for it.
+// meetingKindUnprepared marks a meeting the reader has not confirmed they are
+// ready for, at its current preparation revision.
 //
 // One spelling, written by meetingItem and read by classifyMeeting. A second
 // would be silent: the writer would stamp a word the reader never matches, and
@@ -129,17 +130,19 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		level = levelWaiting
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
-	// Nothing written down for it, said only where the lane could actually tell
-	// — an absent kind means the reader may not read the row's content, not
-	// that the meeting is ready. Silence beats a warning nobody can act on.
-	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+	// Not confirmed ready, said only where the lane could tell: an absent kind
+	// means the reader does not attend or may not read the meeting, not that
+	// they are ready. Silence beats a warning nobody can act on.
+	unprepared := item.Kind != nil && *item.Kind == meetingKindUnprepared
+	if unprepared {
 		reasons = append(reasons, reason("meeting_unprepared", nil))
 	}
 	consequence := "none"
-	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+	if unprepared {
 		consequence = "meeting_unprepared"
 	}
 	row := base(item, level, "meetings", crmcontracts.WorklistItemConsequence(consequence))
+	row.Preparation = item.Preparation
 	// The way into the brief, where the row named a contact to read it on. Both
 	// ids travel because neither names it alone: the activity says WHICH
 	// meeting, the contact says WHOSE page it opens on.
@@ -166,6 +169,9 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		occurredAt: occurredOf(item, asOf),
+		// The reader's own imminent preparation keeps its place whatever else
+		// the meetings lane holds: diversity limits are for routine work.
+		uncrowdable: unprepared && level == levelWaiting,
 		// The HOST, and never the reader. A team-scoped reader receives their
 		// team's meetings, so naming the reader would make every colleague's
 		// appointment look like their own — which is what this row used to do,

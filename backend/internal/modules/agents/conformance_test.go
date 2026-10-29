@@ -192,7 +192,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil)
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
@@ -213,6 +213,7 @@ func fullRegistry(t *testing.T) *Registry {
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, nil })
 	RegisterCommsTools(r, &recordingComms{}, &multiLinkProvider{})
 	RegisterLifecycleTools(r, nil, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{}, inertLifecycle{})
+	RegisterMeetingReadinessTools(r, inertLifecycle{})
 	RegisterEnrichTool(r, nil, inertLifecycle{})
 	RegisterBulkTool(r, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
@@ -262,6 +263,18 @@ func fullRegistry(t *testing.T) *Registry {
 // walks that only need a tool's SPEC and argument shape: they never reach a
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
+
+func (inertLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
+	return MeetingPreparationResult{}, false, nil
+}
+
+func (inertLifecycle) Confirm(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
+
+func (inertLifecycle) Withdraw(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
 
 func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, nil

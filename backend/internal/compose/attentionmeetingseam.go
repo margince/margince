@@ -4,12 +4,11 @@
 package compose
 
 // The meetings lane's seam over the activities store, and the two questions it
-// answers about a booked meeting: what to call it, and whether anybody has
-// prepared it.
+// answers about a booked meeting: what to call it, and whether the reader has
+// said they are ready for it.
 
 import (
 	"context"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -22,9 +21,9 @@ import (
 // store, the same gated list every other activity surface reads.
 //
 // Window, status and order are all SQL predicates, so the limit cuts a list
-// that is already the lane. The day meetings come first, as a calendar's
-// all-day row, then the soonest open timed one. Filtering or sorting after the
-// limit let canceled rows or later meetings hide the next one to prepare.
+// that is already the lane. The day meetings and the timed ones are read with
+// a limit each: a calendar's all-day rows lead the lane, and they can never
+// take the places of the meetings about to start.
 type attentionMeetings struct{ store *activities.Store }
 
 // soonestFirst is the store's ascending order on the meeting's start.
@@ -39,15 +38,12 @@ func (m attentionMeetings) Today(
 	if err != nil {
 		return nil, err
 	}
-	if len(rows) < limit {
-		timed := attention.MeetingWindow{From: window.From, Until: window.Until, DaysFrom: window.DaysUntil, DaysUntil: window.DaysUntil}
-		hours, err := m.openIn(ctx, timed, limit-len(rows), scope, owner)
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, hours...)
+	timed := attention.MeetingWindow{From: window.From, Until: window.Until, DaysFrom: window.DaysUntil, DaysUntil: window.DaysUntil}
+	hours, err := m.openIn(ctx, timed, limit, scope, owner)
+	if err != nil {
+		return nil, err
 	}
-	return m.named(ctx, rows)
+	return m.named(ctx, append(rows, hours...))
 }
 
 // openIn reads the open meetings of one window, soonest first, up to limit.
@@ -68,24 +64,34 @@ func (m attentionMeetings) openIn(
 }
 
 // named turns the lane's rows into meetings, each with who it is with.
+// named turns the lane's rows into meetings, each with who it is with and the
+// reader's own preparation for it.
 func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activity) ([]attention.Meeting, error) {
 	ahead := make([]attention.Meeting, 0, len(rows))
 	for _, row := range rows {
 		if !meetingStillWorthPreparing(row) || !meetingReadable(row) {
 			continue
 		}
-		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt, Precision: row.OccurredPrecision,
-			NeedsPrep: needsPrep, PrepKnown: known, HostUserID: hostOfMeeting(row),
+			HostUserID: hostOfMeeting(row),
 		})
 	}
-	with, err := m.store.MeetingCounterparties(ctx, meetingIDs(ahead, func(meeting attention.Meeting) ids.UUID { return meeting.ID }))
+	meetings := meetingIDs(ahead, func(meeting attention.Meeting) ids.UUID { return meeting.ID })
+	with, err := m.store.MeetingCounterparties(ctx, meetings)
+	if err != nil {
+		return nil, err
+	}
+	prepared, err := m.store.MeetingPreparations(ctx, meetings)
 	if err != nil {
 		return nil, err
 	}
 	for i := range ahead {
 		ahead[i].ContactID = with[ahead[i].ID]
+		if own, attends := prepared[ahead[i].ID]; attends {
+			wire := wirePreparation(own)
+			ahead[i].Preparation = &wire
+		}
 	}
 	return ahead, nil
 }
@@ -160,32 +166,6 @@ func hostOfMeeting(row crmcontracts.Activity) ids.UUID {
 // installations whose calendars are connected.
 func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
 	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
-}
-
-// meetingPrep answers whether a meeting has anything written down for it, and
-// whether that question could be answered at all.
-//
-// The signals are the two the row already carries: a body (the agenda or the
-// notes somebody typed) and a link to a record outside this company (the
-// customer the meeting is with). A meeting with neither is one nobody has
-// prepared.
-//
-// It refuses to answer for a WITHHELD row, and that refusal is the point. A
-// reader outside the activity's audience receives the row with its body nulled
-// — content_state says so — so reading "no body" as "no agenda" would report
-// every colleague's meeting as unprepared, to a reader who cannot open it to
-// find out. Absent beats wrong: the caller draws nothing.
-func meetingPrep(row crmcontracts.Activity) (needsPrep bool, known bool) {
-	if !meetingReadable(row) {
-		return false, false
-	}
-	if row.Body != nil && strings.TrimSpace(*row.Body) != "" {
-		return false, true
-	}
-	if row.Links != nil && len(*row.Links) > 0 {
-		return false, true
-	}
-	return true, true
 }
 
 // subjectOfMeeting is the line a meeting shows, or NOTHING.
