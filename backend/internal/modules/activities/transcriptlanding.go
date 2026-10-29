@@ -7,9 +7,9 @@ package activities
 // asks for it.
 //
 // The extraction lane (ai.TaskTranscriptPropose) was fully built and had never
-// run once — transcript_read held zero rows — because the only thing that ever
-// enqueued it was POST /v1/activities/{id}/transcript-proposals, and nothing called
-// that. A meeting logged over the tool surface sat unread, and the commitments
+// run once, and transcript_read held zero rows. The only thing that ever
+// enqueued it was POST /v1/activities/{id}/transcript-proposals.
+// Nothing called that. A meeting logged over the tool surface sat unread, and the commitments
 // somebody made in it were never proposed.
 
 import (
@@ -28,7 +28,7 @@ import (
 //
 // The extraction lane was fully built and had never run once: transcript_read
 // held zero rows. The only thing that ever enqueued it was
-// POST /v1/activities/{id}/transcript-proposals, and nothing called that — so a
+// POST /v1/activities/{id}/transcript-proposals. Nothing called that, so a
 // meeting logged over the tool surface sat unread, and the tasks somebody
 // promised in it were never proposed. A capability nobody can reach is not a
 // capability.

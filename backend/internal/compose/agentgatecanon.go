@@ -6,10 +6,10 @@ package compose
 // The canonicalization the REST agent gate hashes for staging and redemption.
 //
 // Split from agentgate.go on the 500-line cap, along a boundary already
-// implicit in the file: agentgate.go decides admission, and this is the one
-// thing stageOrRedeem (agentgatestaging.go) hashes a call through — kept together because a caller that
-// diverges on operation, path, headers or body diverges on the identity a
-// staged approval binds to.
+// implicit in the file. agentgate.go decides admission. This is the one
+// thing stageOrRedeem (agentgatestaging.go) hashes a call through.
+// Keeping it together matters. A caller that diverges on operation, path,
+// headers or body diverges on the identity a staged approval binds to.
 
 import (
 	"bytes"
@@ -45,8 +45,8 @@ const (
 	// whose key an earlier 2xx already settled. Its retry cannot present the
 	// key again, so hashing it would make the approval unredeemable.
 	//
-	// This is the same judgment canonicalHeaders makes for If-Match below: a
-	// member that makes the retry impossible protects nothing.
+	// This is the same judgment canonicalHeaders makes for If-Match below.
+	// A member that makes the retry impossible protects nothing.
 	keySettledByThisCall idempotencyKeyBinding = false
 )
 
@@ -58,10 +58,10 @@ const (
 //
 // If-Match is deliberately NOT here, though it is also execution-relevant.
 // On the redemption path the gate OVERWRITES the caller's If-Match with the
-// server-side version pin taken at staging time (agentgatestaging.go,
-// redeemIfPresented) before the handler ever reads it. Hashing If-Match would
-// make the retry unredeemable by the version the agent just saw, without
-// protecting anything the server-side pin does not already protect.
+// version pin taken at staging time (agentgatestaging.go, redeemIfPresented).
+// It does so before the handler ever reads it. Hashing If-Match would
+// make the retry unredeemable by the version the agent just saw.
+// It would protect nothing the server-side pin does not already protect.
 //
 // Every other header (Authorization, User-Agent, tracing headers, …) is
 // excluded for the same reason it always was: hashing one would make an
