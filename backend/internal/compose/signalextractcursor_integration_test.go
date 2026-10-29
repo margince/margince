@@ -7,12 +7,9 @@ package compose
 
 // The read's cursor against the thread's own lower end.
 //
-// threadHasMoved offers a thread again while its oldest message lies below the
-// cursor, and the window reads one correspondence. A thread whose oldest mail
-// belongs to another correspondence on the same key is the case the two
-// disagree on: before coverThreadStart, the older window came back empty, the
-// newest one was read again, and the cursor never moved, so the same reading
-// was bought every pass.
+// The window reads one correspondence, and threadHasMoved offers a thread
+// while its oldest message lies below the cursor. These tests stage a thread
+// whose oldest mail is another correspondence's, where the two used to disagree.
 
 import (
 	"testing"
@@ -25,8 +22,8 @@ import (
 )
 
 // olderCorrespondenceThread captures one mail from orders@beta.test on the
-// pricing key BEFORE alphaThread, so the thread's oldest message is outside the
-// correspondence its window reads. It returns the thread key and beta's mail.
+// pricing key before alphaThread. The thread's oldest message is then outside
+// the correspondence its window reads. It returns the thread key and that mail.
 func olderCorrespondenceThread(t *testing.T, o *owedEnv) (string, ids.UUID) {
 	t.Helper()
 	beta := o.capture(t, pricingMail("orders@beta.test", o.seat, "order-1@beta.test", betaWrites, -30, true))
@@ -104,9 +101,9 @@ func TestAReadWithNothingOlderLeftToReadStopsWalkingBack(t *testing.T) {
 	key, _ := olderCorrespondenceThread(t, o)
 	oldest, oldestID, newest := threadEnds(t, o, key)
 
-	// The state a read before coverThreadStart left: everything up to the
-	// newest message read, and the cursor at the correspondence's own oldest
-	// mail, one message above the thread's.
+	// The state a read before coverThreadStart left. Everything up to the
+	// newest message is read, and the cursor sits at the correspondence's own
+	// oldest mail, one message above the thread's.
 	var alphaFrom time.Time
 	var alphaFromID ids.UUID
 	as := o.e.Admin()

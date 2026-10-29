@@ -64,8 +64,6 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	if err != nil {
 		return nil, err
 	}
-	// A window short of its limit holds everything the read may reach below
-	// its bound. See coverThreadStart for why that has to reach the cursor.
 	covered := len(messages) < extractThreadMessages
 	// Nothing older LEFT is not the same as nothing to read. A thread grows at
 	// the same instant as its newest message — the count moves and the clock
@@ -88,17 +86,11 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	return messages, nil
 }
 
-// coverThreadStart lowers this read's cursor to the thread's own oldest
-// message, once nothing older is left that the read may reach.
-//
-// The window reads one correspondence on the thread and only mail open to
-// automatic reading, while threadHasMoved holds the cursor against EVERY
-// message on the key. Mail of another correspondence on the same key, or
-// older mail the window may not show, therefore stays below the cursor for
-// good: the thread is due again every pass, the older window is empty every
-// time, and the newest window is read again on the fallback, unchanged and at
-// full price, for as long as the thread exists. Those messages are not this
-// reading's to read in any pass, so covering them records nothing it skipped.
+// coverThreadStart lowers the read's cursor to the thread's oldest message.
+// A window short of its limit holds all the mail this read may reach.
+// threadHasMoved compares the cursor with every message on the key, but the
+// window reads only one correspondence. Without this, older mail of another
+// correspondence keeps the thread due, and every pass re-reads the same window.
 func coverThreadStart(thread *settledThread) {
 	if thread.Oldest == nil || thread.OldestID == nil {
 		return
