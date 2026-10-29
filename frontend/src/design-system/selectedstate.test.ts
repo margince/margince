@@ -79,13 +79,15 @@ function accentStates(rules: readonly Rule[]): string[] {
   );
 }
 
+function unexcused(rules: readonly Rule[]): string[] {
+  return accentStates(rules).filter((found) => !LOCATION_MARKERS.has(found));
+}
+
 describe("a selected or pressed state is neutral", () => {
   const rules = rulesOf(appStylesheets(frontendRoot));
 
   it("paints no selected, pressed or current state from an --accent token", () => {
-    expect(
-      accentStates(rules).filter((found) => !LOCATION_MARKERS.has(found)),
-    ).toEqual([]);
+    expect(unexcused(rules)).toEqual([]);
   });
 
   it("finds each rail location marker it lets through", () => {
@@ -138,9 +140,7 @@ describe("a selected or pressed state is neutral", () => {
     const shell = join(frontendRoot, "src", "app", "shell.css");
     const elsewhere = join(frontendRoot, "src", "probe.css");
     const marked = (file: string, selector: string, body: string) =>
-      accentStates([{ file, selector, body }]).filter(
-        (found) => !LOCATION_MARKERS.has(found),
-      );
+      unexcused([{ file, selector, body }]);
     const fill = "background: var(--accent)";
     expect(marked(shell, ".rail .navitem.active", fill)).toEqual([]);
     expect(

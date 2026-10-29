@@ -228,8 +228,8 @@ describe("what the builder offers", () => {
       />,
     );
 
-    // The badge is what tells a reader this column is theirs rather than the
-    // product's — AC-filters-and-views-3 asks for it by name. Neutral: emerald
+    // The badge tells a reader this column is theirs and not the product's;
+    // AC-filters-and-views-3 asks for it by name. Neutral, because the accent
     // is the page's one primary action.
     const badge = screen.getByText("Custom field").closest(".badge");
     expect(badge?.className).not.toContain("badge-accent");

@@ -1,26 +1,21 @@
 /*
- * Margince "Ledger Green" design tokens (ADR-0040, design/00-design-language.md §2).
- * The canonical values live in the spec's design/mockups/app.css :root — this file
- * mirrors them exactly and tokens.test.ts pins every value, so a drift from the
- * design source of truth fails the build.
+ * Margince design tokens. tokens.test.ts pins every value.
  *
- * Semantic split (§2, UX review 2026-06-29): the brand accent (deep teal) means
- * PRIMARY ACTION and brand only; AI/agent-authored surfaces carry their own indigo
- * hue; status (success/warning/danger) is a third family. One meaning per colour —
- * success stays a brighter grass-green than the brand teal.
+ * Semantic split: the brand accent (deep teal) means PRIMARY ACTION and brand
+ * only; AI/agent-authored surfaces carry their own indigo hue; status
+ * (success/warning/danger) is a third family. One meaning per colour — success
+ * stays a brighter grass-green than the brand teal.
  */
 :root {
   /*
-   * The GROUNDS are the design's paper (DESIGN.md §3), and the two themes are
-   * one room with the lights up or down rather than two tints.
+   * The GROUNDS are the design's paper (DESIGN.md §3).
    *
-   * A ladder, darkest first, from a well inside a card up to the surface a card
-   * floats on. Each rung is one visible step off its neighbours, and the ORDER
-   * is the part that carries meaning — tokens.test.ts asserts the ordering in
+   * A ladder, darkest first, from the hover step up to the surface a card
+   * floats on. The ORDER carries the meaning — tokens.test.ts asserts it in
    * both themes rather than trusting five plausible values to stay in sequence:
    *
    *   --bgHover        #d7ede5  a pointer resting on a row on the page
-   *   --bgInset         #eaedeb  a well inside a card: an inset row, a plate
+   *   --bgInset        #eaedeb  a well inside a card: an inset row, a plate
    *   --bgStrip        #e3f1ec  a toolbar or footer band on the ground
    *   --bgPage         #eff6f3  the reading ground, flat under the shell
    *   --bgElevated     #fbfcfb  a card, a panel, a menu
@@ -29,23 +24,20 @@
    * lifts toward the light, so the ladder runs the other way and only the
    * DIRECTION of each step is shared; the dark block states its own order.
    *
-   * The page is no longer the brightest thing on screen; --bgElevated is, and
-   * a card is therefore separated by its own lightness rather than by the
-   * shadow alone. That is what lets --shadow-rest be as slight as it is.
+   * --bgElevated, not the page, is the brightest ground, so a card stands off
+   * by its own lightness rather than by the shadow alone. That is what lets
+   * --shadow-rest be as slight as it is.
    */
   --bgPage: #eff6f3;
   --bgElevated: #fbfcfb;
-  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
-   * --bgPage: one step off BOTH its hosts. The old value was one step off white
-   * only, which is invisible once the page stops being white. */
+  /* Off both of its hosts: 1.15:1 on --bgElevated and 1.07:1 on --bgPage. */
   --bgInset: #eaedeb;
   /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
    * segmented strip, the trough of a meter. Translucent, so it reads one step
    * deeper than any rung it lands on, an inset plate included. */
   --bgChip: rgba(16, 23, 20, 0.03);
   --bgHover: #d7ede5;
-  /* A band that lies on the ground rather than being it, so it must not vanish
-   * into the page the way a pre-paint or a frame should. */
+  /* A band that lies on the ground, so it stays visible against the page. */
   --bgStrip: #e3f1ec;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.
    * One hair under --bgElevated (1.03:1), which is what lets the panes inside
@@ -74,8 +66,7 @@
   --textOnAccent: #fff;
   /* The ink for a control filled with --accent SPECIFICALLY (a primary
    * button, a filled step numeral) — split from --textOnAccent because dark
-   * mode lightens --accent and not every --textOnAccent consumer's fill.
-   * Unthemed here; the dark palette below is what makes it diverge. */
+   * mode lightens --accent and not every --textOnAccent consumer's fill. */
   --textOnAccentControl: #f4faf7;
   /* The ink for a control FILLED with a state tone — a destructive button, a
    * completion disc, a primary badge. Its ground is the tone's *Text token and
@@ -87,7 +78,7 @@
    * Text token, which was chosen to carry ink, and this one flips with the
    * theme because the ground under it does: a Text red is deep in light, where
    * a near-white reads on it, and bright in dark, where near-black does. This
-   * gives 5.92:1 on --infoText, 5.67:1 on --successText, 5.74:1 on
+   * gives 6.00:1 on --infoText, 5.67:1 on --successText, 5.74:1 on
    * --warningText, 5.95:1 on --dangerText and 11.78:1 on --discoveryText; the
    * dark block states the other half. Kept a token of its own rather than
    * folded into --textOnAccentControl: the accent and the state hues are
@@ -246,7 +237,7 @@
    * tint, in both themes, holds each Text token to its base's OKLCh hue, and
    * fails when a state is missing from either theme. */
   --info: #0485f7;
-  --infoText: #0060b7;
+  --infoText: #005fb6;
   --infoSurface: color-mix(in srgb, var(--info) 12%, var(--bgElevated));
   --infoBg: color-mix(in srgb, var(--info) 12%, transparent);
   --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
@@ -764,13 +755,7 @@
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-/*
- * Dark palette: the light block's hues, with the accent lifted so it reads on a
- * dark ground. Every component reads through the same custom properties, so
- * re-tuning the palette later touches only this block. --bgInkField is
- * unchanged: it is the same dark plate in both themes, deliberately not a theme
- * token.
- */
+/* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
   --bgPage: #0c1311;
   --bgElevated: #161d1a;

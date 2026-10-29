@@ -220,8 +220,8 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 
 ### Dark
 
-The same room with the lights down. The ground is `--bgPage #0c1311`, a small step above the `#0a100e` of the
-mock. So the hover step of the sidebar still has room under the page. Each pane is
+The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and the hover
+step is the lightest. Each pane is
 `rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
 
 The accent goes up to `#3aae94` with dark ink (`#07221d`) on it, its text to `#66d5ba`, and the

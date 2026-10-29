@@ -132,8 +132,9 @@
 }
 
 /* A thread read without its summary: the design system's button laid out as
-   a two-line row, stacked and as wide as the list. */
-.compose-choice {
+   a two-line row, stacked and as wide as the list. Two classes, so it outranks
+   .btn and .btn-ghost in any sheet order. */
+.btn.compose-choice {
   display: flex;
   flex-direction: column;
   align-items: stretch;

@@ -734,7 +734,7 @@
   color: var(--textOnAccentControl);
   font-weight: var(--fontWeightMedium);
 }
-/* The focus ring is the accent, which the current row is filled with. */
+/* The ring takes the ink: an accent ring vanishes on the accent fill. */
 .rail .navitem.active:focus-visible {
   outline-color: var(--textOnAccentControl);
 }
@@ -1481,6 +1481,10 @@
     font-weight: var(--fontWeightMedium);
     background: var(--accent);
     border-radius: var(--r-md);
+  }
+  /* Closed only: open, the cell drops its fill and the accent ring shows. */
+  .rail:not(.sheetopen) .railmore.active:focus-visible {
+    outline-color: var(--textOnAccentControl);
   }
 
   /* the sheet: the same element, every destination, thumb-reachable */

@@ -1483,10 +1483,10 @@ test.describe("§3.8: 390px mobile", () => {
       // below the fold — a measurement of the wrong control is a green that
       // means nothing.
       //
-      // `btn-primary` is how the queue marks the one emerald verb. Where a row
-      // draws none — an inline decision offers several equal answers — the
-      // LOWEST control is measured instead, because a row is only workable
-      // when the reader can reach all of it.
+      // `btn-primary` is how the queue marks the one accent verb. An inline
+      // decision offers several equal answers and draws none. There the
+      // lowest control is measured, because a row works only when the reader
+      // can reach all of it.
       //
       // Read off the ROW, never from a list of the containers it groups its
       // verbs into. A selector naming those is a claim about which groups

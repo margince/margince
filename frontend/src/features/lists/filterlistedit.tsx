@@ -219,10 +219,9 @@ export function EditingListNotice({ list }: Readonly<{ list: List }>) {
 }
 
 /**
- * "Save to <list>": the page's one emerald verb. It names the automations
- * watching the list before it writes, held to the version of `list`, and
- * hands back to the page once the list holds the tree, so the page decides
- * where the reader goes.
+ * "Save to <list>": the page's one accent verb. Before it writes, it names the
+ * automations watching the list, held to the version of `list`. Once the list
+ * holds the tree it hands back, so the page decides where the reader goes.
  */
 export function SaveToListAction({
   list,

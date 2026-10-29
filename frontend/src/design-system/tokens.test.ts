@@ -63,7 +63,7 @@ const canonical: Record<string, string> = {
   // down rather than repeated here — this table is the pin that says a value
   // moved at all.
   "--info": "#0485f7",
-  "--infoText": "#0060b7",
+  "--infoText": "#005fb6",
   "--infoSurface": "color-mix(in srgb, var(--info) 12%, var(--bgElevated))",
   "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
   "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
@@ -186,7 +186,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     }
   });
 
-  it("is Ledger Green — not Gradion orange, not Dispact warm-stone", () => {
+  it("keeps the deep-teal accent — not Gradion orange, not Dispact warm-stone", () => {
     expect(normalize(light["--accent"])).toBe("#045647");
     expect(normalize(light["--bgInkField"])).toBe("#13231d");
     const all = normalize(Object.values(light).join(" "));
