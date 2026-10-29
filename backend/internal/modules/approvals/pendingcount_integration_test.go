@@ -34,7 +34,7 @@ func ownSeat(ws, user ids.UUID) context.Context {
 
 // pagedPending walks every page of the pending inbox, as a client must without
 // the count, and keeps the rows the wire still calls pending.
-func pagedPending(t *testing.T, svc *Service, ctx context.Context, in ListInput) []crmcontracts.Approval {
+func pagedPending(ctx context.Context, t *testing.T, svc *Service, in ListInput) []crmcontracts.Approval {
 	t.Helper()
 	status := statusPending
 	in.Status, in.Limit = &status, 50
@@ -103,13 +103,14 @@ func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
 			}
 		}
 	}
+	// Wall time, because staging stamps expires_at from Postgres now().
 	later := time.Now().Add(2 * short)
 	e.svc.now = func() time.Time { return later }
 
 	readers := map[string]context.Context{"all-scope rep": allSeat, "own-scope colleague": ownSeat(e.ws, colleague)}
 	for name, reader := range readers {
 		t.Run(name, func(t *testing.T) {
-			want := pagedPending(t, e.svc, reader, ListInput{})
+			want := pagedPending(reader, t, e.svc, ListInput{})
 			if len(want) == 0 {
 				t.Fatal("the fixture left this reader nothing pending, so agreement proves nothing")
 			}
@@ -127,7 +128,7 @@ func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
 			if !got.AsOf.Equal(later) {
 				t.Fatalf("as_of %v, service clock %v", got.AsOf, later)
 			}
-			mine := pagedPending(t, e.svc, reader, ListInput{RequestedForReader: true})
+			mine := pagedPending(reader, t, e.svc, ListInput{RequestedForReader: true})
 			scoped, err := e.svc.CountPending(reader, ListInput{RequestedForReader: true})
 			if err != nil || scoped.Count != len(mine) {
 				t.Fatalf("requested-for-reader count %d, pages hold %d: %v", scoped.Count, len(mine), err)
@@ -234,6 +235,7 @@ func TestPendingCountJudgesExpiryAtTheInstantItReports(t *testing.T) {
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
 	ttl := time.Hour
 	e.stageAdvance(t, deal, "instant-0", &ttl)
+	// Wall time, because staging stamps expires_at from Postgres now().
 	start := time.Now()
 	reads := 0
 	e.svc.now = func() time.Time {
