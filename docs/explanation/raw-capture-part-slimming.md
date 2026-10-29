@@ -71,7 +71,8 @@ The pass keeps up with it rather than leave them whole for hours.
 
 A pass stops early when the object store cannot prove a part. Such a row is still marked as looked
 at, so more batches while the store is not answering would use up rows they cannot slim. The pass
-goes back to one batch every five minutes until the store answers again.
+stops after the first batch that holds such a part. A row with no attachment parts needs no call to
+the store. So a pass can still take several full batches of those rows while the store is down.
 
 ## Why match bytes, and not parse the MIME
 

@@ -114,6 +114,9 @@ func (w *capturePartSlimWorker) Work(ctx context.Context, _ *river.Job[CapturePa
 		return store.SlimBatch(ctx, capture.PartSlimBatch)
 	}, capturePartSlimDrainBudget, time.Now)
 	if err != nil {
+		w.log.WarnContext(ctx, "raw capture part sweep stopped on a fault",
+			"batches", batches, "considered", got.Considered, "slimmed", got.Slimmed,
+			"unproved_parts", got.Unproved, "payload_bytes_freed", got.Freed)
 		return jobs.FaultContext(ctx, fmt.Errorf("capture_part_slim: slimming a batch: %w", err))
 	}
 	if got.Considered == 0 {
