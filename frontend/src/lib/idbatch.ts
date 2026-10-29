@@ -4,17 +4,16 @@
 import { ProblemError } from "./problem";
 
 /**
- * Reads one page of ids. It answers the ids it found and throws a
- * `ProblemError` when the server refused the page; an id it leaves out is a
- * settled absence.
+ * Reads one page of ids. It answers the ids it found, and an id it leaves out
+ * is a settled absence. It throws a `ProblemError` when the server refused.
  */
 export type PageReader<T> = (
   page: readonly string[],
 ) => Promise<ReadonlyMap<string, T>>;
 
 // What one batch came back with. A page's refusal is about the ids ON that
-// page: the answers an earlier page returned are ones the server gave, and a
-// single map could only report them as a read that never arrived.
+// page. The answers another page returned are ones the server gave, and one
+// map could only report them as a read that never arrived.
 type Answers<T> = Readonly<{
   found: ReadonlyMap<string, T>;
   failures: ReadonlyMap<string, ProblemError>;
@@ -23,11 +22,11 @@ type Answers<T> = Readonly<{
 /**
  * Coalesces every id asked for within one tick into reads of at most
  * `pageSize` ids, rather than one request per reference. A leaf component
- * cannot see its siblings, so the coalescing lives beside the request: one
- * shared batch, every caller served from the one answer it produces.
+ * cannot see its siblings, so the coalescing lives beside the request. One
+ * batch is shared, and every caller is served from its one answer.
  *
- * The returned function resolves an id to its answer, to `null` for an id the
- * pages left out, and throws the page's problem for an id on a refused page.
+ * The returned function resolves an id to its answer, or to `null` when the
+ * pages left it out. For an id on a refused page it throws that page's problem.
  */
 export function idBatcher<T>(
   pageSize: number,

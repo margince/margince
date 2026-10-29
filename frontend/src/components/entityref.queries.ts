@@ -37,9 +37,8 @@ const COMPANY_IDS_PER_READ = 100;
 
 // A report, the deals table and a project list name many companies at once,
 // so every company named within one tick shares one list read. It asks for
-// what `GET /companies/{id}` answers, archived rows and this installation's
-// own company included; a company the reader may not see is left out, which
-// reads as that endpoint's 404.
+// what `GET /companies/{id}` answers, archived rows and our own company too.
+// A company the reader may not see is left out, which reads as a 404 did.
 const companyNameOf = idBatcher<string | null>(
   COMPANY_IDS_PER_READ,
   async (page) => {
@@ -108,9 +107,9 @@ export function fetchEntityName(
  * The query every reader of one record's name shares: the same key, reader and
  * freshness, so a name one surface read costs another nothing.
  *
- * A batched read does not retry on its own. Each retry opens its own window
- * after the batch closed, so one refused batch would come back as one request
- * per name; it is asked again on the next invalidation instead.
+ * A batched read does not retry on its own. Each retry would open its own
+ * window after the batch closed, one request per name. The name is asked again
+ * on the next invalidation instead.
  */
 export function entityNameQuery(kind: EntityKind, id: string) {
   return {
