@@ -62,8 +62,8 @@ describe("The rail's brand block", () => {
     expect(brand.getAttribute("href")).toBe("#/home");
   });
 
-  // A name of any length keeps the head one line tall, so the whole name has
-  // to be reachable some other way, and only when the line cut it.
+  // The head is one line tall for a name of any length. The tooltip shows the
+  // whole name, and only when the line cut it.
   it.each([
     ["shows the whole name when its line cut it", false, ABSURD_NAME],
     ["stays away when the name fits", true, null],
