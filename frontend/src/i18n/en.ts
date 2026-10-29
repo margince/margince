@@ -15271,7 +15271,6 @@ export const en = {
   "contactLink.emailCopied": "Email address copied",
   "contactLink.copyEmailRemedy":
     "Select the address and copy it with your keyboard.",
-  "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
@@ -18367,7 +18366,7 @@ export const en = {
     "The deal is paused until {date}, as agreed with the buyer.",
   "deal.verdict.waitOver": "Follow-up overdue",
   "deal.verdict.waitOverSince":
-    "The buyer asked us to wait until {date}. That day has come, so get back in touch.",
+    "The buyer asked to wait until {date}. That day has come, so get back in touch.",
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",
