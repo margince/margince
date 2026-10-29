@@ -4157,8 +4157,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.calloutMore_other":
     "Hơn {count} liên hệ trên tên miền này chưa gắn với công ty",
   "co.domainContacts.review": "Xem lại liên hệ",
-  "co.domainContacts.denied":
-    "Vai trò của bạn không thể gắn liên hệ với công ty. Liên hệ quản trị viên.",
   "co.contacts.filter.status": "Mức tương tác",
   "co.contacts.filter.statusAll": "Mọi mức tương tác",
   "co.contacts.band.wayIn": "Hướng tiếp cận tốt nhất",

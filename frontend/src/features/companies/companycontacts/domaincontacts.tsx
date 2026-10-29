@@ -7,7 +7,13 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { api } from "../../../api/client";
 import { useIdempotencyKey } from "../../../api/idempotencykey";
 import type { components } from "../../../api/schema";
@@ -24,7 +30,6 @@ import { Heading } from "../../../design-system/heading";
 import { useToast } from "../../../design-system/toast";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
-import { useCanWrite, useGrantRefused } from "../../../lib/capability";
 import {
   problemFieldErrorsOf,
   problemStatus,
@@ -59,20 +64,6 @@ function useLinkCandidates(companyId: string, enabled: boolean) {
       return data;
     },
   });
-}
-
-// Linking needs the edge grant and a write on each contact; the server refuses
-// the whole batch when either is missing.
-function useMayLink(): boolean {
-  const edge = useCanWrite("relationship", "create");
-  const contact = useCanWrite("contact", "update");
-  return edge && contact;
-}
-
-function useLinkRefused(): boolean {
-  const edge = useGrantRefused({ object: "relationship", action: "create" });
-  const contact = useGrantRefused({ object: "contact", action: "update" });
-  return edge || contact;
 }
 
 function isNotACandidate(error: unknown): boolean {
@@ -285,7 +276,6 @@ export function DomainContactsCallout({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const refused = useLinkRefused();
   const [open, setOpen] = useState(false);
   const candidates = useLinkCandidates(companyId, true);
   const list = candidates.data;
@@ -305,10 +295,7 @@ export function DomainContactsCallout({
             : plural("co.domainContacts.callout", list.data.length, { count })
         }
         actions={
-          <Button
-            reason={refused ? t("co.domainContacts.denied") : undefined}
-            onClick={() => setOpen(true)}
-          >
+          <Button onClick={() => setOpen(true)}>
             {t("co.domainContacts.review")}
           </Button>
         }
@@ -335,8 +322,12 @@ function offerKey(companyId: string) {
 }
 
 function useOffered(client: QueryClient, companyId: string): boolean {
+  const subscribe = useCallback(
+    (listener: () => void) => client.getQueryCache().subscribe(listener),
+    [client],
+  );
   return useSyncExternalStore(
-    (listener) => client.getQueryCache().subscribe(listener),
+    subscribe,
     () => client.getQueryData(offerKey(companyId)) === true,
   );
 }
@@ -358,16 +349,15 @@ export function DomainContactsArrival({
 }: Readonly<{ companyId: string }>) {
   const client = useQueryClient();
   const offered = useOffered(client, companyId);
-  const mayLink = useMayLink();
-  const refused = useLinkRefused();
-  const candidates = useLinkCandidates(companyId, offered && mayLink);
+  // A role that may not link reads an empty list, which spends the offer.
+  const candidates = useLinkCandidates(companyId, offered);
   const [shown, setShown] = useState(false);
   const found = (candidates.data?.data.length ?? 0) > 0;
-  if (offered && mayLink && found && !shown) {
+  if (offered && found && !shown) {
     setShown(true);
   }
   const nothingToOffer =
-    refused || candidates.isError || candidates.data?.data.length === 0;
+    candidates.isError || candidates.data?.data.length === 0;
   useEffect(() => {
     if (offered && nothingToOffer && !shown) settleOffer(client, companyId);
   }, [offered, nothingToOffer, shown, client, companyId]);

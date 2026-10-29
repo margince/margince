@@ -4259,8 +4259,6 @@ export const en = {
   "co.domainContacts.calloutMore_other":
     "More than {count} contacts on this domain are not linked",
   "co.domainContacts.review": "Review contacts",
-  "co.domainContacts.denied":
-    "Your role cannot link contacts to companies. Ask an admin.",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Any engagement",
   "co.contacts.band.wayIn": "Best route",

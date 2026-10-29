@@ -4272,8 +4272,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.calloutMore_other":
     "Mehr als {count} Kontakte dieser Domain sind nicht verknüpft",
   "co.domainContacts.review": "Kontakte prüfen",
-  "co.domainContacts.denied":
-    "Deine Rolle darf keine Kontakte mit Unternehmen verknüpfen. Frage einen Admin.",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Beliebiges Engagement",
   "co.contacts.band.wayIn": "Bester Zugang",

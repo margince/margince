@@ -41,6 +41,14 @@ const ALL_GRANTS: GrantSpec = {
 
 type Sent = { path: string; body: unknown; key: string | null };
 
+// The server lists no candidate to a role that could not link one.
+function mayLink(grants: GrantSpec): boolean {
+  return (
+    (grants.relationship ?? []).includes("create") &&
+    (grants.contact ?? []).includes("update")
+  );
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -79,6 +87,7 @@ function stubApi({
       if (path === `/companies/${COMPANY_ID}/link-candidates`) {
         reads.push(path);
         if (read) return read();
+        if (!mayLink(grants)) return json({ data: [], truncated: false });
         return json(lists[Math.min(sent.length, lists.length - 1)]);
       }
       if (path === `/companies/${COMPANY_ID}/link-contacts`) {
@@ -233,7 +242,7 @@ describe("Contacts on a new company’s domain", () => {
     mount(<DomainContactsArrival companyId={COMPANY_ID} />, client);
 
     await waitFor(() => expect(offerStanding(client)).toBe(false));
-    expect(reads).toHaveLength(0);
+    expect(reads).toHaveLength(1);
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
@@ -326,21 +335,17 @@ describe("The Contacts tab’s domain callout", () => {
     ).toBeVisible();
   });
 
-  it("refuses the verb with its reason when the role may not link", async () => {
-    stubApi({
+  it("shows no callout to a role that may not link", async () => {
+    const { reads } = stubApi({
       grants: { company: ["read"], contact: ["read"], relationship: ["read"] },
     });
     mount(<CompanyContactsList companyId={COMPANY_ID} />);
 
-    const review = await screen.findByRole("button", {
-      name: "Review contacts",
-    });
-    expect(review).toBeDisabled();
+    await waitFor(() => expect(reads).toHaveLength(1));
     expect(
-      screen.getByText(
-        "Your role cannot link contacts to companies. Ask an admin.",
-      ),
-    ).toBeVisible();
+      screen.queryByRole("button", { name: "Review contacts" }),
+    ).toBeNull();
+    expect(screen.queryByText(/on this domain/)).toBeNull();
   });
 
   it("shows nothing when the candidate read is refused", async () => {

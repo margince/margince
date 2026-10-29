@@ -45,17 +45,15 @@ function problem(status: number, extra: Record<string, unknown> = {}) {
 
 function stub({
   list = { data: domainCandidates, truncated: false },
-  grants = ALL_GRANTS,
   read,
   link = () => jsonResponse({ data: [] }, 201),
 }: {
   list?: CandidateList;
-  grants?: GrantSpec;
   read?: () => Response;
   link?: () => Response;
 }) {
   installFetchStub({
-    "GET /me": meRoute(grants),
+    "GET /me": meRoute(ALL_GRANTS),
     [CANDIDATES]: read ?? (() => jsonResponse(list)),
     [LINK]: link,
   });
@@ -201,15 +199,6 @@ export const CalloutPhone: Story = { ...Callout, ...phone };
 export const CalloutTruncated: Story = {
   render: callout({ list: { data: fiftyDomainCandidates, truncated: true } }),
 };
-
-// The role may read the candidates but not link them: the verb stays, refused.
-export const CalloutDenied: Story = {
-  render: callout({
-    grants: { company: ["read"], contact: ["read"], relationship: ["read"] },
-  }),
-};
-
-export const CalloutDeniedPhone: Story = { ...CalloutDenied, ...phone };
 
 export const CalloutReadFailed: Story = {
   render: callout({ read: () => problem(500, { detail: "" }) }),
