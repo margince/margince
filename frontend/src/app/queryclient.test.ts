@@ -160,11 +160,16 @@ describe("the query client defaults", () => {
     ).toBe(true);
   });
 
-  it("shares a live work read already on screen with a second view, and re-reads it for the first", () => {
+  it("shares Home's day with the queue drawer, and nothing else with a second view", () => {
     const day = {
       queryKey: ["worklist", "mine", "all", ""],
       queryHash: "shared-day",
       state: { dataUpdatedAt: 10_000 },
+    };
+    const handled = {
+      ...day,
+      queryKey: ["worklist", "handled"],
+      queryHash: "handled",
     };
     expect(liveOnMount({ ...day, getObserversCount: () => 1 }, 20_000)).toBe(
       "always",
@@ -172,6 +177,9 @@ describe("the query client defaults", () => {
     expect(liveOnMount({ ...day, getObserversCount: () => 2 }, 20_000)).toBe(
       true,
     );
+    expect(
+      liveOnMount({ ...handled, getObserversCount: () => 2 }, 20_000),
+    ).toBe("always");
   });
 
   it("fetches a live work read once for two views on screen, and again for a later mount", async () => {
@@ -189,7 +197,7 @@ describe("the query client defaults", () => {
     expect(fetched).toBe(1);
     const drawer = new QueryObserver(client, options);
     const stopDrawer = drawer.subscribe(() => {});
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(drawer.getCurrentResult().fetchStatus).toBe("idle");
     expect(fetched).toBe(1);
     stopDrawer();
     stopHome();

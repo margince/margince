@@ -48,8 +48,9 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
 // A live work read is read again on every mount, so a screen never opens on an
 // answer fetched before it. Two exceptions. The answer the shell prefetched for
 // the screen being opened (app/homeprefetch.ts) serves that mount while under a
-// second old. And a second view of an answer already on screen shares it: the
-// view that is open keeps it current, so only staleness refetches it.
+// second old. And the queue drawer shares Home's day already on screen: Home
+// keeps it current, so only staleness refetches it. Other live reads, such as a
+// record's review verbs, still read again on every mount.
 export const LIVE_ANSWER_CURRENT_MS = 1_000;
 
 const prefetchedAnswers = new Map<string, number>();
@@ -57,6 +58,17 @@ const prefetchedAnswers = new Map<string, number>();
 /** Records the answer a prefetch fetched, by query hash and its stamp. */
 export function notePrefetched(queryHash: string, answeredAt: number): void {
   prefetchedAnswers.set(queryHash, answeredAt);
+}
+
+// The day's worklist key (worklistKey, mine, all, no owner): Home and its queue
+// drawer both read it.
+function isSharedDay(key: QueryKey): boolean {
+  return (
+    key[0] === "worklist" &&
+    key[1] === "mine" &&
+    key[2] === "all" &&
+    key[3] === ""
+  );
 }
 
 export function liveOnMount(
@@ -70,7 +82,9 @@ export function liveOnMount(
   now = Date.now(),
 ): "always" | true {
   if (!isLiveWorkRead(query.queryKey)) return true;
-  if ((query.getObserversCount?.() ?? 0) > 1) return true;
+  if (isSharedDay(query.queryKey) && (query.getObserversCount?.() ?? 0) > 1) {
+    return true;
+  }
   const answeredAt = query.state.dataUpdatedAt;
   const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
   return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
