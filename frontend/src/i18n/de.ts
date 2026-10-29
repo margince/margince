@@ -1587,7 +1587,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.meetings.sentExpires": "Gesendet am {sent} · gültig bis {expires}",
   "contact.meetings.resend": "Erneut senden",
   "contact.meetings.withdraw": "Zurückziehen",
-  "contact.meetings.moreFor": "Weitere Aktionen für {subject}",
   "contact.meetings.withdrawTitle": "Diese Einladung zurückziehen?",
   "contact.meetings.withdrawBody":
     "Der Link funktioniert nicht mehr, und der Gast kann darüber nicht mehr buchen.",
@@ -2556,6 +2555,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",
   "record.moreActions": "Weitere Aktionen",
+  "record.moreActionsFor": "Weitere Aktionen für {subject}",
   "record.fullHistory": "Vollständiger Verlauf",
 
   "share.title": "Diesen Datensatz teilen",
