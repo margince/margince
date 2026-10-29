@@ -15,18 +15,22 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -300,5 +304,45 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 		if strings.Contains(body, colleague.String()) {
 			t.Errorf("with the switch off the export names colleague %s", colleague)
 		}
+	}
+}
+
+// A team of the reader and one colleague has a target that is in effect that
+// colleague's own. It is withheld while the switch is off.
+func TestIndividualPerformanceOffWithholdsATwoMemberTeamsTarget(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	reportingTeammate(t, e)
+	target, err := service.CreateTarget(reportingActor(e), crmcontracts.ReportingTargetInput{
+		Metric: "meetings_held", Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)},
+		PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)},
+		Value: 15, Reason: "Month plan",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep := reportingRepSeat(e)
+	listed := func() bool {
+		t.Helper()
+		list, err := service.ListTargets(rep, nil, 100, reporting.TargetFilter{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return slices.ContainsFunc(list.Data, func(listed crmcontracts.ReportingTarget) bool { return listed.Id == target.Id })
+	}
+	if !listed() {
+		t.Fatal("with the switch on the rep's own team target is not listed")
+	}
+	if _, err := service.GetTarget(rep, ids.UUID(target.Id)); err != nil {
+		t.Fatalf("with the switch on the rep's own team target = %v", err)
+	}
+
+	e.showIndividualPerformance(t, false)
+	if listed() {
+		t.Error("with the switch off a two-member team's target is still listed")
+	}
+	if _, err := service.GetTarget(rep, ids.UUID(target.Id)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("with the switch off a two-member team's target = %v, want not found", err)
 	}
 }

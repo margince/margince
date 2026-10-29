@@ -87,6 +87,8 @@ type targetReach struct {
 	every  bool
 	owners MeasurableOwners
 	teams  []ids.UUID
+	// withheld are team targets no reader sees while the switch is off.
+	withheld []ids.UUID
 }
 
 func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
@@ -98,8 +100,12 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if err != nil {
 		return targetReach{}, err
 	}
+	withheld, err := s.authority.WithheldTeams(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
+	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return targetReach{every: true, owners: owners}, nil
+		return targetReach{every: true, owners: owners, withheld: withheld}, nil
 	}
 	// Only a seat that reaches every team and owner may set the company's
 	// target, so it reads every target it may set.
@@ -107,10 +113,18 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if every && !owners.IndividualOff {
 		owners.Every = true
 	}
-	return targetReach{every: every, owners: owners, teams: actor.TeamIDs}, err
+	return targetReach{every: every, owners: owners, teams: actor.TeamIDs, withheld: withheld}, err
 }
 
 func (r targetReach) clause(b *bindings) string {
+	reach := r.reachClause(b)
+	if len(r.withheld) == 0 {
+		return reach
+	}
+	return "(" + reach + " AND NOT (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.withheld) + ")))"
+}
+
+func (r targetReach) reachClause(b *bindings) string {
 	if r.every && r.owners.Every {
 		return "TRUE"
 	}

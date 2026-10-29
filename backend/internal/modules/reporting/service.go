@@ -76,6 +76,9 @@ type Authority interface {
 	// MeasurableOwners answers which candidates the reader may measure one by
 	// one, the owner rule of Scope asked of many owners in one statement.
 	MeasurableOwners(context.Context, pgx.Tx, []ids.UUID) ([]ids.UUID, error)
+	// WithheldTeams are the teams whose target is a colleague's own while the
+	// installation shows no individual performance; nil while it does.
+	WithheldTeams(context.Context, pgx.Tx) ([]ids.UUID, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
 	// AssertedScope resolves the scope a report revision records. A revision is

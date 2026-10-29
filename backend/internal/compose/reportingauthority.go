@@ -72,6 +72,10 @@ func (a reportingAuthority) MeasurableOwnerSet(ctx context.Context, tx pgx.Tx) (
 	return readerMeasurableOwners(ctx, tx)
 }
 
+func (a reportingAuthority) WithheldTeams(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
+	return withheldTeams(ctx, tx)
+}
+
 // readerMeasurableOwners answers whose figures the reader may see one by one.
 // A seat reading every row sees every owner, and any other its population's
 // members. While the installation shows no individual performance, only the

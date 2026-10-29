@@ -94,9 +94,22 @@ func requireNoLoneColleague(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID)
 	if err != nil || allowed {
 		return err
 	}
+	thin, err := thinGroups(ctx, tx, groups)
+	if err != nil {
+		return err
+	}
+	if slices.Contains(thin, true) {
+		return auth.IndividualPerformanceOffError{}
+	}
+	return nil
+}
+
+// thinGroups answers, per group, whether other seats are in it but fewer than
+// fewestColleagues live colleagues besides the reader are.
+func thinGroups(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok {
-		return errors.New("compose: no actor bound to context")
+		return nil, errors.New("compose: no actor bound to context")
 	}
 	others := map[ids.UUID]bool{}
 	for _, group := range groups {
@@ -106,14 +119,15 @@ func requireNoLoneColleague(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID)
 			}
 		}
 	}
+	out := make([]bool, len(groups))
 	if len(others) == 0 {
-		return nil
+		return out, nil
 	}
 	live, err := liveColleagues(ctx, tx, slices.Collect(maps.Keys(others)))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for _, group := range groups {
+	for index, group := range groups {
 		contributes, counted := false, 0
 		for _, owner := range group {
 			if others[owner] {
@@ -123,11 +137,51 @@ func requireNoLoneColleague(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID)
 				}
 			}
 		}
-		if contributes && counted < fewestColleagues {
-			return auth.IndividualPerformanceOffError{}
+		out[index] = contributes && counted < fewestColleagues
+	}
+	return out, nil
+}
+
+// withheldTeams answers the live teams whose target would be a colleague's own
+// while the switch is off. Such a team has other members, but fewer than
+// fewestColleagues live ones besides the reader. Nil while the switch is on.
+func withheldTeams(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT tm.team_id, array_agg(tm.user_id) FROM team_membership tm
+		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
+		GROUP BY tm.team_id ORDER BY tm.team_id`)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+	}
+	var teams []ids.UUID
+	var members [][]ids.UUID
+	for rows.Next() {
+		var team ids.UUID
+		var seats []ids.UUID
+		if err := rows.Scan(&team, &seats); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+		}
+		teams, members = append(teams, team), append(members, seats)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+	}
+	thin, err := thinGroups(ctx, tx, members)
+	if err != nil {
+		return nil, err
+	}
+	var out []ids.UUID
+	for index, team := range teams {
+		if thin[index] {
+			out = append(out, team)
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // liveColleagues answers which of these seats are live human members.
