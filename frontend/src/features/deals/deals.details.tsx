@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import type { CreateField } from "../../components/create";
 import { useEntityName } from "../../components/entityref";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { saveRecordEdit } from "../../components/recordedit";
 import { RecordFields } from "../../components/recordfields";
@@ -30,7 +31,6 @@ import {
   usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
-import { ExtensionPanels } from "./extensionpanels";
 
 export function DealDetails({
   deal,

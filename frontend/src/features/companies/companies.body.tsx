@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ExtensionPanels } from "../../components/extensionpanels";
 import { RecordTeam } from "../../components/recordteam";
 import type { useTaskUpdate } from "../../components/taskactions";
 import { EmptyState } from "../../design-system/atoms";
@@ -253,6 +254,10 @@ export function CompanyRecordBody({
           <CompanyReachCard
             companyId={company.id}
             companyName={company.display_name}
+          />
+          <ExtensionPanels
+            slot="record_panel.company"
+            record={{ type: "company", id: company.id }}
           />
         </div>
       )}

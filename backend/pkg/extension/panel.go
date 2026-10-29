@@ -17,14 +17,20 @@ import (
 // PanelSlot names a place on a core page that draws units' panels.
 type PanelSlot string
 
-// SlotDealPanel is the end of a deal page's Edit details drawer, after its lists.
-const SlotDealPanel PanelSlot = "record_panel.deal"
+const (
+	// SlotContactPanel is the end of a contact page's research drawer, after its lists.
+	SlotContactPanel PanelSlot = "record_panel.contact"
+	// SlotCompanyPanel is the end of a company page's Contacts tab, after the reach card.
+	SlotCompanyPanel PanelSlot = "record_panel.company"
+	// SlotDealPanel is the end of a deal page's Edit details drawer, after its lists.
+	SlotDealPanel PanelSlot = "record_panel.deal"
+)
 
 // PanelSlots is every slot a core page draws. The frontend's list mirrors it.
 //
 // Held by: TestTheFrontendPanelSlotsMatchTheGoOnes (backend/gates/frontendentryslots_test.go)
 func PanelSlots() []PanelSlot {
-	return []PanelSlot{SlotDealPanel}
+	return []PanelSlot{SlotContactPanel, SlotCompanyPanel, SlotDealPanel}
 }
 
 // Valid reports whether a core page draws this slot.

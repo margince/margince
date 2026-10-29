@@ -7,7 +7,7 @@ import {
   composedPanels,
   type ExtensionPanelProps,
   type ExtensionPanelRegistry,
-} from "../../lib/extensions";
+} from "../lib/extensions";
 
 // A unit's panels: its own components, drawn inline where a core page offers a
 // slot. The unit declares the slot and the RBAC object; the page decides where
@@ -18,7 +18,11 @@ import {
  * backend/pkg/extension/panel.go; backend/gates/frontendentryslots_test.go
  * fails when the two lists differ.
  */
-export const EXTENSION_PANEL_SLOTS = ["record_panel.deal"] as const;
+export const EXTENSION_PANEL_SLOTS = [
+  "record_panel.contact",
+  "record_panel.company",
+  "record_panel.deal",
+] as const;
 
 export type ExtensionPanelSlot = (typeof EXTENSION_PANEL_SLOTS)[number];
 
