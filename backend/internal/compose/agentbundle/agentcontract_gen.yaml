@@ -10412,6 +10412,13 @@ components:
             into the contact in the same write, and a conversion the server refuses fails the
             whole write. An agent sending this field is refused with 422
             `convert_needs_a_human`: an agent converts with `promote_lead`.
+        company_id:
+          type: [string, 'null']
+          format: uuid
+          description: An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+        company_name:
+          type: [string, 'null']
+          description: A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
       additionalProperties: true
     ContactEmailInput:
       type: object
