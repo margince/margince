@@ -1548,7 +1548,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.meetings.sentExpires": "Đã gửi {sent} · hết hạn {expires}",
   "contact.meetings.resend": "Gửi lại",
   "contact.meetings.withdraw": "Thu hồi",
-  "contact.meetings.moreFor": "Thao tác khác cho {subject}",
   "contact.meetings.withdrawTitle": "Thu hồi lời mời này?",
   "contact.meetings.withdrawBody":
     "Liên kết sẽ ngừng hoạt động và khách không thể đặt lịch qua đó nữa.",
@@ -2481,6 +2480,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền ghi nhận hoạt động trên hồ sơ này.",
   "record.share": "Chia sẻ",
   "record.moreActions": "Thao tác khác",
+  "record.moreActionsFor": "Thao tác khác cho {subject}",
   "record.fullHistory": "Lịch sử đầy đủ",
 
   "share.title": "Chia sẻ hồ sơ này",
@@ -12110,6 +12110,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.inviteTitle": "Mời thành viên",
   "users.teamsLabel": "Nhóm",
   "users.noTeamsYet": "Chưa có nhóm nào.",
+  "users.teamsNone": "Chưa thuộc nhóm nào.",
+  "users.teamsAdd": "Thêm nhóm",
+  "users.teamsSearch": "Tìm nhóm",
+  "users.teamsNoMatch": "Không có nhóm nào khớp.",
+  "users.teamsDone": "Xong",
+  "users.teamsEmpty": "Nhập tên để tạo nhóm đầu tiên.",
+  "users.teamsRemove": "Xóa khỏi {team}",
+  "users.teamsCreate": "Tạo nhóm “{name}”",
   "users.teamNobodyToAdd": "Không có thành viên nào để thêm.",
   "users.teamMembersLabel": "Thành viên nhóm",
   "users.teamMembersAdminOnly":

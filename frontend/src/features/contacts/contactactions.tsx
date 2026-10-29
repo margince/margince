@@ -24,9 +24,8 @@ import { openContactTab } from "../worklist/worklist.return";
 import { ImportActivitiesAction } from "./contactimportaction";
 import { ContactRecordActions } from "./contactrecordactions";
 
-// The header's verbs on the contact record page (contactpage.tsx): meeting,
-// logging, and the menu. Writing and calling sit beside the address and the
-// number in the contact's details.
+// The header's verbs on the contact record page (contactpage.tsx): writing,
+// meeting, logging, and the menu. A number dials from the contact's details.
 
 // Why writing to the contact is refused, or undefined when it is not. Only
 // reachability refuses it: with nowhere to write to, a send could only fail.
@@ -43,7 +42,7 @@ function writeRefusal(
   return undefined;
 }
 
-/** Why the write icon may not be pressed, for the page's footnote. */
+/** Why the Email verb may not be pressed, for the page's footnote. */
 export function useWriteRefusal(view: TransportSource): string | undefined {
   const t = useT();
   return writeRefusal({ transports: useTransports(view) }, t);
@@ -59,6 +58,7 @@ export function ContactActions({
   onLogActivity,
   onAddTask,
   activity,
+  writeRefusalId,
   refusedReasonId,
 }: Readonly<{
   view: TransportSource;
@@ -70,6 +70,9 @@ export function ContactActions({
   // The page's gate, whose refusal the page states. A host that passes none
   // (the archived page, whose own sentence refuses every verb) gets its own.
   activity?: ActivityGate;
+  // Where the page states why Email is refused, when it does. Absent, the
+  // verb states it under itself.
+  writeRefusalId?: string;
   // The page's one sentence about why this contact takes no changes, while
   // it does not. The verbs that write the RECORD — edit, merge, archive and
   // the grant Share asserts — are the ones refused by it; logging and mail
@@ -84,9 +87,22 @@ export function ContactActions({
   const archived = view.contact.archived_at ? refusedReasonId : undefined;
   const logRefused = archived ?? gate.refusedId;
   const logPending = !archived && gate.pending;
+  // Read here so the button NAMES what pressing it does, from the same
+  // reachability the composer resolves.
+  const transports = useTransports(view);
+  const write = primaryTransportAction(transports, t);
+  const WriteIcon = write.icon;
+  const refusal = writeRefusal({ transports }, t);
   return (
     <>
-      <ChatVerb view={view} onWrite={onWrite} refusedReasonId={archived} />
+      <EmailVerb
+        label={write.label}
+        icon={<WriteIcon size={15} aria-hidden="true" />}
+        reason={archived || writeRefusalId ? undefined : refusal}
+        reasonId={archived ?? (refusal ? writeRefusalId : undefined)}
+        onClick={onWrite}
+        word={t("record.verb.email")}
+      />
       <IconAction
         label={t("contact.action.meetings")}
         word={t("record.verb.meet")}
@@ -172,35 +188,5 @@ export function ContactActions({
         />
       </OverflowMenu>
     </>
-  );
-}
-
-// The write verb for a contact reached only on chat channels, named for the
-// channel it opens. An address carries its own icon in the details. A contact
-// with no channel at all gets the footnote's sentence instead.
-function ChatVerb({
-  view,
-  onWrite,
-  refusedReasonId,
-}: Readonly<{
-  view: TransportSource;
-  onWrite: () => void;
-  refusedReasonId: string | undefined;
-}>) {
-  const t = useT();
-  const transports = useTransports(view);
-  if (view.contact.primary_email || transports.length === 0) {
-    return null;
-  }
-  const write = primaryTransportAction(transports, t);
-  const WriteIcon = write.icon;
-  return (
-    <EmailVerb
-      label={write.label}
-      icon={<WriteIcon size={15} aria-hidden="true" />}
-      reasonId={refusedReasonId}
-      onClick={onWrite}
-      word={t("record.verb.email")}
-    />
   );
 }

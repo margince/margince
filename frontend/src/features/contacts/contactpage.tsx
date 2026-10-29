@@ -263,6 +263,7 @@ export function ContactPageV2({
                 onLogActivity={() => setDrawer("activity_log")}
                 onAddTask={() => setDrawer("activity_task")}
                 activity={activity}
+                writeRefusalId={writeRefusalId}
                 refusedReasonId={refusedReasonId}
               />
             }

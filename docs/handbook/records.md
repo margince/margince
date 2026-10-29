@@ -117,9 +117,9 @@ The first merge settles the group for every owner, and it cannot be undone. A co
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
-To call a contact, press the **Call** button beside the number in **Details**. It dials the main number, or else the first, in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has no **Call** button. A call logged this way is not linked to the task and does not complete it.
+To call a contact, click its number in **Details** or in the header's **Phone** field. It dials that number in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has nothing to dial. A call logged this way is not linked to the task and does not complete it.
 
-To write to a contact, press **Write email** beside the address; a contact reached only on chat has **Message on** in its header. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
+To write to a contact, press **Email** in its header; a contact reached only on chat shows **Message on** there. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
@@ -251,7 +251,7 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 ### Where can I see everything that happened with a customer?
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
-2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
+2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and the From and To dates.
 A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply** or **Write email**. **Noticed** hides it until you sign out, and on the other tabs it is one line under the record's name.
 Also called: timeline, activity log, customer history, interaction history, newest email.
 
@@ -282,7 +282,7 @@ A meeting holds a status: **booked, held, no-show, canceled.**
 **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, both under **More actions** (⋯) on its row, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
 Also called: fix a note, remove an activity, change a task's due date, move an email to another deal.
 
@@ -291,7 +291,7 @@ No. Margince has no @mentions and no comments on a record. To tell a colleague s
 Also called: tag a teammate, @mention, leave a comment, notify a colleague.
 
 ### Who can see a note, call or meeting I log?
-A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, press **Change visibility** on it in the timeline. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**. Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
+A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, open **More actions** (⋯) on it in the timeline and press **Change visibility**. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**. Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
 
 Also called: private note, who sees my notes, hide a call, make a note private.
 

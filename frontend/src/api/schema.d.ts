@@ -40701,6 +40701,7 @@ export interface components {
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
+            team_week?: components["schemas"]["TeamWeekReach"];
             authorization?: components["schemas"]["Authorization"];
             settings_availability?: components["schemas"]["SettingsAvailability"];
             installation_brand?: components["schemas"]["InstallationBrand"];
@@ -45200,6 +45201,18 @@ export interface components {
             data: components["schemas"]["User"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+         *     answered by the rule that endpoint is served on. `every_team` for a seat holding
+         *     `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+         *     `none` for everyone else, a read-only seat included. Separate from a worklist's
+         *     `scope_options`, because the `team` worklist is the team's live work and the
+         *     week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+         *     carry it, from one rule. Absent from an older server, which a client reads as
+         *     `none`.
+         * @enum {string}
+         */
+        TeamWeekReach: "none" | "teams_led" | "every_team";
         TeamListResponse: {
             data: components["schemas"]["Team"][];
             page: components["schemas"]["PageInfo"];
@@ -49641,17 +49654,7 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
-            /**
-             * @description Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
-             *     answered by the rule that endpoint is served on. `every_team` for a seat holding
-             *     `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
-             *     `none` for everyone else, a read-only seat included. Separate from
-             *     `scope_options`, because the `team` worklist is the team's live work and the
-             *     week is a lead's verdict on named colleagues. Absent from an older server, which
-             *     a client reads as `none`.
-             * @enum {string}
-             */
-            team_week?: "none" | "teams_led" | "every_team";
+            team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
