@@ -173,10 +173,9 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	return d, err
 }
 
-// forecastQualificationSQL is the qualification column of the forecast read:
-// each deal's viability treatment while enforcement is on, and nothing while
-// it is off, so no reading built on this read can claim qualification the
-// installation has not switched on.
+// forecastQualificationSQL is the qualification column of the forecast read.
+// While enforcement is on it is each deal's viability treatment. While it is
+// off it is empty, so no reading can claim a qualification nobody switched on.
 func forecastQualificationSQL(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, error) {
 	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
 	if err != nil {

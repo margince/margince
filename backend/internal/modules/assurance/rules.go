@@ -95,10 +95,10 @@ const (
 	TypeDealViability    = "deal_viability"
 )
 
-// TypeBuyerSilent is a RETIRED type: deal_viability asks its question with one
-// silence clock and the close-date check beside it. Stored findings keep the
-// type for their history, and a pass whose mailbox was read clears the open
-// ones, because no rule raises them any more.
+// TypeBuyerSilent is a RETIRED type. deal_viability asks its question with one
+// silence clock, apart from the close date. Stored findings keep the type for
+// their history. A pass that read the mailbox clears the open ones, because no
+// rule raises them any more.
 const TypeBuyerSilent = "buyer_silent"
 
 // retiredRules are types no rule raises, with the sources a pass must have read
@@ -330,9 +330,9 @@ func noEconomicBuyer() Rule {
 // The customer no longer supports the deal, or a review of it is still open.
 //
 // The deals module judged it (deals.AssessViability); this rule only turns a
-// review_required answer into a finding. Customer progress only: a rep mailing
-// a silent prospect weekly keeps last_activity_at fresh while the customer has
-// not answered, and the close date is no evidence either way.
+// review_required answer into a finding. It reads customer progress only. A
+// rep mailing a silent prospect weekly keeps last_activity_at fresh, and the
+// close date is no evidence either way.
 func dealViability() Rule {
 	return Rule{
 		Type: TypeDealViability, Version: viability.PolicyVersion, Needs: []string{sourceMail},

@@ -408,9 +408,9 @@ it("keeps an unread source visible even when there are no findings or readiness 
   expect(warning.closest("details")).toBeNull();
 });
 
-// The qualified figure sits under the baseline, and a deal the check could not
-// judge is said apart from one it left out: folding them would blame the
-// pipeline for a mailbox nobody read.
+// The qualified figure sits under the baseline. An unjudged deal is said apart
+// from a left-out one, because folding them would blame the pipeline for a
+// mailbox nobody read.
 it("states the qualified figure and keeps unknown deals apart from left-out ones", async () => {
   vi.stubGlobal(
     "fetch",

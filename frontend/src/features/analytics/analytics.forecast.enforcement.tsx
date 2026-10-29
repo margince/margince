@@ -11,8 +11,8 @@ const enforcementKey = ["forecast-assurance-enforcement"];
 
 // Whether the qualified forecast leaves out deals under an open review.
 //
-// It sits with the check it depends on: the switch is refused until a first
-// check has run, because before that no deal has been judged and the qualified
+// It sits with the check it depends on. The switch is refused until a first
+// check has run: before that no deal has been judged, and the qualified
 // forecast would count nothing. Every reader sees the state; only an admin
 // flips it.
 export function EnforcementSwitch() {

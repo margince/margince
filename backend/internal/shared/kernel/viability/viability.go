@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package viability is the vocabulary of one question: is an open deal still
-// supported by its customer, so that it may count toward the qualified forecast.
+// Package viability is the vocabulary of one question: does its customer still
+// support an open deal, so that it may count toward the qualified forecast?
 //
 // deals answers the question, assurance raises and stores the review, and
 // forecasting applies the answer to money. A module never imports a sibling, so
@@ -16,7 +16,7 @@ const PolicyVersion = "v1"
 // Outcome is what one assessment concluded about one deal.
 type Outcome string
 
-// The outcomes. Unknown is not a weaker eligible: it says the sources needed
+// The outcomes. Unknown is not a weaker eligible. It says the sources needed
 // to judge the deal could not be read, and no qualified total may count it.
 const (
 	OutcomeEligible       Outcome = "eligible"
@@ -25,13 +25,7 @@ const (
 	OutcomeUnknown        Outcome = "unknown"
 )
 
-// Outcomes lists every outcome, for the census that holds the receipt
-// table's CHECK to this list.
-func Outcomes() []Outcome {
-	return []Outcome{OutcomeEligible, OutcomeReviewRequired, OutcomeWaiting, OutcomeUnknown}
-}
-
-// Reason is one cause behind an outcome. A reason is a code, never prose: the
+// Reason is one cause behind an outcome. A reason is a code, never prose. The
 // reader's own language renders it, and stored prose about a mailbox would
 // outlive the protection on the mail it described.
 type Reason string

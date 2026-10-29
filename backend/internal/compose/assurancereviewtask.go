@@ -118,9 +118,9 @@ func linkEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID, epis
 	return *linked, nil
 }
 
-// reviewDueAt is the end of the next calendar day in the installation's zone,
-// counted from delivery rather than from the scan, so a delivery that ran late
-// never hands somebody a task that is already overdue.
+// reviewDueAt is the end of the next calendar day in the installation's zone.
+// It counts from delivery, not from the scan, so a late delivery never hands
+// somebody a task that is already overdue.
 func reviewDueAt(ctx context.Context, deps bundleDeps) (time.Time, error) {
 	var due time.Time
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {

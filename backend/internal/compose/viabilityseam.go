@@ -18,7 +18,7 @@ import (
 
 // viabilityFingerprintSQL is what a viability assessment read about one deal.
 // The check stores it on the receipt, and the forecast compares it with the
-// deal's current one: any difference means the evidence moved since the check.
+// deal's current one. A difference means the evidence moved since the check.
 // Work the product filed itself is left out, so the review's own task does not
 // make its receipt stale. Archiving an activity drops it from the count, which
 // changes the fingerprint too.

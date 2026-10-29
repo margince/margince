@@ -6,10 +6,10 @@
 package compose
 
 // A deal whose customer went silent half a year ago, with a close date three
-// months ahead, is the case the close-date check could not see: its date is in
-// the future, so nothing about it looked wrong. These drive the real worker
-// over deals written through the deals and activities stores, then read the
-// forecast for the period the close date falls in.
+// months ahead, is what the close-date check missed. Its date is in the future,
+// so nothing about it looked wrong. These tests drive the real
+// worker over deals written through the deals and activities stores. Then they
+// read the forecast for the period the close date falls in.
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -263,4 +264,30 @@ func TestEvidenceThatMovedSinceTheCheckMakesTheDealUnknown(t *testing.T) {
 
 func hasReason(list, item string) bool {
 	return slices.Contains(strings.Split(list, ","), item)
+}
+
+// While the qualified forecast is enforced the viability review decides what
+// counts, so the sweep keeps its date work and lowers no category. A notch a
+// night would otherwise walk a quiet deal down to omitted with nobody deciding.
+func TestCloseDateSweepLowersNoCategoryWhileTheQualifiedForecastIsEnforced(t *testing.T) {
+	e := setupCloseDate(t)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.Save(e.Admin(), StoredConfig(e.Pool), assurance.QualifiedForecastEnforced, true); err != nil {
+		t.Fatal(err)
+	}
+	id := e.seedSweepDeal(t, "Gone quiet under enforcement", e.late, new("commit"), new(30), 90)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	swept := e.readSwept(t, id)
+	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
+		t.Errorf("forecast_category = %v, want commit kept while the review decides what counts", swept.forecastCat)
+	}
+	if want := today().AddDate(0, 0, 30); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
+		t.Errorf("date = %v, want retained %s", swept.expectedClose, want)
+	}
 }

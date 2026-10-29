@@ -58,7 +58,7 @@ type Deal struct {
 // supports them. Nil on Readings while enforcement is off.
 //
 // Excluded and unknown are counted apart. An excluded deal was judged and
-// found unsupported; an unknown one could not be judged, and counting it as
+// found unsupported; an unknown one could not be judged. Counting it as
 // excluded would report a gap in the mailbox as a gap in the pipeline.
 type QualifiedReadings struct {
 	EvidenceMinor int64

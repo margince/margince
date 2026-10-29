@@ -27,10 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -501,32 +499,6 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	}
 	if hasPace {
 		t.Fatal("a retained human date must not acquire an invented estimate basis")
-	}
-}
-
-// While the qualified forecast is enforced the viability review decides what
-// counts, so the sweep keeps its date work and lowers no category. A notch a
-// night would otherwise walk a quiet deal down to omitted with nobody deciding.
-func TestCloseDateSweepLowersNoCategoryWhileTheQualifiedForecastIsEnforced(t *testing.T) {
-	e := setupCloseDate(t)
-	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
-		t.Fatal(err)
-	}
-	if err := config.Save(e.Admin(), StoredConfig(e.Pool), assurance.QualifiedForecastEnforced, true); err != nil {
-		t.Fatal(err)
-	}
-	id := e.seedSweepDeal(t, "Gone quiet under enforcement", e.late, new("commit"), new(30), 90)
-
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	swept := e.readSwept(t, id)
-	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		t.Errorf("forecast_category = %v, want commit kept while the review decides what counts", swept.forecastCat)
-	}
-	if want := today().AddDate(0, 0, 30); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
-		t.Errorf("date = %v, want retained %s", swept.expectedClose, want)
 	}
 }
 

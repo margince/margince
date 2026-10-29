@@ -171,9 +171,9 @@ func mintBundleTask(
 	return task, nil
 }
 
-// runTaskKey keys an ordinary bundle task on the RUN, not the cycle: a retry
-// that re-scans opens a fresh cycle with a new id, so a cycle-keyed name would
-// differ on exactly the attempt it exists to deduplicate.
+// runTaskKey keys an ordinary bundle task on the RUN, not the cycle. A retry
+// that re-scans opens a fresh cycle with a new id. A cycle-keyed name would
+// then differ on the one attempt it exists to deduplicate.
 func runTaskKey(subject subjectFindings, runID ids.UUID) string {
 	return subject.kind + ":" + subject.id.String() + ":" + runID.String()
 }

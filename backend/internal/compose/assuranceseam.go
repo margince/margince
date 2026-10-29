@@ -212,8 +212,8 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	return out, nil
 }
 
-// customerProgressSQL admits a row that is the CUSTOMER moving the deal: a
-// message a contact on it wrote, or a meeting or call with them that took
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That
+// is a message a contact on it wrote, or a meeting or call with them that took
 // place. Our own mail, a colleague's reply, a task, a field edit, a canceled
 // meeting and a machine's mail never do.
 func customerProgressSQL(alias, asOf string) string {

@@ -80,8 +80,8 @@ const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionS
 
 // reopensSQL is the upsert's test that a re-detected finding starts a new
 // episode. A closing nobody answered reopens, as above. A REVIEW finding also
-// reopens after somebody resolved it, once no suppression is still running:
-// the deal was revived and then went silent again, and that is a new question.
+// reopens after somebody resolved it, once no suppression is still running.
+// The deal was revived and then went silent again, which is a new question.
 // Every other type keeps its resolution, which re-detection must not un-ask.
 const reopensSQL = `(assurance_exception.status IN (` + reopenableStatuses + `)
 	OR (assurance_exception.type = '` + TypeDealViability + `'

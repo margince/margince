@@ -18,8 +18,8 @@ import (
 )
 
 // ReviewTypes are the finding types delivered as one task per episode. Their
-// task is kept once delivered: completing it does not resolve the review, and a
-// second task for the same unchanged episode would ask the same thing again.
+// task is kept once delivered, because completing it does not resolve the
+// review. A second task for the same episode would ask the same thing again.
 func ReviewTypes() []string { return []string{TypeDealViability} }
 
 // EpisodeTask reads a finding's episode and the task that episode was

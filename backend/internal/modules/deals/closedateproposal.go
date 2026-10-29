@@ -42,9 +42,9 @@ const CloseDateCorrectionKind = "close_date_correction"
 // answered it, leaving the deal on a guess with nothing saying so.
 //
 // LowersForecastCategory is asked before every downgrade. It is false while
-// the qualified forecast applies viability reviews: the review then decides
-// what counts, and a category lowered one notch a night would leave a deal at
-// "omitted" with nothing to say whether a rep or the sweep put it there.
+// the qualified forecast applies viability reviews, because the review then
+// decides what counts. A category lowered one notch a night would end at
+// "omitted", with nothing to say whether a rep or the sweep put it there.
 type CorrectionPolicy interface {
 	CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error)
 	LowersForecastCategory(ctx context.Context) (bool, error)

@@ -20,11 +20,11 @@ import (
 // RecordReceipts stores this pass's viability answer for every deal it walked,
 // eligible ones included, replacing each deal's previous receipt.
 //
-// A deal with no assessment gets an unknown receipt rather than none: the
-// qualified forecast must be able to tell "checked and could not judge" from
-// "checked and fine", and absence would read as neither.
+// A deal with no assessment gets an unknown receipt rather than none. The
+// qualified forecast must tell "checked and could not judge" from "checked and
+// fine", and absence would read as neither.
 //
-// The run's own audit row covers these, as it covers the findings: a receipt
+// The run's own audit row covers these, as it covers the findings. A receipt
 // per deal in the audit log would bury the night's one verdict.
 func (s *Store) RecordReceipts(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID, asOf time.Time, lifetime time.Duration, subjects []Subject,
