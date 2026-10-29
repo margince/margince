@@ -63,6 +63,11 @@ const SURFACES: readonly Entry[] = [
   },
   { token: "--bgHover", usage: "A pointer resting on a row on the page." },
   {
+    token: "--bgStrip",
+    usage:
+      "A band on the ground: a table's toolbar and footer, a window's bar.",
+  },
+  {
     token: "--pane",
     usage: "One pane per zone, over the page ground.",
   },

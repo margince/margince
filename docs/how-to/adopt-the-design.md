@@ -123,7 +123,7 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 
 | Part | Change |
 |---|---|
-| `Panel` / `PanelPlate` / `PanelBody` / `PanelRow` (`panel.css`) | The **zone pane**: `--pane` with `--paneEdge`, 18px radius, `backdrop-filter: blur(12px)`, padding `--space-5 --space-6`. A 17px title in the display font, with its count (`small`) and verb (`a`) on one line. Rows at `--space-3`, each with a hairline. `PanelPlate` becomes a row on `--bg3`. |
+| `Panel` / `PanelPlate` / `PanelBody` / `PanelRow` (`panel.css`) | The **zone pane**: `--pane` with `--paneEdge`, 18px radius, padding `--space-5 --space-6`. A 17px title in the display font, with its count (`small`) and verb (`a`) on one line. Rows at `--space-3`, each with a hairline. `PanelPlate` becomes a row on `--bg3`. |
 | `StatStrip` | Becomes the readings row: five `StatCard` parts in a grid, 16px gap, no plate. A slot that cannot be read stays absent or says so (the rule the strip has today). |
 | `RecordView` (`recordview.tsx`, `recordview.css`) | Two cards: on the left the head (mark, name in up to three lines, one fact per line, the pills, the verbs as one bar of tiles) over the details; on the right the tab strip over the open tab's feed. `nameBadge` stays on its own line under the name. The `controls` slot is removed, and the `PageAsideToggle` with it: the details always stand open. |
 | `RecordTabs` | Plain: no line under the strip, 13px, a 2px `--accent` line under the open tab, counts at 11px `--ink4`. The strip sits in the right card, beside the details, and carries no Details control, since the details always stand open. |

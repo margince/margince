@@ -43,7 +43,7 @@ const canonical: Record<string, string> = {
   "--bgPage": "#eff6f3",
   "--bgElevated": "#fbfcfb",
   "--bgInset": "#eaedeb",
-  "--bgHover": "#edf0ee",
+  "--bgHover": "#d7ede5",
   "--accent": "#045647",
   "--accentLight": "#d7ede5",
   "--accentMed": "rgba(4,86,71,.17)",
@@ -68,19 +68,19 @@ const canonical: Record<string, string> = {
   "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
   "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
   "--success": "#17c964",
-  "--successText": "#007435",
+  "--successText": "#007334",
   "--successSurface":
     "color-mix(in srgb, var(--success) 12%, var(--bgElevated))",
   "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
   "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
   "--warning": "#f5a524",
-  "--warningText": "#8a5900",
+  "--warningText": "#895800",
   "--warningSurface":
     "color-mix(in srgb, var(--warning) 16%, var(--bgElevated))",
   "--warningBg": "color-mix(in srgb, var(--warning) 16%, transparent)",
   "--warningBorder": "color-mix(in srgb, var(--warning) 45%, transparent)",
   "--danger": "#ff383c",
-  "--dangerText": "#c5001b",
+  "--dangerText": "#c3001b",
   "--dangerSurface": "color-mix(in srgb, var(--danger) 10%, var(--bgElevated))",
   "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
   "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
@@ -212,12 +212,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   // states its own expected order, and both are checked the same way.
   describe("the surface ladder holds its order", () => {
     // Darkest first, as measured. The two themes are deliberately DIFFERENT
-    // sequences: light lifts from the card well up to the elevated surface,
+    // sequences: light lifts from the hovered row up to the elevated surface,
     // while dark puts the page lowest and lifts every other ground above it,
     // because a dark surface has only one direction to move in.
     const ladders = {
-      light: ["--bgInset", "--bgHover", "--bgPage", "--bgElevated"],
-      dark: ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"],
+      light: [
+        "--bgHover",
+        "--bgInset",
+        "--bgStrip",
+        "--bgPage",
+        "--bgElevated",
+      ],
+      dark: ["--bgPage", "--bgStrip", "--bgElevated", "--bgInset", "--bgHover"],
     };
 
     for (const [theme, rungs] of Object.entries(ladders)) {
@@ -284,6 +290,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgElevated": prose,
         "--bgInset": prose,
         "--bgHover": prose,
+        "--bgStrip": prose,
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill, and so is the opaque Surface a soft badge letters on.
         // A state's fill is its TEXT token, never its base: no one ink sits on
@@ -337,7 +344,13 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
-      const grounds = ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"];
+      const grounds = [
+        "--bgPage",
+        "--bgElevated",
+        "--bgInset",
+        "--bgHover",
+        "--bgStrip",
+      ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {

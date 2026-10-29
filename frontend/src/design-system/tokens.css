@@ -17,10 +17,11 @@
    * A ladder, darkest first, from a well inside a card up to the surface a card
    * floats on. Each rung is one visible step off its neighbours, and the ORDER
    * is the part that carries meaning — tokens.test.ts asserts the ordering in
-   * both themes rather than trusting four plausible values to stay in sequence:
+   * both themes rather than trusting five plausible values to stay in sequence:
    *
+   *   --bgHover        #d7ede5  a pointer resting on a row on the page
    *   --bgInset         #eaedeb  a well inside a card: an inset row, a plate
-   *   --bgHover        #edf0ee  a pointer resting on a row on the page
+   *   --bgStrip        #e3f1ec  a toolbar or footer band on the ground
    *   --bgPage         #eff6f3  the reading ground, flat under the shell
    *   --bgElevated     #fbfcfb  a card, a panel, a menu
    *
@@ -42,7 +43,10 @@
    * segmented strip, the trough of a meter. Translucent, so it reads one step
    * deeper than any rung it lands on, an inset plate included. */
   --bgChip: rgba(16, 23, 20, 0.03);
-  --bgHover: #edf0ee;
+  --bgHover: #d7ede5;
+  /* A band that lies on the ground rather than being it, so it must not vanish
+   * into the page the way a pre-paint or a frame should. */
+  --bgStrip: #e3f1ec;
   /* A RECESS in an elevated surface — the well a board's stage is drawn as.
    * One hair under --bgElevated (1.03:1), which is what lets the panes inside
    * it be the lifted thing: --bgInset is a card's own ground, and five of them
@@ -72,7 +76,7 @@
    * button, a filled step numeral) — split from --textOnAccent because dark
    * mode lightens --accent and not every --textOnAccent consumer's fill.
    * Unthemed here; the dark palette below is what makes it diverge. */
-  --textOnAccentControl: #fff;
+  --textOnAccentControl: #f4faf7;
   /* The ink for a control FILLED with a state tone — a destructive button, a
    * completion disc, a primary badge. Its ground is the tone's *Text token and
    * never the base hue. A base is tuned to be SEEN at a bar's or a dot's
@@ -82,13 +86,13 @@
    * neither, 4.46:1 for white and 3.72:1 for the near-black. So the fill is the
    * Text token, which was chosen to carry ink, and this one flips with the
    * theme because the ground under it does: a Text red is deep in light, where
-   * white reads on it, and bright in dark, where near-black does. White here
-   * gives 6.26:1 on --infoText, 5.92:1 on --successText, 5.98:1 on
-   * --warningText, 6.19:1 on --dangerText and 12.46:1 on --discoveryText; the
+   * a near-white reads on it, and bright in dark, where near-black does. This
+   * gives 5.92:1 on --infoText, 5.67:1 on --successText, 5.74:1 on
+   * --warningText, 5.95:1 on --dangerText and 11.78:1 on --discoveryText; the
    * dark block states the other half. Kept a token of its own rather than
    * folded into --textOnAccentControl: the accent and the state hues are
    * different fills that retune independently. */
-  --textOnStatusControl: #fff;
+  --textOnStatusControl: #f4faf7;
 
   --borderSubtle: #e3eae6;
   --borderStrong: #d1d8d4;
@@ -246,19 +250,19 @@
   --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
 
   --success: #17c964;
-  --successText: #007435;
+  --successText: #007334;
   --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
   --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
 
   --warning: #f5a524;
-  --warningText: #8a5900;
+  --warningText: #895800;
   --warningSurface: color-mix(in srgb, var(--warning) 16%, var(--bgElevated));
   --warningBg: color-mix(in srgb, var(--warning) 16%, transparent);
   --warningBorder: color-mix(in srgb, var(--warning) 45%, transparent);
 
   --danger: #ff383c;
-  --dangerText: #c5001b;
+  --dangerText: #c3001b;
   --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
   --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
@@ -768,7 +772,8 @@
   --bgElevated: #161d1a;
   --bgInset: #1a211e;
   --bgChip: rgba(239, 247, 244, 0.09);
-  --bgHover: #1f2623;
+  --bgHover: #172823;
+  --bgStrip: #0a1713;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
   --bgWell: #111815;
@@ -916,7 +921,8 @@
     --bgElevated: #161d1a;
     --bgInset: #1a211e;
     --bgChip: rgba(239, 247, 244, 0.09);
-    --bgHover: #1f2623;
+    --bgHover: #172823;
+    --bgStrip: #0a1713;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
     --bgWell: #111815;
