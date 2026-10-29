@@ -138,7 +138,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if err := withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 

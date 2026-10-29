@@ -62,10 +62,16 @@ func Languages() []Language {
 
 // For is the copy one installation's mail is written in.
 func For(language string) Copy {
-	if words, known := catalog[Language(language)]; known {
-		return words
+	return catalog[Carried(language)]
+}
+
+// Carried is the language a mail in language is written in: language itself
+// when this build has copy for it, else Fallback.
+func Carried(language string) Language {
+	if Known(language) {
+		return Language(language)
 	}
-	return catalog[Fallback]
+	return Fallback
 }
 
 // Known reports whether this build carries copy for a language.
@@ -316,6 +322,11 @@ type Copy struct {
 	// a reader who does nothing has lost nothing, which is what makes this a
 	// notice rather than a request.
 	NoticeIgnore string
+
+	// PreviewLinkMarker stands where the link goes in a preview, which mints none.
+	// SentLinkMarker stands for it in the timeline copy of a sent mail.
+	PreviewLinkMarker string
+	SentLinkMarker    string
 
 	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
 	// Vietnamese recipient who refuses further advertising: a confirmation

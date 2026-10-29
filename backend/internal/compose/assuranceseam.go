@@ -58,6 +58,7 @@ const assuranceSubjectsSQL = `
 		           AND EXISTS (SELECT 1 FROM activity_participant p
 		                        WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL
 		                          AND p.response = 'accepted')) AS confirmed_meeting_at,
+		       %[8]s AS earlier_answer_until,
 		       EXISTS (SELECT 1 FROM assurance_exception x
 		                WHERE x.subject_kind = 'deal' AND x.subject_id = d.id
 		                  AND x.type = $4 AND x.status = 'open') AS open_review,
@@ -170,7 +171,8 @@ func AssuranceSubjects(
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	query := fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
-		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"))
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		earlierAnswerSQL("d", "$2", arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
@@ -194,7 +196,7 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 		&out.ExpectedClose, &out.CloseProvisional, &category, &stage,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
-		&evidence.ConfirmedMeetingAt, &evidence.OpenReview, &fingerprint,
+		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
 		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
 	if err != nil {
@@ -241,6 +243,31 @@ func customerProgressSQL(alias, asOf string) string {
 func customerRefusalSQL(alias, asOf string) string {
 	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
+}
+
+// earlierAnswerSQL is when the newest answer to the retired buyer-silent check
+// on the deal runs out, if it has not yet. Its findings close on the first
+// night the mail is read, but the answers stay. A deal somebody answered is not
+// asked again before its answer ends. The answer was about one silence:
+// once the customer moved the deal after it, a later silence is a new one. A
+// reminder holds at most as long as any answer may hide a finding.
+func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
+	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
+		arg(int(assurance.MaxSuppression/(24*time.Hour))))
+	return fmt.Sprintf(`(SELECT CASE
+		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
+		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
+		                    AND NOT %[8]s AND %[7]s) THEN NULL
+		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		  FROM assurance_resolution r
+		  JOIN assurance_exception x ON x.id = r.exception_id
+		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
+		 ORDER BY r.created_at DESC, r.id DESC
+		 LIMIT 1)`,
+		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		occurredday.BegunSQL("pa", "r.created_at"))
 }
 
 // visibleToAllSQL admits an activity every member may read. The check runs as

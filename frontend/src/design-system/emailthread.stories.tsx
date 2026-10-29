@@ -145,3 +145,37 @@ export const Unassessed: Story = {
 export const UnassessedWithoutText: Story = {
   args: { completeness: "unassessed", body: HEADER_ONLY },
 };
+
+// A relay send seen by its member. The relay's address stands where the rep's would.
+const RELAYED: EmailPresentation = {
+  ...BASE,
+  summary: {
+    ...BASE.summary,
+    subject: "Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
+    direction: "outbound",
+    counterparty: "Ana Sommer",
+    delivery: { state: "pending" },
+  },
+  body: "Wir haben personenbezogene Daten von Ihnen gespeichert.\n\n[Persönlicher Link, nur an den Kontakt gesendet]",
+  from: [
+    {
+      address: "lars@margince.example",
+      display_name: "Lars J.",
+      user_id: "u-1",
+    },
+  ],
+  to: [{ address: "ana@brandt.example", display_name: "Ana Sommer" }],
+  controller_send: { from_address: "privacy@margince.example" },
+};
+
+export const SentByMarginceForYou: Story = {
+  render: () => (
+    <StoryProviders>
+      <EmailThread
+        presentation={RELAYED}
+        formatWhen={() => "1 Sep 09:12"}
+        viewerUserId="u-1"
+      />
+    </StoryProviders>
+  ),
+};

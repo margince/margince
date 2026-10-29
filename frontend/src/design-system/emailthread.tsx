@@ -18,9 +18,12 @@ import {
   emailDetailKey,
   partyName,
   readEmailPresentation,
+  relaySendOf,
+  senderParties,
 } from "./emailmessage";
 import { EmailText } from "./emailtext";
 import { SurfaceState } from "./surfacestate";
+import { ProvenanceTag } from "./trust";
 import "./emailthread.css";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
@@ -28,6 +31,8 @@ type EmailSummary = components["schemas"]["EmailSummary"];
 
 type Renders = Readonly<{
   formatWhen: ActivityWhenFormatter;
+  /** Who is reading, so a relay send says "for you" only to its member. */
+  viewerUserId?: string;
   /** Names the records a message is filed against, on its envelope. */
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
   renderActions?: (presentation: EmailPresentation) => ReactNode;
@@ -44,6 +49,7 @@ type Renders = Readonly<{
 export function EmailThread({
   presentation,
   formatWhen,
+  viewerUserId,
   renderRecords,
   renderActions,
   related,
@@ -100,6 +106,7 @@ export function EmailThread({
                 <OpenMessage
                   presentation={presentation}
                   formatWhen={formatWhen}
+                  viewerUserId={viewerUserId}
                   renderRecords={renderRecords}
                   renderActions={renderActions}
                   related={related}
@@ -110,6 +117,7 @@ export function EmailThread({
                 <ReadMessage
                   activityId={summary.activity_id}
                   formatWhen={formatWhen}
+                  viewerUserId={viewerUserId}
                   renderRecords={renderRecords}
                   renderActions={renderActions}
                   onFold={() => toggle(summary.activity_id)}
@@ -145,6 +153,7 @@ export function threadOrder(
 function ReadMessage({
   activityId,
   formatWhen,
+  viewerUserId,
   renderRecords,
   renderActions,
   onFold,
@@ -162,6 +171,7 @@ function ReadMessage({
       <OpenMessage
         presentation={read.data}
         formatWhen={formatWhen}
+        viewerUserId={viewerUserId}
         renderRecords={renderRecords}
         renderActions={renderActions}
         onFold={onFold}
@@ -188,6 +198,7 @@ function ReadMessage({
 function OpenMessage({
   presentation,
   formatWhen,
+  viewerUserId,
   renderRecords,
   renderActions,
   related,
@@ -218,8 +229,11 @@ function OpenMessage({
       </div>
     );
   }
-  const sender = presentation.from[0];
-  const name = sender ? partyName(sender) : t("email.detail.none");
+  const relay = relaySendOf(presentation, viewerUserId);
+  const sender = senderParties(presentation)[0];
+  const name = sender
+    ? partyName(sender)
+    : t(relay ? "trust.relaySent" : "email.detail.none");
   const toNames = presentation.to.map(partyName).filter(Boolean).join(", ");
   return (
     <article className="emailthread__message" aria-label={name}>
@@ -261,6 +275,7 @@ function OpenMessage({
           )}
         </button>
       </div>
+      {relay && <ProvenanceTag provenance={relay} />}
       {envelope && (
         <EmailEnvelope presentation={presentation} formatWhen={formatWhen}>
           <FiledUnder presentation={presentation} render={renderRecords} />

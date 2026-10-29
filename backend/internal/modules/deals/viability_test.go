@@ -234,3 +234,21 @@ func TestAnEligibleAssessmentNamesTheDayItsSilenceCrossesTheThreshold(t *testing
 		t.Fatalf("at the named day the deal reads %s, want review_required", after.Outcome)
 	}
 }
+
+func TestAnEarlierAnswerDefersTheReviewUntilItRunsOut(t *testing.T) {
+	t.Parallel()
+	asOf := time.Date(2026, time.October, 29, 9, 0, 0, 0, time.UTC)
+	until := asOf.AddDate(0, 0, 40)
+	in := ViabilityInput{
+		CreatedAt: asOf.AddDate(-1, 0, 0), LastCustomerProgressAt: new(asOf.AddDate(0, 0, -196)),
+		ExpectedClose: new(asOf.AddDate(0, 3, 0)), MailCovered: true, EarlierAnswerUntil: &until,
+	}
+	got := AssessViability(in, asOf, time.UTC)
+	if got.Outcome != viability.OutcomeWaiting || !slices.Equal(got.Reasons, []viability.Reason{viability.ReasonEarlierAnswer}) ||
+		got.NextChange == nil || !got.NextChange.Equal(until) {
+		t.Fatalf("got %s %v until %v, want waiting on the earlier answer until %s", got.Outcome, got.Reasons, got.NextChange, until)
+	}
+	if after := AssessViability(in, until, time.UTC); after.Outcome != viability.OutcomeReviewRequired {
+		t.Fatalf("once the answer ran out the deal reads %s, want a review", after.Outcome)
+	}
+}

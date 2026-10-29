@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/compose/draftcore -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
 [Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
@@ -349,7 +349,7 @@ To ask a contact to confirm their details in Margince, open the contact. In the 
 1. Open the contact's page.
 2. In **Communication permissions**, press **Ask them to confirm their details**.
 
-Margince mails a private link to the contact's own recorded address; you cannot send it to any other address. The link lasts 14 days and works once.
+Margince first shows you the mail as it will go out, and sends nothing until you confirm. You can pick another language than the installation's, and the page the link opens asks in it too. Margince mails a private link to the contact's own recorded address; you cannot send it to any other address. The link lasts 14 days and works once.
 Also called: double opt-in, consent request, GDPR confirmation.
 
 ### How do I send a privacy notice to a contact?
@@ -358,7 +358,7 @@ To send a privacy notice in Margince, open the **Privacy notice owed** item on y
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or the law lets you skip it, press **End the duty…** and record why.
 
-The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
+Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does Margince say "this installation cannot send mail"?
@@ -369,7 +369,7 @@ Also called: privacy notice not sent, cannot send notice.
 
 ### Which mailbox does Margince send from?
 Mail you write in Margince goes out from your own connected mailbox, so the contact sees your address.
-Mail Margince writes by itself goes out from the installation's own address, never from yours. That is the privacy notice, the confirmation link, password reset, invitations, and the weekly review and morning brief sent by email. Your administrator sets that address up.
+Mail Margince writes by itself goes out from the installation's own address, never from yours. That is the privacy notice, the confirmation link, password reset, invitations, and the weekly review and morning brief sent by email. Your administrator sets that address up. A privacy notice or confirmation request you send shows in the contact's history as **Sent by Margince for you**, with that address.
 Also called: sender address, from address, send as me.
 
 ## Asking someone to confirm their own details

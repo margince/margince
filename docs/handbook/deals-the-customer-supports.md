@@ -26,10 +26,17 @@ date you choose, at most 90 days from today, and asks for a reason. **Remind
 later** keeps the review open until the day you pick. When an override ends,
 the deal is not counted until the next check looks at it again.
 
+An answer to the older check, **Buyer has gone quiet**, still
+holds. Until it ends, the deal gets no review. A reminder from that check holds
+for at most 90 days from the day it was given.
+
 ## Count only deals the customer supports
 
 An admin can turn on **Count only deals the customer supports** in **Checks
-before the call**. It can be turned on once the first check has run. While it
+before the call**. It can be turned on once the first check has run. Beside
+the switch, the admin sees how many deals it would leave out right now. If
+that number changes before the admin switches, the switch is refused and shows
+the new number. While it
 is on:
 
 - The forecast answer adds a line: won deals plus confirmed commits that the
