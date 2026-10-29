@@ -686,7 +686,7 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
 			P95: stats.P95, Budget: budget, Samples: stats.Samples,
-			FirstP95: spec.firstP95, Incomplete: tally.incomplete,
+			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Empty: tally.empty,
 		},
 		Empty:  tally.empty,
 		Answer: tally.answer,

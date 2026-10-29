@@ -15,29 +15,35 @@ import (
 )
 
 // strictHomeCohort is one row and seat the strict Home lane must find measured,
-// and the budget it answers to.
+// and the budget it answers to. A filled cohort fails on an empty answer: the
+// corpus gives that seat data there, so empty means a source went missing.
 type strictHomeCohort struct {
 	requirement, row, seat string
 	budget                 time.Duration
+	filled                 bool
 }
 
 // strictHomeCohorts are Home's acceptance targets. They are stricter than the
 // published PERF rows and never consult DailyKnownIssues.
+//
+// The manager owns no records, so their brief and receipts are the declared
+// empty cohort: timed, but never required to hold anything.
 var strictHomeCohorts = []strictHomeCohort{
-	{"R02", "worklist", "rep", 750 * time.Millisecond},
-	{"R02", "worklist", "manager", 750 * time.Millisecond},
-	{"R02", "home_worklist", "rep", 750 * time.Millisecond},
-	{"R02", "home_worklist", "manager", 750 * time.Millisecond},
-	{"R04", "app_shell_me", "rep", 150 * time.Millisecond},
-	{"R04", "app_shell_me", "manager", 150 * time.Millisecond},
-	{"R04", "morning_load_cheap_route", "team", 150 * time.Millisecond},
-	{"R05", "home_brief", "rep", 200 * time.Millisecond},
-	{"R05", "home_handled", "rep", 200 * time.Millisecond},
-	{"R05", "home_handled", "manager", 200 * time.Millisecond},
-	{"R05", "home_magic", "rep", 200 * time.Millisecond},
-	{"R05", "home_magic", "manager", 200 * time.Millisecond},
-	{"R06", "admin_rail_ai_usage", "admin", 100 * time.Millisecond},
-	{"R06", "admin_rail_embed_reindex_identities", "admin", 100 * time.Millisecond},
+	{"R02", "worklist", "rep", 750 * time.Millisecond, true},
+	{"R02", "worklist", "manager", 750 * time.Millisecond, true},
+	{"R02", "home_worklist", "rep", 750 * time.Millisecond, true},
+	{"R02", "home_worklist", "manager", 750 * time.Millisecond, false},
+	{"R04", "app_shell_me", "rep", 150 * time.Millisecond, true},
+	{"R04", "app_shell_me", "manager", 150 * time.Millisecond, true},
+	{"R04", "morning_load_cheap_route", "team", 150 * time.Millisecond, false},
+	{"R05", "home_brief", "rep", 200 * time.Millisecond, true},
+	{"R05", "home_brief", "manager", 200 * time.Millisecond, false},
+	{"R05", "home_handled", "rep", 200 * time.Millisecond, true},
+	{"R05", "home_handled", "manager", 200 * time.Millisecond, false},
+	{"R05", "home_magic", "rep", 200 * time.Millisecond, true},
+	{"R05", "home_magic", "manager", 200 * time.Millisecond, false},
+	{"R06", "admin_rail_ai_usage", "admin", 100 * time.Millisecond, true},
+	{"R06", "admin_rail_embed_reindex_identities", "admin", 100 * time.Millisecond, false},
 }
 
 // JudgeStrictHome judges every strict cohort against the run's results. A
@@ -57,6 +63,9 @@ func JudgeStrictHome(results []DailyResult) []StrictVerdict {
 		worst := max(r.P95, r.FirstP95)
 		v.P95Ms, v.Samples = ms(worst), r.Samples
 		v.Failure = strictFailure(r, worst, c.budget)
+		if v.Failure == "" && c.filled && r.Empty {
+			v.Failure = "answered empty where the corpus holds data"
+		}
 		v.Pass = v.Failure == ""
 		verdicts = append(verdicts, v)
 	}
@@ -179,6 +188,20 @@ func TestUnavailableSourcesReadsTheWorklistsOwnField(t *testing.T) {
 	} {
 		if got := unavailableSources([]byte(body)); got != want {
 			t.Errorf("unavailableSources(%s) = %d, want %d", body, got, want)
+		}
+	}
+}
+
+func TestAnEmptyAnswerFailsOnlyWhereTheCorpusHoldsData(t *testing.T) {
+	results := strictCohortResults()
+	for i := range results {
+		results[i].Empty = true
+	}
+	for _, v := range JudgeStrictHome(results) {
+		filled := v.Name != "morning_load_cheap_route" && v.Name != "admin_rail_embed_reindex_identities" &&
+			(v.Seat != "manager" || v.Name == "worklist" || v.Name == "app_shell_me")
+		if v.Pass == filled {
+			t.Errorf("%s %s: pass=%v on an empty answer; want a failure exactly where the corpus holds data", v.Name, v.Seat, v.Pass)
 		}
 	}
 }

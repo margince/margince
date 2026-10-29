@@ -29,22 +29,36 @@ const (
 	dailyExpiredPerRep = 20
 )
 
-// dailyApprovalActor names the seeding agent in the audit trail.
-const dailyApprovalActor = "agent:bench-close-date"
+// The seed's two actors, as the close-date sweep has them: a system pass
+// stages the cards, and the owner's agent applies the ones on automatic.
+const (
+	dailyStagingActor  = "system:bench-close-date"
+	dailyApprovalActor = "agent:bench-auto-apply"
+)
 
-// DailyApprovals is what seedDailyApprovals wrote, for the record and the census.
-type DailyApprovals struct{ Pending, Applied, Expired int }
+// DailyApprovals is what seedDailyApprovals wrote, for the record and the
+// census, and the cards applyDailyApprovals is still to apply.
+type DailyApprovals struct {
+	Pending, Applied, Expired int
+	toApply                   []dailyApply
+}
 
-// seedDailyApprovals stages close-date cards on each rep's own open deals as
-// that rep's agent, through the approvals service's own staging path, then
-// applies some under policy so they become the day's "Done for you" receipts.
-// Expiry is the one fact set behind the product's back: a card ages into it
-// after a week, and the bench cannot wait one.
+// dailyApply is one staged card and the rep's agent that applies it.
+type dailyApply struct {
+	agent context.Context
+	id    ids.ApprovalID
+}
+
+// seedDailyApprovals stages close-date cards on each rep's own open deals the
+// way the close-date sweep does, through the approvals service's own staging
+// path. Expiry is the one fact set behind the product's back: a card ages
+// into it after a week, and the bench cannot wait one.
 func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64) DailyApprovals {
 	t.Helper()
 	ctx := context.Background()
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
 	svc, users := approvals.NewService(e.DB()), identity.NewServiceFor(e.DB())
+	sweep := principal.SystemActing(principal.WithWorkspaceID(ctx, ws), dailyStagingActor)
 	perRep := func(n int) int { return max(2, int(float64(n)*scale)) }
 	pending, applied, expired := perRep(dailyPendingPerRep), perRep(dailyAppliedPerRep), perRep(dailyExpiredPerRep)
 	var made DailyApprovals
@@ -52,13 +66,10 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 		repID := ids.MustParse(rep.UserID)
 		agent := dailyRepAgent(t, users, ws, repID)
 		for i, deal := range dailyOpenDeals(t, e, repID, pending+applied+expired) {
-			id := stageDailyCloseDate(t, svc, agent, deal, i)
+			id := stageDailyCloseDate(t, svc, sweep, deal, i)
 			switch {
 			case i < applied:
-				if _, err := svc.ApplyUnderPolicy(agent, id); err != nil {
-					t.Fatalf("applying close-date card %s under policy for %s: %v", id, rep.Name, err)
-				}
-				made.Applied++
+				made.toApply = append(made.toApply, dailyApply{agent, id})
 			case i < applied+expired:
 				if _, err := e.Owner.Exec(ctx, `UPDATE approval SET expires_at = now() - interval '1 hour' WHERE id = $1`, id); err != nil {
 					t.Fatalf("expiring close-date card %s: %v", id, err)
@@ -69,6 +80,22 @@ func seedDailyApprovals(t *testing.T, e *apptest.AppEnv, seats Seats, scale floa
 			}
 		}
 	}
+	return made
+}
+
+// applyDailyApprovals applies the cards each rep put on automatic, as that
+// rep's agent. It runs after the morning briefs, because "Done for you" lists
+// what ran since the reader's brief, and the day's automatic work comes after it.
+func applyDailyApprovals(t *testing.T, e *apptest.AppEnv, made DailyApprovals) DailyApprovals {
+	t.Helper()
+	svc := approvals.NewService(e.DB())
+	for _, card := range made.toApply {
+		if _, err := svc.ApplyUnderPolicy(card.agent, card.id); err != nil {
+			t.Fatalf("applying close-date card %s under policy: %v", card.id, err)
+		}
+		made.Applied++
+	}
+	made.toApply = nil
 	t.Logf("seed: approvals %d pending, %d applied today, %d expired", made.Pending, made.Applied, made.Expired)
 	return made
 }
@@ -114,7 +141,7 @@ func dailyOpenDeals(t *testing.T, e *apptest.AppEnv, rep ids.UUID, n int) []ids.
 
 // stageDailyCloseDate stages one "is this date right" card for a deal; the
 // i-th card proposes a date i days out, so no two cards carry one diff.
-func stageDailyCloseDate(t *testing.T, svc *approvals.Service, agent context.Context, deal ids.UUID, i int) ids.ApprovalID {
+func stageDailyCloseDate(t *testing.T, svc *approvals.Service, sweep context.Context, deal ids.UUID, i int) ids.ApprovalID {
 	t.Helper()
 	raw, err := json.Marshal(deals.CloseDateCorrection{
 		DealID:            ids.From[ids.DealKind](deal),
@@ -128,7 +155,7 @@ func stageDailyCloseDate(t *testing.T, svc *approvals.Service, agent context.Con
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := svc.Stage(agent, approvals.StageInput{
+	id, err := svc.Stage(sweep, approvals.StageInput{
 		Kind: deals.CloseDateCorrectionKind, ProposedChange: canonical, DiffHash: hash,
 		TargetType: "deal", TargetID: deal, Summary: "Move the close date",
 	})

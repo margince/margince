@@ -66,6 +66,7 @@ func TestDailyUseBudgets(t *testing.T) {
 	step("home_sources", func(t *testing.T) {
 		made = seedDailyApprovals(t, e, seats, scale)
 		makeDailyBriefs(t, e, seats)
+		made = applyDailyApprovals(t, e, made)
 		aiCalls = seedDailyAICalls(t, e, scale)
 	})
 
