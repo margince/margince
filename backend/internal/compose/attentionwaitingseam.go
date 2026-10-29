@@ -341,7 +341,7 @@ func (w attentionWaiting) emailRows(
 
 // emailSummariesReusingPlans reads the email rows behind a lane's rows. Its
 // statements key on the ids and spell kinds as literals, so the generic plan
-// serves; planned at every call they cost more to plan than to run.
+// serves. Planned at every call, they cost more to plan than to run.
 func emailSummariesReusingPlans(
 	ctx context.Context, store *activities.Store, activityIDs []ids.UUID,
 ) (map[ids.UUID]crmcontracts.EmailSummary, error) {
