@@ -21,10 +21,19 @@ somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
 same review.
 
-A review takes two answers. **Value is correct** keeps the deal counted until a
-date you choose, at most 90 days from today, and asks for a reason. **Remind
-later** keeps the review open until the day you pick. When an override ends,
-the deal is not counted until the next check looks at it again.
+A review takes four answers:
+
+- **The customer is back** closes the review. It needs a message or a meeting
+  from the customer, a confirmed close date and a planned next step. Until then
+  it is refused, and the refusal says what is missing. The deal counts again
+  after the next check.
+- **The customer asked us to wait** records the day on the deal. The review stays
+  open and the deal is not counted until that day. Then the review comes back.
+- **Value is correct** keeps the deal counted until a date you choose, at most
+  90 days from today, and asks for a reason. When it ends, the deal is not
+  counted until the next check looks at it again.
+- **Close as lost** closes the deal as lost with your reason, and closes the
+  review.
 
 An answer to the older check, **Buyer has gone quiet**, still
 holds. Until it ends, the deal gets no review. A reminder from that check holds
