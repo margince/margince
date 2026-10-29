@@ -46,8 +46,8 @@ import { nearestRank } from "./quantile";
  *
  * The times are the app's own journey marks (src/lib/journeymarks.ts). Every
  * journey is also judged by the answers the page was sent
- * (src/testing/homejourney.judge.ts), so a journey whose sections answered with
- * a gap counts as degraded and never as complete. A failed or timed-out
+ * (src/testing/homejourney.judge.ts). A journey whose sections answered with
+ * a gap counts as degraded, never as complete. A failed or timed-out
  * journey is counted as such, never as a latency.
  */
 

@@ -11,9 +11,9 @@ type MagicReceipt = components["schemas"]["MagicReceipt"];
  * journey marks and the Home benchmark both judge by this one rule.
  *
  * A source that failed is missing work, and so is a day with no `focus`,
- * because the lead card is drawn from it. A bounded read is not a gap:
- * `more_available` on a count or the readings and `scope_truncated` say there
- * is more than the page holds, which Home draws as a floor ("5+").
+ * because the lead card is drawn from it. A bounded read is not a gap.
+ * `more_available` and `scope_truncated` say the page holds less than exists,
+ * and Home draws that as a floor ("5+").
  */
 export function worklistGaps(day: Worklist): string[] {
   const gaps = failedSources(day.sources_unavailable).map(

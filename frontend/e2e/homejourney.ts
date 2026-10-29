@@ -24,7 +24,7 @@ const homeRead = (request: Request) =>
 
 /**
  * Every Home answer the page receives, filed under the journey its request
- * belongs to (RequestLedger), so a late answer or a retry is never judged as
+ * belongs to (RequestLedger). A late answer or a retry is never judged as
  * part of the next journey.
  */
 export class AnswerLog {
@@ -165,8 +165,8 @@ export async function journeyMarks(
 export const GLANCE = '[data-testid="brief-glance"]';
 
 /**
- * Samples the screen every frame until `stop`, so a moment the day left the
- * screen or showed someone else is seen even if it lasted one frame.
+ * Samples the screen every frame until `stop`. A moment the day left the
+ * screen or showed someone else is seen, even if it lasted one frame.
  */
 export function watchScreen(page: Page, day: string, greeting: string | null) {
   return page.evaluateHandle(
@@ -196,9 +196,9 @@ export function watchScreen(page: Page, day: string, greeting: string | null) {
 }
 
 /**
- * Times the next click on `target` from the browser's own input timestamp,
- * which includes any wait for a busy main thread, to the first frame in which
- * `answer` matches.
+ * Times the next click on `target` from the browser's own input timestamp to
+ * the first frame in which `answer` matches. The input timestamp includes any
+ * wait for a busy main thread.
  */
 export function probeClick(page: Page, target: string, answer: string) {
   return page.evaluateHandle(

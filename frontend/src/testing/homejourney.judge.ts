@@ -27,9 +27,9 @@ export type Answer = {
 };
 
 /**
- * What the reader's data holds, from `BENCH_HOME_EXPECT`: `work` (the day has
- * rows and a lead), `brief` (the morning brief has items), `handled` (receipts
- * exist), or `none` for a reader whose day is legitimately empty.
+ * What the reader's data holds, from `BENCH_HOME_EXPECT`. `work`: the day has
+ * rows and a lead. `brief`: the morning brief has items. `handled`: receipts
+ * exist. `none`: the reader's day is legitimately empty.
  */
 export type Expectation = { work: boolean; brief: boolean; handled: boolean };
 
@@ -99,7 +99,7 @@ function isSourceList(value: unknown): boolean {
   );
 }
 
-// Checks the fields Home and worklistGaps read, which is what makes an answer
+// Checks the fields Home and worklistGaps read. A gap there makes the answer
 // partial for this page; the rest of the contract is the api's own tests'.
 function isWorklist(body: unknown): body is Worklist {
   const focus = field(body, "focus");
@@ -269,9 +269,9 @@ export function outcomeOf(
 }
 
 /**
- * The samples of `metric` a budget is judged on: one per journey, and
- * infinite for a journey that was not complete or never reached it, so a
- * degraded journey can only push a quantile up.
+ * The samples of `metric` a budget is judged on, one per journey. A journey
+ * that was not complete or never reached it counts as infinite, so a degraded
+ * journey can only push a quantile up.
  */
 export function budgetSamples(
   journeys: readonly Journey[],
@@ -305,8 +305,8 @@ export const QUERY_RETRIES = 2;
 /**
  * Which journey each Home request belongs to. A request belongs to the
  * journey open when it started, and a retry to the journey of the request it
- * repeats, so a retry that lands after the next journey opened is never
- * charged to it. A journey is busy while a request of it is on the wire or a
+ * repeats. A retry that lands after the next journey opened is never charged
+ * to it. A journey is busy while a request of it is on the wire or a
  * retry of it is still due.
  */
 export class RequestLedger {

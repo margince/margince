@@ -105,7 +105,11 @@ describe("degradedReasons", () => {
   it("keeps a failed first answer against the page after a good retry", () => {
     const answers = [
       ...healthy(),
-      answer({ read: "worklist", status: 503, body: { code: "x" } }),
+      answer({
+        read: "worklist",
+        status: 503,
+        body: { code: "service_unavailable" },
+      }),
     ];
     expect(degradedReasons(answers, WORK, READER)).toEqual([
       "worklist: answered 503",
