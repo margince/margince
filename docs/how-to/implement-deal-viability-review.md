@@ -1,6 +1,9 @@
 # Implement deal viability review
 
-Status: reviewed and reconciled implementation plan. Product behavior below is proposed.
+Status: reviewed and reconciled implementation plan. The first slice is built: the pure assessment
+(`deals.AssessViability`), the `deal_viability` rule with a receipt per deal, one task per review
+episode, the qualified readings behind `assurance.qualified_forecast_enforced`, and the sweep's
+category notch held while enforcement is on. The rest is open in #9487 to #9492.
 Source baseline: `3f9a9d7d6196c6ab8e1d3f5bfb4accff15cb7414`.
 The Claude review used `5daf71807da3e2e719e4aa4dd0d831f07ebb8888`; section 11 records its dispositions.
 Section 12 records the inline outcome checks against the source baseline.
@@ -53,12 +56,13 @@ One assurance rule consumes that result. The date corrector never produces a sec
 
 | Capability | Source to extend |
 |---|---|
-| Customer and conversation evidence | [Engagement](../../backend/internal/modules/deals/engagement.go), [email move](../../backend/internal/modules/activities/emailmove.go), and its underlying activities predicates. |
+| Customer and conversation evidence | [Engagement](../../backend/internal/modules/deals/engagement.go), [email move](../../backend/internal/modules/activities/emailmove.go), and the awaiting-answer predicate it uses in [awaiting reply](../../backend/internal/modules/activities/awaitingreply.go). |
 | Pure viability and date facts | [Deal formulas](../../backend/internal/modules/deals/formulas.go) and [date assessment](../../backend/internal/modules/deals/closedate.go). |
 | Findings, coverage, and resolutions | [Assurance scan](../../backend/internal/modules/assurance/scan.go), [rules](../../backend/internal/modules/assurance/rules.go), [store](../../backend/internal/modules/assurance/store.go), and [resolution](../../backend/internal/modules/assurance/resolve.go). |
 | Persistent ordinary review tasks | [Bundle store](../../backend/internal/modules/assurance/bundle.go), [bundle composition](../../backend/internal/compose/assurancebundle.go), and [task adapter](../../backend/internal/compose/assurancebundletask.go). |
-| Monetary contributions and landing | [Forecast readings](../../backend/internal/modules/forecasting/readings.go), [landing](../../backend/internal/modules/forecasting/landing.go), and [forecast seam](../../backend/internal/compose/forecastseam.go). |
+| Monetary contributions and landing | [Forecast readings](../../backend/internal/modules/forecasting/readings.go), [landing](../../backend/internal/modules/forecasting/landing.go), [forecast seam](../../backend/internal/compose/forecastseam.go), and the per-deal weight in [weighted value](../../backend/internal/shared/kernel/values/weighted.go). |
 | Bounded run design | [Close-date membership](../../backend/internal/modules/deals/closedaterun.go), as an existing design to adapt within assurance's ownership. |
+| Category notch and its policy | [Close-date correction](../../backend/internal/modules/deals/closedatecorrect.go), through the `CorrectionPolicy` seam that [compose](../../backend/internal/compose/closedate.go) fills. |
 
 Keep modules within their table ownership. Compose connects them through declared transaction-aware seams.
 Reuse existing weighted-value arithmetic, activities writers, source identity locks, outbox, River, and migration/data-task infrastructure.

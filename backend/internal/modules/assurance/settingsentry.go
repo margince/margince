@@ -26,7 +26,7 @@ var QualifiedForecastEnforced = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED",
 	Type:    config.Bool,
 	Default: config.Some(false),
-	Doc:     "Leave a deal under an open viability review out of the qualified forecast, and stop the close-date sweep lowering forecast categories.",
+	Doc:     "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
 }, config.Store{
 	RBACObject: "installation_settings", AuditVerb: "update",
 	MachineryApplied: true, // the forecast read and the sweep read it for every seat

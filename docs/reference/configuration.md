@@ -292,7 +292,7 @@ admin can also change under Settings.
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal under an open viability review out of the qualified forecast, and stop the close-date sweep lowering forecast categories. |
+| `assurance.qualified_forecast_enforced` | `MARGINCE_ASSURANCE_QUALIFIED_FORECAST_ENFORCED` | — | `bool`, stored | `false` | api, worker | Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories. |
 
 ### `auth`
 
