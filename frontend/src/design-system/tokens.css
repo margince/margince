@@ -166,14 +166,16 @@
   --avatarBlobBC: 0.05;
   --avatarInkL: 0.43;
   --avatarInkC: 0.07;
-  --bgRail: #13231d;
-  /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
-   * (white-alpha icons on the dark green field in BOTH themes), and the
-   * workspace chip stays brand emerald even when the dark accent lightens. */
+  --bgInkField: #13231d;
+  /* The dark ink field: the one dark-green plate, the same in BOTH themes, for
+   * what passes over the page (a toast, the capture chip, a tooltip, a docked
+   * window's title bar, the client surface's bar). The sidebar is NOT on it:
+   * the sidebar is glass, `--pane` over the lit ground (shell.css `.rail`).
+   * The workspace chip stays brand emerald even when the dark accent lightens. */
   --overlayScrim: rgba(19, 35, 29, 0.4);
   --accentBrand: #0b7a53;
-  --railIconActive: #fff;
-  /* The onboarding dialog's dark glass, unthemed like the rail it sits beside:
+  --textOnInkField: #fff;
+  /* The onboarding dialog's dark glass, unthemed like the ink field:
    * the hero is dark in both themes, so its fill, quiet ink and shadow tint are
    * fixed. */
   --obDialogGlass: rgba(255, 255, 255, 0.16);
@@ -806,9 +808,8 @@
  * light-first."). The accent value is the ADR-0040 mandate; the surface and text
  * values are the structured dark counterparts pending a spec-side dark pass —
  * every component reads through the same custom properties, so re-tuning the
- * palette later touches only this block. The rail is unchanged: it is already
- * the dark ink-green field in both themes (§2b — white-alpha on --bgRail,
- * deliberately not theme tokens).
+ * palette later touches only this block. --bgInkField is unchanged: it is the
+ * same dark plate in both themes, deliberately not a theme token.
  */
 [data-theme="dark"] {
   --bgPage: #0c1311;
@@ -826,8 +827,8 @@
 
   --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
-     fill that ISN'T --accent and doesn't lighten here (the rail toast on
-     --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
+     fill that ISN'T --accent and doesn't lighten here (a toast on
+     --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
      the Core's own glass) — dark ink there is a control-boundary failure,
      not a contrast fix, on backgrounds this palette never touches. The five
      state tones are NOT in that set: --textOnStatusControl is their ink, and
@@ -846,7 +847,7 @@
      in", "Send reset link", "Set new password". This ink gives 5.04:1.
      Light theme keeps white at 5.35:1. Scoped to --textOnAccentControl, not
      --textOnAccent: the latter still inks the fills that stay dark here
-     (--bgRail, --ai), where this same dark ink would fail rather than fix
+     (--bgInkField, --ai), where this same dark ink would fail rather than fix
      contrast. */
   --textOnAccentControl: #04240f;
   /* The same flip, one theme later: a filled state control's ground is the

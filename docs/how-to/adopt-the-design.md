@@ -24,7 +24,7 @@ Read this before you touch a stylesheet. Each gate checks one clear rule.
 
 | Gate | What it holds | What the new style must do |
 |---|---|---|
-| `tokens.test.ts` | Pins about 40 token values (`canonical`), the surface light ladders in both themes, AA contrast of five ink tokens on five ground tokens, chip colours, `--accent` = `#0b7a53`, `--bgRail` = `#13231d` and missing from dark, the dark `@media` block byte-equal to `[data-theme="dark"]`, and `brand.css` as derived values only | Change `tokens.css` and the `canonical` table in one commit. Keep both ladders in order. Check the contrast again on the new ground tokens. Keep the two dark blocks the same. Keep `--bgRail` declared (the rail stops using it, the pin stays) |
+| `tokens.test.ts` | Pins about 40 token values (`canonical`), the surface light ladders in both themes, AA contrast of five ink tokens on five ground tokens, chip colours, `--accent` = `#0b7a53`, `--bgInkField` = `#13231d` and missing from dark, the dark `@media` block byte-equal to `[data-theme="dark"]`, and `brand.css` as derived values only | Change `tokens.css` and the `canonical` table in one commit. Keep both ladders in order. Check the contrast again on the new ground tokens. Keep the two dark blocks the same. Keep `--bgInkField` declared: it is the field under a tooltip, never the sidebar |
 | `check-ds-purity.sh` + `conformance.test.ts` | No colour value outside `tokens.css` (only `provider-mark.tsx` may have one) | Every new colour is a token, the glow and each pane included |
 | `check-font-lock.sh` + `conformance.test.ts` + `mono.test.ts` | Three font families only: Outfit, Geist, Geist Mono. Outfit stays by decision, after the display font of the mock was tried in Step 1. Geist Mono only on `pre`, `code`, `samp` and `.code-block`; `frontend/scripts/check-font-lock.sh` and `frontend/src/design-system/mono.test.ts` refuse it in any other place | Change the family in **four** places in one pull request: the strip list of the script, `allowedFamilies` in `conformance.test.ts`, `--f-*` in `tokens.css` (pinned), and the Google Fonts link in `index.html` |
 | `check-ds-spacing.sh` | No new `px` value in `padding`, `margin` or `gap` outside `design-system/` | Screen CSS uses `--space-*`; design-system CSS may keep a `px` value that looks right |
@@ -65,9 +65,9 @@ The shell comes last in this group: it is the part users see most, and the safes
 3. **The accent and the agent.** `--accent` stays `#0b7a53` (pinned). The `--ai` family stays.
    Add `--aiBg` (the row colour) and `--aiLine` if `--aiLight` and `--aiMed` do not match the mock.
    Or map the mock to them, and update the mock.
-4. **Rail tokens.** The design has no dark rail.
-   `--bgRail` and the `--rail*` family stay declared (pinned), and `shell.css` stops using them.
-   Note in `tokens.css` that they are no longer used.
+4. **Ink field tokens.** The design has no dark sidebar.
+   `--bgInkField` and `--textOnInkField` stay declared (pinned) for what passes over the page, such
+   as a tooltip. The sidebar never uses them.
 5. **Fonts.** Outfit (display, 600), Geist (body, 400/500/600, numbers included), Geist Mono (code only,
    400/500).
    A number lines up through `font-variant-numeric: tabular-nums` (`.t-num`), not a mono font.
@@ -144,8 +144,8 @@ Stories: update every changed story. The catalog test needs no new rows unless a
    background.
    That is `--glowA` and `--glowB`; they are not an element, and not a motion.
 2. **Rail.** `glass` (`--pane` and `blur`) over the glow, a hairline on the right, no dark ground.
-   Closed, it stays **64px**. The 44px touch targets and the tooltip rule in `shell.css` depend on that width.
-   Breaking them for the 52px of the mock costs too much. Open, it is 224px, not 252.
+   Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
+   depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.

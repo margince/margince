@@ -164,7 +164,8 @@ body {
  * Both properties sit on `*`: `scrollbar-width` does not inherit at all, and an
  * inherited colour would hand a hovered scroller's accent to every bar nested
  * inside it. The track is transparent because a scroller is not always on
- * --bgPage — the rail is a dark green field, a code block has its own fill.
+ * --bgPage — the sidebar is glass, a docked window is on the ink field, a code
+ * block has its own fill.
  */
 *,
 ::backdrop {
