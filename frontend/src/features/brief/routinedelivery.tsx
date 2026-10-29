@@ -7,7 +7,6 @@ import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
-import { useWorklist } from "../worklist/worklist.queries";
 import { useTeams } from "./teams.queries";
 
 type Delivery = components["schemas"]["BriefDelivery"];
@@ -41,8 +40,9 @@ export function RoutineDeliveryRows({
   const t = useT();
   const me = useMe();
   const teams = useTeams();
-  const day = useWorklist("mine", "all");
-  const reach = day.data?.pages[0]?.team_week ?? "none";
+  // From /me, not the worklist: assembling the whole day to learn one answer
+  // made this screen wait on the slowest read in the app.
+  const reach = me.data?.team_week ?? "none";
   const selectedScope = settings.routine_mail_scope ?? "personal";
   const teamOptions = (teams.data ?? [])
     .filter(

@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,8 +17,6 @@ function story(delivery: Record<string, string>, routes: RouteMap = {}) {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /teams": () => jsonResponse({ data: [] }),
-      "GET /worklist": () =>
-        jsonResponse({ ...readingsDay(), team_week: "none" }),
       "GET /me/brief-delivery": () => jsonResponse(delivery),
       ...routes,
     });

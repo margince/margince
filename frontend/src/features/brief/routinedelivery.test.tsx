@@ -89,3 +89,18 @@ it("does not offer inbox choices until the stored choices are known", async () =
     en["delivery.none"],
   );
 });
+
+it("decides the team choices from /me and never assembles the worklist to do it", async () => {
+  const calls = stubApi({
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
+  });
+  render(<Page />);
+  await screen.findByTestId("delivery-time");
+  await waitFor(() =>
+    expect(calls.some((call) => call.path.startsWith("/me"))).toBe(true),
+  );
+  expect(calls.filter((call) => call.path.startsWith("/worklist"))).toEqual(
+    [],
+  );
+});

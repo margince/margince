@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
 import { SettingList } from "../../design-system/settingrow";
-import { readingsDay } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -27,8 +26,6 @@ export const Personal: Story = {
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /teams": () => jsonResponse({ data: [] }),
-      "GET /worklist": () =>
-        jsonResponse({ ...readingsDay(), team_week: "none" }),
     });
     return (
       <StoryProviders>
