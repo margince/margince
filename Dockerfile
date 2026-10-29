@@ -210,6 +210,9 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 WORKDIR /app
 COPY --from=gobase /src/build/composition/api/ ./build/composition/api/
 COPY --from=gobase /src/build/composition/frontend/ ./build/composition/frontend/
+# The frontend files units replace, as gen-composition checked them. The paths
+# in it are relative to the repository root, so they hold under /app.
+COPY --from=gobase /src/build/composition-frontend/overrides.json /src/build/composition-frontend/overrides.check.ts ./build/composition-frontend/
 COPY package.json pnpm-workspace.yaml ./
 COPY frontend/ ./frontend/
 # The unit trees, because a unit's frontend layer is a workspace member and the

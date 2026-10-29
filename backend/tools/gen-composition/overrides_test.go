@@ -276,6 +276,9 @@ func TestEmitOverridesWritesTheBundlerMapAndTheExportCheck(t *testing.T) {
 	if err := json.Unmarshal(raw, &written); err != nil {
 		t.Fatal(err)
 	}
+	if want := "extensions/acme/frontend/overrides/" + railTarget; got.Replaced[0].Source != want {
+		t.Fatalf("source = %q, want %q: the map must hold in an image whose tree sits elsewhere", got.Replaced[0].Source, want)
+	}
 	if len(written) != 1 || written[0] != got.Replaced[0] {
 		t.Fatalf("bundler map = %+v, want %+v", written, got.Replaced)
 	}
@@ -286,6 +289,7 @@ func TestEmitOverridesWritesTheBundlerMapAndTheExportCheck(t *testing.T) {
 	for _, want := range []string{
 		`import type * as Original0 from "@margince-core/src/app/shellrail";`,
 		"export type Check0 = Keeps<typeof Override0, typeof Original0>;",
+		`import type * as Override0 from "../../extensions/acme/frontend/overrides/src/app/shellrail";`,
 	} {
 		if !strings.Contains(string(check), want) {
 			t.Errorf("type check is missing %q:\n%s", want, check)
