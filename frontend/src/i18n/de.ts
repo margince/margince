@@ -7170,6 +7170,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Deal ist noch nicht beurteilt und zählt ebenfalls nicht.",
   "review.enforcementPreviewUnknown_other":
     "{count} Deals sind noch nicht beurteilt und zählen ebenfalls nicht.",
+  "review.revive": "Der Kunde ist zurück",
+  "review.reviveHelp":
+    "Zählt den Deal wieder, sobald der Kunde geschrieben oder sich mit dir getroffen hat, das Abschlussdatum bestätigt und ein nächster Schritt geplant ist.",
+  "review.wait": "Der Kunde hat um Geduld gebeten",
+  "review.waitHelp":
+    "Hält das Warten am Deal fest. Bis dahin zählt der Deal nicht, und die Prüfung kommt an diesem Tag zurück.",
+  "review.waitUntil": "Warten bis",
+  "review.closeLost": "Als verloren schließen",
+  "review.closeLostHelp": "Schließt den Deal als verloren, mit deinem Grund.",
   "review.enforcementOn": "Die gestützte Prognose ist an.",
   "review.enforcementOff": "Die gestützte Prognose ist aus.",
   "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",

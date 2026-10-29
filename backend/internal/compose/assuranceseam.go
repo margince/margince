@@ -120,7 +120,7 @@ const assuranceSubjectsSQL = `
 		               AND %[5]s)) AS unmet_exit_criteria
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
+		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
 		ORDER BY d.id`
 
 // closePushWindow bounds how far back the close-date-push count looks. One
@@ -155,6 +155,14 @@ const closePushWindow = 90 * 24 * time.Hour
 func AssuranceSubjects(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage,
 ) ([]assurance.Subject, error) {
+	return assuranceSubjects(ctx, tx, asOf, coverage, nil)
+}
+
+// assuranceSubjects is AssuranceSubjects, narrowed to one deal when only is set:
+// a review answer is checked against the same evidence the nightly pass reads.
+func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only *ids.UUID,
+) ([]assurance.Subject, error) {
 	now := asOf.UTC()
 	zone, err := installationZoneTx(ctx, tx)
 	if err != nil {
@@ -172,7 +180,7 @@ func AssuranceSubjects(
 	query := fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
-		earlierAnswerSQL("d", "$2", arg))
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
@@ -268,6 +276,14 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
 		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
+}
+
+// onlyDealSQL narrows the read to one deal, or to none of them when unset.
+func onlyDealSQL(only *ids.UUID, arg func(any) int) string {
+	if only == nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND d.id = $%d", arg(*only))
 }
 
 // visibleToAllSQL admits an activity every member may read. The check runs as

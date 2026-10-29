@@ -2035,8 +2035,16 @@ func (stubs) ListInputChecks(w nethttp.ResponseWriter, r *nethttp.Request, param
 	httperr.NotImplemented(w, r, "ListInputChecks")
 }
 
+func (stubs) CloseLostInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CloseLostInputCheck")
+}
+
 func (stubs) ResolveInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ResolveInputCheck")
+}
+
+func (stubs) WaitInputCheck(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "WaitInputCheck")
 }
 
 func (stubs) PreviewForecastAssurance(w nethttp.ResponseWriter, r *nethttp.Request) {
