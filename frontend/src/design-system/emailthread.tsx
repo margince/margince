@@ -55,13 +55,16 @@ export function EmailThread({
     related?: () => ReactNode;
     notice?: string;
   }>) {
+  const messages = threadOrder(presentation);
+  const newestId = messages[0]?.activity_id ?? presentation.id;
+  const [seenNewest, setSeenNewest] = useState(newestId);
   const [opened, setOpened] = useState<ReadonlySet<string>>(
-    () =>
-      new Set([
-        threadOrder(presentation)[0]?.activity_id ?? presentation.id,
-        presentation.id,
-      ]),
+    () => new Set([newestId, presentation.id]),
   );
+  if (seenNewest !== newestId) {
+    setSeenNewest(newestId);
+    setOpened((was) => new Set([...was, newestId]));
+  }
   const toggle = (id: string) =>
     setOpened((was) => {
       const next = new Set(was);
@@ -77,7 +80,7 @@ export function EmailThread({
         </p>
       )}
       <ol className="emailthread__list">
-        {threadOrder(presentation).map((summary) => {
+        {messages.map((summary) => {
           const isOpen = opened.has(summary.activity_id);
           const self = summary.activity_id === presentation.id;
           return (

@@ -41,7 +41,7 @@ To send a follow-up email in Margince, open the contact's **History** tab and pr
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
-To reply to one message in Margince, open the email reader and press **Reply** below that message. The reader shows the newest message first. The newest message and the one you opened both show their text. Close the composer to return to the thread.
+To reply to one message in Margince, open the email reader and press **Reply** below that message. Select an older message first to show its text and **Reply**. The newest message appears first and opens with the one you came from. Close the composer to return to the thread.
 You can also pick a message under **Threads** in the composer. The line above the recipients says which message you answer.
 
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.

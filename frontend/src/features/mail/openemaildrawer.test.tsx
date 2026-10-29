@@ -3,10 +3,11 @@
 // The email drawer's verbs: Reply and Forward open the composer in place of
 // the drawer, and the drawer comes back when the composer closes.
 
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { emailDetailKey } from "../../design-system/emailmessage";
 import { threadOrder } from "../../design-system/emailthread";
 import {
   messageText,
@@ -103,17 +104,66 @@ function drawer(
       }),
     ...overrides,
   });
-  render(
+  const view = render(
     <OpenEmailDrawer
       activityId={MESSAGE}
       zone={viewerZone()}
       onClose={vi.fn()}
     />,
   );
-  return sent;
+  return { ...view, sent };
 }
 
 describe("the email drawer's verbs", () => {
+  it("opens a new latest message on refresh without reopening folded messages", async () => {
+    const user = userEvent.setup();
+    let current = PRESENTATION;
+    const latest: EmailPresentation = {
+      ...PRESENTATION,
+      id: LATEST,
+      body: "The revised offer works for us.",
+      summary: {
+        ...PRESENTATION.summary,
+        activity_id: LATEST,
+        occurred_at: "2026-09-02T09:15:00Z",
+      },
+      occurred_at: "2026-09-02T09:15:00Z",
+      from: [{ address: "buyer@example.test", display_name: "Latest sender" }],
+    };
+    const { queryClient } = drawer(PRESENTATION, {
+      [`GET /activities/${MESSAGE}/email-presentation`]: () =>
+        jsonResponse(current),
+      [`GET /activities/${LATEST}/email-presentation`]: () =>
+        jsonResponse(latest),
+    });
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Fold the message from Ana Sommer",
+      }),
+    );
+    current = {
+      ...PRESENTATION,
+      thread: { members: [latest.summary], next_cursor: null },
+    };
+    await act(() =>
+      queryClient.invalidateQueries({ queryKey: emailDetailKey(MESSAGE) }),
+    );
+    expect(
+      await screen.findByRole("article", { name: "Latest sender" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "Ana Sommer" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Fold the message from Latest sender",
+      }),
+    );
+    await act(() =>
+      queryClient.invalidateQueries({ queryKey: emailDetailKey(MESSAGE) }),
+    );
+    expect(screen.queryByRole("article", { name: "Latest sender" })).toBeNull();
+    expect(screen.queryByRole("article", { name: "Ana Sommer" })).toBeNull();
+  });
+
   it("orders equal-time messages consistently whichever message was opened", () => {
     const sibling = { ...PRESENTATION.summary, activity_id: LATEST };
     const fromOlder = threadOrder({
@@ -195,7 +245,7 @@ describe("the email drawer's verbs", () => {
           { address: "buyer@example.test", display_name: "Latest sender" },
         ],
       };
-      const sent = drawer(
+      const { sent } = drawer(
         {
           ...PRESENTATION,
           thread: {
