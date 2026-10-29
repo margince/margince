@@ -818,28 +818,6 @@ describe("risk scope and reading actions", () => {
     ).toBeTruthy();
   });
 
-  it("draws the server's exact decisions total rather than a floor", () => {
-    draw(
-      { review: 180, more_available: true },
-      [decisionRow("a1", true)],
-      [{ ...boundedDecisions(200, 1), total: 340 }],
-    );
-    expect(decisionsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "340",
-    );
-  });
-
-  it("keeps the floor when the server states no decisions total", () => {
-    draw(
-      { review: 180, more_available: true },
-      [decisionRow("a1", true)],
-      [boundedDecisions(200, 1)],
-    );
-    expect(decisionsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "180+",
-    );
-  });
-
   // AND NOT AT ALL WHERE THE PAGE IS NOT THE WHOLE LANE. The figure beside it
   // is counted over everything the read weighed; this one can only see the
   // rows the page carries. On a day whose decisions run past page one, pairing

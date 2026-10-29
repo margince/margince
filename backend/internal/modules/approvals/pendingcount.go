@@ -54,8 +54,8 @@ func (s *Service) CountPending(ctx context.Context, in ListInput) (PendingCount,
 }
 
 // CountPendingForTarget counts every row PendingForTarget would list for one
-// record, past its scan cap: the same stored-pending rows, lazy expiry and
-// decidability, with personal mutes included as the record page includes them.
+// record, past its scan cap. It applies the same stored-pending rows, lazy
+// expiry and decidability, and includes personal mutes as the record page does.
 // It joins the caller's transaction, so the count and the capped list read one
 // snapshot.
 func (s *Service) CountPendingForTarget(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (int, error) {

@@ -19,8 +19,8 @@ import (
 )
 
 // The account page counts every proposal on the account the reader could
-// decide, the number the approvals inbox narrowed to that account answers,
-// while its list of them stays a capped page.
+// decide. That is the number the approvals inbox narrowed to the account
+// answers. The list of them stays a capped page.
 func TestTheAccountPageCountsEveryPendingProposalPastTheScanCap(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Harbor", nil)

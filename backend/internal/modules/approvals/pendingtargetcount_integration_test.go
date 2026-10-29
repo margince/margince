@@ -18,7 +18,7 @@ import (
 
 // targetCount reads the record count and the record list in one transaction,
 // as the company page does.
-func (e *stagingEnv) targetCount(t *testing.T, as context.Context, target ids.UUID) (count, listed int) {
+func (e *stagingEnv) targetCount(as context.Context, t *testing.T, target ids.UUID) (count, listed int) {
 	t.Helper()
 	if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
 		var err error
@@ -73,7 +73,7 @@ func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) 
 
 	company := tableCompany
 	want := pagedPending(decider, t, e.svc, ListInput{TargetType: &company, TargetID: &target, IncludeMuted: true})
-	count, listed := e.targetCount(t, decider, target)
+	count, listed := e.targetCount(decider, t, target)
 	if count != len(want) {
 		t.Fatalf("record count %d, the inbox narrowed to the record holds %d", count, len(want))
 	}
@@ -90,7 +90,7 @@ func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) 
 		outsider, "outsider-"+outsider.String()+"@st.test"); err != nil {
 		t.Fatalf("seeding the outsider: %v", err)
 	}
-	if count, _ := e.targetCount(t, sharedSeat(e.ws, outsider), target); count != 0 {
+	if count, _ := e.targetCount(sharedSeat(e.ws, outsider), t, target); count != 0 {
 		t.Errorf("a seat that can decide none of them counted %d", count)
 	}
 }

@@ -60,7 +60,7 @@ func foldRoutineDecisions(rows []ranked) []ranked {
 
 // foldRoutineDecisionsBounded is the same fold, told which sources stopped
 // short of their exact total. A group drawn from such a source states its count
-// as a floor, and a group whose sources were read whole states it as a total.
+// as a floor. A group whose sources were read whole states it as a total.
 // keySystemIncident groups repeated failures of ONE broken thing. It is the one
 // batch key whose members are system trouble rather than routine tidying, and
 // several rules read it to tell the two apart.

@@ -179,7 +179,7 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 		return out, err
 	}
 	if triageable {
-		count, err := a.svc.approvals.CountPendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
+		count, err := a.svc.approvals.CountPendingForTarget(ctx, tx, entityTypeCompany, a.companyID.UUID)
 		if err != nil {
 			return out, err
 		}

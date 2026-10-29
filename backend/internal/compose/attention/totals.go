@@ -8,14 +8,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// exactSources names the sources a store counted exactly over the population
-// this page admits, keyed to that count.
-//
-// The approvals count is taken under the lane's own query, and narrowToScope
-// keeps an approval by the same requested-decider rule for every scope but
-// team. The team narrowing keeps former teammates and judges by a roster the
-// lane query does not share, so there the two populations differ and the count
-// is not offered.
+// exactSources maps each source a store counted in full, over the rows this
+// page admits, to that count. The approvals count uses the lane's own query.
+// narrowToScope applies the same requested-decider rule in every scope but
+// team. The team scope judges by a roster the lane query does not share, so
+// there the count is not offered.
 func (s *Service) exactSources(day crmcontracts.Attention, scope string) map[crmcontracts.WorklistItemSource]int {
 	exact := map[crmcontracts.WorklistItemSource]int{}
 	if day.Counts.ApprovalsOpen != nil && (s.taskOwner != ids.Nil || scope != scopeTeam) {
@@ -25,11 +22,10 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string) map[crm
 }
 
 // withTotals states each category's exact total where every source behind it
-// is whole: read to the end, or read short with an exact count from its store.
-//
-// A source short of its total with no exact count, a lane that never answered,
-// or a scope cut at its roster leaves the total absent, because each of them
-// hides items no figure here can name.
+// is whole. Whole means read to the end, or read short with a store's count.
+// Three things leave the total absent: a short source with no count, a lane
+// that never answered, and a scope cut at its roster. Each hides items no
+// figure here can name.
 func withTotals(
 	counts []crmcontracts.WorklistCount, considered []ranked, bounds map[crmcontracts.WorklistItemSource]bool,
 	exact map[crmcontracts.WorklistItemSource]int, missing []crmcontracts.WorklistSourceUnavailable, scoped scopeNote,
@@ -37,15 +33,9 @@ func withTotals(
 	if scoped.truncated || scoped.failed {
 		return counts
 	}
-	unread := map[crmcontracts.WorklistCountCategory]bool{}
-	for _, source := range missing {
-		if source.ContributesRows != nil && !*source.ContributesRows {
-			continue
-		}
-		if source.Category == nil {
-			return counts
-		}
-		unread[crmcontracts.WorklistCountCategory(*source.Category)] = true
+	unread, known := unreadCategories(missing)
+	if !known {
+		return counts
 	}
 	// Keyed by the row's own category, which countsOf counts under; a bounded
 	// source with no row left is filed by categoryOfSource, as countsOf files it.
@@ -83,4 +73,20 @@ func withTotals(
 		counts[i].Total = new(total[category])
 	}
 	return counts
+}
+
+// unreadCategories names the categories a missing lane would have put rows in.
+// known is false when one such lane names no category, so none can be trusted.
+func unreadCategories(missing []crmcontracts.WorklistSourceUnavailable) (unread map[crmcontracts.WorklistCountCategory]bool, known bool) {
+	unread = map[crmcontracts.WorklistCountCategory]bool{}
+	for _, source := range missing {
+		if source.ContributesRows != nil && !*source.ContributesRows {
+			continue
+		}
+		if source.Category == nil {
+			return nil, false
+		}
+		unread[crmcontracts.WorklistCountCategory(*source.Category)] = true
+	}
+	return unread, true
 }
