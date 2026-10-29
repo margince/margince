@@ -137,6 +137,10 @@
     border: 0;
     border-radius: 0;
     background: none;
+    /* A row is no pane, so it hands on its host's ground and edge. */
+    --ground: inherit;
+    --groundEdge: inherit;
+    --groundSeam: inherit;
     padding: var(--space-3) 0;
     min-block-size: 0;
     display: grid;

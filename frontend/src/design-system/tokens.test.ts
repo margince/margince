@@ -372,8 +372,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
 
     it("makes level 1 opaque without moving it", () => {
       for (const pal of Object.values(themes)) {
-        expect(luminanceOf(pal["--ladder1Solid"])).toBe(
-          luminanceOf(composite(pal["--pane"], pal["--bgPage"])),
+        expect(composite(pal["--ladder1Solid"], pal["--bgPage"])).toBe(
+          composite(pal["--pane"], pal["--bgPage"]),
         );
       }
     });

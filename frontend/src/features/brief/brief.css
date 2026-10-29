@@ -451,7 +451,7 @@
   /* A rim in the pane's own ground, so the disc sits ON the line rather than
      being cut by it. A border rather than a spread shadow: depth here is the
      three tokens', and this is not depth. */
-  border: 2px solid var(--bgElevated);
+  border: 2px solid var(--ground);
 }
 
 /* The badge sits WITH the title rather than after it, so a meeting whose name

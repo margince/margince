@@ -2325,7 +2325,7 @@ span.error-line {
    see StatCard's `alert` docblock. Two classes deliberately, so this beats a
    strip's own `> *` background reset regardless of stylesheet order. */
 .stat-card.stat-card-alert {
-  background: var(--dangerBg);
+  background-image: linear-gradient(var(--dangerBg), var(--dangerBg));
 }
 
 /*

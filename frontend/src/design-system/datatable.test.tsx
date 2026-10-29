@@ -488,8 +488,8 @@ it("pins the first column of a table that asks, on DataTable and by hand", () =>
 it("gives a pinned cell an opaque ground at rest and under the pointer", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const css = readFileSync(join(here, "atoms.css"), "utf8");
-  expect(css).toMatch(
-    /\.table-scroll-sticky > table > \* > tr > :first-child \{[^}]*background: var\(--ground\);/,
+  expect(css).toContain(
+    "}\n.table-scroll-sticky > table > * > tr > :first-child {\n  position: sticky;\n  inset-inline-start: 0;\n  z-index: 1;\n  background: var(--ground);\n}",
   );
   expect(css).toContain(
     ".table-scroll-sticky > .table > tbody > tr:hover > :first-child {\n  background: var(--groundHover);",

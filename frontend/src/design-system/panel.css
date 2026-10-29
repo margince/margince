@@ -524,7 +524,7 @@
 .filter-clause[data-proposed] {
   border-width: 1.5px;
   border-style: dashed;
-  background: var(--aiLight);
+  background-image: linear-gradient(var(--aiLight), var(--aiLight));
 }
 .staging-card {
   border-radius: var(--r-md);

@@ -193,6 +193,7 @@
    a status rather than an alert. */
 .ob-gate-alert.is-resumed {
   border-color: var(--borderStrong);
+  background: var(--ground);
 }
 
 /* Which model is about to read the site, stated before the address is handed

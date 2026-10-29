@@ -685,8 +685,8 @@
   border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
   background: linear-gradient(
     165deg,
-    color-mix(in srgb, var(--arTone) 7%, var(--bgElevated)),
-    var(--bgElevated) 70%
+    color-mix(in srgb, var(--arTone) 7%, var(--ground)),
+    var(--ground) 70%
   );
   border-bottom: 1px solid var(--borderSubtle);
 }

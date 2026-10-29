@@ -9,7 +9,8 @@ export type LadderLists = Readonly<{
   overlays: readonly string[];
 }>;
 
-// Depth from the page ground: a pane on the page is level 1.
+// Depth from the page ground: a pane on the page is level 1. From level 2 the
+// house hairline fades into the ground, so a seam takes the edge.
 export const PAGE_RUNGS = [
   {
     ground: "var(--ladder1Solid)",
@@ -51,14 +52,28 @@ export const PINNED_RUNGS = [
   { selector: '.stat-strip[data-density="plate"]', level: 2, takes: "edge" },
 ] as const;
 
-// A host that paints a layer under its content: a ring, a glow, the waves. A
-// pane on it paints its opaque ground: level 1's paint is see-through in dark.
+// A host with a layer under its panes: a ring, a glow, the waves, a gradient.
+// Level 1's paint is see-through in dark, so a pane on it paints its ground.
 export const UNDERLAY_HOSTS = [
+  ".aipending-sheen",
+  ".arhit",
+  ".arphead",
+  ".avatar-mesh",
   ".brief-triage-frame",
+  ".co-move",
+  ".core-glass",
+  ".core-glow",
+  ".core-rim",
+  ".meterbar span",
+  ".ob-build",
+  ".ob-page",
+  ".ob-stage-flash",
+  ".ob-stage-light",
+  ".rail .arhit",
+  ".standing-sheet > .standing-sheet-pane",
   ":has(> .ambient-waves)",
 ] as const;
 
-// From level 2 the house hairline fades into the ground, so a seam takes the edge.
 type Rung = Readonly<{
   ground: string;
   paint: string;
@@ -91,8 +106,8 @@ function compound(list: readonly string[], at: number, of: number): string {
   return [`${at === 0 ? "" : "  "}:where(`, ...items, close].join("\n");
 }
 
-// Mixed where --ground is declared: a custom property resolves its var() on the
-// element that declares it, so :root cannot hand this down.
+// var(--ground) resolves on the element that declares the shade, so every rule
+// that sets --ground declares the shades again.
 const SHADES = [
   ["Hover", "hover"],
   ["Strip", "strip"],
@@ -133,7 +148,7 @@ export function ladderSheet(
         : `  --groundEdge: ${rung.edge};\n`;
     return `:where(${selector}) {\n${body}}\n`;
   });
-  const hosts = `:where(${UNDERLAY_HOSTS.join(", ")})`;
+  const hosts = compound(UNDERLAY_HOSTS, 0, 2);
   const underlay = `${hosts}\n${compound(surfaces, 1, 2)} {\n  background-color: var(--ground);\n}\n`;
   return [
     HEADER,
@@ -164,5 +179,38 @@ export function ladderLists(sheet: string): LadderLists {
   return {
     surfaces: listOf(PAGE_RUNGS[0]),
     overlays: listOf(OVERLAY_RUNG),
+  };
+}
+
+export function editedLists(
+  current: LadderLists,
+  args: readonly string[],
+): LadderLists {
+  const listed = [...current.surfaces, ...current.overlays];
+  if (args[0] === "--remove") {
+    const gone = args.slice(1);
+    const unknown = gone.filter((selector) => !listed.includes(selector));
+    if (gone.length === 0 || unknown.length > 0) {
+      throw new Error(`not on the ladder: ${unknown.join(", ") || "(none)"}`);
+    }
+    return {
+      surfaces: current.surfaces.filter((one) => !gone.includes(one)),
+      overlays: current.overlays.filter((one) => !gone.includes(one)),
+    };
+  }
+  const split = args.indexOf("--");
+  const surfaces = split < 0 ? args : args.slice(0, split);
+  const overlays = split < 0 ? [] : args.slice(split + 1);
+  const added = [...surfaces, ...overlays];
+  const twice = added.filter(
+    (selector, at) =>
+      listed.includes(selector) || added.indexOf(selector) !== at,
+  );
+  if (twice.length > 0) {
+    throw new Error(`already on the ladder: ${twice.join(", ")}`);
+  }
+  return {
+    surfaces: [...current.surfaces, ...surfaces],
+    overlays: [...current.overlays, ...overlays],
   };
 }

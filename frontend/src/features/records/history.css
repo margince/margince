@@ -28,8 +28,7 @@
   gap: var(--space-2);
 }
 
-/* A well inside the card, which is what --bgInset is for, and the list's own gap
-   is what separates two of them. A recessed row takes the fill and no border:
+/* A pane one level inside the card, kept apart by the list's gap. No border:
    an outline would be a second box drawn inside the box already around it. */
 .change {
   display: flex;

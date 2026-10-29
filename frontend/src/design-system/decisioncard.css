@@ -254,17 +254,6 @@
   max-inline-size: 72ch;
 }
 
-/*
- * A lapsed card keeps the neutral ground the lapse rule above gives it, in the
- * deck as well. The two rules tie on specificity and the deck's comes later, so
- * without this an expired card in the deck drew the live card's paper and the
- * only thing saying it was over was the sentence where the verbs had been.
- */
-.dcard[data-lapsed][data-layout="deck"],
-.dcard[data-urgency="lapsed"][data-layout="deck"] {
-  background: var(--bgInset);
-}
-
 /* A lapsed card's bands go neutral with it: the staged tint on the header and
    the AI rule under it belong to a proposal somebody can still answer. */
 .dcard[data-lapsed][data-layout="deck"] > .dcard-meta,

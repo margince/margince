@@ -265,6 +265,7 @@
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
   border: 1px solid var(--groundEdge);
+  background: var(--ground);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }

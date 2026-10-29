@@ -340,7 +340,7 @@
 
 .ob-decision-card.is-picked {
   border-color: var(--accent);
-  background: var(--accentLight);
+  background-image: linear-gradient(var(--accentLight), var(--accentLight));
 }
 
 /* The choice row: disc + the read's lines on the left, the evidence

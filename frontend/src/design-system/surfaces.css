@@ -64,7 +64,6 @@
   .pdigest,
   .ob-stage,
   .ob-conv-narration p,
-  .ob-conv-confirm,
   .ob-team-form,
   .ob-conv-artifact-empty,
   .ob-decision-card,
@@ -76,14 +75,15 @@
   .ob-voice-result-next,
   .ob-company-card,
   .ob-company-card-facts > div,
-  .ob-triage-rows > li,
   .ob-triage-omitted,
   .ob-triage-contact,
   .ob-triage-fact,
   .ob-basis-section,
   .ob-gate-alert.is-resumed,
   .ob-scan-panel,
-  .ob-conv-artifact .ob-core-dialog
+  .ob-conv-artifact .ob-core-dialog,
+  .ob-conv-confirm:not(.ob-triage),
+  .ob-triage-rows > li:not(.ob-triage-solid-divider)
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -155,7 +155,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -167,14 +166,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -231,7 +231,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -243,14 +242,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -322,7 +322,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -334,14 +333,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -398,7 +398,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -410,14 +409,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -474,7 +474,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -486,14 +485,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -565,7 +565,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -577,14 +576,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -641,7 +641,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -653,14 +652,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -717,7 +717,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -729,14 +728,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -793,7 +793,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -805,14 +804,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -840,13 +840,13 @@
   .lt-menu,
   .evmark-panel,
   .save-bar,
-  .ddeck-tray,
   .palette,
   .settingssearch-list,
   .accountmenu,
   .accountsub,
   .arpanel,
-  .mw-aistat-pop
+  .mw-aistat-pop,
+  .ddeck-tray:not(.panel-foot > .ddeck-tray)
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -874,13 +874,13 @@
     .lt-menu,
     .evmark-panel,
     .save-bar,
-    .ddeck-tray,
     .palette,
     .settingssearch-list,
     .accountmenu,
     .accountsub,
     .arpanel,
-    .mw-aistat-pop
+    .mw-aistat-pop,
+    .ddeck-tray:not(.panel-foot > .ddeck-tray)
   )
   :where(
     .panel,
@@ -937,7 +937,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -949,14 +948,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -984,13 +984,13 @@
     .lt-menu,
     .evmark-panel,
     .save-bar,
-    .ddeck-tray,
     .palette,
     .settingssearch-list,
     .accountmenu,
     .accountsub,
     .arpanel,
-    .mw-aistat-pop
+    .mw-aistat-pop,
+    .ddeck-tray:not(.panel-foot > .ddeck-tray)
   )
   :where(
     .panel,
@@ -1047,7 +1047,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1059,14 +1058,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -1123,7 +1123,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1135,14 +1134,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1170,13 +1170,13 @@
     .lt-menu,
     .evmark-panel,
     .save-bar,
-    .ddeck-tray,
     .palette,
     .settingssearch-list,
     .accountmenu,
     .accountsub,
     .arpanel,
-    .mw-aistat-pop
+    .mw-aistat-pop,
+    .ddeck-tray:not(.panel-foot > .ddeck-tray)
   )
   :where(
     .panel,
@@ -1233,7 +1233,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1245,14 +1244,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -1309,7 +1309,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1321,14 +1320,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   )
   :where(
     .panel,
@@ -1385,7 +1385,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1397,14 +1396,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1440,7 +1440,25 @@
 :where(.stat-strip[data-density="plate"]) {
   --groundEdge: var(--ladder2Edge);
 }
-:where(.brief-triage-frame, :has(> .ambient-waves))
+:where(
+    .aipending-sheen,
+    .arhit,
+    .arphead,
+    .avatar-mesh,
+    .brief-triage-frame,
+    .co-move,
+    .core-glass,
+    .core-glow,
+    .core-rim,
+    .meterbar span,
+    .ob-build,
+    .ob-page,
+    .ob-stage-flash,
+    .ob-stage-light,
+    .rail .arhit,
+    .standing-sheet > .standing-sheet-pane,
+    :has(> .ambient-waves)
+  )
   :where(
     .panel,
     .panel-plate,
@@ -1496,7 +1514,6 @@
     .pdigest,
     .ob-stage,
     .ob-conv-narration p,
-    .ob-conv-confirm,
     .ob-team-form,
     .ob-conv-artifact-empty,
     .ob-decision-card,
@@ -1508,14 +1525,15 @@
     .ob-voice-result-next,
     .ob-company-card,
     .ob-company-card-facts > div,
-    .ob-triage-rows > li,
     .ob-triage-omitted,
     .ob-triage-contact,
     .ob-triage-fact,
     .ob-basis-section,
     .ob-gate-alert.is-resumed,
     .ob-scan-panel,
-    .ob-conv-artifact .ob-core-dialog
+    .ob-conv-artifact .ob-core-dialog,
+    .ob-conv-confirm:not(.ob-triage),
+    .ob-triage-rows > li:not(.ob-triage-solid-divider)
   ) {
   background-color: var(--ground);
 }

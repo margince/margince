@@ -348,8 +348,6 @@
  * pinned to the foot. */
 .rail {
   background-color: var(--ground);
-  /* The blur is for the phone bar, which floats over the page. */
-  backdrop-filter: blur(20px);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */

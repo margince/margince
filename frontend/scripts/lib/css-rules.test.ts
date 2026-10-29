@@ -9,9 +9,13 @@ import {
   alternativesOf,
   classesOf,
   compounds,
+  functionCall,
+  readsEveryCombination,
   resolveNesting,
   rules,
   selectorList,
+  simpleSelectorsOf,
+  specificity,
   splitTopLevel,
   subjectClasses,
   subjectOf,
@@ -124,6 +128,21 @@ describe("the alternatives of a selector", () => {
     expect(read).toHaveLength(40);
     expect(read).toContain(`.s19 :where(${list})`);
     expect(read).toContain(`:where(${list}) .s0`);
+    expect(readsEveryCombination(`:where(${list}) :where(${list})`)).toBe(
+      false,
+    );
+    expect(readsEveryCombination(":is(.a, .b) .c")).toBe(true);
+  });
+
+  it("reads every alternation of one compound once past the cap", () => {
+    const list = Array.from({ length: 20 }, (_, at) => `.s${at}`).join(", ");
+    const read = alternativesOf(
+      `.a:where(${list}):where(${list}) :is(.x, :is(.y, .z))`,
+    );
+    expect(read).toContain(`.a.s3:where(${list}) :is(.x, :is(.y, .z))`);
+    expect(read).toContain(`.a:where(${list}).s7 :is(.x, :is(.y, .z))`);
+    expect(read).toContain(`.a:where(${list}):where(${list}) .z`);
+    expect(new Set(read).size).toBe(read.length);
   });
 
   it("hangs a complex alternative's ancestors in front of the compound", () => {
@@ -216,5 +235,33 @@ describe("the rules under a tree", () => {
       ":is(.a, .b) .c",
       ".d",
     ]);
+  });
+});
+
+describe("what a selector weighs", () => {
+  it("counts ids, classes and types, and an :is() as its heaviest argument", () => {
+    expect(specificity(".a")).toBe(100);
+    expect(specificity("#x .a > li:hover::before")).toBe(10202);
+    expect(specificity('.dcard[data-lapsed][data-layout="deck"]')).toBe(300);
+    expect(specificity(".a:where(.b, #c) span")).toBe(101);
+    expect(specificity(".a:not(.b .c, #d)")).toBe(10100);
+    expect(specificity("button:nth-child(2n)")).toBe(101);
+  });
+
+  it("reads a compound's simple selectors with the type left out", () => {
+    expect([
+      ...simpleSelectorsOf('li.a[data-x="1 2"]:not(.b, .c):hover'),
+    ]).toEqual([".a", '[data-x="12"]', ":not(.b,.c)", ":hover"]);
+  });
+
+  it("reads a function's top-level arguments and where it closes", () => {
+    expect(
+      functionCall("linear-gradient(var(--a), rgb(0 0 0)) padding-box"),
+    ).toEqual({
+      name: "linear-gradient",
+      args: ["var(--a)", "rgb(0 0 0)"],
+      end: 37,
+    });
+    expect(functionCall(".a")).toBeUndefined();
   });
 });
