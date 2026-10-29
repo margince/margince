@@ -20349,6 +20349,27 @@ paths:
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /ai/usage/summary:
+    get:
+      tags: [AI]
+      operationId: getAiUsageSummary
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: What AI cost this month so far, as one figure.
+      description: |
+        The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
+        (the first day of the current UTC month through now), computed the same way and admitted
+        by the same grant. For a page that shows only the month's total and needs none of the
+        report's lines, budget or decisions.
+      responses:
+        '200':
+          description: The month's spend.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiUsageSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /ai/agent-usage:
     get:
       tags: [AI]
@@ -21415,6 +21436,30 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /approvals/pending-count:
+    get:
+      tags: [Approvals]
+      operationId: countPendingApprovals
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How many approvals wait for the caller, exactly.
+      description: |
+        The number of items `listApprovals?status=pending` would return to this caller with the
+        wire status `pending`, across every page: the same visibility checks, the same mutes and
+        the same lazy expiry. It answers one number instead of every page.
+
+        `next_expiry_at` is the earliest moment one of the counted items expires. The count drops
+        then without any event, so a client that shows it reads it again at that moment. Measure
+        the wait from `as_of`, the server's clock when it counted, not from the client's clock.
+      responses:
+        '200':
+          description: The count.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApprovalPendingCount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /approvals/{id}:
     parameters:
@@ -38101,6 +38146,19 @@ components:
             because the metered calls above count attempts and cannot give a rate. Empty when no
             call in the window consulted a decision model.
           items: { $ref: '#/components/schemas/AiDecisionSummary' }
+    AiUsageSummary:
+      type: object
+      description: The month's AI spend so far, summed from the lines GET /ai/usage prices.
+      required: [currency, computed_at]
+      properties:
+        cost_est_minor:
+          type: integer
+          description: >-
+            Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of
+            `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the
+            month cost, which is not the same as a month that cost nothing.
+        currency: { type: string, description: 'ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067).' }
+        computed_at: { type: string, format: date-time, description: The instant the window ends at and the figure was computed. }
     AiDecisionSummary:
       type: object
       description: One task's decision-model pass and fallback counts over the usage window.
@@ -60708,6 +60766,24 @@ components:
         reason:
           type: string
           description: Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
+
+    ApprovalPendingCount:
+      type: object
+      additionalProperties: false
+      required: [count, as_of]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Pending approvals this caller could decide now.
+        next_expiry_at:
+          type: string
+          format: date-time
+          description: When the first counted approval expires. Absent when none of them can expire.
+        as_of:
+          type: string
+          format: date-time
+          description: The server's clock when it counted.
 
     ApprovalListResponse:
       type: object
