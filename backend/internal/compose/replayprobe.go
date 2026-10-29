@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -268,17 +269,31 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 // EnsureVisibleLive requires archived_at IS NULL, so every promote replay would
 // have answered 404.
 func ensureCompanionsVisible(ctx context.Context, pool *pgxpool.Pool, target replayTarget, body string) error {
-	for _, companion := range target.companions {
+	named := make([][]ids.UUID, len(target.companions))
+	for i, companion := range target.companions {
 		for _, raw := range companionIDsAt(body, companion.idPath) {
 			id, err := ids.Parse(raw)
 			if err != nil {
 				return apperrors.ErrNotFound
 			}
-			if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-				return auth.EnsureVisible(ctx, tx, companion.table, id)
-			}); err != nil {
-				return err
+			if !slices.Contains(named[i], id) {
+				named[i] = append(named[i], id)
 			}
+		}
+	}
+	for i, companion := range target.companions {
+		if len(named[i]) == 0 {
+			continue
+		}
+		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			for _, id := range named[i] {
+				if err := auth.EnsureVisible(ctx, tx, companion.table, id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
 	}
 	return nil
