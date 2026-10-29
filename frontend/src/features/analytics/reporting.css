@@ -16,13 +16,6 @@
 .reporting-panel > .panel-body {
   flex: 1;
 }
-/* The "view as table" fold stays right under the chart it opens, with no rule
-   of its own: the foot's rule is the only line the card needs. */
-.reporting-panel .report-chart-data {
-  margin-top: var(--space-3);
-  border-top: 0;
-  padding-top: 0;
-}
 /* The foot is one line: what the chart covers gives way, and the door to its
    records keeps its words whole at the line's end. */
 .reporting-panel > .panel-foot {
