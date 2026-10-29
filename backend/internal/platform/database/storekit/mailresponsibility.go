@@ -150,12 +150,24 @@ func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity,
 	})
 }
 
+// directRecipientMatch is one parsed To participant naming one of the given
+// addresses. The per-mail test and the set of a seat's mail share it.
+const directRecipientMatch = `recipient.role = 'to'
+ AND lower(recipient.address) = ANY(ADDRESS_LIST)`
+
 // DirectMailRecipientSQL matches parsed To evidence, never editable body text.
 func DirectMailRecipientSQL(activity, addresses string) string {
 	clause := `EXISTS (SELECT 1 FROM activity_participant recipient
- WHERE recipient.activity_id = a.id AND recipient.role = 'to'
- AND lower(recipient.address) = ANY(ADDRESS_LIST))`
+ WHERE recipient.activity_id = a.id AND ` + directRecipientMatch + `)`
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
+}
+
+// DirectMailActivitiesSQL is every activity whose parsed To line names one
+// seat, built once as an array. A seat's own reads start from it, over the
+// address index, rather than testing each mail in the workspace.
+func DirectMailActivitiesSQL(identities, seat string) string {
+	return "ARRAY(SELECT recipient.activity_id FROM activity_participant recipient WHERE " +
+		strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
 }
 
 // DirectMailSeatsSQL lists every seat the mail's parsed To line names.
@@ -168,8 +180,8 @@ func DirectMailSeatsSQL(activity, identities string) string {
 // To line when it is the only seat there, else NULL. Two addressed seats make
 // no automatic duty for either, and no shared one.
 func SoleDirectMailSeatSQL(activity, identities string) string {
-	seats := DirectMailSeatsSQL(activity, identities)
-	return "(CASE WHEN cardinality(" + seats + ") = 1 THEN (" + seats + ")[1] END)"
+	return "(SELECT CASE WHEN cardinality(direct.seats) = 1 THEN direct.seats[1] END FROM (SELECT " +
+		DirectMailSeatsSQL(activity, identities) + " AS seats) direct)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.
