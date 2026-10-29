@@ -37,6 +37,9 @@ func (s *Store) MeetingPreparations(ctx context.Context, meetingIDs []ids.UUID) 
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return out, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 	if err := auth.Require(ctx, linkEntityActivity, principal.ActionRead); err != nil {
 		return nil, err
 	}
