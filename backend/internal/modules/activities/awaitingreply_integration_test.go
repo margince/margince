@@ -357,8 +357,7 @@ func (s seatAddresses) ReaderAddresses(_ context.Context, _ pgx.Tx, reader ids.U
 }
 
 // copiedMail seeds a mail the colleague sent to the customer, as the reader's
-// mailbox holds it, with the extra participant rows given as role and seat or
-// address.
+// mailbox holds it. Each extra participant row is a role and a seat or address.
 func (e *loadEnv) copiedMail(t *testing.T, customer ids.UUID, colleagueAddress string, participants ...[3]any) ids.UUID {
 	t.Helper()
 	mail, _ := e.sentTo(t, customer, colleagueAddress, 3*24*time.Hour)

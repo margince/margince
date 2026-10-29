@@ -165,8 +165,8 @@ func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 	t.Fatal("human-held task disappeared from its assignee's current tasks")
 }
 
-// A reminder its assignee pinned holds its request past the horizon: the aged
-// pass leaves it open and it stays the assignee's task, not a colleague's wait.
+// A reminder its assignee pinned holds its request past the horizon. The aged
+// pass leaves it open, and it stays the assignee's task, not a colleague's wait.
 func TestAPinnedReminderHoldsItsRequestPastTheHorizon(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)

@@ -40,8 +40,10 @@ func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryE
 var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
 
 // predicateWords are the SQL words left in a predicate once predicateSpelling ran.
-var predicateWords = map[string]bool{"and": true, "or": true, "not": true, "any": true, "array": true,
-	"is": true, "distinct": true, "from": true, "true": true, "false": true, "in": true, "null": true}
+var predicateWords = map[string]bool{
+	"and": true, "or": true, "not": true, "any": true, "array": true,
+	"is": true, "distinct": true, "from": true, "true": true, "false": true, "in": true, "null": true,
+}
 
 // boundIndexedColumns reads, from the migrated catalog, every column a partial
 // index predicate compares with a value or reads as a boolean. A generic plan

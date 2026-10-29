@@ -54,9 +54,9 @@ const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
 // withinWaitingHorizonSQL is whether message a is young enough for the queue.
 // Age retires every wait unless a human kept the request; old mail stays on the
 // timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
-// Written as (young OR held) AND (young OR open), which equals young OR (held
-// AND open). The first half has no per-message subquery, so Postgres tests it
-// first and old mail never reaches the settlement subqueries.
+// Written as `(young OR held) AND (young OR open)`, which equals
+// `young OR (held AND open)`. The first half has no per-message subquery, so
+// Postgres tests it first and old mail never reaches the settlement subqueries.
 func withinWaitingHorizonSQL(asOf, days string) string {
 	young := occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`)
 	return `((` + young + ` OR ` + heldRequestSQL() + `)
