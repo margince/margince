@@ -118,57 +118,18 @@ func (s *Store) quickCaptureInTx(
 	}
 	out.Contact = contact
 
-	companyID, created, err := s.employerForQuickCapture(ctx, tx, in)
-	if err != nil {
-		return out, err
-	}
-	if companyID == nil {
+	choice := EmployerChoice{CompanyID: in.CompanyID, CompanyName: in.CompanyName, Role: in.Role, Source: quickCaptureSource}
+	if !choice.named() {
 		return out, nil
 	}
-	out.CompanyID = companyID
-	out.CompanyCreated = created
-
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	if _, err := s.CreateRelationshipTx(ctx, tx, CreateRelationshipInput{
-		Kind:      employmentKind,
-		ContactID: &contactID,
-		CompanyID: companyID,
-		Role:      in.Role,
-		Source:    quickCaptureSource,
-	}); err != nil {
+	attached, err := s.attachEmployerTx(ctx, tx, contactID, choice)
+	if err != nil {
 		return out, err
 	}
+	out.CompanyID = &attached.CompanyID
+	out.CompanyCreated = attached.CompanyCreated
 	return out, nil
-}
-
-// employerForQuickCapture resolves the employer the caller named, creating one
-// only when they gave a name and no id. A blank name is not a company: it is a
-// field the reader left alone, and creating a company called "" would put
-// a record in the list that nobody can find or delete by name.
-func (s *Store) employerForQuickCapture(
-	ctx context.Context,
-	tx pgx.Tx,
-	in QuickCaptureInput,
-) (companyID *ids.CompanyID, created bool, err error) {
-	if in.CompanyID != nil {
-		return in.CompanyID, false, nil
-	}
-	if in.CompanyName == nil {
-		return nil, false, nil
-	}
-	name := strings.TrimSpace(*in.CompanyName)
-	if name == "" {
-		return nil, false, nil
-	}
-	company, err := s.CreateCompanyTx(ctx, tx, CreateCompanyInput{
-		DisplayName: name,
-		Source:      quickCaptureSource,
-	}, CustomColumns{})
-	if err != nil {
-		return nil, false, err
-	}
-	made := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	return &made, true, nil
 }
 
 // nameProfileURLField reports a refused LinkedIn value under the field this

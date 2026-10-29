@@ -4244,6 +4244,35 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.neverInTouch": "Noch kein Austausch",
   "co.contacts.theyWrote": "Der Kontakt hat geschrieben",
   "co.contacts.weWrote": "Dein Team hat geschrieben",
+  "co.domainContacts.dialogTitle": "Kontakte dieser Domain verknüpfen",
+  "co.domainContacts.intro":
+    "Diese Kontakte haben eine E-Mail-Adresse auf der Domain dieses Unternehmens. Kontakte ohne aktuellen Arbeitgeber werden ohnehin täglich verknüpft; wähle aus, wer hier arbeitet, um sie jetzt zu verknüpfen.",
+  "co.domainContacts.legend": "Wer arbeitet hier?",
+  "co.domainContacts.worksAt": "Arbeitet bei {company}",
+  "co.domainContacts.truncated_one":
+    "Nur der erste {count} Kontakt wird angezeigt.",
+  "co.domainContacts.truncated_other":
+    "Nur die ersten {count} Kontakte werden angezeigt.",
+  "co.domainContacts.loading": "Kontakte werden geladen…",
+  "co.domainContacts.none":
+    "Es sind keine Kontakte dieser Domain mehr zu verknüpfen.",
+  "co.domainContacts.changed":
+    "Die Liste hat sich geändert, während sie offen war. Prüfe die Auswahl und verknüpfe erneut.",
+  "co.domainContacts.dismiss": "Nicht jetzt",
+  "co.domainContacts.link_one": "{count} Kontakt verknüpfen",
+  "co.domainContacts.link_other": "{count} Kontakte verknüpfen",
+  "co.domainContacts.linkNone": "Kontakte verknüpfen",
+  "co.domainContacts.linked_one": "{count} Kontakt verknüpft",
+  "co.domainContacts.linked_other": "{count} Kontakte verknüpft",
+  "co.domainContacts.callout_one":
+    "{count} Kontakt dieser Domain ist nicht verknüpft",
+  "co.domainContacts.callout_other":
+    "{count} Kontakte dieser Domain sind nicht verknüpft",
+  "co.domainContacts.calloutMore_one":
+    "Mehr als {count} Kontakt dieser Domain ist nicht verknüpft",
+  "co.domainContacts.calloutMore_other":
+    "Mehr als {count} Kontakte dieser Domain sind nicht verknüpft",
+  "co.domainContacts.review": "Kontakte prüfen",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Beliebiges Engagement",
   "co.contacts.band.wayIn": "Bester Zugang",
@@ -5998,6 +6027,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
   "create.companyNew":
     "Erstellt ein neues Unternehmen, sofern keines aus der Liste ausgewählt wird.",
+  "create.companyPrefilled":
+    "Über die Domain der geschäftlichen E-Mail-Adresse einem bestehenden Unternehmen zugeordnet.",
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
@@ -15312,6 +15343,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verknüpfung zum Unternehmen entfernen?",
   "contact.rail.removeEmploymentBody":
     "Die Verknüpfung zu {company} und ihr Verlauf werden dauerhaft gelöscht. {company} selbst bleibt erhalten. Wenn der Kontakt das Unternehmen verlassen hat, markiere die Rolle stattdessen als beendet.",
+  "contact.proposal.title": "Aus {source}: {company}",
+  "contact.proposal.ask": "Dieses Unternehmen verknüpfen oder erstellen?",
+  "contact.proposal.link": "Verknüpfen",
+  "contact.proposal.create": "Erstellen und verknüpfen",
+  "contact.proposal.dismiss": "Verwerfen",
+  "contact.proposal.linkDenied":
+    "Deine Rolle darf keine Unternehmen mit Kontakten verknüpfen. Frage einen Admin.",
+  "contact.proposal.createDenied":
+    "Deine Rolle darf keine Unternehmen erstellen. Frage einen Admin.",
+  "contact.proposal.duplicate":
+    "Es wurde kein Unternehmen erstellt, da {company} die Domain der geschäftlichen E-Mail-Adresse dieses Kontakts schon hat.",
+  "contact.proposal.duplicateUnnamed":
+    "Es wurde kein Unternehmen erstellt, da ein anderes Unternehmen die Domain der geschäftlichen E-Mail-Adresse dieses Kontakts schon hat.",
+  "contact.proposal.linkExisting": "Dieses Unternehmen verknüpfen",
+  "contact.proposal.created": "{company} erstellt und verknüpft",
+  "contact.proposal.createdWithDomain":
+    "{company} mit {domain} erstellt und verknüpft",
   "contact.timeline.empty":
     "Noch keine Aktivitäten mit diesem Kontakt erfasst.",
   "contact.deals.empty": "Dieser Kontakt ist an keinem Deal beteiligt.",
@@ -15346,7 +15394,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactLink.emailCopied": "E-Mail-Adresse kopiert",
   "contactLink.copyEmailRemedy":
     "Markiere die Adresse und kopiere sie mit der Tastatur.",
-  "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.addTask": "Aufgabe hinzufügen",
   "contact.action.research": "Recherche",
@@ -18508,6 +18555,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.onHold": "Pausiert",
   "deal.verdict.onHoldUntil":
     "Der Deal ist bis {date} pausiert, wie mit der Käuferseite vereinbart.",
+  "deal.verdict.waitOver": "Nachfassen überfällig",
+  "deal.verdict.waitOverSince":
+    "Die Käuferseite bat, bis {date} zu warten. Der Tag ist da, jetzt nachfassen.",
   "deal.verdict.overdueToClose": "Abschluss überfällig",
   "deal.verdict.closePassed":
     "Das erwartete Abschlussdatum ({date}) ist verstrichen.",

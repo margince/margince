@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -81,7 +82,7 @@ func seedOpenTask(t *testing.T, e *integration.Env) {
 func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 	e := integration.Setup(t)
 	seedOpenTask(t, e)
-	at := time.Now().UTC()
+	at := clocktest.Now(t).UTC()
 	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 	read := func(ctx context.Context) error {
 		_, err := service.Worklist(ctx, "mine", "all", ids.UUID{}, 0, "")
@@ -128,7 +129,7 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
 	e := integration.Setup(t)
 	seedOpenTask(t, e)
-	at := time.Now().UTC()
+	at := clocktest.Now(t).UTC()
 	service := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at })
 
 	delta, seen := meterRead(e.Admin(), t, func(ctx context.Context) error {

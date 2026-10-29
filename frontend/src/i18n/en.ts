@@ -4232,6 +4232,34 @@ export const en = {
   "co.contacts.neverInTouch": "No exchange yet",
   "co.contacts.theyWrote": "They wrote",
   "co.contacts.weWrote": "Your team wrote",
+  "co.domainContacts.dialogTitle": "Link contacts on this domain",
+  "co.domainContacts.intro":
+    "These contacts have an email address on this company’s domain. Contacts with no current employer are linked each day anyway; tick those who work here to link them now.",
+  "co.domainContacts.legend": "Who works here?",
+  "co.domainContacts.worksAt": "Works at {company}",
+  "co.domainContacts.truncated_one":
+    "Only the first {count} contact is listed.",
+  "co.domainContacts.truncated_other":
+    "Only the first {count} contacts are listed.",
+  "co.domainContacts.loading": "Loading contacts…",
+  "co.domainContacts.none": "No contacts on this domain are left to link.",
+  "co.domainContacts.changed":
+    "The list changed while it was open. Check the ticks and link again.",
+  "co.domainContacts.dismiss": "Not now",
+  "co.domainContacts.link_one": "Link {count} contact",
+  "co.domainContacts.link_other": "Link {count} contacts",
+  "co.domainContacts.linkNone": "Link contacts",
+  "co.domainContacts.linked_one": "{count} contact linked",
+  "co.domainContacts.linked_other": "{count} contacts linked",
+  "co.domainContacts.callout_one":
+    "{count} contact on this domain is not linked",
+  "co.domainContacts.callout_other":
+    "{count} contacts on this domain are not linked",
+  "co.domainContacts.calloutMore_one":
+    "More than {count} contact on this domain is not linked",
+  "co.domainContacts.calloutMore_other":
+    "More than {count} contacts on this domain are not linked",
+  "co.domainContacts.review": "Review contacts",
   "co.contacts.filter.status": "Engagement",
   "co.contacts.filter.statusAll": "Any engagement",
   "co.contacts.band.wayIn": "Best route",
@@ -6055,6 +6083,8 @@ export const en = {
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
     "Creates a new company unless one is picked from the list.",
+  "create.companyPrefilled":
+    "Matched to an existing company by the work email domain.",
   "create.dealName": "Deal name",
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
@@ -15234,6 +15264,23 @@ export const en = {
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":
     "The link to {company} and its history are deleted permanently. {company} itself stays. If they left, mark the role ended instead.",
+  "contact.proposal.title": "From {source}: {company}",
+  "contact.proposal.ask": "Link or create this company?",
+  "contact.proposal.link": "Link",
+  "contact.proposal.create": "Create and link",
+  "contact.proposal.dismiss": "Dismiss",
+  "contact.proposal.linkDenied":
+    "Your role cannot link companies to contacts. Ask an admin.",
+  "contact.proposal.createDenied":
+    "Your role cannot create companies. Ask an admin.",
+  "contact.proposal.duplicate":
+    "{company} already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.duplicateUnnamed":
+    "Another company already has this contact’s work email domain, so no company was created.",
+  "contact.proposal.linkExisting": "Link that company",
+  "contact.proposal.created": "{company} created and linked",
+  "contact.proposal.createdWithDomain":
+    "{company} created with {domain} and linked",
   "contact.timeline.empty": "No activity logged with this contact yet.",
   "contact.deals.empty": "This contact is not on any deal.",
   "contact.deals.untitled": "Untitled deal",
@@ -15272,7 +15319,6 @@ export const en = {
   "contactLink.emailCopied": "Email address copied",
   "contactLink.copyEmailRemedy":
     "Select the address and copy it with your keyboard.",
-  "contact.action.noPhone": "No phone number on this contact.",
   "contact.action.meetings": "Meetings",
   "contact.action.addTask": "Add task",
   "contact.action.research": "Research",
@@ -18366,6 +18412,9 @@ export const en = {
   "deal.verdict.onHold": "On hold",
   "deal.verdict.onHoldUntil":
     "The deal is paused until {date}, as agreed with the buyer.",
+  "deal.verdict.waitOver": "Follow-up overdue",
+  "deal.verdict.waitOverSince":
+    "The buyer asked to wait until {date}. That day has come, so get back in touch.",
   "deal.verdict.overdueToClose": "Overdue to close",
   "deal.verdict.closePassed": "The expected close date, {date}, has passed.",
   "deal.verdict.notStarted": "Not started",

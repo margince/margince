@@ -41,8 +41,6 @@ Margince asks for fewer links between records than most CRM products.
 | Project → Company | **Required: at least one, always.** |
 | Activity → any record | Not required. One you log with no links is shared with everyone; a captured one with no links stays held. |
 
-Many users get two of these wrong.
-
 **A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
 
 A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. The lead page offers **Link to** a company you can open: the one holding the lead's domain, else the only one with that name. Linking makes the company name on the lead open the company. If you later change the lead's company to another name, the link is removed unless the linked company holds the lead's domain. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact it becomes gets a job link to the linked company.
@@ -54,16 +52,17 @@ A contact needs a name and a source. Everything else is up to you.
 ### How do I add a new contact?
 To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**.
 1. Enter the **Full name** (required).
-2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
+2. If you like, fill **First name**, **Last name**, **Title**, **Company** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
+
+The **Company** box lists the companies that match what you type: pick one to link it, or type a name to create one. Until you use the box, a work email fills it with the company whose domain covers the address, such as `example.com` for `dana@eu.example.com`. Margince never makes up a company from a domain alone. On a company's **Contacts** tab, **New contact** files the contact under that company, without the box.
 
 If the contact is already in Margince, **View existing record** opens it instead. If a live lead holds the email or LinkedIn profile, Margince offers **Convert the lead**. It does not create another contact. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 
 ### How do I add a contact quickly, or import contacts from vCards?
 To add a contact quickly in Margince, open **Contacts** and choose **Quick capture**. To add many from a card file, choose **Import vCards**.
-- **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open. If the email or LinkedIn profile belongs to a live lead, it offers to convert that lead instead. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
-- The **Company** box in Quick capture lists the companies that match what you type: pick one to link it. A name you do not pick creates a new company.
+- **Quick capture** asks for **Full name** (required), **Title**, **Company**, **LinkedIn**, **Email** and **Phone**, and confirms with "{name} saved"; the form stays open. Its **Company** box lists and creates companies as in **New contact**, but its **Email** does not fill it. If the email or LinkedIn profile belongs to a live lead, it offers to convert that lead instead. On a company's **Contacts** tab it files the contact under that company, without the **Company** box, if you may change the company.
 - **Import vCards** opens **Import business cards**: choose **Select file or photo** for a **vCard file or card photo**. Each card is Added, Updated, Possible duplicate, Waiting for approval or Skipped; a card for a live lead offers **Convert the lead**. A model reads a photo of up to 20 cards, so every card from a photo waits for your approval. A photo card whose email is already a contact is Skipped. Each field of a card from a file says Imported, "Replaced, old value can be restored", "Record value kept" or "Not in the card". **Next vCard** clears the result for the next card.
 - A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
 Also called: import contacts, upload a .vcf, scan a business card, import cards from a photo.
@@ -88,8 +87,8 @@ To link a contact to a company in Margince, open the contact's page and choose *
 3. Tick **This is their current employer** if it is.
 4. Choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
-Also called: set a contact's company, assign to an account, employer.
 
+A company name Margince read for a contact with no current job shows in the **Companies** panel and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open that other company, nothing is created: Margince names it and offers **Link that company**. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature.
 ### How do I match a purchased job history entry to a company?
 Purchased job history can name an employer Margince cannot match. Then the contact's **Companies** part shows **Company match needed.**; choose **Match company**. Pick a company that is already there, or enter its **Confirmed company website** to create it, then choose **Save company link**. Your choice counts for every role at that employer that has no match yet. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company.
 
@@ -118,9 +117,9 @@ The first merge settles the group for every owner, and it cannot be undone. A co
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
-To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity only dials. A call logged this way is not linked to the task and does not complete it.
+To call a contact, press the **Call** button beside the number in **Details**. It dials the main number, or else the first, in your phone app. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity, or an archived contact, only dials; a contact with no number has no **Call** button. A call logged this way is not linked to the task and does not complete it.
 
-**Call** is refused on an archived contact, which shows no numbers; with no number at all, "No phone number on this contact." shows. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
+To write to a contact, press **Write email** beside the address; a contact reached only on chat has **Message on** in its header. Only a number that starts with + gets a chat button, in the header **Phone** field and in **Details**, for **WhatsApp**, **Telegram** and **Zalo**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
@@ -138,7 +137,8 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
 If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
-Also called: new account, new business, add a client or customer.
+
+A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
 To edit a company in Margince, open it and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.

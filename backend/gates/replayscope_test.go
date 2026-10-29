@@ -85,6 +85,8 @@ var rowScopedResponses = map[string]expectedTarget{
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
 	// company id beside it is a reference, not a second body.
 	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
+	"LinkContactEmployerResult": {table: "contact", idPath: "contact.id"},
+	"LinkCompanyContactsResult": {table: "company", pathParam: "id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and
@@ -261,7 +263,7 @@ var companionRecordFields = map[string]string{
 // companionsInContract names the row-scoped references a route's response
 // schemas carry, beyond the record the replay is keyed on.
 //
-// ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
+// Only for a body that wraps a record or is keyed by its route parameter.
 // `company_id` on a Deal is the deal's own field: the live read of that
 // deal returns it to anyone who can see the deal, so replaying it discloses
 // nothing the product would not. `company_id` on QuickCaptureContactResult
@@ -271,21 +273,46 @@ var companionRecordFields = map[string]string{
 // A dotted idPath is what says the body is a wrapper: the record is nested
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
 // properties only, for the same reason — the nested record's fields are its
-// own, covered by the probe that already resolves it.
+// own, covered by the probe that already resolves it. A body keyed by its route
+// parameter is no record, so every id its array elements name is a companion.
 func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
 	t.Helper()
-	if !strings.Contains(got.idPath, ".") {
-		return nil
-	}
+	wraps, projects := strings.Contains(got.idPath, "."), got.pathParam != ""
 	var out []string
 	for _, schema := range schemas {
-		for field, table := range schemaRecordFields(t, schema) {
-			out = append(out, table+":"+field)
+		if wraps {
+			for field, table := range schemaRecordFields(t, schema) {
+				out = append(out, table+":"+field)
+			}
+		}
+		if wraps || projects {
+			out = append(out, arrayCompanions(t, schema)...)
 		}
 	}
 	sort.Strings(out)
 	return out
 }
+
+// arrayCompanions are the record ids each element of a top-level array of
+// named schemas carries, as "table:field[].id_field".
+func arrayCompanions(t *testing.T, schema string) []string {
+	t.Helper()
+	var out []string
+	for field, format := range contractSchemaProperties(t)[schema] {
+		item, isArray := strings.CutPrefix(format, arrayOfSchema)
+		if !isArray {
+			continue
+		}
+		for idField, table := range schemaRecordFields(t, item) {
+			out = append(out, table+":"+field+"[]."+idField)
+		}
+	}
+	return out
+}
+
+// arrayOfSchema prefixes the item schema of an array property in
+// contractSchemaProperties, where a scalar property holds its format.
+const arrayOfSchema = "array-of:"
 
 // schemaRecordFields reads one named schema's top-level uuid properties that
 // name a row-scoped record.
@@ -604,6 +631,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 			Schemas map[string]struct {
 				Properties map[string]struct {
 					Format string `yaml:"format"`
+					Items  struct {
+						Ref string `yaml:"$ref"`
+					} `yaml:"items"`
 				} `yaml:"properties"`
 			} `yaml:"schemas"`
 		} `yaml:"components"`
@@ -620,6 +650,9 @@ func contractSchemaProperties(t *testing.T) map[string]map[string]string {
 		fields := map[string]string{}
 		for field, property := range schema.Properties {
 			fields[field] = property.Format
+			if item, ok := strings.CutPrefix(property.Items.Ref, "#/components/schemas/"); ok {
+				fields[field] = arrayOfSchema + item
+			}
 		}
 		contractProperties[name] = fields
 	}
