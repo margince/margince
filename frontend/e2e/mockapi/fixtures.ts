@@ -820,6 +820,14 @@ export const aiUsage = {
   },
 };
 
+export const aiUsageSummary = {
+  cost_est_minor: aiUsage.days
+    .flatMap((day) => day.tasks)
+    .reduce((total, task) => total + task.cost_est_minor, 0),
+  currency: aiUsage.budget.currency,
+  computed_at: "2026-07-05T12:00:00Z",
+} satisfies components["schemas"]["AiUsageSummary"];
+
 // The call figures every provider row and tier popover reads. `rows` is
 // required by AiCallStats. One row per provider and tier the fixtures above
 // bind, with failures and timeouts, so the sweeps see the widest form of each
