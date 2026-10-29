@@ -1249,7 +1249,7 @@ public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_on
 public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
 public.assurance_deal_receipt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_deal_receipt.assessed_at timestamp with time zone NOT NULL gen=- def=-
-public.assurance_deal_receipt.assurance_deal_receipt_outcome_check CHECK ((outcome = ANY (ARRAY['eligible'::text, 'review_required'::text, 'unsupported'::text, 'waiting'::text, 'unknown'::text])))
+public.assurance_deal_receipt.assurance_deal_receipt_outcome_check CHECK ((outcome = ANY (ARRAY['eligible'::text, 'review_required'::text, 'unsupported'::text, 'waiting'::text, 'unknown'::text]))) NOT VALID
 public.assurance_deal_receipt.assurance_deal_receipt_pkey PRIMARY KEY (deal_id)
 public.assurance_deal_receipt.assurance_deal_receipt_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
 public.assurance_deal_receipt.assurance_deal_receipt_valid_after_assessed CHECK ((valid_until >= assessed_at))

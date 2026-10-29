@@ -89,9 +89,13 @@ func TestADealWithNoNextStepIsLeftOutWithNoReview(t *testing.T) {
 		t.Fatalf("completing the next step: done=%v err=%v", done, err)
 	}
 
-	v.check(t)
-	if outcome, reasons := v.receiptOf(t, v.supported); outcome != "unsupported" || reasons != "no_next_step" {
-		t.Fatalf("receipt %s %q, want unsupported for the missing next step", outcome, reasons)
+	// Twice: the first pass files the "no next step" finding's own task, and
+	// that task must not pass for the next step on the second.
+	for range 2 {
+		v.check(t)
+		if outcome, reasons := v.receiptOf(t, v.supported); outcome != "unsupported" || reasons != "no_next_step" {
+			t.Fatalf("receipt %s %q, want unsupported for the missing next step", outcome, reasons)
+		}
 	}
 	if v.openReviews(t, v.supported) != 0 {
 		t.Fatalf("an unsupported deal got a review; the rep fixes it on the deal")
@@ -103,5 +107,46 @@ func TestADealWithNoNextStepIsLeftOutWithNoReview(t *testing.T) {
 	q := v.forecast(t).Qualified
 	if q == nil || q.EvidenceMinor != 0 || q.ExcludedCount != 2 || q.UnsupportedCount != 1 || q.UnsupportedMinor != 100_000 {
 		t.Fatalf("qualified readings %+v, want both deals out and the one with no next step as unsupported", q)
+	}
+}
+
+func TestARefusalNotEveryMemberMayReadMovesNothing(t *testing.T) {
+	v := setupViability(t)
+	refusal := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
+	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), refusal,
+		activities.ReplyVerdictNegative, "test"); err != nil || !applied {
+		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
+	}
+	if _, err := v.Activities.SetAudience(v.Admin(), ids.From[ids.ActivityKind](refusal),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the reply: %v", err)
+	}
+
+	v.check(t)
+	if _, reasons := v.receiptOf(t, v.supported); hasReason(reasons, "customer_declined") {
+		t.Fatalf("a limited refusal raised %q; it must not reach a figure everybody reads", reasons)
+	}
+	if v.openReviews(t, v.supported) != 0 {
+		t.Fatalf("a limited refusal raised a review")
+	}
+}
+
+func TestAVerdictThatLandsAfterTheCheckMakesTheDealUnknown(t *testing.T) {
+	v := setupViability(t)
+	reply := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
+	v.check(t)
+	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
+		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		t.Fatal(err)
+	}
+	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 0 {
+		t.Fatalf("qualified readings %+v before the verdict, want nothing unknown", q)
+	}
+	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), reply,
+		activities.ReplyVerdictNegative, "test"); err != nil || !applied {
+		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
+	}
+	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 1 {
+		t.Fatalf("qualified readings %+v, want the deal unknown once its reply turned out a refusal", q)
 	}
 }

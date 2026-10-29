@@ -40517,7 +40517,7 @@ export interface components {
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-         *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is missing, provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+         *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
          */
         ForecastQualifiedReadings: {
             /** Format: int64 */
@@ -40533,7 +40533,7 @@ export interface components {
             excluded_minor: number;
             /**
              * Format: int64
-             * @description The part of `excluded_minor` on deals left out with no review: a close date that is missing, provisional or overdue, or no next step.
+             * @description The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
              */
             unsupported_minor: number;
             unsupported_count: number;

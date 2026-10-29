@@ -199,7 +199,9 @@ func TestSilenceCountsCalendarDaysAcrossTheShortDay(t *testing.T) {
 		t.Fatal(err)
 	}
 	wrote := time.Date(2026, time.January, 28, 0, 5, 0, 0, berlin)
-	in := ViabilityInput{CreatedAt: wrote, LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true}
+	in := ViabilityInput{
+		CreatedAt: wrote, LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true, ExpectedClose: new(wrote.AddDate(1, 0, 0)),
+	}
 	// 29 March 2026 is 23 hours long in Berlin; counting hours would call the
 	// day after it one short.
 	if got := AssessViability(in, time.Date(2026, time.March, 29, 0, 5, 0, 0, berlin), berlin); got.SilentDays != 60 ||
@@ -219,6 +221,7 @@ func TestAnEligibleAssessmentNamesTheDayItsSilenceCrossesTheThreshold(t *testing
 	wrote := time.Date(2026, time.October, 1, 15, 0, 0, 0, zone)
 	got := AssessViability(ViabilityInput{
 		CreatedAt: wrote.AddDate(0, -1, 0), LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true,
+		ExpectedClose: new(wrote.AddDate(1, 0, 0)),
 	}, asOf, zone)
 	want := time.Date(2026, time.December, 1, 0, 0, 0, 0, zone)
 	if got.Outcome != viability.OutcomeEligible || got.NextChange == nil || !got.NextChange.Equal(want) {
@@ -226,6 +229,7 @@ func TestAnEligibleAssessmentNamesTheDayItsSilenceCrossesTheThreshold(t *testing
 	}
 	if after := AssessViability(ViabilityInput{
 		CreatedAt: wrote.AddDate(0, -1, 0), LastCustomerProgressAt: &wrote, MailCovered: true, HasNextStep: true,
+		ExpectedClose: new(wrote.AddDate(1, 0, 0)),
 	}, want, zone); after.Outcome != viability.OutcomeReviewRequired {
 		t.Fatalf("at the named day the deal reads %s, want review_required", after.Outcome)
 	}

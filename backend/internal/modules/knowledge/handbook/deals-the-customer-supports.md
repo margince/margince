@@ -37,8 +37,8 @@ is on:
 - A deal with an open review is left out of that line. The screen says how many
   deals were left out and how much money they carry.
 - A deal the customer still talks about is left out too when it has no next
-  step. The same goes for a close date that is missing, was only guessed, or has
-  passed. Such a deal gets no review and no task, and it has a line of its own.
+  step. The same goes for a close date that was only guessed or has passed.
+  Such a deal gets no review, and it has a line of its own.
   Set the close date or plan the next step, and it counts again after the next
   check.
   While the customer has asked you to wait, the wait is the next step, but the

@@ -19456,7 +19456,7 @@ components:
           type: integer
           format: int64
           description: >-
-            The part of `excluded_minor` on deals left out with no review: a close date that is missing, provisional or overdue, or no next step.
+            The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
         unsupported_count: {type: integer}
         unknown_minor:
           type: integer
