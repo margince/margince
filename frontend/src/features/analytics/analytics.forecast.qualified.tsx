@@ -35,16 +35,22 @@ export function QualifiedAnswer({
         <p className="t-caption">
           {plural("forecast.qualifiedLeftOut", underReview, {
             count: formatNumber(underReview, locale),
-            amount: money(qualified.excluded_minor - qualified.unsupported_minor),
+            amount: money(
+              qualified.excluded_minor - qualified.unsupported_minor,
+            ),
           })}
         </p>
       )}
       {qualified.unsupported_count > 0 && (
         <p className="t-caption">
-          {plural("forecast.qualifiedUnsupported", qualified.unsupported_count, {
-            count: formatNumber(qualified.unsupported_count, locale),
-            amount: money(qualified.unsupported_minor),
-          })}
+          {plural(
+            "forecast.qualifiedUnsupported",
+            qualified.unsupported_count,
+            {
+              count: formatNumber(qualified.unsupported_count, locale),
+              amount: money(qualified.unsupported_minor),
+            },
+          )}
         </p>
       )}
       {qualified.unknown_count > 0 && (
