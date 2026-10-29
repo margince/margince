@@ -219,11 +219,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The filled verb sits inset in the bar, with the same room to the bar's edge
+   as to the tiles under it, so it never presses against the border. */
+.record-split-verbs:has(> .btn-primary, > .btn-with-reason > .btn-primary) {
+  padding-block-start: var(--space-2);
+  padding-inline: var(--space-2);
+}
 .record-split-verbs > .btn-primary,
 .record-split-verbs > .btn-with-reason:has(> .btn-primary) {
   flex-basis: 100%;
   order: -1;
   justify-content: center;
+  margin-block-end: var(--space-2);
 }
 .record-split-verbs > .btn-with-reason:has(> .btn-primary) {
   flex-direction: column;
