@@ -109,11 +109,18 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	ApplyRiverSchema(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Embed Reindex E2E", "embed-reindex@fable.test", "Admin")
 
+	seedRouterBinding(t, e, router)
+	return e
+}
+
+// seedRouterBinding plants the embed binding marker at router's identity, as
+// the api's boot does; the harness boots without that step.
+func seedRouterBinding(t *testing.T, e *apptest.AppEnv, router *ai.Router) {
+	t.Helper()
 	identity, _ := router.EmbedIdentity()
 	if err := search.NewStore(e.DB()).SeedBinding(context.Background(), identity); err != nil {
 		t.Fatalf("SeedBinding: %v", err)
 	}
-	return e
 }
 
 // insertOnlyRunner is the api role's River client: it enqueues and works
