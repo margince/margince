@@ -59,7 +59,7 @@ export function SetPickerFrame({
       data-disabled={disabled || undefined}
     >
       {chosen.length === 0 ? (
-        <span className="t-caption set-picker-none">{none}</span>
+        <span className="t-caption">{none}</span>
       ) : (
         <TokenList
           items={chosen}

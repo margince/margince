@@ -24,6 +24,7 @@ export const FIELD_ROWS = new Map([
   ["Checkbox", "atoms"],
   ["Radio", "atoms"],
   ["ChoiceList", "choicelist"],
+  ["SetPicker", "setpicker"],
 ]);
 // Design-system controls that draw their own label and are not form rows.
 export const NOT_ROWS = new Map([
