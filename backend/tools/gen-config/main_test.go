@@ -83,7 +83,7 @@ func TestTheEnvTemplateWritesEachVariableOnceOnOneLine(t *testing.T) {
 		},
 	}
 	want := envHeader +
-		"\n# ---- required by the image entrypoint ----\n# MARGINCE_LICENSE=\n" +
+		"\n# ---- required by the image entrypoint ----\n# MARGINCE_LICENSE=${file:/run/secrets/license.token}\n" +
 		"\n# ---- loader ----\n# MARGINCE_ENV=\n" +
 		"\n# ---- image entrypoint ----\n# MARGINCE_ADMIN_PASSWORD=\n" +
 		"\n# ---- uploads ----\n# MARGINCE_UPLOADS_ATTACHMENT_MB=25\n"
@@ -146,8 +146,8 @@ func TestASecretRendersNoValueAndNoDefaultInAnyOutput(t *testing.T) {
 		if !s.Secret() {
 			continue
 		}
-		if !strings.Contains(string(files[envPath]), "\n# "+s.Env()+"=\n") {
-			t.Errorf("%s: .env.example gives the secret a value", s.Key())
+		if !strings.Contains(string(files[envPath]), "\n# "+s.Env()+"=${file:/run/secrets/"+s.Key()+"}\n") {
+			t.Errorf("%s: .env.example does not write the secret as a file reference", s.Key())
 		}
 		if !strings.Contains(string(files[defaultsPath]), ": ${file:/run/secrets/"+s.Key()+"}\n") {
 			t.Errorf("%s: the defaults file does not write the secret as a file reference", s.Key())

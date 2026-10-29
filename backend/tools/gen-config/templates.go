@@ -66,7 +66,7 @@ func defaultsYAML(settings []setting) (string, error) {
 
 func defaultsValue(s setting) (string, error) {
 	if s.Secret() {
-		return "${file:/run/secrets/" + s.Key() + "}", nil
+		return secretReference(s), nil
 	}
 	value, ok, err := yamlDefault(s)
 	switch {
@@ -76,6 +76,12 @@ func defaultsValue(s setting) (string, error) {
 		return "null", nil
 	}
 	return value, nil
+}
+
+// secretReference is the file reference both templates show for a secret, so
+// a copied line points at a file instead of carrying the value itself.
+func secretReference(s setting) string {
+	return "${file:/run/secrets/" + s.Key() + "}"
 }
 
 // yamlLine is one line at a nesting depth.
@@ -123,8 +129,9 @@ func yamlScalar(text string) (string, error) {
 const envHeader = `# Written by tools/gen-config; run ` + "`make config-gen`" + ` after a change.
 #
 # Every variable a Margince program or image entrypoint reads, commented out at its default. Copy
-# a line to .env.local (git-ignored) and remove its "# " to set it. A secret has no default. What
-# each variable does is in docs/reference/configuration.md.
+# a line to .env.local (git-ignored) and remove its "# " to set it. A secret shows a file
+# reference instead of a default: point it at the file that holds the value, or write the value
+# itself. What each variable does is in docs/reference/configuration.md.
 `
 
 // envInputs are the variables .env.example lists beside the settings: those
@@ -184,10 +191,13 @@ func envExample(settings []setting, in envInputs) string {
 }
 
 // envDefault is the default as the variable spells it, quoted where the .env
-// reader would otherwise trim or cut it. A secret shows nothing.
+// reader would otherwise trim or cut it. A secret shows its file reference.
 func envDefault(s setting) string {
+	if s.Secret() {
+		return secretReference(s)
+	}
 	text, ok := s.DefaultText()
-	if s.Secret() || !ok {
+	if !ok {
 		return ""
 	}
 	plain := text == strings.TrimSpace(text) && !strings.Contains(text, " #") &&
