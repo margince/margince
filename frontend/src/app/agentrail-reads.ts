@@ -8,7 +8,7 @@ import { providerName } from "../format/connectorprovider";
 import { formatPercent } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { usePendingApprovals } from "../lib/approvals.queries";
+import { usePendingApprovalCount } from "../lib/approvals.queries";
 import { useCan, useHoldsAdminRole } from "../lib/capability";
 import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
 import { useConnectors } from "../lib/connectors";
@@ -47,7 +47,7 @@ export type AiPosture =
 /** What the installation can actually tell us, and what it cannot. */
 export type Signals = Readonly<{
   /** Approvals staged for this human; undefined until the read answers.
-   *  A true total — usePendingApprovals walks every page. */
+   *  An exact total the server counts across every page. */
   waiting: number | undefined;
   /** Sources the agent cannot reach, one per connection. A Gmail and a
    *  Calendar grant of one account share its address, so each carries its
@@ -151,7 +151,7 @@ export function offlineSource(
 export function useSignals(): Signals {
   const t = useT();
   const { locale } = useLocale();
-  const approvals = usePendingApprovals();
+  const approvals = usePendingApprovalCount();
   const connectors = useConnectors();
   const agent = useAgentProfile();
   const license = useLicensePosture();
@@ -165,7 +165,7 @@ export function useSignals(): Signals {
   return {
     // Absent `data` means the read has not answered, or was refused. A 0 here
     // would be this surface inventing an all-clear.
-    waiting: approvals.data ? approvals.data.data.length : undefined,
+    waiting: approvals.data?.count,
     offline,
     sourcesUnknown: connectors.isError,
     ai: agent.state,
