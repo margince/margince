@@ -17,11 +17,16 @@ import (
 // the mail addressed to it and to no other seat (soleDirectSeatSQL). With no
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
+//
+// A named seat's read starts from the mail its To line names, which holds
+// every mail the seat answers for. The scan then judges that share only.
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
-	return fmt.Sprintf("(a.kind = 'email' AND %s = $%d::uuid)", soleDirectSeatSQL(identities), arg(*owner))
+	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
+	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
+		storekit.DirectMailActivitiesSQL(identities, seat), soleDirectSeatSQL(identities), seat)
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`
