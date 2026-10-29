@@ -67,13 +67,6 @@ const mailAllowed: ContactConsentGuardEntry = {
 // consent guard decides whether it may be pressed and the transport directory
 // names a channel, so the first paint is not the answer. Waiting on the LABEL
 // is what makes that wait a condition rather than a duration.
-async function writeIcon(): Promise<HTMLElement> {
-  const details = await recordDetails();
-  return within(details).findByRole("button", {
-    name: en["compose.writeEmail"],
-  });
-}
-
 async function leadVerb(label: string): Promise<HTMLButtonElement> {
   const header = await recordHeader();
   const lead = await within(header).findByRole("button", { name: label });
@@ -260,13 +253,14 @@ describe("a moment action that opens the composer", () => {
     expect(await intentValue()).toBe("follow up after a quiet period");
   });
 
-  it("opens the same drawer from the write icon, carrying no reason", async () => {
-    // One composer, two doors. The rung's verb carries a reason and the icon
-    // beside the address does not. That is the only difference.
+  it("opens the same drawer for the generic verb, carrying no reason", async () => {
+    // One composer, two doors. The rung's verb carries a reason and the
+    // header's does not; the surface and its thread pane are the same.
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
 
-    await user.click(await writeIcon());
+    const header = await recordHeader();
+    await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
       await screen.findByRole("dialog", { name: /New email/ }),
@@ -317,24 +311,25 @@ describe("a moment action that opens the composer", () => {
   });
 });
 
-describe("writing to the contact", () => {
-  // The one sentence a refusal to write can say. Consent is the composer's to
-  // ask, because the purpose it is decided for belongs to the message.
+describe("the header's writing verb", () => {
+  // The only sentence this verb's refusal can say. Consent is the composer's
+  // to ask, because it is answered per purpose and the purpose is the message's.
   const NO_TRANSPORT = "No address and no thread to reply to.";
 
-  it("leaves the header without a write verb when the address carries one", async () => {
+  it("names mail when an address is the only way to reach them", async () => {
     mount("overview", view, [mailAllowed]);
 
-    await writeIcon();
-    const header = await recordHeader();
-    expect(
-      within(header).queryByRole("button", { name: /Email|Write/ }),
-    ).toBeNull();
+    await waitFor(async () => {
+      expect((await leadVerb("Email")).disabled).toBe(false);
+    });
+    const lead = await leadVerb("Email");
+    expect(lead.querySelector(".lucide-mail")).toBeTruthy();
   });
 
-  it("names the channel in the header when a chat conversation is the only way", async () => {
-    // No address means no icon in the details, so the header keeps the one
-    // door to the composer, named for the channel it opens.
+  it("names the channel when a chat conversation is the only way", async () => {
+    // The reported symptom: a green Email on a contact the CRM can only reach
+    // on a chat channel. The provider is named by the directory, so this reads
+    // as itself for a unit this build has never heard of too.
     mount("overview", chatOnly, [mailAllowed]);
 
     await waitFor(async () => {
@@ -345,41 +340,61 @@ describe("writing to the contact", () => {
     expect(lead.querySelector(".lucide-mail")).toBeNull();
   });
 
-  it("offers every transport from the address when the composer will ask which", async () => {
+  it("promises neither transport when the composer will ask which", async () => {
+    // Two ways to reach them means the drawer opens a picker, so a button
+    // reading Email would have named one of several and then asked.
     const user = userEvent.setup();
     mount("overview", mailAndChat, [mailAllowed]);
 
-    await user.click(await writeIcon());
+    await waitFor(async () => {
+      expect((await leadVerb("Write")).disabled).toBe(false);
+    });
+    const lead = await leadVerb("Write");
+    expect(lead.querySelector(".lucide-send")).toBeTruthy();
+    expect(lead.querySelector(".lucide-mail")).toBeNull();
+    expect(lead.querySelector(".lucide-message-square")).toBeNull();
+
+    // And the picker it stayed neutral for is really there.
+    await user.click(lead);
     expect(await screen.findByLabelText(en["compose.transport"])).toBeTruthy();
   });
 
-  it("says why, and offers no door, when there is no way to write to them", async () => {
-    // The case the consent verdict cannot catch: the guard is happily `allowed`
-    // for a contact who has no address at all.
+  it("refuses, and says why, when there is no way to write to them", async () => {
+    // The consent guard reads `allowed` for a contact with no address at all.
+    // An enabled button would open a composer that can only fail at the send.
     mount("overview", unreachable, [mailAllowed]);
 
     expect(await screen.findByText(NO_TRANSPORT)).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: en["compose.writeEmail"] }),
-    ).toBeNull();
-    const header = await recordHeader();
-    expect(
-      within(header).queryByRole("button", { name: /Email|Write/ }),
-    ).toBeNull();
+    const lead = await leadVerb("Write");
+    expect(lead.disabled).toBe(true);
+    expect(lead.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  // A contact who stopped the newsletter can still be sent their invoice.
-  // Which purpose applies is a question about the message, not this page.
+  // Writing stays available. A contact who stopped the newsletter can still be
+  // sent their invoice. Which purpose applies belongs to the message, and the
+  // page has none.
   it("opens the composer even where no purpose currently permits writing", async () => {
     mount("overview", view, [mailBlocked]);
 
-    const icon = await writeIcon();
+    const lead = await leadVerb("Email");
     await waitFor(() => {
-      expect(icon.hasAttribute("disabled")).toBe(false);
+      expect(lead.disabled).toBe(false);
     });
-    // Asserted on the control: a refused verb is disabled and points at its
-    // reason, and this one does neither.
-    expect(icon.getAttribute("aria-describedby")).toBeNull();
+    // No refusal at all, asserted on the control's own state: a refused verb
+    // is disabled and points at its reason, and this one does neither.
+    expect(lead.getAttribute("aria-describedby")).toBeNull();
+    // The verb still names the transport it opens.
+    expect(lead.querySelector(".lucide-mail")).toBeTruthy();
+  });
+
+  it("still refuses when there is nowhere to write to", async () => {
+    // Reachability is the half no consent decision can lift: with no transport
+    // the composer has nothing to send on, whatever the verdict says.
+    mount("overview", unreachable, [mailBlocked]);
+
+    expect(await screen.findByText(NO_TRANSPORT)).toBeTruthy();
+    const lead = await leadVerb("Write");
+    expect(lead.disabled).toBe(true);
   });
 });
 

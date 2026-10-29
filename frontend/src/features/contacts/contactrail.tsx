@@ -94,10 +94,7 @@ export function ContactRail({
       {refusals}
     </>
   );
-  const about = useContactAboutSections(
-    view,
-    writeRefusal ? writeRefusalId : undefined,
-  );
+  const about = useContactAboutSections(view);
   const consentRows = useConsentRows(view, consent);
   const listsOn = useListsAvailable();
   const sections: DetailSection[] = [

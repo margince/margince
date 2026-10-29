@@ -17,7 +17,7 @@ import { ContactActions } from "./contactactions";
 
 afterEach(cleanup);
 
-// Reachable both ways, so a header that still drew either verb would show it.
+// Reachable both ways, so a header that drew a Call verb would show it.
 const reachable: components["schemas"]["Contact360"] = {
   ...view,
   contact: {
@@ -59,16 +59,17 @@ function mountHeader() {
 }
 
 describe("the contact header", () => {
-  it("leaves writing and calling to the address and the number", () => {
+  it("leads with Email and leaves dialling to the number", () => {
     mountHeader();
-    for (const verb of [
-      en["contact.action.call"],
-      en["compose.writeEmail"],
-      en["record.verb.email"],
-    ]) {
-      expect(screen.queryByRole("link", { name: verb })).toBeNull();
-      expect(screen.queryByRole("button", { name: verb })).toBeNull();
-    }
+    expect(
+      screen.getByRole("button", { name: en["contact.action.email"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: en["contact.action.call"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["contact.action.call"] }),
+    ).toBeNull();
   });
 
   it("keeps meetings, Log activity and the menu, with Add task inside it", () => {
