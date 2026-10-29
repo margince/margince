@@ -21,7 +21,8 @@ function AboutThisExperiment() {
   const question = t("agentClients.experiments.clientCheckQuestion");
   return (
     <Popover
-      variant="ghost"
+      className="agent-experiment-help"
+      panelClassName="agent-experiment-panel"
       width="wide"
       label={
         <>
@@ -33,7 +34,7 @@ function AboutThisExperiment() {
       <Heading size="xsmall">{t("agentClients.experiments.whyTitle")}</Heading>
       <p>{t("agentClients.experiments.why")}</p>
       <Heading size="xsmall">{t("agentClients.experiments.howTitle")}</Heading>
-      <ol>
+      <ol className="agent-experiment-steps">
         <li>{t("agentClients.experiments.step1")}</li>
         <li>{t("agentClients.experiments.step2")}</li>
         <li>{t("agentClients.experiments.step3")}</li>
