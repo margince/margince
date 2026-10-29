@@ -7,8 +7,6 @@
 # testing membership, then delete its line. Format: file function reason.
 
 backend/internal/modules/activities/activitylisttx.go activities.ListActivitiesTx the timeline list filter, shared by every activity list; rewritten on its own
-backend/internal/modules/activities/overdueload.go activities.(*Store).taskLoadByAssignee.func1 repeats the gate; awaits its own rewrite and bench measurement
-backend/internal/modules/activities/commitments.go activities.listOpenTasks repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/activities/emailsummarybatch.go activities.EmailSummariesByIDBatch repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/activities/activityread.go activities.(*Store).CountActivities.func1 the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/dealactivitylists.go activities.ListActivitiesByDealTx the timeline list filter, shared by every activity list; rewritten on its own
@@ -17,3 +15,10 @@ backend/internal/modules/contacts/taskclaims.go contacts.(*Store).readTaskClaims
 backend/internal/compose/weekly/weeklycounts.go weekly.countWeekMeetings repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklycoverage.go weekly.readFigureStarts repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklyscorecard.go weekly.scoreDeals repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/modules/activities/citedthread.go activities.SettledCitations repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/modules/activities/owedreview.go activities.owedReviewReadTx repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/compose/reportsql.go compose.(*reportEngine).fetchRows.func1 repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/compose/company360/suggestionreads.go company360.newestMessage repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/compose/export.go compose.readMember repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/compose/derivationfetch.go compose.(*reportEngine).fetchDerivation.func1 repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/modules/search/queryexec.go search.(*QueryExecutor).answerRows.func1 repeats the gate; awaits its own rewrite and bench measurement
