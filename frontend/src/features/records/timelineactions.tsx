@@ -114,13 +114,21 @@ export function RowAnswerActions({
 // The per-row verbs of a 360 timeline: the answer verbs, then one menu for
 // filing and audience. One line in one place on every row. The menu mounts its
 // verbs and their dialogs on first open, so a page of rows does not pay for them.
+// Its name carries the row's subject, so a screen reader's button list can tell
+// the rows apart.
 export function TimelineActions(props: RowVerbProps) {
   const { activity, entityType, entityId } = props;
   const t = useT();
   return (
     <>
       <RowAnswerActions {...props} />
-      <OverflowMenu label={t("record.moreActions")}>
+      <OverflowMenu
+        label={
+          activity.subject
+            ? t("record.moreActionsFor", { subject: activity.subject })
+            : t("record.moreActions")
+        }
+      >
         <ActivityFilesAction activity={activity} />
         <RelinkAction
           activity={activity}

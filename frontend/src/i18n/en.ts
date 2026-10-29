@@ -1526,7 +1526,6 @@ export const en = {
   "contact.meetings.sentExpires": "Sent {sent} · expires {expires}",
   "contact.meetings.resend": "Resend",
   "contact.meetings.withdraw": "Withdraw",
-  "contact.meetings.moreFor": "More actions for {subject}",
   "contact.meetings.withdrawTitle": "Withdraw this invitation?",
   "contact.meetings.withdrawBody":
     "The link stops working and the guest can no longer book through it.",
@@ -2493,6 +2492,7 @@ export const en = {
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
+  "record.moreActionsFor": "More actions for {subject}",
   "record.fullHistory": "Full history",
 
   "share.title": "Share this record",

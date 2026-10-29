@@ -187,7 +187,9 @@ describe("ComposeModal — channel reply", () => {
 // Files, Relink, Remove from project and Change visibility sit in the row's
 // "More actions" menu, which mounts them on its first open.
 async function openRowMenu() {
-  await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: /^More actions( for |$)/ }),
+  );
 }
 
 // Relink is disabled until /me answers. Once it is enabled the grants have

@@ -275,7 +275,9 @@ describe("ProjectScreen", () => {
 
     expect(within(drawer).getByRole("button", { name: "Reply" })).toBeTruthy();
     await user.click(
-      within(drawer).getByRole("button", { name: "More actions" }),
+      within(drawer).getByRole("button", {
+        name: "More actions for Kickoff agenda",
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Relink" }));
     await waitFor(() =>

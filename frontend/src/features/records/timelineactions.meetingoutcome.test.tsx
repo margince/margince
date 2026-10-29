@@ -102,7 +102,9 @@ it.each([
   ["the reader may not write", { writable: false }],
 ])("offers no outcome on a meeting %s", async (_name, change) => {
   show({ ...MEETING, ...change });
-  await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "More actions for Site visit" }),
+  );
   expect(await screen.findByRole("button", { name: "Relink" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Update/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
