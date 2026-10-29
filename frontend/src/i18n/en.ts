@@ -7202,6 +7202,15 @@ export const en = {
     "{count} deal has not been judged yet and would not count either.",
   "review.enforcementPreviewUnknown_other":
     "{count} deals have not been judged yet and would not count either.",
+  "review.revive": "The customer is back",
+  "review.reviveHelp":
+    "Counts the deal again once the customer has written or met with you, the close date is confirmed and a next step is planned.",
+  "review.wait": "The customer asked us to wait",
+  "review.waitHelp":
+    "Records the wait on the deal. The deal stays out until then, and the review comes back on that day.",
+  "review.waitUntil": "Wait until",
+  "review.closeLost": "Close as lost",
+  "review.closeLostHelp": "Closes the deal as lost, with your reason.",
   "review.enforcementOn": "The qualified forecast is on.",
   "review.enforcementOff": "The qualified forecast is off.",
   "review.enforcementAdminOnly": "Only an admin can change this.",

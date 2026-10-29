@@ -23,10 +23,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -142,6 +144,14 @@ func (h reviewAnswerHandlers) answer(
 	write func(ctx context.Context, tx pgx.Tx, deal ids.DealID, active deals.CustomColumns) error,
 ) {
 	ctx := r.Context()
+	// Gated before anything is written: both answers move the deal, so the
+	// answerer needs the review's right and the deal's.
+	for _, object := range []string{"forecast", "deal"} {
+		if err := auth.Require(ctx, object, principal.ActionUpdate); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	active, err := h.deals.ActiveDealColumns(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -156,6 +166,9 @@ func (h reviewAnswerHandlers) answer(
 		}
 		if err != nil {
 			return fmt.Errorf("compose: reading the review: %w", err)
+		}
+		if err := auth.EnsureWritable(ctx, tx, "deal", deal); err != nil {
+			return err
 		}
 		return write(ctx, tx, ids.From[ids.DealKind](deal), active)
 	})

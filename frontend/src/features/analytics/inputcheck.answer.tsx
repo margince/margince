@@ -25,26 +25,32 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
 };
 
 // The answers a customer review takes, as the server accepts them
-// (assurance.ReviewOutcomes): an override with a reason and an end date, or a
-// reminder. Offering "fixed" would be refused on submit.
-const reviewOutcomes = new Set(["value_correct", "remind_later"]);
+// (assurance.ReviewOutcomes), in the words a rep uses: the customer is back,
+// asked to wait, the value is right anyway, or the deal is lost.
+const reviewOutcomes = new Set([
+  "fixed_record",
+  "remind_later",
+  "value_correct",
+  "not_relevant",
+]);
 
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
-  if (props.check?.type !== "unlinked_signal") {
-    const labels =
-      props.check?.type === "deal_viability"
-        ? {
-            ...props.labels,
-            outcomes: props.labels.outcomes.filter((o) =>
-              reviewOutcomes.has(o.value),
-            ),
-          }
-        : props.labels;
+  const t = useT();
+  if (props.check?.type === "deal_viability") {
     return (
       <ResolveSheet
         {...props}
-        labels={labels}
+        labels={reviewLabels(t, props.labels)}
+        asksExpiry={(outcome) => outcome !== "not_relevant"}
+        context={<CheckFacts check={props.check} />}
+      />
+    );
+  }
+  if (props.check?.type !== "unlinked_signal") {
+    return (
+      <ResolveSheet
+        {...props}
         context={props.check ? <CheckFacts check={props.check} /> : undefined}
       />
     );
@@ -53,6 +59,34 @@ export function InputCheckAnswerSheet(props: Readonly<Props>) {
     throw new Error("The app shell must supply review actions");
   }
   return <SignalCheckAnswerSheet {...props} actions={actions} />;
+}
+
+function reviewLabels(
+  t: ReturnType<typeof useT>,
+  labels: Props["labels"],
+): Props["labels"] {
+  const words: Partial<Record<string, { label: string; description: string }>> =
+    {
+      fixed_record: {
+        label: t("review.revive"),
+        description: t("review.reviveHelp"),
+      },
+      remind_later: {
+        label: t("review.wait"),
+        description: t("review.waitHelp"),
+      },
+      not_relevant: {
+        label: t("review.closeLost"),
+        description: t("review.closeLostHelp"),
+      },
+    };
+  return {
+    ...labels,
+    remindAt: t("review.waitUntil"),
+    outcomes: labels.outcomes
+      .filter((outcome) => reviewOutcomes.has(outcome.value))
+      .map((outcome) => ({ ...outcome, ...words[outcome.value] })),
+  };
 }
 
 function SignalCheckAnswerSheet({
