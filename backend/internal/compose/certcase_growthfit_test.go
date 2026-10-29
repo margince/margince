@@ -15,11 +15,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -234,6 +237,111 @@ func TestTheGrowthFitCaseCountsWhatASubScoreCites(t *testing.T) {
 			}
 			if got := prepared.Evaluate(trace); got.Result != tc.want {
 				t.Errorf("outcome = %v (%s), want %v", got.Result, got.Detail, tc.want)
+			}
+		})
+	}
+}
+
+// voiceLane answers with the given whitespace, angle and access reason, each
+// citing their offer so the grounding filter keeps every one.
+type voiceLane struct{ whitespace, angle, reason string }
+
+func (l voiceLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	found := promptFieldID.FindStringSubmatch(req.Messages[len(req.Messages)-1].Content)
+	if found == nil {
+		return model.Response{}, errors.New("the request carried no record id to cite")
+	}
+	cite := []claims.Evidence{{EntityType: "profile_field", EntityID: found[1]}}
+	reply, err := json.Marshal(struct {
+		Band             string                             `json:"band"`
+		SubScores        []companydossier.GrowthFitSubScore `json:"sub_scores"`
+		Whitespace       []claims.Sentence                  `json:"whitespace"`
+		RecommendedAngle claims.Sentence                    `json:"recommended_angle"`
+	}{
+		Band:             "strong",
+		SubScores:        []companydossier.GrowthFitSubScore{{Dimension: "access", Score: 40, Reason: l.reason, Evidence: cite}},
+		Whitespace:       []claims.Sentence{{Text: l.whitespace, Nature: "assessment", Evidence: cite}},
+		RecommendedAngle: claims.Sentence{Text: l.angle, Nature: "recommendation", Evidence: cite},
+	})
+	if err != nil {
+		return model.Response{}, fmt.Errorf("encode the reply: %w", err)
+	}
+	return model.Response{Text: string(reply)}, nil
+}
+
+// A growth fit states findings and moves without a speaker. A kept claim or
+// sub-score reason written as "I" is a wrong answer naming the sentence.
+func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
+	plain := voiceLane{
+		whitespace: "They do not yet buy SAP integration.",
+		angle:      "Focus on their SAP rollout.",
+		reason:     "Their buyers are hard to reach.",
+	}
+	for name, tc := range map[string]struct {
+		lane    voiceLane
+		speaker string
+	}{
+		"a recommended angle that suggests": {
+			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
+				angle: "I suggest you focus on smaller prospects."},
+			speaker: "I suggest",
+		},
+		"whitespace that reports finding none": {
+			lane: voiceLane{angle: plain.angle, reason: plain.reason,
+				whitespace: "I couldn’t identify any obvious gaps."},
+			speaker: "I couldn’t",
+		},
+		"a sub-score reason in the first person": {
+			lane: voiceLane{whitespace: plain.whitespace, angle: plain.angle,
+				reason: "In my reading their buyers are hard to reach."},
+			speaker: "my reading",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			prepared := prepareGrowthFit(t, `{"cites":["their_offer"],"bands":["strong"]}`)
+			trace, err := prepared.Run(context.Background(), tc.lane)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			got := prepared.Evaluate(trace)
+			if got.Result != aitasks.OutcomeWrongAnswer {
+				t.Errorf("outcome = %v (%s), want wrong answer", got.Result, got.Detail)
+			}
+			if !strings.Contains(got.Detail, tc.speaker) {
+				t.Errorf("detail = %q, want it to quote the sentence holding %q", got.Detail, tc.speaker)
+			}
+		})
+	}
+}
+
+// "We" and "our" name the reader's company. A capital I inside a word or a
+// numeral is no speaker either.
+func TestAGrowthFitClaimWithoutASingularSpeakerIsAccepted(t *testing.T) {
+	for name, lane := range map[string]voiceLane{
+		"our platform and we": {
+			whitespace: "They do not yet use our platform.",
+			angle:      "Show how we cut their SAP integration time.",
+			reason:     "Their buyers are hard to reach.",
+		},
+		"I/O and i.e. inside words": {
+			whitespace: "Their I/O-heavy plants run no integration layer, i.e. no middleware.",
+			angle:      "Focus on their I/O bottleneck.",
+			reason:     "Their buyers are hard to reach.",
+		},
+		"a numeral after a capitalised word": {
+			whitespace: "They closed a Series I round without an integration partner.",
+			angle:      "Pitch the Phase I rollout.",
+			reason:     "Their buyers are hard to reach.",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			prepared := prepareGrowthFit(t, `{"cites":["their_offer"],"bands":["strong"]}`)
+			trace, err := prepared.Run(context.Background(), lane)
+			if err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			if got := prepared.Evaluate(trace); got.Result != aitasks.OutcomeAccepted {
+				t.Errorf("outcome = %v (%s), want accepted", got.Result, got.Detail)
 			}
 		})
 	}

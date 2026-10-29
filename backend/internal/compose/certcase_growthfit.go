@@ -31,6 +31,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"unicode"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -282,7 +283,61 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "never cited: " + strings.Join(missing, ", "),
 		}
 	}
+	if spoken := firstPersonText(kept); spoken != "" {
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: fmt.Sprintf("a claim speaks as I: %q", spoken),
+		}
+	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+}
+
+// firstPersonSingular are the words a writer uses of itself alone. "We" and
+// "our" are absent: in a fit they name the reader's own company.
+var firstPersonSingular = map[string]bool{
+	"I": true, "I'm": true, "I'd": true, "I'll": true, "I've": true,
+	"me": true, "Me": true, "my": true, "My": true, "myself": true, "Myself": true,
+}
+
+// firstPersonText is the first kept claim or sub-score reason with a speaker,
+// or "" when the assessment states its findings without one.
+func firstPersonText(kept companydossier.GrowthFitClaims) string {
+	texts := make([]string, 0, len(kept.SubScores))
+	for _, sub := range kept.SubScores {
+		texts = append(texts, sub.Reason)
+	}
+	for _, sentence := range kept.All() {
+		texts = append(texts, sentence.Text)
+	}
+	for _, text := range texts {
+		if speaksAsI(text) {
+			return text
+		}
+	}
+	return ""
+}
+
+// speaksAsI splits on whitespace alone, so "I/O-heavy" and "i.e." stay one word
+// each and never read as the pronoun.
+func speaksAsI(text string) bool {
+	words := strings.Fields(strings.ReplaceAll(text, "’", "'"))
+	for i, field := range words {
+		word := strings.TrimFunc(field, unicode.IsPunct)
+		if firstPersonSingular[word] && (word != "I" || !namesANumeral(words, i)) {
+			return true
+		}
+	}
+	return false
+}
+
+// namesANumeral reads a bare "I" after a capitalised word mid-sentence as the
+// numeral in "Series I". At a sentence's start that "I" is the pronoun.
+func namesANumeral(words []string, i int) bool {
+	if i < 2 || strings.ContainsAny(words[i-2][len(words[i-2])-1:], ".!?:") {
+		return false
+	}
+	before := []rune(words[i-1])
+	return unicode.IsUpper(before[0]) && unicode.IsLetter(before[len(before)-1])
 }
 
 func (c *growthFitCase) bandAccepted(band crmcontracts.GrowthFitBand) bool {

@@ -53,19 +53,23 @@ Give exactly those four dimensions, once each, and no others. Each cites the rec
 A sub-score is the band taken apart, not a second opinion: score each dimension from the same evidence, and give the reason in one sentence. Never total them — a separate step decides the band.
 Judge only on evidence. Do NOT report a band of "unknown" and do not comment on how much data you were given — a separate step counts that and can overrule your band. Give the band the evidence you have actually supports.
 Label every claim. A FACT restates something the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by reading their facts against our offering — every sentence that compares them with us is one, never a fact — say it plainly and cite THEIR records. A RECOMMENDATION is one concrete move.
-positive_factors and negative_factors are why they do or do not fit. whitespace is what we sell that they do not appear to buy yet. objections are what they are likely to push back with. recommended_angle is the single best approach, and is always a recommendation.
+positive_factors and negative_factors are why they do or do not fit. whitespace is what we sell that they do not appear to buy yet; when you see none, return an empty whitespace list, never a claim saying you found none. objections are what they are likely to push back with. recommended_angle is the single best approach, and is always a recommendation.
 Our offering is never a fact about THEM and never a citation: cite only ids the company summary gave you. Every claim must cite at least one — a claim you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a claim's text — the reader sees the text, and an id there is unreadable.
 Never invent a fact. If the summary does not say it, you may still ASSESS it, but then it is an assessment and must be labelled one.
 Write one claim per sentence.`
+
+// growthFitClaimVoice is composed after promptvoice.Rule: of two instructions
+// that disagree, a model keeps the later one.
+const growthFitClaimVoice = `Claims have no speaker. This overrides the VOICE block's line on saying "I": in every claim's text and every sub-score reason, never refer to yourself, so no "I", "me" or "my" in whatever language you write. State the finding itself. Write a recommendation as the move: "Focus on their plant managers", never "I suggest you focus on their plant managers". "We" and "our" still name the company the reader works for.`
 
 // growthFitSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
 // The assessment is filed on the company and read by whoever opens it, so it
 // takes the installation's shared language.
 func growthFitSystemFor(fence promptfence.Fence, lang string) string {
-	return growthFitSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
-		fence.Rule("company summary")
+	return growthFitSystem + "\n" + promptvoice.Rule + "\n" + growthFitClaimVoice + "\n" +
+		promptlang.Rule(lang) + "\n" + fence.Rule("company summary")
 }
 
 // GrowthFitRequest builds the one-shot call. Exported so the AI cert case
