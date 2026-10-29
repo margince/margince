@@ -257,7 +257,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
-		                    AND pa.occurred_at > r.created_at AND %[7]s) THEN NULL
+		                    AND NOT %[8]s AND %[7]s) THEN NULL
 		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
 		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
@@ -266,7 +266,8 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
 		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf))
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		occurredday.BegunSQL("pa", "r.created_at"))
 }
 
 // visibleToAllSQL admits an activity every member may read. The check runs as
