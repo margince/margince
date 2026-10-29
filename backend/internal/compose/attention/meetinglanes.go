@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Meetings is today's booked meetings that have not happened yet: the day
-// meetings first, as a calendar's all-day row, then the timed ones by start,
-// each up to limit. full says either read filled its limit, so a later meeting
+// Meetings is today's booked meetings that have not happened yet. The day
+// meetings come first, as a calendar's all-day row, then the timed ones by
+// start, each up to limit. full says either read filled its limit, so a later meeting
 // may exist that was not read.
 // Optional: nil means this feed does not read meetings, which is not a day with
 // none in it.
@@ -98,8 +98,8 @@ type Meeting struct {
 	ContactID ids.UUID
 
 	// The reader's own preparation for the meeting. Nil when the reader does
-	// not attend it or may not read its content: telling a rep to prepare a
-	// meeting they cannot open, or someone else's, is not theirs to act on.
+	// not attend it or may not read its content. A rep cannot act on a meeting
+	// they cannot open, or on someone else's.
 	Preparation *crmcontracts.MeetingPreparation
 
 	// Whose calendar this came off, and what the row names as its owner. Zero

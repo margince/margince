@@ -134,9 +134,8 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		}
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
-	// Not confirmed ready, said only where the lane could tell: an absent kind
-	// means the reader does not attend or may not read the meeting, not that
-	// they are ready. Silence beats a warning nobody can act on.
+	// Said only where the lane could tell. An absent kind means the reader does
+	// not attend or may not read the meeting, not that they are ready.
 	unprepared := item.Kind != nil && *item.Kind == meetingKindUnprepared
 	if unprepared {
 		reasons = append(reasons, reason("meeting_unprepared", nil))

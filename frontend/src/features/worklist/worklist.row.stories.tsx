@@ -144,15 +144,10 @@ const meetingStillToConfirm: WorklistItem = {
   due_at: "2026-09-02T13:00:00Z",
   because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
   actions: [],
-  // The way into the brief, in the shape the server actually sends it.
-  //
-  // The subject stays the ACTIVITY — the row is about the appointment —
-  // and the contact rides separately, because the brief is not a page of
-  // its own: it opens as `?prep=<activity>` on somebody's record. Writing
-  // this fixture with a contact SUBJECT instead would draw no control at
-  // all, since moveHref reads `with_contact` and returns nothing without
-  // it, and the story would look identical to its sibling below while
-  // claiming to show the opposite.
+  // The way into the brief, in the shape the server sends it. The subject is
+  // the activity, and the contact rides separately: the brief opens as
+  // `?prep=<activity>` on somebody's record. Without `with_contact`, moveHref
+  // returns nothing and the story would draw no control at all.
   subject: { type: "activity", id: "m1" },
   with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
   move: {
@@ -179,8 +174,8 @@ export const AMeetingWithItsStartTime: Story = {
   },
 };
 
-// The same meeting once the reader said they are ready: a reminder with its
-// start time and a Ready mark, and no button left to press.
+// The same meeting once the reader said they are ready. It stays a reminder
+// with its start time and a Ready mark, and has no button left to press.
 export const AMeetingTheReaderIsReadyFor: Story = {
   args: {
     ...baseArgs,

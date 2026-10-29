@@ -13,8 +13,8 @@ import { meetingRow } from "../../testing/brief.fixtures";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
-// "I'm ready" on the reader's own meeting: the press sends the revision the row
-// was read at, the toast offers the undo, and the row says what the server says.
+// "I'm ready" on the reader's own meeting. The press sends the revision the row
+// was read at. The toast offers the undo, and the row says what the server says.
 
 afterEach(() => {
   cleanup();

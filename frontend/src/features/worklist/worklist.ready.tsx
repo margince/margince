@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// "I'm ready" on a meeting the reader attends. The server owns the state: the
-// row shows what `preparation` says, and the press sends back the revision the
+// "I'm ready" on a meeting the reader attends. The server owns the state, and
+// the row shows what `preparation` says. The press sends back the revision the
 // row was read at, so a meeting that moved since is never confirmed blind.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,7 +60,7 @@ export function useMeetingReady() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
-    // On the mutation, not the press: the undo is pressed after the row turned
+    // On the mutation, not the press. The undo is pressed after the row turned
     // ready and lost its button, and a press's own callbacks go with it.
     onError: (error, input) =>
       toast.show(t(failure(error, input)), { tone: "danger" }),

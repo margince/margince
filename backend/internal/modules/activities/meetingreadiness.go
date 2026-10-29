@@ -4,7 +4,7 @@
 package activities
 
 // An attendee's own "I'm ready" for a meeting. It holds for that attendee
-// alone and only at the preparation revision they confirmed: a moved start, a
+// alone and only at the preparation revision they confirmed. A moved start, a
 // new agenda or a changed guest list asks them to look again.
 
 import (
@@ -81,8 +81,8 @@ func (s *Store) ConfirmMeetingReady(ctx context.Context, id ids.ActivityID, revi
 }
 
 // WithdrawMeetingReady is the undo behind ConfirmMeetingReady. It removes the
-// confirmation only while it is still the one given at revision, so the undo
-// of an old press cannot take back a newer confirmation.
+// confirmation only while it is still the one given at revision. The undo of
+// an old press cannot take back a newer confirmation.
 func (s *Store) WithdrawMeetingReady(ctx context.Context, id ids.ActivityID, revision string) (MeetingPreparation, error) {
 	return s.changeReadiness(ctx, id, revision, func(tx pgx.Tx, attendee ids.UUID, _ meetingFacts, _ string) (bool, error) {
 		tag, err := tx.Exec(ctx,
@@ -104,8 +104,8 @@ const (
 // readinessWrite changes the attendee's row and reports whether it did.
 type readinessWrite func(tx pgx.Tx, attendee ids.UUID, current meetingFacts, capturedBy string) (bool, error)
 
-// changeReadiness is the gate and the write shape both readiness verbs share:
-// the caller must read the meeting's content and attend it, and a change lands
+// changeReadiness is the gate and the write shape both readiness verbs share.
+// The caller must read the meeting's content and attend it. A change lands
 // with its audit row and event in one transaction.
 func (s *Store) changeReadiness(
 	ctx context.Context, id ids.ActivityID, revision string, write readinessWrite, state string,
@@ -290,9 +290,9 @@ const preparationsQuery = `
 	  LEFT JOIN meeting_readiness r ON r.activity_id = a.id AND r.attendee_id = %s
 	 WHERE a.id = ANY($%d) AND a.kind = 'meeting' AND ` + activityLive + ` AND %s AND %s`
 
-// participantsSQL names each participant by its most stable identity: the
-// address a calendar sent stays the same when capture later resolves it to a
-// contact, so resolving a guest does not read as a changed guest list.
+// participantsSQL names each participant by its most stable identity. A
+// calendar's address stays when capture later resolves it to a contact. So
+// resolving a guest does not read as a changed guest list.
 const participantsSQL = `COALESCE((SELECT array_agg(COALESCE('a:' || lower(p.address), 'u:' || p.user_id::text,
 	                                  'c:' || p.contact_id::text, 'h:' || p.channel_user_id))
 	           FROM activity_participant p WHERE p.activity_id = a.id), '{}')`

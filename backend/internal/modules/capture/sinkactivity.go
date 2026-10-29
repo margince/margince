@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -491,11 +490,7 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
 	}
-	placeholders := make([]string, len(args))
-	for i := range args {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-	}
 	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
- VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
+ VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

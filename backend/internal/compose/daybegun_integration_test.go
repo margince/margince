@@ -211,8 +211,8 @@ func TestADayCallDatedBeforeADayMeetingIsNotItsFollowUp(t *testing.T) {
 	}
 }
 
-// On a busy day the meetings lane still opens with the day meeting, and the
-// day meeting takes no timed meeting's place: each is read to its own limit.
+// On a busy day the meetings lane still opens with the day meeting. The day
+// meeting takes no timed meeting's place, because each is read to its own limit.
 func TestABusyDayKeepsTheDayMeetingOnTheLane(t *testing.T) {
 	e := integration.Setup(t)
 	for i := range 13 {

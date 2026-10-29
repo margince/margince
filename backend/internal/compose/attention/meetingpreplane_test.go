@@ -3,8 +3,8 @@
 
 package attention
 
-// A meeting the reader has not confirmed ready says so, and a meeting this
-// reader does not attend or may not read says nothing at all.
+// A meeting the reader has not confirmed ready says so. A meeting this reader
+// does not attend or may not read says nothing at all.
 
 import (
 	"context"
@@ -73,8 +73,8 @@ func TestAMeetingTheReaderHasNotConfirmedSaysSo(t *testing.T) {
 }
 
 // The refusal case. A meeting whose content is withheld, or that the reader
-// does not attend, reaches the lane with no preparation, and the queue must say
-// nothing rather than tell a reader to prepare it.
+// does not attend, reaches the lane with no preparation. The queue must then
+// say nothing rather than tell a reader to prepare it.
 func TestAMeetingThisReaderCannotReadClaimsNothingAboutPreparation(t *testing.T) {
 	svc := meetingPrepService([]Meeting{{
 		ID: ids.NewV7(), Subject: "withheld", StartsAt: readInstant.Add(30 * time.Minute),

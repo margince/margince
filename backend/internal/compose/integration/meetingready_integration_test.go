@@ -5,8 +5,8 @@
 
 package integration
 
-// "I'm ready" on both doors: an agent reads the preparation revision through
-// prep_for_meeting and confirms it with no approval, the REST route and the
+// "I'm ready" on both doors. An agent reads the preparation revision through
+// prep_for_meeting and confirms it with no approval. The REST route and the
 // tool answer alike, and a meeting moved in between refuses the old revision.
 
 import (

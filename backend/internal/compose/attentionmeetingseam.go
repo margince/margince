@@ -3,9 +3,8 @@
 
 package compose
 
-// The meetings lane's seam over the activities store, and the two questions it
-// answers about a booked meeting: what to call it, and whether the reader has
-// said they are ready for it.
+// The meetings lane's seam over the activities store. It answers two questions
+// about a booked meeting: what to call it, and whether the reader is ready.
 
 import (
 	"context"
@@ -22,7 +21,7 @@ import (
 //
 // Window, status and order are all SQL predicates, so the limit cuts a list
 // that is already the lane. The day meetings and the timed ones are read with
-// a limit each: a calendar's all-day rows lead the lane, and they can never
+// a limit each. A calendar's all-day rows lead the lane, and they can never
 // take the places of the meetings about to start.
 type attentionMeetings struct{ store *activities.Store }
 

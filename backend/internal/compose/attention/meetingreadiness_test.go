@@ -3,7 +3,7 @@
 
 package attention
 
-// The reader's own imminent preparation keeps its place: crowding does not
+// The reader's own imminent preparation keeps its place. Crowding does not
 // demote it, and a day fuller than the meetings lane's cap does not drop it.
 
 import (
