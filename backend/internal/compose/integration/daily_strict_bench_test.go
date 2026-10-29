@@ -34,6 +34,8 @@ var strictHomeCohorts = []strictHomeCohort{
 	{"R02", "worklist", "manager", 750 * time.Millisecond, "queue"},
 	{"R02", "home_worklist", "rep", 750 * time.Millisecond, "queue"},
 	{"R02", "home_worklist", "manager", 750 * time.Millisecond, ""},
+	{"R09", "app_shell_approvals", "rep", 100 * time.Millisecond, "count"},
+	{"R09", "app_shell_approvals", "manager", 100 * time.Millisecond, "count"},
 	{"R04", "app_shell_me", "rep", 150 * time.Millisecond, "user"},
 	{"R04", "app_shell_me", "manager", 150 * time.Millisecond, "user"},
 	{"R04", "morning_load_cheap_route", "team", 150 * time.Millisecond, ""},
