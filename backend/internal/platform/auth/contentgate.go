@@ -16,7 +16,7 @@ const contentGateSource = "content_gate_source"
 // ContentGateCopies answers how many content gates, or audience arms, sql
 // carries. Postgres plans each copy, and a pooled connection keeps that memory.
 func ContentGateCopies(sql string) int {
-	return strings.Count(sql, "FROM activity "+contentGateSource)
+	return strings.Count(sql, "WHERE "+contentGateSource+".id = ")
 }
 
 // ContentReadableActivitiesSQL renders the ids among need whose content the

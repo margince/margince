@@ -251,7 +251,9 @@ func meetingNeedSQL() string {
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
 	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = COALESCE(named.merged_into_id, named.id)
-	   JOIN activity later ON later.id = touched.activity_id AND later.occurred_at >= c.follow_from`
+	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
+	    AND later.occurred_at >= c.follow_from -- occurred_at raw: FromSQL implies it, so the set is never narrower
+`
 }
 
 func collectMeetingFollowUps(rows pgx.Rows) ([]AwaitingReply, error) {

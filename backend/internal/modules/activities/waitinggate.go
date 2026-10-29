@@ -53,5 +53,5 @@ func waitingReadableSQL(alias string) string {
 // names a relation with an activity's id, thread_key, kind and channel_provider.
 func threadNeedSQL(candidates string) string {
 	return `SELECT c.id FROM ` + candidates + ` c
-	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c")
+	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c") + ` AND t.restricted_at IS NULL`
 }

@@ -279,7 +279,7 @@ func awaitingCandidatesSQL(asOf, sentByReader, window string) string {
 	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, a.occurred_at FROM activity a
 	 WHERE a.kind IN (` + mailKinds + `) AND a.direction = 'outbound' AND a.archived_at IS NULL
 	   AND ` + sentByReader + `
-	   AND a.occurred_at <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
+	   ` + fmt.Sprintf("AND a.occurred_at <= %s::timestamptz - make_interval(days => %s::int) -- occurred_at raw: an age of whole days\n", asOf, window) + `
 	   AND ` + occurredday.FromSQL("a", fmt.Sprintf("%s::timestamptz - make_interval(days => %s::int + %d)", asOf, window, AwaitingReplyLookbackDays))
 }
 
@@ -291,7 +291,9 @@ func awaitingNeedSQL() string {
 	 UNION SELECT later.id FROM ` + followUpCandidates + ` c
 	   JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
 	   JOIN activity_link heard ON heard.contact_id = sent.contact_id
-	   JOIN activity later ON later.id = heard.activity_id AND later.occurred_at > c.occurred_at`
+	   JOIN activity later ON later.id = heard.activity_id AND later.restricted_at IS NULL
+	    AND later.occurred_at > c.occurred_at -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
+`
 }
 
 // awaitingRepliesSQL: every rule sits before the cap.
