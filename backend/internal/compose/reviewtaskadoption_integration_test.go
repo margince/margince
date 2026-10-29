@@ -84,12 +84,39 @@ func TestAnAdoptedTaskGetsTheReviewDueDateAndTheDealOwner(t *testing.T) {
 	if got := v.WsScalar(t, `SELECT coalesce(assignee_id::text, '') FROM activity WHERE id = $1`, earlier); got != v.Rep1.String() {
 		t.Errorf("the adopted task is assigned to %q, want the deal owner %s", got, v.Rep1)
 	}
-	due := v.WsScalar(t, `SELECT coalesce(to_char(due_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
-		FROM activity WHERE id = $1`, earlier)
-	at, err := time.Parse(time.RFC3339, due)
-	if err != nil || !at.After(v.now) || at.After(v.now.Add(72*time.Hour)) {
-		t.Errorf("the adopted task is due %q, want the end of the next local day after %s", due, v.now)
+	v.dueAtReviewDeadline(t, earlier)
+}
+
+// dueAtReviewDeadline checks the task is due when a minted review task is: the
+// end of the next local day.
+func (v *viabilityEnv) dueAtReviewDeadline(t *testing.T, task ids.UUID) {
+	t.Helper()
+	want, err := reviewDueAt(v.Admin(), bundleDeps{
+		bundles: assurance.NewStore(InstallationDB(v.Pool)), now: v.worker.now,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
+	if got := v.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND due_at = $2`, task, want); got != 1 {
+		t.Errorf("the adopted task is not due at %s, the end of the next local day", want)
+	}
+}
+
+func TestAnAdoptedTaskFillsOnlyTheGapAColleagueLeft(t *testing.T) {
+	v := setupViability(t)
+	earlier := v.earlierPassTask(t)
+	rep2 := ids.From[ids.UserKind](v.Rep2)
+	if _, err := v.Activities.UpdateActivity(v.Admin(), ids.From[ids.ActivityKind](earlier),
+		activities.UpdateActivityInput{AssigneeID: &rep2}); err != nil {
+		t.Fatalf("a colleague taking the task: %v", err)
+	}
+
+	v.check(t)
+	v.adoptedTask(t, earlier)
+	if got := v.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE id = $1`, earlier); got != v.Rep2.String() {
+		t.Errorf("the pass moved the task to %q; the colleague who took it, %s, keeps it", got, v.Rep2)
+	}
+	v.dueAtReviewDeadline(t, earlier)
 }
 
 func TestAnAdoptedTaskKeepsTheDateAndAssigneeSomebodyChose(t *testing.T) {

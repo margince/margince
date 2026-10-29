@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -68,7 +69,7 @@ func bundleReview(
 			return false, err
 		}
 		if found {
-			if err := alignAdoptedTask(ctx, deps, task, review); err != nil {
+			if found, err = alignAdoptedTask(ctx, deps, task, subject, review); err != nil {
 				return false, err
 			}
 		}
@@ -127,17 +128,62 @@ func linkEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID, epis
 
 // alignAdoptedTask gives an adopted task what a minted review task carries: a
 // due date and the deal owner. It only fills what is empty, so a date or an
-// assignee somebody chose stays, and a concurrent edit wins over this one.
-func alignAdoptedTask(ctx context.Context, deps bundleDeps, task ids.UUID, review assurance.Exception) error {
-	act, err := deps.activities.GetActivity(ctx, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
-	if err != nil {
-		return fmt.Errorf("compose: reading the adopted task: %w", err)
+// assignee somebody chose stays. It reports false when the task stopped being
+// adoptable since adoptOpenTask read it, done or moved to another record, and
+// the review then mints its own.
+func alignAdoptedTask(
+	ctx context.Context, deps bundleDeps, task ids.UUID, subject subjectFindings, review assurance.Exception,
+) (bool, error) {
+	id := ids.From[ids.ActivityKind](task)
+	for range adoptionAttempts {
+		act, err := deps.activities.GetActivity(ctx, id, storekit.LiveOnly)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return false, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("compose: reading the adopted task: %w", err)
+		}
+		if (act.IsDone != nil && *act.IsDone) || !linksToSubject(act, subject) {
+			return false, nil
+		}
+		in, err := adoptedTaskGaps(ctx, deps, act, review)
+		if err != nil || (in.DueAt == nil && in.AssigneeID == nil) {
+			return err == nil, err
+		}
+		in.IfVersion = (*int64)(act.Version)
+		_, err = deps.activities.UpdateActivity(ctx, id, in)
+		if in.AssigneeID != nil && unassignableSeat(err) {
+			// The owner cannot hold work: the task keeps the date and waits in the
+			// unassigned queue, as a minted one would.
+			if in.AssigneeID = nil; in.DueAt == nil {
+				return true, nil
+			}
+			_, err = deps.activities.UpdateActivity(ctx, id, in)
+		}
+		if !errors.Is(err, apperrors.ErrVersionSkew) {
+			if err != nil {
+				return false, fmt.Errorf("compose: giving the adopted task its due date and owner: %w", err)
+			}
+			return true, nil
+		}
 	}
+	return false, errors.New("compose: the adopted task kept changing; the next pass delivers the review")
+}
+
+// adoptionAttempts bounds the re-reads after a concurrent edit. A task that
+// keeps changing is left to the next pass rather than linked half-filled.
+const adoptionAttempts = 3
+
+// adoptedTaskGaps is the patch that fills an adopted task's empty due date and
+// assignee.
+func adoptedTaskGaps(
+	ctx context.Context, deps bundleDeps, act crmcontracts.Activity, review assurance.Exception,
+) (activities.UpdateActivityInput, error) {
 	var in activities.UpdateActivityInput
 	if act.DueAt == nil {
 		due, err := reviewDueAt(ctx, deps)
 		if err != nil {
-			return err
+			return in, err
 		}
 		in.DueAt = &due
 	}
@@ -145,27 +191,7 @@ func alignAdoptedTask(ctx context.Context, deps bundleDeps, task ids.UUID, revie
 		owner := ids.From[ids.UserKind](*review.OwnerID)
 		in.AssigneeID = &owner
 	}
-	if in.DueAt == nil && in.AssigneeID == nil {
-		return nil
-	}
-	in.IfVersion = (*int64)(act.Version)
-	_, err = deps.activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](task), in)
-	if in.AssigneeID != nil && unassignableSeat(err) {
-		// The owner cannot hold work: the task keeps the date and waits in the
-		// unassigned queue, as a minted one would.
-		in.AssigneeID = nil
-		if in.DueAt == nil {
-			return nil
-		}
-		_, err = deps.activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](task), in)
-	}
-	if errors.Is(err, apperrors.ErrVersionSkew) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("compose: giving the adopted task its due date and owner: %w", err)
-	}
-	return nil
+	return in, nil
 }
 
 // reviewDueAt is the end of the next calendar day in the installation's zone.
