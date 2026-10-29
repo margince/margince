@@ -444,10 +444,9 @@ describe("setting up a partner program", () => {
 });
 
 describe("the shape of the header's verbs", () => {
-  // The order every record type carries: Add task, the most frequent, then
-  // the verbs common to all of them, then what is particular to an account, then the one verb a reader
-  // cannot walk back. A menu whose rows move between record types is a menu
-  // read from the top every time instead of aimed at.
+  // Every record type carries one order. Add task comes first, then the shared
+  // verbs, then the account's own, and last the one verb a reader cannot walk
+  // back. Rows that move between record types get read, not aimed at.
   it("lists the menu's verbs in the order every record carries them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     const user = userEvent.setup();

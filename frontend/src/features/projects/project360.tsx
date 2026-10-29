@@ -132,8 +132,8 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // the project's rather than after it, and both share its one cache entry.
   const cf = useObjectCustomFields("project");
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
-  // Log in the strip and Add task in the menu open one drawer, so the page
-  // holds its state and the gate both of them read.
+  // Log in the strip and Add task in the menu open one drawer. The page holds
+  // that drawer and the gate both verbs read.
   const activity = useActivityGate();
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
   return (

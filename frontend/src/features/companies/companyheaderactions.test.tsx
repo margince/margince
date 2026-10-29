@@ -16,10 +16,8 @@ import {
   CompanyHeaderActions,
 } from "./companyheaderactions";
 
-// The account header's Email/Log activity strip and the menu's Add task, split out of
-// companyheader.test.tsx with CompanyHeaderActions itself: the same verbs
-// CompanyPrimaryActions used to draw as a labelled toolbar, now icon-first
-// like every other record header's action strip.
+// The account header's Email and Log strip, and the menu's Add task. The strip
+// is icon-first like every other record header's action strip.
 
 type Company = components["schemas"]["Company"];
 
