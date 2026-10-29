@@ -143,11 +143,11 @@
   border-radius: var(--r-control);
   background: var(--bgElevated);
 }
-/* Every tile starts from one basis, larger than any tile's own padding and
-   small enough that six fit the card, so the bar shares out equal widths
-   whether a verb is a bare button or wraps one. */
+/* A one-pixel basis keeps every tile on one row in equal widths, however
+   narrow the sheet; a wider one wrapped a verb or two onto a ragged second
+   row. Not zero, so the full-width filled verb still breaks a row of its own. */
 .record-split-verbs > * {
-  flex: 1 1 var(--space-10);
+  flex: 1 1 1px;
   display: flex;
   min-inline-size: 0;
 }
