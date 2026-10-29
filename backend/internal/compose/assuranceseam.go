@@ -248,12 +248,16 @@ func customerRefusalSQL(alias, asOf string) string {
 // earlierAnswerSQL is when the newest answer to the retired buyer-silent check
 // on the deal runs out, if it has not yet. Its findings close on the first
 // night the mail is read, but the answers stay, and a deal somebody answered is
-// not asked again before its answer ends. A reminder holds at most as long as
-// any answer may hide a finding.
+// not asked again before its answer ends. The answer was about one silence:
+// once the customer moved the deal after it, a later silence is a new one. A
+// reminder holds at most as long as any answer may hide a finding.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
 		arg(int(assurance.MaxSuppression/(24*time.Hour))))
 	return fmt.Sprintf(`(SELECT CASE
+		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
+		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
+		                    AND pa.occurred_at > r.created_at AND %[7]s) THEN NULL
 		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
 		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
@@ -262,7 +266,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
 		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent))
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf))
 }
 
 // visibleToAllSQL admits an activity every member may read. The check runs as

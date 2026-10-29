@@ -99,3 +99,18 @@ func TestAnEarlierReminderHoldsNoLongerThanAnyAnswerMay(t *testing.T) {
 		t.Fatalf("a reminder 200 days out still held after %s; it must end with the ceiling", assurance.MaxSuppression)
 	}
 }
+
+func TestAnEarlierAnswerDoesNotCoverALaterSilence(t *testing.T) {
+	v := setupViability(t)
+	until := v.now.Add(assurance.MaxSuppression - time.Hour)
+	v.answerEarlierCheck(t, assurance.Resolution{
+		Outcome: assurance.OutcomeValueCorrect, Reason: "The buyer is on parental leave", ExpiresAt: &until,
+	})
+	// The customer calls the day after the answer, then goes quiet again for
+	// longer than the threshold, all before the answer runs out.
+	v.customerWrites(t, v.silent, v.now.AddDate(0, 0, 1))
+	v.checkAt(t, v.now.AddDate(0, 0, 70))
+	if v.openReviews(t, v.silent) != 1 {
+		t.Fatalf("an answer about one silence held back the review of a later one")
+	}
+}

@@ -11,16 +11,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // EnforcementPreview counts what switching enforcement on would do, through
-// the same treatment every forecast reading applies, so the preview and the
-// figures after the switch cannot disagree.
+// the treatment every forecast reading applies to a deal.
 func EnforcementPreview(pool *pgxpool.Pool) assurance.PreviewFunc {
 	return func(ctx context.Context) (assurance.EnforcementPreview, error) {
 		var out assurance.EnforcementPreview
+		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+			return out, err
+		}
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 			var args []any
 			arg := func(v any) int { args = append(args, v); return len(args) }
