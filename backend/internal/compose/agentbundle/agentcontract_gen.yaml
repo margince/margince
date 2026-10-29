@@ -19427,6 +19427,34 @@ components:
           items: {$ref: '#/components/schemas/ForecastSnapshotRef'}
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
+        qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+      additionalProperties: false
+    ForecastQualifiedReadings:
+      type: object
+      description: >-
+        The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
+      required:
+        - evidence_minor
+        - best_case_minor
+        - weighted_minor
+        - excluded_minor
+        - unknown_minor
+        - excluded_count
+        - unknown_count
+      properties:
+        evidence_minor: {type: integer, format: int64}
+        best_case_minor: {type: integer, format: int64}
+        weighted_minor: {type: integer, format: int64}
+        excluded_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals under an open viability review.
+        unknown_minor:
+          type: integer
+          format: int64
+          description: Open baseline money on deals the check could not judge on current evidence.
+        excluded_count: {type: integer}
+        unknown_count: {type: integer}
       additionalProperties: false
     ForecastSnapshotRef:
       type: object

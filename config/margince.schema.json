@@ -407,6 +407,23 @@
         "null"
       ]
     },
+    "assurance": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "qualified_forecast_enforced": {
+          "description": "Leave a deal under an open viability review out of the qualified forecast, and stop the close-date sweep lowering forecast categories.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        }
+      }
+    },
     "auth": {
       "type": [
         "object",

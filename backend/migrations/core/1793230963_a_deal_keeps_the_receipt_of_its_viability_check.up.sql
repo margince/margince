@@ -12,8 +12,11 @@
 -- New table and nullable or defaulted columns only, so no row is rewritten.
 SET LOCAL lock_timeout = '3s';
 
+-- deal_id names its deal the way assurance_exception.subject_id does, with no
+-- foreign key: a receipt is only ever read joined from a live deal row, and it
+-- holds no personal data that would outlive an erased one.
 CREATE TABLE assurance_deal_receipt (
-    deal_id uuid PRIMARY KEY REFERENCES deal(id) ON DELETE CASCADE,
+    deal_id uuid PRIMARY KEY,
     run_id uuid NOT NULL REFERENCES assurance_run(id) ON DELETE CASCADE,
     outcome text NOT NULL
         CONSTRAINT assurance_deal_receipt_outcome_check

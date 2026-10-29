@@ -407,3 +407,43 @@ it("keeps an unread source visible even when there are no findings or readiness 
   const warning = await screen.findByText(/Not checked:.*mail/i);
   expect(warning.closest("details")).toBeNull();
 });
+
+// The qualified figure sits under the baseline, and a deal the check could not
+// judge is said apart from one it left out: folding them would blame the
+// pipeline for a mailbox nobody read.
+it("states the qualified figure and keeps unknown deals apart from left-out ones", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        qualified: {
+          evidence_minor: 20_000,
+          best_case_minor: 30_000,
+          weighted_minor: 25_000,
+          excluded_minor: 100_000,
+          unknown_minor: 7_000,
+          excluded_count: 3,
+          unknown_count: 1,
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  const answer = await screen.findByText(/the customer still supports/i);
+  expect(answer.textContent).toContain("600.00");
+  expect(
+    (await screen.findByText(/while their review is open/i)).textContent,
+  ).toContain(": 3 (");
+  expect(
+    (await screen.findByText(/could not judge them/i)).textContent,
+  ).toContain(": 1 (");
+});
+
+// While enforcement is off the server sends no qualified block, and the screen
+// must not invent one from the baseline.
+it("says nothing about qualification when the server sends none", async () => {
+  vi.stubGlobal("fetch", forecastStub());
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  await screen.findByText(/Won plus committed deals/i);
+  expect(screen.queryByText(/the customer still supports/i)).toBeNull();
+});

@@ -15,6 +15,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
+import { EnforcementSwitch } from "./analytics.forecast.enforcement";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
 import { checkLabel, SubjectCell } from "./inputcheck.facts";
@@ -116,6 +117,7 @@ function ReviewPanel({
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
         <Recheck runId={run.run_id} />
+        <EnforcementSwitch />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>

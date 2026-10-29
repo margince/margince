@@ -122,6 +122,23 @@ type ForecastReadingsResult struct {
 	// Snapshots are this period's frozen states, newest first — the ids
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
 	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
+
+	// Qualified is the readings restricted to deals the customer still
+	// supports. Absent while the installation does not enforce viability
+	// reviews, which means no qualified reading exists, not that it equals the
+	// figures above.
+	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+}
+
+// ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
+type ForecastQualifiedResult struct {
+	EvidenceMinor int64 `json:"evidence_minor"`
+	BestCaseMinor int64 `json:"best_case_minor"`
+	WeightedMinor int64 `json:"weighted_minor"`
+	ExcludedMinor int64 `json:"excluded_minor"`
+	UnknownMinor  int64 `json:"unknown_minor"`
+	ExcludedCount int   `json:"excluded_count"`
+	UnknownCount  int   `json:"unknown_count"`
 }
 
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.

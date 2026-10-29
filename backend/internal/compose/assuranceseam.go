@@ -222,19 +222,6 @@ func customerProgressSQL(alias, asOf string) string {
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
 }
 
-// viabilityFingerprintSQL is what a viability assessment read about one deal.
-// The check stores it on the receipt, and the forecast compares it with the
-// deal's current one: any difference means the evidence moved since the check.
-// Work the product filed itself is left out, so the review's own task does not
-// make its receipt stale.
-func viabilityFingerprintSQL(deal string) string {
-	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
-		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
-		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)))
-		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
-		  WHERE fl.deal_id = ` + deal + `.id AND ` + relstrength.OriginIsEngagementSQL("fa") + `)))`
-}
-
 // sourceChecked reports whether the run read one source on time.
 func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
 	for _, c := range coverage {
