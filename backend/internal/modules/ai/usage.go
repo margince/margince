@@ -147,9 +147,8 @@ func (m *Meter) MonthSpend(ctx context.Context, rates *RateStore) (MonthSpend, e
 	if err != nil {
 		return MonthSpend{}, err
 	}
-	// Stamped after the reads, not at the window's end: pricing widens the day
-	// bound, so a call recorded while it ran may be in the sum, and the stamp
-	// must not claim an instant earlier than the data it covers.
+	// Stamped after the reads, not at the window's end. Pricing widens the day
+	// bound, so a call recorded during the reads may be in the sum.
 	spend := MonthSpend{ComputedAt: m.now().UTC()}
 	for _, day := range days {
 		for _, line := range day.Tasks {
