@@ -14281,7 +14281,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.readiness_recorded.label":
     "Thay đổi trạng thái sẵn sàng cho cuộc họp",
   "webhooks.event.activity.readiness_recorded.when":
-    "Có ai đó đánh dấu mình sẵn sàng cho một cuộc họp, hoặc hoàn tác việc đó.",
+    "Ai đó đánh dấu đã sẵn sàng cho một cuộc họp, hoặc hoàn tác việc đó.",
   "webhooks.event.engagement.reply.label": "Đã nhận phản hồi",
   "webhooks.event.engagement.reply.when":
     "Tin nhắn đến xuất hiện trong chuỗi thư mà bạn viết trước.",

@@ -11,8 +11,8 @@ import { Badge, Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { problemStatus, throwProblem } from "../../lib/problem";
-import { isUnprepared } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 
 type Preparation = NonNullable<WorklistItem["preparation"]>;

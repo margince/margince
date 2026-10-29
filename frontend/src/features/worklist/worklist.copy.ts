@@ -22,7 +22,6 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 
 export {
   dealFactsText,
-  isUnprepared,
   phrasedReasons,
   reasonText,
   whenText,

@@ -13,14 +13,10 @@ import {
 import { activityTimeOfDay } from "../../format/activitywhen";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import {
-  isUnprepared,
-  itemTitle,
-  moveHref,
-  rowHref,
-} from "../worklist/worklist.copy";
+import { itemTitle, moveHref, rowHref } from "../worklist/worklist.copy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
   type CalendarDay,

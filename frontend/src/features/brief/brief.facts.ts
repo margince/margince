@@ -4,7 +4,7 @@
 import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import type { Locale } from "../../i18n";
-import { isUnprepared } from "../worklist/worklist.copy";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 
 type Source = WorklistItem["source"];

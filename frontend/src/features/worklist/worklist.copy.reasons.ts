@@ -86,13 +86,6 @@ function valued(kind: WorklistReason["kind"]): kind is ValuedReason {
  */
 const BADGED = "meeting_unprepared";
 
-/** Whether the reader attends this meeting and has not confirmed they are ready. */
-export function isUnprepared(item: WorklistItem): boolean {
-  return (
-    item.source === "meeting" && item.preparation?.state === "needs_review"
-  );
-}
-
 /**
  * The reason kinds the when line already says.
  *

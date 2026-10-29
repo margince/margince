@@ -2288,7 +2288,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.owner_id": "Verantwortlich",
   "history.field.provider_claims_received": "Erhaltene Anbieterangaben",
   "history.field.reachability": "Erreichbar",
-  "history.field.readiness": "Bereit für das Meeting",
+  "history.field.readiness": "Bereit für den Termin",
   "history.field.reply_verdict": "Ergebnis der Antwort",
   "history.field.reply_verdict_by": "Ergebnis der Antwort von",
   "history.field.research_claims_accepted": "Übernommene Rechercheangaben",
@@ -14651,9 +14651,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
   "webhooks.event.activity.readiness_recorded.label":
-    "Bereitschaft für ein Meeting geändert",
+    "Bereitschaft für einen Termin geändert",
   "webhooks.event.activity.readiness_recorded.when":
-    "Jemand markiert sich als bereit für ein Meeting oder nimmt das zurück.",
+    "Jemand markiert sich als bereit für einen Termin oder nimmt das zurück.",
   "webhooks.event.engagement.reply.label": "Antwort eingegangen",
   "webhooks.event.engagement.reply.when":
     "Eine eingehende Nachricht kommt in einem Thread an, in dem du zuerst geschrieben hast.",
@@ -16685,13 +16685,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.needsPrep": "Vorbereitung nötig",
   "worklist.ready.confirm": "Ich bin bereit",
   "worklist.ready.badge": "Bereit",
-  "worklist.ready.done": "Als bereit für dieses Meeting markiert.",
+  "worklist.ready.done": "Als bereit für diesen Termin markiert.",
   "worklist.ready.failed": "Nicht als bereit markiert. Erneut versuchen.",
   "worklist.ready.stale":
-    "Das Meeting hat sich geändert. Prüfen Sie es und markieren Sie sich dann als bereit.",
+    "Der Termin hat sich geändert. Prüf ihn und markier dich dann als bereit.",
   "worklist.ready.undoFailed":
-    "Rückgängig hat nicht geklappt. Sie sind weiter als bereit markiert.",
-  "worklist.ready.changed": "Geändert, seit Sie bereit waren: {facts}",
+    "Rückgängig hat nicht geklappt. Du bist weiter als bereit markiert.",
+  "worklist.ready.changed": "Geändert, seit du bereit warst: {facts}",
   "worklist.ready.fact.start_time": "Startzeit",
   "worklist.ready.fact.agenda": "Agenda",
   "worklist.ready.fact.participants": "Gäste",
@@ -16772,7 +16772,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.deal_slips_past_close":
     "Der Deal verpasst sein Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
-    "Der Termin beginnt, bevor Sie sich als bereit markiert haben.",
+    "Der Termin beginnt, bevor du dich als bereit markiert hast.",
   "worklist.consequence.task_slips":
     "Die Aufgabe verpasst ihr Fälligkeitsdatum.",
   "worklist.consequence.work_blocked":

@@ -16578,7 +16578,7 @@ export const en = {
   "worklist.pair.stewardOnly":
     "Only a user who can edit both records can resolve this: an administrator or a sales lead.",
   "worklist.needsPrep": "Needs prep",
-  "worklist.ready.confirm": "I'm ready",
+  "worklist.ready.confirm": "I’m ready",
   "worklist.ready.badge": "Ready",
   "worklist.ready.done": "Marked you ready for this meeting.",
   "worklist.ready.failed": "You were not marked ready. Retry.",

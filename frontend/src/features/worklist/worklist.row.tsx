@@ -6,6 +6,7 @@ import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { askKey } from "./worklist.ask";
@@ -14,7 +15,6 @@ import {
   briefContextTitle,
   briefSubjectLabel,
   dealFactsText,
-  isUnprepared,
   itemTitle,
   phrasedReasons,
   reasonText,
