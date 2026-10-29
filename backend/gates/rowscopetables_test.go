@@ -72,6 +72,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	"VisibleSubset":      {argument: 2},
+	"PassingSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
 	"LinkTargetVisibleClause": {table: anyTable},
@@ -82,10 +83,12 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
 	"EnsureActivityContentVisibleLive": {table: "activity"},
+	"ActivityContentSubset":            {table: "activity"},
 
 	"SignalScopeClause":       {table: "signal"},
 	"EnsureSignalVisible":     {table: "signal"},
 	"EnsureSignalVisibleLive": {table: "signal"},
+	"SignalVisibleLiveSubset": {table: "signal"},
 
 	// The edge conjunction bounds the relationship by its ENDPOINTS: each
 	// endpoint column is tested with VisiblePredicate over its own table, so a
@@ -96,6 +99,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"RelationshipEndpointScope": {endpoints: true},
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
+	"RelationshipVisibleSubset": {endpoints: true},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the
