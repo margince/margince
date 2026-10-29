@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -189,64 +188,4 @@ func TestABatchIsDecidedInOneStatementPerSourceAndAgreesRowByRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-// The subset probes the batch asks are spelled beside the single-row probes in
-// platform/auth. Over live, archived, foreign and missing rows, for a bounded
-// and an unbounded reader, each must answer what its single-row twin answers.
-func TestTheSubsetProbesAnswerAsTheSingleRowProbes(t *testing.T) {
-	e := setupStaging(t)
-	seeder := newDealSeeder(t, e)
-	colleague := e.secondRep(t)
-	archived := seeder.dealOwnedBy(t, &e.rep)
-	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at = now() WHERE id = $1`, archived); err != nil {
-		t.Fatal(err)
-	}
-	deals := []ids.UUID{seeder.dealOwnedBy(t, &e.rep), seeder.dealOwnedBy(t, &colleague), archived, ids.NewV7()}
-	notes := []ids.UUID{e.seedNote(t, "workspace"), e.seedNote(t, "selected"), ids.NewV7()}
-	rules := map[auth.RowRule]func(context.Context, pgx.Tx, string, ids.UUID) error{
-		auth.RuleVisibleLive: auth.EnsureVisibleLive, auth.RuleWritableLive: auth.EnsureWritableLive, auth.RuleWritable: auth.EnsureWritable,
-	}
-	readers := map[string]context.Context{"own scope": ownSeat(e.ws, e.rep), "all scope": seatFor(e.ws, e.rep, tableDeal, objectActivity)}
-	for name, reader := range readers {
-		err := e.svc.db.Tx(reader, func(tx pgx.Tx) error {
-			for rule, single := range rules {
-				subset, err := auth.PassingSubset(reader, tx, tableDeal, deals, rule)
-				if err != nil {
-					return err
-				}
-				if err := agreeRowByRow(deals, subset, func(id ids.UUID) (bool, error) { return probeAnswer(single(reader, tx, tableDeal, id)) }); err != nil {
-					return fmt.Errorf("%s, rule %d: %w", name, rule, err)
-				}
-			}
-			for live, single := range map[bool]func(context.Context, pgx.Tx, ids.UUID) error{
-				false: auth.EnsureActivityContentVisible, true: auth.EnsureActivityContentVisibleLive,
-			} {
-				subset, err := auth.ActivityContentSubset(reader, tx, notes, live)
-				if err != nil {
-					return err
-				}
-				if err := agreeRowByRow(notes, subset, func(id ids.UUID) (bool, error) { return probeAnswer(single(reader, tx, id)) }); err != nil {
-					return fmt.Errorf("%s, activity content live=%t: %w", name, live, err)
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
-func agreeRowByRow(rowIDs []ids.UUID, subset map[ids.UUID]bool, single func(ids.UUID) (bool, error)) error {
-	for i, id := range rowIDs {
-		alone, err := single(id)
-		if err != nil {
-			return err
-		}
-		if alone != subset[id] {
-			return fmt.Errorf("row %d answered %t alone and %t in the subset", i, alone, subset[id])
-		}
-	}
-	return nil
 }

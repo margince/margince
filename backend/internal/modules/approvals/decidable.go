@@ -25,7 +25,7 @@ func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bo
 
 // decidableRows is decidable for a batch, answering by position. Each check
 // that needs the database is asked once per batch. The cited activities take
-// one statement, and each target type's row rule takes one more.
+// one statement, and each target type one more; offers and lead reversals take two.
 func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row) ([]bool, error) {
 	readable, err := proposalsReadable(ctx, tx, p, rows)
 	if err != nil {

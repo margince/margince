@@ -4,7 +4,7 @@
 package approvals
 
 // The target rule of targetvisibility.go, asked of many staged targets at once.
-// It takes one statement per target type rather than one per row.
+// It takes one statement per target type rather than one per row; offers take two.
 
 import (
 	"context"
@@ -64,7 +64,7 @@ func targetsPermitted(ctx context.Context, tx pgx.Tx, refs []targetRef, want tar
 		for j, i := range at {
 			rowIDs[j] = *refs[i].ID
 		}
-		passing, err := rowsPermitted(ctx, tx, targetType, rowIDs, want)
+		passing, err := rowsPermitted(ctx, tx, targetType, distinct(rowIDs), want)
 		if err != nil {
 			return nil, err
 		}
@@ -199,6 +199,16 @@ func targetsOwnedByActor(ctx context.Context, tx pgx.Tx, targetType string, rowI
 	}
 	return idsAmong(ctx, tx,
 		`SELECT id FROM saved_view WHERE id = ANY($1) AND owner_id = $2 AND archived_at IS NULL`, rowIDs, p.UserID)
+}
+
+// distinct drops repeated ids, so a batch citing one record many times asks it once.
+func distinct(rowIDs []ids.UUID) []ids.UUID {
+	seen := make(map[ids.UUID]bool, len(rowIDs))
+	return slices.DeleteFunc(slices.Clone(rowIDs), func(id ids.UUID) bool {
+		repeated := seen[id]
+		seen[id] = true
+		return repeated
+	})
 }
 
 // idsAmong runs a statement selecting the ids among $1 that pass it.

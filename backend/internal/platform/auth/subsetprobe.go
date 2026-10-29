@@ -43,17 +43,12 @@ func PassingSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UU
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	terms := []string{fmt.Sprintf("id = ANY($%d)", arg(rowIDs))}
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
+	idTerm := fmt.Sprintf("id = ANY($%d)", arg(rowIDs))
+	visible, err := rowVisibleTerms(ctx, table, arg, rule != RuleWritable)
 	if err != nil {
 		return nil, err
 	}
-	if rule != RuleWritable {
-		terms = append(terms, "archived_at IS NULL")
-	}
-	if clause != "" {
-		terms = append(terms, clause)
-	}
+	terms := append([]string{idTerm}, visible...)
 	// ensureWriteAuthority's own shortcuts, so the arm is added where the
 	// single-row probe would have queried it.
 	if rule != RuleVisibleLive && !Unbounded(p) && shareableTables[table] {

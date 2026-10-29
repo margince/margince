@@ -43,7 +43,7 @@ func proposalsReadable(ctx context.Context, tx pgx.Tx, p principal.Principal, ro
 	visible := map[ids.UUID]bool{}
 	if readable {
 		// Archived evidence remains readable; only the action target must be live.
-		if visible, err = auth.ActivityContentSubset(ctx, tx, asked, false); err != nil {
+		if visible, err = auth.ActivityContentSubset(ctx, tx, distinct(asked), false); err != nil {
 			return nil, err
 		}
 	}
