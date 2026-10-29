@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { LeadScreen } from "./leads";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
 
@@ -32,8 +33,9 @@ const linked = {
 function serve(served: Record<string, unknown>) {
   const patches: Record<string, unknown>[] = [];
   stubFetch(async (url, method, request) => {
-    if (url.includes("/v1/companies/c-7")) {
-      return jsonResponse({ id: "c-7", display_name: "Nordwind Holding SE" });
+    const named = companyNamesAnswer(url, { "c-7": "Nordwind Holding SE" });
+    if (named) {
+      return named;
     }
     if (method === "PATCH") {
       const body: Record<string, unknown> = JSON.parse(await request.text());

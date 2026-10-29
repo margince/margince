@@ -394,8 +394,11 @@ function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
       }),
     "GET /deals/deal-1": () =>
       jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
-    "GET /companies/co-1": () =>
-      jsonResponse({ id: "co-1", display_name: "Brandt Automotive" }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: "co-1", display_name: "Brandt Automotive" }],
+        next_cursor: null,
+      }),
   });
 }
 
