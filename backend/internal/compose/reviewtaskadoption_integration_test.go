@@ -99,16 +99,16 @@ func TestAnAdoptedTaskKeepsTheDateAndAssigneeSomebodyChose(t *testing.T) {
 	rep2 := ids.From[ids.UserKind](v.Rep2)
 	if _, err := v.Activities.UpdateActivity(v.Admin(), ids.From[ids.ActivityKind](earlier),
 		activities.UpdateActivityInput{DueAt: &chosen, AssigneeID: &rep2}); err != nil {
-		t.Fatalf("a person reassigning and re-dating the task: %v", err)
+		t.Fatalf("a colleague reassigning and re-dating the task: %v", err)
 	}
 
 	v.check(t)
 	v.adoptedTask(t, earlier)
 	if got := v.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE id = $1`, earlier); got != v.Rep2.String() {
-		t.Errorf("the pass moved the task to %q; the person's choice %s must stand", got, v.Rep2)
+		t.Errorf("the pass moved the task to %q; the colleague's choice %s must stand", got, v.Rep2)
 	}
 	if got := v.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND due_at = $2`, earlier, chosen); got != 1 {
-		t.Errorf("the pass moved the due date the person set")
+		t.Errorf("the pass moved the due date the colleague set")
 	}
 }
 
