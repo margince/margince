@@ -6941,6 +6941,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
   "forecast.qualifiedLeftOut_other":
     "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
+  "forecast.qualifiedUnsupported_one":
+    "{count} deal ({amount}) bị loại ra vì chưa có ngày chốt được xác nhận hoặc chưa có bước tiếp theo.",
+  "forecast.qualifiedUnsupported_other":
+    "{count} deal ({amount}) bị loại ra vì chưa có ngày chốt được xác nhận hoặc chưa có bước tiếp theo.",
   "forecast.qualifiedUnknown_one":
     "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
   "forecast.qualifiedUnknown_other":

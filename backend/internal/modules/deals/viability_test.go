@@ -120,6 +120,78 @@ func TestAViabilityAssessmentJudgesSilenceApartFromTheCloseDate(t *testing.T) {
 	}
 }
 
+func TestADealTheCustomerAnswersStillNeedsADateAndANextStep(t *testing.T) {
+	t.Parallel()
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asOf := time.Date(2026, time.October, 29, 9, 0, 0, 0, berlin)
+	daysAgo := func(n int) *time.Time { at := asOf.AddDate(0, 0, -n); return &at }
+	closeIn94 := time.Date(2027, time.January, 31, 0, 0, 0, 0, time.UTC)
+	answered := ViabilityInput{
+		CreatedAt: asOf.AddDate(-1, 0, 0), LastCustomerProgressAt: daysAgo(7),
+		ExpectedClose: &closeIn94, HasNextStep: true, MailCovered: true,
+	}
+
+	cases := map[string]struct {
+		change  func(ViabilityInput) ViabilityInput
+		outcome viability.Outcome
+		reasons []viability.Reason
+	}{
+		"a provisional date leaves the deal out without a review": {
+			change:  func(in ViabilityInput) ViabilityInput { in.CloseProvisional = true; return in },
+			outcome: viability.OutcomeUnsupported, reasons: []viability.Reason{viability.ReasonCloseDateUnsupported},
+		},
+		"no close date leaves the deal out without a review": {
+			change:  func(in ViabilityInput) ViabilityInput { in.ExpectedClose = nil; return in },
+			outcome: viability.OutcomeUnsupported, reasons: []viability.Reason{viability.ReasonCloseDateUnsupported},
+		},
+		"no next step leaves the deal out without a review": {
+			change:  func(in ViabilityInput) ViabilityInput { in.HasNextStep = false; return in },
+			outcome: viability.OutcomeUnsupported, reasons: []viability.Reason{viability.ReasonNoNextStep},
+		},
+		"a wait is the next step, with a close date after it": {
+			change: func(in ViabilityInput) ViabilityInput {
+				in.HasNextStep, in.CustomerWaitUntil = false, new(asOf.AddDate(0, 0, 30))
+				return in
+			},
+			outcome: viability.OutcomeWaiting, reasons: []viability.Reason{viability.ReasonCustomerWait},
+		},
+		"a close date before the wait ends cannot hold": {
+			change: func(in ViabilityInput) ViabilityInput {
+				in.CustomerWaitUntil = new(closeIn94.AddDate(0, 1, 0))
+				return in
+			},
+			outcome: viability.OutcomeUnsupported, reasons: []viability.Reason{viability.ReasonCloseDateUnsupported},
+		},
+		"a refusal raises the review at once": {
+			change:  func(in ViabilityInput) ViabilityInput { in.LastCustomerRefusalAt = daysAgo(2); return in },
+			outcome: viability.OutcomeReviewRequired, reasons: []viability.Reason{viability.ReasonCustomerDeclined},
+		},
+		"a refusal answered by a later message raises nothing": {
+			change:  func(in ViabilityInput) ViabilityInput { in.LastCustomerRefusalAt = daysAgo(20); return in },
+			outcome: viability.OutcomeEligible,
+		},
+		"a refusal outranks a wait": {
+			change: func(in ViabilityInput) ViabilityInput {
+				in.LastCustomerRefusalAt, in.CustomerWaitUntil = daysAgo(2), new(asOf.AddDate(0, 0, 30))
+				return in
+			},
+			outcome: viability.OutcomeReviewRequired, reasons: []viability.Reason{viability.ReasonCustomerDeclined},
+		},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := AssessViability(c.change(answered), asOf, berlin)
+			if got.Outcome != c.outcome || !slices.Equal(got.Reasons, c.reasons) {
+				t.Fatalf("got %s %v, want %s %v", got.Outcome, got.Reasons, c.outcome, c.reasons)
+			}
+		})
+	}
+}
+
 func TestSilenceCountsCalendarDaysAcrossTheShortDay(t *testing.T) {
 	t.Parallel()
 	berlin, err := time.LoadLocation("Europe/Berlin")

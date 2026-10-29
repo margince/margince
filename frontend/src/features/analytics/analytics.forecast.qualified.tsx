@@ -7,6 +7,7 @@ type Readings = components["schemas"]["ForecastReadings"];
 // The figure the customer still supports, under the baseline it is a part of.
 // Left-out and unknown deals are said apart. An unknown deal is a gap in what
 // was checked, and folding it into "left out" would blame the pipeline for it.
+// A deal left out with no review is said apart too: its fix is on the deal.
 export function QualifiedAnswer({
   readings,
   money,
@@ -21,6 +22,7 @@ export function QualifiedAnswer({
   if (!qualified) {
     return null;
   }
+  const underReview = qualified.excluded_count - qualified.unsupported_count;
   return (
     <>
       <p>
@@ -29,11 +31,19 @@ export function QualifiedAnswer({
           weighted: money(qualified.weighted_minor),
         })}
       </p>
-      {qualified.excluded_count > 0 && (
+      {underReview > 0 && (
         <p className="t-caption">
-          {plural("forecast.qualifiedLeftOut", qualified.excluded_count, {
-            count: formatNumber(qualified.excluded_count, locale),
-            amount: money(qualified.excluded_minor),
+          {plural("forecast.qualifiedLeftOut", underReview, {
+            count: formatNumber(underReview, locale),
+            amount: money(qualified.excluded_minor - qualified.unsupported_minor),
+          })}
+        </p>
+      )}
+      {qualified.unsupported_count > 0 && (
+        <p className="t-caption">
+          {plural("forecast.qualifiedUnsupported", qualified.unsupported_count, {
+            count: formatNumber(qualified.unsupported_count, locale),
+            amount: money(qualified.unsupported_minor),
           })}
         </p>
       )}

@@ -19441,6 +19441,8 @@ components:
         - unknown_minor
         - excluded_count
         - unknown_count
+        - unsupported_minor
+        - unsupported_count
       properties:
         evidence_minor: {type: integer, format: int64}
         best_case_minor: {type: integer, format: int64}
@@ -19448,7 +19450,14 @@ components:
         excluded_minor:
           type: integer
           format: int64
-          description: Open baseline money on deals under an open viability review.
+          description: >-
+            Open baseline money on every deal left out: under an open viability review, or unsupported.
+        unsupported_minor:
+          type: integer
+          format: int64
+          description: >-
+            The part of `excluded_minor` on deals left out with no review: a close date that is missing, provisional or overdue, or no next step.
+        unsupported_count: {type: integer}
         unknown_minor:
           type: integer
           format: int64

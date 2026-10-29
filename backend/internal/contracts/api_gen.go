@@ -41659,7 +41659,7 @@ type ForecastMovementDeal struct {
 }
 
 // ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-// A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is missing, provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 type ForecastQualifiedReadings struct {
 	// AmountsPartial True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
 	AmountsPartial *bool `json:"amounts_partial,omitempty"`
@@ -41667,13 +41667,17 @@ type ForecastQualifiedReadings struct {
 	EvidenceMinor  int64 `json:"evidence_minor"`
 	ExcludedCount  int   `json:"excluded_count"`
 
-	// ExcludedMinor Open baseline money on deals under an open viability review.
+	// ExcludedMinor Open baseline money on every deal left out: under an open viability review, or unsupported.
 	ExcludedMinor int64 `json:"excluded_minor"`
 	UnknownCount  int   `json:"unknown_count"`
 
 	// UnknownMinor Open baseline money on deals the check could not judge on current evidence.
-	UnknownMinor  int64 `json:"unknown_minor"`
-	WeightedMinor int64 `json:"weighted_minor"`
+	UnknownMinor     int64 `json:"unknown_minor"`
+	UnsupportedCount int   `json:"unsupported_count"`
+
+	// UnsupportedMinor The part of `excluded_minor` on deals left out with no review: a close date that is missing, provisional or overdue, or no next step.
+	UnsupportedMinor int64 `json:"unsupported_minor"`
+	WeightedMinor    int64 `json:"weighted_minor"`
 }
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
@@ -41706,7 +41710,7 @@ type ForecastReadings struct {
 	PricedCount int `json:"priced_count"`
 
 	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-	// A deal under an open viability review is excluded. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
+	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is missing, provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.

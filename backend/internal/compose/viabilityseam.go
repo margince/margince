@@ -11,6 +11,7 @@ package compose
 import (
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
@@ -19,13 +20,15 @@ import (
 // viabilityFingerprintSQL is what a viability assessment read about one deal.
 // The check stores it on the receipt, and the forecast compares it with the
 // deal's current one. A difference means the evidence moved since the check.
-// Work the product filed itself is left out, so the review's own task does not
+// A verdict that lands after the message counts too, because a refusal changes
+// the answer. Work the product filed itself is left out, so the review's own task does not
 // make its receipt stale. Archiving an activity drops it from the count, which
 // changes the fingerprint too.
 func viabilityFingerprintSQL(deal string) string {
 	return `md5(concat_ws('|', ` + deal + `.owner_id, ` + deal + `.status, ` + deal + `.archived_at, ` +
 		deal + `.expected_close_date, ` + deal + `.close_date_provisional, ` + deal + `.wait_until,
-		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)))
+		(SELECT concat_ws('|', count(*), max(greatest(fa.updated_at, fl.created_at)),
+		        count(*) FILTER (WHERE fa.reply_verdict = '` + activities.ReplyVerdictNegative + `'))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
 		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` +
 		relstrength.OriginIsEngagementSQL("fa") + `)))`
@@ -36,7 +39,8 @@ func viabilityFingerprintSQL(deal string) string {
 // Eligible needs a CURRENT receipt: this policy, not past its validity, judged
 // on the evidence the deal still carries. Without one the deal is unknown, even
 // with no finding open, because no finding is not the same as judged and fine.
-// A judged deal with an open review is excluded. An override counts the deal
+// A judged deal with an open review is excluded, and so is one judged
+// unsupported, which has no review to answer. An override counts the deal
 // again until it ends; once it has ended the deal is unknown until the next
 // check reopens the review.
 func viabilityQualificationSQL(deal string, arg func(any) int) string {
@@ -49,6 +53,8 @@ func viabilityQualificationSQL(deal string, arg func(any) int) string {
 		WHEN EXISTS (SELECT 1 FROM assurance_exception vx
 		              WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
 		                AND vx.type = $%[4]d AND vx.status = 'open') THEN '%[6]s'
+		WHEN EXISTS (SELECT 1 FROM assurance_deal_receipt vr
+		              WHERE vr.deal_id = %[1]s.id AND vr.outcome = '%[10]s') THEN '%[11]s'
 		WHEN EXISTS (SELECT 1 FROM assurance_exception vx
 		              WHERE vx.subject_kind = 'deal' AND vx.subject_id = %[1]s.id
 		                AND vx.type = $%[4]d AND vx.status = 'resolved'
@@ -58,5 +64,6 @@ func viabilityQualificationSQL(deal string, arg func(any) int) string {
 		ELSE '%[5]s' END)`,
 		deal, arg(viability.PolicyVersion), viabilityFingerprintSQL(deal), arg(assurance.TypeDealViability),
 		viability.QualificationEligible, viability.QualificationExcluded, viability.QualificationUnknown,
-		viability.OutcomeUnknown, assurance.OutcomeValueCorrect)
+		viability.OutcomeUnknown, assurance.OutcomeValueCorrect,
+		viability.OutcomeUnsupported, viability.QualificationUnsupported)
 }

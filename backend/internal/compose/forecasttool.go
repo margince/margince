@@ -185,6 +185,7 @@ func forecastToolResult(
 			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
 			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
 			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
+			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
 		}
 	}
 	return out

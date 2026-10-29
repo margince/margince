@@ -7148,6 +7148,10 @@ export const en = {
     "{count} deal ({amount}) is left out while its review is open.",
   "forecast.qualifiedLeftOut_other":
     "{count} deals ({amount}) are left out while their reviews are open.",
+  "forecast.qualifiedUnsupported_one":
+    "{count} deal ({amount}) is left out because it has no confirmed close date or no next step.",
+  "forecast.qualifiedUnsupported_other":
+    "{count} deals ({amount}) are left out because they have no confirmed close date or no next step.",
   "forecast.qualifiedUnknown_one":
     "{count} deal ({amount}) is not counted because the last check could not judge it.",
   "forecast.qualifiedUnknown_other":

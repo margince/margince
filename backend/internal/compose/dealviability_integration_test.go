@@ -99,7 +99,20 @@ func (v *viabilityEnv) commitDeal(
 		t.Fatal(err)
 	}
 	v.customerWrites(t, deal, lastReply)
+	v.planNextStep(t, deal)
 	return deal
+}
+
+// planNextStep writes the open task that is the deal's next step.
+func (v *viabilityEnv) planNextStep(t *testing.T, deal ids.UUID) {
+	t.Helper()
+	subject, due := "Send the order form", v.now.AddDate(0, 0, 7)
+	if _, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // customerWrites logs a call with the buyer on the deal: the customer moving it.

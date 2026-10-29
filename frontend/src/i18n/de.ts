@@ -7115,6 +7115,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
   "forecast.qualifiedLeftOut_other":
     "{count} Deals ({amount}) bleiben draußen, solange ihre Prüfung offen ist.",
+  "forecast.qualifiedUnsupported_one":
+    "{count} Deal ({amount}) bleibt draußen, weil er kein bestätigtes Abschlussdatum oder keinen nächsten Schritt hat.",
+  "forecast.qualifiedUnsupported_other":
+    "{count} Deals ({amount}) bleiben draußen, weil sie kein bestätigtes Abschlussdatum oder keinen nächsten Schritt haben.",
   "forecast.qualifiedUnknown_one":
     "{count} Deal ({amount}) zählt nicht, weil die letzte Prüfung ihn nicht beurteilen konnte.",
   "forecast.qualifiedUnknown_other":
