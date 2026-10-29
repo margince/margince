@@ -131,8 +131,10 @@ func (h reviewAnswerHandlers) CloseLostInputCheck(w http.ResponseWriter, r *http
 		if err != nil {
 			return fmt.Errorf("compose: finding the lost stage: %w", err)
 		}
+		// The target is a lost stage, so the move claims no win and carries no
+		// win-evidence reason.
 		if _, err := h.deals.AdvanceDealTx(ctx, tx, deal, deals.AdvanceDealInput{
-			ToStageID: lost, LostReason: &reason,
+			ToStageID: lost, LostReason: &reason, WonWithoutContractReason: nil,
 		}, active); err != nil {
 			return err
 		}

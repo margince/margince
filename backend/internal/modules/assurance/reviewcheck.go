@@ -5,6 +5,7 @@ package assurance
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -41,7 +42,7 @@ func (s *Store) applyReviewCheck(ctx context.Context, tx pgx.Tx, exception ids.U
 	}
 	if s.reviewCheck == nil {
 		if outcome == OutcomeFixedRecord || outcome == OutcomeNotRelevant {
-			return fmt.Errorf("assurance: the review check is not wired")
+			return errors.New("assurance: the review check is not wired")
 		}
 		return nil
 	}
