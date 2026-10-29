@@ -13048,6 +13048,27 @@ func (e KnowledgeEmbedState) Valid() bool {
 	}
 }
 
+// Defines values for LatestInboundKind.
+const (
+	LatestInboundKindEmail   LatestInboundKind = "email"
+	LatestInboundKindMessage LatestInboundKind = "message"
+	LatestInboundKindWebForm LatestInboundKind = "web_form"
+)
+
+// Valid indicates whether the value is a known member of the LatestInboundKind enum.
+func (e LatestInboundKind) Valid() bool {
+	switch e {
+	case LatestInboundKindEmail:
+		return true
+	case LatestInboundKindMessage:
+		return true
+	case LatestInboundKindWebForm:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadIndustry.
 const (
 	LeadIndustryAerospaceDefense          LeadIndustry = "aerospace_defense"
@@ -23149,6 +23170,33 @@ func (e ListActivitiesParamsEntityType) Valid() bool {
 	case ListActivitiesParamsEntityTypeLead:
 		return true
 	case ListActivitiesParamsEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListLatestInboundParamsEntityType.
+const (
+	ListLatestInboundParamsEntityTypeCompany ListLatestInboundParamsEntityType = "company"
+	ListLatestInboundParamsEntityTypeContact ListLatestInboundParamsEntityType = "contact"
+	ListLatestInboundParamsEntityTypeDeal    ListLatestInboundParamsEntityType = "deal"
+	ListLatestInboundParamsEntityTypeLead    ListLatestInboundParamsEntityType = "lead"
+	ListLatestInboundParamsEntityTypeProject ListLatestInboundParamsEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the ListLatestInboundParamsEntityType enum.
+func (e ListLatestInboundParamsEntityType) Valid() bool {
+	switch e {
+	case ListLatestInboundParamsEntityTypeCompany:
+		return true
+	case ListLatestInboundParamsEntityTypeContact:
+		return true
+	case ListLatestInboundParamsEntityTypeDeal:
+		return true
+	case ListLatestInboundParamsEntityTypeLead:
+		return true
+	case ListLatestInboundParamsEntityTypeProject:
 		return true
 	default:
 		return false
@@ -44426,6 +44474,37 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
+// LatestInbound defines model for LatestInbound.
+type LatestInbound struct {
+	// AcceptsRequest A task made from it accepts its request through `request_activity_id`.
+	AcceptsRequest bool `json:"accepts_request"`
+
+	// Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	Activity Activity `json:"activity"`
+
+	// Kind What arrived. A website form is a `note` activity whose `source_system` is `web_form`.
+	Kind LatestInboundKind `json:"kind"`
+}
+
+// LatestInboundKind What arrived. A website form is a `note` activity whose `source_system` is `web_form`.
+type LatestInboundKind string
+
+// LatestInboundList defines model for LatestInboundList.
+type LatestInboundList struct {
+	Data []LatestInbound `json:"data"`
+}
+
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -59202,6 +59281,15 @@ type LogActivityParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// ListLatestInboundParams defines parameters for ListLatestInbound.
+type ListLatestInboundParams struct {
+	EntityType ListLatestInboundParamsEntityType `form:"entity_type" json:"entity_type"`
+	EntityId   openapi_types.UUID                `form:"entity_id" json:"entity_id"`
+}
+
+// ListLatestInboundParamsEntityType defines parameters for ListLatestInbound.
+type ListLatestInboundParamsEntityType string
 
 // RelinkActivitiesParams defines parameters for RelinkActivities.
 type RelinkActivitiesParams struct {
@@ -78616,6 +78704,9 @@ type ServerInterface interface {
 	// Change the follow-up window (admin/ops).
 	// (PATCH /activities/follow-up-settings)
 	UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
+	// What they sent on one record in the last 7 days that nobody has answered.
+	// (GET /activities/latest-inbound)
+	ListLatestInbound(w http.ResponseWriter, r *http.Request, params ListLatestInboundParams)
 	// Re-associate a named set of activities to a chosen record, in one transaction.
 	// (POST /activities/relink-bulk)
 	RelinkActivities(w http.ResponseWriter, r *http.Request, params RelinkActivitiesParams)
@@ -81469,6 +81560,12 @@ func (_ Unimplemented) GetFollowUpSettings(w http.ResponseWriter, r *http.Reques
 // Change the follow-up window (admin/ops).
 // (PATCH /activities/follow-up-settings)
 func (_ Unimplemented) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What they sent on one record in the last 7 days that nobody has answered.
+// (GET /activities/latest-inbound)
+func (_ Unimplemented) ListLatestInbound(w http.ResponseWriter, r *http.Request, params ListLatestInboundParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87553,6 +87650,60 @@ func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateFollowUpSettings(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLatestInbound operation middleware
+func (siw *ServerInterfaceWrapper) ListLatestInbound(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLatestInboundParams
+
+	// ------------- Required query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "entity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "entity_id", r.URL.Query(), &params.EntityId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLatestInbound(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126987,6 +127138,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/follow-up-settings", wrapper.UpdateFollowUpSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/latest-inbound", wrapper.ListLatestInbound)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/relink-bulk", wrapper.RelinkActivities)

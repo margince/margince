@@ -5562,6 +5562,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/latest-inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What they sent on one record in the last 7 days that nobody has answered.
+         * @description The record page's "Just in" read, newest first. An email or message is one the
+         *     `waiting_reply` read lists, so a badge, the waiting lane and this agree on who is
+         *     waiting. A website form lands as a note that read does not know. It counts as
+         *     answered once a later outbound email or message, a call, or a held meeting is on the
+         *     record. At most 10 items, which is more than a reader sets aside in a week.
+         *
+         *     An item an open task already stands for is left out, as the `waiting_reply` read
+         *     leaves it out: one made from it, or the reminder filed for its request, a
+         *     colleague's private task included. `accepts_request` says a task made from the item
+         *     should accept its request (`request_activity_id`), so that completing the task
+         *     settles the request. When it is false, a task made from it carries
+         *     `source_activity_id` instead.
+         */
+        get: operations["listLatestInbound"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}": {
         parameters: {
             query?: never;
@@ -36582,6 +36613,19 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        LatestInboundList: {
+            data: components["schemas"]["LatestInbound"][];
+        };
+        LatestInbound: {
+            activity: components["schemas"]["Activity"];
+            /**
+             * @description What arrived. A website form is a `note` activity whose `source_system` is `web_form`.
+             * @enum {string}
+             */
+            kind: "email" | "message" | "web_form";
+            /** @description A task made from it accepts its request through `request_activity_id`. */
+            accepts_request: boolean;
+        };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];
             page: components["schemas"]["PageInfo"];
@@ -60832,6 +60876,33 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLatestInbound: {
+        parameters: {
+            query: {
+                entity_type: "contact" | "company" | "deal" | "lead" | "project";
+                entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unanswered items, newest first; empty when nothing waits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatestInboundList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

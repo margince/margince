@@ -113,6 +113,11 @@ function stubLead(
           authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
         });
       }
+      if (
+        new URL(request.url).pathname.endsWith("/activities/latest-inbound")
+      ) {
+        return jsonResponse({ data: [] });
+      }
       if (new URL(request.url).pathname.endsWith("/context")) {
         return jsonResponse({
           anchor: { type: "lead", id: "l-1" },

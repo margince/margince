@@ -1,7 +1,7 @@
 import type { components } from "../../api/schema";
+import { RecordNextBar } from "../../components/latestinbound";
 import { NextTaskSlot } from "../../components/nexttaskslot";
 import { Button } from "../../design-system/atoms";
-import { NextBar } from "../../design-system/nextbar";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
@@ -39,7 +39,9 @@ export function LeadNextBar({
   const record = useRecordZone();
   const next = leadNext(lead, { t, locale, zone, record, asOf });
   return (
-    <NextBar
+    <RecordNextBar
+      // A lead ready to qualify outranks what just came in.
+      urgent={next.qualify || undefined}
       title={next.title}
       late={next.late}
       sub={next.sub}

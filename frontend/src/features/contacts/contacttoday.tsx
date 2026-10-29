@@ -1,11 +1,11 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RecordNextBar } from "../../components/latestinbound";
 import { NextTaskSlot } from "../../components/nexttaskslot";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { NextBar } from "../../design-system/nextbar";
 import { formatDate, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
@@ -105,6 +105,11 @@ export function ContactToday({
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
 
+const URGENT_RULES: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "meeting_prep",
+  "overdue_promise",
+]);
+
 // The server's `why_now` is the only reason: one moment gives one reason, and
 // the facts in it are the part a rep judges.
 function MomentBar({
@@ -129,7 +134,11 @@ function MomentBar({
     <TaskCallAction task={task} pageContact={view.contact} />
   );
   return (
-    <NextBar
+    <RecordNextBar
+      // A meeting about to happen, or a promise past its date, outranks what
+      // just came in; the item then sits above the bar.
+      urgent={URGENT_RULES.has(moment.rule) || undefined}
+      about={moment.evidence.map((item) => item.id)}
       title={moment.headline}
       late={lateness(owedDue(moment, view), view, t, locale)}
       sub={moment.why_now}
@@ -220,7 +229,7 @@ function TaskBar({
   const { locale } = useLocale();
   const zone = useRecordZone();
   return (
-    <NextBar
+    <RecordNextBar
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
@@ -264,18 +273,20 @@ function AnswerBar({
   ];
   if (withheld.length > 0) {
     return (
-      <NextBar
+      <RecordNextBar
         title={t("today.withheld", { sections: withheld.join(", ") })}
         onward={<NextTaskSlot />}
       />
     );
   }
   if (!moment) {
-    return <NextBar title={t("record.notShown")} onward={<NextTaskSlot />} />;
+    return (
+      <RecordNextBar title={t("record.notShown")} onward={<NextTaskSlot />} />
+    );
   }
   if (moment.rule === "thin_relationship") {
     return (
-      <NextBar
+      <RecordNextBar
         title={moment.headline}
         sub={t("contact.overview.coverage")}
         action={
@@ -285,7 +296,7 @@ function AnswerBar({
       />
     );
   }
-  return <NextBar onward={<NextTaskSlot />} />;
+  return <RecordNextBar onward={<NextTaskSlot />} />;
 }
 
 // What the move says is owed, in the order both readers below take it: the

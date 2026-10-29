@@ -219,21 +219,20 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       }
     >
       {tab === "overview" && (
-        <LeadLatestInbound latest={latest} leadId={lead.id} />
-      )}
-      {tab === "overview" && (
-        <LeadOverviewPane
-          lead={lead}
-          id={id}
-          writer={writer}
-          promotion={promotion}
-          terminalReasonId={terminalReasonId}
-          thread={threadQuery}
-          asOf={asOf}
-          onOpenEmail={setOpenEmail}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-        />
+        <LeadLatestInbound latest={latest} leadId={lead.id}>
+          <LeadOverviewPane
+            lead={lead}
+            id={id}
+            writer={writer}
+            promotion={promotion}
+            terminalReasonId={terminalReasonId}
+            thread={threadQuery}
+            asOf={asOf}
+            onOpenEmail={setOpenEmail}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+        </LeadLatestInbound>
       )}
       {tab === "deals" && (
         <LeadDealsTab

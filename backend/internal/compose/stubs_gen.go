@@ -51,6 +51,10 @@ func (stubs) UpdateFollowUpSettings(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "UpdateFollowUpSettings")
 }
 
+func (stubs) ListLatestInbound(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLatestInboundParams) {
+	httperr.NotImplemented(w, r, "ListLatestInbound")
+}
+
 func (stubs) RelinkActivities(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RelinkActivitiesParams) {
 	httperr.NotImplemented(w, r, "RelinkActivities")
 }

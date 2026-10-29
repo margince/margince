@@ -141,6 +141,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /tasks` | createTask | Create a task — a commitment with an owner, on the records it is about. | Change records | at once |
 | `GET /activities` | listActivities | List activities (the timeline; cursor-paginated, filterable by type/entity). | Read records | at once |
 | `POST /activities` | logActivity | Log an activity (the `log_activity` MCP verb). | Change records | at once |
+| `GET /activities/latest-inbound` | listLatestInbound | What they sent on one record in the last 7 days that nobody has answered. | Read records | at once |
 | `GET /activities/{id}` | getActivity | Get an activity by id (includes its links and raw capture payload). | Read records | at once |
 | `PATCH /activities/{id}` | updateActivity | Update an activity (e.g. complete a task). | Change records | at once |
 | `DELETE /activities/{id}` | archiveActivity | Archive (soft-delete) an activity. | Change records | at once |

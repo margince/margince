@@ -190,6 +190,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/acquisition-sources":                                           {Op: "listAcquisitionSources", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities":                                                    {Op: "listActivities", Access: "tool", Tool: "list_records", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/follow-up-settings":                                 {Op: "getFollowUpSettings", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/activities/latest-inbound":                                     {Op: "listLatestInbound", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}":                                               {Op: "getActivity", Access: "tool", Tool: "read_record", RecordType: "activity", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}/email-presentation":                            {Op: "getEmailPresentation", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}/meeting-brief":                                 {Op: "getMeetingBrief", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
@@ -1050,6 +1051,7 @@ var agentPolicies = map[string]agentPolicy{
 var readViewQueries = map[string][]viewQuery{
 	"GET /v1/acquisition-sources":                           {},
 	"GET /v1/activities/follow-up-settings":                 {},
+	"GET /v1/activities/latest-inbound":                     {{Name: "entity_id", Type: "string"}, {Name: "entity_type", Type: "string"}},
 	"GET /v1/activities/{id}/email-presentation":            {{Name: "thread_cursor", Type: "string"}},
 	"GET /v1/activities/{id}/meeting-brief":                 {{Name: "project_id", Type: "string"}},
 	"GET /v1/activities/{id}/reply-recipient":               {},

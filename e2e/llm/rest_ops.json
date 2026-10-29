@@ -21,6 +21,7 @@
     "GET /v1/acquisition-sources": "read_view",
     "GET /v1/activities": "list_records",
     "GET /v1/activities/follow-up-settings": "read_view",
+    "GET /v1/activities/latest-inbound": "read_view",
     "GET /v1/activities/{id}": "read_record",
     "GET /v1/activities/{id}/email-presentation": "read_view",
     "GET /v1/activities/{id}/meeting-brief": "read_view",

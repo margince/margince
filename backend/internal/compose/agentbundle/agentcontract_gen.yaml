@@ -2765,6 +2765,36 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /activities/latest-inbound:
+    get:
+      tags: [Activities]
+      operationId: listLatestInbound
+      summary: What they sent on one record in the last 7 days that nobody has answered.
+      description: |-
+        The record page's "Just in" read, newest first. An email or message is one the
+        `waiting_reply` read lists, so a badge, the waiting lane and this agree on who is
+        waiting. A website form lands as a note that read does not know. It counts as
+        answered once a later outbound email or message, a call, or a held meeting is on the
+        record. At most 10 items, which is more than a reader sets aside in a week.
+      parameters:
+        - name: entity_type
+          in: query
+          required: true
+          schema: {type: string, enum: [contact, company, deal, lead, project]}
+        - name: entity_id
+          in: query
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The unanswered items, newest first; empty when nothing waits.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LatestInboundList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -16271,6 +16301,26 @@ components:
       additionalProperties: true
       description: >-
         A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
+    LatestInboundList:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          maxItems: 10
+          items: {$ref: '#/components/schemas/LatestInbound'}
+    LatestInbound:
+      type: object
+      required: [activity, kind, accepts_request]
+      properties:
+        activity: {$ref: '#/components/schemas/Activity'}
+        kind:
+          type: string
+          enum: [email, message, web_form]
+          description: What arrived.
+        accepts_request:
+          type: boolean
+          description: A task made from it accepts its request through `request_activity_id`.
     ActivityListResponse:
       type: object
       required: [data, page]
