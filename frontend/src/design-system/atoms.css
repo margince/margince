@@ -850,6 +850,9 @@
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
 }
+.segmented button:hover:where(:not(:disabled)) {
+  background: var(--bgHover);
+}
 .segmented button[aria-pressed="true"] {
   background: var(--bgElevated);
   color: var(--textPrimary);

@@ -25,7 +25,7 @@
   padding: 0 8px;
   /* Every variant reserves the edge; soft draws it in its tone and primary
      leaves it transparent, so a row of mixed variants shares one height. */
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--paneEdge);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);

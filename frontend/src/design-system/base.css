@@ -237,6 +237,12 @@
 .btn-ghost:hover {
   background: var(--bgHover);
 }
+/* :where keeps the specificity at the pressed rule's, so a set toggle keeps its edge. */
+.btn-ghost:hover:where(
+  :not(:disabled, [aria-disabled="true"], [aria-busy="true"])
+) {
+  border-color: var(--accent);
+}
 /* A button that TOGGLES has to show which way it is set, from `aria-pressed`:
    a selected relationship-graph node drives the detail below it, and has to
    look unlike its neighbours. The pair is the pressed filter pill's
