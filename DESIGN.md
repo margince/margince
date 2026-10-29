@@ -232,8 +232,8 @@ then `[data-theme="dark"]`.
 
 ### How colour is spent
 
-- **The two glows are the chrome**. The sidebar is glass over the emerald light, and the light is a
-  faint tint, never a green column; there is no coloured bar on any screen.
+- **The two glows are the chrome**. The sidebar is glass over the emerald light. That light is a
+  soft tint, never a green column, and there is no coloured bar on any screen.
 - **At most one filled control in view**, in emerald: the move the page names. Every other button is
   a pane with an outline.
 - **The indigo tint marks the agent's work**. The agent's read is a row on `--aiBg`. A staged change is a row
@@ -382,17 +382,16 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 
 - **The sidebar is light, never green**. It is glass: the white `--pane` with `blur(20px)` over the
   lit page, one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour
-  open and folded, and in dark it is the same pane with the lights down. No screen, mock or
-  prototype paints it dark green or in the accent: the dark green plate (`--bgInkField`) is only for
-  what passes over the page, such as a toast or a tooltip. The only green in the column is the
+  open and folded, and in dark it is the same pane with the lights down. No screen or mock
+  paints it dark green or in the accent. The dark green `--bgInkField` is only for what passes over
+  the page, such as a tooltip. The only green in the column is the
   workspace mark of a company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
-  At the top is the workspace head: the company's mark in a 40px square, its name, and the line on
-  what it runs on, drawn as one bordered card while open. Then the rows, 32px each with an 18px
-  icon, in the order `frontend/src/app/nav.ts` holds: Home; Records (Contacts, Companies, Leads,
-  Deals); Work (Projects, Filters and views); Insights (Analytics). The group labels are quiet sentence
-  case. The current row is a neutral `--bgInset` pill in medium weight, never an accent fill. The
-  agent's orb is pinned to the foot.
+  At the top is the workspace head: the company's mark in a 40px square and its name. While open,
+  it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
+  one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
+- **Its states**: the group labels are quiet sentence case. The current row is a neutral `--bgInset`
+  pill in medium weight, never an accent fill. The agent's orb is pinned to the foot.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the

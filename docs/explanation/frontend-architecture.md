@@ -246,11 +246,10 @@ The app shell is **glass over the light page**, as
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
 
-The ink field group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
-`--overlayScrim`) is the one dark green plate, the same in both themes. It is
-for what passes over the page: a toast, the capture chip, the tooltips the
-folded sidebar shows, a docked window's title bar and the bar of the client
-surface. The sidebar is never on it. A new app panel styled from those tokens
+The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
+`--overlayScrim`) is the one dark green field, the same in both themes. It is
+for what passes over the page, such as the tooltips the folded sidebar shows
+and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.
 
 Both themes ship, and **the theme resolves before React starts**.
