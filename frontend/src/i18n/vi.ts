@@ -4132,6 +4132,32 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.neverInTouch": "Chưa có trao đổi",
   "co.contacts.theyWrote": "Họ đã viết",
   "co.contacts.weWrote": "Nhóm của bạn đã viết",
+  "co.domainContacts.dialogTitle": "Gắn liên hệ trên tên miền này",
+  "co.domainContacts.intro":
+    "Các liên hệ này có địa chỉ email trên tên miền của công ty này. Liên hệ chưa có nơi làm việc hiện tại vẫn sẽ được gắn mỗi ngày; chọn các liên hệ làm việc tại đây để gắn ngay.",
+  "co.domainContacts.legend": "Ai làm việc tại đây?",
+  "co.domainContacts.worksAt": "Làm việc tại {company}",
+  "co.domainContacts.truncated_one": "Chỉ hiển thị {count} liên hệ đầu tiên.",
+  "co.domainContacts.truncated_other": "Chỉ hiển thị {count} liên hệ đầu tiên.",
+  "co.domainContacts.loading": "Đang tải liên hệ…",
+  "co.domainContacts.none": "Không còn liên hệ nào trên tên miền này để gắn.",
+  "co.domainContacts.changed":
+    "Danh sách đã thay đổi khi đang mở. Kiểm tra lại lựa chọn rồi gắn lại.",
+  "co.domainContacts.dismiss": "Để sau",
+  "co.domainContacts.link_one": "Gắn {count} liên hệ",
+  "co.domainContacts.link_other": "Gắn {count} liên hệ",
+  "co.domainContacts.linkNone": "Gắn liên hệ",
+  "co.domainContacts.linked_one": "Đã gắn {count} liên hệ",
+  "co.domainContacts.linked_other": "Đã gắn {count} liên hệ",
+  "co.domainContacts.callout_one":
+    "{count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.callout_other":
+    "{count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.calloutMore_one":
+    "Hơn {count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.calloutMore_other":
+    "Hơn {count} liên hệ trên tên miền này chưa gắn với công ty",
+  "co.domainContacts.review": "Xem lại liên hệ",
   "co.contacts.filter.status": "Mức tương tác",
   "co.contacts.filter.statusAll": "Mọi mức tương tác",
   "co.contacts.band.wayIn": "Hướng tiếp cận tốt nhất",
@@ -5859,6 +5885,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
     "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
+  "create.companyPrefilled":
+    "Đã khớp với công ty có sẵn theo tên miền email công việc.",
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
@@ -14608,7 +14636,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.address": "Địa chỉ",
   "contact.enriched.field.website": "Trang web",
   "contact.enriched.readFrom": "Đọc từ {source} vào {when}",
-  "contact.enriched.source.capture_enrich": "email của họ",
+  "contact.enriched.source.capture_enrich": "chữ ký email của họ",
   "contact.enriched.source.site_read": "trang web công ty",
   "contact.enriched.source.vcard_import": "vCard đã nhập",
   "contact.enriched.source.contact_research": "kết quả nghiên cứu đã chấp nhận",
@@ -14907,6 +14935,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.removeEmploymentTitle": "Gỡ liên kết công ty?",
   "contact.rail.removeEmploymentBody":
     "Liên kết với {company} và lịch sử liên quan sẽ bị xóa vĩnh viễn. Hồ sơ {company} vẫn được giữ nguyên. Nếu họ đã nghỉ việc, hãy đánh dấu vai trò đã kết thúc thay vì xóa.",
+  "contact.proposal.title": "Từ {source}: {company}",
+  "contact.proposal.ask": "Gắn hoặc tạo công ty này?",
+  "contact.proposal.link": "Gắn",
+  "contact.proposal.create": "Tạo và gắn",
+  "contact.proposal.dismiss": "Bỏ qua",
+  "contact.proposal.linkDenied":
+    "Vai trò của bạn không thể gắn công ty với liên hệ. Liên hệ quản trị viên.",
+  "contact.proposal.createDenied":
+    "Vai trò của bạn không thể tạo công ty. Liên hệ quản trị viên.",
+  "contact.proposal.duplicate":
+    "{company} đã có tên miền email công việc của liên hệ này, nên chưa tạo công ty mới.",
+  "contact.proposal.duplicateUnnamed":
+    "Một công ty khác đã có tên miền email công việc của liên hệ này, nên chưa tạo công ty mới.",
+  "contact.proposal.linkExisting": "Gắn công ty đó",
+  "contact.proposal.created": "Đã tạo và gắn {company}",
+  "contact.proposal.createdWithDomain":
+    "Đã tạo {company} với tên miền {domain} và gắn",
   "contact.timeline.empty": "Chưa ghi nhận hoạt động nào với liên hệ này.",
   "contact.deals.empty": "Liên hệ này chưa có trong deal nào.",
   "contact.deals.untitled": "Deal chưa có tên",
@@ -14939,7 +14984,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactLink.copyEmail": "Sao chép địa chỉ email",
   "contactLink.emailCopied": "Đã sao chép địa chỉ email",
   "contactLink.copyEmailRemedy": "Hãy chọn địa chỉ và sao chép bằng bàn phím.",
-  "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
   "contact.action.addTask": "Thêm việc cần làm",
   "contact.action.research": "Tìm hiểu",
@@ -18024,6 +18068,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.verdict.onHold": "Tạm dừng",
   "deal.verdict.onHoldUntil":
     "Tạm dừng đến {date} theo thỏa thuận với khách hàng.",
+  "deal.verdict.waitOver": "Việc tiếp theo quá hạn",
+  "deal.verdict.waitOverSince":
+    "Khách hàng hẹn chờ đến {date}. Đã đến ngày, hãy liên hệ lại.",
   "deal.verdict.overdueToClose": "Quá hạn chốt",
   "deal.verdict.closePassed": "Ngày dự kiến chốt ({date}) đã qua.",
   "deal.verdict.notStarted": "Chưa bắt đầu",

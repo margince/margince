@@ -364,13 +364,13 @@ describe("logging a call started on the page", () => {
     });
   });
 
-  it("opens the same drawer from the header's Call", async () => {
+  it("opens the same drawer from the Call icon beside the number", async () => {
     mountWithCalls();
     await readyToLog();
 
-    const call = within(await recordHeader()).getByRole("link", {
-      name: "Call",
-    });
+    const details = document.querySelector<HTMLElement>(".record-aside");
+    if (!details) throw new Error("the record drew no details beside the feed");
+    const call = within(details).getByRole("link", { name: "Call" });
     expect(fireEvent.click(call)).toBe(true);
     const dialog = await screen.findByRole("dialog", { name: "Log activity" });
     expect(screen.getAllByRole("dialog")).toHaveLength(1);

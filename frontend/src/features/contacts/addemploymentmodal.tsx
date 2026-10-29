@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   Button,
   Checkbox,
@@ -12,11 +12,14 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
 import {
+  type Employment,
   type EmploymentActions,
   searchCompanyCandidates,
 } from "./contactemployers";
+import { stillHeld } from "./employmentcurrency";
 import { datePatch, validDateEntry } from "./employmentpatch";
 import "../../design-system/querystates.css";
 
@@ -32,6 +35,9 @@ export function AddEmploymentModal({
   create,
   excludedCompanyIds,
   hasCurrentEmployment,
+  initialTerm,
+  initialCompany = null,
+  onLinked,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -46,10 +52,17 @@ export function AddEmploymentModal({
   // START in the state the save will produce instead of showing the reader one
   // answer and writing the other.
   hasCurrentEmployment: boolean;
+  // A name to start the search on, or a company already chosen. Read at mount.
+  initialTerm?: string;
+  initialCompany?: RecordPickerCandidate | null;
+  // Runs once the employment is written, before the modal closes.
+  onLinked?: () => void;
 }>) {
   const t = useT();
   const headingId = useId();
-  const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
+  const [company, setCompany] = useState<RecordPickerCandidate | null>(
+    initialCompany,
+  );
   const [role, setRole] = useState("");
   // A FIRST-CLASS field rather than something to correct afterwards. An
   // employment with no start date has no window, and the account walk that
@@ -72,13 +85,8 @@ export function AddEmploymentModal({
   // and `hasCurrentEmployment` is read off the same rows that rule reads, so the
   // two agree by construction rather than by being maintained in step.
   const [isCurrent, setIsCurrent] = useState(!hasCurrentEmployment);
-  // useState only reads its initial value ONCE, and this modal is mounted for
-  // the life of the section rather than remounted per open. So the default has
-  // to be re-taken every time it opens, or it answers a question about the rows
-  // as they were the first time the section rendered: end the only employment,
-  // reopen, and the box would still be unticked because the initializer had
-  // already run — writing an explicit `false` for the contact's one current job,
-  // which is the whole defect this default exists to prevent.
+  // A caller may keep this modal mounted across opens, so each open takes the
+  // default again.
   useEffect(() => {
     if (open) {
       setIsCurrent(!hasCurrentEmployment);
@@ -108,10 +116,8 @@ export function AddEmploymentModal({
   function close() {
     setCompany(null);
     setRole("");
-    // The modal is never unmounted — the list only flips `open` — so every
-    // field it holds has to be put back by hand. A start date left standing
-    // from a cancelled flow is the worst of them to forget: it would be sent
-    // for the NEXT employer, dated from the last one.
+    // A caller may keep the modal mounted, so each field is put back by hand:
+    // a start date left standing would date the next employer.
     setStart("");
     setAllConnected(false);
     create.reset();
@@ -133,6 +139,7 @@ export function AddEmploymentModal({
                 searchTargets={searchTargets}
                 selected={company}
                 onPick={setCompany}
+                initialTerm={initialTerm}
                 disabled={create.isPending}
               />
               {!company && allConnected && (
@@ -177,13 +184,15 @@ export function AddEmploymentModal({
           variant="primary"
           disabled={!company || !validDateEntry(start)}
           pending={create.isPending}
-          onClick={() => {
+          onClick={async () => {
             if (!company) {
               return;
             }
             const started = datePatch(start);
-            create.mutate(
-              {
+            // Awaited rather than a mutate callback: the link can replace the
+            // row that holds this dialog, and an unmounted observer drops those.
+            const linked = await create
+              .mutateAsync({
                 kind: "employment",
                 contact_id: contactId,
                 company_id: company.id,
@@ -196,9 +205,16 @@ export function AddEmploymentModal({
                 // to say "ui", which named the screen rather than the origin,
                 // and would have re-created the spelling the backfill removed.
                 source: "manual",
-              },
-              { onSuccess: close },
-            );
+              })
+              .then(
+                () => true,
+                // A refusal stays on screen through `create.error`.
+                () => false,
+              );
+            if (linked) {
+              onLinked?.();
+              close();
+            }
           }}
         >
           {t("create.save")}
@@ -206,6 +222,56 @@ export function AddEmploymentModal({
       </div>
     </Modal>
   );
+}
+
+/** What the add dialog opens on: a name to search, or a company already chosen. */
+export type EmploymentSeed = Readonly<{
+  term?: string;
+  company?: RecordPickerCandidate;
+  onLinked?: () => void;
+}>;
+
+/**
+ * The add dialog for one contact, and the verb that opens it. Each open
+ * remounts the dialog, so its seed and defaults are read afresh.
+ */
+export function useAddEmployment(
+  contactId: string,
+  create: EmploymentActions["create"],
+  employments: readonly Employment[],
+) {
+  const [adding, setAdding] = useState<
+    EmploymentSeed & Readonly<{ open: boolean; seq: number }>
+  >({ open: false, seq: 0 });
+  // A string key, so the picker keeps its candidates until the set of ids
+  // changes; `stable` because the key is only compared with itself.
+  const connectedKey = employments
+    .map((employment) => employment.company_id)
+    .sort(stable)
+    .join(",");
+  const connected = useMemo(
+    () => (connectedKey === "" ? [] : connectedKey.split(",")),
+    [connectedKey],
+  );
+  const modal = (
+    <AddEmploymentModal
+      key={adding.seq}
+      open={adding.open}
+      onClose={() => setAdding((prior) => ({ ...prior, open: false }))}
+      initialTerm={adding.company ? undefined : adding.term}
+      initialCompany={adding.company}
+      onLinked={adding.onLinked}
+      contactId={contactId}
+      create={create}
+      excludedCompanyIds={connected}
+      hasCurrentEmployment={employments.some(stillHeld)}
+    />
+  );
+  return {
+    modal,
+    open: (seed: EmploymentSeed = {}) =>
+      setAdding((prior) => ({ ...seed, open: true, seq: prior.seq + 1 })),
+  };
 }
 
 // The date range only — role is now its own InlineText control above, so

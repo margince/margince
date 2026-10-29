@@ -208,7 +208,7 @@ describe("every secondary verb is a row of the header's one menu", () => {
     }
     // The other direction: the verbs a reader came to do must not cost them
     // an opening press.
-    for (const daily of [en["log.title"], en["contact.action.call"]]) {
+    for (const daily of [en["log.title"], en["contact.action.meetings"]]) {
       expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
     }
   });
