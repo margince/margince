@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ProblemError } from "./problem";
-
 /**
  * Reads one page of ids. It answers the ids it found, and an id it leaves out
  * is a settled absence. It throws a `ProblemError` when the server refused.
@@ -16,7 +14,7 @@ export type PageReader<T> = (
 // map could only report them as a read that never arrived.
 type Answers<T> = Readonly<{
   found: ReadonlyMap<string, T>;
-  failures: ReadonlyMap<string, ProblemError>;
+  failures: ReadonlyMap<string, unknown>;
 }>;
 
 /**
@@ -37,13 +35,13 @@ export function idBatcher<T>(
 
   async function readAll(ids: readonly string[]): Promise<Answers<T>> {
     const found = new Map<string, T>();
-    const failures = new Map<string, ProblemError>();
+    const failures = new Map<string, unknown>();
     for (let at = 0; at < ids.length; at += pageSize) {
       const page = ids.slice(at, at + pageSize);
       const answer = await readOrRefusal(readPage, page);
-      if (answer instanceof ProblemError) {
+      if (answer instanceof Refusal) {
         for (const id of page) {
-          failures.set(id, answer);
+          failures.set(id, answer.cause);
         }
       } else {
         for (const [id, value] of answer) {
@@ -71,26 +69,27 @@ export function idBatcher<T>(
 
   return async (id) => {
     const { found, failures } = await join(id);
-    const failed = failures.get(id);
-    if (failed) {
-      throw failed;
+    if (failures.has(id)) {
+      throw failures.get(id);
     }
     return found.get(id) ?? null;
   };
 }
 
-// A refused page is held against its own ids rather than rejecting the shared
-// batch, which would lose what another page already read.
+// A page that failed, whether refused or never answered, is held against its
+// own ids rather than rejecting the shared batch, which would lose what another
+// page already read.
+class Refusal {
+  constructor(readonly cause: unknown) {}
+}
+
 async function readOrRefusal<T>(
   readPage: PageReader<T>,
   page: readonly string[],
-): Promise<ReadonlyMap<string, T> | ProblemError> {
+): Promise<ReadonlyMap<string, T> | Refusal> {
   try {
     return await readPage(page);
   } catch (error) {
-    if (error instanceof ProblemError) {
-      return error;
-    }
-    throw error;
+    return new Refusal(error);
   }
 }

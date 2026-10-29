@@ -133,4 +133,23 @@ describe("company names", () => {
     expect(result.current.map((n) => n.name)).toEqual([null, null]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps the names an earlier read returned when a later one never arrives", async () => {
+    const answered = companiesExcept();
+    let reads = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      reads += 1;
+      if (reads === 2) throw new TypeError("network down");
+      return answered(input);
+    });
+
+    const { result } = nameAll(
+      Array.from({ length: 150 }, (_, at) => `c-${at}`),
+    );
+
+    await waitFor(() => expect(result.current[149]?.reading).toBe("failed"));
+    expect(result.current[0]?.name).toBe("Company c-0");
+    expect(result.current[99]?.name).toBe("Company c-99");
+    expect(result.current[100]?.name).toBeNull();
+  });
 });
