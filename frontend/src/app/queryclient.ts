@@ -46,9 +46,10 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer fetched before it. The one exception is the answer the shell prefetched
-// for the screen being opened (app/homeprefetch.ts). While it is under a second
-// old, that screen's mount uses it instead of fetching it a second time.
+// answer fetched before it. Two exceptions. The answer the shell prefetched for
+// the screen being opened (app/homeprefetch.ts) serves that mount while under a
+// second old. And a second view of an answer already on screen shares it: the
+// view that is open keeps it current, so only staleness refetches it.
 export const LIVE_ANSWER_CURRENT_MS = 1_000;
 
 const prefetchedAnswers = new Map<string, number>();
@@ -63,10 +64,13 @@ export function liveOnMount(
     queryKey: QueryKey;
     queryHash: string;
     state: { dataUpdatedAt: number };
+    // The mounting observer counts itself, so more than one means another view.
+    getObserversCount?: () => number;
   },
   now = Date.now(),
 ): "always" | true {
   if (!isLiveWorkRead(query.queryKey)) return true;
+  if ((query.getObserversCount?.() ?? 0) > 1) return true;
   const answeredAt = query.state.dataUpdatedAt;
   const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
   return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
