@@ -2,17 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { CheckSquare, FileText } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
-import { LogActivityAction } from "../../components/logactivity.action";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RecordTeam } from "../../components/recordteam";
 import {
@@ -22,17 +24,15 @@ import {
   useTaskUpdate,
 } from "../../components/taskactions";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
-import { VerbWord } from "../../design-system/iconaction";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
-import { useCan, useCanWrite } from "../../lib/capability";
+import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { useMe } from "../../lib/session";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
@@ -48,6 +48,7 @@ import { ProjectDocuments } from "./projectdocuments";
 import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
+import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
 import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
@@ -131,6 +132,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // the project's rather than after it, and both share its one cache entry.
   const cf = useObjectCustomFields("project");
   const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
+  // Log in the strip and Add task in the menu open one drawer, so the page
+  // holds its state and the gate both of them read.
+  const activity = useActivityGate();
+  const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
   return (
     <RecordView
       aside={<ProjectDetails view={view} />}
@@ -152,10 +157,15 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <ProjectLogVerbs
             projectId={project.id}
             refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            activity={activity}
+            drawer={logDrawer}
+            onDrawer={setLogDrawer}
           />
           <ProjectActions
             project={project}
             refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            activity={activity}
+            onAddTask={() => setLogDrawer("task")}
             cf={cf}
             health={view.health?.current}
             onOpen={setDrawer}
@@ -273,62 +283,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   );
 }
 
-/**
- * Log and Task: one drawer, opened on the kind the verb asked for. A verb a
- * reader may not use still shows, pointing at the sentence that says why.
- */
-function ProjectLogVerbs({
-  projectId,
-  refusedReasonId,
-}: Readonly<{ projectId: string; refusedReasonId?: string }>) {
-  const t = useT();
-  const [drawer, setDrawer] = useState<"log" | "task" | null>(null);
-  // useCanWrite, not useCan: both verbs POST, and a read seat is refused
-  // before RBAC is consulted. A guard that has not answered refuses nothing.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const grantKnown = me.data?.authorization !== undefined;
-  const refusedId = useId();
-  const refused =
-    refusedReasonId ?? (grantKnown && !canLog ? refusedId : undefined);
-  return (
-    <>
-      {!refusedReasonId && grantKnown && !canLog && (
-        <p className="t-caption" id={refusedId}>
-          {t("record.logActivityRefused")}
-        </p>
-      )}
-      <Button
-        disabled={!grantKnown}
-        reasonId={refused}
-        title={t("log.title")}
-        onClick={() => setDrawer("log")}
-      >
-        <FileText aria-hidden="true" />
-        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
-      </Button>
-      <Button
-        disabled={!grantKnown}
-        reasonId={refused}
-        title={t("log.addTask")}
-        onClick={() => setDrawer("task")}
-      >
-        <CheckSquare aria-hidden="true" />
-        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
-      </Button>
-      {drawer && (
-        <LogActivityAction
-          entityType="project"
-          entityId={projectId}
-          askedKind={drawer === "task" ? "task" : undefined}
-          openOnMount
-          onClose={() => setDrawer(null)}
-        />
-      )}
-    </>
-  );
-}
-
 // A commitment carries no row version, and a task write must name one. So
 // the verbs read their task whole first and offer themselves once they have.
 function useNextTaskVerbs(
@@ -395,6 +349,8 @@ function CommitmentTick({
 function ProjectActions({
   project,
   refusedReasonId,
+  activity,
+  onAddTask,
   cf,
   health,
   onOpen,
@@ -402,6 +358,8 @@ function ProjectActions({
 }: Readonly<{
   project: Project;
   refusedReasonId?: string;
+  activity: ActivityGate;
+  onAddTask: () => void;
   cf: ObjectCustomFields;
   // The reading that stands, which Correct reading corrects.
   health?: ProjectHealthAssessment;
@@ -412,6 +370,14 @@ function ProjectActions({
   const owner = useOwnerPicker(project.owner_id);
   return (
     <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
+      {/* First: the most frequent verb in the menu. */}
+      <Button
+        disabled={activity.pending}
+        reasonId={refusedReasonId ?? activity.refusedId}
+        onClick={onAddTask}
+      >
+        {t("log.addTask")}
+      </Button>
       {/* Worded: a bare pencil among sentences names nothing to a reader. */}
       <EditAction<Project>
         labelled

@@ -55,8 +55,12 @@ describe("the contact page on an archived row", () => {
       screen.getByRole("button", { name: en["history.undo.action"] }),
     ).toBeTruthy();
 
+    // Add task is a row of the header's menu.
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     for (const verb of [en["log.title"], en["contact.action.addTask"]]) {
-      const control = screen.getByRole("button", { name: verb });
+      const control = await screen.findByRole("button", { name: verb });
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toBe(reason.id);
     }

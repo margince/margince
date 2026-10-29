@@ -176,9 +176,10 @@ async function menuPanel(): Promise<HTMLElement> {
 }
 
 describe("every secondary verb is a row of the header's one menu", () => {
-  // In the order a reader meets them: the record's own writes, then the
-  // quieter doors, then the destructive one last.
+  // In the order a reader meets them: Add task, the most frequent, then the
+  // record's own writes, the quieter doors, and the destructive one last.
   const ROWS = [
+    en["contact.action.addTask"],
     en["merge.contact"],
     en["scheduling.new"],
     en["record.share"],
@@ -205,9 +206,9 @@ describe("every secondary verb is a row of the header's one menu", () => {
     for (const row of ROWS) {
       expect(within(actions).queryByRole("button", { name: row })).toBeNull();
     }
-    // The other direction: a verb a reader came to do must not cost them an
-    // opening press.
-    for (const daily of [en["log.title"], en["contact.action.addTask"]]) {
+    // The other direction: the verbs a reader came to do must not cost them
+    // an opening press.
+    for (const daily of [en["log.title"], en["contact.action.call"]]) {
       expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
     }
   });

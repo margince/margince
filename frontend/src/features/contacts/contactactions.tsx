@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, CheckSquare, FileText } from "lucide-react";
+import { CalendarDays, FileText } from "lucide-react";
 import type { ReactNode } from "react";
-import { useId } from "react";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../components/activitygate";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
@@ -11,14 +14,12 @@ import { CallAction } from "../../design-system/callaction";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { primaryPhone } from "../../format/contacturi";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
 import {
   primaryTransportAction,
   useTransports,
 } from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
-import { useMe } from "../../lib/session";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
@@ -62,30 +63,6 @@ export function useWriteRefusal(view: TransportSource): string | undefined {
   return writeRefusal({ transports: useTransports(view) }, t);
 }
 
-/**
- * Whether this reader may write activities (log, task, book), asked once for
- * the page. The verbs point at `sentenceId`, and the page states the refusal
- * under that id in the left card's footnote. A grant `/me` has not answered
- * yet refuses nothing; the verbs are only briefly quiet (`pending`).
- */
-export function useActivityGate(): Readonly<{
-  refusedId: string | undefined;
-  pending: boolean;
-  sentenceId: string;
-}> {
-  // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
-  // seat is refused before RBAC is consulted.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const sentenceId = useId();
-  const known = me.data?.authorization !== undefined;
-  return {
-    refusedId: known && !canLog ? sentenceId : undefined,
-    pending: !known,
-    sentenceId,
-  };
-}
-
 // The header's verbs, in the order every record page carries them: writing
 // first, then the record's other doors. None of them is filled — the move
 // worth doing is the one the call names, and that one carries the colour.
@@ -108,7 +85,7 @@ export function ContactActions({
   onAddTask: () => void;
   // The page's gate, whose refusal the page states. A host that passes none
   // (the archived page, whose own sentence refuses every verb) gets its own.
-  activity?: ReturnType<typeof useActivityGate>;
+  activity?: ActivityGate;
   // Where the page states why Email is refused, when it does. Absent, the
   // verb states it under itself.
   writeRefusalId?: string;
@@ -179,23 +156,6 @@ export function ContactActions({
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
       </Button>
-      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
-          squaring this one would name the opposite of what it does. Files the
-          task against THIS record — the same form Log activity opens, started
-          on its task kind, rather than a navigation to the Worklist, which has
-          no way to add one. */}
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        onClick={onAddTask}
-        title={t("contact.action.addTask")}
-      >
-        <CheckSquare aria-hidden="true" />
-        <VerbWord
-          word={t("record.verb.task")}
-          label={t("contact.action.addTask")}
-        />
-      </Button>
       <ExtensionEntries
         slot="record_header.contact"
         record={{ type: "contact", id: contactId }}
@@ -215,6 +175,11 @@ export function ContactActions({
         label={t("record.moreActions")}
         word={t("record.verb.more")}
       >
+        {/* First in the menu: the most frequent verb here. Files the task
+            against THIS record, in the same form Log activity opens. */}
+        <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+          {t("contact.action.addTask")}
+        </Button>
         <ContactRecordActions
           contact={view.contact}
           disabledReasonId={refusedReasonId}

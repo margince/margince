@@ -5,16 +5,18 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { CompanyActionBadges } from "./companyheader";
 import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
 
-// The account header's Email/Log activity/Add task strip, split out of
+// The account header's Email/Log activity strip and the menu's Add task, split out of
 // companyheader.test.tsx with CompanyHeaderActions itself: the same verbs
 // CompanyPrimaryActions used to draw as a labelled toolbar, now icon-first
 // like every other record header's action strip.
@@ -99,17 +101,38 @@ function renderInApp(ui: ReactNode) {
 // leading card gained a door into it (companies.tsx); this wrapper stands in
 // for that page so the click-driven assertions below still exercise the real
 // open/close wiring rather than a state this test would otherwise own itself.
+// The strip and its menu read one gate, as on the page; Add task is a row of
+// the menu.
 function ActionsHost() {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
+  const activity = useActivityGate();
   return (
-    <CompanyHeaderActions
-      company={COMPANY}
-      composerOpen={false}
-      onComposerOpen={() => undefined}
-      drawer={drawer}
-      onDrawer={setDrawer}
-    />
+    <>
+      <CompanyHeaderActions
+        company={COMPANY}
+        composerOpen={false}
+        onComposerOpen={() => undefined}
+        drawer={drawer}
+        onDrawer={setDrawer}
+        activity={activity}
+      />
+      <CompanyActionBadges
+        company={COMPANY}
+        activity={activity}
+        onAddTask={() => setDrawer("task")}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />
+    </>
   );
+}
+
+// Add task lives in the More menu, whose rows mount on the first open.
+async function findAddTask(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: en["record.moreActions"] }),
+  );
+  return screen.findByRole("button", { name: en["log.addTask"] });
 }
 
 function renderActions() {
@@ -128,7 +151,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     renderActions();
 
     const log = await screen.findByRole("button", { name: "Log activity" });
-    const task = await screen.findByRole("button", { name: "Add task" });
+    const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     const describedBy = log.getAttribute("aria-describedby");
@@ -140,6 +163,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
 
     // Both refused for the SAME reason, so the reader reads it once: pressing
     // one does not open a form the store would refuse anyway.
+    await user.keyboard("{Escape}");
     await user.click(log);
     expect(screen.queryByRole("dialog")).toBeNull();
 
@@ -156,10 +180,11 @@ describe("Log activity and Add task, gated on the create grant", () => {
 
   it("presses both, with the grant", async () => {
     stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
     renderActions();
 
     const log = await screen.findByRole("button", { name: "Log activity" });
-    const task = await screen.findByRole("button", { name: "Add task" });
+    const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(false);
     expect(task.hasAttribute("disabled")).toBe(false);
   });
@@ -171,10 +196,11 @@ describe("Log activity and Add task, gated on the create grant", () => {
   // even in.
   it("stays quiet, disabled with no claimed refusal, while the grant is still in flight", async () => {
     const answer = stubMeInFlight();
+    const user = userEvent.setup();
     renderActions();
 
     const log = await screen.findByRole("button", { name: "Log activity" });
-    const task = await screen.findByRole("button", { name: "Add task" });
+    const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     expect(
@@ -202,19 +228,20 @@ describe("Log activity and Add task, gated on the create grant", () => {
 
 // Outside the menu the verbs are few enough to carry a glyph, and a header
 // strip of label-only buttons reads as a list of links. The glyph is an
-// addition, never a replacement: the accessible name is still the verb, so
-// nothing about how this button is found has moved.
-it("leads Log activity and Add task with a glyph, keeping their words", async () => {
+// addition, never a replacement: the accessible name is still the verb. In the
+// menu Add task is worded, like every row there.
+it("leads Log activity with a glyph and words Add task in the menu", async () => {
   stubGrants({ activity: ["create"] });
+  const user = userEvent.setup();
   renderActions();
 
-  for (const name of [en["log.title"], en["log.addTask"]]) {
-    const verb = await screen.findByRole("button", { name });
-    expect(verb.textContent).toContain(name);
-    // aria-hidden, so the glyph adds nothing to the name the row is found
-    // by, which is what the findByRole above has already proved.
-    expect(verb.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
-  }
+  const log = await screen.findByRole("button", { name: en["log.title"] });
+  expect(log.textContent).toContain(en["log.title"]);
+  // aria-hidden, so the glyph adds nothing to the name the row is found by.
+  expect(log.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+  const task = await findAddTask(user);
+  expect(task.textContent).toBe(en["log.addTask"]);
+  expect(task.querySelector("svg")).toBeNull();
 });
 
 // The verb bar draws each verb as a glyph over one short word, the full verb
@@ -281,7 +308,7 @@ describe("Add task writes only tasks", () => {
     const user = userEvent.setup();
     renderActions();
 
-    await user.click(await screen.findByRole("button", { name: "Add task" }));
+    await user.click(await findAddTask(user));
     const drawer = await screen.findByRole("dialog");
     expect(
       within(drawer).getByRole("heading", { name: "Add task" }),

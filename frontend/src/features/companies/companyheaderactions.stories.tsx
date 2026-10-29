@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -50,16 +51,25 @@ function Row({
           measure the record page gives them. */}
       <div style={{ maxWidth: "18.75rem" }}>
         <div className="record-split-verbs">
-          <CompanyHeaderActions
-            company={record}
-            composerOpen={false}
-            onComposerOpen={() => undefined}
-            drawer={null}
-            onDrawer={() => undefined}
-          />
+          <GatedActions record={record} />
         </div>
       </div>
     </StoryProviders>
+  );
+}
+
+// The gate is the page's, read inside the providers the way the page reads it.
+function GatedActions({ record }: Readonly<{ record: Company }>) {
+  const activity = useActivityGate();
+  return (
+    <CompanyHeaderActions
+      company={record}
+      composerOpen={false}
+      onComposerOpen={() => undefined}
+      drawer={null}
+      onDrawer={() => undefined}
+      activity={activity}
+    />
   );
 }
 

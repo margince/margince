@@ -17957,7 +17957,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.verb.call": "Gọi",
   "record.verb.meet": "Họp",
   "record.verb.log": "Ghi",
-  "record.verb.task": "Việc",
   "record.verb.more": "Thêm",
   "standing.timeline.more_one": "+{count} mục",
   "standing.timeline.more_other": "+{count} mục",
