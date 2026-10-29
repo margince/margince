@@ -251,13 +251,13 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
+	source := activityDiscoverClause(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
 	sourceID := provenance.TaskSourceActivitySQL(alias)
 	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
-	 OR EXISTS (SELECT 1 FROM activity request_source
-	   WHERE request_source.id = %[3]s
-     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR request_source.archived_at IS NULL)
-	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID)
+	 OR EXISTS (SELECT 1 FROM activity %[4]s
+	   WHERE %[4]s.id = %[3]s
+     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
+	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
 	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
 		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
 }

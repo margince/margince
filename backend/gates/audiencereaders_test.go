@@ -60,6 +60,9 @@ import (
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
 	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "AutomaticMailContent",
+	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
+	// in platform/auth holds that it renders the content gate.
+	"ContentReadableActivitiesSQL",
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
 	// The documents library reaches the clause two hops down —

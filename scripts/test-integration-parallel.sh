@@ -239,6 +239,9 @@ TIMEDOUT="$(mktemp)"
 LANE_T0="$(date +%s)"
 export LANE_T0 WALLCLOCK
 OUTDIR="$(mktemp -d)"
+# Each package process appends the large statements it sends here; the lane
+# checks them for a repeated content gate once every package passed.
+export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # Set on the failing path only, and read by the trap below, which then leaves
 # $OUTDIR behind. The per-package logs are the ONLY copy of a failure that is not
 # interleaved with 35 other packages; deleting them on the way out made an
@@ -817,6 +820,15 @@ if [[ "$fail" -ne 0 ]]; then
     echo "    copied to the shard artifact: $SHARD_OUT/"
   fi
   exit 1
+fi
+
+# A shard saw a slice of the statements, so it hands its seen senders to the
+# fan-in, which judges staleness over every shard. A whole lane judges it here.
+check_repeated_gates "$MARGINCE_SQL_CENSUS_DIR" "$OUTDIR/repeated-gates.txt"
+if [[ -n "$SHARD_OUT" ]]; then
+  cp "$OUTDIR/repeated-gates.txt" "$SHARD_OUT/repeated-gates.txt"
+else
+  stale_repeated_gates "$OUTDIR/repeated-gates.txt"
 fi
 
 # The manifests the fan-in reconciles: full discovery (identical across
