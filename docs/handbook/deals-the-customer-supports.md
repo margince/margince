@@ -13,6 +13,9 @@ review is named **Customer support needs review**, and the owner of the deal get
 task. The close date does not change this: a deal three months from its close
 date gets the same review.
 
+A reply that turns the deal down does not count. When the last message from the
+customer says no, the deal gets the review at once, without waiting for 60 days.
+
 A reply from the customer does not end the review. The review stays until
 somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
@@ -33,6 +36,13 @@ is on:
   customer still supports.
 - A deal with an open review is left out of that line. The screen says how many
   deals were left out and how much money they carry.
+- A deal the customer still talks about is left out too when it has no next
+  step. The same goes for a close date that is missing, was only guessed, or has
+  passed. Such a deal gets no review and no task, and it has a line of its own.
+  Set the close date or plan the next step, and it counts again after the next
+  check.
+  While the customer has asked you to wait, the wait is the next step, but the
+  close date must not fall before the wait ends.
 - A deal the last check could not judge is not counted either, and has a line of
   its own. That happens when the mailbox could not be read, when the deal is
   new, or when something on it changed after the check.
