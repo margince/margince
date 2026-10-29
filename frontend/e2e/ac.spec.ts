@@ -440,10 +440,10 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
-  ).toHaveAttribute("href", "#/settings");
+  ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
-  ).toHaveAttribute("href", "#/settings/meetings");
+  ).toHaveAttribute("href", "/#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -3545,7 +3545,7 @@ test.describe("calling a contact", () => {
       await expect(email).toBeVisible();
       await expect(open).toHaveAttribute(
         "href",
-        `#/contacts/${CALLED_CONTACT}`,
+        `/#/contacts/${CALLED_CONTACT}`,
       );
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task from a call open)");

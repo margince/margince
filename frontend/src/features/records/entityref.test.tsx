@@ -101,7 +101,7 @@ describe("EntityRef", () => {
     // is the stronger claim: it is also what a new tab, a bookmark and a
     // middle-click follow, and none of those goes through an onClick.
     const link = await screen.findByRole("link", { name: "Brandt GmbH" });
-    expect(link.getAttribute("href")).toBe("#/companies/o-1");
+    expect(link.getAttribute("href")).toBe("/#/companies/o-1");
     await userEvent.click(link);
     expect(window.location.hash).toBe("#/companies/o-1");
   });
@@ -124,7 +124,7 @@ describe("EntityRef", () => {
       (await screen.findByRole("link", { name: "Anna Weber" })).getAttribute(
         "href",
       ),
-    ).toBe("#/contacts/p-1");
+    ).toBe("/#/contacts/p-1");
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -137,7 +137,7 @@ describe("EntityRef", () => {
       (await screen.findByRole("link", { name: "Q3 Renewal" })).getAttribute(
         "href",
       ),
-    ).toBe("#/deals/d-1");
+    ).toBe("/#/deals/d-1");
   });
 
   it("resolves a lead to leads/{id} (P-16: lead joins the ENTITY registry)", async () => {
@@ -155,7 +155,7 @@ describe("EntityRef", () => {
       (await screen.findByRole("link", { name: "Jordan Lee" })).getAttribute(
         "href",
       ),
-    ).toBe("#/leads/l-1");
+    ).toBe("/#/leads/l-1");
   });
 
   it("falls back to the id (no link) once the lookup has settled without a name", async () => {
@@ -350,7 +350,7 @@ describe("EntityRef", () => {
       (await screen.findByRole("link", { name: "Jonas Keller" })).getAttribute(
         "href",
       ),
-    ).toBe("#/leads/l-1");
+    ).toBe("/#/leads/l-1");
   });
 
   it("uses a caller-supplied user name without reading the roster at all", async () => {
@@ -691,4 +691,14 @@ describe("invited seats", () => {
       .find((url) => url.pathname.endsWith("/users"));
     expect(asked?.searchParams.has("include_invited")).toBe(false);
   });
+});
+
+it("offers a named public-card URL while an ordinary click stays in the app", async () => {
+  const id = "01a00000-0000-7000-8000-000000000001";
+  const user = userEvent.setup({ delay: null });
+  render(<EntityRef kind="deal" id={id} name="Example <renewal> · 海" />);
+  const link = screen.getByRole("link", { name: "Example <renewal> · 海" });
+  expect(link.getAttribute("href")).toBe(`/r/deals/${id}#/deals/${id}`);
+  await user.click(link);
+  expect(location.hash).toBe(`#/deals/${id}`);
 });

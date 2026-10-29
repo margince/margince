@@ -7,6 +7,10 @@ an HTTP handler and not find it. The check is at the entry point of the store or
 transaction seam and the grants of the app role are the last guard under it. This is a design
 decision.
 
+A record link has a limited public card: its name, type and short context are readable without a session.
+The public card edge binds a system principal only for that projection. It cannot reach the signed-in router.
+The full record still needs the reader's session and record access. See [Sharing record links](../handbook/sharing-record-links.md).
+
 ## Why authorization lives below the handlers
 
 Most web apps gate authorization in the HTTP layer: a middleware checks the permission, and all that is

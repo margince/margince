@@ -218,7 +218,7 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. Margince answers all three with **not found**, so a link alone shows nothing.
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record.
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.

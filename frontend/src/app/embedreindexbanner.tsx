@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../design-system/applink";
 import { Callout } from "../design-system/callout";
 import {
   useEmbedReindexAvailable,
@@ -56,7 +57,11 @@ export function EmbedReindexBanner() {
         tone="warning"
         kind="standing"
         title={t("reindexbanner.needed")}
-        actions={<a href="#/settings/maintenance">{t("reindexbanner.link")}</a>}
+        actions={
+          <AppLink href="#/settings/maintenance">
+            {t("reindexbanner.link")}
+          </AppLink>
+        }
       />
     </div>
   );

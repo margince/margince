@@ -486,7 +486,7 @@ describe("a suggestion on the pipeline board", () => {
         const name = await within(column).findByRole("link", {
           name: "Acme GmbH: proposal sent",
         });
-        expect(name.getAttribute("href")).toBe("#/companies/co-1");
+        expect(name.getAttribute("href")).toBe("/#/companies/co-1");
       } finally {
         window.location.hash = "";
       }

@@ -1851,6 +1851,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "trust.relayForColleague": "Margince đã gửi thay đồng nghiệp",
   "trust.relaySent": "Margince đã gửi",
   "trust.relayFrom": "Địa chỉ gửi: {address}",
+  "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",

@@ -1,5 +1,6 @@
 import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
@@ -54,11 +55,11 @@ function BrandBlock() {
         <span className="ws-chip" aria-hidden="true">
           <Logomark />
         </span>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <AppLink className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
-        </a>
+        </AppLink>
         {/* No attribution here: the product's own name is already above it. */}
         <span className="ws-company">{marker}</span>
       </>
@@ -76,7 +77,7 @@ function BrandBlock() {
           src={mark}
         />
       </span>
-      <a
+      <AppLink
         className="ws"
         href="#/home"
         aria-label={t("shell.companyLogoAria", {
@@ -91,7 +92,7 @@ function BrandBlock() {
           {installation.display_name}
         </Heading>
         {nameTip}
-      </a>
+      </AppLink>
       <span className="ws-company">
         <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}

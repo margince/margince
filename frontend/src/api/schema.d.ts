@@ -6482,6 +6482,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/record-previews/{record_type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "deals" | "companies" | "contacts";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the limited public link card for a record.
+         * @description Anyone with the record URL may read its name, type, company and brief context.
+         *     This HTML contains Open Graph metadata and opens the signed-in app. It exposes no
+         *     notes, activity, files, addresses, amounts or access grant. Full record reads still
+         *     require the recipient's own session and permissions. Archived records answer 404.
+         */
+        get: operations["getPublicRecordPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/booking/company-logo": {
         parameters: {
             query?: never;
@@ -62260,6 +62287,40 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getPublicRecordPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "deals" | "companies" | "contacts";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public record card and link to the protected app. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The preview is unavailable; the HTML still opens the protected app. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
         };
     };
     getPublicBookingCompanyLogo: {

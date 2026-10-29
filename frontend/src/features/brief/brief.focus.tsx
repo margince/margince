@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 import { TaskNextSteps } from "../../components/tasknextsteps";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
@@ -217,9 +218,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <>
       {label && href && (
-        <a className="entity-link" href={href}>
+        <AppLink className="entity-link" href={href}>
           {label}
-        </a>
+        </AppLink>
       )}
       {inbox && <span>{t(`visibility.${inbox}`)}</span>}
     </>

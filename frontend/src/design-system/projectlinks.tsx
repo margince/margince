@@ -14,10 +14,10 @@
 // here, so every record page says it the same way.
 
 import { Fragment, type ReactNode, useRef, useState } from "react";
-
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "../lib/problem";
+import { AppLink } from "./applink";
 import { Button, EmptyState, Field } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { Panel, PanelBody, PanelGroupHead, PanelRow } from "./panel";
@@ -302,9 +302,9 @@ function LinkedRows({
   return adapter.linked.map((project) => (
     <PanelRow key={project.project_id}>
       <div className="pl-row">
-        <a href={project.href ?? `#/projects/${project.project_id}`}>
+        <AppLink href={project.href ?? `#/projects/${project.project_id}`}>
           {project.name}
-        </a>
+        </AppLink>
         {project.key && <span>{project.key}</span>}
         {project.phase}
         {onDetach && (

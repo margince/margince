@@ -194,3 +194,12 @@ describe("every response the web tier sends carries the whole security set", () 
     }
   });
 });
+
+it("routes a record card to the public metadata endpoint rather than the static shell", () => {
+  for (const kind of ["deals", "companies", "contacts"]) {
+    expect(
+      locate(`/r/${kind}/01a00000-0000-7000-8000-000000000001`).body,
+    ).toContain("return 302 /v1/public/record-previews/$1/$2;");
+  }
+  expect(locate("/open-record.js").body).toContain("expires -1;");
+});

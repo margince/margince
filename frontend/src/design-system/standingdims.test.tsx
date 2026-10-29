@@ -81,7 +81,7 @@ describe("Standing dimensions", () => {
 
     expect(screen.getByRole("link", { name: "Sarah Cole" })).toHaveAttribute(
       "href",
-      "#/contacts/a",
+      "/#/contacts/a",
     );
     expect(
       screen.getByRole("region", {

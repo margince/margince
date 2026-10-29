@@ -7,6 +7,7 @@ import { mailbox } from "../format/contacturi";
 import { useT } from "../i18n";
 import type { CallRecord } from "../lib/callstart";
 import { useWriteTo, type WriteToRecord } from "../lib/writeto";
+import { AppLink } from "./applink";
 import { Button } from "./button";
 import { CallAction, linkVerb } from "./callaction";
 import { CopyAction } from "./clipboardcopy";
@@ -128,9 +129,9 @@ export function ContactLink(props: Contact) {
     // The address was admitted above, so this carries nothing but it. No
     // `target="_blank"`, for the reason `CallAction` gives for a `tel:`.
     return (
-      <a className={className} href={`mailto:${address}`}>
+      <AppLink className={className} href={`mailto:${address}`}>
         {body}
-      </a>
+      </AppLink>
     );
   }
   return (

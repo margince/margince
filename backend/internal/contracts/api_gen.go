@@ -80993,6 +80993,9 @@ type ServerInterface interface {
 	// Check current availability for this personal proposal.
 	// (GET /public/proposal/{token}/availability)
 	GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams)
+	// Read the limited public link card for a record.
+	// (GET /public/record-previews/{record_type}/{id})
+	GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The documents as published, grouped.
 	// (GET /public/rooms/documents)
 	ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
@@ -86081,6 +86084,12 @@ func (_ Unimplemented) AcceptPublicMeetingProposal(w http.ResponseWriter, r *htt
 // Check current availability for this personal proposal.
 // (GET /public/proposal/{token}/availability)
 func (_ Unimplemented) GetPublicProposalAvailability(w http.ResponseWriter, r *http.Request, token string, params GetPublicProposalAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the limited public link card for a record.
+// (GET /public/record-previews/{record_type}/{id})
+func (_ Unimplemented) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118865,6 +118874,41 @@ func (siw *ServerInterfaceWrapper) GetPublicProposalAvailability(w http.Response
 	handler.ServeHTTP(w, r)
 }
 
+// GetPublicRecordPreview operation middleware
+func (siw *ServerInterfaceWrapper) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPublicRecordPreview(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListBuyerRoomDocuments operation middleware
 func (siw *ServerInterfaceWrapper) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request) {
 
@@ -129518,6 +129562,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/proposal/{token}/availability", wrapper.GetPublicProposalAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/record-previews/{record_type}/{id}", wrapper.GetPublicRecordPreview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/rooms/documents", wrapper.ListBuyerRoomDocuments)

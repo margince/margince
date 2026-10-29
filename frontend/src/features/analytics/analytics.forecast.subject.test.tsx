@@ -75,7 +75,7 @@ describe("a forecast finding", () => {
     const link = await screen.findByRole("link", { name: "Fleet retrofit" });
     // The href, not a click: it is also what a new tab and a middle-click
     // follow, and a manager triaging a review opens several deals at once.
-    expect(link.getAttribute("href")).toBe("#/deals/d-1");
+    expect(link.getAttribute("href")).toBe("/#/deals/d-1");
   });
 
   it("still draws the row when the server names no subject", async () => {

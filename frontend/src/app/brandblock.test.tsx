@@ -59,7 +59,7 @@ describe("The rail's brand block", () => {
     const attribution = document.querySelector(".ws-company");
     expect(attribution?.textContent).toContain("Powered by Margince");
     expect(within(brand).queryByText("Powered by Margince")).toBeNull();
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(brand.getAttribute("href")).toBe("/#/home");
   });
 
   // The head is one line tall for a name of any length. The tooltip shows the

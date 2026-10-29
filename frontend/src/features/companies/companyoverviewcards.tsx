@@ -7,6 +7,7 @@ import {
   TaskCompleteCheck,
   type useTaskUpdate,
 } from "../../components/taskactions";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import {
   OverviewCard,
@@ -293,12 +294,12 @@ function DealItem({
   return (
     <OverviewRow
       title={
-        <a
+        <AppLink
           className="co-rowlink"
           href={routeHash({ screen: "deals", id: deal.deal_id })}
         >
           {deal.name}
-        </a>
+        </AppLink>
       }
       sub={sub || undefined}
       right={
@@ -330,12 +331,12 @@ function ProjectItem({
   return (
     <OverviewRow
       title={
-        <a
+        <AppLink
           className="co-rowlink"
           href={routeHash({ screen: "projects", id: project.project_id })}
         >
           {project.name}
-        </a>
+        </AppLink>
       }
       sub={sub}
     />

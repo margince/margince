@@ -3,6 +3,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -214,9 +215,9 @@ function ClosedRun({
       title={title}
       actions={
         newer ? (
-          <a className="link-button" href={runHref(newer)}>
+          <AppLink className="link-button" href={runHref(newer)}>
             {t("import.supersededOpen")}
-          </a>
+          </AppLink>
         ) : (
           <Button variant="primary" onClick={wizard.reset}>
             {t("import.closed.upload")}

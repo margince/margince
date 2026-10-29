@@ -130,7 +130,7 @@ export const SettingNameHit: Story = {
     await expect(hit).toHaveTextContent("http.port");
     await expect(hit).toHaveAttribute(
       "href",
-      "#/settings/configuration?q=MARGINCE_HTTP_PORT",
+      "/#/settings/configuration?q=MARGINCE_HTTP_PORT",
     );
   },
 };

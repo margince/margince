@@ -295,7 +295,9 @@ describe("what the ranked queue tells a reader", () => {
       name: "Open privacy request",
     });
     const dsr = "01a05500-0000-7000-8000-00000000dddd";
-    expect(request.getAttribute("href")).toBe(`#/settings/privacy?case=${dsr}`);
+    expect(request.getAttribute("href")).toBe(
+      `/#/settings/privacy?case=${dsr}`,
+    );
   });
 
   it("omits generic consequence narration", async () => {
@@ -665,7 +667,7 @@ describe("a lead still owed its first reply", () => {
 
     const link = await screen.findByRole("link", { name: "Weber GmbH" });
     expect(link.getAttribute("href")).toBe(
-      "#/leads/11111111-2222-4333-8444-555555555555",
+      "/#/leads/11111111-2222-4333-8444-555555555555",
     );
   });
 
@@ -728,7 +730,7 @@ describe("an introduction ask on the queue", () => {
     // mentioned anywhere else, and landing a colleague on the overview leaves
     // them to go and find it.
     expect(verb.getAttribute("href")).toBe(
-      "#/contacts/018f3a1b-0000-7000-8000-000000000010/network",
+      "/r/contacts/018f3a1b-0000-7000-8000-000000000010#/contacts/018f3a1b-0000-7000-8000-000000000010/network",
     );
   });
 

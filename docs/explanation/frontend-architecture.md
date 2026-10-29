@@ -44,8 +44,9 @@ reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
 Routing uses the **URL hash** (`#/deals/01J9ZK` → `{ screen: "deals", id: "01J9ZK" }`).
-So any plain file host serves `index.html` for every entry point, and the
-server needs no fallback for the web app. A hash may carry a query of its own.
+Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher can name the record.
+The web tier serves the app for a browser and sends other fetches to the public card endpoint.
+`AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 ## The layers

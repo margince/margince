@@ -4,6 +4,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
 import { Heading } from "./heading";
 import { RecordStory } from "./recordstory";
@@ -17,10 +18,10 @@ export function RecordBack({
 }: Readonly<{ href: string; label: string }>) {
   return (
     <div className="record-back">
-      <a className="link-button" href={href}>
+      <AppLink className="link-button" href={href}>
         <ArrowLeft aria-hidden="true" />
         {label}
-      </a>
+      </AppLink>
     </div>
   );
 }

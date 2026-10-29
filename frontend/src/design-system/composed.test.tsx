@@ -160,8 +160,8 @@ describe("DealCard + PipelineBoard", () => {
     const hrefs = screen
       .getAllByRole("link")
       .map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/deals/d1");
-    expect(hrefs).toContain("#/companies/o-1");
+    expect(hrefs).toContain("/#/deals/d1");
+    expect(hrefs).toContain("/#/companies/o-1");
   });
 
   // The refusal case, and the reason the card takes an href rather than an id:
@@ -173,7 +173,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
       screen.getAllByRole("link").map((each) => each.getAttribute("href")),
-    ).toEqual(["#/deals/d1"]);
+    ).toEqual(["/#/deals/d1"]);
   });
 
   // A company has three readings on a card and only one of them is blank. The

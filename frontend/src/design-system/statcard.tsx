@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { useT } from "../i18n";
+import { AppLink } from "./applink";
 import { type PeekContent, usePeek } from "./peek";
 import { Popover } from "./popover";
 import "./atoms.css";
@@ -284,9 +285,13 @@ function Door({
 }>) {
   if (href) {
     return (
-      <a className="stat-card-open" href={href} aria-describedby={describedBy}>
+      <AppLink
+        className="stat-card-open"
+        href={href}
+        aria-describedby={describedBy}
+      >
         {children}
-      </a>
+      </AppLink>
     );
   }
   return (

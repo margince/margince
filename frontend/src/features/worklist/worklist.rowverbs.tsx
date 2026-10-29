@@ -9,6 +9,7 @@
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
@@ -138,9 +139,13 @@ export function RowActs({
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
           <PutDownLines write={write} />
           {ways.map(({ action, destination }) => (
-            <a key={action} className={NAVIGATING_VERB} href={destination}>
+            <AppLink
+              key={action}
+              className={NAVIGATING_VERB}
+              href={destination}
+            >
               {VERB_LABEL[action](t)}
-            </a>
+            </AppLink>
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
@@ -179,17 +184,17 @@ function RowAnswer({
     <>
       {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
       {lead && (
-        <a className={NAVIGATING_VERB} href={lead.destination}>
+        <AppLink className={NAVIGATING_VERB} href={lead.destination}>
           {VERB_LABEL[lead.action](t)}
-        </a>
+        </AppLink>
       )}
       {item.source === "brief_item" &&
         !primary &&
         !moveHref(item) &&
         subjectHref(item) && (
-          <a className={NAVIGATING_VERB} href={subjectHref(item)}>
+          <AppLink className={NAVIGATING_VERB} href={subjectHref(item)}>
             {t("deal.openDeal")}
-          </a>
+          </AppLink>
         )}
       {primary}
     </>
@@ -288,7 +293,7 @@ function PreparedMove({
     moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
     <>
-      <a
+      <AppLink
         className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB}
         href={move}
         aria-busy={check.isPending}
@@ -303,7 +308,7 @@ function PreparedMove({
       >
         {modelWrites && <Sparkles aria-hidden="true" />}
         {moveLabel(item, t)}
-      </a>
+      </AppLink>
       <ErrorLine error={check.error} />
     </>
   );

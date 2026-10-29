@@ -7,6 +7,7 @@
 // view and a list read alike wherever they sit.
 
 import { type ReactNode, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import {
   Badge,
   Button,
@@ -202,9 +203,9 @@ function LibraryName({
   return (
     <span className="library-name-cell">
       <span className="library-name-line">
-        <a className="library-name" href={hrefOf(item)}>
+        <AppLink className="library-name" href={hrefOf(item)}>
           {nameOf(item)}
-        </a>
+        </AppLink>
         {item.kind === "list" && <ListHealthBadge list={item.list} />}
         {isArchived(item) && <Badge>{t("record.archived")}</Badge>}
       </span>
