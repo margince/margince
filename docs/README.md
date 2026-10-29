@@ -166,6 +166,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   that go with it.
 - [an-extension-cannot-add-its-own-record-k.md](reference/an-extension-cannot-add-its-own-record-k.md): the
   package of work for an extension to add its own record kinds, links and reports, and which features are built.
+- [record-links.md](reference/record-links.md): typed links for deals, companies and contacts: types,
+  rights and routes.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.

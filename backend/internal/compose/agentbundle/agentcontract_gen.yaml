@@ -1475,6 +1475,11 @@ paths:
           description: >-
             An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
           schema: {type: string}
+        - name: link_type
+          in: query
+          description: >-
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+          schema: {type: string, maxLength: 68}
         - name: tag_id
           in: query
           schema:

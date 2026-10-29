@@ -105,6 +105,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "currency", Type: "string"},
 		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "include_archived", Type: "boolean"},
+		{Name: "link_type", Type: "string"},
 		{Name: "list_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
 		{Name: "owner_team_id", Type: "string"},

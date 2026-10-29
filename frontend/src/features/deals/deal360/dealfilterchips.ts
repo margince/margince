@@ -7,6 +7,7 @@ import {
   type AcquisitionSource,
   acquisitionFilterOptions,
 } from "../../../lib/acquisitionsources.queries";
+import type { LinkType } from "../../../lib/recordlinks.queries";
 import { MOTION_OPTIONS, PRIORITY_OPTIONS } from "./dealcommercialfields";
 
 // The surface's own narrowing chips, beside the stage and company ones
@@ -23,11 +24,15 @@ export function dealSurfaceChips({
   partnerOptions,
   partnerApplied,
   acquisitionSources,
+  linkTypes,
   retiredSuffix,
 }: Readonly<{
   partnerOptions: { value: string; label: string }[];
   partnerApplied?: string;
   acquisitionSources?: AcquisitionSource[];
+  // Offered once the declared types are known, for the reason the channel
+  // chip below is: an option with no value reads as "clear this filter".
+  linkTypes?: readonly LinkType[];
   // Already translated: the option's `text` arm takes a rendered string, and
   // this file has no translator at the point the options are built.
   retiredSuffix: string;
@@ -92,6 +97,21 @@ export function dealSurfaceChips({
         label: o.label,
       })),
     },
+    // The server's own words for each type, so an extension's type reads as
+    // its unit declared it.
+    ...(linkTypes?.length
+      ? [
+          {
+            key: "link_type",
+            label: "deals.filterLinkType" as const,
+            allLabel: "deals.filterLinkTypeAll" as const,
+            options: linkTypes.map((type) => ({
+              value: type.name,
+              text: type.label,
+            })),
+          },
+        ]
+      : []),
     // The administered channels, offered only once the catalog is loaded: an
     // option whose value is still "" reads as "clear this filter".
     //

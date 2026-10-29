@@ -51,6 +51,18 @@
       ]
     }
   ],
+  "link_types": [
+    {
+      "type": "follow_up_of",
+      "label": "Follow-up of",
+      "from": [
+        "deal"
+      ],
+      "to": [
+        "deal"
+      ]
+    }
+  ],
   "report_counts": [
     {
       "name": "ledger_accounts",

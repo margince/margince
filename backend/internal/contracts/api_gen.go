@@ -13096,6 +13096,27 @@ func (e LinkedInReachFunction) Valid() bool {
 	}
 }
 
+// Defines values for LinkedRecordType.
+const (
+	LinkedRecordTypeCompany LinkedRecordType = "company"
+	LinkedRecordTypeContact LinkedRecordType = "contact"
+	LinkedRecordTypeDeal    LinkedRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the LinkedRecordType enum.
+func (e LinkedRecordType) Valid() bool {
+	switch e {
+	case LinkedRecordTypeCompany:
+		return true
+	case LinkedRecordTypeContact:
+		return true
+	case LinkedRecordTypeDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListHealth.
 const (
 	ListHealthInvalid      ListHealth = "invalid"
@@ -24742,6 +24763,27 @@ func (e ListRecordGrantsParamsSubjectType) Valid() bool {
 	case ListRecordGrantsParamsSubjectTypeTeam:
 		return true
 	case ListRecordGrantsParamsSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListRecordLinksParamsRecordType.
+const (
+	ListRecordLinksParamsRecordTypeCompany ListRecordLinksParamsRecordType = "company"
+	ListRecordLinksParamsRecordTypeContact ListRecordLinksParamsRecordType = "contact"
+	ListRecordLinksParamsRecordTypeDeal    ListRecordLinksParamsRecordType = "deal"
+)
+
+// Valid indicates whether the value is a known member of the ListRecordLinksParamsRecordType enum.
+func (e ListRecordLinksParamsRecordType) Valid() bool {
+	switch e {
+	case ListRecordLinksParamsRecordTypeCompany:
+		return true
+	case ListRecordLinksParamsRecordTypeContact:
+		return true
+	case ListRecordLinksParamsRecordTypeDeal:
 		return true
 	default:
 		return false
@@ -44081,6 +44123,24 @@ type LinkSuggestionList struct {
 	Data []LinkSuggestion `json:"data"`
 }
 
+// LinkType defines model for LinkType.
+type LinkType struct {
+	From  []LinkedRecordType `json:"from"`
+	Label string             `json:"label"`
+
+	// Name A core word, or `ext:<unit>:<type>` for an extension's.
+	Name string             `json:"name"`
+	To   []LinkedRecordType `json:"to"`
+
+	// Unit The extension that declared it. Absent for core's own.
+	Unit *string `json:"unit,omitempty"`
+}
+
+// LinkTypeList defines model for LinkTypeList.
+type LinkTypeList struct {
+	Data []LinkType `json:"data"`
+}
+
 // LinkedInAccount defines model for LinkedInAccount.
 type LinkedInAccount struct {
 	// Connected Whether this member has authorized LinkedIn.
@@ -44162,6 +44222,9 @@ type LinkedInReachResponse struct {
 	// that shrinks as accounts are created.
 	UnresolvedConnections int `json:"unresolved_connections"`
 }
+
+// LinkedRecordType defines model for LinkedRecordType.
+type LinkedRecordType string
 
 // List A Live List (list_type dynamic: its members are its filter's current result) or a Shortlist (static: members chosen by hand). Mirrors the `list` table.
 type List struct {
@@ -45866,6 +45929,15 @@ type NewForecastShareKind string
 
 // NewForecastShareScopeKind defines model for NewForecastShare.ScopeKind.
 type NewForecastShareScopeKind string
+
+// NewRecordLink defines model for NewRecordLink.
+type NewRecordLink struct {
+	FromId   openapi_types.UUID `json:"from_id"`
+	FromType LinkedRecordType   `json:"from_type"`
+	LinkType string             `json:"link_type"`
+	ToId     openapi_types.UUID `json:"to_id"`
+	ToType   LinkedRecordType   `json:"to_type"`
+}
 
 // NewWeeklyPlanCommitment defines model for NewWeeklyPlanCommitment.
 type NewWeeklyPlanCommitment struct {
@@ -48684,6 +48756,28 @@ type RecordKindOptionActions string
 
 // RecordKindOptionDeletePolicy What removing a record of the kind means. `archive_only` keeps the row.
 type RecordKindOptionDeletePolicy string
+
+// RecordLink defines model for RecordLink.
+type RecordLink struct {
+	CreatedAt time.Time          `json:"created_at"`
+	FromId    openapi_types.UUID `json:"from_id"`
+
+	// FromName The name of the record the link starts on, for the screen. Absent on a write's answer.
+	FromName *string            `json:"from_name,omitempty"`
+	FromType LinkedRecordType   `json:"from_type"`
+	Id       openapi_types.UUID `json:"id"`
+	LinkType string             `json:"link_type"`
+	ToId     openapi_types.UUID `json:"to_id"`
+
+	// ToName The name of the record the link ends on, for the screen. Absent on a write's answer.
+	ToName *string          `json:"to_name,omitempty"`
+	ToType LinkedRecordType `json:"to_type"`
+}
+
+// RecordLinkList defines model for RecordLinkList.
+type RecordLinkList struct {
+	Data []RecordLink `json:"data"`
+}
 
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
@@ -60953,6 +61047,9 @@ type ListDealsParams struct {
 	// AcquisitionSource An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker.
 	AcquisitionSource *string `form:"acquisition_source,omitempty" json:"acquisition_source,omitempty"`
 
+	// LinkType A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+	LinkType *string `form:"link_type,omitempty" json:"link_type,omitempty"`
+
 	// TagId Narrow to the records carrying these tags. Repeat the parameter for several.
 	//
 	// By ID, not by name: a name is what a human types and an admin can rename, so a
@@ -63440,6 +63537,15 @@ type RevokeRecordGrantParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// ListRecordLinksParams defines parameters for ListRecordLinks.
+type ListRecordLinksParams struct {
+	RecordType ListRecordLinksParamsRecordType `form:"record_type" json:"record_type"`
+	RecordId   openapi_types.UUID              `form:"record_id" json:"record_id"`
+}
+
+// ListRecordLinksParamsRecordType defines parameters for ListRecordLinks.
+type ListRecordLinksParamsRecordType string
+
 // CreateRecordRoleParams defines parameters for CreateRecordRole.
 type CreateRecordRoleParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -65821,6 +65927,9 @@ type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
+
+// CreateRecordLinkJSONRequestBody defines body for CreateRecordLink for application/json ContentType.
+type CreateRecordLinkJSONRequestBody = NewRecordLink
 
 // CreateRecordRoleJSONRequestBody defines body for CreateRecordRole for application/json ContentType.
 type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
@@ -78860,6 +78969,9 @@ type ServerInterface interface {
 	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
 	// (POST /link-suggestions/{id}/reject)
 	RejectLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// The types a link between two records may have.
+	// (GET /link-types)
+	ListLinkTypes(w http.ResponseWriter, r *http.Request)
 	// The filters a record list may be narrowed by, for each record type.
 	// (GET /list-filters)
 	DescribeListFilters(w http.ResponseWriter, r *http.Request)
@@ -79316,6 +79428,15 @@ type ServerInterface interface {
 	// Which kinds of record installed extensions add beside core's own.
 	// (GET /record-kinds)
 	ListRecordKinds(w http.ResponseWriter, r *http.Request)
+	// The links of one deal, company or contact, in both directions.
+	// (GET /record-links)
+	ListRecordLinks(w http.ResponseWriter, r *http.Request, params ListRecordLinksParams)
+	// Link one record to another with a type.
+	// (POST /record-links)
+	CreateRecordLink(w http.ResponseWriter, r *http.Request)
+	// Remove a link.
+	// (DELETE /record-links/{id})
+	DeleteRecordLink(w http.ResponseWriter, r *http.Request, id Id)
 	// List responsibility roles, active and retired, in display order.
 	// (GET /record-roles)
 	ListRecordRoles(w http.ResponseWriter, r *http.Request)
@@ -83468,6 +83589,12 @@ func (_ Unimplemented) RejectLinkSuggestion(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The types a link between two records may have.
+// (GET /link-types)
+func (_ Unimplemented) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The filters a record list may be narrowed by, for each record type.
 // (GET /list-filters)
 func (_ Unimplemented) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
@@ -84377,6 +84504,24 @@ func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request,
 // Which kinds of record installed extensions add beside core's own.
 // (GET /record-kinds)
 func (_ Unimplemented) ListRecordKinds(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The links of one deal, company or contact, in both directions.
+// (GET /record-links)
+func (_ Unimplemented) ListRecordLinks(w http.ResponseWriter, r *http.Request, params ListRecordLinksParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Link one record to another with a type.
+// (POST /record-links)
+func (_ Unimplemented) CreateRecordLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a link.
+// (DELETE /record-links/{id})
+func (_ Unimplemented) DeleteRecordLink(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103749,6 +103894,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "link_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "link_type", r.URL.Query(), &params.LinkType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "link_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "link_type", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "tag_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag_id", r.URL.Query(), &params.TagId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -110814,6 +110972,26 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListLinkTypes operation middleware
+func (siw *ServerInterfaceWrapper) ListLinkTypes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLinkTypes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeListFilters operation middleware
 func (siw *ServerInterfaceWrapper) DescribeListFilters(w http.ResponseWriter, r *http.Request) {
 
@@ -117064,6 +117242,110 @@ func (siw *ServerInterfaceWrapper) ListRecordKinds(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListRecordKinds(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListRecordLinks operation middleware
+func (siw *ServerInterfaceWrapper) ListRecordLinks(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRecordLinksParams
+
+	// ------------- Required query parameter "record_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_type", r.URL.Query(), &params.RecordType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_type"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecordLinks(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateRecordLink operation middleware
+func (siw *ServerInterfaceWrapper) CreateRecordLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateRecordLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteRecordLink operation middleware
+func (siw *ServerInterfaceWrapper) DeleteRecordLink(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteRecordLink(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126685,6 +126967,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/link-suggestions/{id}/reject", wrapper.RejectLinkSuggestion)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/link-types", wrapper.ListLinkTypes)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/list-filters", wrapper.DescribeListFilters)
 	})
 	r.Group(func(r chi.Router) {
@@ -127139,6 +127424,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-kinds", wrapper.ListRecordKinds)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/record-links", wrapper.ListRecordLinks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/record-links", wrapper.CreateRecordLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/record-links/{id}", wrapper.DeleteRecordLink)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-roles", wrapper.ListRecordRoles)

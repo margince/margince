@@ -40,6 +40,9 @@ func New() extension.Extension {
 		// The reference for a company type: an account whose invoices this
 		// source's ledger holds.
 		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},
+		// The reference for a link type: a deal that carries on an earlier one,
+		// stored as ext:finance-demo:follow_up_of.
+		LinkTypes: []extension.LinkType{{Type: "follow_up_of", Label: "Follow-up of", From: []string{"deal"}, To: []string{"deal"}}},
 		// The reference for a record kind: a ledger account, kept in the unit's
 		// own table. No role holds a right on it until an admin grants one,
 		// except the starting grants named here.

@@ -282,6 +282,11 @@ type Extension struct {
 	// tags, lists and the audit log, under rights that default to deny.
 	RecordKinds []RecordKindDeclaration
 
+	// LinkTypes are the ways this unit says two core records relate, stored as
+	// `ext:<unit>:<type>`. A link of one is made through core's links, under the
+	// rights of both records it joins.
+	LinkTypes []LinkType
+
 	// ReportCounts are the named numbers this unit adds to Reports and Home.
 	// They are data: core builds the query, so a unit cannot register one that
 	// skips row scope, field masks or the group floor.

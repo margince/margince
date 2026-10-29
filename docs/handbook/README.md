@@ -56,6 +56,7 @@ Records, deals and mail in Margince, by page:
 - How do I see all my tasks? → [Your day](your-day.md)
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - An extension suggested a record for a message. What do I do? → [Suggested links](suggested-links.md)
+- How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
 - What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
@@ -110,6 +111,8 @@ Records, deals and mail in Margince, by page:
   not claim, and planning a week.
 - [Suggested links](suggested-links.md): the queue of records an extension
   suggests for a message, and how to accept or decline one.
+- [Links between records](deal-links.md): linking a deal to a deal, a company
+  or a contact with a type, and finding deals by link.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the

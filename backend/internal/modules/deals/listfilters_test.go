@@ -45,6 +45,7 @@ var dealFilterOperands = map[string]string{
 	filterIncludeArchived:    "true",
 	filterSort:               "-created_at",
 	filterListID:             filterOperandID,
+	filterLinkType:           "follow_up_of",
 	filterCloseFrom:          "2026-10-01",
 	filterCloseTo:            "2026-12-31",
 	filterValueMin:           "2000000",
@@ -75,7 +76,7 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityDeal, []string{
 			"acquisition_source", "close_from", "close_to", "commercial_motion", "company_id", "country",
-			"currency", "forecast_category", "include_archived", "list_id", "owner_id", "owner_team_id",
+			"currency", "forecast_category", "include_archived", "link_type", "list_id", "owner_id", "owner_team_id",
 			"partner_attribution", "partner_company_id", "partner_sourced", "pipeline_id", "priority",
 			"project_id", "sort", "source_id", "source_system", "stage_id", "stalled", "status", "tag_id",
 			"tag_mode", "unassigned", "value_max", "value_min",

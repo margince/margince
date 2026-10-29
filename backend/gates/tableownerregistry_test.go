@@ -512,6 +512,7 @@ var tableOwners = map[string]string{
 	"forecast_capture_status":         "internal/modules/forecasting",
 	"forecast_snapshot":               "internal/modules/forecasting",
 	"forecast_contribution":           "internal/modules/forecasting",
+	"record_link":                     "internal/modules/recordlinks",
 	"weekly_plan":                     "internal/modules/weeklyplan",
 	"weekly_plan_commitment":          "internal/modules/weeklyplan",
 	"weekly_review_deal":              "internal/compose/weekly",

@@ -386,9 +386,7 @@ func anonymizeSubjectRows(
 }
 
 // purgeContactDerivedRows deletes what the system DERIVED about the subject and
-// keyed on their contact id.
-//
-// The five tables share a posture that makes them one step rather than five:
+// keyed on their contact id. The five tables share a posture that makes them one step rather than five:
 // none is anonymizable. An embedding is an opaque vector of the text, a
 // provenance row says where a now-erased field came from, an enrichment row
 // holds the subject's title and employer with the verbatim sentence it was
@@ -418,6 +416,9 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
+		return err
+	}
+	if err := deleteSubjectRecordLinks(ctx, tx, contactID.UUID); err != nil {
 		return err
 	}
 	return purgeProvidedValues(ctx, tx, subjects)

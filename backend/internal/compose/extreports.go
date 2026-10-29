@@ -111,10 +111,10 @@ func coreBreakdownServed(b extension.ReportBreakdown) error {
 		return err
 	}
 	if spec := prebuiltReports[b.Population]; spec.entity != datasource.EntityDeal || spec.table != tableDeal {
-		return fmt.Errorf("population %q takes no custom-field breakdown; only deal populations do", b.Population)
+		return fmt.Errorf("population %q takes no breakdown by a custom field or link type; only deal populations do", b.Population)
 	}
-	if !strings.HasPrefix(b.By, datasource.CustomFieldPrefix) && !strings.HasPrefix(b.By, analyticsquery.CompanyCustomFieldPrefix) {
-		return fmt.Errorf("breakdown %q splits a core population by %q, which is not a custom field", b.Name, b.By)
+	if b.By != dimensionLinkType && !strings.HasPrefix(b.By, datasource.CustomFieldPrefix) && !strings.HasPrefix(b.By, analyticsquery.CompanyCustomFieldPrefix) {
+		return fmt.Errorf("breakdown %q splits a core population by %q, which is neither a custom field nor %s", b.Name, b.By, dimensionLinkType)
 	}
 	return nil
 }

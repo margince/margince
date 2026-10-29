@@ -34,6 +34,7 @@ import {
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useLinkTypes } from "../../lib/recordlinks.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
@@ -306,6 +307,7 @@ export function DealsScreen({
   // The channel catalog for the filter chip. Shared cache with the edit form's
   // own read, so opening one after the other costs a single request.
   const acquisitionSources = useAcquisitionSources().data;
+  const linkTypes = useLinkTypes().data;
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
   // won/lost are reached through the confirmed advance, never at create.
@@ -364,6 +366,7 @@ export function DealsScreen({
     partnerOptions,
     partnerApplied: query.filters.partner_company_id,
     acquisitionSources,
+    linkTypes,
     retiredSuffix: t("deal.acquisitionRetired"),
   }).filter(offered);
   const refusedLabel = maskRefusedLabel(maskRefused, {

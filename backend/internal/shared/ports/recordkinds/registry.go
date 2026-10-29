@@ -95,4 +95,5 @@ func Reset() {
 	mu.Lock()
 	defer mu.Unlock()
 	byName = map[string]Declared{}
+	resetLinkTypes()
 }

@@ -27,7 +27,7 @@ func TestPreflightReportsRefusesWhatTheEngineCannotRun(t *testing.T) {
 		"unknown core population":                     {unit([]extension.ReportCount{{Name: "x", Label: "X", Population: "no-such-report"}}, nil), "not a core report population"},
 		"a name used twice":                           {unit([]extension.ReportCount{{Name: "visits", Label: "A", Population: "visit"}, {Name: "visits", Label: "B", Population: "visit"}}, nil), "twice"},
 		"a core population that is not the deal's":    {unit(nil, []extension.ReportBreakdown{{Name: "b", Label: "B", Population: "leads-by-status", By: "cf_x"}}), "only deal populations"},
-		"a core breakdown that is not a custom field": {unit(nil, []extension.ReportBreakdown{{Name: "b", Label: "B", Population: "pipeline-current", By: "owner_id"}}), "not a custom field"},
+		"a core breakdown that is not a custom field": {unit(nil, []extension.ReportBreakdown{{Name: "b", Label: "B", Population: "pipeline-current", By: "owner_id"}}), "neither a custom field"},
 	}
 	for name, c := range cases {
 		err := preflightReports(c.exts)

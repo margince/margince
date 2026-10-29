@@ -122,6 +122,8 @@ tags:
     description: The typed relationship edge (employment + deal stakeholder).
   - name: Deals
     description: Deals, including stage advancement.
+  - name: Links
+    description: Typed links between a deal, a company and a contact, and the link types.
   - name: Pipelines
     description: Pipelines and their ordered stages.
   - name: Projects
@@ -5899,6 +5901,13 @@ paths:
             An acquisition-source key, or `unset` for unclassified deals. A retired key still
             filters, so history stays reachable after the source leaves the picker.
           schema: { type: string }
+        - name: link_type
+          in: query
+          description: >-
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at
+            least one link of that type to another live deal, from either end. Links to a company or
+            a contact are not read by this filter.
+          schema: { type: string, maxLength: 68 }
         - name: tag_id
           in: query
           schema:
@@ -8582,6 +8591,97 @@ paths:
               schema: { $ref: '#/components/schemas/Activity' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /link-types:
+    get:
+      tags: [Links]
+      operationId: listLinkTypes
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The types a link between two records may have.
+      description: |
+        Core's types, then each extension's, with the records each may start and end on. An
+        extension's type is named `ext:<unit>:<type>`.
+      responses:
+        '200':
+          description: Every link type.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkTypeList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /record-links:
+    get:
+      tags: [Links]
+      operationId: listRecordLinks
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The links of one deal, company or contact, in both directions.
+      description: |
+        Every link that starts or ends on the record, newest first. A link is left out when the
+        caller may not read the record on its other end, or when that record is archived, so the
+        list never names a record the caller could not open. Archiving the other end hides the link
+        and unarchiving brings it back.
+      parameters:
+        - { name: record_type, in: query, required: true, schema: { type: string, enum: [deal, company, contact] } }
+        - { name: record_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The links of the record the caller may see.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordLinkList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Links]
+      operationId: createRecordLink
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Link one record to another with a type.
+      description: |
+        The caller needs the right to update the record the link starts on, and to read the record
+        it ends on. A record the caller cannot read answers `404`. The type must allow both
+        records, so `follow_up_of` joins any two, and an extension's type may be narrower.
+        Linking a pair that already holds the type is the same success, and linking a record to
+        itself is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewRecordLink' }
+      responses:
+        '200':
+          description: The link, new or already there.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordLink' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /record-links/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Links]
+      operationId: deleteRecordLink
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Remove a link.
+      description: |
+        The caller needs the right to update the record the link starts on and must be able to read
+        the record it ends on. The link row is deleted and the audit log keeps what it joined.
+      responses:
+        '204': { description: The link is gone. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /link-suggestions:
@@ -49830,6 +49930,71 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+
+    LinkedRecordType:
+      type: string
+      enum: [deal, company, contact]
+
+    LinkType:
+      type: object
+      additionalProperties: false
+      required: [name, label, from, to]
+      properties:
+        name: { type: string, description: 'A core word, or `ext:<unit>:<type>` for an extension''s.' }
+        label: { type: string }
+        unit:
+          type: [string, 'null']
+          description: The extension that declared it. Absent for core's own.
+        from: { type: array, items: { $ref: '#/components/schemas/LinkedRecordType' } }
+        to: { type: array, items: { $ref: '#/components/schemas/LinkedRecordType' } }
+
+    LinkTypeList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/LinkType' }
+
+    NewRecordLink:
+      type: object
+      additionalProperties: false
+      required: [from_type, from_id, to_type, to_id, link_type]
+      properties:
+        from_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        from_id: { type: string, format: uuid }
+        to_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        to_id: { type: string, format: uuid }
+        link_type: { type: string, maxLength: 68 }
+
+    RecordLink:
+      type: object
+      additionalProperties: false
+      required: [id, from_type, from_id, to_type, to_id, link_type, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        from_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        from_id: { type: string, format: uuid }
+        from_name:
+          type: [string, 'null']
+          description: The name of the record the link starts on, for the screen. Absent on a write's answer.
+        to_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        to_id: { type: string, format: uuid }
+        to_name:
+          type: [string, 'null']
+          description: The name of the record the link ends on, for the screen. Absent on a write's answer.
+        link_type: { type: string }
+        created_at: { type: string, format: date-time }
+
+    RecordLinkList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordLink' }
 
     LinkSuggestion:
       type: object

@@ -2431,6 +2431,10 @@ func (stubs) RejectLinkSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "RejectLinkSuggestion")
 }
 
+func (stubs) ListLinkTypes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLinkTypes")
+}
+
 func (stubs) DescribeListFilters(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeListFilters")
 }
@@ -3037,6 +3041,18 @@ func (stubs) RevokeRecordGrant(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) ListRecordKinds(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListRecordKinds")
+}
+
+func (stubs) ListRecordLinks(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListRecordLinksParams) {
+	httperr.NotImplemented(w, r, "ListRecordLinks")
+}
+
+func (stubs) CreateRecordLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateRecordLink")
+}
+
+func (stubs) DeleteRecordLink(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeleteRecordLink")
 }
 
 func (stubs) ListRecordRoles(w nethttp.ResponseWriter, r *nethttp.Request) {

@@ -4963,6 +4963,7 @@ public.idx_record_grant_deal CREATE INDEX idx_record_grant_deal ON public.record
 public.idx_record_grant_lead CREATE INDEX idx_record_grant_lead ON public.record_grant USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.idx_record_grant_project CREATE INDEX idx_record_grant_project ON public.record_grant USING btree (project_id) WHERE (project_id IS NOT NULL)
 public.idx_record_grant_subject CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id)
+public.idx_record_link_to CREATE INDEX idx_record_link_to ON public.record_link USING btree (to_type, to_id)
 public.idx_rel_employer_contacts CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
 public.idx_rel_history_company CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id)
 public.idx_rel_history_contact CREATE INDEX idx_rel_history_contact ON public.relationship USING btree (contact_id)
@@ -6721,6 +6722,21 @@ public.record_grant.subject_type text NOT NULL gen=- def=-
 public.record_grant.version bigint NOT NULL gen=- def=1
 public.record_grant_pkey CREATE UNIQUE INDEX record_grant_pkey ON public.record_grant USING btree (id)
 public.record_grant_unique CREATE UNIQUE INDEX record_grant_unique ON public.record_grant USING btree (record_type, record_id, subject_type, subject_id)
+public.record_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.record_link.captured_by text NOT NULL gen=- def=-
+public.record_link.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.record_link.from_id uuid NOT NULL gen=- def=-
+public.record_link.from_type text NOT NULL gen=- def=-
+public.record_link.id uuid NOT NULL gen=- def=uuidv7()
+public.record_link.link_type text NOT NULL gen=- def=-
+public.record_link.record_link_from_type_check CHECK ((from_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text])))
+public.record_link.record_link_not_itself CHECK (((from_type <> to_type) OR (from_id <> to_id)))
+public.record_link.record_link_pkey PRIMARY KEY (id)
+public.record_link.record_link_to_type_check CHECK ((to_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text])))
+public.record_link.record_link_type_check CHECK (((link_type = ANY (ARRAY['follow_up_of'::text, 'renews'::text, 'related_to'::text])) OR (link_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
+public.record_link.to_id uuid NOT NULL gen=- def=-
+public.record_link.to_type text NOT NULL gen=- def=-
+public.record_link_pkey CREATE UNIQUE INDEX record_link_pkey ON public.record_link USING btree (id)
 public.record_role acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.record_role.active boolean NOT NULL gen=- def=true
 public.record_role.assignee_kinds text[] NOT NULL gen=- def=-
@@ -8236,6 +8252,7 @@ public.uq_record_assignment_deal_team CREATE UNIQUE INDEX uq_record_assignment_d
 public.uq_record_assignment_deal_user CREATE UNIQUE INDEX uq_record_assignment_deal_user ON public.record_assignment USING btree (deal_id, role_id, user_id) WHERE ((deal_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_project_team CREATE UNIQUE INDEX uq_record_assignment_project_team ON public.record_assignment USING btree (project_id, role_id, team_id) WHERE ((project_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_project_user CREATE UNIQUE INDEX uq_record_assignment_project_user ON public.record_assignment USING btree (project_id, role_id, user_id) WHERE ((project_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
+public.uq_record_link_pair CREATE UNIQUE INDEX uq_record_link_pair ON public.record_link USING btree (from_type, from_id, to_type, to_id, link_type)
 public.uq_rel_billing_contact CREATE UNIQUE INDEX uq_rel_billing_contact ON public.relationship USING btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
 public.uq_rel_current_primary_employer CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (contact_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL))
 public.uq_rel_deal_contact_role CREATE UNIQUE INDEX uq_rel_deal_contact_role ON public.relationship USING btree (deal_id, contact_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
