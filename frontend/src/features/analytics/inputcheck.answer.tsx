@@ -25,8 +25,8 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
 };
 
 // The answers a customer review takes, as the server accepts them
-// (assurance.ReviewOutcomes), in the words a rep uses: the customer is back,
-// asked to wait, the value is right anyway, or the deal is lost.
+// (assurance.ReviewOutcomes). The sheet words them as a rep would: the
+// customer is back, asked to wait, the value is right anyway, or it is lost.
 const reviewOutcomes = new Set([
   "fixed_record",
   "remind_later",

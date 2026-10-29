@@ -93,6 +93,21 @@ type reviewAnswerHandlers struct {
 	now       func() time.Time
 }
 
+// answeringAssuranceStore is the assurance store every answer goes through,
+// with the signal and review checks the answers need.
+func answeringAssuranceStore(pool *pgxpool.Pool) *assurance.Store {
+	return assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal).
+		WithReviewCheck(AssuranceReviewCheck)
+}
+
+func newReviewAnswerHandlers(pool *pgxpool.Pool) reviewAnswerHandlers {
+	return reviewAnswerHandlers{
+		pool: pool, deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		assurance: answeringAssuranceStore(pool),
+		now:       func() time.Time { return time.Now().UTC() },
+	}
+}
+
 // WaitInputCheck records the customer's wait on the deal and defers the review
 // to the same day.
 func (h reviewAnswerHandlers) WaitInputCheck(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {

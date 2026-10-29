@@ -278,23 +278,16 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// ForecastDeals, where the caller's authority already sits.
 		// The assurance surface reads what last night's pass found. Its scan
 		// is a job rather than a request, so the handler set is a read.
-		assuranceHandlers: assurance.NewHandlers(
-			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal).
-				WithReviewCheck(AssuranceReviewCheck),
-			AssuranceExceptionsIn,
+		assuranceHandlers: assurance.NewHandlers(answeringAssuranceStore(pool), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
 		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview(pool)),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
-		Reads:                 NewContactGraphReads(pool, InstallationDB(pool)),
-		companyRollupHandlers: companyRollupHandlers{pool: pool, now: time.Now},
-		reviewAnswerHandlers: reviewAnswerHandlers{
-			pool: pool, deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-			assurance: assurance.NewStore(InstallationDB(pool)).WithReviewCheck(AssuranceReviewCheck),
-			now:       func() time.Time { return time.Now().UTC() },
-		},
+		Reads:                  NewContactGraphReads(pool, InstallationDB(pool)),
+		companyRollupHandlers:  companyRollupHandlers{pool: pool, now: time.Now},
+		reviewAnswerHandlers:   newReviewAnswerHandlers(pool),
 		companyOfferedHandlers: companyOfferedHandlers{store: contacts.NewStore(InstallationDB(pool))},
 		strengthHandlers: strengthHandlers{
 			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,

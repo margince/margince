@@ -130,9 +130,9 @@ func (s *Store) resolveIn(
 	if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
 		return err
 	}
-	// The status the answer leaves the finding in. A deferral does NOT
-	// resolve it: "not now" is an answer about when, not about whether, and
-	// a deferred finding that read as resolved would never come back.
+	// The status the answer leaves the finding in. A deferral does not resolve
+	// it. "Not now" is about when, not whether, and a deferred finding that
+	// read as resolved would never come back.
 	status := "resolved"
 	if in.Outcome == OutcomeRemindLater {
 		status = "open"
@@ -146,9 +146,9 @@ func (s *Store) resolveIn(
 		return fmt.Errorf("assurance: answering the finding: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		// Not there, or already answered. A 404 either way: telling a
-		// caller that a finding exists but is already resolved says the
-		// finding exists, about a deal they may not be able to open.
+		// Not there, or already answered: a 404 either way. Saying a finding
+		// is already resolved says it exists, about a deal the caller may not
+		// be able to open.
 		return apperrors.ErrNotFound
 	}
 	// After the status moved, so the check reads the deal as it stands
@@ -182,14 +182,11 @@ func (s *Store) resolveIn(
 	if err != nil {
 		return err
 	}
-	// A surface counting open findings has to know one was answered, and
-	// WHICH KIND of answer it was: the two suppressing outcomes hide the
-	// finding, and a consumer treating all six alike would keep showing
-	// something a contact has already dealt with.
+	// A surface counting open findings has to know one was answered, and with
+	// which kind of answer. The two suppressing outcomes hide the finding. A
+	// consumer treating all six alike would keep showing it.
 	//
-	// The reason does not ride along. It is prose one contact wrote for
-	// another, and a subscriber acting on it is acting on something the
-	// author may edit.
+	// The reason does not ride along: it is prose the author may edit.
 	event := crmcontracts.PublicEventForecastExceptionResolved{
 		ExceptionId: openapi_types.UUID(exceptionID),
 		Outcome:     crmcontracts.PublicEventForecastExceptionResolvedOutcome(in.Outcome),
@@ -239,10 +236,10 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
 }
 
-// ReviewOutcomes are the answers a viability review takes: revived, which the
-// review check confirms against the deal's evidence; closed lost, recorded as
-// not relevant once the deal is lost; a reasoned override with an end date; or
-// a wait that keeps the review open.
+// ReviewOutcomes are the four answers a viability review takes. Revived is
+// confirmed by the review check against the deal's evidence. Closed lost is
+// recorded as not relevant once the deal is lost. An override needs a reason
+// and an end date. A wait keeps the review open.
 func ReviewOutcomes() []string {
 	return []string{OutcomeFixedRecord, OutcomeNotRelevant, OutcomeValueCorrect, OutcomeRemindLater}
 }
