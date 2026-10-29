@@ -100,7 +100,7 @@ function isLiveRead(key: QueryKey): boolean {
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
-const MAX_RETRIES = 2;
+export const MAX_RETRIES = 2;
 
 // The 5xx statuses that are SETTLED rather than failed, and so are not retried.
 //

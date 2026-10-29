@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { BUSY_NIGHT } from "../../testing/magic.fixtures";
 import { day } from "../../testing/worklist.testkit";
-import { BUSY_NIGHT } from "../sign-in/magic.fixtures";
 import { homeJourneyMarks } from "./brief.journey";
 
 const FAILED = { source: "email", reason: "failed" } as const;
 const WITHHELD = { source: "deal_suggestion", reason: "withheld" } as const;
+const FOCUS = { items: [], total: 0, urgent_remaining: 0 };
 
 describe("homeJourneyMarks", () => {
   it("marks nothing while the day is still loading", () => {
@@ -47,7 +48,7 @@ describe("homeJourneyMarks", () => {
     expect(
       homeJourneyMarks({
         state: "ready",
-        day: day({ sources_unavailable: [WITHHELD] }),
+        day: day({ focus: FOCUS, sources_unavailable: [WITHHELD] }),
         settled: true,
         receipt: BUSY_NIGHT,
       }),
@@ -58,7 +59,7 @@ describe("homeJourneyMarks", () => {
     expect(
       homeJourneyMarks({
         state: "ready",
-        day: day({ sources_unavailable: [FAILED] }),
+        day: day({ focus: FOCUS, sources_unavailable: [FAILED] }),
         settled: true,
         receipt: BUSY_NIGHT,
       }),
@@ -69,9 +70,20 @@ describe("homeJourneyMarks", () => {
     expect(
       homeJourneyMarks({
         state: "ready",
-        day: day(),
+        day: day({ focus: FOCUS }),
         settled: true,
         receipt: { ...BUSY_NIGHT, sources_unavailable: [FAILED] },
+      }),
+    ).toEqual(["home:useful", "home:degraded"]);
+  });
+
+  it("marks a day with no focus to lead with as degraded", () => {
+    expect(
+      homeJourneyMarks({
+        state: "ready",
+        day: day(),
+        settled: true,
+        receipt: BUSY_NIGHT,
       }),
     ).toEqual(["home:useful", "home:degraded"]);
   });

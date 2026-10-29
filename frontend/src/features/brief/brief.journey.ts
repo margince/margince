@@ -1,32 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import type { JourneyMark } from "../../lib/journeymarks";
-import type { MagicReceipt } from "../../lib/magic.queries";
-import type { Worklist } from "../worklist/worklist.queries";
+import { receiptGaps, worklistGaps } from "./brief.completeness";
 
 /**
  * The journey marks Home has reached.
  *
  * Useful: the day's work is on screen, rows or a confirmed empty day.
  * Complete: the brief, the handled receipts and the overnight receipt have
- * answered too, and no answer names a source that failed. Degraded: they
- * answered, but a source failed, so the page cannot claim it is complete. A
- * withheld source is the reader's grant and leaves the page complete.
+ * answered too, and nothing they hold is a gap (brief.completeness.ts).
+ * Degraded: they answered with a gap, so the page cannot claim it is complete.
  */
 export function homeJourneyMarks(home: {
   state: "loading" | "failed" | "ready";
-  day: Worklist | undefined;
+  day: components["schemas"]["Worklist"] | undefined;
   settled: boolean;
-  receipt: MagicReceipt | undefined;
+  receipt: components["schemas"]["MagicReceipt"] | undefined;
 }): JourneyMark[] {
   if (home.state === "failed") return ["home:failed"];
   if (home.state !== "ready" || !home.day) return [];
   if (!home.settled) return ["home:useful"];
-  const missing = [
-    ...home.day.sources_unavailable,
-    ...(home.receipt?.sources_unavailable ?? []),
+  const gaps = [
+    ...worklistGaps(home.day),
+    ...(home.receipt ? receiptGaps(home.receipt) : []),
   ];
-  const failed = missing.some((entry) => entry.reason === "failed");
-  return ["home:useful", failed ? "home:degraded" : "home:complete"];
+  return ["home:useful", gaps.length > 0 ? "home:degraded" : "home:complete"];
 }

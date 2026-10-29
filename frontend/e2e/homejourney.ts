@@ -1,219 +1,134 @@
-import type { Page, Request, Response } from "@playwright/test";
-import { greetingNameOf } from "../src/format/greetingname";
+import type { Page, Request, Response, Route } from "@playwright/test";
 import {
   JOURNEY_START,
   type JourneyMark,
   journeyMarkName,
   journeyOf,
 } from "../src/lib/journeymarks";
+import {
+  type Answer,
+  type Frame,
+  type HomeRead,
+  RequestLedger,
+  readOf,
+} from "../src/testing/homejourney.judge";
 
 /**
- * What the Home benchmark checks besides time: the answers the page itself
- * received, judged against what the signed-in reader is known to have. The
- * marks say when the screen thought it was done; these say whether it was.
+ * The browser side of the Home benchmark: what the page was sent, what its
+ * screen showed and when. The verdicts on all of it are plain functions in
+ * src/testing/homejourney.judge.ts.
  */
 
-/** The reads Home's sections draw from. `me` is judged too: whose page it is. */
-export const HOME_READS = ["worklist", "handled", "brief", "magic"] as const;
-export type HomeRead = (typeof HOME_READS)[number] | "me";
-
-export type Answer = { read: HomeRead; status: number; body: unknown };
+const homeRead = (request: Request) =>
+  readOf(new URL(request.url()), request.method());
 
 /**
- * What the reader's data holds, from `BENCH_HOME_EXPECT`: `work` (the day has
- * rows), `brief` (the morning brief has items), `handled` (receipts exist), or
- * `none` for a reader whose day is legitimately empty.
- */
-export type Expectation = { work: boolean; brief: boolean; handled: boolean };
-
-export function expectationFrom(spelled: string): Expectation {
-  const words = new Set(spelled.split(",").map((word) => word.trim()));
-  for (const word of words) {
-    if (!["work", "brief", "handled", "none"].includes(word)) {
-      throw new Error(
-        `BENCH_HOME_EXPECT names "${word}"; use work, brief, handled or none`,
-      );
-    }
-  }
-  return {
-    work: words.has("work"),
-    brief: words.has("brief"),
-    handled: words.has("handled"),
-  };
-}
-
-/** The Home read a response answers, or undefined for any other request. */
-export function readOf(url: URL, method: string): HomeRead | undefined {
-  if (method !== "GET" || url.searchParams.has("cursor")) return undefined;
-  switch (url.pathname) {
-    case "/v1/worklist":
-      return url.searchParams.get("scope") === "mine" &&
-        url.searchParams.get("filter") === "all" &&
-        !url.searchParams.has("owner")
-        ? "worklist"
-        : undefined;
-    case "/v1/worklist/handled":
-      return "handled";
-    case "/v1/brief":
-      return "brief";
-    case "/v1/magic":
-      return "magic";
-    case "/v1/me":
-      return "me";
-    default:
-      return undefined;
-  }
-}
-
-/** The signed-in reader `/v1/me` names, and the name Home greets them by. */
-export function readerFrom(body: unknown): {
-  id: string;
-  greeting: string | null;
-} {
-  const user = field(body, "user");
-  const id = field(user, "id");
-  if (typeof id !== "string") throw new Error("/v1/me named no user id");
-  const text = (key: string) => {
-    const value = field(user, key);
-    return typeof value === "string" ? value : null;
-  };
-  return {
-    id,
-    greeting: greetingNameOf({
-      greeting_name: text("greeting_name"),
-      display_name: text("display_name"),
-    }),
-  };
-}
-
-function field(body: unknown, key: string): unknown {
-  return typeof body === "object" && body !== null && key in body
-    ? Object.entries(body).find(([name]) => name === key)?.[1]
-    : undefined;
-}
-
-function list(body: unknown, key: string): unknown[] {
-  const value = field(body, key);
-  return Array.isArray(value) ? value : [];
-}
-
-function sourcesWith(body: unknown, reason: string): string[] {
-  return list(body, "sources_unavailable")
-    .filter((entry) => field(entry, "reason") === reason)
-    .map((entry) => String(field(entry, "source")));
-}
-
-/** Sources a grant keeps from this reader: expected, and never degraded. */
-export function withheldSources(answers: readonly Answer[]): string[] {
-  return answers.flatMap((answer) =>
-    sourcesWith(answer.body, "withheld").map((s) => `${answer.read}:${s}`),
-  );
-}
-
-/**
- * Why the answers do not make a healthy Home for `reader`, or [] when they do.
- * Every answer counts, a retry included: a later good answer does not erase a
- * failed one, because the reader saw the page in between.
- */
-export function degradedReasons(
-  answers: readonly Answer[],
-  expected: Expectation,
-  reader: string,
-): string[] {
-  const reasons: string[] = [];
-  for (const read of HOME_READS) {
-    if (!answers.some((answer) => answer.read === read)) {
-      reasons.push(`${read}: no answer`);
-    }
-  }
-  for (const answer of answers) {
-    reasons.push(...answerReasons(answer, expected, reader));
-  }
-  return reasons;
-}
-
-function answerReasons(
-  { read, status, body }: Answer,
-  expected: Expectation,
-  reader: string,
-): string[] {
-  // No brief run yet is a page that offers to make one, unless one is expected.
-  if (read === "brief" && status === 404 && !expected.brief) return [];
-  if (status !== 200) return [`${read}: answered ${status}`];
-  if (body === undefined) return [`${read}: answered 200 with no JSON body`];
-  const reasons = sourcesWith(body, "failed").map(
-    (source) => `${read}: source ${source} failed`,
-  );
-  if (read === "worklist" && expected.work && list(body, "queue").length === 0)
-    reasons.push("worklist: empty queue for a reader who has work");
-  if (read === "brief" && expected.brief && list(body, "items").length === 0)
-    reasons.push("brief: no items for a reader whose brief has some");
-  if (
-    read === "handled" &&
-    expected.handled &&
-    list(body, "receipts").length === 0
-  )
-    reasons.push("handled: no receipts for a reader who has some");
-  if (read === "me" && field(field(body, "user"), "id") !== reader)
-    reasons.push("me: answered for another reader");
-  return reasons;
-}
-
-/**
- * Every Home answer the page receives, in batches: `take` hands over what
- * arrived since the last take, once each body has been read.
+ * Every Home answer the page receives, filed under the journey its request
+ * belongs to (RequestLedger), so a late answer or a retry is never judged as
+ * part of the next journey.
  */
 export class AnswerLog {
-  private pending: Promise<Answer>[] = [];
-  private open = 0;
+  private readonly ledger = new RequestLedger();
+  private readonly owners = new WeakMap<Request, string>();
+  private readonly statuses = new WeakMap<Request, number>();
+  private answers: { journey: string; answer: Promise<Answer> }[] = [];
 
   constructor(page: Page) {
-    const isHomeRead = (request: Request) =>
-      readOf(new URL(request.url()), request.method()) !== undefined;
     page.on("request", (request) => {
-      if (isHomeRead(request)) this.open++;
+      const read = homeRead(request);
+      if (read) this.owners.set(request, this.ledger.started(read));
     });
-    const settle = (request: Request) => {
-      if (isHomeRead(request)) this.open--;
-    };
-    page.on("requestfinished", settle);
-    page.on("requestfailed", settle);
     page.on("response", (response) => {
-      const read = readOf(new URL(response.url()), response.request().method());
-      if (read) this.pending.push(answerOf(read, response));
+      const request = response.request();
+      const read = homeRead(request);
+      const journey = this.owners.get(request);
+      if (!read || journey === undefined) return;
+      this.statuses.set(request, response.status());
+      this.answers.push({ journey, answer: answerOf(read, journey, response) });
     });
+    const finish = (request: Request) => {
+      const read = homeRead(request);
+      const journey = this.owners.get(request);
+      if (read && journey !== undefined)
+        this.ledger.finished(read, journey, this.statuses.get(request) ?? null);
+    };
+    page.on("requestfinished", finish);
+    page.on("requestfailed", finish);
   }
 
-  /**
-   * Home reads still on the wire. A refetch asked for while one is in flight
-   * joins it and sends nothing, so a journey starts only once this is 0.
-   */
-  inFlight(): number {
-    return this.open;
+  /** Files every Home request from now on under `journey`. */
+  begin(journey: string): void {
+    this.ledger.begin(journey);
   }
 
-  /** Whether every read in `reads` has answered since the last take. */
-  async holds(reads: readonly HomeRead[]): Promise<boolean> {
-    const answers = await Promise.all(this.pending);
+  /** Whether `journey` is done: every read in `reads` answered, none due. */
+  async settled(journey: string, reads: readonly HomeRead[]): Promise<boolean> {
+    if (this.ledger.busy(journey)) return false;
+    const answers = await this.of(journey);
     return reads.every((read) => answers.some((a) => a.read === read));
   }
 
-  async take(): Promise<Answer[]> {
-    const taken = this.pending;
-    this.pending = [];
-    return Promise.all(taken);
+  /** The answers of `journey`, and the end of waiting for any more. */
+  async close(journey: string): Promise<Answer[]> {
+    this.ledger.release(journey);
+    const answers = await this.of(journey);
+    this.answers = this.answers.filter((a) => a.journey !== journey);
+    return answers;
+  }
+
+  private of(journey: string): Promise<Answer[]> {
+    return Promise.all(
+      this.answers.filter((a) => a.journey === journey).map((a) => a.answer),
+    );
   }
 }
 
-async function answerOf(read: HomeRead, response: Response): Promise<Answer> {
+async function answerOf(
+  read: HomeRead,
+  journey: string,
+  response: Response,
+): Promise<Answer> {
   const status = response.status();
   try {
-    return { read, status, body: await response.json() };
+    return { read, journey, status, body: await response.json() };
   } catch {
-    // Judged in answerReasons: a 200 without a body is named, never read as an
-    // empty day.
-    return { read, status, body: undefined };
+    // Judged in degradedReasons: a 200 without a body is named, never read as
+    // an empty day.
+    return { read, journey, status, body: undefined };
   }
+}
+
+/**
+ * Holds every answer to the day's read until `release`, so a click can be
+ * made while the refetch is still on the wire. The server does its work at
+ * once; only the answer waits.
+ */
+export async function holdWorklist(page: Page) {
+  let open = () => {};
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  const answering: Promise<void>[] = [];
+  const matches = (url: URL) => readOf(url, "GET") === "worklist";
+  const hold = (route: Route) => {
+    const answer = (async () => {
+      if (route.request().method() !== "GET") return route.continue();
+      const response = await route.fetch();
+      await opened;
+      return route.fulfill({ response });
+    })();
+    answering.push(answer);
+    return answer;
+  };
+  await page.route(matches, hold);
+  return {
+    // Unrouting first would hand the held answers to the default handler.
+    release: async () => {
+      open();
+      await Promise.all(answering);
+      await page.unroute(matches, hold);
+    },
+  };
 }
 
 /** Opens a journey in the running document; returns when it opened. */
@@ -247,10 +162,7 @@ export async function journeyMarks(
   return out;
 }
 
-const GLANCE = '[data-testid="brief-glance"]';
-
-/** One animation frame: whether the day was on screen, greeting `reader`. */
-export type Frame = { at: number; day: boolean; reader: boolean };
+export const GLANCE = '[data-testid="brief-glance"]';
 
 /**
  * Samples the screen every frame until `stop`, so a moment the day left the
