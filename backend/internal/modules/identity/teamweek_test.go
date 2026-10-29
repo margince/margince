@@ -11,10 +11,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// /me answers which teams' weeks the caller may open, so a settings screen that
-// needs only that never assembles the whole worklist to read it. The answer is
-// the caller's own, decided from the identity /me describes even where the
-// request context carries no signed-in user yet, as on the login responses.
+// /me answers which teams' weeks the caller may open. A settings screen that
+// needs only that answer then never assembles the whole worklist. It is decided
+// from the identity /me describes, because a login response's request context
+// carries no signed-in user yet.
 func TestMeSaysWhichTeamWeeksTheCallerMayOpen(t *testing.T) {
 	read := principal.ObjectGrant{Read: true}
 	cases := []struct {

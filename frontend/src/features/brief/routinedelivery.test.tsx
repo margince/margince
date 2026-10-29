@@ -101,9 +101,7 @@ it("decides the team choices from /me and never assembles the worklist to do it"
   await waitFor(() =>
     expect(calls.some((call) => call.path.startsWith("/me"))).toBe(true),
   );
-  expect(calls.filter((call) => call.path.startsWith("/worklist"))).toEqual(
-    [],
-  );
+  expect(calls.filter((call) => call.path.startsWith("/worklist"))).toEqual([]);
 });
 
 const ledTeam = { id: "00000000-0000-4000-8000-000000000001", name: "Berlin" };
@@ -113,8 +111,10 @@ async function teamChoices(teamWeek: string, myTeams: string[]) {
   stubApi({
     "GET /me": () =>
       jsonResponse({ ...meFixture(), team_week: teamWeek, teams: myTeams }),
-    "GET /teams": () => jsonResponse({ data: [ledTeam, otherTeam], page: { has_more: false } }),
-    "GET /me/brief-delivery": () => jsonResponse({ routine_mail_scope: "team" }),
+    "GET /teams": () =>
+      jsonResponse({ data: [ledTeam, otherTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
   });
   render(<Page />);
   const row = await screen.findByTestId("delivery-team");
@@ -134,8 +134,10 @@ it("says the team list failed instead of offering an empty choice", async () => 
   stubApi({
     "GET /me": () =>
       jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
-    "GET /teams": () => jsonResponse({ title: "Unavailable", status: 503 }, 503),
-    "GET /me/brief-delivery": () => jsonResponse({ routine_mail_scope: "team" }),
+    "GET /teams": () =>
+      jsonResponse({ title: "Unavailable", status: 503 }, 503),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
   });
   render(<Page />);
   const row = await screen.findByTestId("delivery-team");
