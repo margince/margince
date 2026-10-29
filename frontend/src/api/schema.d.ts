@@ -13641,6 +13641,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What AI cost this month so far, as one figure.
+         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
+         *     (the first day of the current UTC month through now), computed the same way and admitted
+         *     by the same grant. For a page that shows only the month's total and needs none of the
+         *     report's lines, budget or decisions.
+         */
+        get: operations["getAiUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/agent-usage": {
         parameters: {
             query?: never;
@@ -26490,6 +26513,18 @@ export interface components {
             };
             /** @description Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model. */
             decisions?: components["schemas"]["AiDecisionSummary"][];
+        };
+        /** @description The month's AI spend so far, summed from the lines GET /ai/usage prices. */
+        AiUsageSummary: {
+            /** @description Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing. */
+            cost_est_minor?: number;
+            /** @description ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067). */
+            currency: string;
+            /**
+             * Format: date-time
+             * @description The instant the window ends at and the figure was computed.
+             */
+            computed_at: string;
         };
         /** @description One task's decision-model pass and fallback counts over the usage window. */
         AiDecisionSummary: {
@@ -73035,6 +73070,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getAiUsageSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The month's spend. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     listAgentUsageByUser: {

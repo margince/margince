@@ -62,10 +62,10 @@ function stubApi() {
           checked_at: "2026-08-01T09:00:00Z",
         });
       }
-      if (pathname.endsWith("/ai/usage")) {
+      if (pathname.endsWith("/ai/usage/summary")) {
         return jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+          currency: "USD",
+          computed_at: "2026-08-01T09:00:00Z",
         });
       }
       return jsonResponse({ data: [], page: { has_more: false } });

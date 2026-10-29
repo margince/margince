@@ -132,16 +132,7 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 				TokensIn:        task.TokensIn,
 				TokensOut:       task.TokensOut,
 			}
-			// A task line that is ENTIRELY unpriced (every window call
-			// lacking a rate row, so the summed cost is exactly 0 with no
-			// priced call behind it) omits cost_est_minor rather than
-			// reporting a fabricated 0 — the same "unpriced, not free"
-			// distinction CostReport draws (price-on-read, ADR-0067). A
-			// line with any priced cost reports it even if some of its
-			// calls were unpriced: the number is a real, if partial, dollar
-			// total, not an invented one.
-			if task.CostEstMicroUSD > 0 || task.UnpricedCalls == 0 {
-				minor := int(task.CostEstMicroUSD / microUSDPerMinor)
+			if minor, priced := lineCostMinor(task); priced {
 				wireTask.CostEstMinor = &minor
 			}
 			// The count travels with the figure it qualifies. Without it a
@@ -160,9 +151,39 @@ func wireAiUsage(days []DayUsage, budget BudgetStatus) crmcontracts.AiUsage {
 	out.Budget.MonthlyTokens = int(budget.MonthlyTokens)
 	out.Budget.SpentTokens = int(budget.SpentTokens)
 	out.Budget.Band = crmcontracts.AiUsageBudgetBand(budget.Band)
-	currency := "USD"
+	currency := usageCurrency
 	out.Budget.Currency = &currency
 	return out
+}
+
+// usageCurrency is what every cost_est_minor is denominated in: the rate sheet
+// prices in micro-USD and microUSDPerMinor converts to cents.
+const usageCurrency = "USD"
+
+// lineCostMinor is one report line's cost_est_minor, and whether the line
+// carries one. A line whose every call lacks a rate carries none, since a 0
+// there would claim the calls were free. A line with any priced cost carries
+// it, as a real if partial total.
+func lineCostMinor(line TaskUsage) (int, bool) {
+	if line.CostEstMicroUSD > 0 || line.UnpricedCalls == 0 {
+		return int(line.CostEstMicroUSD / microUSDPerMinor), true
+	}
+	return 0, false
+}
+
+// GetAiUsageSummary implements (GET /ai/usage/summary).
+func (h Handlers) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+	spend, err := h.meter.MonthSpend(r.Context(), h.rates)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.AiUsageSummary{Currency: usageCurrency, ComputedAt: spend.ComputedAt}
+	if spend.Priced {
+		minor := spend.Minor
+		out.CostEstMinor = &minor
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetAiHealth implements (GET /ai/health).

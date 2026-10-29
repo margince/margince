@@ -101,31 +101,11 @@ const AI_CALL: AiCallSummary = {
   outcome: "answered",
 };
 
-/** A month with one priced line and one the server could not price. */
-const PRICED_USAGE = {
-  days: [
-    {
-      date: "2026-08-01",
-      tasks: [
-        {
-          task: "enrich",
-          tier: "cheap_cloud",
-          calls: 2,
-          tokens_in: 100,
-          tokens_out: 40,
-          cost_est_minor: 120,
-        },
-        {
-          task: "summarize",
-          tier: "cheap_cloud",
-          calls: 1,
-          tokens_in: 30,
-          tokens_out: 10,
-        },
-      ],
-    },
-  ],
-  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+/** A month the server priced at 120 minor units of its currency. */
+const PRICED_SPEND = {
+  cost_est_minor: 120,
+  currency: "USD",
+  computed_at: "2026-08-01T09:00:00Z",
 };
 
 /** A pending write, held open so `useIsMutating` reports it for the life of
@@ -563,22 +543,42 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
-  // The exact figure, not merely a figure: 120 minor units of the budget's
-  // currency is $1.20, and the line the server could not price adds nothing
-  // to it rather than turning the total into an unknown.
-  it("sums the priced lines into the month's spend", async () => {
-    stubAgentRailApi({ aiUsage: () => jsonResponse(PRICED_USAGE) });
+  // The exact figure, not merely a figure: 120 minor units of the summary's
+  // currency is $1.20. The rail reads the one-figure summary and never the
+  // detailed usage report, which it would only sum down to that figure.
+  it("shows the month's spend from the summary, not the usage report", async () => {
+    const fetchMock = stubAgentRailApi({
+      aiSpend: () => jsonResponse(PRICED_SPEND),
+    });
     const { container } = render(ROUTE);
     await waitFor(() =>
       expect(container.querySelector(".arspend")?.textContent).toContain(
         "$1.20",
       ),
     );
+    const paths = fetchMock.mock.calls.map(
+      ([request]) => new URL(request.url).pathname,
+    );
+    expect(paths.some((path) => path.endsWith("/ai/usage/summary"))).toBe(true);
+    expect(paths.some((path) => path.endsWith("/ai/usage"))).toBe(false);
     // And on the same line as the disclosure: one row of chrome, not a figure
     // with a chevron half a line below it.
     const foot = container.querySelector(".arlast");
     expect(foot?.querySelector(".arspend")).not.toBeNull();
     expect(foot?.querySelector(".archev")).not.toBeNull();
+  });
+
+  // A priced month that cost under a cent is a real zero and draws one.
+  it("draws a priced zero as a figure", async () => {
+    stubAgentRailApi({
+      aiSpend: () => jsonResponse({ ...PRICED_SPEND, cost_est_minor: 0 }),
+    });
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(container.querySelector(".arspend")?.textContent).toContain(
+        "$0.00",
+      ),
+    );
   });
 
   // The server serves the figure on `ai_diagnostics:read`, which the ops seat
@@ -589,7 +589,7 @@ describe("AgentRail", () => {
     const user = userEvent.setup();
     const fetchMock = stubAgentRailApi({
       me: () => jsonResponse(meFixture({ roles: ["ops"], allow: OPERATOR })),
-      aiUsage: () => jsonResponse(PRICED_USAGE),
+      aiSpend: () => jsonResponse(PRICED_SPEND),
     });
     const { container } = render(ROUTE);
     await openPanel(user, container);
@@ -610,7 +610,7 @@ describe("AgentRail", () => {
     // see is a figure the client never asks for.
     expect(
       fetchMock.mock.calls.some(([request]) =>
-        new URL(request.url).pathname.endsWith("/ai/usage"),
+        new URL(request.url).pathname.includes("/ai/usage"),
       ),
     ).toBe(false);
   });

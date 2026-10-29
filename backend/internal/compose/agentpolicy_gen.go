@@ -226,6 +226,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/ai/status":                                                     {Op: "getAiStatus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/task-overrides":                                             {Op: "getAiTaskOverrides", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/ai/usage":                                                      {Op: "getAiUsage", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/ai/usage/summary":                                              {Op: "getAiUsageSummary", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/context":                                             {Op: "getAnalyticsContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/coverage":                                            {Op: "getDataCoverage", Access: "tool", Tool: "data_coverage", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/editions/compare":                                    {Op: "compareReportingEditions", Access: "tool", Tool: "read_reporting", RecordType: "", Tier: "auto_execute", Scope: "read"},
