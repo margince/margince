@@ -28404,6 +28404,10 @@ paths:
         deal: before that the qualified forecast would count nothing. A setting fixed by
         the environment is refused with `409 setting_locked`.
 
+        Switching on also sends `preview_digest`, the `digest` of the preview the admin
+        saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
+        so nobody switches on a picture that is no longer true.
+
         Switching off takes effect at once. The reviews, their tasks and their history
         stay; only the qualified readings disappear, and the baseline readings never
         changed.
@@ -28416,6 +28420,9 @@ paths:
               required: [enabled]
               properties:
                 enabled: { type: boolean }
+                preview_digest:
+                  type: string
+                  description: The `digest` of the preview shown before switching on.
               additionalProperties: false
       responses:
         '200':
@@ -56293,6 +56300,26 @@ components:
         state:
           type: string
           enum: [not_enrolled, observing, enforcing]
+        preview:
+          $ref: '#/components/schemas/ForecastEnforcementPreview'
+      additionalProperties: false
+    ForecastEnforcementPreview:
+      type: object
+      description: >-
+        What switching enforcement on would do now. Present only while `observing`, and only
+        to an admin: it counts every open deal. Switching on sends `digest` back, and is
+        refused when the deals' treatment changed since.
+      required: [left_out_count, unknown_count, digest]
+      properties:
+        left_out_count:
+          type: integer
+          description: Open deals the qualified forecast would leave out, under review or unsupported.
+        unknown_count:
+          type: integer
+          description: Open deals the last check could not judge on current evidence.
+        digest:
+          type: string
+          description: Names the policy version and every open deal's treatment this preview counted.
       additionalProperties: false
     ForecastAssurance:
       type: object

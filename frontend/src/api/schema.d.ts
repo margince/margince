@@ -19181,6 +19181,10 @@ export interface paths {
          *     deal: before that the qualified forecast would count nothing. A setting fixed by
          *     the environment is refused with `409 setting_locked`.
          *
+         *     Switching on also sends `preview_digest`, the `digest` of the preview the admin
+         *     saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
+         *     so nobody switches on a picture that is no longer true.
+         *
          *     Switching off takes effect at once. The reviews, their tasks and their history
          *     stay; only the qualified readings disappear, and the baseline readings never
          *     changed.
@@ -40987,6 +40991,16 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /** @enum {string} */
             state: "not_enrolled" | "observing" | "enforcing";
+            preview?: components["schemas"]["ForecastEnforcementPreview"];
+        };
+        /** @description What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since. */
+        ForecastEnforcementPreview: {
+            /** @description Open deals the qualified forecast would leave out, under review or unsupported. */
+            left_out_count: number;
+            /** @description Open deals the last check could not judge on current evidence. */
+            unknown_count: number;
+            /** @description Names the policy version and every open deal's treatment this preview counted. */
+            digest: string;
         };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
@@ -81931,6 +81945,8 @@ export interface operations {
             content: {
                 "application/json": {
                     enabled: boolean;
+                    /** @description The `digest` of the preview shown before switching on. */
+                    preview_digest?: string;
                 };
             };
         };

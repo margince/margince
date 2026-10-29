@@ -57,6 +57,9 @@ const (
 	ReasonCustomerWait Reason = "customer_wait"
 	// ReasonMeetingConfirmed: the customer accepted a meeting still to come.
 	ReasonMeetingConfirmed Reason = "meeting_confirmed"
+	// ReasonEarlierAnswer: somebody answered the retired buyer-silent check,
+	// and that answer has not run out yet.
+	ReasonEarlierAnswer Reason = "earlier_answer"
 	// ReasonCoverageUnknown: the mailbox could not be read, so silence cannot
 	// be observed.
 	ReasonCoverageUnknown Reason = "coverage_unknown"

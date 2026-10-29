@@ -41668,8 +41668,11 @@ type ForecastAssuranceStatus string
 type ForecastAssuranceEnforcement struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
-	Locks *SettingLocks                     `json:"locks,omitempty"`
-	State ForecastAssuranceEnforcementState `json:"state"`
+	Locks *SettingLocks `json:"locks,omitempty"`
+
+	// Preview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
+	Preview *ForecastEnforcementPreview       `json:"preview,omitempty"`
+	State   ForecastAssuranceEnforcementState `json:"state"`
 }
 
 // ForecastAssuranceEnforcementState defines model for ForecastAssuranceEnforcement.State.
@@ -41729,6 +41732,18 @@ type ForecastCall struct {
 
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
+
+// ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
+type ForecastEnforcementPreview struct {
+	// Digest Names the policy version and every open deal's treatment this preview counted.
+	Digest string `json:"digest"`
+
+	// LeftOutCount Open deals the qualified forecast would leave out, under review or unsupported.
+	LeftOutCount int `json:"left_out_count"`
+
+	// UnknownCount Open deals the last check could not judge on current evidence.
+	UnknownCount int `json:"unknown_count"`
+}
 
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
 // The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
@@ -62784,6 +62799,9 @@ type GetForecastParamsScopeKind string
 // SetForecastAssuranceEnforcementJSONBody defines parameters for SetForecastAssuranceEnforcement.
 type SetForecastAssuranceEnforcementJSONBody struct {
 	Enabled bool `json:"enabled"`
+
+	// PreviewDigest The `digest` of the preview shown before switching on.
+	PreviewDigest *string `json:"preview_digest,omitempty"`
 }
 
 // ListInputChecksParams defines parameters for ListInputChecks.

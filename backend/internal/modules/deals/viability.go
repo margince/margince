@@ -26,6 +26,9 @@ type ViabilityInput struct {
 	// ConfirmedMeetingAt is the next meeting still to come that a customer
 	// guest accepted. A booked meeting nobody outside accepted is not one.
 	ConfirmedMeetingAt *time.Time
+	// EarlierAnswerUntil is when an answer somebody gave the retired
+	// buyer-silent check runs out. Until then the deal is not asked again.
+	EarlierAnswerUntil *time.Time
 	ExpectedClose      *time.Time
 	CloseProvisional   bool
 	HasNextStep        bool
@@ -120,13 +123,18 @@ func activeDeferral(in ViabilityInput, asOf time.Time) viability.Reason {
 		return viability.ReasonCustomerWait
 	case in.ConfirmedMeetingAt != nil && asOf.Before(*in.ConfirmedMeetingAt):
 		return viability.ReasonMeetingConfirmed
+	case in.EarlierAnswerUntil != nil && asOf.Before(*in.EarlierAnswerUntil):
+		return viability.ReasonEarlierAnswer
 	}
 	return ""
 }
 
 func deferralEnd(in ViabilityInput, deferral viability.Reason) *time.Time {
-	if deferral == viability.ReasonCustomerWait {
+	switch deferral {
+	case viability.ReasonCustomerWait:
 		return in.CustomerWaitUntil
+	case viability.ReasonEarlierAnswer:
+		return in.EarlierAnswerUntil
 	}
 	return in.ConfirmedMeetingAt
 }
