@@ -108,3 +108,24 @@ func TestTheMeetingsLaneReadsPastItsCap(t *testing.T) {
 		t.Errorf("the lane read %d meetings, want the ceiling %d above the cap %d", meetings.limit, meetingsPrepCeiling, plannedCap)
 	}
 }
+
+func TestAnImminentMeetingTheReaderIsReadyForIsAReminderNotUrgentWork(t *testing.T) {
+	soon := rankInstant.Add(30 * time.Minute)
+	for _, tc := range []struct {
+		name      string
+		prepared  *crmcontracts.MeetingPreparation
+		wantLevel int
+	}{
+		{"still to prepare", ownPreparation(false), levelWaiting},
+		{"not attended", nil, levelWaiting},
+		{"ready", ownPreparation(true), levelAgreed},
+	} {
+		row := classifyMeeting(meetingItem(Meeting{ID: ids.NewV7(), Subject: tc.name, StartsAt: soon, Preparation: tc.prepared}), rankInstant)
+		if row.item.Level != tc.wantLevel {
+			t.Errorf("an imminent meeting %s ranked at level %d, want %d", tc.name, row.item.Level, tc.wantLevel)
+		}
+		if !hasReason(row.item, "meeting_soon") {
+			t.Errorf("an imminent meeting %s lost its starting-soon reminder", tc.name)
+		}
+	}
+}

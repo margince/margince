@@ -121,13 +121,17 @@ const meetingKindUnprepared = "unprepared"
 
 // classifyMeeting: a meeting starting within the horizon is the most urgent
 // thing on the page, because it happens whether or not the reader acts. A day
-// meeting has no start to be near, so it is never one.
+// meeting has no start to be near, so it is never one. A reader who said they
+// are ready keeps the reminder, and the meeting leaves the urgent work.
 func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	reasons := []crmcontracts.WorklistReason{}
 	day := occurredday.IsStatedDay(item.OccurredPrecision)
+	ready := item.Preparation != nil && item.Preparation.State == crmcontracts.MeetingPreparationStateReady
 	if !day && item.DueAt != nil && item.DueAt.Sub(asOf) <= meetingHorizon {
-		level = levelWaiting
+		if !ready {
+			level = levelWaiting
+		}
 		reasons = append(reasons, reason("meeting_soon", nil))
 	}
 	// Not confirmed ready, said only where the lane could tell: an absent kind
