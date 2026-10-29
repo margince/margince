@@ -22,8 +22,12 @@ import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { RECORDS_COUNT_LABEL } from "../../lib/filtersaddress";
+import {
+  listEntityTypeOf,
+  RECORDS_COUNT_LABEL,
+} from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
+import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
 import { navigate, routeHash } from "../../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
@@ -32,7 +36,6 @@ import {
   type LibraryGroup,
   type LibraryItem,
   nameOf,
-  resourceOf,
 } from "./library";
 import "../voice-knowledge/library.css";
 import {
@@ -284,8 +287,16 @@ export function ListRecordsCount({
  */
 function LibraryRecords({ item }: Readonly<{ item: LibraryItem }>) {
   const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
   if (item.kind === "view") {
-    return <span>{t(RECORD_TYPE_LABEL[resourceOf(item)])}</span>;
+    const type = listEntityTypeOf(item.tab);
+    return (
+      <span>
+        {type
+          ? t(RECORD_TYPE_LABEL[type])
+          : recordKindLabel(item.tab, directory)}
+      </span>
+    );
   }
   return (
     <span className="library-records">

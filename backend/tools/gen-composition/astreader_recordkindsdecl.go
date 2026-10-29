@@ -38,8 +38,9 @@ type declaredKindSubject struct {
 }
 
 type declaredRecordKindField struct {
-	Name  string `json:"name"`
-	Label string `json:"label"`
+	Name    string   `json:"name"`
+	Label   string   `json:"label"`
+	Options []string `json:"options,omitempty"`
 }
 
 type declaredRecordKindDefault struct {
@@ -83,7 +84,7 @@ func (k declaredRecordKind) declaration() extension.RecordKindDeclaration {
 		NaturalKey: k.NaturalKey, DeletePolicy: k.DeletePolicy,
 	}
 	for _, f := range k.Fields {
-		d.Fields = append(d.Fields, extension.RecordKindField{Name: f.Name, Label: f.Label})
+		d.Fields = append(d.Fields, extension.RecordKindField{Name: f.Name, Label: f.Label, Options: f.Options})
 	}
 	if k.Timeline != nil {
 		d.Timeline = &extension.RecordKindTimeline{LabelField: k.Timeline.LabelField, AtColumn: k.Timeline.AtColumn}
@@ -275,6 +276,8 @@ func (r *unitReader) readKindField(elt ast.Expr, ext string) (declaredRecordKind
 			f.Name, err = r.stringLit(kv.Value, "RecordKindField.Name")
 		case "Label":
 			f.Label, err = r.stringLit(kv.Value, "RecordKindField.Label")
+		case "Options":
+			f.Options, err = r.readStringSlice(kv.Value, "RecordKindField.Options")
 		default:
 			err = r.errAt(kv, "RecordKindField field %s is not derivable by this generator", key.Name)
 		}

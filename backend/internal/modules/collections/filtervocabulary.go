@@ -48,6 +48,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // VocabularyField is one field a filter clause may name on some resource.
@@ -123,6 +124,9 @@ func (s *Store) FilterVocabulary(ctx context.Context, resource string) ([]Vocabu
 	}
 	if !ok {
 		return nil, false, nil
+	}
+	if recordkinds.IsExtensionName(resource) {
+		return extensionVocabulary(engine), true, nil
 	}
 	offerable, err := s.offerableCustomColumns(ctx, resource)
 	if err != nil {

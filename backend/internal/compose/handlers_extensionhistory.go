@@ -103,9 +103,9 @@ func extensionRecordEntries(ctx context.Context, tx pgx.Tx, entity string, id id
 	return out, nil
 }
 
-// extensionHistoryQuery is the read of one kind's rows about one core record,
-// and false for a kind that declares no timeline or none for this record. Every
-// identifier is one the declaration validated, quoted all the same.
+// extensionHistoryQuery is the read of one kind's rows about one core record.
+// It answers false for a kind with no timeline, or none for this record.
+// The declaration validated every identifier. Each is quoted anyway.
 func extensionHistoryQuery(d recordkinds.Declared, entity string) (string, bool) {
 	if d.Timeline == nil {
 		return "", false

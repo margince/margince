@@ -40,6 +40,31 @@ type Query struct {
 	// ActivityWalk selects the activity link-walk scope clause instead
 	// of the direct ownership clause (the timeline's visibility rule).
 	ActivityWalk bool
+	// Object, when set, is the extension record kind whose rows Table holds.
+	// Such rows carry no owner, so the read right on the kind is the whole row
+	// scope. The gate then names the kind, not the schema-qualified Table.
+	Object string
+}
+
+// object is the name the read gate and the field masks know the rows by.
+func (q Query) object() string {
+	if q.Object != "" {
+		return q.Object
+	}
+	return q.Table
+}
+
+// rowScope is the caller's row-scope clause over alias t, empty when the caller
+// sees every row, and always empty for an extension kind.
+func (q Query) rowScope(ctx context.Context, arg func(any) int) (string, error) {
+	switch {
+	case q.Object != "":
+		return "", nil
+	case q.ActivityWalk:
+		return auth.ActivityContentClause(ctx, "t", arg)
+	default:
+		return auth.ScopeClauseFor(ctx, q.Table, "t", arg)
+	}
 }
 
 // predicateWhere is the admission point AND the clause composer for every
@@ -61,7 +86,7 @@ func (q Query) predicateWhere(ctx context.Context, p Predicate) (string, []any, 
 // scopedWhere is predicateWhere for any narrowing clause: the gate, the base
 // clause, the narrowing and the row scope, composed in the one place.
 func (q Query) scopedWhere(ctx context.Context, narrow func(arg func(any) int) (string, error)) (string, []any, error) {
-	if err := auth.Require(ctx, q.Table, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, q.object(), principal.ActionRead); err != nil {
 		return "", nil, err
 	}
 	var args []any
@@ -77,12 +102,7 @@ func (q Query) scopedWhere(ctx context.Context, narrow func(arg func(any) int) (
 	}
 	where = append(where, compiled)
 
-	var scope string
-	if q.ActivityWalk {
-		scope, err = auth.ActivityContentClause(ctx, "t", arg)
-	} else {
-		scope, err = auth.ScopeClauseFor(ctx, q.Table, "t", arg)
-	}
+	scope, err := q.rowScope(ctx, arg)
 	if err != nil {
 		return "", nil, err
 	}

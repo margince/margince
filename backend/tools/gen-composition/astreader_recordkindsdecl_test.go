@@ -53,6 +53,17 @@ func TestRecordKindDeclarationsDeriveIntoTheManifest(t *testing.T) {
 	}
 }
 
+func TestAFieldsOptionsDeriveIntoTheManifest(t *testing.T) {
+	derived, err := deriveSynthetic(t, "x", recordKindUnitSource(`{Kind: "account", DisplayName: "Account", Table: "ext_x_account",
+	Fields: []extension.RecordKindField{{Name: "code", Label: "Code", Options: []string{"Gold", "Silver"}}}, NaturalKey: []string{"code"}},`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(derived); !strings.Contains(s, `"Gold"`) || !strings.Contains(s, `"Silver"`) {
+		t.Errorf("the manifest drops the field's options:\n%s", s)
+	}
+}
+
 func TestARecordKindTimelineDerivesIntoTheManifest(t *testing.T) {
 	derived, err := deriveSynthetic(t, "x", recordKindUnitSource(`{
 	Kind: "visit", DisplayName: "Visit", Table: "ext_x_visit",

@@ -15765,6 +15765,12 @@ export const en = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "{count} lead matches",
   "filters.matchLeads_other": "{count} leads match",
+  "filters.matchExtension_one": "{count} {kind} record matches",
+  "filters.matchExtension_other": "{count} {kind} records match",
+  "filters.new.extension": "New {kind} filter",
+  "filters.switch.body.extension":
+    "The conditions are cleared, because they name fields of one record type.",
+  "unit.extension": "{kind} records",
   "filters.date.on": "On a date",
   "filters.date.daysAgo": "Days ago",
   "filters.date.mode": "How the date is given",

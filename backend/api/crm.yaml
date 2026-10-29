@@ -12925,8 +12925,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read.
-          schema: { type: string, enum: [contact, company, deal, lead, project] }
+          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          schema: { $ref: '#/components/schemas/FilterResource' }
       responses:
         '200':
           description: The vocabulary for this resource.
@@ -14290,7 +14290,7 @@ paths:
       parameters:
         - name: resource
           in: query
-          schema: { $ref: '#/components/schemas/SavedViewResource' }
+          schema: { $ref: '#/components/schemas/SavedViewTarget' }
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
@@ -15760,10 +15760,25 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+            items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           style: form
           explode: false
-          description: Restrict to these object types (default all).
+          description: >
+            Restrict to these object types (default all). Besides the core types, a kind an
+            extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller
+            who may read that kind.
+        - name: exclude_ids
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            maxItems: 100
+          style: form
+          explode: false
+          description: >
+            Record ids, of any type, to leave out of the answer. They are dropped before ranking,
+            so a page is full and `types_with_more` counts only the records that remain. Use it to
+            keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
           schema: { type: integer, minimum: 1, maximum: 20 }
@@ -52583,7 +52598,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         purpose: { type: [string, 'null'], description: 'What the list is for, in the words of its steward.' }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         list_type: { type: string, enum: [static, dynamic], default: static }
         definition: { type: [object, 'null'], additionalProperties: true, description: 'A Live List''s filter tree; null for a Shortlist.' }
         sharing:
@@ -52738,7 +52753,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         list_id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         entity_id: { type: string, format: uuid }
         added_by: { type: string, description: 'The principal that added a Shortlist member; `dynamic` for a Live List member.' }
         added_by_name: { type: [string, 'null'], description: 'For a Shortlist member, the display name of the user who added it; null for any other principal.' }
@@ -52778,7 +52793,7 @@ components:
       required: [name, entity_type]
       properties:
         name: { type: string, minLength: 1 }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         list_type: { type: string, enum: [static, dynamic], default: static }
         definition: { type: [object, 'null'], additionalProperties: true }
         purpose: { type: [string, 'null'] }
@@ -52802,7 +52817,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         entity_id: { type: string, format: uuid }
         note: { type: [string, 'null'], maxLength: 500, description: 'Why, in the words of whoever made the change.' }
 
@@ -52901,14 +52916,21 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/ListHistoryEntry' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    FilterResource:
+      type: string
+      description: >-
+        A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a
+        kind an extension declared. A kind no installed extension declares answers 404 on the
+        vocabulary and 422 on a preview.
+      x-extensible-enum: [contact, company, deal, lead, project]
+      pattern: '^(contact|company|deal|lead|project)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
+
     FilterPreviewRequest:
       type: object
       description: A candidate filter to evaluate without saving it.
       required: [resource, filter]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: { $ref: '#/components/schemas/FilterResource' }
         filter:
           type: object
           additionalProperties: true
@@ -52936,9 +52958,7 @@ components:
         What a candidate filter would select for this caller (LVS-EXT-9).
       required: [resource, match_count, columns, rows, truncated]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: { $ref: '#/components/schemas/FilterResource' }
         match_count:
           type: integer
           description: |
@@ -53047,9 +53067,7 @@ components:
         accepts are the same set.
       required: [resource, fields]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: { $ref: '#/components/schemas/FilterResource' }
         fields:
           type: array
           description: |
@@ -53411,16 +53429,14 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
-    SavedViewResource:
+    SavedViewTarget:
       type: string
-      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-      enum: [contacts, companies, deals, activities, leads, partners, projects]
-      # Pinned: the generator prefixes a constant only to break a collision, so
-      # these names move when an UNRELATED schema gains or loses a value that
-      # collides with one of them. Adding `commitments` to the attention feed's
-      # lanes_omitted did exactly that once, silently unprefixing all seven and
-      # breaking every caller.
-      x-enum-varnames: [SavedViewResourceContacts, SavedViewResourceCompanies, SavedViewResourceDeals, SavedViewResourceActivities, SavedViewResourceLeads, SavedViewResourcePartners, SavedViewResourceProjects]
+      description: >-
+        The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an
+        extension declared. One schema for the record, the create body and the list filter, so
+        the three cannot drift.
+      x-extensible-enum: [contacts, companies, deals, activities, leads, partners, projects]
+      pattern: '^(contacts|companies|deals|activities|leads|partners|projects)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
 
     ReportingMetricID:
       type: string
@@ -54461,7 +54477,7 @@ components:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
         shared_scope: { type: string, enum: [private, team, workspace], default: private, description: V1 enforces private. }
-        resource: { $ref: '#/components/schemas/SavedViewResource' }
+        resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query:
           type: object
@@ -54476,7 +54492,7 @@ components:
       type: object
       required: [resource, name, query]
       properties:
-        resource: { $ref: '#/components/schemas/SavedViewResource' }
+        resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query: { type: object, additionalProperties: true }
 
@@ -58292,7 +58308,7 @@ components:
         # `tag` is a WORD, not a record: finding it is the step before finding
         # the records that carry it, and without it a reader has to know the
         # vocabulary already.
-        type: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+        type: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
@@ -58373,7 +58389,7 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
         types_with_more:
           type: array
-          items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           description: >
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for

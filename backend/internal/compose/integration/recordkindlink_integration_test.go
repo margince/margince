@@ -129,11 +129,6 @@ func TestAnExtensionRecordTakesATagAndJoinsAShortlistUnderTheKindsRights(t *test
 	if members, _, err := store.ListMembers(worker, list.ID, 50, ""); err != nil || len(members) != 1 {
 		t.Errorf("the Shortlist's members = %d, %v; want the one added", len(members), err)
 	}
-	if _, err := store.CreateList(worker, collections.CreateListInput{
-		Name: "Live kind list", EntityType: probeKind, ListType: "dynamic", Definition: map[string]any{"all": []any{}},
-	}); err == nil {
-		t.Error("a Live List over an extension kind was accepted")
-	}
 }
 
 func TestAnExtensionKindWithoutTheUpdateRightCannotBeTagged(t *testing.T) {

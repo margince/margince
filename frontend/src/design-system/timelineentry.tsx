@@ -67,9 +67,9 @@ export type TimelineEntry = {
   // rep comparing "we told them X" against "someone set stage to Y" had to
   // hold two orderings in their head.
   //
-  // `extension` and `signal` are not activities either: they are a row of an
-  // installed extension's own kind and one of its signals, built by core from
-  // a declaration so the extension draws no entry of its own.
+  // `extension` and `signal` are a row of an installed extension's own kind and
+  // one of its signals. Core builds them from a declaration, so the extension
+  // draws no entry of its own.
   kind:
     | "email"
     | "meeting"

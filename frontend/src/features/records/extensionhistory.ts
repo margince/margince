@@ -44,15 +44,15 @@ export function useExtensionHistory(
 
 /**
  * extensionTimeline draws the entries as timeline rows. The kind names itself
- * beside the title, so a reader tells a visit from a payment signal, and a kind
- * the build has no text for still reads as its own name.
+ * beside the title, so a reader tells a visit from a payment signal. A kind the
+ * build has no text for still reads as its own name.
  */
 export function extensionTimeline(
   entries: readonly ExtensionHistoryEntry[],
 ): TimelineEntry[] {
   return entries.map((entry) => ({
-    // The source is part of the id: a row and a signal can share a uuid space
-    // only by accident, and the list keys on this.
+    // The source is part of the id. A row and a signal can share a uuid only
+    // by accident, and the list keys on this.
     id: `${entry.source === "record" ? "extension" : "signal"}:${entry.id}`,
     kind: entry.source === "record" ? "extension" : "signal",
     title: entry.title,

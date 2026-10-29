@@ -433,7 +433,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 		t.Fatalf("search → %d", status)
 	}
 	for _, hit := range page.Data {
-		if hit.Type == crmcontracts.SearchResultTypeContact && hit.WorksAt != nil && hit.WorksAt.CompanyId.String() == company.ID {
+		if hit.Type == "contact" && hit.WorksAt != nil && hit.WorksAt.CompanyId.String() == company.ID {
 			delete(staff, hit.Id.String())
 		}
 	}

@@ -109,6 +109,8 @@ export type FilterResultsProps = Readonly<{
   named: readonly string[];
   /** The plural noun for these rows — "contacts". Translated by the caller. */
   unit: string;
+  /** Headings by column name, for a record type whose labels the vocabulary lacks. */
+  columnLabels?: Readonly<Record<string, string>>;
   /** Names this table for the column widths it remembers between visits. */
   widthsKey: string;
   /** What an empty answer says, worded by the caller from the filter it ran. */
@@ -129,6 +131,7 @@ export function FilterResults({
   fields,
   named,
   unit,
+  columnLabels,
   widthsKey,
   emptyNote,
   pending,
@@ -157,7 +160,7 @@ export function FilterResults({
     const reference = referenceOf(name);
     return {
       key: name,
-      header: headerFor(name, fields, t),
+      header: columnLabels?.[name] ?? headerFor(name, fields, t),
       // The identity column is fixed, because it makes a row recognisable. The
       // picker may not hide it, and a phone shows it as the card's heading.
       fixed: index === 0,

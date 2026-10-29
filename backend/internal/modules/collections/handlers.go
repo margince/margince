@@ -187,7 +187,7 @@ func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, pa
 		data = append(data, wireVocabularyField(f))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FilterVocabulary{
-		Resource: crmcontracts.FilterVocabularyResource(resource),
+		Resource: resource,
 		Fields:   data,
 	})
 }

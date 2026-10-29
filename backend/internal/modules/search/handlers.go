@@ -5,12 +5,14 @@ package search
 
 import (
 	"net/http"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers is the module's transport slice; compose embeds it so the
@@ -59,10 +61,14 @@ func NewHandlers(
 func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontracts.SearchParams) {
 	in := Input{Query: params.Q}
 	if params.Types != nil {
-		for _, t := range *params.Types {
-			in.Types = append(in.Types, string(t))
+		in.Types = *params.Types
+	}
+	if params.ExcludeIds != nil {
+		for _, id := range *params.ExcludeIds {
+			in.Exclude = append(in.Exclude, ids.UUID(id))
 		}
 	}
+	in.WithExtensions = true
 	if params.Cursor != nil {
 		in.Cursor = *params.Cursor
 	}
@@ -92,10 +98,7 @@ func wirePage(page Page) crmcontracts.SearchResponse {
 	}
 	response := crmcontracts.SearchResponse{Data: wireHits(page.Hits), Page: pageInfo}
 	if page.TypesWithMore != nil {
-		more := make([]crmcontracts.SearchResponseTypesWithMore, 0, len(page.TypesWithMore))
-		for _, entity := range page.TypesWithMore {
-			more = append(more, crmcontracts.SearchResponseTypesWithMore(entity))
-		}
+		more := slices.Clone(page.TypesWithMore)
 		response.TypesWithMore = &more
 	}
 	if len(page.NearMatches) > 0 {
@@ -115,7 +118,7 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 	for _, hit := range hits {
 		result := crmcontracts.SearchResult{
 			Id:    openapi_types.UUID(hit.ID),
-			Type:  crmcontracts.SearchResultType(hit.Type),
+			Type:  hit.Type,
 			Score: new(float32(hit.Score)),
 			// Unconditionally, on every hit: this search reads the store the
 			// record lives in, so a hit is never a copy of somebody else's

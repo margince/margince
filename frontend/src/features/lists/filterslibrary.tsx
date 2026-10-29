@@ -23,13 +23,13 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
+  type CoreLibraryType,
   type LibraryAnchor,
-  type LibraryType,
-  NEW_FILTER_LABEL,
   NO_TYPE_HITS_LABEL,
   OBJECT_TABS,
   type ObjectTab,
-  TAB_LABEL,
+  useObjectTabs,
+  useTabWords,
 } from "../../lib/filtersaddress";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -247,11 +247,12 @@ function TypePills({
   const projects =
     cut.type === "projects" ||
     items.some((item) => typeOf(item) === "projects");
-  const pills: FilterPill<LibraryType | "all">[] = [
+  const wordsOf = useTabWords();
+  const pills: FilterPill<CoreLibraryType | "all">[] = [
     { value: "all", label: t("filters.library.all"), count: counts?.all },
     ...OBJECT_TABS.map((tab) => ({
       value: tab,
-      label: t(TAB_LABEL[tab]),
+      label: wordsOf(tab).tab,
       count: counts?.[tab],
     })),
     ...(projects
@@ -281,8 +282,12 @@ function TypePills({
  * filter; otherwise it asks which records first, because a filter is built
  * over the fields of one type and there is no neutral one to start on.
  */
-function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
+function NewFilterAction({
+  type,
+}: Readonly<{ type: CoreLibraryType | "all" }>) {
   const t = useT();
+  const wordsOf = useTabWords();
+  const tabs = useObjectTabs();
   const open = (tab: ObjectTab) => navigate({ screen: "filters", id: tab });
   if (type !== "all" && type !== "projects") {
     return (
@@ -292,7 +297,7 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
         onClick={() => open(type)}
       >
         <Plus aria-hidden />
-        {t(NEW_FILTER_LABEL[type])}
+        {wordsOf(type).newFilter}
       </Button>
     );
   }
@@ -309,9 +314,9 @@ function NewFilterAction({ type }: Readonly<{ type: LibraryType | "all" }>) {
     >
       <p className="t-caption">{t("filters.library.whichRecords")}</p>
       <div className="library-types">
-        {OBJECT_TABS.map((tab) => (
+        {tabs.map((tab) => (
           <Button key={tab} onClick={() => open(tab)}>
-            {t(TAB_LABEL[tab])}
+            {wordsOf(tab).tab}
           </Button>
         ))}
       </div>

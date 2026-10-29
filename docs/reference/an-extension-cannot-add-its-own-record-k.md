@@ -23,7 +23,7 @@ are done.
 | 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) | done |
 | 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) | done |
 | 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) | done |
-| 9 | Search and lists for extension kinds | Nothing yet. | None yet | planned |
+| 9 | Search and lists for extension kinds | Find a kind's rows in search. List them in a Shortlist or a Live List, filter them in the Filters screen and keep a saved view over them. | [Search and lists for extension kinds](#search-and-lists-for-extension-kinds) | done |
 | 10 | Suggested-link resolver | Nothing yet. | None yet | planned |
 | 11 | Typed links between core records | Nothing yet. | None yet | planned |
 | 12 | Let an unattended extension run land a signal through Ingest | Nothing yet. | None yet | planned |
@@ -128,9 +128,8 @@ No column gains a foreign key to an extension table, because an extension role c
 
 What this feature does not do yet:
 
-- A Live List over an extension kind is refused. Only a Shortlist takes one.
 - The activity writers still refuse an extension kind, so no activity is filed on an extension record yet. The column is ready.
-- The record page, search, and the REST wire enums keep core's kinds. Tag counts do not include extension records.
+- The record page keeps core's kinds. Tag counts do not include extension records.
 
 ## Extension report breakdowns and counts
 
@@ -299,3 +298,52 @@ What this feature does not do yet:
 - The kind's declared display name is not on the entry. The entry shows the kind's short name.
 - An entry does not open anything. An extension kind has no page of its own yet.
 - The feed has no next page. Core reads the newest 50 of each source.
+
+## Search and lists for extension kinds
+
+A kind an extension declared is a type in search and a record type for lists, filters and saved views. The unit writes
+no code for it. The steps are in
+[Find a kind in search, lists and saved views](../how-to/add-an-extension.md#find-a-kind-in-search-lists-and-saved-views).
+
+The maintainers chose to keep core's closed lists and add one pattern, `ext:<unit>:<kind>`, over listing every kind in
+the contract. Which kinds exist is decided by the composed set at boot, so a contract cannot name them. Each place that
+lists core's types now holds an `x-extensible-enum` of core's types beside that pattern.
+
+```mermaid
+flowchart LR
+    Q[GET /v1/search] --> B[Core branches]
+    Q --> X[One branch per declared kind]
+    X --> G{Seat may read the kind?}
+    G -- no --> N[Left out]
+    G -- yes --> T[Title match, live rows only]
+    B --> R[Rank]
+    T --> R
+    R --> D[Drop exclude_ids]
+```
+
+| Part | What it does |
+|---|---|
+| Search branch | One per declared kind, built from the registry on each request. A title holds every word of the query. A title that starts with the first word ranks above one that only holds it. |
+| Title | The `LabelField` of the kind's `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. |
+| Who sees a hit | The kind's `read` right is the whole scope, because a row has no owner. An archived row is never a hit. |
+| `types` | Takes core's types and `ext:<unit>:<kind>`. A kind no unit declares is a 422 on `types`. Without `types`, `GET /v1/search` also covers every kind the seat may read. |
+| `exclude_ids` | At most 100 record ids of any type, dropped before ranking and before `types_with_more` is counted. Meant for keeping a record's own author out of the matches suggested for it. The agent tool `search_records` takes the same argument. |
+| Contract | `SearchResult.type`, `types_with_more` and the `types` parameter list core's types in `x-extensible-enum` and carry the pattern. A gate holds the list equal to the search module's branch table and the pattern to admitting every core type and an extension kind. |
+| Filter vocabulary | `resource` takes the kind. Every declared field is a text field. A seat without the `read` right gets a 404. |
+| Filter preview | `resource` takes the kind. The columns are `id` and the declared fields, less any a field mask withholds. |
+| Lists | A Shortlist or a Live List takes the kind as `entity_type`. A member of another type is refused with the code `entity_type_mismatch`. |
+| Saved views | `resource` takes the kind, checked against the registry. A filter in the view is checked against the kind's declared fields. |
+| Frontend | The search results page groups a kind's hits after core's records, names the group from the kind directory and offers a filter pill for it. The Filters screen offers each kind the seat may read after the four core tabs, with the declared field labels as the preview's column headings, and saves the filter as a saved view. |
+
+What this feature does not do yet:
+
+- Search ranks a kind by its title alone, with no stemming and no vector lane. A kind has no near-match names and no
+  graph edges.
+- A hit of an extension kind opens nothing, because the kind has no page of its own. The ⌘K menu leaves such hits out
+  for the same reason.
+- The list screens draw core's record types only, so a list over an extension kind is left out of the library, and the
+  Filters screen saves an extension filter as a saved view, not as a list. The API takes both.
+- The filter field picker shows the declared column name, not its label.
+- The filtered export and the saved view export refuse an extension kind.
+- The list members endpoint has no `exclude_ids`. It takes `entity_id`, which keeps only the ids named.
+- Every declared field is a text field. A kind cannot declare a number or a date field yet.

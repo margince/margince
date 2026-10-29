@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 type Store struct {
@@ -166,6 +167,12 @@ type Input struct {
 	// NearMatches asks an empty first page to offer close names. Anchor
 	// resolution and retrieval leave it unset: they must never resolve to a guess.
 	NearMatches bool
+	// WithExtensions adds every declared extension kind to the types a search
+	// naming none covers. Only GET /v1/search asks: a kind named in Types is
+	// searched either way, and the other lanes keep their core types.
+	WithExtensions bool
+	// Exclude drops these records, of any type, before ranking and counting.
+	Exclude []ids.UUID
 }
 
 // maxQueryWords bounds the words one query may hold. The employer arm binds a
@@ -189,12 +196,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			"q holds %d words and a search takes at most %d; keep the words that name what you are looking for",
 			words, maxQueryWords)}
 	}
-	types := in.Types
-	if len(types) == 0 {
-		for _, b := range searchBranches {
-			types = append(types, b.entity)
-		}
-	}
+	types := requestedTypes(in)
 	for _, t := range types {
 		if !knownEntity(t) {
 			return Page{}, &BadQueryError{Field: "types", Reason: fmt.Sprintf("unknown type %q", t)}
@@ -235,6 +237,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 				branches = append(branches, arm)
 			}
 		}
+		branches = append(branches, admittedExtensionSQL(ctx, types, query, headPos, tailPos, arg)...)
 		if len(branches) == 0 {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
@@ -243,7 +246,9 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			page = shape.page(nil)
 			return nil
 		}
-		hits, err := rank(ctx, tx, shape.statement(branches, withinClause(in.Within, arg), arg), args)
+		bound := slices.DeleteFunc([]string{withinClause(in.Within, arg), excludeClause(in.Exclude, arg)},
+			func(clause string) bool { return clause == "" })
+		hits, err := rank(ctx, tx, shape.statement(branches, strings.Join(bound, " AND "), arg), args)
 		if err != nil {
 			return err
 		}
@@ -469,6 +474,9 @@ func (e *QueryTooBroadError) FieldFault() (field, code, message string) {
 }
 
 func knownEntity(t string) bool {
+	if _, declared := recordkinds.Lookup(t); declared {
+		return true
+	}
 	for _, b := range searchBranches {
 		if b.entity == t {
 			return true

@@ -38497,8 +38497,7 @@ export interface components {
             name: string;
             /** @description What the list is for, in the words of its steward. */
             purpose?: string | null;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /**
              * @default static
              * @enum {string}
@@ -38637,8 +38636,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             list_id: string;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /** Format: uuid */
             entity_id: string;
             /** @description The principal that added a Shortlist member; `dynamic` for a Live List member. */
@@ -38675,8 +38673,7 @@ export interface components {
         };
         CreateListRequest: {
             name: string;
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /**
              * @default static
              * @enum {string}
@@ -38720,8 +38717,7 @@ export interface components {
             steward_id?: string;
         };
         ListMemberChangeRequest: {
-            /** @enum {string} */
-            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            entity_type: components["schemas"]["FilterResource"];
             /** Format: uuid */
             entity_id: string;
             /** @description Why, in the words of whoever made the change. */
@@ -38816,10 +38812,11 @@ export interface components {
             data: components["schemas"]["ListHistoryEntry"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview. */
+        FilterResource: string;
         /** @description A candidate filter to evaluate without saving it. */
         FilterPreviewRequest: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description The canonical filter tree — the same representation a dynamic list's
              *     `definition` and a saved view's `query` carry, and untyped here for
@@ -38842,8 +38839,7 @@ export interface components {
         };
         /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
         FilterPreview: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description Every row the filter selects that this caller may see — not the
              *     length of `rows`. This is the number a builder shows a human while
@@ -38930,8 +38926,7 @@ export interface components {
          *     accepts are the same set.
          */
         FilterVocabulary: {
-            /** @enum {string} */
-            resource: "contact" | "company" | "deal" | "lead" | "project";
+            resource: components["schemas"]["FilterResource"];
             /**
              * @description Every offerable field, core and custom together — a filter names them
              *     the same way, so splitting them here would invite a caller to treat
@@ -39242,11 +39237,8 @@ export interface components {
             data: components["schemas"]["Tag"][];
             page: components["schemas"]["PageInfo"];
         };
-        /**
-         * @description The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-         * @enum {string}
-         */
-        SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
+        /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
+        SavedViewTarget: string;
         /** @enum {string} */
         ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
         /**
@@ -39765,7 +39757,7 @@ export interface components {
              * @enum {string}
              */
             shared_scope: "private" | "team" | "workspace";
-            resource: components["schemas"]["SavedViewResource"];
+            resource: components["schemas"]["SavedViewTarget"];
             name: string;
             /** @description The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. */
             query: {
@@ -39784,7 +39776,7 @@ export interface components {
             archived_at?: string | null;
         };
         CreateSavedViewRequest: {
-            resource: components["schemas"]["SavedViewResource"];
+            resource: components["schemas"]["SavedViewTarget"];
             name: string;
             query: {
                 [key: string]: unknown;
@@ -42273,8 +42265,7 @@ export interface components {
             as_of_pinned?: boolean;
         };
         SearchResult: {
-            /** @enum {string} */
-            type: "contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag";
+            type: string;
             /** Format: uuid */
             id: string;
             /** @description Display label (name/subject). */
@@ -42308,7 +42299,7 @@ export interface components {
             data: components["schemas"]["SearchResult"][];
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
-            types_with_more?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+            types_with_more?: string[];
             /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
             near_matches?: components["schemas"]["SearchNearMatch"][];
         };
@@ -65779,8 +65770,8 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read. */
-                resource: "contact" | "company" | "deal" | "lead" | "project";
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                resource: components["schemas"]["FilterResource"];
             };
             header?: never;
             path?: never;
@@ -66920,7 +66911,7 @@ export interface operations {
     listSavedViews: {
         parameters: {
             query?: {
-                resource?: components["schemas"]["SavedViewResource"];
+                resource?: components["schemas"]["SavedViewTarget"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
             };
@@ -68502,8 +68493,10 @@ export interface operations {
             query: {
                 /** @description The search query. */
                 q: string;
-                /** @description Restrict to these object types (default all). */
-                types?: ("contact" | "company" | "deal" | "activity" | "lead" | "project" | "product" | "offer_template" | "tag")[];
+                /** @description Restrict to these object types (default all). Besides the core types, a kind an extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller who may read that kind. */
+                types?: string[];
+                /** @description Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record. */
+                exclude_ids?: string[];
                 /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */

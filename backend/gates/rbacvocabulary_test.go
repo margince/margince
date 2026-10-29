@@ -147,6 +147,8 @@ func missing(have, want []string) []string {
 // malformed contract a parse failure instead of a silently empty enum.
 type contractSchemaFields struct {
 	Enum       []string             `yaml:"enum"`
+	Extensible []string             `yaml:"x-extensible-enum"`
+	Pattern    string               `yaml:"pattern"`
 	Required   []string             `yaml:"required"`
 	Properties map[string]yaml.Node `yaml:"properties"`
 }

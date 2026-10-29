@@ -13,10 +13,10 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import {
+  listEntityTypeOf,
   type ObjectTab,
-  RESOURCE_OF,
-  UNIT_LABEL,
-  VIEW_OF,
+  useTabWords,
+  viewOf,
 } from "../../lib/filtersaddress";
 import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
 import { problemMessageOf } from "../../lib/problem";
@@ -71,7 +71,10 @@ export function SaveFilterModal({
   onSaved: (kind: SavedKind, id: string, name: string) => void;
 }>) {
   const t = useT();
-  const listsOn = useListsAvailable();
+  // An extension's kind can be saved as a view only: lists are over core types.
+  const listEntityType = listEntityTypeOf(tab);
+  const listsOn = useListsAvailable() && listEntityType !== undefined;
+  const units = useTabWords()(tab).unit;
   const { create } = useSaveView();
   const createList = useCreateList();
   const [name, setName] = useState(initialName);
@@ -111,11 +114,11 @@ export function SaveFilterModal({
   };
   // The tree is read at the press, so what is saved is the filter on screen.
   const save = () => {
-    if (asList) {
+    if (asList && listEntityType) {
       createList.mutate(
         {
           name: trimmed,
-          entityType: RESOURCE_OF[tab],
+          entityType: listEntityType,
           listType: "dynamic",
           definition: encode(tree),
           sharing: audience.sharing,
@@ -127,7 +130,7 @@ export function SaveFilterModal({
       return;
     }
     create.mutate(
-      { resource: VIEW_OF[tab], name: trimmed, query: filterStateFrom(tree) },
+      { resource: viewOf(tab), name: trimmed, query: filterStateFrom(tree) },
       { onSuccess: (view) => onSaved("view", view.id, trimmed) },
     );
   };
@@ -150,7 +153,7 @@ export function SaveFilterModal({
             {...control}
             value={name}
             placeholder={t("filters.namePlaceholder", {
-              records: t(UNIT_LABEL[tab]),
+              records: units,
             })}
             onChange={(event) => setName(event.target.value)}
           />

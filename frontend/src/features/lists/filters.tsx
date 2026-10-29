@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { PendingBody } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { fallbackTitleOf, filtersAddressOf } from "../../lib/filtersaddress";
+import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { navigateReplacing } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { FocusedPending } from "./filterhead";
@@ -25,6 +26,7 @@ export function FiltersScreen({
 }: Readonly<{ id?: string; list?: string; view?: string }>) {
   const t = useT();
   const me = useMe();
+  const directory = useRecordKindDirectory().data?.data ?? [];
   // `#/lists` names no list, and the lists a reader can find live in the
   // library's Shared group. A redirect, so Back never lands here again.
   useEffect(() => {
@@ -47,7 +49,7 @@ export function FiltersScreen({
     if (address.kind !== "library") {
       return (
         <FocusedPending
-          title={t(fallbackTitleOf(address))}
+          title={fallbackTitleOf(address, t, directory)}
           label={t("common.loading")}
         />
       );

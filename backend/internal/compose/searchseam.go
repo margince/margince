@@ -28,7 +28,7 @@ func recordSearchSeam(pool *pgxpool.Pool) agents.RecordSearch {
 	return func(ctx context.Context, q agents.RecordSearchQuery) (agents.RecordSearchPage, error) {
 		page, err := store.Search(ctx, search.Input{
 			Query: q.Text, Types: q.Types, Limit: q.Limit, Cursor: q.Cursor,
-			PerType: q.PerType, WithEmployees: q.WithEmployees, NearMatches: q.NearMatches,
+			PerType: q.PerType, WithEmployees: q.WithEmployees, NearMatches: q.NearMatches, Exclude: q.Exclude,
 		})
 		if err != nil {
 			return agents.RecordSearchPage{}, err

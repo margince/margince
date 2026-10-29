@@ -30,7 +30,6 @@ import (
 	"errors"
 	"testing"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -536,14 +535,8 @@ func TestAResourceWithNoEngineIsNotAnEmptyVocabulary(t *testing.T) {
 // admits has an engine. This is what keeps it that way — and what makes the
 // branch honest rather than dead: it fires the moment the two disagree.
 func TestEveryResourceTheContractAdmitsHasAnEngine(t *testing.T) {
-	for _, admitted := range []crmcontracts.GetFilterVocabularyParamsResource{
-		crmcontracts.GetFilterVocabularyParamsResourceContact,
-		crmcontracts.GetFilterVocabularyParamsResourceCompany,
-		crmcontracts.GetFilterVocabularyParamsResourceDeal,
-		crmcontracts.GetFilterVocabularyParamsResourceLead,
-		crmcontracts.GetFilterVocabularyParamsResourceProject,
-	} {
-		if _, present := segmentEngines[string(admitted)]; !present {
+	for _, admitted := range []string{"contact", "company", "deal", "lead", "project"} {
+		if _, present := segmentEngines[admitted]; !present {
 			t.Errorf("the contract admits resource %q but no engine serves it, so the operation 404s on a value it advertises", admitted)
 		}
 	}

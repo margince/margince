@@ -8533,33 +8533,6 @@ func (e CreateLeadRequestStatus) Valid() bool {
 	}
 }
 
-// Defines values for CreateListRequestEntityType.
-const (
-	CreateListRequestEntityTypeCompany CreateListRequestEntityType = "company"
-	CreateListRequestEntityTypeContact CreateListRequestEntityType = "contact"
-	CreateListRequestEntityTypeDeal    CreateListRequestEntityType = "deal"
-	CreateListRequestEntityTypeLead    CreateListRequestEntityType = "lead"
-	CreateListRequestEntityTypeProject CreateListRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the CreateListRequestEntityType enum.
-func (e CreateListRequestEntityType) Valid() bool {
-	switch e {
-	case CreateListRequestEntityTypeCompany:
-		return true
-	case CreateListRequestEntityTypeContact:
-		return true
-	case CreateListRequestEntityTypeDeal:
-		return true
-	case CreateListRequestEntityTypeLead:
-		return true
-	case CreateListRequestEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CreateListRequestListType.
 const (
 	CreateListRequestListTypeDynamic CreateListRequestListType = "dynamic"
@@ -10414,60 +10387,6 @@ func (e FieldHistoryEntryEntityType) Valid() bool {
 	}
 }
 
-// Defines values for FilterPreviewResource.
-const (
-	FilterPreviewResourceCompany FilterPreviewResource = "company"
-	FilterPreviewResourceContact FilterPreviewResource = "contact"
-	FilterPreviewResourceDeal    FilterPreviewResource = "deal"
-	FilterPreviewResourceLead    FilterPreviewResource = "lead"
-	FilterPreviewResourceProject FilterPreviewResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterPreviewResource enum.
-func (e FilterPreviewResource) Valid() bool {
-	switch e {
-	case FilterPreviewResourceCompany:
-		return true
-	case FilterPreviewResourceContact:
-		return true
-	case FilterPreviewResourceDeal:
-		return true
-	case FilterPreviewResourceLead:
-		return true
-	case FilterPreviewResourceProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for FilterPreviewRequestResource.
-const (
-	FilterPreviewRequestResourceCompany FilterPreviewRequestResource = "company"
-	FilterPreviewRequestResourceContact FilterPreviewRequestResource = "contact"
-	FilterPreviewRequestResourceDeal    FilterPreviewRequestResource = "deal"
-	FilterPreviewRequestResourceLead    FilterPreviewRequestResource = "lead"
-	FilterPreviewRequestResourceProject FilterPreviewRequestResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterPreviewRequestResource enum.
-func (e FilterPreviewRequestResource) Valid() bool {
-	switch e {
-	case FilterPreviewRequestResourceCompany:
-		return true
-	case FilterPreviewRequestResourceContact:
-		return true
-	case FilterPreviewRequestResourceDeal:
-		return true
-	case FilterPreviewRequestResourceLead:
-		return true
-	case FilterPreviewRequestResourceProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FilterProposalResource.
 const (
 	FilterProposalResourceCompany FilterProposalResource = "company"
@@ -10561,33 +10480,6 @@ func (e FilterProposalUnsupportedCode) Valid() bool {
 	case FilterProposalUnsupportedCodeValueNotAllowed:
 		return true
 	case FilterProposalUnsupportedCodeValueNotVerifiable:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for FilterVocabularyResource.
-const (
-	FilterVocabularyResourceCompany FilterVocabularyResource = "company"
-	FilterVocabularyResourceContact FilterVocabularyResource = "contact"
-	FilterVocabularyResourceDeal    FilterVocabularyResource = "deal"
-	FilterVocabularyResourceLead    FilterVocabularyResource = "lead"
-	FilterVocabularyResourceProject FilterVocabularyResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the FilterVocabularyResource enum.
-func (e FilterVocabularyResource) Valid() bool {
-	switch e {
-	case FilterVocabularyResourceCompany:
-		return true
-	case FilterVocabularyResourceContact:
-		return true
-	case FilterVocabularyResourceDeal:
-		return true
-	case FilterVocabularyResourceLead:
-		return true
-	case FilterVocabularyResourceProject:
 		return true
 	default:
 		return false
@@ -13159,33 +13051,6 @@ func (e LinkedInReachFunction) Valid() bool {
 	}
 }
 
-// Defines values for ListEntityType.
-const (
-	ListEntityTypeCompany ListEntityType = "company"
-	ListEntityTypeContact ListEntityType = "contact"
-	ListEntityTypeDeal    ListEntityType = "deal"
-	ListEntityTypeLead    ListEntityType = "lead"
-	ListEntityTypeProject ListEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListEntityType enum.
-func (e ListEntityType) Valid() bool {
-	switch e {
-	case ListEntityTypeCompany:
-		return true
-	case ListEntityTypeContact:
-		return true
-	case ListEntityTypeDeal:
-		return true
-	case ListEntityTypeLead:
-		return true
-	case ListEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListHealth.
 const (
 	ListHealthInvalid      ListHealth = "invalid"
@@ -13408,60 +13273,6 @@ func (e ListHistoryEntryReason) Valid() bool {
 	case ListHistoryEntryReasonRecordArchived:
 		return true
 	case ListHistoryEntryReasonRecordRestored:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberEntityType.
-const (
-	ListMemberEntityTypeCompany ListMemberEntityType = "company"
-	ListMemberEntityTypeContact ListMemberEntityType = "contact"
-	ListMemberEntityTypeDeal    ListMemberEntityType = "deal"
-	ListMemberEntityTypeLead    ListMemberEntityType = "lead"
-	ListMemberEntityTypeProject ListMemberEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberEntityType enum.
-func (e ListMemberEntityType) Valid() bool {
-	switch e {
-	case ListMemberEntityTypeCompany:
-		return true
-	case ListMemberEntityTypeContact:
-		return true
-	case ListMemberEntityTypeDeal:
-		return true
-	case ListMemberEntityTypeLead:
-		return true
-	case ListMemberEntityTypeProject:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for ListMemberChangeRequestEntityType.
-const (
-	ListMemberChangeRequestEntityTypeCompany ListMemberChangeRequestEntityType = "company"
-	ListMemberChangeRequestEntityTypeContact ListMemberChangeRequestEntityType = "contact"
-	ListMemberChangeRequestEntityTypeDeal    ListMemberChangeRequestEntityType = "deal"
-	ListMemberChangeRequestEntityTypeLead    ListMemberChangeRequestEntityType = "lead"
-	ListMemberChangeRequestEntityTypeProject ListMemberChangeRequestEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the ListMemberChangeRequestEntityType enum.
-func (e ListMemberChangeRequestEntityType) Valid() bool {
-	switch e {
-	case ListMemberChangeRequestEntityTypeCompany:
-		return true
-	case ListMemberChangeRequestEntityTypeContact:
-		return true
-	case ListMemberChangeRequestEntityTypeDeal:
-		return true
-	case ListMemberChangeRequestEntityTypeLead:
-		return true
-	case ListMemberChangeRequestEntityTypeProject:
 		return true
 	default:
 		return false
@@ -17317,39 +17128,6 @@ func (e SavedViewSharedScope) Valid() bool {
 	}
 }
 
-// Defines values for SavedViewResource.
-const (
-	SavedViewResourceSavedViewResourceActivities SavedViewResource = "activities"
-	SavedViewResourceSavedViewResourceCompanies  SavedViewResource = "companies"
-	SavedViewResourceSavedViewResourceContacts   SavedViewResource = "contacts"
-	SavedViewResourceSavedViewResourceDeals      SavedViewResource = "deals"
-	SavedViewResourceSavedViewResourceLeads      SavedViewResource = "leads"
-	SavedViewResourceSavedViewResourcePartners   SavedViewResource = "partners"
-	SavedViewResourceSavedViewResourceProjects   SavedViewResource = "projects"
-)
-
-// Valid indicates whether the value is a known member of the SavedViewResource enum.
-func (e SavedViewResource) Valid() bool {
-	switch e {
-	case SavedViewResourceSavedViewResourceActivities:
-		return true
-	case SavedViewResourceSavedViewResourceCompanies:
-		return true
-	case SavedViewResourceSavedViewResourceContacts:
-		return true
-	case SavedViewResourceSavedViewResourceDeals:
-		return true
-	case SavedViewResourceSavedViewResourceLeads:
-		return true
-	case SavedViewResourceSavedViewResourcePartners:
-		return true
-	case SavedViewResourceSavedViewResourceProjects:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ScheduledAgentName.
 const (
 	ScheduledAgentNameMorningBrief         ScheduledAgentName = "morning_brief"
@@ -17476,45 +17254,6 @@ func (e SearchNearMatchType) Valid() bool {
 	}
 }
 
-// Defines values for SearchResponseTypesWithMore.
-const (
-	SearchResponseTypesWithMoreActivity      SearchResponseTypesWithMore = "activity"
-	SearchResponseTypesWithMoreCompany       SearchResponseTypesWithMore = "company"
-	SearchResponseTypesWithMoreContact       SearchResponseTypesWithMore = "contact"
-	SearchResponseTypesWithMoreDeal          SearchResponseTypesWithMore = "deal"
-	SearchResponseTypesWithMoreLead          SearchResponseTypesWithMore = "lead"
-	SearchResponseTypesWithMoreOfferTemplate SearchResponseTypesWithMore = "offer_template"
-	SearchResponseTypesWithMoreProduct       SearchResponseTypesWithMore = "product"
-	SearchResponseTypesWithMoreProject       SearchResponseTypesWithMore = "project"
-	SearchResponseTypesWithMoreTag           SearchResponseTypesWithMore = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchResponseTypesWithMore enum.
-func (e SearchResponseTypesWithMore) Valid() bool {
-	switch e {
-	case SearchResponseTypesWithMoreActivity:
-		return true
-	case SearchResponseTypesWithMoreCompany:
-		return true
-	case SearchResponseTypesWithMoreContact:
-		return true
-	case SearchResponseTypesWithMoreDeal:
-		return true
-	case SearchResponseTypesWithMoreLead:
-		return true
-	case SearchResponseTypesWithMoreOfferTemplate:
-		return true
-	case SearchResponseTypesWithMoreProduct:
-		return true
-	case SearchResponseTypesWithMoreProject:
-		return true
-	case SearchResponseTypesWithMoreTag:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -17530,45 +17269,6 @@ func (e SearchResultTrustTier) Valid() bool {
 	case SearchResultTrustTierSearchResultTrustTierExternal:
 		return true
 	case SearchResultTrustTierSearchResultTrustTierUnverified:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SearchResultType.
-const (
-	SearchResultTypeActivity      SearchResultType = "activity"
-	SearchResultTypeCompany       SearchResultType = "company"
-	SearchResultTypeContact       SearchResultType = "contact"
-	SearchResultTypeDeal          SearchResultType = "deal"
-	SearchResultTypeLead          SearchResultType = "lead"
-	SearchResultTypeOfferTemplate SearchResultType = "offer_template"
-	SearchResultTypeProduct       SearchResultType = "product"
-	SearchResultTypeProject       SearchResultType = "project"
-	SearchResultTypeTag           SearchResultType = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchResultType enum.
-func (e SearchResultType) Valid() bool {
-	switch e {
-	case SearchResultTypeActivity:
-		return true
-	case SearchResultTypeCompany:
-		return true
-	case SearchResultTypeContact:
-		return true
-	case SearchResultTypeDeal:
-		return true
-	case SearchResultTypeLead:
-		return true
-	case SearchResultTypeOfferTemplate:
-		return true
-	case SearchResultTypeProduct:
-		return true
-	case SearchResultTypeProject:
-		return true
-	case SearchResultTypeTag:
 		return true
 	default:
 		return false
@@ -24313,33 +24013,6 @@ func (e GetFieldHistoryParamsActorType) Valid() bool {
 	}
 }
 
-// Defines values for GetFilterVocabularyParamsResource.
-const (
-	GetFilterVocabularyParamsResourceCompany GetFilterVocabularyParamsResource = "company"
-	GetFilterVocabularyParamsResourceContact GetFilterVocabularyParamsResource = "contact"
-	GetFilterVocabularyParamsResourceDeal    GetFilterVocabularyParamsResource = "deal"
-	GetFilterVocabularyParamsResourceLead    GetFilterVocabularyParamsResource = "lead"
-	GetFilterVocabularyParamsResourceProject GetFilterVocabularyParamsResource = "project"
-)
-
-// Valid indicates whether the value is a known member of the GetFilterVocabularyParamsResource enum.
-func (e GetFilterVocabularyParamsResource) Valid() bool {
-	switch e {
-	case GetFilterVocabularyParamsResourceCompany:
-		return true
-	case GetFilterVocabularyParamsResourceContact:
-		return true
-	case GetFilterVocabularyParamsResourceDeal:
-		return true
-	case GetFilterVocabularyParamsResourceLead:
-		return true
-	case GetFilterVocabularyParamsResourceProject:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GetForecastParamsPeriod.
 const (
 	GetForecastParamsPeriodMonth   GetForecastParamsPeriod = "month"
@@ -25144,45 +24817,6 @@ func (e GetSchedulingCalendarsParamsProvider) Valid() bool {
 	case GetSchedulingCalendarsParamsProviderGcal:
 		return true
 	case GetSchedulingCalendarsParamsProviderGraphcal:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SearchParamsTypes.
-const (
-	SearchParamsTypesActivity      SearchParamsTypes = "activity"
-	SearchParamsTypesCompany       SearchParamsTypes = "company"
-	SearchParamsTypesContact       SearchParamsTypes = "contact"
-	SearchParamsTypesDeal          SearchParamsTypes = "deal"
-	SearchParamsTypesLead          SearchParamsTypes = "lead"
-	SearchParamsTypesOfferTemplate SearchParamsTypes = "offer_template"
-	SearchParamsTypesProduct       SearchParamsTypes = "product"
-	SearchParamsTypesProject       SearchParamsTypes = "project"
-	SearchParamsTypesTag           SearchParamsTypes = "tag"
-)
-
-// Valid indicates whether the value is a known member of the SearchParamsTypes enum.
-func (e SearchParamsTypes) Valid() bool {
-	switch e {
-	case SearchParamsTypesActivity:
-		return true
-	case SearchParamsTypesCompany:
-		return true
-	case SearchParamsTypesContact:
-		return true
-	case SearchParamsTypesDeal:
-		return true
-	case SearchParamsTypesLead:
-		return true
-	case SearchParamsTypesOfferTemplate:
-		return true
-	case SearchParamsTypesProduct:
-		return true
-	case SearchParamsTypesProject:
-		return true
-	case SearchParamsTypesTag:
 		return true
 	default:
 		return false
@@ -37628,18 +37262,17 @@ type CreateLegalEntityRequest struct {
 
 // CreateListRequest defines model for CreateListRequest.
 type CreateListRequest struct {
-	Definition *map[string]interface{}     `json:"definition,omitempty"`
-	EntityType CreateListRequestEntityType `json:"entity_type"`
-	ListType   *CreateListRequestListType  `json:"list_type,omitempty"`
-	Name       string                      `json:"name"`
-	Purpose    *string                     `json:"purpose,omitempty"`
-	Sharing    *CreateListRequestSharing   `json:"sharing,omitempty"`
-	StewardId  *openapi_types.UUID         `json:"steward_id,omitempty"`
-	TeamId     *openapi_types.UUID         `json:"team_id,omitempty"`
-}
+	Definition *map[string]interface{} `json:"definition,omitempty"`
 
-// CreateListRequestEntityType defines model for CreateListRequest.EntityType.
-type CreateListRequestEntityType string
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource             `json:"entity_type"`
+	ListType   *CreateListRequestListType `json:"list_type,omitempty"`
+	Name       string                     `json:"name"`
+	Purpose    *string                    `json:"purpose,omitempty"`
+	Sharing    *CreateListRequestSharing  `json:"sharing,omitempty"`
+	StewardId  *openapi_types.UUID        `json:"steward_id,omitempty"`
+	TeamId     *openapi_types.UUID        `json:"team_id,omitempty"`
+}
 
 // CreateListRequestListType defines model for CreateListRequest.ListType.
 type CreateListRequestListType string
@@ -37904,8 +37537,8 @@ type CreateSavedViewRequest struct {
 	Name  string                 `json:"name"`
 	Query map[string]interface{} `json:"query"`
 
-	// Resource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-	Resource SavedViewResource `json:"resource"`
+	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+	Resource SavedViewTarget `json:"resource"`
 }
 
 // CreateSignalRequest defines model for CreateSignalRequest.
@@ -40408,8 +40041,10 @@ type FilterPreview struct {
 	// length of `rows`. This is the number a builder shows a human while
 	// they decide whether the filter is right, so it is a full count rather
 	// than a page size dressed up as one.
-	MatchCount int                   `json:"match_count"`
-	Resource   FilterPreviewResource `json:"resource"`
+	MatchCount int `json:"match_count"`
+
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
 
 	// Rows Up to `limit` matching rows as column→value maps, ordered by id.
 	// Deliberately the export's projection rather than a shape invented for
@@ -40421,9 +40056,6 @@ type FilterPreview struct {
 	// "showing 25 of 812" without comparing lengths and guessing.
 	Truncated bool `json:"truncated"`
 }
-
-// FilterPreviewResource defines model for FilterPreview.Resource.
-type FilterPreviewResource string
 
 // FilterPreviewRequest A candidate filter to evaluate without saving it.
 type FilterPreviewRequest struct {
@@ -40439,12 +40071,11 @@ type FilterPreviewRequest struct {
 
 	// Limit How many rows to sample. The COUNT is unaffected by this — it is the
 	// full match count for the caller, not the size of the page.
-	Limit    *int                         `json:"limit,omitempty"`
-	Resource FilterPreviewRequestResource `json:"resource"`
-}
+	Limit *int `json:"limit,omitempty"`
 
-// FilterPreviewRequestResource defines model for FilterPreviewRequest.Resource.
-type FilterPreviewRequestResource string
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
+}
 
 // FilterProposal Filter clauses proposed from plain words, already checked against the
 // caller's vocabulary. Not saved.
@@ -40515,6 +40146,9 @@ type FilterProposalUnsupported struct {
 // client can say it in its own words.
 type FilterProposalUnsupportedCode string
 
+// FilterResource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+type FilterResource = string
+
 // FilterVocabulary What a filter may say about one record type (LVS-EXT-8). Read from the
 // engine that evaluates filters, so the set here and the set the engine
 // accepts are the same set.
@@ -40524,12 +40158,11 @@ type FilterVocabulary struct {
 	// one kind as second class. A retired field of either kind is absent
 	// (see `custom`); a core field retired by an ADR is absent for the same
 	// reason and has no catalog row a client could learn that from.
-	Fields   []FilterVocabularyField  `json:"fields"`
-	Resource FilterVocabularyResource `json:"resource"`
-}
+	Fields []FilterVocabularyField `json:"fields"`
 
-// FilterVocabularyResource defines model for FilterVocabulary.Resource.
-type FilterVocabularyResource string
+	// Resource A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	Resource FilterResource `json:"resource"`
+}
 
 // FilterVocabularyField One field a filter clause may name, with what it accepts.
 type FilterVocabularyField struct {
@@ -44465,7 +44098,9 @@ type List struct {
 
 	// Dependencies What uses this list: the active automation rules that watch or add to it, then its filtered exports. Neither blocks a change; a rule pauses itself when its list is archived.
 	Dependencies *[]ListDependency `json:"dependencies,omitempty"`
-	EntityType   ListEntityType    `json:"entity_type"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource `json:"entity_type"`
 
 	// Health `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 	Health ListHealth         `json:"health"`
@@ -44505,9 +44140,6 @@ type List struct {
 	// VisibleCount How many members this caller may see. Null when the list's filter can no longer be evaluated (health `invalid`). Never the list's whole size.
 	VisibleCount *int `json:"visible_count,omitempty"`
 }
-
-// ListEntityType defines model for List.EntityType.
-type ListEntityType string
 
 // ListHealth `ownerless` when nobody looks after the list — no steward, or one who can no longer sign in — so somebody should take it over. `invalid` when a Live List's filter no longer compiles. `retired_field` when a Live List's filter names a custom field that has been retired: the list still evaluates on the kept values, and its steward should replace the clause. `retired_tag` when a Live List's filter names a tag that has been archived or merged away: that tag no longer matches any record, so a clause on it selects nothing, and its steward should name the tag that took its place. `invalid` outranks `ownerless`, which outranks `retired_field`, which outranks `retired_tag`.
 type ListHealth string
@@ -44710,32 +44342,30 @@ type ListMember struct {
 	AddedBy *string `json:"added_by,omitempty"`
 
 	// AddedByName For a Shortlist member, the display name of the user who added it; null for any other principal.
-	AddedByName *string              `json:"added_by_name,omitempty"`
-	CreatedAt   *time.Time           `json:"created_at,omitempty"`
-	EntityId    openapi_types.UUID   `json:"entity_id"`
-	EntityType  ListMemberEntityType `json:"entity_type"`
-	Id          openapi_types.UUID   `json:"id"`
-	ListId      openapi_types.UUID   `json:"list_id"`
-	Note        *string              `json:"note,omitempty"`
+	AddedByName *string            `json:"added_by_name,omitempty"`
+	CreatedAt   *time.Time         `json:"created_at,omitempty"`
+	EntityId    openapi_types.UUID `json:"entity_id"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource     `json:"entity_type"`
+	Id         openapi_types.UUID `json:"id"`
+	ListId     openapi_types.UUID `json:"list_id"`
+	Note       *string            `json:"note,omitempty"`
 
 	// Values For a Live List member: each field the list's filter names, by field name, with what it holds on this record for this caller. Absent for a Shortlist member.
 	Values *map[string]ListFieldValue `json:"values,omitempty"`
 }
 
-// ListMemberEntityType defines model for ListMember.EntityType.
-type ListMemberEntityType string
-
 // ListMemberChangeRequest defines model for ListMemberChangeRequest.
 type ListMemberChangeRequest struct {
-	EntityId   openapi_types.UUID                `json:"entity_id"`
-	EntityType ListMemberChangeRequestEntityType `json:"entity_type"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
+	EntityType FilterResource `json:"entity_type"`
 
 	// Note Why, in the words of whoever made the change.
 	Note *string `json:"note,omitempty"`
 }
-
-// ListMemberChangeRequestEntityType defines model for ListMemberChangeRequest.EntityType.
-type ListMemberChangeRequestEntityType string
 
 // ListMemberExplanation defines model for ListMemberExplanation.
 type ListMemberExplanation struct {
@@ -50813,8 +50443,8 @@ type SavedView struct {
 	// Query The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim.
 	Query map[string]interface{} `json:"query"`
 
-	// Resource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-	Resource SavedViewResource `json:"resource"`
+	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+	Resource SavedViewTarget `json:"resource"`
 
 	// SharedScope V1 enforces private.
 	SharedScope *SavedViewSharedScope `json:"shared_scope,omitempty"`
@@ -50833,8 +50463,8 @@ type SavedViewListResponse struct {
 	Page PageInfo    `json:"page"`
 }
 
-// SavedViewResource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-type SavedViewResource string
+// SavedViewTarget The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
+type SavedViewTarget = string
 
 // ScheduledAgentName A scheduled agent a rep can grant standing authority to. The set matches
 // runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
@@ -51034,11 +50664,8 @@ type SearchResponse struct {
 	Page        PageInfo           `json:"page"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
-	TypesWithMore *[]SearchResponseTypesWithMore `json:"types_with_more,omitempty"`
+	TypesWithMore *[]string `json:"types_with_more,omitempty"`
 }
-
-// SearchResponseTypesWithMore defines model for SearchResponse.TypesWithMore.
-type SearchResponseTypesWithMore string
 
 // SearchResult defines model for SearchResult.
 type SearchResult struct {
@@ -51064,7 +50691,7 @@ type SearchResult struct {
 
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 	TrustTier *SearchResultTrustTier `json:"trust_tier,omitempty"`
-	Type      SearchResultType       `json:"type"`
+	Type      string                 `json:"type"`
 
 	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
 	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
@@ -51072,9 +50699,6 @@ type SearchResult struct {
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
-
-// SearchResultType defines model for SearchResult.Type.
-type SearchResultType string
 
 // SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
@@ -61704,12 +61328,9 @@ type GetFieldHistoryParamsActorType string
 
 // GetFilterVocabularyParams defines parameters for GetFilterVocabulary.
 type GetFilterVocabularyParams struct {
-	// Resource The record type whose vocabulary to read.
-	Resource GetFilterVocabularyParamsResource `form:"resource" json:"resource"`
+	// Resource The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+	Resource FilterResource `form:"resource" json:"resource"`
 }
-
-// GetFilterVocabularyParamsResource defines parameters for GetFilterVocabulary.
-type GetFilterVocabularyParamsResource string
 
 // ListFinanceSourceCustomersParams defines parameters for ListFinanceSourceCustomers.
 type ListFinanceSourceCustomersParams struct {
@@ -64184,8 +63805,11 @@ type SearchParams struct {
 	// Q The search query.
 	Q string `form:"q" json:"q"`
 
-	// Types Restrict to these object types (default all).
-	Types *[]SearchParamsTypes `form:"types,omitempty" json:"types,omitempty"`
+	// Types Restrict to these object types (default all). Besides the core types, a kind an extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller who may read that kind.
+	Types *[]string `form:"types,omitempty" json:"types,omitempty"`
+
+	// ExcludeIds Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
+	ExcludeIds *[]openapi_types.UUID `form:"exclude_ids,omitempty" json:"exclude_ids,omitempty"`
 
 	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
 	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty"`
@@ -64206,9 +63830,6 @@ type SearchParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
-
-// SearchParamsTypes defines parameters for Search.
-type SearchParamsTypes string
 
 // ListSignalsParams defines parameters for ListSignals.
 type ListSignalsParams struct {
@@ -64653,7 +64274,7 @@ type PreviewMemberRetirementParamsMode string
 
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
-	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
+	Resource *SavedViewTarget `form:"resource,omitempty" json:"resource,omitempty"`
 
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
@@ -119551,6 +119172,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "types"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "types", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "exclude_ids" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", false, false, "exclude_ids", r.URL.Query(), &params.ExcludeIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "exclude_ids"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exclude_ids", Err: err})
 		}
 		return
 	}

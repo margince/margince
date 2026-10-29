@@ -15417,6 +15417,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Lead",
   "filters.matchLeads_one": "{count} lead khớp",
   "filters.matchLeads_other": "{count} lead khớp",
+  "filters.matchExtension_one": "{count} bản ghi {kind} khớp",
+  "filters.matchExtension_other": "{count} bản ghi {kind} khớp",
+  "filters.new.extension": "Bộ lọc {kind} mới",
+  "filters.switch.body.extension":
+    "Các điều kiện sẽ bị xóa vì đang dùng trường của một loại bản ghi.",
+  "unit.extension": "bản ghi {kind}",
   "filters.date.on": "Vào ngày cụ thể",
   "filters.date.daysAgo": "S\u1ed1 ng\u00e0y tr\u01b0\u1edbc",
   "filters.date.mode": "C\u00e1ch nh\u1eadp ng\u00e0y",

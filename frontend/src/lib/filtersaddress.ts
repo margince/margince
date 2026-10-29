@@ -6,101 +6,177 @@
 // shell, the trail and every filter page read it, so it imports no screen.
 
 import type { components } from "../api/schema";
-import type { PluralBase } from "../i18n";
+import { type PluralBase, type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type ExtensionEntityKind, isExtensionEntityKind } from "./entity";
+import { recordKindLabel, useRecordKindDirectory } from "./recordkinds";
 
-type FilterResource = components["schemas"]["FilterVocabulary"]["resource"];
-type ListRecordType = components["schemas"]["List"]["entity_type"];
-type SavedViewResource = components["schemas"]["SavedViewResource"];
+type FilterResource = components["schemas"]["FilterResource"];
+import type { ListRecordType } from "./lists.queries";
 
 /**
- * The resources whose lists offer saved views, as the contract spells them:
- * plural here and singular on `/filters/*`, because the two endpoint families
- * spell their enums differently. `VIEW_OF` below is where the two meet.
+ * The core resources whose lists offer saved views, as the contract spells them.
+ * They are plural here and singular on `/filters/*`, because the two endpoint
+ * families spell them differently. `viewOf` below is where the two meet.
  */
 export type ViewResource =
   | "contacts"
   | "companies"
   | "deals"
   | "leads"
-  | "projects";
+  | "projects"
+  | ExtensionEntityKind;
 
 /**
- * The object tabs, and the record type each reads.
+ * The core object tabs, and the record type each reads.
  *
  * The tab says "Contacts" and the vocabulary says "contact": the wire's word and
  * the product's word differ, and this is the one place that correspondence is
  * written down rather than assumed at each call site.
  */
 export const OBJECT_TABS = ["contacts", "companies", "deals", "leads"] as const;
-export type ObjectTab = (typeof OBJECT_TABS)[number];
+type CoreObjectTab = (typeof OBJECT_TABS)[number];
+
+/** A core tab, or a record kind an extension declared, which names itself. */
+export type ObjectTab = CoreObjectTab | ExtensionEntityKind;
 
 export function isObjectTab(id: string | undefined): id is ObjectTab {
-  return OBJECT_TABS.some((tab) => tab === id);
+  return (
+    id !== undefined &&
+    (OBJECT_TABS.some((tab) => tab === id) || isExtensionEntityKind(id))
+  );
 }
 
 /** The address segment below `filters` that opens a Live List's filter. */
 export const EDIT_LIST_SEGMENT = "list";
 
-export const RESOURCE_OF: Record<ObjectTab, FilterResource> = {
+const CORE_RESOURCE_OF = {
   contacts: "contact",
   companies: "company",
   deals: "deal",
   leads: "lead",
-};
+} as const satisfies Record<CoreObjectTab, FilterResource>;
+
+/** The record type `/filters/*` is asked about for this tab. */
+export function resourceOf(tab: ObjectTab): FilterResource {
+  return isExtensionEntityKind(tab) ? tab : CORE_RESOURCE_OF[tab];
+}
+
+/**
+ * The record type a Live List is made over, absent for an extension kind. The
+ * list screens draw core types only, so the filter is saved as a view instead.
+ */
+export function listEntityTypeOf(tab: ObjectTab): ListRecordType | undefined {
+  return isExtensionEntityKind(tab) ? undefined : CORE_RESOURCE_OF[tab];
+}
 
 /**
  * The same objects again, as `/views` spells them.
  *
  * A third spelling, and it is not a mistake to fix here: `/filters/*` takes
  * `contact` and `/views` takes `contacts`, both enumerated in the contract. So
- * the correspondence is written down once, beside `RESOURCE_OF`, rather than
+ * the correspondence is written down once, beside `resourceOf`, rather than
  * derived at each call site by adding an "s".
  */
-export const VIEW_OF: Record<ObjectTab, ViewResource> = {
-  contacts: "contacts",
-  companies: "companies",
-  deals: "deals",
-  leads: "leads",
-};
+export function viewOf(tab: ObjectTab): ViewResource {
+  return tab;
+}
 
-export const TAB_LABEL: Record<ObjectTab, MessageKey> = {
+const TAB_LABEL: Record<CoreObjectTab, MessageKey> = {
   contacts: "filters.tab.contacts",
   companies: "filters.tab.companies",
   deals: "filters.tab.deals",
   leads: "filters.tab.leads",
 };
 
-export const MATCH_LABEL: Record<ObjectTab, PluralBase> = {
+const MATCH_LABEL: Record<CoreObjectTab, PluralBase> = {
   contacts: "filters.matchContacts",
   companies: "filters.matchCompanies",
   deals: "filters.matchDeals",
   leads: "filters.matchLeads",
 };
 
-/** The plural noun the results table counts and names its empty state by. */
-export const UNIT_LABEL: Record<ObjectTab, MessageKey> = {
+const UNIT_LABEL: Record<CoreObjectTab, MessageKey> = {
   contacts: "unit.contacts",
   companies: "unit.companies",
   deals: "unit.deals",
   leads: "unit.leads",
 };
 
-/** What the one primary verb says once a record type is chosen. */
-export const NEW_FILTER_LABEL: Record<ObjectTab, MessageKey> = {
+const NEW_FILTER_LABEL: Record<CoreObjectTab, MessageKey> = {
   contacts: "filters.new.contacts",
   companies: "filters.new.companies",
   deals: "filters.new.deals",
   leads: "filters.new.leads",
 };
 
-/** Why switching away from this record type clears the conditions. */
-export const SWITCH_CLEARS_LABEL: Record<ObjectTab, MessageKey> = {
+const SWITCH_CLEARS_LABEL: Record<CoreObjectTab, MessageKey> = {
   contacts: "filters.switch.body.contacts",
   companies: "filters.switch.body.companies",
   deals: "filters.switch.body.deals",
   leads: "filters.switch.body.leads",
 };
+
+/** What the directory says of an extension's kinds, as far as words need it. */
+type KindDirectory = readonly { name: string; display_name: string }[];
+
+/** Every word a filter page says about the record type it is built on. */
+export type TabWords = Readonly<{
+  /** The tab's name on the segmented control and the library's pills. */
+  tab: string;
+  /** The plural noun the results table counts and names its empty state by. */
+  unit: string;
+  /** What the one primary verb says once a record type is chosen. */
+  newFilter: string;
+  /** Why switching away from this record type clears the conditions. */
+  switchClears: string;
+  /** The count's plural base, and the values it interpolates besides `count`. */
+  match: PluralBase;
+  matchParams: Readonly<Record<string, string>>;
+}>;
+
+/** The words for a tab: the catalogue's for a core one, the directory's name for an extension's. */
+export function tabWords(
+  tab: ObjectTab,
+  t: Translator,
+  directory: KindDirectory,
+): TabWords {
+  if (isExtensionEntityKind(tab)) {
+    const kind = recordKindLabel(tab, directory);
+    return {
+      tab: kind,
+      unit: t("unit.extension", { kind }),
+      newFilter: t("filters.new.extension", { kind }),
+      switchClears: t("filters.switch.body.extension"),
+      match: "filters.matchExtension",
+      matchParams: { kind },
+    };
+  }
+  return {
+    tab: t(TAB_LABEL[tab]),
+    unit: t(UNIT_LABEL[tab]),
+    newFilter: t(NEW_FILTER_LABEL[tab]),
+    switchClears: t(SWITCH_CLEARS_LABEL[tab]),
+    match: MATCH_LABEL[tab],
+    matchParams: {},
+  };
+}
+
+/** The words for a tab, with the kind directory read once per session. */
+export function useTabWords(): (tab: ObjectTab) => TabWords {
+  const t = useT();
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  return (tab) => tabWords(tab, t, directory);
+}
+
+/** The tabs the builder offers: the four core ones, then the directory's kinds. */
+export function useObjectTabs(): readonly ObjectTab[] {
+  const directory = useRecordKindDirectory().data?.data ?? [];
+  return [
+    ...OBJECT_TABS,
+    ...directory.map((entry) => entry.name).filter(isExtensionEntityKind),
+  ];
+}
 
 /** A count of a list's records, in the noun its record type is counted in. */
 export const RECORDS_COUNT_LABEL: Record<ListRecordType, PluralBase> = {
@@ -116,9 +192,12 @@ export const RECORDS_COUNT_LABEL: Record<ListRecordType, PluralBase> = {
  * projects, which a list can hold but no builder edits.
  */
 export const LIBRARY_TYPES = [...OBJECT_TABS, "projects"] as const;
-export type LibraryType = (typeof LIBRARY_TYPES)[number];
+export type CoreLibraryType = (typeof LIBRARY_TYPES)[number];
 
-const LIBRARY_TYPE_OF_LIST: Record<ListRecordType, LibraryType> = {
+/** A row's record type: a pill's, or an extension's kind, which has no pill. */
+export type LibraryType = CoreLibraryType | ExtensionEntityKind;
+
+const LIBRARY_TYPE_OF_LIST: Record<ListRecordType, CoreLibraryType> = {
   contact: "contacts",
   company: "companies",
   deal: "deals",
@@ -126,12 +205,14 @@ const LIBRARY_TYPE_OF_LIST: Record<ListRecordType, LibraryType> = {
   project: "projects",
 };
 
-export function libraryTypeOfList(type: ListRecordType): LibraryType {
-  return LIBRARY_TYPE_OF_LIST[type];
+export function libraryTypeOfList(
+  type: ListRecordType | ExtensionEntityKind,
+): LibraryType {
+  return isExtensionEntityKind(type) ? type : LIBRARY_TYPE_OF_LIST[type];
 }
 
 /** What a pill with no rows says, in that record type's own noun. */
-export const NO_TYPE_HITS_LABEL: Record<LibraryType, MessageKey> = {
+export const NO_TYPE_HITS_LABEL: Record<CoreLibraryType, MessageKey> = {
   contacts: "filters.library.noTypeHits.contacts",
   companies: "filters.library.noTypeHits.companies",
   deals: "filters.library.noTypeHits.deals",
@@ -140,8 +221,10 @@ export const NO_TYPE_HITS_LABEL: Record<LibraryType, MessageKey> = {
 };
 
 /** The builder tab a record type's Live List opens on; projects have none. */
-export function tabOfListType(type: ListRecordType): ObjectTab | undefined {
-  const libraryType = LIBRARY_TYPE_OF_LIST[type];
+export function tabOfListType(
+  type: ListRecordType | ExtensionEntityKind,
+): ObjectTab | undefined {
+  const libraryType = libraryTypeOfList(type);
   return isObjectTab(libraryType) ? libraryType : undefined;
 }
 
@@ -149,10 +232,11 @@ export function tabOfListType(type: ListRecordType): ObjectTab | undefined {
  * The tab a saved view's filter opens on. Views over activities, partners or
  * projects hold list state no builder reads, so they have none.
  */
-export function tabOfViewResource(
-  resource: SavedViewResource,
-): ObjectTab | undefined {
-  return OBJECT_TABS.find((tab) => VIEW_OF[tab] === resource);
+export function tabOfViewResource(resource: string): ObjectTab | undefined {
+  if (isExtensionEntityKind(resource)) {
+    return resource;
+  }
+  return OBJECT_TABS.find((tab) => viewOf(tab) === resource);
 }
 
 /** The group `#/filters/views` or `#/filters/lists` lands on. */
@@ -174,14 +258,18 @@ export type FocusedFiltersAddress = Exclude<
  * The name a focused page wears until it has read its own — a view's or a
  * list's name — so it is never without a heading while it waits.
  */
-export function fallbackTitleOf(address: FocusedFiltersAddress): MessageKey {
+export function fallbackTitleOf(
+  address: FocusedFiltersAddress,
+  t: Translator,
+  directory: KindDirectory,
+): string {
   switch (address.kind) {
     case "new":
-      return NEW_FILTER_LABEL[address.tab];
+      return tabWords(address.tab, t, directory).newFilter;
     case "view":
-      return "filters.library.kindView";
+      return t("filters.library.kindView");
     case "listFilter":
-      return "lists.editFilter";
+      return t("lists.editFilter");
   }
 }
 
