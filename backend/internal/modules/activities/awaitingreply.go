@@ -193,17 +193,25 @@ func (s *Store) queryAwaitingReplies(
 		return nil, err
 	}
 	reader := arg(readerOrNobody(ctx))
-	rows, err := tx.Query(ctx, fmt.Sprintf(awaitingRepliesSQL,
+	query := fmt.Sprintf(awaitingRepliesSQL,
 		instant, g.content, g.links, arg(readerAddresses), arg(windowDays),
 		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
 		reader, messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), g.back),
 		g.customer, AwaitingReplyScanCap,
-	), args...)
+	)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading replies the reader is waiting for: %w", err)
 	}
 	return scanFollowUps(rows, "a reply the reader is waiting for")
 }
+
+// The kinds awaitingTheirAnswerSQL judges. The follow-up lane asks after mail;
+// the History badge asks after chat messages too.
+const (
+	mailKinds         = `'email'`
+	conversationKinds = `'email', 'message'`
+)
 
 // awaitingTheirAnswerSQL is a mail on alias a the reader sent that still waits
 // on the other side, for the badge and the follow-up lane. sentByReader is
@@ -211,8 +219,8 @@ func (s *Store) queryAwaitingReplies(
 // may not read decides nothing. A calendar copy asks nobody a question. A
 // thread key is chosen by the sender, so a later message counts only when
 // filed under the same record.
-func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent string) string {
-	return `(a.kind = 'email'
+func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) string {
+	return `(a.kind IN (` + kinds + `)
 	   AND a.direction = 'outbound'
 	   AND a.archived_at IS NULL
 	   AND NOT ` + ImportedHistorySQL + `
@@ -268,7 +276,7 @@ var awaitingRepliesSQL = `
 	       a.occurred_precision
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
-	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s") + `
+	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s", mailKinds) + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
 	   AND ` + occurredday.FromSQL("a", "$%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)") + `
 	   AND %[2]s

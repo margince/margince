@@ -52,6 +52,24 @@ const CONTEXT = {
     }),
     via: "inline",
   },
+  contact_case: {
+    item: row({
+      source: "contact_case",
+      actions: ["merge"],
+      contact_case: {
+        anchor_id: "one",
+        revision: "r1",
+        members: [
+          { id: "one", label: "First contact" },
+          { id: "two", label: "Second contact" },
+        ],
+        owners: ["Ana"],
+        can_merge: true,
+        merge_mode: "ordinary",
+      },
+    }),
+    via: "inline",
+  },
   deal_suggestion: record("deal_suggestion", "company"),
   tag_suggestion: record("tag_suggestion", "contact"),
   task: activity("task"),

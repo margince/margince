@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 9 |
-| Tool catalog | 133.1 KB |
+| Tool catalog | 134.0 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 34965 |
+| Approx. wire tokens | 35201 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 27.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 33.3 KB | 24% | Yes, every step |
-| Input schemas | 63.4 KB | 47% | Yes, every step |
+| Descriptions (incl. governance clause) | 33.5 KB | 24% | Yes, every step |
+| Input schemas | 64.1 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.9 KB | 6% | Partly |
-| **Description + input schema** | **96.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **97.6 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -74,7 +74,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1782 |
+| [`find_records`](#find_records) | Find records | yes |  | 1791 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -90,9 +90,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1010 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1017 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
@@ -3554,6 +3554,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "reminder_due": {
           "type": "string"
         },
+        "shared_with_me": {
+          "type": "string"
+        },
         "size_band": {
           "type": "string"
         },
@@ -6994,6 +6997,8 @@ view refuses an argument it does not take and names the ones it does.
         "company_vat_check",
         "consent_purposes",
         "contact_360",
+        "contact_case",
+        "contact_cases",
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
@@ -7256,7 +7261,9 @@ Settle two records that may be one. With candidate_id and decision: a pair creat
 duplicate_candidates — not_the_same says they are two, so the pair is not flagged again, and
 reopen takes that back; neither record changes. With record_type, source_id and target_id: merge two
 contacts or two companies into one, moving the source's activities, deals and links onto the
-survivor. A merge archives the source and redirects it to the target; it cannot be reversed by
+survivor. With record_type contact, contact_id, member_ids, survivor_id, owner_id and revision:
+merge a contact case read through read_view in one step; preview true answers who keeps access and
+writes nothing. A merge archives the source and redirects it to the target; it cannot be reversed by
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
 survives and source_id the one merged away — read both records before choosing. (Runs immediately;
@@ -7278,6 +7285,11 @@ requires passport scope "write".)
       "format": "uuid",
       "type": "string"
     },
+    "contact_id": {
+      "description": "Any member of a contact case, to merge the case instead of a pair",
+      "format": "uuid",
+      "type": "string"
+    },
     "decision": {
       "description": "not_the_same dismisses the pair; reopen takes a dismissal back",
       "enum": [
@@ -7291,6 +7303,23 @@ requires passport scope "write".)
       "maxLength": 255,
       "type": "string"
     },
+    "member_ids": {
+      "description": "The contacts of one case to merge into one; leave out with candidate_id",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "owner_id": {
+      "description": "Who owns the remaining contact: the owner of one selected member",
+      "format": "uuid",
+      "type": "string"
+    },
+    "preview": {
+      "description": "Answer what the case merge would do and write nothing",
+      "type": "boolean"
+    },
     "record_type": {
       "enum": [
         "contact",
@@ -7298,8 +7327,17 @@ requires passport scope "write".)
       ],
       "type": "string"
     },
+    "revision": {
+      "description": "The case revision you read",
+      "type": "string"
+    },
     "source_id": {
       "description": "The record merged away (archived, redirected to the survivor); leave out with candidate_id",
+      "format": "uuid",
+      "type": "string"
+    },
+    "survivor_id": {
+      "description": "The case member that remains",
       "format": "uuid",
       "type": "string"
     },

@@ -1247,6 +1247,25 @@ public.assurance_cycle.opened_by text NOT NULL gen=- def=-
 public.assurance_cycle.scope text NOT NULL gen=- def=-
 public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL)
 public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
+public.assurance_deal_receipt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_deal_receipt.assessed_at timestamp with time zone NOT NULL gen=- def=-
+public.assurance_deal_receipt.assurance_deal_receipt_outcome_check CHECK ((outcome = ANY (ARRAY['eligible'::text, 'review_required'::text, 'waiting'::text, 'unknown'::text])))
+public.assurance_deal_receipt.assurance_deal_receipt_pkey PRIMARY KEY (deal_id)
+public.assurance_deal_receipt.assurance_deal_receipt_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
+public.assurance_deal_receipt.assurance_deal_receipt_valid_after_assessed CHECK ((valid_until >= assessed_at))
+public.assurance_deal_receipt.captured_by text NOT NULL gen=- def=-
+public.assurance_deal_receipt.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_deal_receipt.deal_id uuid NOT NULL gen=- def=-
+public.assurance_deal_receipt.input_fingerprint text NOT NULL gen=- def=-
+public.assurance_deal_receipt.outcome text NOT NULL gen=- def=-
+public.assurance_deal_receipt.policy_version text NOT NULL gen=- def=-
+public.assurance_deal_receipt.reasons text[] NOT NULL gen=- def='{}'::text[]
+public.assurance_deal_receipt.run_id uuid NOT NULL gen=- def=-
+public.assurance_deal_receipt.silent_days integer NOT NULL gen=- def=-
+public.assurance_deal_receipt.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_deal_receipt.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.assurance_deal_receipt_by_run CREATE INDEX assurance_deal_receipt_by_run ON public.assurance_deal_receipt USING btree (run_id)
+public.assurance_deal_receipt_pkey CREATE UNIQUE INDEX assurance_deal_receipt_pkey ON public.assurance_deal_receipt USING btree (deal_id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
@@ -1256,11 +1275,13 @@ public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
 public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_exception.assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.assurance_exception.assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency text gen=- def=-
+public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.id uuid NOT NULL gen=- def=uuidv7()
@@ -1273,6 +1294,7 @@ public.assurance_exception.severity text NOT NULL gen=- def=-
 public.assurance_exception.status text NOT NULL gen=- def='open'::text
 public.assurance_exception.subject_id uuid NOT NULL gen=- def=-
 public.assurance_exception.subject_kind text NOT NULL gen=- def=-
+public.assurance_exception.task_activity_id uuid gen=- def=-
 public.assurance_exception.type text NOT NULL gen=- def=-
 public.assurance_exception.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.uq_assurance_exception_logical_key UNIQUE (logical_key)
@@ -7435,6 +7457,7 @@ public.signal.source text NOT NULL gen=- def=-
 public.signal.source_channel text NOT NULL gen=- def='derived'::text
 public.signal.status text NOT NULL gen=- def='open'::text
 public.signal.summary text NOT NULL gen=- def=-
+public.signal.summary_params jsonb gen=- def=-
 public.signal.trg_signal_entity_keys CREATE TRIGGER trg_signal_entity_keys BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()
 public.signal.trg_signal_updated CREATE TRIGGER trg_signal_updated BEFORE UPDATE ON public.signal FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text])))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.signal.updated_at timestamp with time zone NOT NULL gen=- def=now()

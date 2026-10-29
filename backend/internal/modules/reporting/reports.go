@@ -110,7 +110,8 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if after != nil {
 			where += " AND d.id>" + b.add(*after)
 		}
-		rows, err := tx.Query(ctx, "SELECT "+reportColumns+reportFrom+" WHERE "+where+" ORDER BY d.id LIMIT "+b.add(limit+1), b.values...)
+		query := "SELECT " + reportColumns + reportFrom + " WHERE " + where + " ORDER BY d.id LIMIT " + b.add(limit+1)
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}

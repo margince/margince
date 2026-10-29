@@ -61,13 +61,14 @@ func (WeeklyAttention) StalledDealsOf(
 		scope = sqlUnnarrowed
 	}
 	quiet := idlebase.SQL("d")
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT d.id, d.name, d.owner_id, %[1]s,
 		       (extract(epoch FROM now() - %[1]s) / 86400)::int
 		  FROM deal d
 		 WHERE d.archived_at IS NULL AND d.owner_id = ANY($%[2]d) AND %[3]s AND (%[4]s)
 		 ORDER BY %[1]s, d.id
-		 LIMIT $%[5]d`, quiet, arg(members), deals.StalledSQL("d"), scope, arg(limit)), args...)
+		 LIMIT $%[5]d`, quiet, arg(members), deals.StalledSQL("d"), scope, arg(limit))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the team's stalled deals: %w", err)
 	}

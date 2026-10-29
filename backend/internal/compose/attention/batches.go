@@ -186,7 +186,7 @@ func batchKeyOf(row ranked) (crmcontracts.WorklistBatchKey, bool) {
 	if row.item.Category != "decisions" || row.item.Level != levelRoutine {
 		return "", false
 	}
-	if row.item.Source == sourceDuplicate {
+	if row.item.Source == sourceDuplicate || row.item.Source == sourceContactCase {
 		return "duplicates", true
 	}
 	if row.item.Source == crmcontracts.WorklistItemSource(sourceDomainQuestion) {

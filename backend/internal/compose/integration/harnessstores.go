@@ -33,12 +33,14 @@ func (e *Env) bindStores(db *database.DB) {
 	e.Contacts = contacts.NewStore(db).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
-		WithMergeSignalReader(signals.PreviewSignalCarryTx).
+		WithMergeSignalReader(signals.PreviewSignalCarry(nil)).
 		WithMergeCommitmentReader(weeklyplan.NewStore(db, nil, identityTeammates{svc: identity.NewServiceFor(db)}).PreviewCommitmentCarryTx).
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(e.Activities).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+		// As production wires it: a merge keeps the former owner's access.
+		WithGrantCarrier(identity.NewServiceFor(db)).
 		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
 	e.Deals = deals.NewStore(db, installseam.Deals())
 	e.Projects = ProjectsStore(db)

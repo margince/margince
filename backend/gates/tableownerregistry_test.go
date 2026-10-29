@@ -497,6 +497,7 @@ var tableOwners = map[string]string{
 	"team_weekly_review_rep_funnel":  "internal/compose/weekly",
 	"team_weekly_review_rep_pattern": "internal/compose/weekly",
 	"assurance_run_finding":          "internal/modules/assurance",
+	"assurance_deal_receipt":         "internal/modules/assurance",
 	"assurance_run":                  "internal/modules/assurance",
 	"assurance_source_coverage":      "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to

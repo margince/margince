@@ -4,9 +4,10 @@
 # MARGINCE_* vars in docs/reference/configuration.md and programs.md); the worker resolves
 # --config/--dsn/--redis/--public-base-url from their env fallbacks.
 #
-# The worker runs NO migrations (the api role owns that) — on a cold database it
+# The worker runs NO migrations (the api role owns that). On a cold database it
 # fails its dependency probe and the orchestrator restarts it until the api has
-# migrated.
+# migrated. On a database behind this binary it starts, stays unready, and holds
+# its lanes and jobs until the api has migrated.
 set -eu
 
 # Optional convenience: an env file mounted at /.env, which the worker reads

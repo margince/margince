@@ -1,18 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package customfields is the governed add-field engine (custom-fields.md):
-// the single chokepoint in the system allowed to run a runtime ALTER TABLE.
-// It validates a field definition against the closed type/object sets,
-// derives its namespaced physical column identifier, generates the DDL only
-// from the validated spec (never raw user text), and detects a structural
-// request so a caller can refuse it. This file is the pure engine core —
-// no DB handle, no HTTP — so the DDL strings it returns can be exercised
-// without a database in the unit-test lane; the Service (service.go)
-// wires the schema-pool transaction that runs them (ALTER TABLE +
-// custom_field catalog INSERT + one audit_log row, atomically).
-//
-// Tables owned: docs/reference/entity-model/customfields.md.
 package customfields
 
 import (

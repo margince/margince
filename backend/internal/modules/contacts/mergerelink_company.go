@@ -62,7 +62,7 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := moveCompanyScans(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	if err := moveCompanyDedupeCandidates(ctx, tx, sourceID, targetID); err != nil {
+	if err := moveDedupeCandidates(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
 	if err := repointLinkedLeads(ctx, tx, sourceID, targetID); err != nil {

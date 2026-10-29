@@ -231,6 +231,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a case recorded, dated and shown to nobody is a control that only
 		// looks like one.
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
+		// Contact pairs reach the queue as cases, one per group of contacts.
+		attention.WithContactCases(attentionContactCases{store: contacts.NewStore(db)}),
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),

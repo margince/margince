@@ -4,9 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Panel } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
+import type { MagicLine } from "../../lib/magic.queries";
 import { StoryProviders } from "../../testing/story-utils";
 import { MagicLaneSection } from "./magic.lines";
-import type { MagicLine } from "./magic.queries";
 
 // The receipt's watching lane, where a connector that broke overnight names
 // itself by its provider's readable name and the account it reads.

@@ -7140,6 +7140,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Kein nächster Schritt",
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
+  "review.dealViability": "Rückhalt beim Kunden prüfen",
+  "forecast.qualifiedPartial":
+    "Einige dieser Deals haben keinen Betrag, den du sehen kannst. Die Beträge oben liegen deshalb unter ihrem vollen Wert.",
+  "forecast.qualifiedLeftOut_one":
+    "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
+  "forecast.qualifiedLeftOut_other":
+    "{count} Deals ({amount}) bleiben draußen, solange ihre Prüfung offen ist.",
+  "forecast.qualifiedUnknown_one":
+    "{count} Deal ({amount}) zählt nicht, weil die letzte Prüfung ihn nicht beurteilen konnte.",
+  "forecast.qualifiedUnknown_other":
+    "{count} Deals ({amount}) zählen nicht, weil die letzte Prüfung sie nicht beurteilen konnte.",
+  "forecast.qualifiedAnswer":
+    "Gewonnene Deals plus bestätigte Commits, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
+  "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
+  "review.enforcementHint":
+    "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
+  "review.enforcementOn": "Die gestützte Prognose ist an.",
+  "review.enforcementOff": "Die gestützte Prognose ist aus.",
+  "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",
+  "review.enforcementNotStarted": "Starte zuerst die erste Prüfung.",
   "review.commitUnpriced": "Commit ohne Betrag",
   "review.stageExitUnmet": "Austrittskriterien der Phase nicht erfüllt",
   "review.unknownCheck": "Unbenannte Prüfung",
@@ -18580,4 +18600,95 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.verdict.nothingOwed": "Auf keiner Seite steht etwas aus.",
   "contact.verdict.noExchange":
     "Mit diesem Kontakt ist noch kein Austausch erfasst.",
+  "contactCase.title": "Mögliche Duplikate",
+  "contactCase.intro":
+    "Markiere die Kontakte, die dieselbe Person sind. Wähle dann, welcher Datensatz bleibt und wer verantwortlich ist.",
+  "contactCase.loading": "Mögliche Duplikate werden geladen…",
+  "contactCase.none": "Für diesen Kontakt gibt es keine offenen Duplikate.",
+  "contactCase.settledElsewhere":
+    "Jemand anderes hat diese Duplikate bereits geklärt. Dieser Kontakt bleibt bestehen.",
+  "contactCase.withheld": "Diese Duplikate sind für dich nicht sichtbar.",
+  "contactCase.stale":
+    "Die Duplikate haben sich während deiner Prüfung geändert. Prüfe die Auswahl erneut.",
+  "contactCase.refused":
+    "Du kannst diese Kontakte nicht zusammenführen. Frage die Verantwortlichen der Kontakte oder einen Admin.",
+  "contactCase.merged": "Kontakte zusammengeführt",
+  "contactCase.resolved": "Kontakt bereits zusammengeführt",
+  "contactCase.resolvedBy": "Zusammengeführt von {name}",
+  "contactCase.resolvedInto": "Verbleibender Kontakt:",
+  "contactCase.tooFew": "Markiere mindestens zwei Kontakte.",
+  "contactCase.notConnected":
+    "Einige markierte Kontakte sind nicht als mögliche Duplikate mit den anderen verknüpft. Markiere die Kontakte dazwischen oder entferne die Markierung.",
+  "contactCase.noOwner":
+    "Wähle, wer für den verbleibenden Kontakt verantwortlich ist.",
+  "contactCase.ownerLabel": "Verantwortlich",
+  "contactCase.ownerHint":
+    "Nur wer für einen markierten Kontakt verantwortlich ist, kann den verbleibenden Kontakt übernehmen.",
+  "contactCase.ownerPlaceholder": "Verantwortliche Person wählen",
+  "contactCase.previewVerb": "Vorschau anzeigen",
+  "contactCase.merge_one": "{count} Kontakt zusammenführen",
+  "contactCase.merge_other": "{count} Kontakte zusammenführen",
+  "contactCase.member.owner": "Verantwortlich: {name}",
+  "contactCase.member.unowned": "Niemand verantwortlich",
+  "contactCase.member.keep": "Angaben dieses Datensatzes behalten",
+  "contactCase.member.keepNamed": "Angaben von {name} behalten",
+  "contactCase.member.dismissedWith": "Als andere Person als {names} markiert.",
+  "contactCase.notAllowed.tooLarge":
+    "Diese Gruppe ist zu groß, um sie auf einmal zusammenzuführen. Entscheide die Paare unten einzeln.",
+  "contactCase.pair.notSame": "Nicht dieselbe Person",
+  "contactCase.pair.mergeTwo": "Diese zwei zusammenführen",
+  "contactCase.pair.keep": "{name} behalten",
+  "contactCase.pair.refused":
+    "Du kannst dieses Paar nicht entscheiden. Frage die Verantwortlichen der Kontakte oder einen Admin.",
+  "contactCase.pair.failed":
+    "Das Paar wurde nicht gespeichert. Bitte versuche es erneut.",
+  "contactCase.notAllowed.ownersOnly":
+    "Zusammenführen kann nur, wer für einen dieser Kontakte verantwortlich ist oder alle bearbeiten kann.",
+  "contactCase.notAllowed.noAuthority":
+    "Zum Zusammenführen brauchst du Schreibzugriff auf jeden Kontakt hier. Eine verantwortliche Person der anderen Kontakte kann sie zusammenführen, oder ein Admin schaltet gemeinsame Duplikatprüfung ein.",
+  "contactCase.field.name": "Name",
+  "contactCase.field.legalName": "Rechtlicher Name",
+  "contactCase.field.email": "E-Mail",
+  "contactCase.field.phone": "Telefon",
+  "contactCase.field.matchedOn": "Übereinstimmung bei",
+  "contactCase.field.chatAccount": "Chat-Konto",
+  "contactCase.field.other": "Angabe",
+  "contactCase.evidence.title": "Warum sie sich ähneln",
+  "contactCase.evidence.pair": "{left} und {right}",
+  "contactCase.evidence.match": "{percent} Übereinstimmung",
+  "contactCase.evidence.different": "Verschiedene Personen",
+  "contactCase.preview.title": "Was das Zusammenführen bewirkt",
+  "contactCase.preview.keeps": "{name} bleibt, verantwortlich ist {owner}.",
+  "contactCase.preview.mergedTitle": "Darin zusammengeführt",
+  "contactCase.preview.sharesTitle": "Behält Zugriff",
+  "contactCase.preview.noShares": "Keine weitere verantwortliche Person.",
+  "contactCase.preview.shareWrite": "{name}, darf bearbeiten",
+  "contactCase.preview.shareRead": "{name}, darf ansehen",
+  "contactCase.preview.skippedTitle": "Kein neuer Zugriff",
+  "contactCase.preview.skipped.inactive": "{name}: Konto ist inaktiv",
+  "contactCase.preview.skipped.alreadyOwner":
+    "{name}: verantwortlich für den verbleibenden Kontakt",
+  "contactCase.preview.skipped.alreadyGranted": "{name}: hat bereits Zugriff",
+  "contactCase.preview.final":
+    "Das Zusammenführen lässt sich nicht rückgängig machen.",
+  "contactCase.entry_one": "Mögliches Duplikat ({count})",
+  "contactCase.entry_other": "Mögliche Duplikate ({count})",
+  "worklist.contactCase.review": "Prüfen",
+  "worklist.contactCase.owners": "Verantwortlich: {names}.",
+  "worklist.contactCase.yours": "Du kannst sie zusammenführen.",
+  "worklist.contactCase.unowned": "Niemand verantwortlich.",
+  "worklist.contactCase.notYours":
+    "Du kannst sie nicht zusammenführen. Die Prüfung zeigt, wer es kann.",
+  "worklist.ask.contact_case":
+    "Diese Kontakte sehen nach derselben Person aus. Prüfe sie und führe die passenden zusammen.",
+  "worklist.untitled.contact_case": "Mögliche doppelte Kontakte",
+  "brief.coverage.source.contact_case": "Doppelte Kontakte",
+  "list.viewSharedWithMe": "Für dich freigegeben",
+  "list.emptyShared": "Keine {unit} für dich freigegeben.",
+  "sharedMergeReviews.title": "Gemeinsame Duplikatprüfung",
+  "sharedMergeReviews.hint":
+    "Wer für ein Duplikat verantwortlich ist, darf auch die Kopien anderer Nutzender zu dieser Person zusammenführen. Diese behalten Zugriff auf den verbleibenden Kontakt. Sonst öffnet sich nichts: keine E-Mails, keine Dateien.",
+  "sharedMergeReviews.switch": "Verantwortliche führen zusammen",
+  "sharedMergeReviews.readOnly": "Diese Einstellung ändert ein Admin.",
+  "sharedMergeReviews.notSaved": "Einstellung wurde nicht gespeichert.",
 };

@@ -9,6 +9,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
 import { ENTITY, isEntityKind } from "../../lib/entity";
+import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import {
   magicByKey,
   magicSentenceKey,
@@ -19,7 +20,6 @@ import { routeHash } from "../../lib/router";
 import { approvalHref } from "../automations/approvaldrawer";
 import { MagicApproval } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
-import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
 import { MagicUndoButton, undoPress } from "./magic.undo";
 

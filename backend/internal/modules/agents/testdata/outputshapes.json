@@ -3621,6 +3621,9 @@
                           "example": {
                             "type": "string"
                           },
+                          "field_label": {
+                            "type": "string"
+                          },
                           "label": {
                             "type": "string"
                           },
@@ -5354,6 +5357,45 @@
           },
           "priced_count": {
             "type": "integer"
+          },
+          "qualified": {
+            "type": "object",
+            "properties": {
+              "amounts_partial": {
+                "type": "boolean"
+              },
+              "best_case_minor": {
+                "type": "integer"
+              },
+              "evidence_minor": {
+                "type": "integer"
+              },
+              "excluded_count": {
+                "type": "integer"
+              },
+              "excluded_minor": {
+                "type": "integer"
+              },
+              "unknown_count": {
+                "type": "integer"
+              },
+              "unknown_minor": {
+                "type": "integer"
+              },
+              "weighted_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amounts_partial",
+              "best_case_minor",
+              "evidence_minor",
+              "excluded_count",
+              "excluded_minor",
+              "unknown_count",
+              "unknown_minor",
+              "weighted_minor"
+            ]
           },
           "scope_id": {
             "type": "string"
@@ -7503,6 +7545,90 @@
       "data": {
         "type": "object",
         "properties": {
+          "case": {
+            "type": "object",
+            "properties": {
+              "committed": {
+                "type": "boolean"
+              },
+              "merged_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "mode": {
+                "type": "string"
+              },
+              "owner_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "shares": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "access": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "access",
+                    "name",
+                    "user_id"
+                  ]
+                }
+              },
+              "skipped": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "user_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "reason",
+                    "user_id"
+                  ]
+                }
+              },
+              "survivor": {
+                "type": "string"
+              },
+              "survivor_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "committed",
+              "merged_ids",
+              "mode",
+              "owner_id",
+              "shares",
+              "skipped",
+              "survivor_id"
+            ]
+          },
           "merged": {
             "type": "boolean"
           },

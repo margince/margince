@@ -16,20 +16,22 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // previewSubjects is one deal that trips two rules, so a preview has something
 // to count and the counts have shape.
 func previewSubjects(owner string) SubjectsFunc {
 	past := time.Now().UTC().AddDate(0, 0, -30)
-	silent := time.Now().UTC().AddDate(0, 0, -120)
 	amount := int64(500000)
-	return func(context.Context, pgx.Tx) ([]Subject, error) {
+	return func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) {
 		return []Subject{{
 			DealID: "11111111-1111-7111-8111-111111111111", Owner: owner,
 			AmountMinor: &amount, Currency: "EUR",
-			ExpectedClose: &past, LastInboundAt: &silent,
-			Category: categoryCommit, StageName: "Negotiation",
+			ExpectedClose: &past,
+			Viability:     &SubjectViability{Outcome: viability.OutcomeReviewRequired, SilentDays: 120},
+			Category:      categoryCommit, StageName: "Negotiation",
 		}}, nil
 	}
 }

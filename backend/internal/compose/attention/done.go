@@ -43,6 +43,8 @@ var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceUndelivered:         true,
 	crmcontracts.WorklistItemSourceDsr:                 true,
 	crmcontracts.WorklistItemSourceNoticeCase:          true,
+	// Done sets a case aside for this owner alone; the other owners keep it.
+	crmcontracts.WorklistItemSourceContactCase: true,
 }
 
 // DoneStore keeps the reader's own Done set. OPTIONAL: unbound, no row is ever

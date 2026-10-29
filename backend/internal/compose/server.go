@@ -220,7 +220,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// answers honestly and nothing can reach the network. WithProvider
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
-		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: contacts.NewStore(InstallationDB(pool))}),
+		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: contacts.NewStore(InstallationDB(pool))}, signalSummaryWords),
 		// The reversal seam is wired at construction rather than as an option:
 		// undoability is part of what the history surface MEANS, and a server
 		// that served the history without it would render buttons that answer
@@ -282,7 +282,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal),
 			AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		),
+		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the

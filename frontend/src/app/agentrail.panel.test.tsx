@@ -40,24 +40,11 @@ function settled(minutesAgo: number, over: Occurrence): Occurrence {
   };
 }
 
-/** A month with one priced line, so the figure is $1.20 and not a round one. */
-const PRICED_USAGE = {
-  days: [
-    {
-      date: "2026-08-01",
-      tasks: [
-        {
-          task: "enrich",
-          tier: "cheap_cloud",
-          calls: 2,
-          tokens_in: 100,
-          tokens_out: 40,
-          cost_est_minor: 120,
-        },
-      ],
-    },
-  ],
-  budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+/** A month priced at 120 minor units, so the figure is $1.20 and not a round one. */
+const PRICED_SPEND = {
+  cost_est_minor: 120,
+  currency: "USD",
+  computed_at: "2026-08-01T09:00:00Z",
 };
 
 const AI_CALL = {
@@ -90,6 +77,8 @@ function jsonResponse(body: unknown): Response {
 }
 
 type Answers = Readonly<{
+  /** The seat's grants; the administrator's when absent. */
+  allow?: GrantSpec;
   running?: readonly Occurrence[];
   /** Absent means the body carries no `live_total` at all. */
   liveTotal?: number;
@@ -107,7 +96,7 @@ function stubApi(answers: Answers) {
     vi.fn(async (request: Request) => {
       const pathname = new URL(request.url).pathname;
       if (pathname.endsWith("/me")) {
-        return jsonResponse(meFixture({ allow: ADMIN }));
+        return jsonResponse(meFixture({ allow: answers.allow ?? ADMIN }));
       }
       if (pathname.endsWith("/assistant/profile")) {
         return jsonResponse({
@@ -142,14 +131,11 @@ function stubApi(answers: Answers) {
       if (pathname.endsWith("/ai/calls")) {
         return jsonResponse({ data: answers.calls ?? [], tasks: [] });
       }
-      if (pathname.endsWith("/ai/usage")) {
+      if (pathname.endsWith("/ai/usage/summary")) {
         return jsonResponse(
           answers.priced
-            ? PRICED_USAGE
-            : {
-                days: [],
-                budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
-              },
+            ? PRICED_SPEND
+            : { currency: "USD", computed_at: "2026-08-01T09:00:00Z" },
         );
       }
       return jsonResponse({
@@ -235,6 +221,18 @@ describe("the agent panel's hierarchy", () => {
       en["agent.panel.recent"],
     );
     expect(head?.querySelector("a.link-button")?.textContent).toBe(
+      en["agent.panel.fullLog"],
+    );
+  });
+
+  // The log opens the AI usage page, which a seat without the diagnostics read
+  // grant cannot open. Offering it would send a rep to a refusal.
+  it("offers the full log only to a seat that can open it", async () => {
+    const rep = await openPanel({ allow: { license: ["read"] } });
+    expect(rep.querySelector("a.link-button")).toBeNull();
+    cleanup();
+    const admin = await openPanel();
+    expect(admin.querySelector("a.link-button")?.textContent).toBe(
       en["agent.panel.fullLog"],
     );
   });

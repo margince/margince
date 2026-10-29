@@ -16,8 +16,16 @@ import (
 
 const signalKindArg = "kind"
 
-// PreviewSignalCarryTx refuses an incomplete signal set rather than implying a partial merge scope.
-func PreviewSignalCarryTx(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]crmcontracts.Signal, error) {
+// PreviewSignalCarry reads the signals a merge would carry, worded for the
+// reviewer. Nil words keep the stored summaries.
+func PreviewSignalCarry(words SummaryWords) func(context.Context, pgx.Tx, string, ids.UUID) ([]crmcontracts.Signal, error) {
+	return func(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]crmcontracts.Signal, error) {
+		return previewSignalCarryTx(ctx, tx, kind, source, words)
+	}
+}
+
+// previewSignalCarryTx refuses an incomplete signal set rather than implying a partial merge scope.
+func previewSignalCarryTx(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID, words SummaryWords) ([]crmcontracts.Signal, error) {
 	rows, err := tx.Query(ctx, `SELECT id FROM signal WHERE entity_type = @kind AND entity_id = @source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{signalKindArg: kind, "source": source})
 	if err != nil {
 		return nil, err
@@ -31,7 +39,7 @@ func PreviewSignalCarryTx(ctx context.Context, tx pgx.Tx, kind string, source id
 	}
 	out := make([]crmcontracts.Signal, 0, len(selected))
 	for _, id := range selected {
-		signal, err := ReadSignalTx(ctx, tx, id, storekit.IncludeArchived)
+		signal, err := ReadSignalTx(ctx, tx, id, storekit.IncludeArchived, words)
 		if err != nil {
 			return nil, err
 		}

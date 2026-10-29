@@ -144,7 +144,7 @@ func adminRailCalls(dailyInput) []dailyCall {
 		{Name: "company", Path: "/v1/company"},
 		{Name: "installation_license", Path: "/v1/installation/license"},
 		{Name: "ai_calls", Path: "/v1/ai/calls?limit=10"},
-		{Name: "ai_usage", Path: "/v1/ai/usage"},
+		{Name: "ai_usage", Path: "/v1/ai/usage/summary"},
 		{Name: "ai_budget", Path: "/v1/ai/budget"},
 		{Name: "embed_reindex_identities", Path: "/v1/embeddings/reindex/identities"},
 	}

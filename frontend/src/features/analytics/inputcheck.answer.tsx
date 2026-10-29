@@ -24,12 +24,27 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
   onSubmit: (answer: ResolveAnswer, dealId?: string) => void;
 };
 
+// The answers a customer review takes, as the server accepts them
+// (assurance.ReviewOutcomes): an override with a reason and an end date, or a
+// reminder. Offering "fixed" would be refused on submit.
+const reviewOutcomes = new Set(["value_correct", "remind_later"]);
+
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
   if (props.check?.type !== "unlinked_signal") {
+    const labels =
+      props.check?.type === "deal_viability"
+        ? {
+            ...props.labels,
+            outcomes: props.labels.outcomes.filter((o) =>
+              reviewOutcomes.has(o.value),
+            ),
+          }
+        : props.labels;
     return (
       <ResolveSheet
         {...props}
+        labels={labels}
         context={props.check ? <CheckFacts check={props.check} /> : undefined}
       />
     );

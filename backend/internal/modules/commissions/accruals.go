@@ -49,11 +49,12 @@ func AccrualsTx(ctx context.Context, tx pgx.Tx, from, to time.Time, limit int) (
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT id, deal_id, %s, amount_minor, currency, fx_rate_to_base, created_at
 		   FROM commission_entry
 		  WHERE status <> 'void' AND created_at >= $%d AND created_at < $%d AND %s
-		  ORDER BY created_at, id LIMIT $%d`, partner, arg(from), arg(to), where, arg(limit+1)), args...)
+		  ORDER BY created_at, id LIMIT $%d`, partner, arg(from), arg(to), where, arg(limit+1))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read commission accruals: %w", err)
 	}

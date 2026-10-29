@@ -1,17 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package webhooks is the governed outbound integration surface
-// (B-E10.13, S-E10.6/A51): tenant-configured webhook_subscription rows,
-// and a delivery worker that fans matching domain events over the event
-// bus (events.md §4) to their target URLs as HMAC-SHA256-signed HTTP
-// POSTs, retried with exponential backoff and parked in a dead-letter
-// store with inspectable replay. It is first-party (subscriptions live in
-// the workspace), not a third-party app marketplace and not an inbound
-// receiver (features/04 §3). A subscription's signing secret is sealed at
-// rest (cipher.go); it is returned exactly once at create/rotate.
-//
-// Tables owned: docs/reference/entity-model/webhooks.md.
 package webhooks
 
 import (

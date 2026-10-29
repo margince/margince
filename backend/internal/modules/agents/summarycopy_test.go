@@ -28,6 +28,8 @@ var summaryVerbs = map[string][]string{
 	"settingFields":       {"%s"},
 	"moreFields":          {"%d"},
 	"merge":               {"%s", "%s", "%s"},
+	"mergeCase":           {"%d", "%s"},
+	"previewCase":         {"%d", "%s"},
 	"enrich":              {"%s", "%s", "%s"},
 	"ownDomain":           nil,
 	"onDeal":              {"%s", "%s"},

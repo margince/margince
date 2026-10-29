@@ -192,6 +192,27 @@ func (e ActivityMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for ActivityMessageMove.
+const (
+	ActivityMessageMoveNeedsReply     ActivityMessageMove = "needs_reply"
+	ActivityMessageMoveNone           ActivityMessageMove = "none"
+	ActivityMessageMoveWaitingForThem ActivityMessageMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMessageMove enum.
+func (e ActivityMessageMove) Valid() bool {
+	switch e {
+	case ActivityMessageMoveNeedsReply:
+		return true
+	case ActivityMessageMoveNone:
+		return true
+	case ActivityMessageMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
 	ActivityAudienceParticipants ActivityAudience = "participants"
@@ -1097,22 +1118,22 @@ func (e PartnerRelationshipStage) Valid() bool {
 
 // Defines values for RelationshipStrengthBucket.
 const (
-	RelationshipStrengthBucketModerate RelationshipStrengthBucket = "moderate"
-	RelationshipStrengthBucketNone     RelationshipStrengthBucket = "none"
-	RelationshipStrengthBucketStrong   RelationshipStrengthBucket = "strong"
-	RelationshipStrengthBucketWeak     RelationshipStrengthBucket = "weak"
+	Moderate RelationshipStrengthBucket = "moderate"
+	None     RelationshipStrengthBucket = "none"
+	Strong   RelationshipStrengthBucket = "strong"
+	Weak     RelationshipStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the RelationshipStrengthBucket enum.
 func (e RelationshipStrengthBucket) Valid() bool {
 	switch e {
-	case RelationshipStrengthBucketModerate:
+	case Moderate:
 		return true
-	case RelationshipStrengthBucketNone:
+	case None:
 		return true
-	case RelationshipStrengthBucketStrong:
+	case Strong:
 		return true
-	case RelationshipStrengthBucketWeak:
+	case Weak:
 		return true
 	default:
 		return false
@@ -1543,7 +1564,13 @@ type Activity struct {
 
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+	// word with them, `none` otherwise.
+	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
+	OccurredAt  time.Time            `json:"occurred_at"`
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
@@ -1609,6 +1636,12 @@ type ActivityLanguage string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
+
+// ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+// word with them, `none` otherwise.
+type ActivityMessageMove string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
@@ -2564,8 +2597,13 @@ type Signal struct {
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
 	Status        SignalStatus        `json:"status"`
-	Summary       string              `json:"summary"`
-	UpdatedAt     time.Time           `json:"updated_at"`
+
+	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
+	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+	// the installation's base language. Every other summary, and a summary stored without its
+	// parts, reads as it was written.
+	Summary   string    `json:"summary"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -2989,6 +3027,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_status")
 	}
 
+	if raw, found := object["message_move"]; found {
+		err = json.Unmarshal(raw, &a.MessageMove)
+		if err != nil {
+			return fmt.Errorf("error reading 'message_move': %w", err)
+		}
+		delete(object, "message_move")
+	}
+
 	if raw, found := object["occurred_at"]; found {
 		err = json.Unmarshal(raw, &a.OccurredAt)
 		if err != nil {
@@ -3362,6 +3408,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.MessageMove != nil {
+		object["message_move"], err = json.Marshal(a.MessageMove)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'message_move': %w", err)
 		}
 	}
 

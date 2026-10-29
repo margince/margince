@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 333 |
-| Columns | 3956 |
-| Foreign keys | 551 |
+| Tables | 334 |
+| Columns | 3971 |
+| Foreign keys | 553 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 145 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 49 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 38 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 68 | 39 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 43 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -96,7 +96,7 @@ erDiagram
 | [aiactivity](aiactivity.md) | 1 |
 | [approvals](approvals.md) | 3 |
 | [assignments](assignments.md) | 2 |
-| [assurance](assurance.md) | 7 |
+| [assurance](assurance.md) | 8 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 25 |
 | [collections](collections.md) | 13 |
@@ -132,7 +132,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 68 | 38 |
+| [`activity`](activities.md#activity) | activities | 68 | 39 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -172,9 +172,10 @@ erDiagram
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
-| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
+| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 12 | 0 |
+| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 22 | 3 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 2 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
@@ -409,7 +410,7 @@ erDiagram
 | [`session`](identity.md#session) | identity | 10 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
-| [`signal`](signals.md#signal) | signals | 29 | 3 |
+| [`signal`](signals.md#signal) | signals | 30 | 3 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
 | [`site_read`](contacts.md#site_read) | contacts | 36 | 3 |

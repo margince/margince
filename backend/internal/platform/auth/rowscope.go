@@ -275,13 +275,7 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 		access = "\n\t\t     AND rg.access = '" + grantAccessWrite + "'"
 	}
 	return func(alias string) string {
-		return fmt.Sprintf(`(%s OR EXISTS (
-		   SELECT 1 FROM record_grant rg
-		   WHERE rg.record_type = '%s' AND rg.record_id = %s%s
-		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id IN (%s))
-		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-			inner(alias), table, col(alias, "id"), access, memberIdentitySQL(me), teams)
+		return fmt.Sprintf(`(%s OR %s)`, inner(alias), liveGrantSQL(table, col(alias, "id"), access, me, teams))
 	}
 }
 

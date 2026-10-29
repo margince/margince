@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -67,6 +69,19 @@ type RoutingConfig struct {
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/contacts/leadroutingvocab_test.go)
 var RoutableLeadFields = []string{leadOriginColumn, leadCompanyColumn, candidateCompanyKey}
+
+// staleRuleFields are the fields of rules that name something routing no
+// longer reads. Such a rule never applies: reading it as an empty fact would let
+// a rule that wants an empty value match every lead.
+func (c RoutingConfig) staleRuleFields() []string {
+	var stale []string
+	for _, rule := range c.Rules {
+		if !slices.Contains(RoutableLeadFields, rule.Field) && !slices.Contains(stale, rule.Field) {
+			stale = append(stale, rule.Field)
+		}
+	}
+	return stale
+}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -126,7 +141,7 @@ func chooseOwner(cfg RoutingConfig, lead leadRoutingFacts, openLoad map[ids.User
 		return cfg.CapPerOwner <= 0 || openLoad[id] < cfg.CapPerOwner
 	}
 	for i, rule := range cfg.Rules {
-		if !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
+		if !slices.Contains(RoutableLeadFields, rule.Field) || !strings.EqualFold(rule.Equals, lead.field(rule.Field)) {
 			continue
 		}
 		// The cap outranks the rule (AC-S5: caps are never exceeded): a
@@ -390,6 +405,9 @@ func (w leadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.
 	cfg, err := ParseRoutingConfig(ev.Params)
 	if err != nil {
 		return workflow.RunResult{}, err
+	}
+	if stale := cfg.staleRuleFields(); len(stale) > 0 {
+		slog.WarnContext(ctx, "lead routing skipped rules on fields it no longer reads", "fields", stale)
 	}
 	decision, err := w.store.RouteLead(ctx, ids.From[ids.LeadKind](ev.Entity.ID), cfg)
 	if err != nil {

@@ -80,7 +80,7 @@ func (s *Store) ReissueByEmail(ctx context.Context, email string) ([]IssuedInvit
 func liveSeatsFor(ctx context.Context, tx pgx.Tx, email string) ([]crmcontracts.DealRoomParticipant, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT %s FROM %s
 		   JOIN deal_room r ON r.id = p.room_id
 		  WHERE p.email = $%d AND p.revoked_at IS NULL AND NOT p.preview
@@ -89,7 +89,8 @@ func liveSeatsFor(ctx context.Context, tx pgx.Tx, email string) ([]crmcontracts.
 		                     WHERE live.participant_id = p.id AND live.consumed_at IS NULL
 		                       AND live.superseded_at IS NULL AND live.expires_at > now())
 		  ORDER BY p.created_at`,
-		participantColumns, participantFrom, arg(email)), args...)
+		participantColumns, participantFrom, arg(email))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("find deal room seats by email: %w", err)
 	}

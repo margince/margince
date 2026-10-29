@@ -74,8 +74,9 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d::uuid[]) AND %s`,
-		arg(slices.Collect(maps.Keys(at))), owed), args...)
+	query := sprintf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d::uuid[]) AND %s`,
+		arg(slices.Collect(maps.Keys(at))), owed)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("activities: reading which meetings await an outcome: %w", err)
 	}
