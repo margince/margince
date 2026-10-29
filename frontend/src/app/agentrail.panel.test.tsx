@@ -125,6 +125,9 @@ function stubApi(answers: Answers) {
             : { live_total: answers.liveTotal }),
         });
       }
+      if (pathname.endsWith("/approvals/pending-count")) {
+        return jsonResponse({ count: 0, as_of: "2026-08-01T09:00:00Z" });
+      }
       if (pathname.endsWith("/connectors")) {
         return jsonResponse({ data: [] });
       }
