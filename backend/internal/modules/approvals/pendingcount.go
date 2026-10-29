@@ -37,8 +37,13 @@ func (s *Service) CountPending(ctx context.Context, in ListInput) (PendingCount,
 	}
 	status := statusPending
 	in.Status, in.Cursor, in.FailedForDecider = &status, "", false
-	out := PendingCount{AsOf: s.now()}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	var out PendingCount
+	// One `RepeatableRead` snapshot, so a decision committing mid-walk cannot
+	// reach later batches and miss earlier ones. A composed read's snapshot is
+	// joined instead. Expiry is judged on the service clock, read once, as
+	// every read in this module judges it.
+	err = s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		out = PendingCount{AsOf: s.now()}
 		waiting := pendingEligible(ctx, tx, p, in, out.AsOf)
 		return walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
 			for _, a := range batch {

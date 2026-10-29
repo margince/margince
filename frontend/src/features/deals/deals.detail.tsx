@@ -16,7 +16,7 @@ import {
 } from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
-import { usePendingApprovals } from "../../lib/approvals.queries";
+import { useTargetApprovals } from "../../lib/approvals.queries";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
@@ -194,9 +194,8 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // changes, resolved once here so the render below reads one name.
   const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
   const me = useMe();
-  // The shared pending-approvals hook, not a second query on the same key, so
-  // the Inbox and the rail badge keep one cache entry.
-  const approvalsQuery = usePendingApprovals();
+  // Only this deal's pending approvals, filtered by the server.
+  const approvalsQuery = useTargetApprovals("deal", id);
   // Read here and shared through the cache. The head's "Your move" pill and
   // How it stands read the status card. The Committee reading and the
   // committee card read coverage. None of them asks a second time.
@@ -263,9 +262,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );
-          const dealApprovals = (approvalsQuery.data?.data ?? []).filter(
-            (approval) => approval.target_entity_id === deal.id,
-          );
+          const dealApprovals = approvalsQuery.data?.data ?? [];
           // Pinned to one closure, so every control that advances this deal
           // shares one version of what an advance means.
           const onAdvance = (toStage: Stage) => {

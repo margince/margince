@@ -15,6 +15,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -179,5 +180,72 @@ func TestPendingCountEndpointAnswersTheEngineCount(t *testing.T) {
 	NewHandlers(e.svc).CountPendingApprovals(recorder, request)
 	if recorder.Code == http.StatusOK {
 		t.Fatalf("a caller with no principal was answered a count: %s", recorder.Body.String())
+	}
+}
+
+// stageAdvance stages one deal proposal through the real writer.
+func (e *stagingEnv) stageAdvance(t *testing.T, deal ids.UUID, hash string, ttl *time.Duration) {
+	t.Helper()
+	staging := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
+	if _, err := e.svc.Stage(staging, StageInput{
+		Kind: "advance_deal", ProposedChange: []byte(`{"stage":"won"}`), DiffHash: hash,
+		TargetType: tableDeal, TargetID: deal, Summary: "Review the proposed deal stage", TTL: ttl,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A count inside a composed read answers from that read's snapshot. A staging
+// committed meanwhile is missing from it and present in the next fresh count.
+func TestPendingCountReadsTheSnapshotItIsCalledIn(t *testing.T) {
+	e := setupStaging(t)
+	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
+	e.stageAdvance(t, deal, "snapshot-0", nil)
+	e.stageAdvance(t, deal, "snapshot-1", nil)
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	err := database.WithWorkspaceSnapshot(reader, e.pool, func(ctx context.Context) error {
+		before, err := e.svc.CountPending(ctx, ListInput{})
+		if err != nil {
+			return err
+		}
+		e.stageAdvance(t, deal, "snapshot-2", nil)
+		inside, err := e.svc.CountPending(ctx, ListInput{})
+		if err != nil {
+			return err
+		}
+		if before.Count != 2 || inside.Count != 2 {
+			t.Fatalf("counts in one snapshot were %d then %d, want 2 both times", before.Count, inside.Count)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := e.svc.CountPending(reader, ListInput{})
+	if err != nil || after.Count != 3 {
+		t.Fatalf("a fresh count saw %d, want 3: %v", after.Count, err)
+	}
+}
+
+// The clock steps past the row's expiry on every read. A count that judged
+// expiry on a later read than as_of would leave out a row pending at as_of.
+func TestPendingCountJudgesExpiryAtTheInstantItReports(t *testing.T) {
+	e := setupStaging(t)
+	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
+	ttl := time.Hour
+	e.stageAdvance(t, deal, "instant-0", &ttl)
+	start := time.Now()
+	reads := 0
+	e.svc.now = func() time.Time {
+		at := start.Add(time.Duration(reads) * 2 * ttl)
+		reads++
+		return at
+	}
+	got, err := e.svc.CountPending(seatFor(e.ws, e.rep, tableDeal, objectActivity), ListInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Count != 1 || got.NextExpiry == nil || !got.NextExpiry.After(got.AsOf) {
+		t.Fatalf("as_of %v, next expiry %v, count %d: expiry was not judged at as_of", got.AsOf, got.NextExpiry, got.Count)
 	}
 }
