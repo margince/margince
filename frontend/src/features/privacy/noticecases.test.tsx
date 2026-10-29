@@ -18,6 +18,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { mailPreview } from "./controllermail.fixtures";
 import { NoticeCasesCard } from "./noticecases";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -234,7 +235,7 @@ describe("the disclosure-duty queue", () => {
     ).toBeNull();
   });
 
-  it("sends the privacy notice to the duty's contact after a confirm", async () => {
+  it("previews the notice for the duty's contact, and sends it only on the confirm", async () => {
     const sent = stubRoutes({
       "GET /me": () =>
         jsonResponse(
@@ -243,6 +244,8 @@ describe("the disclosure-duty queue", () => {
             allow: { privacy_request: ["read", "update"], contact: ["update"] },
           }),
         ),
+      "GET /contacts/contact-1/consent/mail-preview": () =>
+        jsonResponse(mailPreview("privacy_notice")),
       "POST /contacts/contact-1/consent/privacy-notice": () =>
         jsonResponse({
           delivered_to: "lena@kps.test",
@@ -252,6 +255,7 @@ describe("the disclosure-duty queue", () => {
         }),
     });
     render(<NoticeCasesCard />);
+    const posts = () => sent.filter((s) => s.key.startsWith("POST"));
 
     const user = userEvent.setup();
     await pressVerb(
@@ -260,15 +264,29 @@ describe("the disclosure-duty queue", () => {
       en["noticeDuty.sendNotice"],
     );
     const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("lena@kps.test")).toBeVisible();
+    expect(
+      sent.some((s) =>
+        s.url.endsWith(
+          "/contacts/contact-1/consent/mail-preview?kind=privacy_notice",
+        ),
+      ),
+    ).toBe(true);
+    expect(posts()).toEqual([]);
+
     await user.click(
       within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
     );
     await waitFor(() =>
-      expect(
-        sent.some(
-          (s) => s.key === "POST /contacts/contact-1/consent/privacy-notice",
-        ),
-      ).toBe(true),
+      expect(posts()).toEqual([
+        {
+          key: "POST /contacts/contact-1/consent/privacy-notice",
+          url: expect.stringMatching(
+            /\/contacts\/contact-1\/consent\/privacy-notice$/,
+          ),
+          body: { language: "de" },
+        },
+      ]),
     );
   });
 

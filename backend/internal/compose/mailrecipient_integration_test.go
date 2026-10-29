@@ -399,7 +399,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 		lane := setupConfirmLane(t)
 		lane.store.WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
 		integration.SetBaseLanguage(lane.e.Admin(), t, lane.e.Pool, language)
-		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 			t.Fatal(err)
 		}
 		purpose, err := lane.store.CreatePurpose(lane.e.Admin(), "marketing_email", "Product news", true)

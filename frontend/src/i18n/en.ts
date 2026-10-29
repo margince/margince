@@ -1835,6 +1835,10 @@ export const en = {
   // system did its housekeeping" are different answers to "who do I ask".
   "trust.systemTag": "System task: {job}",
   "trust.systemUnnamed": "System task",
+  "trust.relayForYou": "Sent by Margince for you",
+  "trust.relayForColleague": "Sent by Margince for a colleague",
+  "trust.relaySent": "Sent by Margince",
+  "trust.relayFrom": "From {address}",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.ai_activity": "AI activity record",
@@ -7190,6 +7194,14 @@ export const en = {
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
+  "review.enforcementPreviewLeftOut_one":
+    "Turning it on now leaves {count} deal out of that line.",
+  "review.enforcementPreviewLeftOut_other":
+    "Turning it on now leaves {count} deals out of that line.",
+  "review.enforcementPreviewUnknown_one":
+    "{count} deal has not been judged yet and would not count either.",
+  "review.enforcementPreviewUnknown_other":
+    "{count} deals have not been judged yet and would not count either.",
   "review.enforcementOn": "The qualified forecast is on.",
   "review.enforcementOff": "The qualified forecast is off.",
   "review.enforcementAdminOnly": "Only an admin can change this.",
@@ -8996,9 +9008,18 @@ export const en = {
   "notice.state.blocked": "Blocked",
   "notice.state.notRequired": "Not required",
   "notice.sendTitle": "Send privacy notice?",
-  "notice.sendBody":
-    "{contact} receives an email saying who holds their data and why.",
   "notice.sendConfirm": "Send notice",
+  "controllerMail.confirmTitle": "Send confirmation request?",
+  "controllerMail.confirmSend": "Send request",
+  "controllerMail.relayTitle": "Sent from the installation",
+  "controllerMail.relay":
+    "Margince sends this from the installation’s address, not from your mailbox.",
+  "controllerMail.language": "Language",
+  "controllerMail.defaultLanguage":
+    "The installation’s mail language is {language}.",
+  "controllerMail.noSender": "None named by the mail relay",
+  "controllerMail.loading": "Loading preview…",
+  "controllerMail.noPreview": "Nothing can be sent until the preview loads.",
   "notice.sentTo": "Privacy notice sent to {address}",
   "notice.overdue": "Overdue",
   "notifications.bell": "Notifications",

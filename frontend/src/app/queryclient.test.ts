@@ -2,6 +2,7 @@ import {
   MutationObserver,
   onlineManager,
   type QueryClient,
+  QueryObserver,
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
@@ -157,6 +158,54 @@ describe("the query client defaults", () => {
         5_000,
       ),
     ).toBe(true);
+  });
+
+  it("shares Home's day with the queue drawer, and nothing else with a second view", () => {
+    const day = {
+      queryKey: ["worklist", "mine", "all", ""],
+      queryHash: "shared-day",
+      state: { dataUpdatedAt: 10_000 },
+    };
+    const handled = {
+      ...day,
+      queryKey: ["worklist", "handled"],
+      queryHash: "handled",
+    };
+    expect(liveOnMount({ ...day, getObserversCount: () => 1 }, 20_000)).toBe(
+      "always",
+    );
+    expect(liveOnMount({ ...day, getObserversCount: () => 2 }, 20_000)).toBe(
+      true,
+    );
+    expect(
+      liveOnMount({ ...handled, getObserversCount: () => 2 }, 20_000),
+    ).toBe("always");
+  });
+
+  it("fetches a live work read once for two views on screen, and again for a later mount", async () => {
+    const client = createQueryClient();
+    let fetched = 0;
+    const options = {
+      queryKey: ["worklist", "mine", "all", ""],
+      queryFn: async () => ++fetched,
+    };
+    const home = new QueryObserver(client, options);
+    const stopHome = home.subscribe(() => {});
+    await vi.waitFor(() =>
+      expect(home.getCurrentResult().fetchStatus).toBe("idle"),
+    );
+    expect(fetched).toBe(1);
+    const drawer = new QueryObserver(client, options);
+    const stopDrawer = drawer.subscribe(() => {});
+    expect(drawer.getCurrentResult().fetchStatus).toBe("idle");
+    expect(fetched).toBe(1);
+    stopDrawer();
+    stopHome();
+    const back = new QueryObserver(client, options);
+    const stopBack = back.subscribe(() => {});
+    await vi.waitFor(() => expect(fetched).toBe(2));
+    stopBack();
+    client.clear();
   });
 
   it("reports a failed query once, through the global sink", async () => {

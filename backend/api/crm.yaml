@@ -23900,8 +23900,7 @@ paths:
       summary: Mail the subject a single-use link that confirms one marketing purpose.
       description: |
         Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-        primary address — `queued` reports whether it reached the lane, and an installation with
-        none still mints and answers 201. The purpose must be live and must itself require double
+        primary address. The purpose must be live and must itself require double
         opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
         confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
         authenticated operator, who could paste it straight back into `recordConsent` — a round
@@ -23916,10 +23915,8 @@ paths:
         authorization decision recording why the installation was allowed to send it, and a
         timeline entry — which is what makes it visible to a subject-access export and reachable by
         erasure. `queued` reports that the message was staged in the same transaction that minted
-        the link; `sendable` says whether this installation has a lane at all. An installation with
-        no lane still mints the token and answers 201, because the write happened and reporting it
-        as a failure would invite a second request that mints another token and supersedes the
-        first.
+        the link. An installation with no lane is refused with 409 before anything is minted,
+        because the link is mailed and never returned.
       requestBody:
         required: true
         content:
@@ -23938,6 +23935,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
           description: |
             The request named no purpose, named one no `consent_purpose` row holds, or the contact
@@ -23983,6 +23981,51 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/mail-preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: previewControllerMail
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
+      description: |
+        Renders the mail the matching send would stage now: its From and To addresses, subject and
+        text. The link is not minted, so the text carries a labelled marker where the send puts
+        the link. Nothing is written and nothing is sent.
+
+        It admits the same callers and contacts as the send, so it never shows a mail the send
+        would refuse.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema: { type: string, enum: [record_confirmation, privacy_notice] }
+          description: '`record_confirmation` previews `confirm-request`; `privacy_notice` previews `privacy-notice`.'
+        - name: language
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/MailLanguage' }
+          description: The language to render in. Absent means the installation's mail language.
+      responses:
+        '200':
+          description: The mail as the send would stage it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControllerMailPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
+        '422':
+          description: |
+            The contact carries no live email address, the installation's controller particulars
+            are incomplete, or the language is not one this build sends in.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /contacts/{id}/consent/privacy-notice:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -24012,6 +24055,11 @@ paths:
         The address is derived from the contact's own live primary email, never taken from the
         caller, and the token is never returned. Both properties are the same ones
         `confirm-request` rests on and for the same reasons.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ControllerMailSend' }
       responses:
         '201':
           description: Notice issued, and what became of the delivery.
@@ -24021,6 +24069,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /contacts/{id}/consent/confirm-request:
     parameters:
@@ -24052,9 +24101,13 @@ paths:
         row, an authorization decision recording why the installation was allowed to send it, and a
         timeline entry — which is what makes it visible to a subject-access export and reachable by
         erasure. `queued` reports that the message was staged, in the same transaction that minted
-        the link; `sendable` says whether this installation has a lane at all. An installation with
-        no lane still mints the token and answers 201, because the write happened and reporting it
-        as a failure would invite a second request that mints another token and supersedes the first.
+        the link. An installation with no lane is refused with 409 before anything is minted,
+        because the link is mailed and never returned.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ControllerMailSend' }
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -24064,8 +24117,11 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ControllerMailRefused' }
         '422':
-          description: The contact carries no live email address, so there is no mailbox a link could reach.
+          description: |
+            The contact carries no live email address, so there is no mailbox a link could reach,
+            or the language is not one this build sends in.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -28348,6 +28404,10 @@ paths:
         deal: before that the qualified forecast would count nothing. A setting fixed by
         the environment is refused with `409 setting_locked`.
 
+        Switching on also sends `preview_digest`, the `digest` of the preview the admin
+        saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
+        so nobody switches on a picture that is no longer true.
+
         Switching off takes effect at once. The reviews, their tasks and their history
         stay; only the qualified readings disappear, and the baseline readings never
         changed.
@@ -28360,6 +28420,9 @@ paths:
               required: [enabled]
               properties:
                 enabled: { type: boolean }
+                preview_digest:
+                  type: string
+                  description: The `digest` of the preview shown before switching on.
               additionalProperties: false
       responses:
         '200':
@@ -33295,6 +33358,13 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    ControllerMailRefused:
+      description: |
+        The installation cannot send its own mail (`conflict`), or the consent engine refuses this
+        mail to this contact (`consent_not_granted`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     VersionConflict:
       description: 'Optimistic-lock failure — the entity changed since the version in If-Match (`code: version_skew`).'
       content:
@@ -36825,6 +36895,11 @@ components:
           description: |
             True when the message has blind recipients this caller may not see. The viewer says
             that they exist rather than showing an empty list that reads as none.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`. Its `from_address` is the address the mail left from, whatever `from` names.
         attachments:
           type: array
           items: { $ref: '#/components/schemas/EmailAttachmentSummary' }
@@ -44497,6 +44572,10 @@ components:
             What the receipt is evidence OF. The graph counts attendees and organizers as well
             as correspondents, so a meeting is as much a receipt here as a mail — and a citation
             that drew every one of them as an email would tell a reader a meeting was one.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay, as on `Activity`.
 
     ContactGraphRoute:
       type: object
@@ -49719,6 +49798,11 @@ components:
             Present exactly when `kind=email`. What the canonical email row renders, so a list
             does not have to fetch a message per visible line to draw one. Every other kind
             carries none, and a reader branches on its presence rather than on the kind word.
+        controller_send:
+          allOf: [{ $ref: '#/components/schemas/ControllerSend' }]
+          readOnly: true
+          nullable: true
+          description: Present only on a mail sent through the installation's own relay. Absent on every other row.
         message_move:
           type: string
           enum: [needs_reply, waiting_for_them, none]
@@ -56216,6 +56300,26 @@ components:
         state:
           type: string
           enum: [not_enrolled, observing, enforcing]
+        preview:
+          $ref: '#/components/schemas/ForecastEnforcementPreview'
+      additionalProperties: false
+    ForecastEnforcementPreview:
+      type: object
+      description: >-
+        What switching enforcement on would do now. Present only while `observing`, and only
+        to an admin: it counts every open deal. Switching on sends `digest` back, and is
+        refused when the deals' treatment changed since.
+      required: [left_out_count, unknown_count, digest]
+      properties:
+        left_out_count:
+          type: integer
+          description: Open deals the qualified forecast would leave out, under review or unsupported.
+        unknown_count:
+          type: integer
+          description: Open deals the last check could not judge on current evidence.
+        digest:
+          type: string
+          description: Names the policy version and every open deal's treatment this preview counted.
       additionalProperties: false
     ForecastAssurance:
       type: object
@@ -60614,6 +60718,60 @@ components:
             plaintext link is mailed and never returned, so one that cannot be sent is one
             nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
 
+    MailLanguage:
+      type: string
+      enum: [de, en, vi]
+      description: A language this build writes the installation's own mail in.
+
+    ControllerMailSend:
+      type: object
+      description: How to send a mail the installation writes as controller. An absent body sends in the installation's mail language.
+      properties:
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: |
+            The language of the mail and of the page its link opens. Absent means the
+            installation's mail language.
+
+    ControllerMailPreview:
+      type: object
+      description: The exact mail a controller send would stage now, with a marker where the link goes.
+      required: [kind, language, default_language, languages, from_address, to_address, subject, text]
+      properties:
+        kind: { type: string, enum: [record_confirmation, privacy_notice] }
+        language: { $ref: '#/components/schemas/MailLanguage' }
+        default_language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The installation's mail language, which a send with no language uses.
+        languages:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/MailLanguage' }
+          description: Every language this build can send the mail in, in a stable order.
+        from_address:
+          type: [string, 'null']
+          description: The address the relay sends from. Null when the installation names none.
+        to_address:
+          type: string
+          description: The contact's own live primary email, the only address the send mails.
+        subject: { type: string }
+        text:
+          type: string
+          description: |
+            The plain-text body as sent. Where the send puts the link, it carries a marker in the
+            mail's language instead of a URL.
+
+    ControllerSend:
+      type: object
+      description: |
+        Present on a mail sent through the installation's own relay rather than through a
+        member's mailbox. Its presence is the lane.
+      required: [from_address]
+      properties:
+        from_address:
+          type: [string, 'null']
+          description: The From address the mail left from, or was staged with while it waits. Null when the relay names none.
+
     CompanyVatCheck:
       type: object
       description: |
@@ -62673,6 +62831,9 @@ components:
           items:
             type: string
             enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     SubscriptionConfirmationPage:
       type: object
@@ -62694,6 +62855,9 @@ components:
           type: string
           enum: [unknown, granted, withdrawn]
           description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     RecordConfirmationPage:
       type: object
@@ -62719,6 +62883,9 @@ components:
           type: array
           description: 'Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.'
           items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
+        language:
+          allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+          description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 
     ConfirmFieldOrigin:
       type: object

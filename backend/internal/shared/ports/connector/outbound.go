@@ -232,6 +232,9 @@ type SendReceipt struct {
 	// every caller to carry a recovery path that is not theirs. ProviderMessageID
 	// is durable on the delivery, so a later pass can re-ask the provider.
 	RFC822MessageID string
+	// FromAddress is the address the message left from, when the transport
+	// reports it; empty keeps the one recorded at staging.
+	FromAddress string
 }
 
 // InlineImage is one image a message's markup shows by content id.

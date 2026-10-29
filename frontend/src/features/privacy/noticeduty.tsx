@@ -14,7 +14,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
@@ -23,6 +22,11 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { WorklistItem } from "../worklist/worklist.queries";
+import {
+  ControllerMailDialog,
+  type ControllerMailIssued,
+  type ControllerMailKind,
+} from "./controllermail";
 import {
   acquisitionKindLabel,
   acquisitionRecorder,
@@ -73,25 +77,20 @@ export function NoticeDuty({
     }
   };
 
-  const send = useMutation({
-    mutationFn: async (route: "privacy-notice" | "confirm-request") => {
-      return unwrap(
-        route === "privacy-notice"
-          ? await api.POST("/contacts/{id}/consent/privacy-notice", {
-              params: { path: { id: contactId } },
-            })
-          : await api.POST("/contacts/{id}/consent/confirm-request", {
-              params: { path: { id: contactId } },
-            }),
-      );
-    },
-    onSuccess: (issued) =>
-      settle(
-        issued.queued
-          ? t("noticeDuty.sent", { address: issued.delivered_to })
-          : t("noticeDuty.notSent", { address: issued.delivered_to }),
-      ),
-  });
+  // The kind outlives the close, so the dialog keeps its words while it leaves.
+  const [mailKind, setMailKind] =
+    useState<ControllerMailKind>("privacy_notice");
+  const [previewing, setPreviewing] = useState(false);
+  const preview = (kind: ControllerMailKind) => {
+    setMailKind(kind);
+    setPreviewing(true);
+  };
+  const reportSent = (issued: ControllerMailIssued) =>
+    settle(
+      issued.queued
+        ? t("noticeDuty.sent", { address: issued.delivered_to })
+        : t("noticeDuty.notSent", { address: issued.delivered_to }),
+    );
 
   const excuse = useMutation({
     mutationFn: async (vars: { state: ExcuseState; note: string }) => {
@@ -124,14 +123,14 @@ export function NoticeDuty({
             <div className="notice-duty-actions">
               <Button
                 variant="primary"
-                disabled={send.isPending}
-                onClick={() => send.mutate("privacy-notice")}
+                aria-haspopup="dialog"
+                onClick={() => preview("privacy_notice")}
               >
                 {t("noticeDuty.sendNotice")}
               </Button>
               <Button
-                disabled={send.isPending}
-                onClick={() => send.mutate("confirm-request")}
+                aria-haspopup="dialog"
+                onClick={() => preview("record_confirmation")}
               >
                 {t("noticeDuty.askConfirm")}
               </Button>
@@ -141,7 +140,13 @@ export function NoticeDuty({
             </div>
           )
         )}
-        {send.isError && <ErrorLine error={send.error} />}
+        <ControllerMailDialog
+          contactId={contactId}
+          kind={mailKind}
+          open={previewing}
+          onClose={() => setPreviewing(false)}
+          onSent={reportSent}
+        />
         <ExcuseModal
           open={excusing}
           onClose={() => setExcusing(false)}

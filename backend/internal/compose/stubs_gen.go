@@ -1423,6 +1423,10 @@ func (stubs) GetContactConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "GetContactConsentGuard")
 }
 
+func (stubs) PreviewControllerMail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewControllerMailParams) {
+	httperr.NotImplemented(w, r, "PreviewControllerMail")
+}
+
 func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SendPrivacyNotice")
 }

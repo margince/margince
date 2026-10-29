@@ -214,6 +214,9 @@ var erasureColumnBaseline = map[string][]string{
 		// which put the address back on the one table whose whole point is that
 		// the address copy is scrubbed.
 		"from_name",
+		// The installation's own relay address a controller delivery was
+		// staged with, the same on every one of them.
+		"from_address",
 		// The storage key of the workspace's own logo the markup embeds. It
 		// names the workspace's mark and is the same on every delivery.
 		"inline_logo_key",
