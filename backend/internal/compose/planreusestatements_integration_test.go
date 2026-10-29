@@ -37,8 +37,8 @@ func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryE
 var boundIndexedColumn = regexp.MustCompile(
 	`(?i)\.(kind|direction|role|status|audience|entity_type|meeting_status|archived_at)\s*(=|<>|!=|IN|=\s*ANY)\s*\(?\s*\$\d+`)
 
-// The reads a composed worklist reuses generic plans for send every partial-index
-// predicate as a literal, which is what lets a generic plan keep the index.
+// The reads a composed worklist reuses generic plans for spell every
+// partial-index predicate as a literal. That lets a generic plan keep the index.
 func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) {
 	e := integration.Setup(t)
 	sent := &sentStatements{}

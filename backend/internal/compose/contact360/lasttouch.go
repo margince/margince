@@ -151,8 +151,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow)
-	// Inside a composed read it reuses its generic plan: it keys on the
-	// contacts, spells every kind as a literal, and plans far slower than it runs.
+	// Inside a composed read it reuses its generic plan. It keys on the contacts
+	// and spells every kind as a literal, and it plans far slower than it runs.
 	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 		return scanLastTouches(ctx, tx, query, args, out)
 	})
