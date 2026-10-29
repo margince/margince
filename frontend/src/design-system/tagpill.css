@@ -9,12 +9,6 @@
   flex: none;
 }
 
-/* Inside a TagPill the dot sits in Badge's label, which is inline text rather
-   than flex, so Badge's gap never reaches it and the margin stands in. */
-.badge-label > .tagpill-dot {
-  margin-inline-end: 5px;
-}
-
 /* Each tone reads its own --tag* token, which is where both themes' values are
    stated. They are deliberately NOT the status tokens: a dot on --danger reads
    as a warning to anyone who has learned the rest of the palette, and retuning
