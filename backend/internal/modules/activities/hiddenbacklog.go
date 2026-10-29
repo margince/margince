@@ -251,17 +251,25 @@ type waitingRelaxation struct {
 // paged read, and it is deliberately left alone: this change adds no copy, and
 // folding that one in means threading its keyset bound through here, which is
 // a refactor of the queue's read rather than of this guardrail.
-//
-// It answers the statement's candidates apart from its body. The caller gates
-// them once, under waitingWithSQL, so two halves of one query share one gate.
 func (s *Store) waitingStatement(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, relax waitingRelaxation, measured int,
 	arg func(any) int,
-) (candidates, body string, err error) {
+) (string, error) {
 	instant := arg(asOf)
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	// The same gate for the reply that may LIFT a snooze. A reply this
+	// reader cannot see must not put the row back on their day: the row
+	// reappearing is itself the disclosure that it arrived.
+	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	if err != nil {
+		return "", err
+	}
 	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	if linkVisible == "" {
 		linkVisible = scopeUnbounded
@@ -292,7 +300,7 @@ func (s *Store) waitingStatement(
 	}
 	ownDomains, err := s.ownDomainList(ctx, tx)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	setAside := neverRelaxed
 	if relax.keepSetAside {
@@ -301,30 +309,27 @@ func (s *Store) waitingStatement(
 	// Relaxations widen eligibility rules, never what a reader may be shown.
 	bookedDiscover, err := bookedDiscoverClause(ctx, arg)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	requestTaskDiscover, err := requestTaskDiscoverClause(ctx, arg)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg)
-	at, reader := fmt.Sprintf("$%d", instant), arg(relax.reader)
-	// The reply that may LIFT a snooze takes the gate too: the row reappearing
-	// on the reader's day is itself the disclosure that it arrived.
-	return waitingCandidatesSQL(at, fmt.Sprintf("$%d", reader), responsibility, horizon), fmt.Sprintf(waitingRepliesSQL, instant, waitingReadableSQL("a"), linkVisible, WaitingScanCap,
+	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
-		reader,
+		arg(relax.reader),
 		responsibility,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
-		messageSnoozeLiftedSQL(at, waitingReadableSQL("back")),
+		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,
 		noKeyset, bookedDiscover,
@@ -337,11 +342,7 @@ func (s *Store) countWaiting(
 ) (int, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	candidates, inner, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
-	if err != nil {
-		return 0, err
-	}
-	with, err := waitingWithSQL(ctx, candidates, arg)
+	inner, err := s.waitingStatement(ctx, tx, asOf, relax, measured, arg)
 	if err != nil {
 		return 0, err
 	}
@@ -349,7 +350,7 @@ func (s *Store) countWaiting(
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a
 	// count(*) pushed inside would report groups before the cap.
-	if err := tx.QueryRow(ctx, with+`SELECT count(*) FROM (`+inner+`) waiting`,
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM (`+inner+`) waiting`,
 		planEachBind(args)...).Scan(&count); err != nil {
 		return 0, err
 	}

@@ -274,11 +274,17 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 		// published the wait, the timing and the linked record — and let a
 		// reader watch a row vanish to learn that a reply they may not see had
 		// arrived.
-		// The same gate holds the reply that may LIFT a snooze. A reply this
+		content, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return err
+		}
+		// The same gate for the reply that may LIFT a snooze. A reply this
 		// reader cannot see must not put the row back on their day: the row
-		// reappearing is itself the disclosure that it arrived. Both read one
-		// gated set (waitingWithSQL), so the statement carries one gate.
-		content, backContent := waitingReadableSQL("a"), waitingReadableSQL("back")
+		// reappearing is itself the disclosure that it arrived.
+		backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+		if err != nil {
+			return err
+		}
 		// The links come back only where the reader may see what they point at.
 		// One visible contact must not expose a colleague's deal, which is the
 		// disclosure the timeline's own link read guards against.
@@ -327,12 +333,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		responsibility := seats.responsibilitySQL(identities, arg)
-		with, err := waitingWithSQL(ctx, waitingCandidatesSQL(fmt.Sprintf("$%d", instant), fmt.Sprintf("$%d", reader), responsibility, horizon), arg)
-		if err != nil {
-			return err
-		}
 		rows, err := tx.Query(ctx,
-			with+"SELECT waiting.*, "+directMailSeatsSQL(identities)+" FROM ("+fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+			"SELECT waiting.*, "+directMailSeatsSQL(identities)+" FROM ("+fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
 				liveRecord(openDealPredicate, "d"),
 				liveRecord(workingLeadPredicate, "ld"),

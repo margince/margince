@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"strings"
 	"time"
 
@@ -340,3 +341,12 @@ var awaitingRepliesSQL = `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`
+
+// threadNeedSQL names each of candidates and the live rows on its thread. A
+// statement gates that set once when its later-message and snooze-lift tests
+// read the same thread; both match by correspondence.ThreadSQL. candidates
+// names a relation with an activity's id, thread_key, kind and channel_provider.
+func threadNeedSQL(candidates string) string {
+	return `SELECT c.id FROM ` + candidates + ` c
+	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c") + ` AND t.restricted_at IS NULL`
+}
