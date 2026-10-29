@@ -954,7 +954,6 @@ export const en = {
   "retention.scopeReportEdition": "Saved report editions",
   "reporting.lastCapture": "Last successful capture {at}",
   "reporting.allocationDifference": "Team target minus allocated targets",
-  "reporting.view": "Performance view",
   "reporting.fromDate": "From",
   "reporting.throughDate": "Through",
   "reporting.chooseDates": "Choose a start and end date to view this period.",

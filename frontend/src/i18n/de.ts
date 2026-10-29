@@ -1000,7 +1000,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.scopeReportEdition": "Gespeicherte Berichtsausgaben",
   "reporting.lastCapture": "Letzte erfolgreiche Erfassung {at}",
   "reporting.allocationDifference": "Teamziel abzüglich verteilter Ziele",
-  "reporting.view": "Leistungsansicht",
   "reporting.fromDate": "Von",
   "reporting.throughDate": "Bis einschließlich",
   "reporting.chooseDates": "Wähle ein Start- und Enddatum für diesen Zeitraum.",

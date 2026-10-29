@@ -1,5 +1,5 @@
 import "./reporting.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -19,11 +19,15 @@ import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { metricLabel, unitLabel } from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingFramework,
+} from "./reporting.queries";
 
 type Framework = components["schemas"]["ReportingFramework"];
 export function ReportingDefinitions() {
@@ -32,13 +36,7 @@ export function ReportingDefinitions() {
   const [section, setSection] = useState("definitions");
   const canPublish = useCanWrite("reporting_framework", "update");
   const catalog = useReportingCatalog();
-  const framework = useQuery({
-    enabled: canPublish && section === "setup",
-    queryKey: ["reporting-framework"],
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/framework"));
-    },
-  });
+  const framework = useReportingFramework(canPublish && section === "setup");
   return (
     <>
       {canPublish && (
@@ -125,16 +123,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const scopes = useAnalyticsContext();
   const [definition, setDefinition] = useState(framework.definition);
   const [reason, setReason] = useState("");
-  const pipelines = useQuery({
-    queryKey: ["reporting-framework-pipelines"],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-    },
-  });
+  const pipelines = usePipelines();
   const write = useMutation({
     mutationFn: async ({
       version,
@@ -152,9 +141,6 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["reporting-framework"] });
-      await client.invalidateQueries({
-        queryKey: ["reporting-overview-setup"],
-      });
     },
   });
   const toggleStage = (
@@ -210,7 +196,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
       <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
         {(result) => (
           <>
-            {result.data.map((pipeline) => (
+            {result.map((pipeline) => (
               <fieldset key={pipeline.id}>
                 <legend>
                   {pipeline.name} · {t("reporting.qualification")}
@@ -266,7 +252,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
                   value={capture.pipeline_id ?? ""}
                   options={[
                     { value: "", label: t("reporting.allPipelines") },
-                    ...(pipelines.data?.data ?? []).map((pipeline) => ({
+                    ...(pipelines.data ?? []).map((pipeline) => ({
                       value: pipeline.id,
                       label: pipeline.name,
                     })),

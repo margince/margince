@@ -10,11 +10,11 @@ import { Select } from "../../design-system/select";
 import { useNow } from "../../format/now";
 import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import { useT } from "../../i18n";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingSelection } from "./reporting.model";
-import { useReportingPipelines } from "./reporting.queries";
 
 export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
   "this_month",
@@ -50,7 +50,7 @@ export function ReportingFilters({
   // The day the period's bounds are counted in, not the viewer's own.
   const today = isoOrBlank(dayInZone(useNow(0), zone)) || undefined;
   const context = useAnalyticsContext();
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const [draftFrom, setDraftFrom] = useState(
     selection.interval
       ? dayInZone(Date.parse(selection.interval.start_at), zone)
@@ -147,7 +147,7 @@ export function ReportingFilters({
               value={selection.pipeline_id ?? ""}
               options={[
                 { value: "", label: t("reporting.allPipelines") },
-                ...(pipelines.data?.data ?? []).map((pipeline) => ({
+                ...(pipelines.data ?? []).map((pipeline) => ({
                   value: pipeline.id,
                   label: pipeline.name,
                 })),
