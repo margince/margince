@@ -11,6 +11,7 @@ package contacts
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -342,6 +343,10 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 			desired = append(desired, string(t))
 		}
 		in.RelationshipTypes = &desired
+	}
+	if req.ExtensionRelationshipTypes != nil {
+		desired := slices.Clone(*req.ExtensionRelationshipTypes)
+		in.ExtensionRelationshipTypes = &desired
 	}
 	return in
 }

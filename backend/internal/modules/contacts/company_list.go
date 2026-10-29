@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -62,6 +63,9 @@ type ListCompaniesInput struct {
 	// single classification field, now retired.
 	Lifecycle        *string
 	RelationshipType *string
+	// ExtensionRelationshipType is RelationshipType for an `ext:<unit>:<type>`
+	// value, kept apart so the closed core enum stays closed.
+	ExtensionRelationshipType *string
 	// Industry is free text on the record; SizeBand is the contract's enum.
 	Industry *string
 	SizeBand *string
@@ -301,15 +305,25 @@ func appendCompanyEnumClauses(where []string, in ListCompaniesInput, arg func(an
 			return nil, httperr.Validation("relationship_type", "not_a_known_value",
 				"filter by one of the relationship types the contract defines, or leave the parameter off")
 		}
-		// EXISTS, not a join: an account carries several types, and a join
-		// would return it once per row for the keyset cursor to page over.
-		where = append(where, storekit.SQLf(`EXISTS (
-			SELECT 1 FROM company_relationship_type rt
-			WHERE rt.company_id = company.id
-			  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`,
-			arg(*in.RelationshipType)))
+		where = append(where, relationshipTypeClause(arg(*in.RelationshipType)))
+	}
+	if in.ExtensionRelationshipType != nil {
+		if _, declared := companytypes.Lookup(*in.ExtensionRelationshipType); !declared {
+			return nil, httperr.Validation("extension_relationship_type", "not_a_known_value",
+				"filter by a company type an installed extension declares, or leave the parameter off")
+		}
+		where = append(where, relationshipTypeClause(arg(*in.ExtensionRelationshipType)))
 	}
 	return where, nil
+}
+
+// relationshipTypeClause is EXISTS, not a join: an account carries several types,
+// and a join would return it once per row for the keyset cursor to page over.
+func relationshipTypeClause(argument int) string {
+	return storekit.SQLf(`EXISTS (
+		SELECT 1 FROM company_relationship_type rt
+		WHERE rt.company_id = company.id
+		  AND rt.relationship_type = $%d AND rt.archived_at IS NULL)`, argument)
 }
 
 // scanCompanyPage drains one list query's rows: each company

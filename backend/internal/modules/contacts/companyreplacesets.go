@@ -19,12 +19,16 @@ import (
 // company carries them. The staged sets are already normalised and have their
 // primary elected, so they compare directly with the live rows.
 func companyReplaceSetsChanged(ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput) (bool, error) {
-	if in.RelationshipTypes != nil {
-		live, err := readLiveRelationshipTypes(ctx, tx, id)
+	if in.RelationshipTypes != nil || in.ExtensionRelationshipTypes != nil {
+		all, err := readLiveRelationshipTypes(ctx, tx, id)
 		if err != nil {
 			return false, err
 		}
-		if !sameStringSet(live, *in.RelationshipTypes) {
+		live, liveExt := splitRelationshipTypes(all)
+		if in.RelationshipTypes != nil && !sameStringSet(live, *in.RelationshipTypes) {
+			return true, nil
+		}
+		if in.ExtensionRelationshipTypes != nil && !sameStringSet(liveExt, *in.ExtensionRelationshipTypes) {
 			return true, nil
 		}
 	}

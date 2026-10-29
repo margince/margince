@@ -5350,6 +5350,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which company types installed extensions add beside core's own.
+         * @description The values a company can carry in `extension_relationship_types`, and the label a
+         *     screen shows for each. Which extensions are installed is a fact of the binary, so the
+         *     contract cannot list the values; this operation does.
+         *
+         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     on them. Each value and label is declared in extension code, never typed by an
+         *     administrator. Empty when no installed extension declares a type.
+         */
+        get: operations["listCompanyTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks": {
         parameters: {
             query?: never;
@@ -28266,6 +28292,8 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
+            /** @description The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from `relationship_types`, whose list stays the closed set above. Each value is declared by the extension it names; a value no extension declares is refused (422, `invalid_enum`). */
+            extension_relationship_types?: string[];
             /**
              * @description Where to fetch the company's logo image (A55) — the `getCompanyLogo`
              *     path for this record, cookie-authenticated and same-origin. A revision query changes
@@ -28404,6 +28432,8 @@ export interface components {
             lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
+            /** @description Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like `relationship_types`. Absent = untouched; an empty array clears them. A value no extension declares is refused with 422. */
+            extension_relationship_types?: string[];
         } & {
             [key: string]: unknown;
         };
@@ -35424,6 +35454,18 @@ export interface components {
          *     states the invariant; `GET /v1/channel-providers` resolves the live set.
          */
         ProviderRef: string;
+        /** @description The company types installed extensions add, ordered by value. */
+        CompanyTypeDirectory: {
+            data: components["schemas"]["CompanyTypeOption"][];
+        };
+        CompanyTypeOption: {
+            /** @description The value a company carries, `ext:<unit>:<type>`. */
+            value: string;
+            /** @description What a screen shows, in English, as the extension declared it. */
+            label: string;
+            /** @description The extension that declared the type. */
+            unit: string;
+        };
         /** @description Every messaging transport this installation has registered (ADR-0107). */
         ChannelProviderDirectory: {
             data: components["schemas"]["ChannelProviderEntry"][];
@@ -54218,6 +54260,8 @@ export interface operations {
                 lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
                  *     a team the caller cannot see returns their own visible rows filtered to nothing, not a
@@ -59483,6 +59527,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChannelProviderDirectory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    listCompanyTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every declared type, ordered by value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyTypeDirectory"];
                 };
             };
             401: components["responses"]["Unauthorized"];

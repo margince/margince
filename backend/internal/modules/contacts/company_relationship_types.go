@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // relationshipTypePartner is the one type bound to another row's existence.
@@ -69,12 +70,65 @@ func dedupeRelationshipTypes(desired []string) ([]string, error) {
 	return out, nil
 }
 
-// attachCompanyRelationshipTypes fills the wire field for a page of companies
-// in one query, the same batch shape attachCompanyDomains uses.
+// dedupeExtensionRelationshipTypes is dedupeRelationshipTypes for the types
+// extensions declare. A value passes when a composed unit declares it or the
+// company already carries it. An unchanged save must not fail because the unit
+// was taken out.
+func dedupeExtensionRelationshipTypes(desired, live []string) ([]string, error) {
+	_, liveExt := splitRelationshipTypes(live)
+	carried := make(map[string]bool, len(liveExt))
+	for _, t := range liveExt {
+		carried[t] = true
+	}
+	seen := make(map[string]bool, len(desired))
+	out := make([]string, 0, len(desired))
+	for _, t := range desired {
+		_, declared := companytypes.Lookup(t)
+		if !companytypes.IsExtensionValue(t) || (!declared && !carried[t]) {
+			return nil, httperr.Validation("extension_relationship_types", "invalid_enum",
+				fmt.Sprintf("%q is not a company type an extension declares; %s", t, declaredExtensionTypes()))
+		}
+		if seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// declaredExtensionTypes renders what a refusal can offer instead.
+func declaredExtensionTypes() string {
+	declared := make(map[string]bool)
+	for _, d := range companytypes.All() {
+		declared[d.Value] = true
+	}
+	if len(declared) == 0 {
+		return "no extension declares one"
+	}
+	return vocabularyOf(declared)
+}
+
+// splitRelationshipTypes parts stored types into core's and extensions'.
+func splitRelationshipTypes(all []string) (core, ext []string) {
+	core, ext = []string{}, []string{}
+	for _, t := range all {
+		if companytypes.IsExtensionValue(t) {
+			ext = append(ext, t)
+		} else {
+			core = append(core, t)
+		}
+	}
+	return core, ext
+}
+
+// attachCompanyRelationshipTypes fills the two wire fields for a page of
+// companies in one query, the same batch shape attachCompanyDomains uses.
+// Core's list never carries an `ext:` value.
 //
-// A company with no types gets an EMPTY slice rather than a nil one: the
-// reader asked what this company is to us and the answer is "nothing recorded",
-// which is a fact, not a missing field.
+// A company with no types gets empty slices rather than nil ones. "Nothing
+// recorded" is a fact, not a missing field.
 func attachCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
 	if len(companies) == 0 {
 		return nil
@@ -84,8 +138,9 @@ func attachCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, companies []
 	for i := range companies {
 		idx[companies[i].Id] = &companies[i]
 		companyIDs[i] = ids.UUID(companies[i].Id)
-		empty := []crmcontracts.CompanyRelationshipTypes{}
+		empty, emptyExt := []crmcontracts.CompanyRelationshipTypes{}, []string{}
 		companies[i].RelationshipTypes = &empty
+		companies[i].ExtensionRelationshipTypes = &emptyExt
 	}
 
 	rows, err := tx.Query(ctx,
@@ -105,6 +160,10 @@ func attachCompanyRelationshipTypes(ctx context.Context, tx pgx.Tx, companies []
 		}
 		o, ok := idx[openapi_types.UUID(companyID)]
 		if !ok {
+			continue
+		}
+		if companytypes.IsExtensionValue(relType) {
+			*o.ExtensionRelationshipTypes = append(*o.ExtensionRelationshipTypes, relType)
 			continue
 		}
 		*o.RelationshipTypes = append(*o.RelationshipTypes, crmcontracts.CompanyRelationshipTypes(relType))
@@ -181,30 +240,27 @@ func hasPartnerRow(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (boo
 // answer: the caller is asking for a state the partner APIs would contradict,
 // and silently keeping the row would make the request a lie in the other
 // direction.
+// With ext set it replaces the extension half, else core's half; the partner
+// rule applies to core's half only.
 func reconcileCompanyRelationshipTypes(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, desired []string,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, desired []string, ext bool,
 ) ([]string, error) {
-	live, err := readLiveRelationshipTypes(ctx, tx, companyID)
+	all, err := readLiveRelationshipTypes(ctx, tx, companyID)
 	if err != nil {
 		return nil, err
+	}
+	live, liveExt := splitRelationshipTypes(all)
+	if ext {
+		live = liveExt
 	}
 	desiredSet := make(map[string]bool, len(desired))
 	for _, t := range desired {
 		desiredSet[t] = true
 	}
-	// The invariant binds BOTH ways, so it is checked both ways. Guarding only
-	// the removal left the other half open: a patch could name this company a
-	// partner with no programme behind it, and every partner API — which reads
-	// the extension table — would go on saying it is not one.
-	isPartner, err := hasPartnerRow(ctx, tx, companyID)
-	if err != nil {
-		return nil, err
-	}
-	switch {
-	case isPartner && !desiredSet[relationshipTypePartner]:
-		return nil, httperr.Validation("relationship_types", codePartnerRowExists, partnerRowExistsMessage())
-	case !isPartner && desiredSet[relationshipTypePartner]:
-		return nil, httperr.Validation("relationship_types", codePartnerRowMissing, partnerRowMissingMessage())
+	if !ext {
+		if err := checkPartnerInvariant(ctx, tx, companyID, desiredSet); err != nil {
+			return nil, err
+		}
 	}
 
 	liveSet := make(map[string]bool, len(live))
@@ -234,6 +290,24 @@ func reconcileCompanyRelationshipTypes(
 		}
 	}
 	return live, nil
+}
+
+// checkPartnerInvariant holds the partner rule against the desired core set.
+//
+// It binds both ways. Guarding only the removal let a patch name a company a
+// partner with no programme behind it, while every partner API said it was not.
+func checkPartnerInvariant(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, desiredSet map[string]bool) error {
+	isPartner, err := hasPartnerRow(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	switch {
+	case isPartner && !desiredSet[relationshipTypePartner]:
+		return httperr.Validation("relationship_types", codePartnerRowExists, partnerRowExistsMessage())
+	case !isPartner && desiredSet[relationshipTypePartner]:
+		return httperr.Validation("relationship_types", codePartnerRowMissing, partnerRowMissingMessage())
+	}
+	return nil
 }
 
 // ensureCompanyRelationshipType asserts one type without disturbing the others.

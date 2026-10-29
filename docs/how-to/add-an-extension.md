@@ -668,6 +668,27 @@ An admin changes them with `PUT /v1/extensions/{name}/settings`. Send `overwrite
 
 The core stores the values and does not yet hand them to the unit's code. Only core code reads them today. A unit that needs to read its own setting has to wait for that.
 
+## Declare a company type
+
+Core gives a company a fixed list of types, such as `customer` and `supplier`. A unit that needs one more declares it, and sets it on a company. The unit's types are kept apart from core's: they come back in `extension_relationship_types`, and core's `relationship_types` stays the closed list.
+
+```go
+CompanyTypes: []extension.CompanyType{
+	{Type: "reseller", Label: "Reseller"},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Type` | The short name: lower-case letters and digits, joined by single `_` marks. A unit cannot declare one name twice. |
+| `Label` | What a screen shows for the type. Required, in English. |
+
+The stored value is `ext:<unit>:<type>`, for example `ext:acme-pack:reseller`. The core builds it from the unit's own name, so two units can each declare `reseller` and neither can set the other's. `make gen` and the start both refuse a declaration that breaks the table above, and the generated manifest lists the types.
+
+Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, companyID, []string{"reseller"})`. Name the short types. The call replaces the types your unit holds on that company and leaves the types of other units alone. An empty list removes your own. A name you did not declare is `ErrInvalid`. It is a write, so a scheduled job gets `ErrForbidden`, and the caller needs the permission to update the company, like any other edit.
+
+A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
+
 ## Draw a panel on a core page
 
 A unit with a frontend package can draw its own part of a page inline on a core page. Declare one

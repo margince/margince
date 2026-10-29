@@ -2876,7 +2876,7 @@ public.company_relationship_type.captured_by text NOT NULL gen=- def=-
 public.company_relationship_type.company_id uuid NOT NULL gen=- def=-
 public.company_relationship_type.company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_relationship_type.company_relationship_type_pkey PRIMARY KEY (id)
-public.company_relationship_type.company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])))
+public.company_relationship_type.company_relationship_type_relationship_type_check CHECK (((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text])) OR (relationship_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'::text)))
 public.company_relationship_type.company_relationship_type_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_relationship_type.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_relationship_type.id uuid NOT NULL gen=- def=uuidv7()

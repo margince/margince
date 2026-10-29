@@ -3178,6 +3178,15 @@ paths:
           description: >-
             Accounts carrying this relationship type. Multi-valued per account, so this selects
             accounts that are AT LEAST this — a partner that is also a customer matches both.
+        - name: extension_relationship_type
+          in: query
+          schema:
+            type: string
+            pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
+          description: >-
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`).
+            It is a separate parameter so the closed `relationship_type` list stays as it is. A value
+            no installed extension declares answers 422. Both parameters together select accounts that carry both.
         - name: owner_team_id
           in: query
           schema: { type: string, format: uuid }
@@ -7890,6 +7899,29 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ChannelProviderDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /company-types:
+    get:
+      tags: [Companies]
+      operationId: listCompanyTypes
+      security: [ { cookieAuth: [] } ]   # screens read it; an agent learns the values from the 422 that names them
+      x-agent-access: human-only
+      summary: Which company types installed extensions add beside core's own.
+      description: |
+        The values a company can carry in `extension_relationship_types`, and the label a
+        screen shows for each. Which extensions are installed is a fact of the binary, so the
+        contract cannot list the values; this operation does.
+
+        Readable by any signed-in seat, because the company list shows these types and filters
+        on them. Each value and label is declared in extension code, never typed by an
+        administrator. Empty when no installed extension declares a type.
+      responses:
+        '200':
+          description: Every declared type, ordered by value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyTypeDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   # ---------------------------- /activities ---------------------------------
@@ -40256,6 +40288,13 @@ components:
             legitimately several things at once — the partner program is built on companies that are
             simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND
             has a `partner` row; removing the type while that row lives is refused (422).
+        extension_relationship_types:
+          type: array
+          items: { type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$' }
+          description: >-
+            The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from
+            `relationship_types`, whose list stays the closed set above. Each value is declared by the
+            extension it names; a value no extension declares is refused (422, `invalid_enum`).
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -40447,6 +40486,13 @@ components:
             the company still has a `partner` extension row is refused with 422 — the invariant binds both
             ways, and an invariant nothing enforces is a comment.
           items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other] }
+        extension_relationship_types:
+          type: array
+          description: >-
+            Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like
+            `relationship_types`. Absent = untouched; an empty array clears them. A value no extension
+            declares is refused with 422.
+          items: { type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$' }
       additionalProperties: true
       x-extension: true
 
@@ -49039,6 +49085,27 @@ components:
         the legal set is identical in every installation, which is false. The contract
         states the invariant; `GET /v1/channel-providers` resolves the live set.
 
+    CompanyTypeDirectory:
+      type: object
+      description: The company types installed extensions add, ordered by value.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CompanyTypeOption' }
+    CompanyTypeOption:
+      type: object
+      required: [value, label, unit]
+      properties:
+        value:
+          type: string
+          description: The value a company carries, `ext:<unit>:<type>`.
+        label:
+          type: string
+          description: What a screen shows, in English, as the extension declared it.
+        unit:
+          type: string
+          description: The extension that declared the type.
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered (ADR-0107).

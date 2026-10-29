@@ -36,6 +36,10 @@ import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
+import {
+  companyTypeLabel,
+  useCompanyTypeDirectory,
+} from "../../lib/companytypes";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -96,6 +100,7 @@ export function CompaniesScreen() {
   const viewerId = useViewerId();
   const ownerChips = useOwnerChips();
   const tagChips = useTagChips();
+  const extensionTypes = useCompanyTypeDirectory().data?.data ?? [];
   const savedViews = useSavedViewTabs("companies");
   // Beside the owner dial rather than in `chips`, because of the option labels.
   // A `chips` entry runs every label through `t()`, so its options must be
@@ -236,11 +241,17 @@ export function CompaniesScreen() {
             // is multi-valued (ADR-0079), because showing only the first type
             // would make the second look untrue.
             cell: (company: Company) =>
-              company.relationship_types?.length ? (
+              company.relationship_types?.length ||
+              company.extension_relationship_types?.length ? (
                 <CellStrip>
-                  {company.relationship_types.map((type) => (
+                  {(company.relationship_types ?? []).map((type) => (
                     <Badge key={type}>
                       {t(RELATIONSHIP_TYPE_LABELS[type])}
+                    </Badge>
+                  ))}
+                  {(company.extension_relationship_types ?? []).map((type) => (
+                    <Badge key={type}>
+                      {companyTypeLabel(type, extensionTypes)}
                     </Badge>
                   ))}
                 </CellStrip>
@@ -268,10 +279,19 @@ export function CompaniesScreen() {
             key: "relationship_type",
             label: "company.relationshipTypes",
             allLabel: "company.filterRelTypeAll",
-            options: RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
-              value,
-              label: RELATIONSHIP_TYPE_LABELS[value],
-            })),
+            options: [
+              ...RELATIONSHIP_TYPE_OPTIONS.map((value) => ({
+                value,
+                label: RELATIONSHIP_TYPE_LABELS[value],
+              })),
+              // An option value holding a colon reads as `param:value`. The
+              // extension filter is its own parameter, so naming it keeps the
+              // whole `ext:<unit>:<type>` value.
+              ...extensionTypes.map(({ value, label }) => ({
+                value: `extension_relationship_type:${value}`,
+                text: label,
+              })),
+            ],
           },
         ]}
         dataViews={savedViews}

@@ -184,6 +184,9 @@ export type BackstopOptions = Readonly<{
   // page is the composer's or their mail client's. None unless a suite is
   // about writing to somebody.
   connectors?: unknown;
+  // The company types installed extensions declare: none unless a suite is
+  // about showing or filtering on one.
+  companyTypes?: unknown;
 }>;
 
 export function backstopAnswer(
@@ -207,6 +210,9 @@ export function backstopAnswer(
   }
   if (pathname.endsWith("/connectors")) {
     return jsonResponse(options?.connectors ?? { data: [] });
+  }
+  if (pathname.endsWith("/company-types")) {
+    return jsonResponse({ data: options?.companyTypes ?? [] });
   }
   // The account scan the page asks for on open: `never`, echoing the 360's
   // rows, unless a suite hands in one, so a page test is not also a scan test.
