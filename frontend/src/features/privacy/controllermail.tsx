@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -49,7 +49,12 @@ export function ControllerMailDialog({
   const preview = useQuery({
     queryKey: ["controller-mail-preview", contactId, kind, language ?? null],
     enabled: open && contactId !== "",
-    placeholderData: keepPreviousData,
+    // Only a language change keeps the old mail up; another contact's never shows.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === contactId &&
+      previousQuery.queryKey[2] === kind
+        ? previous
+        : undefined,
     queryFn: async () =>
       unwrap(
         await api.GET("/contacts/{id}/consent/mail-preview", {

@@ -329,4 +329,61 @@ describe("the preview of a mail the installation sends for a rep", () => {
     ).toBeVisible();
     expect(posts(requests)).toEqual([]);
   });
+
+  it("never shows one contact's mail on another contact's dialog", async () => {
+    let releaseSecond: (response: Response) => void = () => {};
+    const secondPreview = new Promise<Response>((resolve) => {
+      releaseSecond = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input instanceof Request ? input.url : String(input);
+        return url.includes("/contacts/contact-2/")
+          ? secondPreview
+          : jsonResponse(mailPreview("record_confirmation"));
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const dialogFor = (contactId: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ControllerMailDialog
+            contactId={contactId}
+            kind="record_confirmation"
+            open
+            onClose={() => {}}
+            onSent={() => {}}
+          />
+        </LocaleProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = rtlRender(dialogFor("contact-1"));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("lena@kps.test");
+
+    rerender(dialogFor("contact-2"));
+
+    expect(
+      await within(dialog).findByText(en["controllerMail.loading"]),
+    ).toBeVisible();
+    expect(within(dialog).queryByText("lena@kps.test")).toBeNull();
+    expect(within(dialog).queryByText("Ihre Kontaktdaten prüfen")).toBeNull();
+    expect(
+      within(dialog).getByRole("button", {
+        name: en["controllerMail.confirmSend"],
+      }),
+    ).toBeDisabled();
+
+    releaseSecond(
+      jsonResponse(
+        mailPreview("record_confirmation", "de", {
+          to_address: "jonas@kps.test",
+        }),
+      ),
+    );
+    expect(await within(dialog).findByText("jonas@kps.test")).toBeVisible();
+  });
 });
