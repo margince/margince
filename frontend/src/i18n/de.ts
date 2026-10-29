@@ -1898,6 +1898,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "trust.agentUnnamedFor": "Von einem Agenten für {name} erstellt",
   "trust.systemTag": "Systemaufgabe: {job}",
   "trust.systemUnnamed": "Systemaufgabe",
+  "trust.relayForYou": "Von Margince für dich gesendet",
+  "trust.relayForColleague": "Von Margince für ein Teammitglied gesendet",
+  "trust.relaySent": "Von Margince gesendet",
+  "trust.relayFrom": "Absendeadresse: {address}",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
@@ -8937,9 +8941,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.state.blocked": "Blockiert",
   "notice.state.notRequired": "Nicht erforderlich",
   "notice.sendTitle": "Datenschutzhinweis senden?",
-  "notice.sendBody":
-    "{contact} erhält eine E-Mail darüber, wer die Daten verarbeitet und wozu.",
   "notice.sendConfirm": "Hinweis senden",
+  "controllerMail.confirmTitle": "Bestätigungsanfrage senden?",
+  "controllerMail.confirmSend": "Anfrage senden",
+  "controllerMail.relayTitle": "Versand durch die Installation",
+  "controllerMail.relay":
+    "Margince sendet dies von der Adresse der Installation, nicht aus deinem Postfach.",
+  "controllerMail.language": "Sprache",
+  "controllerMail.defaultLanguage":
+    "Die E-Mail-Sprache der Installation ist {language}.",
+  "controllerMail.noSender": "Vom Mail-Relay nicht genannt",
+  "controllerMail.loading": "Vorschau wird geladen…",
+  "controllerMail.noPreview":
+    "Senden ist erst möglich, wenn die Vorschau geladen ist.",
   "notice.sentTo": "Datenschutzhinweis an {address} gesendet",
   "notice.overdue": "Überfällig",
   "notifications.bell": "Benachrichtigungen",

@@ -33,6 +33,8 @@ func (f *fakeRelay) SendControllerMail(_ context.Context, msg ControllerMessage)
 	return f.err
 }
 
+func (f *fakeRelay) SenderAddress() string { return "" }
+
 // fakeVault is the key vault boundary. It counts reads and destructions
 // separately, because the two answer different questions: whether the link ever
 // reached the wire, and whether it stopped being live afterwards.

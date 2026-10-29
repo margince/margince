@@ -38,6 +38,8 @@ import (
 // installation, and no subject's mailbox grant is involved.
 type ControllerRelay interface {
 	SendControllerMail(ctx context.Context, msg ControllerMessage) error
+	// SenderAddress is the From the relay sends with, "" when it names none.
+	SenderAddress() string
 }
 
 // ControllerMessage is one rendered controller mail, link already substituted.
@@ -103,7 +105,7 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 			}
 			// The row's own message id, echoed back. A relay does not rewrite
 			// the identity it was handed, so nothing is owed a re-key.
-			return connector.SendReceipt{RFC822MessageID: del.MessageID}, nil
+			return connector.SendReceipt{RFC822MessageID: del.MessageID, FromAddress: d.relay.SenderAddress()}, nil
 		},
 	}, nil
 }

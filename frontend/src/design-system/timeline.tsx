@@ -215,6 +215,18 @@ function directionPhrase(
   return t("timeline.withWhom", { who });
 }
 
+// A relay send names its sender, or it reads as the rep's own mail.
+function RelayTag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  if (entry.provenance.kind !== "system" || !entry.provenance.relay) {
+    return null;
+  }
+  return (
+    <span className="tl-meta">
+      <ProvenanceTag provenance={entry.provenance} />
+    </span>
+  );
+}
+
 /**
  * TimelineRow is one entry. It is split out of the list so a grouped view can
  * render the same row inside an expanded conversation. A second rendering of
@@ -268,6 +280,7 @@ export function TimelineRow({
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
           />
+          <RelayTag entry={entry} />
           <AutomaticFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}

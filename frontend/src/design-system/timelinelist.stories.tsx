@@ -474,3 +474,68 @@ export const DateOnlyEntry: Story = {
     await expect(timed?.textContent).toMatch(/11:05/);
   },
 };
+
+// A relay send beside the reader's own mail. Only the first names Margince.
+function sentMail(
+  id: string,
+  subject: string,
+  controllerSend: Activity["controller_send"],
+): Activity {
+  const at = id === "relay" ? "2026-10-20T09:00:00Z" : "2026-10-19T15:00:00Z";
+  return {
+    offers_email: false,
+    id,
+    kind: "email",
+    subject,
+    occurred_at: at,
+    occurred_precision: "instant",
+    direction: "outbound",
+    is_done: false,
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: at,
+    updated_at: at,
+    controller_send: controllerSend,
+    email_summary: {
+      activity_id: id,
+      occurred_at: at,
+      occurred_precision: "instant",
+      version: 1,
+      subject,
+      counterparty: "Dana Buyer",
+      direction: "outbound",
+      display_status: "team",
+      move: "none",
+      attachment_count: 0,
+      delivery: { state: id === "relay" ? "pending" : "sent" },
+    },
+  };
+}
+
+export const SentByMarginceForYou: Story = {
+  render: () => (
+    <StoryProviders>
+      <GroupedTimelineList
+        zone={ZONE}
+        groups={groupChronology(
+          activityTimeline(
+            [
+              sentMail("relay", "Information about your personal data", {
+                from_address: "privacy@kps.test",
+              }),
+              sentMail("own", "Fleet renewal", undefined),
+            ],
+            "u-1",
+          ),
+        )}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Sent by Margince for you"),
+    ).toBeVisible();
+    await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
+  },
+};

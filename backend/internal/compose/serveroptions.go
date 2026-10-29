@@ -51,7 +51,7 @@ func WithOperatorMail(m mailer.Mailer) Option {
 		// through the durable send lane, which gives it a delivery row, an
 		// authorization decision and a timeline entry like every other message.
 		// The relay still transmits it, one layer down, as the controller seam.
-		s.controllerRelay = mailerRelay{m}
+		s.controllerRelay = newMailerRelay(m)
 		s.rewireConfirmationLane(pool)
 	}
 }

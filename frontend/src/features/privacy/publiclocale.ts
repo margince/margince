@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { isLocale, useLocale } from "../../i18n";
+import { isLocale, type Locale, useLocale } from "../../i18n";
 import { parseParams } from "../../lib/urlstate";
 
 /**
@@ -27,4 +27,17 @@ export function usePublicLocale(): void {
       adoptLocale(asked);
     }
   }, [adoptLocale]);
+}
+
+/**
+ * Take the language the server says the mail behind this page was sent in.
+ * Adopted like `?lang=`, so it never becomes the reader's stored pick.
+ */
+export function useMailLanguage(language: Locale | undefined): void {
+  const { adoptLocale } = useLocale();
+  useEffect(() => {
+    if (language) {
+      adoptLocale(language);
+    }
+  }, [language, adoptLocale]);
 }

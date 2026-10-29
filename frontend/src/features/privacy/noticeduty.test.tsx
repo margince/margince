@@ -10,6 +10,7 @@ import {
   renderWorklist,
   row,
 } from "../../testing/worklist.testkit";
+import { mailPreview } from "./controllermail.fixtures";
 
 afterEach(() => {
   cleanup();
@@ -43,7 +44,7 @@ function dutyDay(duty = OWED) {
 // The server a writer meets: the queue with one duty, a /me that may update
 // contacts, and every write recorded.
 function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
-  const writes: string[] = [];
+  const writes: { path: string; body: unknown }[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -66,6 +67,18 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
           created_at: "2026-01-28T09:00:00Z",
         });
       }
+      if (path.endsWith(`/contacts/${CONTACT}/consent/mail-preview`)) {
+        const kind = new URL(url).searchParams.get("kind");
+        return jsonResponse(
+          mailPreview(
+            kind === "privacy_notice"
+              ? "privacy_notice"
+              : "record_confirmation",
+            "de",
+            { to_address: "steve@kps.test" },
+          ),
+        );
+      }
       if (path.endsWith("/me")) {
         return jsonResponse(
           meFixture({
@@ -75,7 +88,8 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
         );
       }
       if (method === "POST") {
-        writes.push(path);
+        const text = request ? await request.text() : String(init?.body ?? "");
+        writes.push({ path, body: text ? JSON.parse(text) : null });
         return jsonResponse({
           delivered_to: "steve@kps.test",
           expires_at: "2026-10-27T00:00:00Z",
@@ -93,6 +107,7 @@ describe("a privacy-notice duty on the Focus card", () => {
   it("says what the duty is and sends the notice from the card's own pane", async () => {
     const writes = stubDuty();
     renderWorklist();
+    const user = userEvent.setup();
 
     expect(
       await screen.findByText("Privacy notice owed (GDPR Art. 14)"),
@@ -105,17 +120,54 @@ describe("a privacy-notice duty on the Focus card", () => {
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "End the duty…" })).toBeTruthy();
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Send privacy notice" }),
     );
-    await waitFor(() =>
-      expect(
-        writes.some((path) =>
-          path.endsWith(`/contacts/${CONTACT}/consent/privacy-notice`),
-        ),
-      ).toBe(true),
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        "Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
+      ),
+    ).toBeTruthy();
+    expect(writes).toEqual([]);
+
+    await user.click(
+      within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
     );
     expect(await screen.findByText(/Sent to steve@kps.test/)).toBeTruthy();
+    expect(writes).toEqual([
+      {
+        path: expect.stringMatching(
+          new RegExp(`/contacts/${CONTACT}/consent/privacy-notice$`),
+        ),
+        body: { language: "de" },
+      },
+    ]);
+  });
+
+  it("previews the confirmation request before asking, and Escape sends nothing", async () => {
+    const writes = stubDuty();
+    renderWorklist();
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["noticeDuty.askConfirm"],
+      }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: en["controllerMail.confirmTitle"],
+    });
+    expect(
+      await within(dialog).findByText("Ihre Kontaktdaten prüfen"),
+    ).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes).toEqual([]);
+    expect(
+      screen.getByRole("button", { name: en["noticeDuty.sendNotice"] }),
+    ).toBeTruthy();
   });
 
   it("says what the deadline rests on: how, when, who recorded it, and the rule", async () => {

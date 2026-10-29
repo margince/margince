@@ -13,7 +13,7 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
-import { provenanceOf } from "./provenanceof";
+import { provenanceOf, withControllerSend } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
@@ -182,12 +182,16 @@ export function activityTimeline(
       automaticKind: activity.automatic_kind,
       atIso: activity.occurred_at,
       atPrecision: activity.occurred_precision,
-      provenance: provenanceOf(
-        activity.captured_by,
+      provenance: withControllerSend(
+        provenanceOf(
+          activity.captured_by,
+          viewerUserId,
+          activity.author,
+          activity.source,
+          activity.imported_from,
+        ),
+        activity.controller_send,
         viewerUserId,
-        activity.author,
-        activity.source,
-        activity.imported_from,
       ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance

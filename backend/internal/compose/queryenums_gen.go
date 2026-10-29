@@ -95,6 +95,10 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "relationship_mark", Values: []string{"vendor_marketing", "any"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
+	"GET /v1/contacts/{id}/consent/mail-preview": {
+		{Name: "kind", Values: []string{"record_confirmation", "privacy_notice"}, Array: false, Explode: true},
+		{Name: "language", Values: []string{"de", "en", "vi"}, Array: false, Explode: true},
+	},
 	"GET /v1/context-search": {
 		{Name: "record_types", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: true, Explode: true},
 	},
