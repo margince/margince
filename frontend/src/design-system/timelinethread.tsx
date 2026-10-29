@@ -331,11 +331,7 @@ export function ThreadRow({
   // every member of which is withheld says so where its subject would go.
   const subject = group.entries.find((entry) => !entry.withheld)?.title;
   return (
-    <li
-      className={[directionClass(newest.direction), "tl-thread"]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <li className={directionClass(newest.direction)}>
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}

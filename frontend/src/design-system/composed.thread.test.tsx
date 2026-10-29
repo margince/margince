@@ -366,7 +366,7 @@ describe("the files a thread carried", () => {
         ]}
       />,
     );
-    const card = document.querySelector(".tl-thread > .tl-body");
+    const card = document.querySelector(".tl-thread-messages")?.parentElement;
     expect(
       card?.querySelector(":scope > .tl-meta .emailentry__files")?.textContent,
     ).toBe("3 attachments");
@@ -423,9 +423,10 @@ describe("the files a thread carried", () => {
       />,
     );
     expect(
-      document.querySelector(
-        ".tl-thread > .tl-body > .tl-meta .emailentry__files",
-      )?.textContent,
+      document
+        .querySelector(".tl-thread-messages")
+        ?.parentElement?.querySelector(":scope > .tl-meta .emailentry__files")
+        ?.textContent,
     ).toBe("2 attachments");
 
     await user.click(screen.getByRole("button", { name: /earlier/ }));
