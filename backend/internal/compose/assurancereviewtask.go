@@ -128,9 +128,9 @@ func linkEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID, epis
 
 // alignAdoptedTask gives an adopted task what a minted review task carries: a
 // due date and the deal owner. It only fills what is empty, so a date or an
-// assignee somebody chose stays. It reports false when the task stopped being
-// adoptable since adoptOpenTask read it, done or moved to another record, and
-// the review then mints its own.
+// assignee somebody chose stays. It reports false when the task was done or
+// moved to another record since adoptOpenTask read it. The review then mints
+// its own.
 func alignAdoptedTask(
 	ctx context.Context, deps bundleDeps, task ids.UUID, subject subjectFindings, review assurance.Exception,
 ) (bool, error) {
