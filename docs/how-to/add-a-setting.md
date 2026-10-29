@@ -43,7 +43,7 @@ setting needs an endpoint that reads and writes it, and most have a screen under
 2. **Fill the `Spec`.** The fields are in `backend/internal/platform/config/spec.go`.
    `Key` has no capitals, is split by dots, and is also the path in YAML.
    `Env` is in capitals, with `_` between words, and starts with `MARGINCE_`.
-   `Doc` is one line, and the reference and both example files print it.
+   `Doc` is one line, and the reference and `config/margince.schema.json` print it.
    `Min`, `Max` and `Validate` check a value from every source.
 3. **Name the programs** in `Roles`: `config.RoleAPI`, `config.RoleWorker` or `config.RoleMigrate`.
    A `Define` setting with no `Roles` is read by no program, and a gate fails it.
@@ -60,7 +60,7 @@ setting needs an endpoint that reads and writes it, and most have a screen under
 7. **Run `make config-gen`.**
    It writes again every file that `backend/tools/gen-config/main.go` lists as an output.
    They include the settings tables of the configuration reference, `config/margince.example.yaml`,
-   `.env.example` and `config/margince.schema.json`. Never edit those parts by hand.
+   `config/margince.defaults.yaml`, `.env.example` and `config/margince.schema.json`. Never edit those parts by hand.
 8. **Test it.** Use `backend/internal/platform/config/configtest`.
    `configtest.MustLoad` loads a YAML text over your settings.
    `configtest.MustLoadEnv` loads them from the environment alone.

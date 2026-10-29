@@ -12,7 +12,7 @@ in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting 
 ## The least production needs
 
 - `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
-- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (or `license.token`).
+- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`).
 - For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
   `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
 
@@ -107,7 +107,8 @@ reports `margince_license_posture{state="valid"} 1`. What each posture does at b
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
-and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at least the
+and every setting has a variable, while only some have a flag. Most variables start with
+`MARGINCE_`, and the AI provider keys keep their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the
 [least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
 password itself; see
 [What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).

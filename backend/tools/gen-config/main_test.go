@@ -83,7 +83,7 @@ func TestTheEnvTemplateWritesEachVariableOnceOnOneLine(t *testing.T) {
 		},
 	}
 	want := envHeader +
-		"\n# ---- required by the image entrypoint ----\n# MARGINCE_LICENSE=${file:/run/secrets/license.token}\n" +
+		"\n# ---- required by the image entrypoint ----\n# MARGINCE_LICENSE=\n" +
 		"\n# ---- loader ----\n# MARGINCE_ENV=\n" +
 		"\n# ---- image entrypoint ----\n# MARGINCE_ADMIN_PASSWORD=\n" +
 		"\n# ---- uploads ----\n# MARGINCE_UPLOADS_ATTACHMENT_MB=25\n"
@@ -146,8 +146,8 @@ func TestASecretRendersNoValueAndNoDefaultInAnyOutput(t *testing.T) {
 		if !s.Secret() {
 			continue
 		}
-		if !strings.Contains(string(files[envPath]), "\n# "+s.Env()+"=${file:/run/secrets/"+s.Key()+"}\n") {
-			t.Errorf("%s: .env.example does not write the secret as a file reference", s.Key())
+		if !strings.Contains(string(files[envPath]), "\n# "+s.Env()+"=\n") {
+			t.Errorf("%s: .env.example gives the secret a value", s.Key())
 		}
 		if !strings.Contains(string(files[defaultsPath]), ": ${file:/run/secrets/"+s.Key()+"}\n") {
 			t.Errorf("%s: the defaults file does not write the secret as a file reference", s.Key())
@@ -254,6 +254,22 @@ func TestAnEnvDefaultIsQuotedWhereTheReaderWouldChangeIt(t *testing.T) {
 		}
 		if got := envDefault(setting{Any: s, shape: shape}); got != want {
 			t.Errorf("envDefault(%q) = %s, want %s", text, got, want)
+		}
+	}
+}
+
+// The Type cell is where an operator learns which saved values a data reset
+// keeps, so the mark follows the store's own flag.
+func TestTheTypeCellMarksAStoredSettingADataResetKeeps(t *testing.T) {
+	for kept, want := range map[bool]string{true: "`string`, stored, kept by a reset", false: "`string`, stored"} {
+		s := config.DefineStored(config.Spec[string]{Key: "gen_config_test.name", Env: "X_ENV", Type: config.String, Doc: "d"},
+			config.Store{RBACObject: "installation_settings", AuditVerb: "update", SurvivesDataReset: kept})
+		shape, err := s.Shape()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := typeCell(setting{Any: s, shape: shape}); got != want {
+			t.Errorf("SurvivesDataReset %v: type cell %q, want %q", kept, got, want)
 		}
 	}
 }
