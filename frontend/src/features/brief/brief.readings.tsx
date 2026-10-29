@@ -230,6 +230,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const scopeCut = scopeWasCut(day);
   const unread = laneUnread(day) || scopeCut;
   const floorOf = floorTest(day);
+  // The server's exact total, present only where nothing behind it was cut.
+  const decisionsTotal = day.counts.find(
+    (count) => count.category === DECISIONS,
+  )?.total;
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -314,13 +318,14 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           scope={day.scope}
           label={t("brief.readings.decisions")}
           count={
-            day.sources_unavailable.some(
+            decisionsTotal ??
+            (day.sources_unavailable.some(
               (entry) => entry.category === DECISIONS || !entry.category,
             ) && readings.review === 0
               ? null
-              : readings.review
+              : readings.review)
           }
-          floor={floorOf(DECISIONS)}
+          floor={decisionsTotal === undefined && floorOf(DECISIONS)}
           // Only where something IS held up, and how much of it. Otherwise the
           // plain basis, which says what the figure was taken over and claims
           // nothing about who is waiting.

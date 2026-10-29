@@ -305,7 +305,7 @@ func (s *Service) worklistFrom(
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
 	// Queue filters do not hide Focus candidates. Explicitly chosen reconnections
 	// are admitted beside ordinary current work.
-	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
+	focusRows := dropDone(foldRoutineDecisionsBounded(rows, bounded),
 		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	// Ordinary pins order the queue without changing Focus eligibility.
@@ -326,7 +326,7 @@ func (s *Service) worklistFrom(
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
 	if !opensTheDeck(filter) {
-		rows = dropDone(s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth), s.marked, day.AsOf)
+		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
@@ -415,7 +415,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: countsOf(considered, shown, bounded),
+		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope), missing, scoped),
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.

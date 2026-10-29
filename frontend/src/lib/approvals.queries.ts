@@ -51,7 +51,12 @@ export type BundleOutcome =
 // are waiting reads usePendingApprovalCount instead.
 async function fetchAllApprovals(
   status: ApprovalStatus,
-  target?: { entityType?: string; entityId?: string; bundleId?: string },
+  target?: {
+    entityType?: string;
+    entityId?: string;
+    bundleId?: string;
+    includeMuted?: boolean;
+  },
 ): Promise<Approval[]> {
   const all: Approval[] = [];
   let cursor: string | null | undefined;
@@ -66,6 +71,7 @@ async function fetchAllApprovals(
             bundle_id: target?.bundleId,
             target_entity_type: target?.entityType,
             target_entity_id: target?.entityId,
+            include_muted: target?.includeMuted,
           },
         },
       }),
@@ -208,7 +214,11 @@ export function useTargetApprovals(
     enabled,
     queryFn: async (): Promise<ApprovalPage> => ({
       data: (
-        await fetchAllApprovals("pending", { entityType, entityId })
+        await fetchAllApprovals("pending", {
+          entityType,
+          entityId,
+          includeMuted: true,
+        })
       ).filter((approval) => approval.status === "pending"),
     }),
   });

@@ -39,7 +39,7 @@ func TestAPinnedDecisionStaysItsOwnRowRatherThanFolding(t *testing.T) {
 
 	// One of the twelve, pinned — then folded the way the assembler folds.
 	pinned := applyPins(rows, map[RowRef]bool{{Source: "approval", RowID: "a"}: true})
-	folded := foldRoutineDecisionsBounded(pinned, false)
+	folded := foldRoutineDecisionsBounded(pinned, nil)
 
 	var stoodAlone bool
 	for _, row := range folded {

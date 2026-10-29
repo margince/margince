@@ -43117,9 +43117,9 @@ components:
           type: [integer, 'null']
           description: |
             Null when the caller cannot triage approvals (an agent principal) — not
-            counted, as opposed to counted as zero. Saturates at 200: deciding who may
-            see a staged change is a per-row check, and a badge is not worth making one
-            record page pay for an unbounded backlog.
+            counted, as opposed to counted as zero. Exact: every pending proposal on this
+            company the caller could decide, including ones past the approvals section's
+            scan cap.
 
     BillingContact:
       type: object
@@ -66311,6 +66311,13 @@ components:
             soonest-due dozen; the number says how many there are, which is the reading
             `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        approvals_open:
+          type: integer
+          minimum: 0
+          description: >-
+            Every pending approval this read's scope holds that the caller may decide, counted
+            by the approvals engine behind `GET /v1/approvals/pending-count` rather than from
+            the bounded lane. Absent when the lane was not read.
         deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`." }
         tag_suggestions_open: { type: integer, minimum: 0, description: "Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`." }
         meetings:
@@ -67563,6 +67570,13 @@ components:
             MAY exist past what was considered. A category inherits its sources' honesty:
             reporting "12 decisions" over a pile the read never finished counting is the
             failure this flag exists to prevent.
+        total:
+          type: integer
+          minimum: 0
+          description: |
+            The exact number of admitted items in this category for this read's scope and
+            owner. Absent when that population has not been counted exactly; a client then
+            reads `considered` with `more_available` as today. Absent never means zero.
 
     WorklistSummary:
       type: object

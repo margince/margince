@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -43,25 +44,47 @@ func (s *Service) CountPending(ctx context.Context, in ListInput) (PendingCount,
 	// joined instead. Expiry is judged on the service clock, read once, as
 	// every read in this module judges it.
 	err = s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
-		out = PendingCount{AsOf: s.now()}
-		waiting := pendingEligible(ctx, tx, p, in, out.AsOf)
-		return walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
-			counted, err := waiting(batch)
-			if err != nil {
-				return false, err
-			}
-			for i, a := range batch {
-				if counted[i] {
-					out.add(a)
-				}
-			}
-			return false, nil
-		})
+		out, err = countPendingIn(ctx, tx, p, in, s.now())
+		return err
 	})
 	if err != nil {
 		return PendingCount{}, err
 	}
 	return out, nil
+}
+
+// CountPendingForTarget counts every row PendingForTarget would list for one
+// record, past its scan cap. It applies the same stored-pending rows, lazy
+// expiry and decidability, and includes personal mutes as the record page does.
+// It joins the caller's transaction. The account page reads at repeatable read,
+// so there the count and the capped list see one snapshot.
+func (s *Service) CountPendingForTarget(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (int, error) {
+	if err := actingForAHuman(ctx); err != nil {
+		return 0, err
+	}
+	p, _ := principal.Actor(ctx)
+	out, err := countPendingIn(ctx, tx, p, targetPending(targetType, targetID), s.now())
+	return out.Count, err
+}
+
+// countPendingIn walks every stored-pending row `in` selects and counts the
+// ones p has to decide at now.
+func countPendingIn(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput, now time.Time) (PendingCount, error) {
+	out := PendingCount{AsOf: now}
+	waiting := pendingEligible(ctx, tx, p, in, now)
+	err := walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
+		counted, err := waiting(batch)
+		if err != nil {
+			return false, err
+		}
+		for i, a := range batch {
+			if counted[i] {
+				out.add(a)
+			}
+		}
+		return false, nil
+	})
+	return out, err
 }
 
 func (c *PendingCount) add(a row) {

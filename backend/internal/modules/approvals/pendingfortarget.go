@@ -31,18 +31,15 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 		limit = PendingScanCap
 	}
 	now := s.now()
-	pending := statusPending
-	q, args := approvalPageQuery(ListInput{
-		Status: &pending, TargetType: &targetType, TargetID: &targetID,
-	}, nil)
+	in := targetPending(targetType, targetID)
+	q, args := approvalPageQuery(in, nil)
 	batch, err := collect(ctx, tx, q, args)
 	if err != nil {
 		return nil, err
 	}
 	// Lazy expiry: a row past its expiry is not a decision anyone still owes,
 	// so it must not appear as one on the record page.
-	visible, err := askWhere(batch, func(a row) bool { return a.PendingAt(now) },
-		func(rows []row) ([]bool, error) { return decidableRows(ctx, tx, p, rows) })
+	visible, err := pendingEligible(ctx, tx, p, in, now)(batch)
 	if err != nil {
 		return nil, err
 	}
@@ -61,4 +58,12 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	}
 	withoutOwnersRecords(ctx, out)
 	return out, nil
+}
+
+// targetPending selects the stored-pending rows standing against one record.
+// It names no requested decider and binds no mutes, so the record page lists
+// and counts every proposal the caller could decide there.
+func targetPending(targetType string, targetID ids.UUID) ListInput {
+	pending := statusPending
+	return ListInput{Status: &pending, TargetType: &targetType, TargetID: &targetID}
 }

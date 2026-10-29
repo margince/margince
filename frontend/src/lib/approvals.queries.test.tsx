@@ -281,6 +281,18 @@ describe("useTargetApprovals", () => {
     expect(seen).toContain("pending|company-1");
   });
 
+  // The account page counts muted proposals too, so its queue must list them.
+  it("asks for muted proposals as well", async () => {
+    stubPages({});
+    renderHook(() => useTargetApprovals("company", "company-1"), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const [input] = vi.mocked(fetch).mock.calls[0] ?? [];
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    expect(url.searchParams.get("include_muted")).toBe("true");
+  });
+
   it("asks nothing while it is gated", async () => {
     const seen = stubPages({});
 
