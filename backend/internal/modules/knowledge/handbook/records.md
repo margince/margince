@@ -251,7 +251,7 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 ### Where can I see everything that happened with a customer?
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
-2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and **From** and **To** dates.
+2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and the From and To dates.
 A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply** or **Write email**. **Noticed** hides it until you sign out, and on the other tabs it is one line under the record's name.
 Also called: timeline, activity log, customer history, interaction history, newest email.
 
@@ -282,7 +282,7 @@ A meeting holds a status: **booked, held, no-show, canceled.**
 **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, both under **More actions** (⋯) on its row, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
 Also called: fix a note, remove an activity, change a task's due date, move an email to another deal.
 
@@ -291,7 +291,7 @@ No. Margince has no @mentions and no comments on a record. To tell a colleague s
 Also called: tag a teammate, @mention, leave a comment, notify a colleague.
 
 ### Who can see a note, call or meeting I log?
-A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, press **Change visibility** on it in the timeline. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**. Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
+A note, call or meeting you log in Margince can be read by anyone who can open at least one record it is linked to. One with no links can be read by everyone. To see who may read it, open **More actions** (⋯) on it in the timeline and press **Change visibility**. Choose **Participants only** or name the colleagues and teams who may read it, and press **Save visibility**. Colleagues not in that group see that it is there, not what it says, and an admin's wider access does not change that. Captured mail works in another way: see [Who can see an email](who-can-see-an-email.md).
 
 Also called: private note, who sees my notes, hide a call, make a note private.
 
