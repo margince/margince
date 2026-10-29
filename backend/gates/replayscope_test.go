@@ -263,7 +263,7 @@ var companionRecordFields = map[string]string{
 // companionsInContract names the row-scoped references a route's response
 // schemas carry, beyond the record the replay is keyed on.
 //
-// ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
+// Only for a body that wraps a record or is keyed by its route parameter.
 // `company_id` on a Deal is the deal's own field: the live read of that
 // deal returns it to anyone who can see the deal, so replaying it discloses
 // nothing the product would not. `company_id` on QuickCaptureContactResult
@@ -273,7 +273,8 @@ var companionRecordFields = map[string]string{
 // A dotted idPath is what says the body is a wrapper: the record is nested
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL
 // properties only, for the same reason — the nested record's fields are its
-// own, covered by the probe that already resolves it.
+// own, covered by the probe that already resolves it. A body keyed by its route
+// parameter is no record, so every id its array elements name is a companion.
 func companionsInContract(t *testing.T, schemas []string, got expectedTarget) []string {
 	t.Helper()
 	wraps, projects := strings.Contains(got.idPath, "."), got.pathParam != ""

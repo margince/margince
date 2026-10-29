@@ -19,12 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// CompanyForAddress is the company a contact at this address would work at.
-// That is the live, readable company whose domain covers the address's domain most
-// narrowly. found is false when there is none.
+// CompanyForAddress is the live, readable company whose domain covers the
+// address's domain most narrowly. found is false when there is none.
 //
-// It matches as the daily plant and the link candidates do. Consumer mail and a
-// suppressed domain never answer, even when a company carries the domain.
+// Which domains cover an address is the daily plant's rule; the choice among
+// several is this read's own. Consumer mail and a suppressed domain never answer.
 func (s *Store) CompanyForAddress(ctx context.Context, email string) (crmcontracts.ContactEmployer, bool, error) {
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return crmcontracts.ContactEmployer{}, false, err

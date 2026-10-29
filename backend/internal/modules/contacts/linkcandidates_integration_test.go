@@ -143,6 +143,28 @@ func TestAWorkspaceSeatIsNoLinkCandidate(t *testing.T) {
 	}
 }
 
+// A seat stored under the Unicode spelling of its domain is still a seat.
+func TestASeatAtAUnicodeDomainIsNoLinkCandidate(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company := e.createNamedCompany(ctx, t, "Bücher", "xn--bcher-kva.example")
+	seat := e.contactWithEmail(ctx, t, "Anna Seat", "anna@bücher.example")
+	e.declareSeatAddress(ctx, t, e.otherRep, "anna@xn--bcher-kva.example", "provider")
+	client := e.contactWithEmail(ctx, t, "Ben Client", "ben@bücher.example")
+
+	candidates, _, err := e.store.ListLinkCandidates(ctx, company)
+	if err != nil {
+		t.Fatalf("listing candidates: %v", err)
+	}
+	if got := candidateIDs(candidates); len(got) != 1 || got[0] != client {
+		t.Fatalf("candidates = %v, want only %v and not the seat %v", got, client, seat)
+	}
+	_, err = e.store.LinkCompanyContacts(ctx, company, []ids.UUID{seat.UUID})
+	if field, code, _ := validationField(err); field != fieldContactIDs || code != codeNotLinkCandidate {
+		t.Fatalf("linking the seat = %v, want 422 %s", err, codeNotLinkCandidate)
+	}
+}
+
 // A contact shared read-only can be read but not given an edge. It is not offered,
 // and the link refuses it like any other non-candidate.
 func TestAReadOnlyShareIsNoLinkCandidate(t *testing.T) {
@@ -178,13 +200,24 @@ func TestACallerWhoMayNotLinkIsOfferedNoCandidates(t *testing.T) {
 	e := setupDedupe(t)
 	company := e.createNamedCompany(e.as(), t, "Viewco", "viewco.test")
 	e.contactWithEmail(e.as(), t, "Vic Viewed", "vic@viewco.test")
-	actor, _ := principal.Actor(e.as())
-	actor.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true}
-	ctx := principal.WithActor(e.as(), actor)
-
-	candidates, truncated, err := e.store.ListLinkCandidates(ctx, company)
-	if err != nil || len(candidates) != 0 || truncated {
-		t.Fatalf("candidates = %v truncated = %v err = %v, want none for a caller without relationship:create", candidateIDs(candidates), truncated, err)
+	refusals := map[string]func(*principal.Principal){
+		"without relationship:create": func(p *principal.Principal) {
+			p.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true}
+		},
+		"on a read seat": func(p *principal.Principal) { p.SeatType = principal.SeatRead },
+	}
+	for name, narrow := range refusals {
+		t.Run(name, func(t *testing.T) {
+			actor, _ := principal.Actor(e.as())
+			narrow(&actor)
+			candidates, truncated, err := e.store.ListLinkCandidates(principal.WithActor(e.as(), actor), company)
+			if err != nil || len(candidates) != 0 || truncated {
+				t.Fatalf("candidates = %v truncated = %v err = %v, want none", candidateIDs(candidates), truncated, err)
+			}
+		})
+	}
+	if candidates, _, err := e.store.ListLinkCandidates(e.as(), company); err != nil || len(candidates) != 1 {
+		t.Fatalf("an unnarrowed rep got %v (err %v), want Vic, so the cases above prove nothing", candidateIDs(candidates), err)
 	}
 }
 

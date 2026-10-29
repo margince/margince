@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An address answers the company the plant would employ it at, on its own domain or
-// the narrowest parent. Consumer mail, a refused domain and a hidden company never answer.
+// An address answers the company on its own domain or the narrowest parent covering it.
+// Consumer mail, a refused domain and a hidden company never answer.
 func TestAnAddressAnswersTheCompanyOnItsDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

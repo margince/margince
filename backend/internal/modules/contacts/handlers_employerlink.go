@@ -4,7 +4,9 @@
 package contacts
 
 import (
+	"fmt"
 	"net/http"
+	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -63,8 +65,17 @@ func (h Handlers) ListCompanyLinkCandidates(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CompanyLinkCandidateList{Data: data, Truncated: truncated})
 }
 
+// maxAddressQuery is the contract's maxLength for the asked address, which the
+// generated params type does not enforce.
+const maxAddressQuery = 320
+
 // GetCompanyForAddress serves GET /companies/for-address.
 func (h Handlers) GetCompanyForAddress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCompanyForAddressParams) {
+	if length := utf8.RuneCountInString(params.Email); length > maxAddressQuery {
+		httperr.Write(w, r, httperr.Validation("email", "too_long",
+			fmt.Sprintf("an address is at most %d characters; this one is %d", maxAddressQuery, length)))
+		return
+	}
 	company, found, err := h.store.CompanyForAddress(r.Context(), params.Email)
 	if err != nil {
 		writeStoreErr(w, r, err)

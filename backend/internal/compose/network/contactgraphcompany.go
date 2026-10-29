@@ -139,7 +139,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		return nil, 0, err
 	}
 	viewer, _ := principal.Actor(ctx)
-	seatPos := arg(seats.For(seatViewer(viewer)))
+	notSeat := storekit.HoldsNoSeatAddressSQL("p.id", seats.For(seatViewer(viewer)), arg)
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
@@ -176,7 +176,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND p.id <> $%d
 		   AND (%s)
 		   AND (%s)
-		   AND `+storekit.HoldsNoSeatAddressSQL("p.id", seatPos)+`
+		   AND `+notSeat+`
 		)
 		SELECT id, full_name, title, count(*) OVER () AS total
 		  FROM coworkers WHERE edge_rank = 1

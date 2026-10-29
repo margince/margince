@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -84,8 +85,9 @@ func mayLinkEmployees(ctx context.Context) (bool, error) {
 // link share it, so the link accepts what the list offers and nothing else. A
 // non-nil `only` narrows it to those contacts.
 //
-// It matches a domain and skips workspace seats as the daily plant does. It asks
-// the write authority the edge create asks.
+// It matches a domain and skips workspace seats as the daily plant does. A batch
+// to link is checked for seats under the plant's locks too. It asks the write
+// authority the edge create asks.
 func (s *Store) linkCandidatesTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, only []ids.UUID, limit int,
 ) ([]LinkCandidate, error) {
@@ -137,7 +139,7 @@ func (s *Store) linkCandidatesTx(
 		 ORDER BY lower(c.full_name), c.id
 		 LIMIT %[8]d`,
 		matching, arg(companyID), employment.LiveSlotSQL("rel"), employment.IsCurrentSQL("rel.ended_at"),
-		storekit.HoldsNoSeatAddressSQL("c.id", arg(seats.For(ids.Nil))), scope, narrowed, limit), args...)
+		storekit.HoldsNoSeatAddressSQL("c.id", seats.For(ids.Nil), arg), scope, narrowed, limit), args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading link candidates: %w", err)
 	}
@@ -148,7 +150,26 @@ func (s *Store) linkCandidatesTx(
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading link candidates: %w", err)
 	}
+	if only != nil {
+		if out, err = withoutSeatsTx(ctx, tx, out); err != nil {
+			return nil, err
+		}
+	}
 	return out, attachCandidateEmployers(ctx, tx, out)
+}
+
+// withoutSeatsTx drops the workspace seats from a batch about to be linked,
+// through seatContactsTx and its locks, as plantDomainEmployment does.
+func withoutSeatsTx(ctx context.Context, tx pgx.Tx, candidates []LinkCandidate) ([]LinkCandidate, error) {
+	contactIDs := make([]ids.ContactID, 0, len(candidates))
+	for _, c := range candidates {
+		contactIDs = append(contactIDs, c.ContactID)
+	}
+	seats, err := seatContactsTx(ctx, tx, contactIDs)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(candidates, func(c LinkCandidate) bool { return seats[c.ContactID] }), nil
 }
 
 // linkableContactClause is the contacts the caller may read and change, the
