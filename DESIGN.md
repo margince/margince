@@ -876,7 +876,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, white text, `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#07221d` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |
