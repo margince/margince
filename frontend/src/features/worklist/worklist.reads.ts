@@ -52,8 +52,10 @@ export function worklistDayOptions(
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
     initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      readWorklistPage(scope, filter, owner, pageParam),
+    // React Query aborts the signal once no screen still observes this key, and
+    // the server then stops assembling the day instead of answering nobody.
+    queryFn: ({ pageParam, signal }) =>
+      readWorklistPage(scope, filter, owner, pageParam, signal),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
@@ -65,11 +67,13 @@ export async function readWorklistPage(
   filter: WorklistFilter,
   owner: string | undefined,
   cursor: string | undefined,
+  signal?: AbortSignal,
 ): Promise<Worklist> {
   const dials = owner ? { owner, filter } : { scope, filter };
   return unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },
+      signal,
     }),
   );
 }

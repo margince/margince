@@ -29,14 +29,15 @@ function NextTaskPress() {
   const [reading, setReading] = useState(false);
   const [failure, setFailure] = useState<unknown>(null);
   const [spent, setSpent] = useState(false);
-  const mounted = useRef(false);
+  // Aborted when the reader leaves, so the server stops assembling a page nobody reads.
+  const leaving = useRef(new AbortController());
   useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
+    const controller = new AbortController();
+    leaving.current = controller;
+    return () => controller.abort();
   }, []);
   const press = async () => {
+    const { signal } = leaving.current;
     setFailure(null);
     setReading(true);
     try {
@@ -50,6 +51,7 @@ function NextTaskPress() {
           list.filter,
           list.owner,
           cursor,
+          signal,
         );
         pages.push(page);
         cursor = page.next_cursor ?? undefined;
@@ -59,15 +61,15 @@ function NextTaskPress() {
           list.carried,
           cursor === undefined,
         );
-      } while (mounted.current && next === undefined && cursor !== undefined);
+      } while (!signal.aborted && next === undefined && cursor !== undefined);
       // The answer is about the record it was pressed on; a reader gone elsewhere stays there.
-      if (!mounted.current) return;
+      if (signal.aborted) return;
       if (next === undefined) setSpent(true);
       else navigate(parseHash(next), parseParams(next));
     } catch (error) {
-      setFailure(error);
+      if (!signal.aborted) setFailure(error);
     } finally {
-      setReading(false);
+      if (!signal.aborted) setReading(false);
     }
   };
   return (
