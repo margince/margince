@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -335,5 +336,20 @@ func (w attentionWaiting) emailRows(
 		// the same answer to that question as "no rows for you".
 		return map[ids.UUID]crmcontracts.EmailSummary{}, nil
 	}
-	return w.store.EmailSummariesByID(ctx, emailIDs)
+	return emailSummariesReusingPlans(ctx, w.store, emailIDs)
+}
+
+// emailSummariesReusingPlans reads the email rows behind a lane's rows. Its
+// statements key on the ids and spell kinds as literals, so the generic plan
+// serves. Planned at every call, they cost more to plan than to run.
+func emailSummariesReusingPlans(
+	ctx context.Context, store *activities.Store, activityIDs []ids.UUID,
+) (map[ids.UUID]crmcontracts.EmailSummary, error) {
+	var summaries map[ids.UUID]crmcontracts.EmailSummary
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		summaries, err = store.EmailSummariesByID(ctx, activityIDs)
+		return err
+	})
+	return summaries, err
 }
