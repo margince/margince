@@ -283,7 +283,7 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: "never cited: " + strings.Join(missing, ", "),
 		}
 	}
-	if spoken := firstPersonText(kept); spoken != "" {
+	if spoken := selfReferenceText(kept); spoken != "" {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf("a claim or reason speaks as I: %q", spoken),
@@ -292,16 +292,16 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
-// firstPersonSingular are the words a writer uses of itself alone. "We" and
+// selfWords are the words a writer uses of itself alone. "We" and
 // "our" are absent: in a fit they name the reader's own company.
-var firstPersonSingular = map[string]bool{
+var selfWords = map[string]bool{
 	"I": true, "I'm": true, "I'd": true, "I'll": true, "I've": true,
 	"me": true, "Me": true, "my": true, "My": true, "myself": true, "Myself": true,
 }
 
-// firstPersonText is the first kept claim or sub-score reason with a speaker,
+// selfReferenceText is the first kept claim or sub-score reason with a speaker,
 // or "" when the assessment states its findings without one.
-func firstPersonText(kept companydossier.GrowthFitClaims) string {
+func selfReferenceText(kept companydossier.GrowthFitClaims) string {
 	texts := make([]string, 0, len(kept.SubScores))
 	for _, sub := range kept.SubScores {
 		texts = append(texts, sub.Reason)
@@ -324,7 +324,7 @@ func speaksAsI(text string) bool {
 		return unicode.IsSpace(r) || r == '—' || r == '–'
 	})
 	for _, field := range words {
-		if firstPersonSingular[strings.TrimFunc(field, unicode.IsPunct)] {
+		if selfWords[strings.TrimFunc(field, unicode.IsPunct)] {
 			return true
 		}
 	}

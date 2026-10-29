@@ -282,38 +282,52 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 		speaker string
 	}{
 		"a recommended angle that suggests": {
-			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I suggest you focus on smaller prospects."},
+			lane: voiceLane{
+				whitespace: plain.whitespace, reason: plain.reason,
+				angle: "I suggest you focus on smaller prospects.",
+			},
 			speaker: "I suggest",
 		},
 		"whitespace that reports finding none": {
-			lane: voiceLane{angle: plain.angle, reason: plain.reason,
-				whitespace: "I couldn’t identify any obvious gaps."},
+			lane: voiceLane{
+				angle: plain.angle, reason: plain.reason,
+				whitespace: "I couldn’t identify any obvious gaps.",
+			},
 			speaker: "I couldn’t",
 		},
-		"a sub-score reason in the first person": {
-			lane: voiceLane{whitespace: plain.whitespace, angle: plain.angle,
-				reason: "In my reading their buyers are hard to reach."},
+		"a sub-score reason that says my": {
+			lane: voiceLane{
+				whitespace: plain.whitespace, angle: plain.angle,
+				reason: "In my reading their buyers are hard to reach.",
+			},
 			speaker: "my reading",
 		},
 		"a pronoun after a name inside the sentence": {
-			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
-				angle: "In Germany I suggest focusing on plant managers."},
+			lane: voiceLane{
+				whitespace: plain.whitespace, reason: plain.reason,
+				angle: "In Germany I suggest focusing on plant managers.",
+			},
 			speaker: "Germany I suggest",
 		},
 		"a pronoun joined to a word by a dash": {
-			lane: voiceLane{angle: plain.angle, reason: plain.reason,
-				whitespace: "Their rollout is stalled—I suggest a pilot."},
+			lane: voiceLane{
+				angle: plain.angle, reason: plain.reason,
+				whitespace: "Their rollout is stalled—I suggest a pilot.",
+			},
 			speaker: "stalled—I",
 		},
 		"a conditional contraction with a curly apostrophe": {
-			lane: voiceLane{whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I’d lead with SAP."},
+			lane: voiceLane{
+				whitespace: plain.whitespace, reason: plain.reason,
+				angle: "I’d lead with SAP.",
+			},
 			speaker: "I’d lead",
 		},
 		"a perfect-tense contraction with a curly apostrophe": {
-			lane: voiceLane{angle: plain.angle, reason: plain.reason,
-				whitespace: "They lack middleware, as I’ve seen in their stack."},
+			lane: voiceLane{
+				angle: plain.angle, reason: plain.reason,
+				whitespace: "They lack middleware, as I’ve seen in their stack.",
+			},
 			speaker: "I’ve seen",
 		},
 	} {
