@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { markdownFirstLine } from "../design-system/markdown-parse";
+import { markdownFirstLine } from "../design-system/markdown-text";
 
 /**
  * What a task asks, as one plain line for a row under its title, or nothing.

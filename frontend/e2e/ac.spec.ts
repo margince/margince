@@ -3397,7 +3397,9 @@ test.describe("calling a contact", () => {
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
 
-  test("the header Call dials the primary of two numbers", async ({ page }) => {
+  test("the Call icon beside the number dials the primary of two numbers", async ({
+    page,
+  }) => {
     await page.goto(`/#/contacts/${CALLED_CONTACT}`);
     await expectShellRendered(page);
     await expect(
@@ -3405,21 +3407,20 @@ test.describe("calling a contact", () => {
     ).toHaveAttribute("href", tel);
   });
 
-  test("the header Call on a contact with no number is refused and says why", async ({
-    page,
-  }) => {
+  test("a contact with no number offers no Call at all", async ({ page }) => {
     await page.goto("/#/contacts/p-anna");
     await expectShellRendered(page);
-    const call = page.getByRole("button", {
-      name: de["contact.action.call"],
-      exact: true,
-    });
-    await expect(call).toBeDisabled();
-    await expect(call).toHaveAccessibleDescription(
-      de["contact.action.noPhone"],
-    );
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"] }),
+      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: de["contact.action.call"],
+        exact: true,
+      }),
     ).toHaveCount(0);
   });
 

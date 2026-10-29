@@ -214,7 +214,7 @@ Also called: change the amount, update deal size, switch to dollars.
 ### How do I change a deal's expected close date?
 To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date.
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
-To hold a deal until a date without moving its close date, set **Wait until** instead.
+To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
 
 ### How do I change a deal's company or project?
