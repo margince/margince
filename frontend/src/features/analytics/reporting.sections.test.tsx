@@ -294,6 +294,39 @@ describe("which views a seat reads", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers no Sales view to a reader whose catalog publishes no sales preset", async () => {
+    showScreen("#/analytics/performance", {
+      metrics: [
+        {
+          id: "forecast_landing",
+          version: "1",
+          unit: "money",
+          temporal_basis: "state_at",
+          supports_target: false,
+          definition:
+            "The deal forecast's expected finish for this fiscal quarter.",
+          blocks: ["forecast_support", "metric_reading"],
+        },
+        ...reportingSectionsCatalog.metrics.filter(
+          (metric) => metricView(metric.id) === "leads",
+        ),
+      ],
+      presets: [],
+    });
+
+    expect(
+      await screen.findByRole("button", {
+        name: en["reporting.leads"],
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: en["analytics.sectionPerformance"],
+      }),
+    ).toBeNull();
+  });
+
   it("says why there is no view to choose when it reads none", async () => {
     showScreen("#/analytics/performance", { metrics: [], presets: [] });
 

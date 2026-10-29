@@ -142,3 +142,98 @@ func sumOf(values map[string]float64) float64 {
 	}
 	return total
 }
+
+// TestReportingTargetCostDoesNotGrowWithTheMetricsHeldAgainstTargets measures
+// what reading targets adds: the same seat with and without the target grant.
+// It compares two and five metrics, each with a target. The metric readers
+// grow with the metrics; the target work must not.
+func TestReportingTargetCostDoesNotGrowWithTheMetricsHeldAgainstTargets(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	admin := reportingActor(e)
+	seedTargetExclusions(t, service, admin, e)
+	blind := reportingTieredReader(admin, principal.RowScopeAll)
+	actor, _ := principal.Actor(blind)
+	actor.Permissions.Objects["sales_target"] = principal.ObjectGrant{}
+	blind = principal.WithActor(blind, actor)
+	targetCost := func(metrics ...crmcontracts.ReportingMetricID) int64 {
+		selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: metrics, Blocks: []crmcontracts.ReportingBlockKind{"target_progress"}}
+		return evaluateOwnerCost(admin, t, service, selection).statements - evaluateOwnerCost(blind, t, service, selection).statements
+	}
+	few := targetCost("bookings_won", "meetings_held")
+	many := targetCost("bookings_won", "meetings_held", "qualified_pipeline_created", "accepted_opportunities", "partner_pipeline")
+	t.Logf("statements the targets add: 2 metrics=%d, 5 metrics=%d", few, many)
+	if few <= 0 || many != few {
+		t.Errorf("target work grew with the metrics: 2 metrics=%d statements, 5 metrics=%d", few, many)
+	}
+}
+
+// TestReportingBatchedTargetsKeepEveryExclusion holds each figure against only
+// the target of its own metric, scope, pipeline and interval.
+func TestReportingBatchedTargetsKeepEveryExclusion(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	admin := reportingActor(e)
+	seedTargetExclusions(t, service, admin, e)
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held", "qualified_pipeline_created", "accepted_opportunities", "partner_pipeline"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment", "target_progress"}}
+	result, err := service.Evaluate(admin, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The October and the pipeline target of sales won, the retired partner
+	// target and Rep1's own credit target must all stay out.
+	want := map[crmcontracts.ReportingMetricID]*float64{"bookings_won": ptrFloat(30000000), "meetings_held": ptrFloat(12), "qualified_pipeline_created": ptrFloat(5000000), "accepted_opportunities": nil, "partner_pipeline": nil}
+	for _, metric := range result.Metrics {
+		if expected := want[metric.Id]; (expected == nil) != (metric.Target == nil) || (expected != nil && *expected != *metric.Target) {
+			t.Errorf("%s: target = %s, want %s", metric.Id, valueOf(metric.Target), valueOf(expected))
+		}
+	}
+	reading := evaluateOwnerCost(admin, t, service, crmcontracts.ReportingSelection{Scope: selection.Scope, Period: selection.Period, TargetBasis: selection.TargetBasis, CloseWindow: selection.CloseWindow, Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment"}})
+	if !maps.Equal(reading.targets, map[string]float64{e.Rep1.String(): 20000000}) {
+		t.Errorf("owner targets = %v, want only Rep1's sales target", reading.targets)
+	}
+}
+
+// seedTargetExclusions writes the September targets an evaluation should
+// hold, beside targets that differ in one part of the key each.
+func seedTargetExclusions(t *testing.T, service *reporting.Service, admin context.Context, e *forecastEnv) {
+	t.Helper()
+	september := openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
+	october := openapi_types.Date{Time: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}
+	workspace := crmcontracts.ReportingScope{Kind: "workspace"}
+	rep1 := crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}
+	create := func(metric crmcontracts.ReportingMetricID, scope crmcontracts.ReportingScope, pipeline *openapi_types.UUID, start openapi_types.Date, value int64) crmcontracts.ReportingTarget {
+		t.Helper()
+		target, err := service.CreateTarget(admin, crmcontracts.ReportingTargetInput{Metric: metric, Scope: scope, PipelineId: pipeline, PeriodKind: "month", PeriodStart: start, Value: value, Reason: "Fixture target"})
+		if err != nil {
+			t.Fatalf("%s target: %v", metric, err)
+		}
+		return target
+	}
+	create("bookings_won", workspace, nil, september, 30000000)
+	create("bookings_won", workspace, ptrUUID(e.pipeline), september, 31000000)
+	create("bookings_won", workspace, nil, october, 32000000)
+	create("bookings_won", rep1, nil, september, 20000000)
+	create("meetings_held", workspace, nil, september, 12)
+	create("qualified_pipeline_created", workspace, nil, september, 5000000)
+	create("accepted_opportunities", rep1, nil, september, 7)
+	partner := create("partner_pipeline", workspace, nil, september, 9000000)
+	retired := true
+	input := partner.Definition
+	input.Retired = &retired
+	input.Reason = "Fixture retirement"
+	if _, err := service.UpdateTarget(admin, ids.UUID(partner.Id), partner.Version, input); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func ptrFloat(value float64) *float64 { return &value }
+
+func valueOf(value *float64) string {
+	if value == nil {
+		return "none"
+	}
+	return fmt.Sprint(*value)
+}

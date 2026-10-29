@@ -82,13 +82,19 @@ export function viewOfSection(section: Section): ReportingView | undefined {
   return REPORTING_VIEWS.find((view) => VIEW_SHAPE[view].section === section);
 }
 
-// The views whose metrics this catalog holds: the ones a seat is offered.
+// The views a seat is offered on this catalog. A preset view is offered when
+// the catalog publishes its preset, because that preset is all it asks. Any
+// other view is offered when the catalog holds one of its metrics.
 export function readableViews(
-  metrics: readonly Readonly<{ id: ReportingMetricID }>[],
+  catalog: Pick<Catalog, "metrics" | "presets">,
 ): ReportingView[] {
-  return REPORTING_VIEWS.filter((view) =>
-    metrics.some((metric) => METRIC_VIEW[metric.id] === view),
-  );
+  return REPORTING_VIEWS.filter((view) => {
+    const shape = VIEW_SHAPE[view];
+    if ("preset" in shape) {
+      return catalog.presets.some((preset) => preset.id === shape.preset);
+    }
+    return catalog.metrics.some((metric) => METRIC_VIEW[metric.id] === view);
+  });
 }
 
 export function metricView(metric: ReportingMetricID): ReportingView {

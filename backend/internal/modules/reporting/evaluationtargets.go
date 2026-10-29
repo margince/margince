@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -52,17 +53,8 @@ func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetRe
 	if err := s.authorizeTargetScopes(ctx, tx, frame.Scope, owners); err != nil {
 		return nil, err
 	}
-	var metrics, kinds, subjects []string
-	seen := map[targetKey]bool{}
-	for _, key := range keys {
-		if !seen[key] {
-			seen[key] = true
-			metrics, kinds, subjects = append(metrics, string(key.metric)), append(kinds, string(key.kind)), append(subjects, key.subject)
-		}
-	}
-	var b bindings
-	where := reach.clause(&b) + " AND " + activeTarget + " AND (t.metric,t.scope_kind,COALESCE(t.scope_id::text,'')) IN (SELECT * FROM unnest(" + b.add(metrics) + "::text[]," + b.add(kinds) + "::text[]," + b.add(subjects) + "::text[])) AND t.pipeline_id IS NOT DISTINCT FROM " + b.add(frame.PipelineId) + "::uuid AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
-	rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where, b.values...)
+	query, values := targetsQuery(reach, frame, keys)
+	rows, err := tx.Query(ctx, query, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +68,45 @@ func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetRe
 		held[keyFor(target.Definition.Scope, target.Definition.Metric)] = target
 	}
 	return held, nil
+}
+
+// targetsQuery matches keys on the raw natural-key columns, so
+// sales_target_identity narrows on metric, scope and pipeline. A key with no
+// subject matches only a target with no scope id, and an owner key only its
+// own owner. The two arms are a `UNION ALL` because an `OR` of them is not
+// planned as an index scan.
+//
+//craft:ignore naked-any pgx binds heterogeneous scalar types at the SQL boundary.
+func targetsQuery(reach targetReach, frame crmcontracts.ReportingContext, keys []targetKey) (string, []any) {
+	var whole, subject struct{ metrics, kinds, ids []string }
+	seen := map[targetKey]bool{}
+	for _, key := range keys {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		arm := &whole
+		if key.subject != "" {
+			arm = &subject
+			arm.ids = append(arm.ids, key.subject)
+		}
+		arm.metrics, arm.kinds = append(arm.metrics, string(key.metric)), append(arm.kinds, string(key.kind))
+	}
+	var b bindings
+	common := reach.clause(&b) + " AND " + activeTarget + " AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
+	if frame.PipelineId == nil {
+		common += " AND t.pipeline_id IS NULL"
+	} else {
+		common += " AND t.pipeline_id=" + b.add(*frame.PipelineId) + "::uuid"
+	}
+	var arms []string
+	if len(whole.metrics) > 0 {
+		arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+" AND t.scope_id IS NULL AND (t.metric,t.scope_kind) IN (SELECT * FROM unnest("+b.add(whole.metrics)+"::text[],"+b.add(whole.kinds)+"::text[]))")
+	}
+	if len(subject.metrics) > 0 {
+		arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+" AND (t.metric,t.scope_kind,t.scope_id) IN (SELECT * FROM unnest("+b.add(subject.metrics)+"::text[],"+b.add(subject.kinds)+"::text[],"+b.add(subject.ids)+"::uuid[]))")
+	}
+	return strings.Join(arms, " UNION ALL "), b.values
 }
 
 // authorizeTargetScopes refuses the evaluation when the reader may not
