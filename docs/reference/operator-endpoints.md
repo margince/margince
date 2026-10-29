@@ -75,12 +75,17 @@ Served next to `/v1`:
   | Metric | Type | Labels |
   |---|---|---|
   | `margince_worklist_stage_duration_seconds` | histogram | `stage` |
+  | `margince_worklist_stage_statements_total` | counter | `stage` |
+  | `margince_worklist_stage_statement_errors_total` | counter | `stage` |
+  | `margince_worklist_stage_db_seconds` | histogram | `stage` |
+  | `margince_worklist_stage_app_seconds` | histogram | `stage` |
+  | `margince_worklist_pool_wait_seconds` | histogram | (none) |
 
   **`stage` is a fixed name from the code**, never a request value. Each `timeStage` call in
   `backend/internal/compose/attention` names one step, and every optional lane is timed under its
   own lane name. The buckets run from `1ms` to `8s`, past the `4s` budget an optional lane may
-  spend. The series start empty and count from process start, so read them through `rate`. The
-  stages that cost the most time, over 5 minutes:
+  spend. One bucket sits at `0.75s`, the target for one `/v1/worklist` read. The series start empty
+  and count from process start, so read them through `rate`. The stages that cost the most time, over 5 minutes:
 
   ```promql
   topk(5, sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum[5m]))
@@ -88,6 +93,35 @@ Served next to `/v1`:
   ```
 
   A slow `/v1/worklist` in the HTTP section shows here as the stage that grew.
+
+  The other families split each stage into its SQL and its Go code. A tracer on every pool counts
+  each statement a stage sends, and an error or a cancel counts in the errors family too. A batch
+  counts one statement for each query in it. A statement in an inner stage counts in that stage
+  only, never in the stage around it.
+
+  - `margince_worklist_stage_db_seconds` is database time as the client saw it. It runs from the
+    send of a statement until its result is closed. That is network time, the server's work and the
+    rows read in Go, not only the server's own work.
+  - `margince_worklist_stage_app_seconds` is the rest of the stage: its time less that
+    database time, its pool waits and its inner stages.
+  - The stage `outside_stages` holds the statements a read sends outside every timed stage, such
+    as `BEGIN`, `COMMIT` and the scope checks. It has cost series and no `margince_worklist_stage_duration_seconds` series.
+  - `margince_worklist_pool_wait_seconds` is how long one read waited for pool connections, mostly
+    the one acquire of its snapshot. The pool section's acquire counters add up every wait in the
+    process; this family gives one value for each read.
+
+  A `/v1/attention` read goes through the same stages, so its reads count in these families as
+  well. Statements per read and database share of each stage, over 5 minutes:
+
+  ```promql
+  sum by (stage) (rate(margince_worklist_stage_statements_total[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_db_seconds_count[5m]))
+  sum by (stage) (rate(margince_worklist_stage_db_seconds_sum[5m]))
+    / sum by (stage) (rate(margince_worklist_stage_duration_seconds_sum[5m]))
+  ```
+
+  The `0.75s` bucket also changed the `le` series of `margince_worklist_stage_duration_seconds`. A
+  saved query that names each `le` value needs the new one.
 
   The connection pool section reports the own pool of this process. It publishes every value pgx
   works out, as gauges and counters:

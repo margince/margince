@@ -90,6 +90,9 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// Typed entity ids ride uuid/uuid[] on every connection, and every
 	// timestamptz reads back in UTC.
 	setSessionUTC(cfg)
+	// Inert until a caller binds a StatementMeter to the context, which is how
+	// the worklist splits each stage into database time and Go time.
+	cfg.ConnConfig.Tracer = statementTracer{now: time.Now}
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		RegisterUTCTimes(conn)

@@ -135,22 +135,45 @@ func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 	}
 }
 
-// worklistStagesSoFar is the timings logWorklistStages later subtracts.
-func worklistStagesSoFar() map[string]httpserver.Histogram { return attention.StageTimings() }
+// worklistStageMark is the stage collector at one moment, which
+// logWorklistStages later subtracts.
+type worklistStageMark struct {
+	durations map[string]httpserver.Histogram
+	costs     map[string]attention.StageCost
+}
+
+func worklistStagesSoFar() worklistStageMark {
+	return worklistStageMark{durations: attention.StageTimings(), costs: attention.StageCosts()}
+}
 
 // logWorklistStages prints each worklist stage's mean over the latency step,
-// slowest first, so a slow worklist row names the lane it spent its time in.
-// The timings are process-wide, so the reads before the step are subtracted.
-func logWorklistStages(t *testing.T, before map[string]httpserver.Histogram) {
+// slowest first, with its statements, database time and Go time per read. A
+// slow worklist row then names its lane, and whether SQL or Go took the time.
+// The collector is process-wide, so the reads before the step are subtracted.
+func logWorklistStages(t *testing.T, before worklistStageMark) {
 	t.Helper()
-	stages := attention.StageTimings()
-	count := func(stage string) uint64 { return stages[stage].Count() - before[stage].Count() }
-	mean := func(stage string) float64 {
-		return (stages[stage].Sum() - before[stage].Sum()) / float64(max(1, count(stage)))
+	now := worklistStagesSoFar()
+	// outside_stages has costs and no duration, so its runs come from the costs.
+	runs := func(stage string) uint64 {
+		return max(now.durations[stage].Count(), now.costs[stage].DB.Count()) -
+			max(before.durations[stage].Count(), before.costs[stage].DB.Count())
 	}
-	names := slices.Collect(maps.Keys(stages))
+	mean := func(stage string) float64 {
+		return (now.durations[stage].Sum() - before.durations[stage].Sum()) / float64(max(1, runs(stage)))
+	}
+	names := slices.Collect(maps.Keys(now.costs))
+	for stage := range maps.Keys(now.durations) {
+		if !slices.Contains(names, stage) {
+			names = append(names, stage)
+		}
+	}
 	slices.SortFunc(names, func(a, b string) int { return cmp.Compare(mean(b), mean(a)) })
 	for _, stage := range names {
-		t.Logf("worklist stage %-28s mean %8.1f ms over %d", stage, mean(stage)*1000, count(stage))
+		n := float64(max(1, runs(stage)))
+		statements := float64(now.costs[stage].Statements-before.costs[stage].Statements) / n
+		db := (now.costs[stage].DB.Sum() - before.costs[stage].DB.Sum()) / n
+		app := (now.costs[stage].App.Sum() - before.costs[stage].App.Sum()) / n
+		t.Logf("worklist stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms database %8.1f ms Go per read",
+			stage, mean(stage)*1000, runs(stage), statements, db*1000, app*1000)
 	}
 }
