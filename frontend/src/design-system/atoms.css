@@ -798,8 +798,8 @@
    behind it. Declared here rather than by each host, because every host that
    styled it reached a slightly different answer and the same record then drew
    one figure two ways.
-   Its own ink, not the host's: a quiet label's --textSecondary reads under
-   4.5:1 on the chip in dark, so the figure stays primary. The minimum width is what keeps a
+   Its own ink, not the host's: --textSecondary is not one of the chipInks
+   pairs measured on the chip, so the figure stays primary. The minimum width is what keeps a
    column of chips the same size from 1 to 99, and the centring is what keeps
    the digit in the middle of it. */
 .optioncount {
@@ -815,7 +815,7 @@
 }
 
 .segmented {
-  border: 0;
+  border: 1px solid var(--paneEdge);
   margin: 0;
   display: inline-flex;
   /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
@@ -828,7 +828,8 @@
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  padding: 3px;
+  /* 2px plus the 1px edge: the option's --segmentPaddingY again. */
+  padding: 2px;
   gap: 2px;
 }
 .segmented button {

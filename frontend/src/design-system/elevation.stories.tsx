@@ -110,19 +110,19 @@ export const Surfaces: Story = {
 };
 
 /**
- * A pane is one translucent zone over the lit ground, edged with a hairline.
+ * A pane is one zone over the page ground, edged with a hairline.
  */
 export const Pane: Story = {
   render: () => (
     <div className={specimenColumn} style={{ maxWidth: "880px" }}>
       <p className={specimenIntro}>
-        Use a pane for one zone over the lit ground: a translucent fill with a
-        blur behind it, and a hairline for its edge.
+        Use a pane for one zone over the page ground, with a hairline for its
+        edge.
       </p>
       <div
         style={{
           padding: "var(--space-4)",
-          background: "var(--groundLit)",
+          background: "var(--bgPage)",
           border: "1px solid var(--borderSubtle)",
           borderRadius: "var(--r-lg)",
         }}
@@ -136,7 +136,7 @@ export const Pane: Story = {
         >
           <Label
             token="--pane"
-            usage="One translucent pane per zone, with --paneEdge for its hairline."
+            usage="One pane per zone, with --paneEdge for its hairline."
           />
         </div>
       </div>

@@ -48,7 +48,10 @@ type Entry = Readonly<{
 const THEMES: readonly Theme[] = ["light", "dark"];
 
 const SURFACES: readonly Entry[] = [
-  { token: "--bgPage", usage: "The reading ground." },
+  {
+    token: "--bgPage",
+    usage: "The reading ground, flat under the app shell and the Deal Room.",
+  },
   {
     token: "--bgWell",
     usage: "A recess in an elevated surface, the well a board's stage is.",
@@ -61,12 +64,12 @@ const SURFACES: readonly Entry[] = [
   { token: "--bgHover", usage: "A pointer resting on a row on the page." },
   {
     token: "--pane",
-    usage: "One translucent pane per zone, over the lit ground.",
+    usage: "One pane per zone, over the page ground.",
   },
   {
     token: "--bgChip",
     usage:
-      "A small inline fill drawn on a rung: a badge, a key-cap, a segmented strip, a meter trough. Translucent.",
+      "A small inline fill drawn on a rung: a badge, a key-cap, a segmented strip, a meter trough.",
   },
 ];
 
@@ -130,7 +133,7 @@ const ACCENT: readonly Entry[] = [
   },
   {
     token: "--accentLight",
-    usage: "The accent's translucent tint, and the colour of the focus glow.",
+    usage: "The accent's tint, and the colour of the focus glow.",
   },
   { token: "--accentMed" },
   {
@@ -273,7 +276,7 @@ const FOCUS: readonly Entry[] = [
   },
 ];
 
-const ATMOSPHERE: readonly Entry[] = [
+const OVERLAYS: readonly Entry[] = [
   {
     token: "--overlayLight",
     on: "--bgInset",
@@ -288,22 +291,6 @@ const ATMOSPHERE: readonly Entry[] = [
     token: "--overlayScrim",
     on: "--bgPage",
     usage: "The scrim behind a modal.",
-  },
-  {
-    token: "--glowA",
-    on: "--bgPage",
-    usage: "The emerald light at the top-left corner, behind the sidebar.",
-  },
-  {
-    token: "--glowB",
-    on: "--bgPage",
-    usage: "The indigo light at the top-right corner.",
-  },
-  {
-    token: "--groundLit",
-    on: "--bgPage",
-    usage:
-      "The page colour with both lights painted in, shared by the app shell and the buyer's Deal Room.",
   },
 ];
 
@@ -778,12 +765,12 @@ export const OrbsAndFocus: Story = {
 };
 
 /** Material effects, not brand colour. */
-export const OverlaysAndAtmosphere: Story = {
-  name: "Overlays and atmosphere",
+export const Overlays: Story = {
+  name: "Overlays",
   render: () => (
     <Rows
-      intro="Material effects, not brand colour: a highlight and a scrim are pure white and pure black at low alpha, unthemed so white stays white when the surface under it goes dark. The two glows are the chrome, the only decoration on the page, and atmosphere that moves is a feature, so they never animate."
-      entries={ATMOSPHERE}
+      intro="Material effects, not brand colour: a highlight and a scrim are pure white and pure black at low alpha, unthemed so white stays white when the surface under it goes dark."
+      entries={OVERLAYS}
     />
   ),
 };

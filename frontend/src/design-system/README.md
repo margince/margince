@@ -216,6 +216,10 @@ A selected view tab, a pressed button, the current record tab or the current row
 reader is. So it is neutral, like a pressed `FilterPills` pill. `selectedstate.test.ts` fails such a
 state in any shipped sheet when its ground, ink, edge or bar comes from an `--accent*` token.
 
+The current row of the side rail, and its cell in the phone bar, are the one exception: they are
+filled with `--accent`. That row marks where the reader is in the whole app, not one choice of
+several. The gate names these two rules and no other.
+
 `--ai` is provenance. A progress bar or a running step
 in that colour claims a model decided the figure. So work still running reads `--info*`: the ring
 of a spinner, a delivery in the queue, a stage under way.
