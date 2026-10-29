@@ -98,7 +98,7 @@ func (l *spendLedger) handlers() Handlers {
 }
 
 // serveSpend runs one handler as reader and decodes its 200 body into out.
-func serveSpend[Body crmcontracts.AiUsage | crmcontracts.AiUsageSummary](t *testing.T, reader context.Context, serve http.HandlerFunc, out *Body) {
+func serveSpend[Body crmcontracts.AiUsage | crmcontracts.AiUsageSummary](reader context.Context, t *testing.T, serve http.HandlerFunc, out *Body) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	serve(rec, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(reader))
@@ -112,10 +112,10 @@ func serveSpend[Body crmcontracts.AiUsage | crmcontracts.AiUsageSummary](t *test
 
 // reportLineSum is what the shell computed from /ai/usage: the sum of the
 // lines that carry a cost, or nil when none does.
-func reportLineSum(t *testing.T, h Handlers, reader context.Context) *int {
+func reportLineSum(reader context.Context, t *testing.T, h Handlers) *int {
 	t.Helper()
 	var report crmcontracts.AiUsage
-	serveSpend(t, reader, func(w http.ResponseWriter, r *http.Request) {
+	serveSpend(reader, t, func(w http.ResponseWriter, r *http.Request) {
 		h.GetAiUsage(w, r, crmcontracts.GetAiUsageParams{})
 	}, &report)
 	var sum *int
@@ -133,10 +133,10 @@ func reportLineSum(t *testing.T, h Handlers, reader context.Context) *int {
 	return sum
 }
 
-func readSummary(t *testing.T, h Handlers, reader context.Context) crmcontracts.AiUsageSummary {
+func readSummary(reader context.Context, t *testing.T, h Handlers) crmcontracts.AiUsageSummary {
 	t.Helper()
 	var summary crmcontracts.AiUsageSummary
-	serveSpend(t, reader, h.GetAiUsageSummary, &summary)
+	serveSpend(reader, t, h.GetAiUsageSummary, &summary)
 	return summary
 }
 
@@ -182,8 +182,8 @@ func TestMonthSpendEqualsTheSumOfTheReportsPricedLines(t *testing.T) {
 	now := julyDay(20, 15)
 	h := ledger.at(now).handlers()
 	reader := diagnosticsReader(ledger.ws)
-	reportSum := reportLineSum(t, h, reader)
-	summary := readSummary(t, h, reader)
+	reportSum := reportLineSum(reader, t, h)
+	summary := readSummary(reader, t, h)
 
 	if reportSum == nil || *reportSum != 7 {
 		t.Fatalf("the report's priced lines sum to %s, want 7 cents", minorText(reportSum))
@@ -195,7 +195,7 @@ func TestMonthSpendEqualsTheSumOfTheReportsPricedLines(t *testing.T) {
 		t.Errorf("summary currency = %q, want %q", summary.Currency, usageCurrency)
 	}
 	if !summary.ComputedAt.Equal(now) {
-		t.Errorf("summary computed_at = %s, want the window end %s", summary.ComputedAt, now)
+		t.Errorf("summary computed_at = %s, want the meter clock %s", summary.ComputedAt, now)
 	}
 }
 
@@ -205,10 +205,10 @@ func TestMonthSpendWithNoPricedLineCarriesNoFigure(t *testing.T) {
 
 	h := ledger.at(julyDay(20, 15)).handlers()
 	reader := diagnosticsReader(ledger.ws)
-	if sum := reportLineSum(t, h, reader); sum != nil {
+	if sum := reportLineSum(reader, t, h); sum != nil {
 		t.Fatalf("the report prices %d cents for unpriced calls, want no priced line", *sum)
 	}
-	if summary := readSummary(t, h, reader); summary.CostEstMinor != nil {
+	if summary := readSummary(reader, t, h); summary.CostEstMinor != nil {
 		t.Fatalf("summary cost_est_minor = %d, want it omitted: no line carries a price", *summary.CostEstMinor)
 	}
 }
