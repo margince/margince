@@ -214,8 +214,8 @@ export function DockedWindow({
     onStateChange("min");
   };
   const grown = state === "max";
-  // Portalled to the end of the body, after the dialog it was opened from:
-  // at the overlays' level, document order is what draws it above that dialog.
+  // Portalled to the end of the body, after the dialog it was opened from. At
+  // the overlays' level, document order draws it above that dialog.
   return createPortal(
     <>
       <section

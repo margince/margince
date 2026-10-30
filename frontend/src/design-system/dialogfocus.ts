@@ -132,7 +132,7 @@ function openPanelIn(
 ): HTMLElement | null {
   const panels = panelsOpenedFrom(dialog);
   const active = document.activeElement;
-  // A docked window owns Tab only while the reader is in it: unlike a popover
+  // A docked window owns Tab only while the reader is in it. Unlike a popover,
   // it stays open while they work in the dialog under it.
   const held = [...panels, ...windowsAbove(dialog)].find((panel) =>
     panel.contains(active),
