@@ -23136,6 +23136,17 @@ export interface components {
              */
             call_zalo: boolean;
             /**
+             * @description Show individual performance. On by default. Off, reports, analytics questions,
+             *     forecasts and forecast shares, targets, evidence, editions and their exports, and
+             *     team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+             *     by owner or meeting host are refused, a colleague's scope is refused, and a figure
+             *     that any colleague contributes to is refused unless at least two live colleagues
+             *     besides the reader do. Each reader keeps their own figures. The Team board, coaching
+             *     moves, a lead's view of a named member's queue, the morning mail's team section and
+             *     team weekly plans are not covered yet.
+             */
+            individual_performance: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -23274,6 +23285,8 @@ export interface components {
             call_telegram?: boolean;
             /** @description Show the Zalo link next to a contact's phone number. Omit to leave it unchanged. */
             call_zalo?: boolean;
+            /** @description Show individual performance. Omit to leave it unchanged. Each change is audited. */
+            individual_performance?: boolean;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -52061,7 +52074,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;

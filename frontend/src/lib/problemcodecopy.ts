@@ -18,6 +18,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
+  // The installation switched off individual performance; the detail is English.
+  ["individual_performance_off", "common.individualPerformanceOff"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
   // Every code httperr.Duplicate sends: its detail is one fixed API sentence

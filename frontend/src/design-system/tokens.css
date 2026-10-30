@@ -137,6 +137,9 @@
   --overlayScrim: rgba(19, 35, 29, 0.4);
   --accentBrand: #045647;
   --textOnInkField: #fff;
+  /* The quiet ink on the ink field, opaque so its contrast is a number:
+   * 7.6:1 on the plate. inkfield.css hands it to whatever reads --textSecondary there. */
+  --textOnInkFieldQuiet: #a3b5ad;
   /* The onboarding dialog's dark glass, unthemed like the ink field:
    * the hero is dark in both themes, so its fill, quiet ink and shadow tint are
    * fixed. */

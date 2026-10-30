@@ -138,7 +138,8 @@ func (s *Service) authorizeTargetScopes(ctx context.Context, tx pgx.Tx, scope cr
 
 func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.ReportingEvaluation) error {
 	var reach targetReach
-	if out.Context.TargetInterval != nil && auth.Allows(ctx, "sales_target", principal.ActionRead) {
+	reached := out.Context.TargetInterval != nil && auth.Allows(ctx, "sales_target", principal.ActionRead)
+	if reached {
 		var err error
 		if reach, err = s.targetReach(ctx, tx); err != nil {
 			return err
@@ -187,11 +188,16 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 			metric.Attainment = &attainment
 		}
 	}
+	if len(pointOwners) > 0 && !reached {
+		if reach.owners, err = s.authority.MeasurableOwnerSet(ctx, tx); err != nil {
+			return err
+		}
+	}
 	for index := range out.Charts {
 		chart := &out.Charts[index]
 		if points, ok := pointOwners[index]; ok {
 			applyOwnerTargets(chart, points, held)
-			if err := s.ownerTargetAllocation(ctx, tx, out.Context, chart, held); err != nil {
+			if err := s.ownerTargetAllocation(ctx, tx, reach.owners, out.Context, chart, held); err != nil {
 				return err
 			}
 		}
@@ -282,8 +288,10 @@ func applyChartTarget(frame crmcontracts.ReportingContext, metrics []crmcontract
 	}
 }
 
-func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart, held heldTargets) error {
-	visible, err := s.allocationVisible(ctx, tx, frame.Scope)
+func (s *Service) ownerTargetAllocation(
+	ctx context.Context, tx pgx.Tx, owners MeasurableOwners, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart, held heldTargets,
+) error {
+	visible, err := s.allocationVisible(ctx, tx, owners, frame.Scope)
 	if err != nil || !visible {
 		return err
 	}

@@ -906,7 +906,8 @@
   .accountsub,
   .arpanel,
   .mw-aistat-pop,
-  .ddeck-tray:not(.panel-foot > .ddeck-tray)
+  .ddeck-tray:not(.panel-foot > .ddeck-tray),
+  .notifbell-loose
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -940,7 +941,8 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .ddeck-tray:not(.panel-foot > .ddeck-tray)
+    .ddeck-tray:not(.panel-foot > .ddeck-tray),
+    .notifbell-loose
   )
   :where(
     .panel,
@@ -1056,7 +1058,8 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .ddeck-tray:not(.panel-foot > .ddeck-tray)
+    .ddeck-tray:not(.panel-foot > .ddeck-tray),
+    .notifbell-loose
   )
   :where(
     .panel,
@@ -1254,7 +1257,8 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .ddeck-tray:not(.panel-foot > .ddeck-tray)
+    .ddeck-tray:not(.panel-foot > .ddeck-tray),
+    .notifbell-loose
   )
   :where(
     .panel,

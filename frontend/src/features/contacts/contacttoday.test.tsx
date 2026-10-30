@@ -566,3 +566,40 @@ describe("Call on the move a call left owed", () => {
     ).toBeTruthy();
   });
 });
+
+describe("the face of the move's verb", () => {
+  const FOLLOW_UP: ContactMoment = {
+    ...QUIET,
+    claim_key: "moment:gone_quiet",
+    rule: "gone_quiet",
+    headline: "No reply recorded for 233 days",
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+
+  it("wears indigo where the press has the model draft the mail", () => {
+    show(VIEW, FOLLOW_UP);
+
+    const draft = screen.getByRole("button", { name: "Draft a follow-up" });
+    expect(draft.classList.contains("btn-ai")).toBe(true);
+  });
+
+  it("keeps the accent where the press only opens a form", () => {
+    show(VIEW, {
+      ...FOLLOW_UP,
+      recommended_action: {
+        kind: "log_activity",
+        label: "Log an interaction",
+        state: "available",
+        destination: { surface: "activity_log" },
+      },
+    });
+
+    const log = screen.getByRole("button", { name: "Log an interaction" });
+    expect(log.classList.contains("btn-ai")).toBe(false);
+  });
+});

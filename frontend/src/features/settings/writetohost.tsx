@@ -52,6 +52,8 @@ export function WriteToHost({ children }: Readonly<{ children: ReactNode }>) {
             target.entityType === "contact" ? target.entityId : undefined
           }
           recordAddress={target.address}
+          intent={target.draftIntent}
+          draftOnOpen={target.draftIntent !== undefined}
           kind="email"
           open={writing}
           onClose={() => setWriting(false)}

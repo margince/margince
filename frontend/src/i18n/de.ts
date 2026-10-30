@@ -2789,6 +2789,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
+  "common.individualPerformanceOff":
+    "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen und Summen, zu denen mindestens zwei andere Mitglieder beitragen.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -6130,6 +6132,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "today.quiet": "Gerade besteht kein Handlungsbedarf.",
   "task.untitled": "Aufgabe ohne Titel",
   "task.next.openContact": "Kontakt öffnen",
+  "task.next.draftEmail": "E-Mail entwerfen",
+  "task.next.draftIntent": "zu dieser Aufgabe schreiben",
   "task.next.noAddress": "Dieser Kontakt hat keine E-Mail-Adresse.",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
@@ -6467,6 +6471,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
+  "compose.draftingBody": "Der Entwurf wird geschrieben.",
   "compose.askAgain": "Auftrag ändern",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
@@ -13128,6 +13133,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callWhatsApp": "WhatsApp-Chat",
   "installationSettings.callTelegram": "Telegram-Chat",
   "installationSettings.callZalo": "Zalo-Chat",
+  "installationSettings.individualTitle": "Einzelleistung",
+  "installationSettings.individualPerformance": "Einzelleistung anzeigen",
+  "installationSettings.individualHint":
+    "Schließt ein Betriebsrat die Bewertung einzelner Mitarbeitender aus, schalte dies aus. Alle sehen weiter ihre eigenen Zahlen. Die Handbuchseite zu Compliance nennt, was der Schalter noch nicht abdeckt.",
+  "installationSettings.individualOn":
+    "Berichte, Prognosen und Team-Wochen können die Zahlen jedes Teammitglieds denen zeigen, die sie messen dürfen.",
+  "installationSettings.individualOff":
+    "Berichte, Prognosen und Team-Wochen zeigen keine Zahlen anderer Teammitglieder, und eine Summe, zu der nur ein anderes Mitglied beiträgt, wird zurückgehalten. Noch nicht abgedeckt: das Team-Board, Coaching-Hinweise, die Ansicht der Aufgaben eines Mitglieds, der Team-Teil der Morgen-Mail und die Wochenpläne des Teams.",
   "installationSettings.callingHint":
     "Solange ein Schalter aktiv ist, öffnet ein Link neben jeder Telefonnummer mit Ländervorwahl den Chat in dieser App. Die App erhält die Nummer.",
   "installationSettings.editField": "{field} bearbeiten",

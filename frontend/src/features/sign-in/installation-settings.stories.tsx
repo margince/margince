@@ -39,6 +39,7 @@ const SETTINGS = {
   call_whatsapp: true,
   call_telegram: false,
   call_zalo: true,
+  individual_performance: true,
 };
 
 const RATE_SHEET_LOCK = {

@@ -2728,6 +2728,8 @@ export const en = {
   // does not say the record may be missing: a row the reader may not see at all
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
+  "common.individualPerformanceOff":
+    "An administrator switched off individual performance. You can see your own figures, and totals that at least two other members contribute to.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -6186,6 +6188,8 @@ export const en = {
   "today.quiet": "Nothing needs attention right now.",
   "task.untitled": "Untitled task",
   "task.next.openContact": "Open contact",
+  "task.next.draftEmail": "Draft email",
+  "task.next.draftIntent": "write about this task",
   "task.next.noAddress": "No email address on this contact.",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
@@ -6513,6 +6517,7 @@ export const en = {
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
+  "compose.draftingBody": "Writing the draft.",
   "compose.askAgain": "Change the ask",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
@@ -13125,6 +13130,14 @@ export const en = {
   "installationSettings.callWhatsApp": "WhatsApp chat",
   "installationSettings.callTelegram": "Telegram chat",
   "installationSettings.callZalo": "Zalo chat",
+  "installationSettings.individualTitle": "Individual performance",
+  "installationSettings.individualPerformance": "Show individual performance",
+  "installationSettings.individualHint":
+    "Where a works council rules out assessing individual employees, switch this off. Everyone still sees their own figures. The handbook page on compliance lists what the switch does not cover yet.",
+  "installationSettings.individualOn":
+    "Reports, forecasts and team reviews can show each colleague’s figures to those allowed to measure them.",
+  "installationSettings.individualOff":
+    "Reports, forecasts and team weeks show no colleague’s figures, and a total that only one other member contributes to is withheld. Not covered yet: the Team board, coaching moves, a lead’s view of a member’s queue, the morning mail’s team section and team weekly plans.",
   "installationSettings.callingHint":
     "While a switch is on, a link beside each phone number with a country code opens the chat in that app. The app receives the number.",
   "installationSettings.editField": "Edit {field}",

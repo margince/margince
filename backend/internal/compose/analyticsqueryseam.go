@@ -73,9 +73,10 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 			// lookup joins. Reassembling it here would be a second spelling of
 			// the report engine's FROM, and the two would disagree the first
 			// time a spec grew a join.
-			From:      granted.fromClause(),
-			BaseWhere: granted.populationWhere(),
-			Fields:    map[string]analyticsquery.Field{},
+			From:        granted.fromClause(),
+			BaseWhere:   granted.populationWhere(),
+			Fields:      map[string]analyticsquery.Field{},
+			Contributor: contributorColumn(granted),
 		}
 		addFields(entity.Fields, withoutKeys(granted.dimensions, slices.Concat(granted.rowKeys, granted.rowMoments)), analyticsquery.KindDimension)
 		addFields(entity.Fields, granted.measures, analyticsquery.KindMeasure)

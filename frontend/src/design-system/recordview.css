@@ -102,19 +102,23 @@
   line-clamp: 3;
   overflow: hidden;
 }
-/* The name as its own edit button, in the heading's type at rest and open. */
+/* The name as its own edit button, in the heading's type at rest and open. The
+   type goes on the button and the box, never the wrapper: the refusal under the
+   box takes the type of what encloses it, and a refusal is not a headline. */
 .record-split-rename {
   flex: 1;
   min-inline-size: 0;
-  font: var(--fontHeadingLarge);
 }
 .record-split-rename .record-split-name {
   padding-inline: var(--space-1);
   margin-inline: calc(-1 * var(--space-1));
 }
-.record-split-rename .inline-editable,
-.record-split-rename .input {
+.record-split-rename .inline-editable {
   font: inherit;
+  color: inherit;
+}
+.record-split-rename .input {
+  font: var(--fontHeadingLarge);
   color: inherit;
 }
 .record-split-lines {
