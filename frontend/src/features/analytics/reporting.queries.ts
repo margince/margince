@@ -3,6 +3,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
+import type { MetricNames } from "./reporting.model";
 
 export { reloadReportingFigures };
 
@@ -28,6 +29,15 @@ export function useReportingCatalog(enabled = true) {
       return unwrap(await api.GET("/analytics/metrics"));
     },
   });
+}
+
+// The catalog's name for each metric, the one the CSV export writes too. The
+// Analytics screen asks for the catalog first; a metric it does not offer this
+// reader keeps its id.
+export function useMetricNames(): MetricNames {
+  const metrics = useReportingCatalog().data?.metrics;
+  return (metric) =>
+    metrics?.find((definition) => definition.id === metric)?.label ?? metric;
 }
 
 function firstPage(): string | undefined {

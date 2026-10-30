@@ -25,7 +25,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { metricLabel, type ReportingMetricID } from "./reporting.model";
+import type { ReportingMetricID } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";
 
@@ -148,7 +148,7 @@ export function ReportingTargetDialog({
                       .filter((metric) => metric.supports_target)
                       .map((metric) => ({
                         value: metric.id,
-                        label: metricLabel(metric.id, t),
+                        label: metric.label,
                       }))}
                     onChange={(value) => {
                       const selected = catalog.metrics.find(

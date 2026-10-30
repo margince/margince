@@ -261,7 +261,7 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("heading", { name: "Accepted handoffs" }),
+    await screen.findByRole("heading", { name: "Accepted handoffs" }),
   ).toBeVisible();
   expect(
     document.querySelectorAll(".report-chart-column").length,

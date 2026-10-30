@@ -4,11 +4,14 @@
 package compose
 
 import (
+	"context"
 	"slices"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestReportingCSVNamesACurrencyOnlyForMoney(t *testing.T) {
@@ -28,5 +31,26 @@ func TestReportingCSVNamesACurrencyOnlyForMoney(t *testing.T) {
 	}
 	if rows[2][unit] != reportingCountUnit || rows[2][currency] != "" {
 		t.Fatalf("count row names a currency: %v", rows[2])
+	}
+}
+
+// A spreadsheet reader sees the name the page shows, in the reading's language;
+// the id stays in the metric column for a machine.
+func TestReportingCSVLabelsAHeadlineWithTheCatalogName(t *testing.T) {
+	sales := float64(2160000)
+	reader := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{string(recordTypeDeal): {Read: true}}}})
+	catalog, err := metricEvaluator{}.Catalog(reader, textlang.German)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evaluation crmcontracts.ReportingEvaluation
+	german := string(textlang.German)
+	evaluation.Context.ProseLanguage = &german
+	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: reportingBookingsWon, Unit: reportingMoney, Value: &sales}}
+	rows := reportingCSVRows(evaluation)
+	metric, label := slices.Index(rows[0], "metric"), slices.Index(rows[0], "label")
+	shown := catalog.Metrics[slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == reportingBookingsWon })].Label
+	if rows[1][metric] != reportingBookingsWon || rows[1][label] != shown || shown != "Gewonnener Umsatz" {
+		t.Fatalf("headline row %v, catalog label %q", rows[1], shown)
 	}
 }

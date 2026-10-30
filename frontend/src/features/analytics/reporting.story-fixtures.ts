@@ -2,6 +2,7 @@ import type { components } from "../../api/schema";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
+  reportingMetricNames,
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
@@ -16,6 +17,7 @@ import {
 import type { ReportingEvaluation } from "./reporting.model";
 
 export {
+  reportingMetricNames,
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
@@ -202,6 +204,7 @@ function sectionDefinition(
 ): MetricDefinition {
   return {
     id,
+    label: reportingMetricNames[id],
     version: "1",
     unit,
     temporal_basis,

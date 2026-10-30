@@ -11,7 +11,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatHours, formatMoneyCompact } from "../../format/format";
 import { en } from "../../i18n/en";
-import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
+import {
+  reportingMetricNames,
+  reportingStoryEvaluation,
+} from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -95,7 +98,7 @@ describe("the Leads view", () => {
   it("reads the lead metrics without a pipeline and splits them by group", async () => {
     const asked = showView("leads", reportingLeadsEvaluation);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(created.getByRole("button", { name: "Website: 12" })).toBeVisible();
     const evaluate = asked.find((url) =>
       url.pathname.endsWith("/analytics/evaluate"),
@@ -119,7 +122,7 @@ describe("the Leads view", () => {
       "?close=fiscal_quarter",
     );
 
-    await panel(titled(en["reporting.leads_created"]));
+    await panel(titled(reportingMetricNames.leads_created));
     const evaluate = asked.find((url) =>
       url.pathname.endsWith("/analytics/evaluate"),
     );
@@ -144,7 +147,7 @@ describe("the Leads view", () => {
     const user = userEvent.setup({ delay: null });
     const asked = showView("leads", reportingLeadsEvaluation);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     await user.click(created.getByRole("button", { name: "Website: 12" }));
 
     const drawer = within(await screen.findByRole("dialog"));
@@ -171,7 +174,7 @@ describe("the Leads view", () => {
     };
     showView("leads", empty);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(
       created.getByText("No lead came in during this period."),
     ).toBeVisible();
@@ -192,7 +195,7 @@ describe("the Leads view", () => {
     };
     showView("leads", withheld);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(created.queryByText(en["reporting.withheld"])).toBeNull();
     expect(screen.getAllByText(en["reporting.withheld"])).toHaveLength(1);
   });
@@ -202,7 +205,7 @@ describe("the Partners view", () => {
   it("names a partner the reader cannot open in words, never by its key", async () => {
     showView("partners", reportingPartnersEvaluation);
 
-    const pipeline = await panel(titled(en["reporting.partner_pipeline"]));
+    const pipeline = await panel(titled(reportingMetricNames.partner_pipeline));
     const amount = formatMoneyCompact(500_000, "EUR", "en");
     expect(
       pipeline.getByRole("button", {
@@ -215,13 +218,15 @@ describe("the Partners view", () => {
   it("counts the records behind a money group, and not behind a count", async () => {
     showView("partners", reportingPartnersEvaluation);
 
-    const commission = await panel(titled(en["reporting.partner_commission"]));
+    const commission = await panel(
+      titled(reportingMetricNames.partner_commission),
+    );
     expect(
       commission.getByRole("columnheader", {
         name: en["reporting.recordCount"],
       }),
     ).toBeInTheDocument();
-    const activity = await panel(titled(en["reporting.partner_activity"]));
+    const activity = await panel(titled(reportingMetricNames.partner_activity));
     expect(
       activity.queryByRole("columnheader", {
         name: en["reporting.recordCount"],

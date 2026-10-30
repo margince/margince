@@ -16,6 +16,7 @@ import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { WrittenSummary } from "./reporting.written";
@@ -187,13 +188,14 @@ export function ChartPanel({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
-      title={chartTitle(chart, evaluation, t)}
+      title={chartTitle(chart, evaluation, t, metricName)}
       footer={
         <>
           <ChartContext

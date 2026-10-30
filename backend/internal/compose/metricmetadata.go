@@ -29,6 +29,7 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 		minimum = analyticsquery.PercentileSampleFloor
 	}
 	out.MinimumCohort = &minimum
+	out.Label = reportingMetricNames[out.Id].In(language)
 	out.Definition = reportingDefinitionWords[out.Id].In(language)
 	attribution := reportingAttributionWords[out.Id].In(language)
 	out.Attribution = &attribution

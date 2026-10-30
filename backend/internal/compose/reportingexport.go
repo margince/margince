@@ -70,7 +70,7 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
-		appendRow(string(metric.Id), "headline", string(metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
 	}
 	for _, chart := range evaluation.Charts {
 		for _, point := range chart.Points {

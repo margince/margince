@@ -9,7 +9,6 @@ import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingMetricID,
   type ReportingSelection,
@@ -17,7 +16,7 @@ import {
   reportingPeriodLabel,
   reportingQuery,
 } from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 
 type TargetBasis = ReportingSelection["target_basis"];
 type Metric = ReportingEvaluation["metrics"][number];
@@ -70,6 +69,7 @@ function TargetReadings({
   locale: Locale;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const query = useQuery({
     queryKey: ["reporting-evaluation", "my-targets", self, metrics],
     queryFn: async (): Promise<Readings> => {
@@ -85,7 +85,7 @@ function TargetReadings({
       {(readings) => (
         <StatStrip>
           {metrics.flatMap((id) =>
-            targetCards(id, readings, t, locale).map((card) => (
+            targetCards(id, metricName(id), readings, t, locale).map((card) => (
               <StatCard
                 key={card.key}
                 narrow="row"
@@ -134,11 +134,11 @@ type Card = Readonly<{
 // so and still shows the month so far.
 function targetCards(
   id: ReportingMetricID,
+  label: string,
   readings: Readings,
   t: Translator,
   locale: Locale,
 ): Card[] {
-  const label = metricLabel(id, t);
   const cards = BASES.flatMap((basis): Card[] => {
     const metric = readings[basis].metrics.find((each) => each.id === id);
     if (metric?.target == null) return [];
