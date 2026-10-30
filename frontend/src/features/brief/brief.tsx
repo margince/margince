@@ -54,19 +54,15 @@ import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
-export function BriefScreen() {
-  const t = useT();
-  const nowMs = useNow(60_000);
-  const me = useMe();
-  const query = useWorklist("mine", "all");
-  const [params, setParams] = useUrlParams();
-  const address = addressFrom(params);
-  const day = briefDay(query.data?.pages);
-  // The queue the button opens, which keeps the drawer's scope and owner from
-  // the address. It shares the drawer's query key, so the two report one total.
+// The queue the button opens, which keeps the drawer's scope and owner from
+// the address. It shares the drawer's query key, so the two report one total.
+function useDrawerDay(
+  params: ReturnType<typeof useUrlParams>[0],
+  drawerOpen: boolean,
+  homeDay: ReturnType<typeof briefDay>,
+) {
   const owner = params.get("owner") ?? "";
   const drawer = drawerQueue(params);
-  const drawerOpen = params.get("queue") === "1";
   // The server counts every candidate before it applies a view, so Home's own
   // read already holds a closed drawer's total over the same queue.
   const homeQueue = drawer.scope === "mine" && owner === "";
@@ -77,8 +73,25 @@ export function BriefScreen() {
     drawerOpen || !homeQueue,
     drawer.view,
   );
+  if (homeQueue && !drawerOpen) {
+    // A disabled query stops refetching, so its cached day goes stale.
+    return { drawer, queuedDay: homeDay };
+  }
   const queuedDay =
-    briefDay(queued.data?.pages) ?? (homeQueue ? day : undefined);
+    briefDay(queued.data?.pages) ?? (homeQueue ? homeDay : undefined);
+  return { drawer, queuedDay };
+}
+
+export function BriefScreen() {
+  const t = useT();
+  const nowMs = useNow(60_000);
+  const me = useMe();
+  const query = useWorklist("mine", "all");
+  const [params, setParams] = useUrlParams();
+  const address = addressFrom(params);
+  const day = briefDay(query.data?.pages);
+  const drawerOpen = params.get("queue") === "1";
+  const { drawer, queuedDay } = useDrawerDay(params, drawerOpen, day);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();

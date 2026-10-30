@@ -349,6 +349,47 @@ it("counts a closed drawer over the reader's own queue from Home's one read", as
   expect(views, "a closed drawer sent a second Worklist read").toEqual([null]);
 });
 
+it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  let tasks = 7;
+  stubApi({
+    "GET /worklist": () =>
+      jsonResponse({
+        ...readingsDay({}, [taskRow("t", "Call Weber")]),
+        counts: [
+          {
+            category: "tasks",
+            considered: tasks,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+      }),
+  });
+  const { client } = render(<BriefScreen />);
+  const count = () =>
+    screen
+      .getByRole("button", { name: new RegExp(en["brief.queue.show"]) })
+      .querySelector(".optioncount")?.textContent;
+  await waitFor(() => expect(count()).toContain("7"));
+
+  await user.click(
+    screen.getByRole("button", { name: new RegExp(en["brief.queue.show"]) }),
+  );
+  await screen.findByRole("dialog", { name: en["brief.queue.title"] });
+  await user.click(screen.getByRole("button", { name: /close/i }));
+  tasks = 9;
+  await client.refetchQueries({
+    queryKey: ["worklist", "mine", "all", ""],
+    exact: true,
+  });
+
+  await waitFor(() =>
+    expect(count(), "the closed drawer kept its own stale day").toContain("9"),
+  );
+});
+
 it.each(["failed", "bounded", "scope"])(
   "does not claim an exact drawer total for %s coverage",
   async (gap) => {
