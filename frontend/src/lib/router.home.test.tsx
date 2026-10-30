@@ -30,9 +30,9 @@ it("canonicalizes legacy Home links without adding history or losing queue filte
 
 // A path this build does not serve reads as the not-found page.
 //
-// The web tier answers any path with the shell and the router reads only the
-// fragment, so `/settings` used to open Home and leave the address bar on a
-// path nothing resolved. Later navigation then stacked onto it.
+// The web tier answers any path with the shell, and the router reads only the
+// fragment. So `/settings` used to open Home and leave the address bar on a
+// path nothing resolved, with later navigation stacking onto it.
 it("calls a path this build does not serve the not-found page", () => {
   history.replaceState(null, "", "/settings");
   const { result } = renderHook(() => useRoute());
