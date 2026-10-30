@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Marking several rows done at once, from the Worklist.
+// Acting on several rows at once, from the Worklist, in selection mode.
 //
-// A row takes a checkbox when it offers Done. That is a task or a promise
-// ticked done, or a row whose Done takes it off the reader's own list. An
-// approval, and a row offering no Done, are answered one at a time.
+// After Select, a row takes a checkbox when it offers Done. That is a task or
+// a promise to complete, or a row whose Done takes it off the reader's own
+// list. The two verbs stay apart. An approval is answered one at a time.
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -85,18 +85,37 @@ function theDay() {
   });
 }
 
+/** Enters selection mode, which is what draws the checkboxes. */
+async function startSelecting(user = userEvent.setup()) {
+  await user.click(
+    await screen.findByRole("button", { name: en["worklist.bulk.select"] }),
+  );
+  return user;
+}
+
 function selectBox(title: string) {
   return screen.queryByRole("checkbox", {
     name: en["bulk.selectRow"].replace("{name}", title),
   });
 }
 
-describe("ticking Worklist rows for Mark done", () => {
+describe("ticking Worklist rows in selection mode", () => {
+  it("draws no checkbox until the reader presses Select", async () => {
+    stub(theDay());
+    renderUnderAToastRegion();
+
+    await screen.findByText("Question about the invoice");
+    expect(selectBox("Send the retrofit quote")).toBeNull();
+    await startSelecting();
+    expect(selectBox("Send the retrofit quote")).not.toBeNull();
+  });
+
   it("offers a checkbox on task and promise rows only", async () => {
     stub(theDay());
     renderUnderAToastRegion();
 
     await screen.findByText("Question about the invoice");
+    await startSelecting();
     expect(selectBox("Send the retrofit quote")).not.toBeNull();
     expect(selectBox("Confirm the meeting by Friday")).not.toBeNull();
     expect(selectBox("Question about the invoice")).toBeNull();
@@ -116,8 +135,8 @@ describe("ticking Worklist rows for Mark done", () => {
         summary: { urgent: 0, due: 0, lower_priority: 2, total: 2 },
       }),
     );
-    const user = userEvent.setup();
     renderUnderAToastRegion();
+    const user = await startSelecting();
 
     await user.click(
       (
@@ -180,8 +199,8 @@ describe("ticking Worklist rows for Mark done", () => {
         return passthrough(input, init);
       }),
     );
-    const user = userEvent.setup();
     renderUnderAToastRegion();
+    const user = await startSelecting();
 
     await user.click(
       await screen.findByRole("button", {
@@ -189,7 +208,9 @@ describe("ticking Worklist rows for Mark done", () => {
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: en["worklist.bulk.markDone"] }),
+      screen.getByRole("button", {
+        name: en["worklist.bulk.complete_other"].replace("{count}", "2"),
+      }),
     );
 
     await waitFor(() => {
@@ -246,8 +267,8 @@ describe("marking the ticked rows done", () => {
         return passthrough(input, init);
       }),
     );
-    const user = userEvent.setup();
     renderUnderAToastRegion();
+    const user = await startSelecting();
 
     await user.click(
       await screen.findByRole("button", {
@@ -255,7 +276,9 @@ describe("marking the ticked rows done", () => {
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: en["worklist.bulk.markDone"] }),
+      screen.getByRole("button", {
+        name: en["worklist.bulk.complete_other"].replace("{count}", "2"),
+      }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -278,12 +301,9 @@ describe("marking the ticked rows done", () => {
       new RegExp(en["bulk.doneWorklistItems_one"].replace("{count}", "1")),
     );
     expect(executed).toHaveLength(1);
-    expect(
-      (selectBox("Send the retrofit quote") as HTMLInputElement).checked,
-    ).toBe(false);
-    expect(
-      (selectBox("Confirm the meeting by Friday") as HTMLInputElement).checked,
-    ).toBe(false);
+    // The change ends selection mode, so no box stays ticked out of sight.
+    expect(selectBox("Send the retrofit quote")).toBeNull();
+    expect(selectBox("Confirm the meeting by Friday")).toBeNull();
   });
 });
 
@@ -293,6 +313,7 @@ describe("a queue that mixes rows that can be ticked with rows that cannot", () 
     const { container } = renderUnderAToastRegion();
 
     await screen.findByText("Question about the invoice");
+    await startSelecting();
     // Three rows take no box: the waiting message, the approval and the
     // system row.
     expect(container.querySelectorAll(".worklist-row-pick-slot")).toHaveLength(
@@ -316,8 +337,8 @@ describe("a queue that mixes rows that can be ticked with rows that cannot", () 
   });
 });
 
-describe("Mark done on rows that are not tasks", () => {
-  it("takes the ticked rows off the list in one call, beside the tasks", async () => {
+describe("the two verbs for ticked rows", () => {
+  it("completes the tasks and takes the other rows off the list, each by its own verb", async () => {
     const sent: { path: string; body: unknown }[] = [];
     stub(
       day({
@@ -354,10 +375,10 @@ describe("Mark done on rows that are not tasks", () => {
         return passthrough(input, init);
       }),
     );
-    const user = userEvent.setup();
     renderUnderAToastRegion();
 
     await screen.findByText("Retrofit for the north plant");
+    const user = await startSelecting();
     expect(selectBox("Send the follow-up")).toBeNull();
     await user.click(
       await screen.findByRole("button", {
@@ -365,7 +386,14 @@ describe("Mark done on rows that are not tasks", () => {
       }),
     );
     await user.click(
-      screen.getByRole("button", { name: en["worklist.bulk.markDone"] }),
+      screen.getByRole("button", {
+        name: en["worklist.bulk.putDown_one"].replace("{count}", "1"),
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.bulk.complete_one"].replace("{count}", "1"),
+      }),
     );
 
     await waitFor(() => {

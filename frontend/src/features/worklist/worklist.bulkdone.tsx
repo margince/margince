@@ -15,12 +15,12 @@ import { useMarkRowsDone, type WorklistRowRef } from "./worklist.donequeries";
 import type { WorklistItem } from "./worklist.queries";
 import { rowIdentity } from "./worklist.rowidentity";
 
-// Marking several Worklist rows done in one change.
+// Acting on several Worklist rows at once, in selection mode.
 //
-// Every row that offers Done takes a checkbox. Tasks and promises go through
-// the bulk dialog, which previews the change and offers one Undo. Every other
-// row leaves the reader's own list in one call, with one Undo. "Select all"
-// takes the rows LOADED under the current filter, so its label says "shown".
+// Checkboxes show only after the reader presses Select. Two verbs stay apart.
+// Complete finishes tasks and promises through the bulk dialog. Take off my
+// list puts every other row down for this reader. "Select all" takes the rows
+// loaded now, and rows that load later start unticked.
 
 /** The sources whose Done marks a task or a promise done. */
 const BULK_DONE_SOURCES: ReadonlySet<string> = new Set([
@@ -47,7 +47,7 @@ export function bulkDoneEligible(item: WorklistItem): boolean {
 
 /** The rows the reader has ticked, out of the ones on screen. */
 export type WorklistPicks = Readonly<{
-  /** Whether any row on screen takes a checkbox. */
+  /** Whether rows draw checkboxes: selection mode is on and one takes a box. */
   offered: boolean;
   picked: ReadonlySet<string>;
   toggle: (item: WorklistItem) => void;
@@ -63,17 +63,19 @@ export function useWorklistPicks(
   view: string,
 ) {
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  const [selecting, setSelecting] = useState(false);
   // Cleared rather than kept per view: a selection carried back to a filter
   // the reader left would be acted on without being seen again.
   const [tickedFor, setTickedFor] = useState(view);
   if (tickedFor !== view) {
     setTickedFor(view);
     setTicked(new Set());
+    setSelecting(false);
   }
   const eligible = queue.filter(bulkDoneEligible);
   const rows = eligible.filter((item) => ticked.has(rowIdentity(item)));
   const picks: WorklistPicks = {
-    offered: eligible.length > 0,
+    offered: selecting && eligible.length > 0,
     picked: new Set(rows.map(rowIdentity)),
     toggle: (item) =>
       setTicked((prev) => {
@@ -91,8 +93,20 @@ export function useWorklistPicks(
     picks,
     eligible,
     rows,
+    selecting,
+    select: () => setSelecting(true),
     selectAll: () => setTicked(new Set(eligible.map(rowIdentity))),
     clear: () => setTicked(new Set()),
+    untick: (items: readonly WorklistItem[]) =>
+      setTicked((prev) => {
+        const next = new Set(prev);
+        for (const item of items) next.delete(rowIdentity(item));
+        return next;
+      }),
+    stop: () => {
+      setSelecting(false);
+      setTicked(new Set());
+    },
   };
 }
 
@@ -101,12 +115,11 @@ export function useWorklistPicks(
  * the same width while any row on screen has a box, so the queue stays aligned.
  */
 export function pickFor(item: WorklistItem, picks: WorklistPicks) {
+  if (!picks.offered) return undefined;
   if (bulkDoneEligible(item)) {
     return <RowPick item={item} picks={picks} />;
   }
-  return picks.offered ? (
-    <span className="worklist-row-pick-slot" aria-hidden="true" />
-  ) : undefined;
+  return <span className="worklist-row-pick-slot" aria-hidden="true" />;
 }
 
 function RowPick({
@@ -166,9 +179,8 @@ function usePutDownRows() {
 }
 
 /**
- * The bar over the queue while it holds a row that can be marked done: the
- * way to select every such row shown, and once any is selected, the count and
- * Mark done.
+ * Select, while the queue holds a row that takes a box. In selection mode it
+ * shows the count, Select all, the two verbs for what is ticked, and Cancel.
  */
 export function WorklistBulkBar({
   selection,
@@ -177,77 +189,95 @@ export function WorklistBulkBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
-  const { eligible, rows, selectAll, clear } = selection;
+  const { eligible, rows, selecting, select, selectAll, untick, stop } =
+    selection;
   const putDown = usePutDownRows();
   if (eligible.length === 0 && request === null) {
     return null;
   }
-  // Each record once: two rows may name one record, and the change refuses
-  // an id named twice.
-  const completeInDialog = (completing: readonly WorklistItem[]) =>
-    setRequest({
-      recordType: "worklist_item",
-      verb: "complete",
-      rows: [
-        ...new Map(
-          completing.map((item) => [
-            item.id,
-            {
-              id: item.id,
-              version: item.version,
-              label: item.title ?? item.id,
-            },
-          ]),
-        ).values(),
-      ],
-      openId: crypto.randomUUID(),
-    });
-  const markDone = () => {
-    const completing = rows.filter(completesInBulk);
-    const leaving = rows
-      .filter((item) => !completesInBulk(item))
-      .map((item) => ({ source: item.source, row_id: item.id }));
-    if (leaving.length > 0) {
-      putDown(leaving);
-    }
-    if (completing.length > 0) {
-      completeInDialog(completing);
-    } else {
-      clear();
-    }
-  };
+  const completing = rows.filter(completesInBulk);
+  const leaving = rows.filter((item) => !completesInBulk(item));
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
+  if (!selecting && request === null) {
+    return (
+      <SelectionBar>
+        <Button onClick={select}>{t("worklist.bulk.select")}</Button>
+      </SelectionBar>
+    );
+  }
   return (
     <SelectionBar>
       {rows.length > 0 && (
         <span className="t-caption">
-          {plural("bulk.selected", rows.length, {
-            count: formatNumber(rows.length, locale),
-          })}
+          {plural("bulk.selected", rows.length, count(rows.length))}
         </span>
       )}
       {rows.length < eligible.length && (
         <Button onClick={selectAll}>
-          {plural("worklist.bulk.selectAll", eligible.length, {
-            count: formatNumber(eligible.length, locale),
-          })}
+          {plural(
+            "worklist.bulk.selectAll",
+            eligible.length,
+            count(eligible.length),
+          )}
         </Button>
       )}
-      {rows.length > 0 && (
-        <>
-          <Button onClick={clear}>{t("worklist.bulk.clear")}</Button>
-          <Button variant="primary" onClick={markDone}>
-            {t("worklist.bulk.markDone")}
-          </Button>
-        </>
+      {completing.length > 0 && (
+        <Button
+          variant="primary"
+          onClick={() => setRequest(completeRequest(completing))}
+        >
+          {plural(
+            "worklist.bulk.complete",
+            completing.length,
+            count(completing.length),
+          )}
+        </Button>
       )}
+      {leaving.length > 0 && (
+        <Button
+          onClick={() => {
+            putDown(
+              leaving.map((item) => ({ source: item.source, row_id: item.id })),
+            );
+            untick(leaving);
+          }}
+        >
+          {plural(
+            "worklist.bulk.putDown",
+            leaving.length,
+            count(leaving.length),
+          )}
+        </Button>
+      )}
+      <Button onClick={stop}>{t("worklist.bulk.cancel")}</Button>
       <BulkChangeDialog
         request={request}
         onClose={() => setRequest(null)}
         onDone={() => {
           setRequest(null);
-          clear();
+          stop();
         }}
       />
     </SelectionBar>
   );
+}
+
+// Each record once: two rows may name one record, and the change refuses an
+// id named twice.
+function completeRequest(
+  completing: readonly WorklistItem[],
+): BulkChangeRequest {
+  return {
+    recordType: "worklist_item",
+    verb: "complete",
+    rows: [
+      ...new Map(
+        completing.map((item) => [
+          item.id,
+          { id: item.id, version: item.version, label: item.title ?? item.id },
+        ]),
+      ).values(),
+    ],
+    openId: crypto.randomUUID(),
+  };
 }

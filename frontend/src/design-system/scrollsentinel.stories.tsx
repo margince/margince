@@ -27,16 +27,12 @@ const idle = { list: "story", onLoadMore: () => undefined } as const;
 
 export const Loading: Story = {
   name: "A batch in flight",
-  render: () => (
-    <ScrollSentinel {...idle} cursor="c1" loading failed={false} />
-  ),
+  render: () => <ScrollSentinel {...idle} cursor="c1" loading failed={false} />,
 };
 
 export const Failed: Story = {
   name: "A batch that did not arrive",
-  render: () => (
-    <ScrollSentinel {...idle} cursor="c1" loading={false} failed />
-  ),
+  render: () => <ScrollSentinel {...idle} cursor="c1" loading={false} failed />,
 };
 
 export const End: Story = {
@@ -66,9 +62,11 @@ function Growing() {
   return (
     <div style={{ height: 240, overflow: "auto" }}>
       <ol>
-        {Array.from({ length: rows }, (_, at) => (
-          <li key={at}>Row {at + 1}</li>
-        ))}
+        {Array.from({ length: rows }, (_, at) => `Row ${at + 1}`).map(
+          (label) => (
+            <li key={label}>{label}</li>
+          ),
+        )}
       </ol>
       <ScrollSentinel
         list="growing"

@@ -52,6 +52,7 @@ function NextTaskPress() {
           list.owner,
           cursor,
           signal,
+          list.view,
         );
         pages.push(page);
         cursor = page.next_cursor ?? undefined;

@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Panel } from "../../design-system/panel";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
+import type { WorklistView } from "../../lib/worklistviews";
 import { pickFor, type WorklistPicks } from "./worklist.bulkdone";
-import { type ReviewShortfall, reviewFilter } from "./worklist.destinations";
+import { reviewView } from "./worklist.destinations";
 import { DomainReview, DomainReviewLauncher } from "./worklist.domainreview";
 import { hasPane } from "./worklist.pane";
-import type { WorklistFilter, WorklistItem } from "./worklist.queries";
+import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 import { rowIdentity } from "./worklist.rowidentity";
 
@@ -74,7 +74,7 @@ export type RowContext = Readonly<{
   selectedId: string;
   onSelect: (next: string) => void;
   onOpenEmail: (activityId: string) => void;
-  onFilter: (next: WorklistFilter) => void;
+  onView: (next: WorklistView) => void;
   picks: WorklistPicks;
 }>;
 
@@ -90,7 +90,7 @@ export function QueueRows({
   selectedId,
   onSelect,
   onOpenEmail,
-  onFilter,
+  onView,
   picks,
 }: RowContext & Readonly<{ items: readonly WorklistItem[] }>) {
   const [domainReview, setDomainReview] = useState(false);
@@ -123,7 +123,7 @@ export function QueueRows({
               onReview={() =>
                 item.batch?.key === "domain_questions"
                   ? setDomainReview(true)
-                  : onFilter(reviewFilter(item))
+                  : onView(reviewView(item))
               }
             />
           </li>
@@ -134,68 +134,28 @@ export function QueueRows({
   );
 }
 
-// The work that is not the day's, drawn below it and never hidden.
-//
-// Its own component, because WorklistBody already holds the split, the bands,
-// the pane and the paging. A panel that decides what to admit about itself is
-// one job more than one function should hold.
-export function ReviewPanel({
+// The Decisions or System view's rows in one panel, named by the view. The
+// domain review launcher stays on the Decisions panel even when it is empty.
+export function ViewPanel({
+  view,
   items,
-  shortfall,
-  more,
-  changed = false,
   rows,
+  children,
 }: Readonly<{
+  view: Exclude<WorklistView, "today">;
   items: readonly WorklistItem[];
-  shortfall: ReviewShortfall | null;
-  more: boolean;
-  changed?: boolean;
   rows: RowContext;
+  children?: ReactNode;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
+  const launcher = view === "decisions" ? <DomainReviewLauncher /> : undefined;
   if (items.length === 0) {
-    return <DomainReviewLauncher />;
+    return launcher ?? null;
   }
   return (
-    <Panel
-      title={t("worklist.review")}
-      actions={<DomainReviewLauncher />}
-      // What this panel is not showing, in the footer band, which is where a
-      // figure about the whole panel goes. A direct child of `Panel` sits in no
-      // padding, while the rows are `PanelRow`s with the panel's own inset. A
-      // bare `<p>` would start a `--padPanel` left of every row, outside the card.
-      //
-      // The panel has no cursor of its own: review rows arrive through the
-      // day's one control below it. Without this footer, a reader with an
-      // approval past the page cut sees a panel that looks complete.
-      // The day's own total is the denominator, never drawn bare. It counts
-      // every candidate the read weighed, so alone it would claim rows this
-      // panel does not hold. Once the walk is over the gap is still true, but
-      // there is no control left to point at.
-      footer={
-        shortfall?.floor
-          ? t("worklist.review.floor", {
-              loaded: formatNumber(shortfall.loaded, locale),
-            })
-          : shortfall
-            ? t(
-                changed
-                  ? "worklist.review.snapshotChanged"
-                  : more
-                    ? "worklist.review.partial"
-                    : "worklist.review.partialDone",
-                {
-                  loaded: formatNumber(shortfall.loaded, locale),
-                  total: formatNumber(shortfall.total, locale),
-                },
-              )
-            : more
-              ? t("worklist.review.more")
-              : undefined
-      }
-    >
+    <Panel title={t(`worklist.view.${view}`)} actions={launcher}>
       <QueueRows items={items} {...rows} />
+      {children}
     </Panel>
   );
 }

@@ -9,6 +9,7 @@ import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
 import { exactCount, unreadSources } from "../../lib/worklistcounts";
+import type { WorklistView } from "../../lib/worklistviews";
 import type { T } from "./worklist.copy";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -34,9 +35,10 @@ export function completenessText(
   t: T,
   locale: Locale,
   loaded?: readonly WorklistItem[],
+  view?: WorklistView,
 ): string | null {
   // Null is a narrowing these figures cannot describe. See countsUnder.
-  const counted = countsUnder(day, filter);
+  const counted = countsUnder(day, filter, view);
   if (counted === null) {
     return day.counts.some((count) => count.more_available)
       ? t("worklist.completeness.boundedSome")
@@ -55,7 +57,7 @@ export function completenessText(
     0,
   );
   const limited = counted.filter((count) => exactCount(count) === undefined);
-  const unread = unreadSources(day, filter);
+  const unread = unreadSources(day, filter, view);
   const floor = limited.length > 0 || onScreen.floor;
   if (onScreen.items >= considered && !floor && unread === 0) {
     return null;

@@ -575,3 +575,11 @@
     display: inline-flex;
   }
 }
+
+/* Upcoming and backlog, the closing section of Today: its name and count on
+   one line. */
+.worklist-upcoming-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

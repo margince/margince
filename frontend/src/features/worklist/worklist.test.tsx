@@ -55,7 +55,7 @@ describe("what the ranked queue tells a reader", () => {
 
     expect(
       await screen.findByText(
-        "No tasks due today or overdue. Later tasks are on each record’s Tasks tab.",
+        "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
       ),
     ).toBeTruthy();
     // The unqualified sentence is the one that misled: it must not be what a
@@ -232,7 +232,7 @@ describe("what the ranked queue tells a reader", () => {
         const target = call[0];
         return target instanceof Request ? target.url : String(target);
       });
-      expect(urls.some((url) => url.includes("filter=decisions"))).toBe(true);
+      expect(urls.some((url) => url.includes("view=decisions"))).toBe(true);
     });
   });
 
@@ -532,12 +532,20 @@ describe("what the ranked queue tells a reader", () => {
     stub(
       day({
         queue: [row()],
-        summary: { urgent: 1234, due: 0, lower_priority: 0, total: 1 },
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 1234 },
+        counts: [
+          {
+            category: "tasks",
+            considered: 1234,
+            shown: 1,
+            more_available: false,
+          },
+        ],
       }),
     );
     renderWorklist("de");
 
-    expect(await screen.findByText(/1\.234/)).toBeTruthy();
+    expect(await screen.findByText("1.234 offene Punkte")).toBeTruthy();
   });
 
   it("offers no scope control when the reader has one scope", async () => {
@@ -762,7 +770,7 @@ describe("an introduction ask on the queue", () => {
     // Wait for the queue itself to render before asserting an absence: a
     // findBy on a link that must NOT exist would pass against a page that had
     // not drawn anything yet.
-    await screen.findByText(/0 urgent/);
+    await screen.findByText(/Send the retrofit quote/);
     // A "Decide" LINK beside an inline decision card would ask the reader to
     // choose between answering here and going somewhere to answer.
     expect(screen.queryByRole("link", { name: "Decide" })).toBeNull();

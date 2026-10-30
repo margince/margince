@@ -31,8 +31,8 @@ export type ScrollSentinelProps = Readonly<{
 
 /**
  * The end of a list that loads its next batch as the reader nears it. It asks
- * once per cursor, keeps asking while the list is shorter than the screen, and
- * stops on a failure or a cursor that did not move, offering Retry instead.
+ * once per cursor and keeps asking while the list is shorter than the screen.
+ * A failure or a cursor that did not move stops it and offers Retry.
  */
 export function ScrollSentinel({
   list,
@@ -93,11 +93,13 @@ export function ScrollSentinel({
       <div className="t-caption" aria-live="polite">
         {sentinelLine({ cursor, loading, failed, stalled, observable, end, t })}
       </div>
-      {cursor !== undefined && !loading && (failed || stalled || !observable) && (
-        <Button onClick={retry}>
-          {observable ? t("common.retry") : t("list.loadMore")}
-        </Button>
-      )}
+      {cursor !== undefined &&
+        !loading &&
+        (failed || stalled || !observable) && (
+          <Button onClick={retry}>
+            {observable ? t("common.retry") : t("list.loadMore")}
+          </Button>
+        )}
     </div>
   );
 }

@@ -290,6 +290,7 @@ describe("a group names what is broken", () => {
 describe("a review row on the queue's own page", () => {
   it("opens the record's pane beside it", async () => {
     const user = userEvent.setup();
+    globalThis.location.hash = "#/worklist?view=system";
     draw([
       {
         occurred_precision: "instant",
@@ -315,5 +316,6 @@ describe("a review row on the queue's own page", () => {
         name: en["worklist.pane.title"],
       }),
     ).toBeTruthy();
+    globalThis.location.hash = "";
   });
 });

@@ -6,6 +6,7 @@ import {
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
+import type { WorklistView } from "../../lib/worklistviews";
 import type {
   TeamBoard,
   TeamExceptions,
@@ -34,9 +35,10 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
   enabled = true,
+  view?: WorklistView,
 ) {
   return useInfiniteQuery({
-    ...worklistDayOptions(scope, filter, owner),
+    ...worklistDayOptions(scope, filter, owner, view),
     enabled,
   });
 }
@@ -46,8 +48,16 @@ export function worklistDayOptions(
   scope: WorklistScope,
   filter: WorklistFilter,
   owner?: string,
+  view?: WorklistView,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
+  // A view joins the key only when named, so Home's read keeps its own key.
+  const queryKey = [
+    ...worklistKey,
+    scope,
+    filter,
+    owner ?? "",
+    ...(view ? [view] : []),
+  ];
   return infiniteQueryOptions({
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
@@ -55,7 +65,7 @@ export function worklistDayOptions(
     // React Query aborts the signal once no screen still observes this key, and
     // the server then stops assembling the day instead of answering nobody.
     queryFn: ({ pageParam, signal }) =>
-      readWorklistPage(scope, filter, owner, pageParam, signal),
+      readWorklistPage(scope, filter, owner, pageParam, signal, view),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
@@ -68,8 +78,10 @@ export async function readWorklistPage(
   owner: string | undefined,
   cursor: string | undefined,
   signal?: AbortSignal,
+  view?: WorklistView,
 ): Promise<Worklist> {
-  const dials = owner ? { owner, filter } : { scope, filter };
+  const whose = owner ? { owner, filter } : { scope, filter };
+  const dials = view ? { ...whose, view } : whose;
   return unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },
