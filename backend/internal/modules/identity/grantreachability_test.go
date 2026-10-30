@@ -202,6 +202,7 @@ func grantsHandlersRequire(t *testing.T) requireCensus {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
+		imported := importedConstants(file, filepath.Dir(root), constants)
 		ast.Inspect(file, func(node ast.Node) bool {
 			dir := filepath.Dir(path)
 			call, at, ok := requireCall(node, strings.HasSuffix(dir, "internal/modules/identity"))
@@ -216,7 +217,7 @@ func grantsHandlersRequire(t *testing.T) requireCensus {
 			if ident, isIdent := call.Args[at].(*ast.Ident); isIdent && ident.Name == "object" {
 				return true
 			}
-			object, resolved := objectName(call.Args[at], constants[dir])
+			object, resolved := objectName(call.Args[at], constants[dir], imported)
 			if !resolved {
 				census.dynamicObject++
 				return true
@@ -288,10 +289,10 @@ func requireCall(node ast.Node, inIdentity bool) (*ast.CallExpr, int, bool) {
 	return call, 1, true
 }
 
-// objectName resolves the object argument: a string literal, or an identifier
-// naming a string constant declared in the same package. Anything else is a
-// runtime value and is reported unresolved rather than guessed at.
-func objectName(arg ast.Expr, constants map[string]string) (string, bool) {
+// objectName resolves the object argument. It reads a string literal, a string
+// constant of the same package, or `pkg.Name` for one in an imported backend
+// package. Anything else is a runtime value, reported unresolved, never guessed.
+func objectName(arg ast.Expr, constants map[string]string, imported map[string]map[string]string) (string, bool) {
 	if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 		name, err := strconv.Unquote(lit.Value)
 		return name, err == nil
@@ -300,7 +301,33 @@ func objectName(arg ast.Expr, constants map[string]string) (string, bool) {
 		value, found := constants[ident.Name]
 		return value, found
 	}
+	if selector, ok := arg.(*ast.SelectorExpr); ok {
+		if pkg, isIdent := selector.X.(*ast.Ident); isIdent {
+			value, found := imported[pkg.Name][selector.Sel.Name]
+			return value, found
+		}
+	}
 	return "", false
+}
+
+// importedConstants maps each backend package a file imports, by the name the
+// file calls it, to that package's string constants. backend is the module
+// root's directory, so an import path's remainder is the package's directory.
+func importedConstants(file *ast.File, backend string, constants map[string]map[string]string) map[string]map[string]string {
+	const module = "github.com/margince/margince/backend/"
+	out := map[string]map[string]string{}
+	for _, spec := range file.Imports {
+		importPath, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || !strings.HasPrefix(importPath, module) {
+			continue
+		}
+		name := filepath.Base(importPath)
+		if spec.Name != nil {
+			name = spec.Name.Name
+		}
+		out[name] = constants[filepath.Join(backend, strings.TrimPrefix(importPath, module))]
+	}
+	return out
 }
 
 // actionName reads `principal.ActionCreate` and its siblings as "create".

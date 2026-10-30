@@ -23,6 +23,7 @@ export const reportingMetricNames: Record<
   lead_status_moves: "Lead status changes",
   leads_promoted: "Leads qualified",
   lead_first_response: "First response time",
+  leads_awaiting_response: "Leads still waiting for a reply",
   partner_pipeline: "Partner pipeline",
   partner_won: "Partner sales won",
   partner_commission: "Partner commission",

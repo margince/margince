@@ -235,6 +235,8 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+	s.sdrSummaryHandlers = newSdrSummaryHandlers(
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),

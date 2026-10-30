@@ -280,7 +280,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.OpenStatusOnly {
-		where = append(where, openMeetingStatusSQL)
+		where = append(where, OpenMeetingStatusSQL)
 	}
 	return where
 }

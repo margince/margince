@@ -29190,6 +29190,88 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsContext' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/sdr-summary:
+    get:
+      tags: [Reports]
+      operationId: getSdrSummary
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+      description: |
+        `workflow` says whether this workspace hands prospects on. A reporting framework set up
+        for SDR teams (`template: sdr`) does, and `handoffs` is then present. Any other setup
+        answers `qualification` and leaves `handoffs` out. A zero is never read as the setup:
+        a team that hands on nothing this week still has a handoff workflow.
+
+        A handoff waits from the start of its current submission. One returned and resubmitted
+        starts a new wait. Each handoff is credited to whoever submitted that round. No handoff
+        target time is configured anywhere, so only the age is given.
+
+        `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
+        that have not happened by `as_of`, credited by the
+        meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
+        read activities.
+
+        Both counts are one statement each over the scope, never a read per row. The scope is
+        checked as every analytics read checks it: an owner or team the seat may not measure
+        is 404, so the answer does not say that they exist.
+      x-agent-access: human-only
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace] }
+          description: Whose work to count. Omitted means the seat's own default population.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: The owner or team named by `scope_kind`.
+      responses:
+        '200':
+          description: The summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SdrSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sdr-summary/handoffs:
+    get:
+      tags: [Reports]
+      operationId: listSdrWaitingHandoffs
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The handoffs waiting on somebody else, oldest wait first, one page at a time.
+      description: |
+        The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
+        current wait began and then by id. A prospect the seat may not read is listed as
+        `restricted` with no name and no id. A handoff carries no deal while it waits, so no
+        deal field is ever part of a row.
+      x-agent-access: human-only
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace] }
+          description: Whose handoffs to list. Omitted means the seat's own default population.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: The owner or team named by `scope_kind`.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: Opaque position from a previous page's `next_cursor`.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        '200':
+          description: One page of waiting handoffs.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SdrWaitingHandoffPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/schema:
     get:
       tags: [Reports]
@@ -54534,6 +54616,7 @@ components:
       - lead_status_moves
       - leads_promoted
       - lead_first_response
+      - leads_awaiting_response
       - partner_pipeline
       - partner_won
       - partner_commission
@@ -54570,6 +54653,74 @@ components:
       - unsupported
       - unavailable
       - failed
+    SdrSummary:
+      type: object
+      additionalProperties: false
+      required: [as_of, scope, workflow]
+      properties:
+        as_of: { type: string, format: date-time, description: The instant both counts were read at. }
+        scope: { $ref: '#/components/schemas/AnalyticsScope' }
+        workflow:
+          type: string
+          enum: [handoff, qualification]
+          description: '`handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.'
+        handoffs: { $ref: '#/components/schemas/SdrHandoffTotals' }
+        upcoming_meetings:
+          type: integer
+          minimum: 0
+          description: Booked meetings that start after `as_of`, credited to the scope.
+    SdrHandoffTotals:
+      type: object
+      additionalProperties: false
+      required: [waiting, unassigned, blocked, returned]
+      properties:
+        waiting: { type: integer, minimum: 0, description: Handoffs submitted and not yet decided. }
+        unassigned: { type: integer, minimum: 0, description: Waiting handoffs offered to nobody in particular. }
+        blocked:
+          type: integer
+          minimum: 0
+          description: Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them.
+        returned: { type: integer, minimum: 0, description: Handoffs sent back to the submitter to try again. These wait on the submitter. }
+        oldest_waiting_since: { type: string, format: date-time, description: When the longest current wait began. Absent with nothing waiting. }
+    SdrWaitingHandoff:
+      type: object
+      additionalProperties: false
+      required: [id, waiting_since, resubmitted, restricted]
+      properties:
+        id: { type: string, format: uuid }
+        waiting_since: { type: string, format: date-time, description: The start of the current submission. }
+        resubmitted: { type: boolean, description: Whether this handoff was returned and submitted again. }
+        restricted: { type: boolean, description: 'The seat may not read the prospect, so `subject` is absent.' }
+        subject: { $ref: '#/components/schemas/SdrHandoffSubject' }
+        submitter_id: { type: string, format: uuid, description: Who submitted the current round. }
+        recipient: { $ref: '#/components/schemas/SdrHandoffRecipient' }
+    SdrHandoffSubject:
+      type: object
+      additionalProperties: false
+      required: [type, id, label]
+      properties:
+        type: { type: string, enum: [lead, contact] }
+        id: { type: string, format: uuid }
+        label: { type: string }
+    SdrHandoffRecipient:
+      type: object
+      additionalProperties: false
+      required: [id, label, active]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        active: { type: boolean, description: 'False when the recipient was suspended, deactivated or removed. The handoff is then blocked.' }
+    SdrWaitingHandoffPage:
+      type: object
+      additionalProperties: false
+      required: [as_of, rows]
+      properties:
+        as_of: { type: string, format: date-time }
+        rows:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/SdrWaitingHandoff' }
+        next_cursor: { type: string, description: Absent on the last page. }
     ReportingScope:
       type: object
       additionalProperties: false

@@ -190,27 +190,27 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 **Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
-The **SDR outcomes** tab shows held meetings and accepted opportunities. **Leads** shows new leads, status changes, leads qualified and first response time. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures. A workspace set up for SDR teams opens Analytics on **SDR outcomes**.
+The **SDR outcomes** tab shows held meetings, accepted opportunities, leads qualified, first response time and the leads still waiting for a first reply. **Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures. A workspace set up for SDR teams opens Analytics on **SDR outcomes**.
 
 ## My outcomes
 
-The **My outcomes** section of Analytics shows your own work, in three panels.
+The **My outcomes** section of Analytics shows your own work, in up to six panels.
 
-**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**.
-
-**My open deals**: deals and value, both opening the Deals section.
+**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**. **My open deals**: deals and value, both opening the Deals section.
 
 **My meetings**: meetings *you host*, counted by where each stands today. The states are **Booked, Held, No-show, Canceled.** The line under it states the rule that readers often get wrong: "A held meeting no longer counts as booked." The count has no date filter; use **Analytics → SDR outcomes** for period totals.
+
+**My leads this month**: leads qualified, first reply time for answered leads only, and the leads still waiting for a first reply. The definition of leads qualified is shown above the figures. Where the workspace is not set up for SDR handoffs, the panel also shows **Meetings coming up**.
+
+**Handoffs waiting on others** appears only when Analytics is set up for SDR teams. It counts the handoffs you sent that nobody has decided, the longest wait, those in the shared queue and those returned to you. A handoff returned and sent again waits from the new sending. One whose recipient can no longer act is counted as blocked, and a manager must reassign it. A prospect you cannot open is listed without its name. Only the age is shown, because no handoff target time is set.
+
+**Waiting on you**: the first items of your Worklist, in its order. When a source could not be read, the panel says the list may be missing items and never says that nothing needs you.
 
 ## Delivery
 
 The **Delivery** section of Analytics holds the project reports.
 
-**Projects by phase**: phase, projects, open deal value, won deal value.
-
-**Open project tasks**: project, phase, open tasks, overdue tasks.
-
-**Projects inactive for 30 days**: project, phase, quiet since.
+**Projects by phase**: phase, projects, open deal value, won deal value. **Open project tasks**: project, phase, open tasks, overdue tasks. **Projects inactive for 30 days**: project, phase, quiet since.
 
 When there is nothing, the page says which nothing it means: "No projects yet. Create one under
 Projects with New project. A won deal moves its project to Delivering." or "No project in delivery has gone quiet."

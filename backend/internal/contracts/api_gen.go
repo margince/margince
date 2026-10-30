@@ -17208,6 +17208,7 @@ const (
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
 	ReportingMetricIDLeadFirstResponse        ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves          ReportingMetricID = "lead_status_moves"
+	ReportingMetricIDLeadsAwaitingResponse    ReportingMetricID = "leads_awaiting_response"
 	ReportingMetricIDLeadsCreated             ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted            ReportingMetricID = "leads_promoted"
 	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
@@ -17234,6 +17235,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadFirstResponse:
 		return true
 	case ReportingMetricIDLeadStatusMoves:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponse:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -18091,6 +18094,42 @@ func (e SchedulingProfileProvider) Valid() bool {
 	case SchedulingProfileProviderGcal:
 		return true
 	case SchedulingProfileProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrHandoffSubjectType.
+const (
+	SdrHandoffSubjectTypeContact SdrHandoffSubjectType = "contact"
+	SdrHandoffSubjectTypeLead    SdrHandoffSubjectType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SdrHandoffSubjectType enum.
+func (e SdrHandoffSubjectType) Valid() bool {
+	switch e {
+	case SdrHandoffSubjectTypeContact:
+		return true
+	case SdrHandoffSubjectTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrSummaryWorkflow.
+const (
+	SdrSummaryWorkflowHandoff       SdrSummaryWorkflow = "handoff"
+	SdrSummaryWorkflowQualification SdrSummaryWorkflow = "qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrSummaryWorkflow enum.
+func (e SdrSummaryWorkflow) Valid() bool {
+	switch e {
+	case SdrSummaryWorkflowHandoff:
+		return true
+	case SdrSummaryWorkflowQualification:
 		return true
 	default:
 		return false
@@ -23866,6 +23905,48 @@ func (e GetReportingEvidenceParamsCloseWindow) Valid() bool {
 	case GetReportingEvidenceParamsCloseWindowAllOpen:
 		return true
 	case GetReportingEvidenceParamsCloseWindowFiscalQuarter:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSdrSummaryParamsScopeKind.
+const (
+	GetSdrSummaryParamsScopeKindOwner     GetSdrSummaryParamsScopeKind = "owner"
+	GetSdrSummaryParamsScopeKindTeam      GetSdrSummaryParamsScopeKind = "team"
+	GetSdrSummaryParamsScopeKindWorkspace GetSdrSummaryParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrSummaryParamsScopeKind enum.
+func (e GetSdrSummaryParamsScopeKind) Valid() bool {
+	switch e {
+	case GetSdrSummaryParamsScopeKindOwner:
+		return true
+	case GetSdrSummaryParamsScopeKindTeam:
+		return true
+	case GetSdrSummaryParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSdrWaitingHandoffsParamsScopeKind.
+const (
+	ListSdrWaitingHandoffsParamsScopeKindOwner     ListSdrWaitingHandoffsParamsScopeKind = "owner"
+	ListSdrWaitingHandoffsParamsScopeKindTeam      ListSdrWaitingHandoffsParamsScopeKind = "team"
+	ListSdrWaitingHandoffsParamsScopeKindWorkspace ListSdrWaitingHandoffsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrWaitingHandoffsParamsScopeKind enum.
+func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSdrWaitingHandoffsParamsScopeKindOwner:
+		return true
+	case ListSdrWaitingHandoffsParamsScopeKindTeam:
+		return true
+	case ListSdrWaitingHandoffsParamsScopeKindWorkspace:
 		return true
 	default:
 		return false
@@ -52639,6 +52720,89 @@ type SchedulingProfile struct {
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
 
+// SdrHandoffRecipient defines model for SdrHandoffRecipient.
+type SdrHandoffRecipient struct {
+	// Active False when the recipient was suspended, deactivated or removed. The handoff is then blocked.
+	Active bool               `json:"active"`
+	Id     openapi_types.UUID `json:"id"`
+	Label  string             `json:"label"`
+}
+
+// SdrHandoffSubject defines model for SdrHandoffSubject.
+type SdrHandoffSubject struct {
+	Id    openapi_types.UUID    `json:"id"`
+	Label string                `json:"label"`
+	Type  SdrHandoffSubjectType `json:"type"`
+}
+
+// SdrHandoffSubjectType defines model for SdrHandoffSubject.Type.
+type SdrHandoffSubjectType string
+
+// SdrHandoffTotals defines model for SdrHandoffTotals.
+type SdrHandoffTotals struct {
+	// Blocked Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them.
+	Blocked int `json:"blocked"`
+
+	// OldestWaitingSince When the longest current wait began. Absent with nothing waiting.
+	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
+
+	// Returned Handoffs sent back to the submitter to try again. These wait on the submitter.
+	Returned int `json:"returned"`
+
+	// Unassigned Waiting handoffs offered to nobody in particular.
+	Unassigned int `json:"unassigned"`
+
+	// Waiting Handoffs submitted and not yet decided.
+	Waiting int `json:"waiting"`
+}
+
+// SdrSummary defines model for SdrSummary.
+type SdrSummary struct {
+	// AsOf The instant both counts were read at.
+	AsOf     time.Time         `json:"as_of"`
+	Handoffs *SdrHandoffTotals `json:"handoffs,omitempty"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// UpcomingMeetings Booked meetings that start after `as_of`, credited to the scope.
+	UpcomingMeetings *int `json:"upcoming_meetings,omitempty"`
+
+	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+	Workflow SdrSummaryWorkflow `json:"workflow"`
+}
+
+// SdrSummaryWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+type SdrSummaryWorkflow string
+
+// SdrWaitingHandoff defines model for SdrWaitingHandoff.
+type SdrWaitingHandoff struct {
+	Id        openapi_types.UUID   `json:"id"`
+	Recipient *SdrHandoffRecipient `json:"recipient,omitempty"`
+
+	// Restricted The seat may not read the prospect, so `subject` is absent.
+	Restricted bool `json:"restricted"`
+
+	// Resubmitted Whether this handoff was returned and submitted again.
+	Resubmitted bool               `json:"resubmitted"`
+	Subject     *SdrHandoffSubject `json:"subject,omitempty"`
+
+	// SubmitterId Who submitted the current round.
+	SubmitterId *openapi_types.UUID `json:"submitter_id,omitempty"`
+
+	// WaitingSince The start of the current submission.
+	WaitingSince time.Time `json:"waiting_since"`
+}
+
+// SdrWaitingHandoffPage defines model for SdrWaitingHandoffPage.
+type SdrWaitingHandoffPage struct {
+	AsOf time.Time `json:"as_of"`
+
+	// NextCursor Absent on the last page.
+	NextCursor *string             `json:"next_cursor,omitempty"`
+	Rows       []SdrWaitingHandoff `json:"rows"`
+}
+
 // SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
 type SearchHitEmployer struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
@@ -60517,6 +60681,34 @@ type ListReportRunsParams struct {
 type UpdateReportingScheduleParams struct {
 	IfMatch string `json:"If-Match"`
 }
+
+// GetSdrSummaryParams defines parameters for GetSdrSummary.
+type GetSdrSummaryParams struct {
+	// ScopeKind Whose work to count. Omitted means the seat's own default population.
+	ScopeKind *GetSdrSummaryParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// GetSdrSummaryParamsScopeKind defines parameters for GetSdrSummary.
+type GetSdrSummaryParamsScopeKind string
+
+// ListSdrWaitingHandoffsParams defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParams struct {
+	// ScopeKind Whose handoffs to list. Omitted means the seat's own default population.
+	ScopeKind *ListSdrWaitingHandoffsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParamsScopeKind string
 
 // ListReportingTargetsParams defines parameters for ListReportingTargets.
 type ListReportingTargetsParams struct {
@@ -79786,6 +79978,12 @@ type ServerInterface interface {
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
+	// An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+	// (GET /analytics/sdr-summary)
+	GetSdrSummary(w http.ResponseWriter, r *http.Request, params GetSdrSummaryParams)
+	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
+	// (GET /analytics/sdr-summary/handoffs)
+	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -83005,6 +83203,18 @@ func (_ Unimplemented) UpdateReportingSchedule(w http.ResponseWriter, r *http.Re
 // What questions this caller may ask, and in what words.
 // (GET /analytics/schema)
 func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+// (GET /analytics/sdr-summary)
+func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, params GetSdrSummaryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The handoffs waiting on somebody else, oldest wait first, one page at a time.
+// (GET /analytics/sdr-summary/handoffs)
+func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93396,6 +93606,136 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAnalyticsSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSdrSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSdrSummaryParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSdrSummary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSdrWaitingHandoffs operation middleware
+func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSdrWaitingHandoffsParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128431,6 +128771,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary", wrapper.GetSdrSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
