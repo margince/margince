@@ -178,6 +178,9 @@ func (e *Engine) TeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 AND local_week_start = $2`, teamID, week)
 		var err error
@@ -207,6 +210,9 @@ func (e *Engine) LatestTeamReview(
 	}
 	var review TeamReview
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		row := tx.QueryRow(ctx, teamReviewSelect+`
 			 WHERE team_id = $1 ORDER BY local_week_start DESC LIMIT 1`, teamID)
 		var err error
@@ -270,9 +276,6 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 
 // readTeamReview is the frozen snapshot plus what needs attention now.
 func (e *Engine) readTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, error) {
-	if err := refuseWhileIndividualOff(ctx, tx); err != nil {
-		return TeamReview{}, err
-	}
 	review, err := scanTeamReview(ctx, tx, row)
 	if err != nil {
 		return TeamReview{}, err
