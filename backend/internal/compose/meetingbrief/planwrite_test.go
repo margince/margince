@@ -255,7 +255,7 @@ func padID(i int) string {
 	return base + string(rune('0'+i/10)) + string(rune('0'+i%10)) + "000"
 }
 
-func TestAFirstPersonObjectiveOrOpeningIsRefusedAndAnImperativeOneKept(t *testing.T) {
+func TestAnObjectiveOrOpeningWrittenAsAPromiseIsRefusedAndAnImperativeOneKept(t *testing.T) {
 	in := fullInput()
 	line := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}`
@@ -271,7 +271,7 @@ func TestAFirstPersonObjectiveOrOpeningIsRefusedAndAnImperativeOneKept(t *testin
 		t.Fatalf("ParsePlan: %v", err)
 	}
 	if got.Opening != nil {
-		t.Errorf("opening = %q, want the first-person opening refused", got.Opening.Text)
+		t.Errorf("opening = %q, want the promised opening refused", got.Opening.Text)
 	}
 	if got.Objective == nil || got.Objective.Sentence.Text != imperativeGoal {
 		t.Errorf("objective = %+v, want the imperative objective kept", got.Objective)
@@ -282,7 +282,7 @@ func TestAFirstPersonObjectiveOrOpeningIsRefusedAndAnImperativeOneKept(t *testin
 		t.Fatalf("ParsePlan: %v", err)
 	}
 	if got.Objective != nil {
-		t.Errorf("objective = %q, want the first-person objective refused", got.Objective.Sentence.Text)
+		t.Errorf("objective = %q, want the promised objective refused", got.Objective.Sentence.Text)
 	}
 	if got.Opening == nil || got.Opening.Text != imperative {
 		t.Errorf("opening = %+v, want the imperative opening kept", got.Opening)

@@ -197,7 +197,7 @@ func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
 	}
 }
 
-func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
 	in := fullInput()
 	move := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}`

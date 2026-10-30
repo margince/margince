@@ -189,25 +189,25 @@ func TestTerminateSentence(t *testing.T) {
 	}
 }
 
-func TestEveryShippedLanguageNamesItsFirstPersonSubjects(t *testing.T) {
+func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		if len(firstPersonSubjects[lang]) == 0 {
-			t.Errorf("%q ships with no first-person subjects, so a recommendation written as a promise in it is shown", lang)
+		if len(writerSubjects[lang]) == 0 {
+			t.Errorf("%q ships with no writer subjects, so a recommendation written as a promise in it is shown", lang)
 		}
 	}
 }
 
-func TestEveryListedFirstPersonSubjectOpensInFirstPerson(t *testing.T) {
-	for lang, subjects := range firstPersonSubjects {
+func TestEveryListedWriterSubjectIsRefused(t *testing.T) {
+	for lang, subjects := range writerSubjects {
 		for _, subject := range subjects {
-			if !OpensInFirstPerson(subject + " send the agreement.") {
+			if !OpensWithWriterSubject(subject + " send the agreement.") {
 				t.Errorf("%s subject %q is listed and still not refused", lang, subject)
 			}
 		}
 	}
 }
 
-func TestARecommendationOpeningWithTheWriterOrReaderIsFirstPerson(t *testing.T) {
+func TestARecommendationOpeningWithIOrWeIsAPromise(t *testing.T) {
 	for _, text := range []string{
 		"I'll send the finalized partnership agreement once legal completes its review.",
 		"I will send the agreement.",
@@ -224,13 +224,13 @@ func TestARecommendationOpeningWithTheWriterOrReaderIsFirstPerson(t *testing.T) 
 		"Chúng tôi sẽ gửi hợp đồng.",
 		"chúng   tôi sẽ gửi hợp đồng.",
 	} {
-		if !OpensInFirstPerson(text) {
-			t.Errorf("OpensInFirstPerson(%q) = false, want the promise refused", text)
+		if !OpensWithWriterSubject(text) {
+			t.Errorf("OpensWithWriterSubject(%q) = false, want the promise refused", text)
 		}
 	}
 }
 
-func TestAnInstructionOrAFactIsNotFirstPerson(t *testing.T) {
+func TestAnInstructionOrAFactIsNotAPromise(t *testing.T) {
 	for _, text := range []string{
 		"Send them the final partnership agreement for signature once legal finishes its review.",
 		"Ask them which sub-processor blocks sign-off.",
@@ -242,13 +242,13 @@ func TestAnInstructionOrAFactIsNotFirstPerson(t *testing.T) {
 		"Schicke ihnen den Vertrag.",
 		"",
 	} {
-		if OpensInFirstPerson(text) {
-			t.Errorf("OpensInFirstPerson(%q) = true, want it kept", text)
+		if OpensWithWriterSubject(text) {
+			t.Errorf("OpensWithWriterSubject(%q) = true, want it kept", text)
 		}
 	}
 }
 
-func TestKeepBriefRefusesAFirstPersonRecommendationWithoutSpendingTheBudget(t *testing.T) {
+func TestKeepBriefRefusesAMoveWrittenAsAPromiseWithoutSpendingTheBudget(t *testing.T) {
 	cite := []Evidence{{EntityType: "deal", EntityID: dealID}}
 	kept := KeepBrief([]Sentence{
 		{Text: "I couldn't see their mailbox.", Nature: "fact", Evidence: cite},

@@ -258,7 +258,7 @@ func TestWriteKeepsWhatItGroundsAndNamesTheModel(t *testing.T) {
 	}
 }
 
-func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
 	t.Parallel()
 	kept, err := ParseBrief(`{"sentences":[
 		{"text":"I'll send the sub-processor list once legal completes its review.","nature":"recommendation","evidence":[

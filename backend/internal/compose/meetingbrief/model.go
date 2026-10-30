@@ -63,7 +63,7 @@ Say plainly when something is uncertain or missing rather than filling the gap. 
 // instead — which json.Marshal emitted as "Language", so the field the prompt
 // named was never actually present.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("meeting summary")
 }
 
@@ -288,7 +288,7 @@ func keptSentence(
 		return Sentence{}, false
 	}
 	if nature == natureRecommendation {
-		if claims.OpensInFirstPerson(sentence.Text) {
+		if claims.OpensWithWriterSubject(sentence.Text) {
 			return Sentence{}, false
 		}
 		*recommendations++

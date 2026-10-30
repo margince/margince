@@ -122,7 +122,7 @@ const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_
 // access get different facts — not about preference. Language is not a
 // permission, so it does not follow the reader.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("account summary")
 }
 
@@ -308,7 +308,7 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 				continue
 			}
 			if nature == natureRecommendation {
-				if claims.OpensInFirstPerson(sentence.Text) {
+				if claims.OpensWithWriterSubject(sentence.Text) {
 					continue
 				}
 				recommendations++

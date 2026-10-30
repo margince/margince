@@ -642,7 +642,7 @@ func TestParseBriefDropsASentenceWhoseFactsTheCitedRecordDoesNotCarry(t *testing
 	}
 }
 
-func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
 	move := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"company","entity_id":"` + briefCompanyID + `"}]}`
 	}

@@ -47,7 +47,7 @@ Say plainly when something is uncertain rather than filling the gap. Omit a fiel
 
 // planSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func planSystemFor(fence promptfence.Fence, lang string) string {
-	return planSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return planSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("meeting briefing")
 }
 

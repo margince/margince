@@ -240,7 +240,7 @@ func TestAWaitingChangeRequestOutranksNewerWaitingAsks(t *testing.T) {
 	}
 }
 
-func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
 	move := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}`
 	}

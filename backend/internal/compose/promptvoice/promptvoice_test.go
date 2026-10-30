@@ -51,7 +51,6 @@ func TestTheVoiceCarriesEveryInstructionItExistsFor(t *testing.T) {
 		"speaks as Margince":         "Margince",
 		"says I for its own actions": "I",
 		"addresses the reader":       "you",
-		"hands the reader the move":  "the reader's to make",
 		"leads with the result":      "Lead with the result",
 		"one idea per sentence":      "One idea per sentence",
 		"admits what it cannot see":  "could not see",
@@ -64,6 +63,22 @@ func TestTheVoiceCarriesEveryInstructionItExistsFor(t *testing.T) {
 	for what, instruction := range required {
 		if !strings.Contains(rule, instruction) {
 			t.Errorf("the voice no longer %s: %q is gone from promptvoice.Rule", what, instruction)
+		}
+	}
+}
+
+func TestTheMoveHandsTheReaderTheMove(t *testing.T) {
+	// A recommendation written as the model's own promise reads as work already
+	// taken on; each entry is a clause of the rule that stops that.
+	required := map[string]string{
+		"hands the reader the move":    "the reader's to make",
+		"asks for an imperative":       "imperative",
+		"bans a promise in its voice":  "I'll send",
+		"bans the reader's own quotes": "quoted words",
+	}
+	for what, instruction := range required {
+		if !strings.Contains(promptvoice.Move, instruction) {
+			t.Errorf("the move rule no longer %s: %q is gone from promptvoice.Move", what, instruction)
 		}
 	}
 }

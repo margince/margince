@@ -243,7 +243,7 @@ type BriefBounds struct {
 	Fact            string
 	Recommendation  string
 	// Refuse drops a grounded recommendation this caller will not show, on top
-	// of the first-person one KeepBrief refuses for every caller. Nil adds none.
+	// of the promise KeepBrief refuses for every caller. Nil adds none.
 	Refuse func(Sentence) bool
 }
 
@@ -265,7 +265,7 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 			continue
 		}
 		if sentence.Nature == bounds.Recommendation {
-			if recommendations == bounds.Recommendations || OpensInFirstPerson(sentence.Text) ||
+			if recommendations == bounds.Recommendations || OpensWithWriterSubject(sentence.Text) ||
 				(bounds.Refuse != nil && bounds.Refuse(sentence)) {
 				continue
 			}
@@ -276,24 +276,24 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 	return Dedupe(out)
 }
 
-// firstPersonSubjects is, per shipped language, every subject that makes a
+// writerSubjects is, per shipped language, every subject that makes a
 // recommendation the writer's or the reader's own promise. Vietnamese anh, chị,
 // em and mình are absent: each also addresses the reader as "you".
-var firstPersonSubjects = map[textlang.Lang][]string{
+var writerSubjects = map[textlang.Lang][]string{
 	textlang.English:    {"i", "i'll", "i'm", "i've", "i'd", "we", "we'll", "we're", "we've", "we'd", "let's"},
 	textlang.German:     {"ich", "wir"},
 	textlang.Vietnamese: {"tôi", "chúng tôi"},
 }
 
-// OpensInFirstPerson reports whether text opens with a first-person subject in
-// any shipped language. A recommendation that does is a promise, "I'll send the
+// OpensWithWriterSubject reports whether text opens with an I or a we, in any
+// shipped language. A recommendation that does is a promise, "I'll send the
 // agreement", where the reader needed an instruction, "Send the agreement".
 //
 // Every language is checked whatever the brief's own: a model can answer in the
 // wrong one, and the subjects do not collide across them.
-func OpensInFirstPerson(text string) bool {
+func OpensWithWriterSubject(text string) bool {
 	words := leadingWords(text, 2)
-	for _, subjects := range firstPersonSubjects {
+	for _, subjects := range writerSubjects {
 		for _, subject := range subjects {
 			if opensWith(words, strings.Fields(subject)) {
 				return true
