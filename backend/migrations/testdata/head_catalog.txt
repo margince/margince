@@ -4130,8 +4130,10 @@ public.deal_stage_history.to_position_at_change integer gen=- def=-
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.valuation_provenance text gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
+public.deal_stage_history.write_seq bigint gen=- def=nextval('deal_stage_history_write_seq'::regclass)
 public.deal_stage_history_deal_id_id_key CREATE UNIQUE INDEX deal_stage_history_deal_id_id_key ON public.deal_stage_history USING btree (deal_id, id)
 public.deal_stage_history_pkey CREATE UNIQUE INDEX deal_stage_history_pkey ON public.deal_stage_history USING btree (id)
+public.deal_stage_history_write_seq acl=margince_owner=rwU/margince_owner,margince_app=rU/margince_owner rls=false force=false
 public.deal_status_card acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_status_card.deal_id uuid NOT NULL gen=- def=-
 public.deal_status_card.deal_status_card_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
@@ -6947,6 +6949,7 @@ public.report_definition_revision acl=margince_owner=arwdDxt/margince_owner,marg
 public.report_definition_revision.created_at timestamp with time zone NOT NULL gen=- def=-
 public.report_definition_revision.created_by uuid NOT NULL gen=- def=-
 public.report_definition_revision.framework_revision bigint NOT NULL gen=- def=-
+public.report_definition_revision.metric_versions jsonb gen=- def=-
 public.report_definition_revision.question_bindings jsonb NOT NULL gen=- def='{}'::jsonb
 public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
 public.report_definition_revision.report_definition_revision_framework_revision_js_safe CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))

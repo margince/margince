@@ -18,6 +18,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
 import { isVersionSkewOf, throwProblem } from "../../lib/problem";
+import { cohortOutcomeLabel } from "./reporting.cohort";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
   type ReportingEvaluation,
@@ -120,7 +121,7 @@ export function ReportingEvidenceDrawer({
   const definition = catalog.data?.metrics.find(
     (metric) => metric.id === reference.metric,
   );
-  const { metric, point, interval, selectedValue } = evidenceSelection(
+  const { metric, point, outcome, interval, selectedValue } = evidenceSelection(
     evaluation,
     reference,
   );
@@ -160,6 +161,9 @@ export function ReportingEvidenceDrawer({
           {evaluation.context.scope.label}
           {point?.label
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
+            : ""}
+          {outcome
+            ? ` · ${cohortOutcomeLabel(outcome, t)} · ${formatNumber(outcome.count, locale)}`
             : ""}
         </p>
         <p className="t-caption">
@@ -332,7 +336,7 @@ function evidenceSelection(
             point.evidence.through === reference.through,
         )),
   );
-  const point =
+  const named =
     reference.group_key || reference.through
       ? chart?.points.find(
           (point) =>
@@ -340,8 +344,19 @@ function evidenceSelection(
             point.evidence?.through === reference.through,
         )
       : undefined;
+  // A cohort's outcome count names its own members inside a point.
+  const counted = reference.group_key
+    ? chart?.points
+        .flatMap((point) =>
+          (point.outcomes ?? []).map((count) => ({ point, count })),
+        )
+        .find(({ count }) => count.evidence?.group_key === reference.group_key)
+    : undefined;
+  const point = named ?? counted?.point;
+  const outcome = counted?.count;
+  // An outcome's count is drawn beside its name, not as the point's value.
   const selectedValue =
-    point?.value ??
+    (outcome ? undefined : point?.value) ??
     (!reference.group_key &&
     !reference.through &&
     metric?.evidence.context_id === reference.context_id
@@ -354,7 +369,7 @@ function evidenceSelection(
       : reference.context_id === "state"
         ? undefined
         : evaluation.context.interval);
-  return { metric, point, interval, selectedValue };
+  return { metric, point, outcome, interval, selectedValue };
 }
 
 function MetricDefinition({

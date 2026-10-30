@@ -3,8 +3,8 @@
 
 package compose
 
-// The lead cohort, version 1 of lead_cohort_outcomes: the leads leadArrivedSQL
-// admits in the interval, credited to the owner each arrived with. A lead's
+// The lead cohort, version 1 of lead_cohort_outcomes: the leads
+// leadArrivedBetweenSQL admits in the interval, credited to the owner each arrived with. A lead's
 // outcome is the furthest it reached by the cutoff. That is an accepted
 // handoff, then Qualified, then Disqualified, as weekly.LeadMovesSQL counts
 // moves. A lead that reached none is still open, never lost.
@@ -58,9 +58,11 @@ func readReportingLeadCohort(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	said := reporting.ExplanationCopy(frame)
-	cutoff := b.add(frame.EvaluatedAt)
-	arrived := "SELECT l.id FROM lead l WHERE " + leadArrivedSQL(frame, &b, cutoff) + " AND " + scope
-	moves := weekly.LeadMovesSQL("arrived", b.add(reportingEarliest(frame)), cutoff)
+	// Arrivals are the interval's alone; their outcomes are followed to the cutoff.
+	start, end := cohortWindow(frame)
+	from, cutoff := b.add(start), b.add(frame.EvaluatedAt)
+	arrived := "SELECT l.id FROM lead l WHERE " + leadArrivedBetweenSQL(from, b.add(end)) + " AND " + scope
+	moves := weekly.LeadMovesSQL("arrived", from, cutoff)
 	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -86,6 +88,7 @@ func readReportingLeadCohort(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 	unrecorded := false
 	for i := range facts {
 		facts[i].Outcome = facts[i].GroupKey
+		facts[i].GroupKey = cohortOutcomeGroup("", facts[i].Outcome)
 		facts[i].GroupLabel = said.Say(cohortOutcomeWords[facts[i].Outcome])
 		unrecorded = unrecorded || facts[i].Provenance == leadCohortOwnerUnrecorded
 	}

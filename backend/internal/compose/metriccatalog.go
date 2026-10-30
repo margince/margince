@@ -114,6 +114,16 @@ type metricEvaluator struct {
 // forecastCapture holds the forecast reading of one evaluation.
 type forecastCapture struct{ operands *reporting.ForecastOperands }
 
+func (metricEvaluator) MetricVersions(metrics []crmcontracts.ReportingMetricID) reporting.MetricVersions {
+	out := reporting.MetricVersions{}
+	for _, spec := range reportingMetrics {
+		if slices.Contains(metrics, spec.definition.Id) {
+			out[spec.definition.Id] = spec.definition.Version
+		}
+	}
+	return out
+}
+
 func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crmcontracts.ReportingCatalog, error) {
 	out := crmcontracts.ReportingCatalog{Metrics: []crmcontracts.ReportingMetricDefinition{}}
 	for _, spec := range reportingMetrics {

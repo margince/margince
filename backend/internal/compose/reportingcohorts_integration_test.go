@@ -75,8 +75,16 @@ func (f *stageCohortFixture) deal(t *testing.T, owner ids.UUID, moves ...ids.UUI
 
 func (f *stageCohortFixture) evaluate(t *testing.T, service *reporting.Service, scope crmcontracts.ReportingScope, interval crmcontracts.ReportingWindow) crmcontracts.ReportingEvaluation {
 	t.Helper()
-	selection := crmcontracts.ReportingSelection{Scope: scope, PipelineId: ptrUUID(f.env.pipeline), Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingStageConversion}, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort}}
-	result, err := service.Evaluate(reportingActor(f.env), selection)
+	return f.evaluateAs(reportingActor(f.env), t, service, f.selection(scope, interval))
+}
+
+func (f *stageCohortFixture) selection(scope crmcontracts.ReportingScope, interval crmcontracts.ReportingWindow) crmcontracts.ReportingSelection {
+	return crmcontracts.ReportingSelection{Scope: scope, PipelineId: ptrUUID(f.env.pipeline), Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingStageConversion}, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort}}
+}
+
+func (f *stageCohortFixture) evaluateAs(reader context.Context, t *testing.T, service *reporting.Service, selection crmcontracts.ReportingSelection) crmcontracts.ReportingEvaluation {
+	t.Helper()
+	result, err := service.Evaluate(reader, selection)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +181,7 @@ func TestStageCohortReconcilesRegressionRepeatReopenSkipAndUnresolvedEntries(t *
 		t.Fatalf("stage conversion: %+v, want 6 of 9 resolved, partial for the unknown direction", metric)
 	}
 
-	evidence, err := service.Evidence(reportingActor(f.env), result.Selection, reportingStageConversion, reportingInterval, s0.String()+":"+cohortAdvanced, nil, nil, 50,
+	evidence, err := service.Evidence(reportingActor(f.env), result.Selection, reportingStageConversion, reportingInterval, cohortOutcomeGroup(s0.String(), cohortAdvanced), nil, nil, 50,
 		reporting.EvidenceExpectation{Key: result.EvaluationKey, At: result.Context.EvaluatedAt, FrameworkRevision: result.Context.FrameworkRevision})
 	if err != nil {
 		t.Fatal(err)

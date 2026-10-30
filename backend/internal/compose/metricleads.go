@@ -174,7 +174,12 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 // leadArrivedSQL is the arrival cohort both response readings count from: a
 // counted lead no import wrote, which arrived in the window ending at `at`.
 func leadArrivedSQL(frame crmcontracts.ReportingContext, b *reportingBindings, at string) string {
-	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + b.add(reportingEarliest(frame)) + " AND " + leadArrivalSQL + "<" + at
+	return leadArrivedBetweenSQL(b.add(reportingEarliest(frame)), at)
+}
+
+// leadArrivedBetweenSQL is that cohort for the half-open window [start, end).
+func leadArrivedBetweenSQL(start, end string) string {
+	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + start + " AND " + leadArrivalSQL + "<" + end
 }
 
 // leadArrivalSQL is when a lead arrived: the instant the response target runs from.

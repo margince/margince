@@ -51,7 +51,7 @@ func projectCohortRate(out *crmcontracts.ReportingMetric, facts []reporting.Fact
 
 // cohortCounts lists one count per outcome, in order, zeros included, so every
 // point of a chart has the same columns. Each count's evidence is its members.
-func cohortCounts(frame crmcontracts.ReportingContext, chart crmcontracts.ReportingChart, facts []reporting.Fact, outcomes []string, group func(outcome string) string) []crmcontracts.ReportingCohortCount {
+func cohortCounts(frame crmcontracts.ReportingContext, chart crmcontracts.ReportingChart, facts []reporting.Fact, outcomes []string, stage string) []crmcontracts.ReportingCohortCount {
 	said := reporting.ExplanationCopy(frame)
 	out := make([]crmcontracts.ReportingCohortCount, 0, len(outcomes))
 	for _, outcome := range outcomes {
@@ -60,7 +60,7 @@ func cohortCounts(frame crmcontracts.ReportingContext, chart crmcontracts.Report
 		if outcome == cohortUnresolved {
 			basis = crmcontracts.ReportingCohortCountDurationBasisCurrentAge
 		}
-		key := group(outcome)
+		key := cohortOutcomeGroup(stage, outcome)
 		out = append(out, crmcontracts.ReportingCohortCount{
 			Key: outcome, Label: said.Say(cohortOutcomeWords[outcome]), Count: int64(len(members)),
 			MedianDays: metricPercentile(members, .5), DurationBasis: &basis,
@@ -129,7 +129,7 @@ func reportingStageCohortChart(out *reporting.Evaluation, chart crmcontracts.Rep
 		point := cohortPoint(stage, facts[0].StageLabel, facts)
 		group := "stage:" + stage
 		point.Evidence = &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}
-		outcomes := cohortCounts(frame, chart, facts, stageCohortOutcomes, func(outcome string) string { return stage + ":" + outcome })
+		outcomes := cohortCounts(frame, chart, facts, stageCohortOutcomes, stage)
 		entries := cohortEntries(frame, facts)
 		point.Outcomes, point.Entries = &outcomes, &entries
 		chart.Points = append(chart.Points, point)
@@ -145,7 +145,7 @@ func reportingLeadCohortChart(out *reporting.Evaluation, chart crmcontracts.Repo
 	facts := metricFacts(out.Facts, chart.Metric, chart.ContextId)
 	point := cohortPoint("arrivals", reporting.ExplanationCopy(frame).Say(cohortWords.Arrivals), facts)
 	point.Evidence = &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId}
-	outcomes := cohortCounts(frame, chart, facts, leadCohortOutcomes, func(outcome string) string { return outcome })
+	outcomes := cohortCounts(frame, chart, facts, leadCohortOutcomes, "")
 	point.Outcomes = &outcomes
 	chart.Points = []crmcontracts.ReportingPoint{point}
 	return chart

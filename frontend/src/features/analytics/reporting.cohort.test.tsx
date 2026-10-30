@@ -4,11 +4,21 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { StoryProviders } from "../../testing/story-utils";
+import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { CohortTable } from "./reporting.cohort";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import type { ReportingChart } from "./reporting.model";
+import {
+  reportingCatalogClient,
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+} from "./reporting.story-fixtures";
 
-afterEach(cleanup);
+const originalFetch = globalThis.fetch;
+afterEach(() => {
+  cleanup();
+  globalThis.fetch = originalFetch;
+});
 
 const count = (key: string, members: number, median: number | null = null) => ({
   key,
@@ -20,7 +30,7 @@ const count = (key: string, members: number, median: number | null = null) => ({
   evidence: {
     metric: "stage_conversion" as const,
     context_id: "interval",
-    group_key: `demo:${key}`,
+    group_key: `stage:demo:outcome:${key}`,
   },
 });
 
@@ -77,7 +87,7 @@ it("opens the members behind an outcome's count and says the still open stay out
   expect(evidence).toHaveBeenLastCalledWith({
     metric: "stage_conversion",
     context_id: "interval",
-    group_key: "demo:advanced",
+    group_key: "stage:demo:outcome:advanced",
   });
   expect(screen.getByText(en["reporting.cohortStillOpenNote"])).toBeVisible();
   expect(screen.getByText(en["reporting.cohortNoRate"])).toBeVisible();
@@ -96,4 +106,32 @@ it("explains a direction that was not recorded only when a member has one", () =
   );
 
   expect(screen.getByText(en["reporting.cohortPartialNote"])).toBeVisible();
+});
+
+it("names the stage, the outcome and its count when an outcome's members open", async () => {
+  const chart = stageCohort(0);
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    charts: [...reportingStoryEvaluation.charts, chart],
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        reference={{
+          metric: "stage_conversion",
+          context_id: "interval",
+          group_key: "stage:demo:outcome:advanced",
+        }}
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+
+  expect(
+    await screen.findByText(
+      new RegExp(`Demo · ${en["reporting.cohortOutcome.advanced"]} · 2`),
+    ),
+  ).toBeInTheDocument();
 });

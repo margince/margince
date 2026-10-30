@@ -71,6 +71,8 @@ type Evaluator interface {
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
 	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)
+	// MetricVersions is each named metric's current definition version.
+	MetricVersions([]crmcontracts.ReportingMetricID) MetricVersions
 }
 
 // Authority injects live identity and source visibility without sibling imports.

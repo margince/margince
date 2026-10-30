@@ -1,7 +1,7 @@
 import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { formatNumber, formatPercent, MONEY_ABSENT } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ReportingChart, ReportingEvidenceRef } from "./reporting.model";
 
@@ -22,6 +22,15 @@ const OUTCOME_LABEL: Readonly<Record<string, MessageKey>> = {
   qualified: "reporting.cohortOutcome.qualified",
   disqualified: "reporting.cohortOutcome.disqualified",
 };
+
+/** An outcome's name in the reader's words, else the server's label. */
+export function cohortOutcomeLabel(
+  count: Readonly<{ key: string; label: string }>,
+  t: Translator,
+): string {
+  const key = OUTCOME_LABEL[count.key];
+  return key ? t(key) : count.label;
+}
 
 // The outcomes that stay out of the rate, each with the note that says why.
 const NOTE_OF_OUTCOME: Readonly<Record<string, MessageKey>> = {
@@ -60,10 +69,7 @@ export function CohortTable({
         {t(stages ? "reporting.cohortEmpty" : "reporting.cohortNoArrivals")}
       </EmptyState>
     );
-  const outcomeLabel = (count: CohortCount) => {
-    const key = OUTCOME_LABEL[count.key];
-    return key ? t(key) : count.label;
-  };
+  const outcomeLabel = (count: CohortCount) => cohortOutcomeLabel(count, t);
   const shown = (key: string) =>
     chart.points.some((point) =>
       point.outcomes?.some((count) => count.key === key && count.count > 0),

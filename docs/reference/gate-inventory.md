@@ -304,6 +304,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `envcontract_test.go` | H3 | The MARGINCE\_\* variables the code reads, the reference pages name and an entrypoint requires agree with each other. |
 | `erasurecascadereach_test.go` | H2 | Every file the Art. 17 cascade executes SQL from is one the PII censuses read. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
+| `eventtimefacts_test.go` | H2 | Every writer of a stage move records the stage order it happened in. |
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `exactseatmatch_test.go` | H2 | TestEveryExactSeatMatchFoldsTheDomain holds every SQL comparison of a seat's login to storekit.SeatLoginIsSQL. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
