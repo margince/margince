@@ -24,6 +24,30 @@ Targets use the month or fiscal quarter that holds the real cutoff, even when th
 
 Every chart can also be read as numbers. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
 
+## How far is this quarter from its target?
+
+With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:
+
+- **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
+- **Left to win** is the target minus sales won so far, and never below zero.
+- **Coverage, all open deals** is the open value expected to close this quarter, over what is left to win.
+- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
+
+When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
+
+- No sales won target is set for this scope, pipeline and quarter. A missing target is not a target of zero.
+- A deal amount has no exchange rate, so the totals would be too low.
+- You cannot see every deal in the scope, or the amount of one.
+- **Show individual performance** is off, and one colleague besides you makes up the figures.
+- The manager's call is below the sales already won.
+- The time span is not this quarter, or the scope is several teams at once.
+- One pipeline is picked, and the target covers all pipelines, or the landing is a manager's call.
+- The target was set in a currency that is no longer the base currency.
+
+When another time span, pipeline or team would compare, a button under the notice switches the page to it.
+
+This comparison is not **Deal value needed** on the **Forecast** page. That figure holds the pipeline against a call or past quarters, never against a target.
+
 ## What does each graph mean?
 
 - **Sales won:** won value added up over time, and the time span before it when the two can be compared. It also shows a target for the full time span. The target is for the whole time span; it does not ask for the same amount each day.

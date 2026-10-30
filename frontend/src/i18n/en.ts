@@ -1161,6 +1161,70 @@ export const en = {
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
     "This fiscal quarter, from the deal forecast",
+  "reporting.compare.atTarget": "At the {target} target",
+  "reporting.compare.colleague_withheld":
+    "This would show one colleague’s own results",
+  "reporting.compare.colleague_withheldBody":
+    "Individual performance is off, and one colleague besides you makes up these figures. Pick a larger team or the whole company.",
+  "reporting.compare.call_below_won":
+    "The manager’s call is below what is already won",
+  "reporting.compare.call_below_wonBody":
+    "The call says the quarter ends lower than the sales already won, so no gap or coverage is shown. Update the call to compare.",
+  "reporting.compare.apply.period": "Show this quarter",
+  "reporting.compare.apply.scope": "Show one team",
+  "reporting.compare.apply.pipeline": "Show all pipelines",
+  "reporting.compare.apply.manager_call_pipeline": "Show all pipelines",
+  "reporting.compare.title": "This quarter against its target",
+  "reporting.compare.gap": "Gap to target",
+  "reporting.compare.short": "Short of the {target} target",
+  "reporting.compare.ahead": "Ahead of the {target} target",
+  "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
+  "reporting.compare.basis.commit_evidence": "commit evidence",
+  "reporting.compare.basis.weighted": "the weighted pipeline",
+  "reporting.compare.basis.manager_call": "the manager’s call",
+  "reporting.compare.remaining": "Left to win",
+  "reporting.compare.remainingBasis": "{won} won of {target}",
+  "reporting.compare.reached": "Target reached",
+  "reporting.compare.coverageAll": "Coverage, all open deals",
+  "reporting.compare.coverageQualified": "Coverage, qualified deals",
+  "reporting.compare.coverageBasis":
+    "{open} open in this quarter, over what is left to win",
+  "reporting.compare.qualifiedBasis":
+    "{open} in qualified deals, over what is left to win",
+  "reporting.compare.ratio": "{ratio}×",
+  "reporting.compare.qualifiedOff": "Not switched on",
+  "reporting.compare.qualifiedOffBasis":
+    "Turn on the qualified forecast to count only the deals the customer still supports.",
+  "reporting.compare.no_target": "No sales target for this quarter",
+  "reporting.compare.no_targetBody":
+    "Set a sales won target for this scope and quarter under Targets to see the gap and coverage. No target is not a target of zero.",
+  "reporting.compare.fx_missing": "Some deal amounts have no exchange rate",
+  "reporting.compare.fx_missingBody":
+    "The totals would be too low, so no gap or coverage is shown. Add the missing exchange rate to see them.",
+  "reporting.compare.partial_visibility":
+    "You cannot see every deal in this scope",
+  "reporting.compare.partial_visibilityBody":
+    "Some deals or deal amounts in this scope are hidden from you, so your figures are not held against the target for the whole scope.",
+  "reporting.compare.incompatible.period":
+    "Pick this fiscal quarter to compare with a target",
+  "reporting.compare.incompatible.periodBody":
+    "The comparison covers the current fiscal quarter only.",
+  "reporting.compare.incompatible.scope":
+    "Pick one team to compare with a target",
+  "reporting.compare.incompatible.scopeBody":
+    "The forecast reads one team or the whole company, not several teams together.",
+  "reporting.compare.incompatible.pipeline":
+    "No target is set for this pipeline",
+  "reporting.compare.incompatible.pipelineBody":
+    "The target covers all pipelines and is not split across them. Pick All pipelines to compare.",
+  "reporting.compare.incompatible.manager_call_pipeline":
+    "Pick All pipelines to compare the manager’s call",
+  "reporting.compare.incompatible.manager_call_pipelineBody":
+    "The expected landing is the manager’s call, and a call covers all pipelines.",
+  "reporting.compare.incompatible.currency":
+    "The target is in another currency",
+  "reporting.compare.incompatible.currencyBody":
+    "It was set in a currency that is no longer the base currency. Set the target again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",

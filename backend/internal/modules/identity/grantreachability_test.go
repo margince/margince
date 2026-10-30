@@ -63,8 +63,9 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // dynamicObjectCeiling bounds the `auth.Require` call sites whose object this
 // scan cannot resolve. Each is a door no static check covers, so it may fall
 // freely and rise only with a reason. Migration's doors count here because
-// they name ImportRunObject, which the scan cannot follow.
-const dynamicObjectCeiling = 94
+// they name ImportRunObject, which the scan cannot follow. So does narrowing an
+// activity read to a record, whose type linkColumn holds to the link vocabulary.
+const dynamicObjectCeiling = 95
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

@@ -17,7 +17,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
-import type { AnalyticsScope } from "./analytics.context";
+import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
@@ -260,6 +260,16 @@ function OverviewBody({
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
                 onEvidence={setEvidence}
+                onApplySelection={(next) => {
+                  // The server named the selection; the page only moves its
+                  // dials to it.
+                  if (next.period !== period) setPeriod(next.period);
+                  if (next.pipeline_id !== selection.pipeline_id)
+                    setPipelineId(next.pipeline_id ?? "");
+                  if (scopeKey(next.scope) !== scopeKey(scope))
+                    replaceDial("scope", scopeKey(next.scope));
+                  setEvidence(null);
+                }}
               />
               {evidence && (
                 <ReportingEvidenceDrawer

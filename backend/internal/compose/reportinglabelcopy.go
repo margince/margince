@@ -23,6 +23,8 @@ var reportingForecastLabels = map[string]langcopy.Phrase{
 	"forecast_supported":     {En: "Supported open", De: "Belegte offene Deals", Vi: "Deal đang mở có bằng chứng hỗ trợ"},
 	"forecast_upside":        {En: "Additional upside", De: "Zusätzliches Potenzial", Vi: "Tiềm năng tăng thêm"},
 	"forecast_call":          {En: "Recorded forecast", De: "Erfasste Prognose", Vi: "Dự báo đã ghi nhận"},
+	forecastOpenContext:      {En: "Open in the quarter", De: "Offene Deals im Quartal", Vi: "Deal đang mở trong quý"},
+	forecastQualifiedContext: {En: "Qualified open in the quarter", De: "Qualifizierte offene Deals im Quartal", Vi: "Deal đủ điều kiện đang mở trong quý"},
 	reportingForecastLanding: {En: "Expected landing", De: "Erwartetes Ergebnis", Vi: "Kết quả dự kiến"},
 }
 

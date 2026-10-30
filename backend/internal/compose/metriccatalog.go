@@ -83,7 +83,13 @@ func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcont
 
 type metricEvaluator struct {
 	forecast *forecasting.Store
+	// compared receives what the forecast reader measured for a target
+	// comparison. Evaluate gives each evaluation its own.
+	compared *forecastCapture
 }
+
+// forecastCapture holds the forecast reading of one evaluation.
+type forecastCapture struct{ operands *reporting.ForecastOperands }
 
 func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crmcontracts.ReportingCatalog, error) {
 	out := crmcontracts.ReportingCatalog{Metrics: []crmcontracts.ReportingMetricDefinition{}}
@@ -107,6 +113,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	}
 
 	selection.Scope = frame.Scope
+	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}
 	for _, spec := range reportingMetrics {
 		if !slices.Contains(selection.Metrics, spec.definition.Id) {
@@ -119,12 +126,20 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err != nil {
 			return out, err
 		}
+		read := len(facts)
 		facts, coverage, err = withholdColleagues(ctx, tx, frame, owners, facts, coverage)
 		if err != nil {
 			return out, err
 		}
 		out.Facts = append(out.Facts, facts...)
 		out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, facts, coverage))
+		// A failed reading's savepoint rolled its figures back.
+		if spec.definition.Id == reportingForecastLanding && coverage.Status != reportingFailed {
+			out.Forecast = e.compared.operands
+			if out.Forecast != nil && read > len(facts) {
+				out.Forecast.ColleagueWithheld = true
+			}
+		}
 	}
 	if err := projectReportingCharts(&out); err != nil {
 		return out, err
