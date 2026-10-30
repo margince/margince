@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -522,5 +524,36 @@ func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
 	}
 	if len(got.Contributions) != 2 {
 		t.Errorf("contributions = %d, want the lost deal's row kept for the snapshot", len(got.Contributions))
+	}
+}
+
+// The forecast read has no ORDER BY, so Postgres may return the same deals in
+// another order on the next read. A report receipt hashes the contributions in
+// order, and evidence opened later would refuse an unchanged report as stale.
+func TestTheContributionsDoNotDependOnTheOrderTheDealsArrive(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+	asOf := *day(t, time.May, 14)
+	population := make([]Deal, 0, 6)
+	for i, category := range []string{CategoryCommit, CategoryBestCase, "", CategoryCommit, CategoryBestCase, CategoryCommit} {
+		deal := healthyDeal(t)
+		deal.ID = fmt.Sprintf("deal-%d", i)
+		deal.Category = category
+		deal.AmountMinor = new(int64(10_000 * (i + 1)))
+		deal.BaseMinor = deal.AmountMinor
+		population = append(population, deal)
+	}
+	stored, err := Compute(period, asOf, population)
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	reversed := slices.Clone(population)
+	slices.Reverse(reversed)
+	reread, err := Compute(period, asOf, reversed)
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	if !reflect.DeepEqual(reread, stored) {
+		t.Fatalf("the same deals in another order gave other readings:\n%+v\n%+v", reread.Contributions, stored.Contributions)
 	}
 }

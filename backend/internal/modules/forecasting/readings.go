@@ -6,6 +6,7 @@ package forecasting
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -185,8 +186,11 @@ const (
 // and arithmetic — the two things worth testing exhaustively and the two that
 // are impossible to test exhaustively through a store.
 func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
+	// The rows come in no stated order, and a report receipt hashes the
+	// contributions in order, so they follow the deal id.
+	byID := slices.SortedFunc(slices.Values(in), func(a, b Deal) int { return strings.Compare(a.ID, b.ID) })
 	out := Readings{Contributions: make([]Contribution, 0, len(in))}
-	for _, deal := range in {
+	for _, deal := range byID {
 		contribution, err := contribute(period, asOfDay, deal)
 		if err != nil {
 			return Readings{}, err
