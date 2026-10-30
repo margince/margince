@@ -475,7 +475,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-20 columns · primary key `(id)` · referenced by 2 foreign keys
+23 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -488,6 +488,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `changed_by` | `text` | yes |  |
 | `currency_at_change` | `character(3)` |  |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
+| `from_position_at_change` | `integer` |  |  |
 | `from_stage_id` | `uuid` |  | Points at `stage.id`. |
 | `fx_date_at_change` | `date` |  |  |
 | `fx_rate_at_change` | `numeric` |  |  |
@@ -496,9 +497,11 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `pipeline_id_at_change` | `uuid` |  |  |
 | `reversal_of` | `uuid` |  | Points at `deal_stage_history.id`. |
 | `semantic_at_change` | `text` |  | One of `open`, `won`, `lost`. |
+| `to_position_at_change` | `integer` |  |  |
 | `to_stage_id` | `uuid` | yes | Points at `stage.id`. |
 | `valuation_provenance` | `text` |  |  |
 | `win_probability_at_change` | `smallint` |  |  |
+| `write_seq` | `bigint`, default `nextval('deal_stage_history_write_seq'::regclass)` |  |  |
 
 **Points at**
 
