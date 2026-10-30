@@ -2106,7 +2106,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1484,
+      "tokens": 1526,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",
