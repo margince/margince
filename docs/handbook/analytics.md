@@ -5,8 +5,7 @@
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline
 reports, sales performance, time in stage, your own outcomes, delivery and data
 coverage. It is in the sidebar under **Insights**. It answers two different
-kinds of question and keeps them apart: what the records say, and what somebody
-expects will happen.
+kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
 
 Every number here opens the records it was made from. If a figure looks wrong,
 open it rather than guessing.
