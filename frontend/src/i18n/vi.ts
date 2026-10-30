@@ -1170,6 +1170,52 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang mở ngày {date}: {amount} trong {count} deal.",
   "reporting.writtenOpen_other":
     "Đang mở ngày {date}: {amount} trong {count} deal.",
+  "reporting.writtenSomeFailed":
+    "Hiện không đọc được một số số liệu, nên bản tóm tắt này bỏ qua chúng.",
+  "reporting.writtenTargetReached":
+    "Doanh số đã chốt trong {quarter} đã đạt mục tiêu {target}.",
+  "reporting.writtenNoTarget":
+    "Chưa đặt mục tiêu doanh số cho {quarter}, nên không có khoảng cách để hiển thị.",
+  "reporting.writtenFinish": "Kết quả dự kiến cho {quarter}: {amount}.",
+  "reporting.writtenFinishShort":
+    "Kết quả dự kiến cho {quarter}: {amount}, thấp hơn mục tiêu {target} là {gap}.",
+  "reporting.writtenFinishAhead":
+    "Kết quả dự kiến cho {quarter}: {amount}, cao hơn mục tiêu {target} là {gap}.",
+  "reporting.writtenFinishOnTarget":
+    "Kết quả dự kiến cho {quarter}: {amount}, đúng bằng mục tiêu {target}.",
+  "reporting.writtenCoverage":
+    "Các deal đang mở dự kiến chốt trong quý này bao phủ {ratio}× của {remaining} còn phải chốt.",
+  "reporting.writtenAccepted_one":
+    "{count} bàn giao được chấp nhận trong {period}.",
+  "reporting.writtenAccepted_other":
+    "{count} bàn giao được chấp nhận trong {period}.",
+  "reporting.writtenAcceptedNone":
+    "Không có bàn giao nào được chấp nhận trong {period}.",
+  "reporting.writtenQualified_one": "{count} lead đủ điều kiện trong {period}.",
+  "reporting.writtenQualified_other":
+    "{count} lead đủ điều kiện trong {period}.",
+  "reporting.writtenQualifiedNone":
+    "Không có lead nào đủ điều kiện trong {period}.",
+  "reporting.writtenMeetings_one":
+    "{count} cuộc họp đã diễn ra trong {period}.",
+  "reporting.writtenMeetings_other":
+    "{count} cuộc họp đã diễn ra trong {period}.",
+  "reporting.writtenMeetingsNone":
+    "Không có cuộc họp nào diễn ra trong {period}.",
+  "reporting.writtenLeadsWaiting_one":
+    "{count} lead vẫn đang chờ phản hồi đầu tiên.",
+  "reporting.writtenLeadsWaiting_other":
+    "{count} lead vẫn đang chờ phản hồi đầu tiên.",
+  "reporting.writtenHandoffsWaiting_one":
+    "{count} bàn giao đang chờ bộ phận bán hàng quyết định.",
+  "reporting.writtenHandoffsWaiting_other":
+    "{count} bàn giao đang chờ bộ phận bán hàng quyết định.",
+  "reporting.prepared.prospectingTitle": "Tiến độ tìm kiếm khách hàng của tôi",
+  "reporting.prepared.prospectingPurpose":
+    "Cuộc họp đã diễn ra, bàn giao được chấp nhận và lead đủ điều kiện trong tuần này, so với mục tiêu tháng.",
+  "reporting.prepared.teamTitle": "Đánh giá tìm kiếm khách hàng của nhóm",
+  "reporting.prepared.teamPurpose":
+    "Cuộc họp đã diễn ra, bàn giao được chấp nhận và lead đủ điều kiện của nhóm trong tuần này, mỗi thứ tính một lần cho nhóm.",
   "reporting.prepared.title": "Báo cáo soạn sẵn",
   "reporting.prepared.open": "Mở",
   "reporting.prepared.preview": "Xem trước",
@@ -6734,6 +6780,113 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sections": "Mục phân tích",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionOverview": "Tổng quan",
+  "analytics.overview.views": "Chế độ xem tổng quan",
+  "analytics.overview.sales": "Rà soát bán hàng",
+  "analytics.overview.prospecting": "Tìm kiếm khách hàng của tôi",
+  "analytics.overview.readings": "Chỉ số chính",
+  "analytics.overview.expectedFinish": "Kết quả dự kiến",
+  "analytics.overview.quarterOnly": "Chỉ quý này",
+  "analytics.overview.finishBasis": "Cuối quý tài chính này, theo {basis}",
+  "analytics.overview.noTargetRate":
+    "Chưa đặt mục tiêu doanh số, nên tỷ lệ thắng hiển thị ở đây",
+  "analytics.overview.notCompared": "Chưa so sánh",
+  "analytics.overview.notComparedDetail": "Ghi chú bên dưới giải thích lý do",
+  "analytics.overview.covers": "Bao phủ {ratio}× của {remaining} còn phải chốt",
+  "analytics.overview.openDeals_one": "{count} deal đang mở",
+  "analytics.overview.openDeals_other": "{count} deal đang mở",
+  "analytics.overview.saveView": "Lưu chế độ xem",
+  "analytics.overview.templates": "Mẫu báo cáo",
+  "analytics.overview.salesNothing":
+    "Không có kiểm tra dự báo nào đang mở cho phạm vi này.",
+  "analytics.overview.quarterOnlyTitle": "Kết quả dự kiến tính cho quý này",
+  "analytics.overview.quarterOnlyBody":
+    "Kết quả dự kiến và khoảng cách đến mục tiêu được tính cho quý tài chính hiện tại. Chọn quý này để xem.",
+  "analytics.overview.setTarget": "Đặt mục tiêu",
+  "analytics.overview.setTargetBody":
+    "Đặt mục tiêu doanh số cho quý này để xem khoảng cách và mức bao phủ.",
+  "analytics.overview.targetWho":
+    "Một đồng nghiệp quản lý mục tiêu, thường là quản trị viên hoặc quản lý bán hàng, có thể đặt mục tiêu.",
+  "analytics.overview.sinceTitle": "Kể từ lần ghi nhận trước",
+  "analytics.overview.historyStarts":
+    "Việc so sánh bắt đầu sau lần ghi nhận phù hợp thứ hai.",
+  "analytics.overview.noMovement":
+    "Pipeline đang mở không thay đổi giữa hai lần ghi nhận.",
+  "analytics.overview.partlyHidden": "Một phần số liệu này bị ẩn với bạn",
+  "analytics.overview.stillWaiting_one": "{count} lead vẫn đang chờ phản hồi",
+  "analytics.overview.stillWaiting_other": "{count} lead vẫn đang chờ phản hồi",
+  "analytics.overview.monthlyTitle": "Mục tiêu tháng, {month}",
+  "analytics.overview.noMonthlyTarget": "Chưa đặt mục tiêu tháng",
+  "analytics.overview.setMonthlyTargetBody":
+    "Đặt mục tiêu tháng cho cuộc họp hoặc bàn giao được chấp nhận để xem còn thiếu bao nhiêu trong tháng.",
+  "analytics.overview.noHandoffs":
+    "Lead đủ điều kiện là kết quả chính của bạn, vì công ty này không dùng bàn giao SDR.",
+  "analytics.overview.changeWorkflow": "Đổi trong Thiết lập",
+  "analytics.overview.workflowWho":
+    "Quản trị viên có thể thiết lập việc này trong Thiết lập.",
+  "analytics.attentionIncomplete":
+    "Không đọc được một số kiểm tra, nên danh sách này có thể chưa đủ.",
+  "analytics.overview.mainOutcome": "Kết quả chính",
+  "analytics.overview.workflowFailed":
+    "Không đọc được công ty này có dùng bàn giao SDR hay không.",
+  "analytics.overview.workflowTitle": "Bàn giao SDR",
+  "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
+  "analytics.overview.team": "Tìm kiếm khách hàng của nhóm",
+  "analytics.team.chooseTeam": "Chọn một nhóm",
+  "analytics.team.chooseTeamBody":
+    "Tìm kiếm khách hàng của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm kiếm khách hàng của tôi.",
+  "analytics.team.todaysMembers":
+    "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo các bàn giao trước đây của họ.",
+  "analytics.team.countedOnce":
+    "Mỗi số liệu tính công việc của nhóm một lần. Một cuộc họp có nhiều thành viên tham dự được tính là một cuộc họp.",
+  "analytics.team.feedback": "Phản hồi về bàn giao",
+  "analytics.team.withheld":
+    "Hiệu suất cá nhân đang tắt, và các số liệu này sẽ cho thấy công việc của một đồng nghiệp.",
+  "analytics.team.decided": "Quyết định trong kỳ này",
+  "analytics.team.submitted": "Đã bàn giao",
+  "analytics.team.submittedDetail": "Các vòng bàn giao, kể cả bàn giao lại",
+  "analytics.team.accepted": "Được chấp nhận",
+  "analytics.team.acceptedDetail":
+    "Mỗi deal một lần, ghi công cho thành viên bàn giao",
+  "analytics.team.returned": "Được trả lại",
+  "analytics.team.returnedDetail": "Gửi lại để bàn giao lần nữa",
+  "analytics.team.rejected": "Bị từ chối",
+  "analytics.team.rejectedDetail": "Từ chối hẳn",
+  "analytics.team.cohort_one":
+    "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
+  "analytics.team.cohort_other":
+    "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
+  "analytics.team.medianDecision":
+    "Một nửa được quyết định trong vòng {hours}.",
+  "analytics.team.smallSampleTitle": "Mẫu nhỏ",
+  "analytics.team.smallSample":
+    "Ít hơn {below} vòng là quá ít để so sánh. Hãy đọc số lượng, không phải tỷ lệ. Không có gì ở đây cho biết ai đã làm việc chăm chỉ đến đâu.",
+  "analytics.team.waitingNow_one": "{count} bàn giao đang chờ quyết định.",
+  "analytics.team.waitingNow_other": "{count} bàn giao đang chờ quyết định.",
+  "analytics.team.blocked_one":
+    "{count} trong số đó chờ một thành viên không còn xử lý được.",
+  "analytics.team.blocked_other":
+    "{count} trong số đó chờ một thành viên không còn xử lý được.",
+  "analytics.team.unattributed_one":
+    "{count} sự kiện bàn giao được ghi trước khi lưu thành viên bàn giao, nên không dòng thành viên nào tính các sự kiện này.",
+  "analytics.team.unattributed_other":
+    "{count} sự kiện bàn giao được ghi trước khi lưu thành viên bàn giao, nên không dòng thành viên nào tính các sự kiện này.",
+  "analytics.team.reasons": "Lý do được nêu",
+  "analytics.team.reason": "Lý do",
+  "analytics.team.outcome": "Kết quả",
+  "analytics.team.count": "Số lượng",
+  "analytics.team.membersWithheld":
+    "Hiệu suất cá nhân đang tắt, nên không hiển thị số liệu của từng thành viên.",
+  "analytics.team.members": "Thành viên",
+  "analytics.team.member": "Thành viên",
+  "analytics.team.meetings": "Cuộc họp đã diễn ra",
+  "analytics.team.waiting": "Đang chờ",
+  "analytics.team.waitingFor_one": "{count}, lâu nhất {age}",
+  "analytics.team.waitingFor_other": "{count}, lâu nhất {age}",
+  "analytics.team.rowsOverlap":
+    "Một cuộc họp có nhiều thành viên tham dự được tính trong dòng của từng thành viên, nên tổng các dòng có thể lớn hơn của nhóm.",
+  "analytics.team.truncated":
+    "Nhóm có nhiều thành viên hơn số dòng trong bảng này.",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",

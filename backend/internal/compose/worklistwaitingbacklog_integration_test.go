@@ -497,3 +497,31 @@ func assertLastTask(t *testing.T, served []servedRow, id string) {
 		t.Errorf("the walk's last task is %s, want the undated generated task %s", last, id)
 	}
 }
+
+// Done on a waiting card past the lane's scan succeeds, and the card leaves the
+// reader's next walk. The Done check finds it through the tail's own cards.
+func TestDoneOnAWaitingCardBelowTheRankedTopTakesItOff(t *testing.T) {
+	w := seedWaitingBacklog(t)
+	r := w.r
+	ctx := w.seat(r.e.Rep1)
+	served, _, frozen := walkWorklist(ctx, t, r, "mine", ids.Nil)
+	card := ""
+	for _, row := range served {
+		if row.source == crmcontracts.WorklistItemSourceCustomerWaiting && !frozen[row.id] {
+			card = row.id
+		}
+	}
+	if card == "" {
+		t.Fatal("no waiting card was served below the ranked top, so this proves nothing")
+	}
+	svc := newAttentionService(r.e.Pool, approvals.NewService(r.e.DB()), func() time.Time { return r.now })
+	if err := svc.MarkRowsDone(ctx, []attention.RowRef{{Source: string(crmcontracts.WorklistItemSourceCustomerWaiting), RowID: card}}); err != nil {
+		t.Fatalf("Done on a waiting card below the ranked top: %v", err)
+	}
+	again, _, _ := walkWorklist(ctx, t, r, "mine", ids.Nil)
+	for _, row := range again {
+		if row.id == card {
+			t.Fatal("the card marked done was served again")
+		}
+	}
+}

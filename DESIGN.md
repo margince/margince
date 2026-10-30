@@ -866,6 +866,9 @@ and verbs with the more button. It has five readings where the page has figures,
   team board;
 - **Reports**: three reports, with "Explain this number" opening the plan and the rows on an indigo
   dashed pane;
+- **Analytics Overview**: four readings, not five, and this is the one exception to the count. The
+  context bar, the four readings, the sentences under them and the start of the list of what needs
+  you all fit at 1366×768. A fifth figure goes below them or into a saved view;
 - **Ask Margince**: the ask field, an answer as a pane like the 360 with its citations, the two-tier
   contract, and the passport steps;
 - the **Project 360**;

@@ -51,7 +51,8 @@ export function ReportingFilters({
   // The day the period's bounds are counted in, not the viewer's own.
   const today = isoOrBlank(dayInZone(useNow(0), zone)) || undefined;
   const context = useAnalyticsContext();
-  const pipelines = usePipelines();
+  // A view whose figures take no pipeline never waits on the pipelines.
+  const pipelines = usePipelines(showPipeline);
   const [draftFrom, setDraftFrom] = useState(
     selection.interval
       ? dayInZone(Date.parse(selection.interval.start_at), zone)

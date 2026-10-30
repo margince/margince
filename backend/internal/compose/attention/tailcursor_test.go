@@ -43,7 +43,7 @@ func TestATailThisBinaryCouldNotHaveMintedIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	refused := map[string]*backlogCursor{
-		"an unknown source":      {At: map[string]string{"deal_at_risk": ""}, Window: window},
+		"an unknown source":      {At: map[string]string{"meeting": ""}, Window: window},
 		"a position that is not": {At: map[string]string{"task": "not a token"}, Window: window},
 		"no source at all":       {At: map[string]string{}, Window: window},
 		"no window":              {At: map[string]string{"task": ""}},

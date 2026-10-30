@@ -1189,6 +1189,53 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prognose für das Ende des Geschäftsquartals, Stand {date}: {amount}.",
   "reporting.writtenOpen_one": "Offen am {date}: {amount} in {count} Deal.",
   "reporting.writtenOpen_other": "Offen am {date}: {amount} in {count} Deals.",
+  "reporting.writtenSomeFailed":
+    "Einige Zahlen konnten gerade nicht gelesen werden, daher lässt diese Zusammenfassung sie weg.",
+  "reporting.writtenTargetReached":
+    "Der gewonnene Umsatz im Zeitraum {quarter} hat das Ziel von {target} erreicht.",
+  "reporting.writtenNoTarget":
+    "Für {quarter} ist kein Umsatzziel gesetzt, daher gibt es keinen Abstand zu zeigen.",
+  "reporting.writtenFinish": "Erwartetes Ergebnis für {quarter}: {amount}.",
+  "reporting.writtenFinishShort":
+    "Erwartetes Ergebnis für {quarter}: {amount}, {gap} unter dem Ziel von {target}.",
+  "reporting.writtenFinishAhead":
+    "Erwartetes Ergebnis für {quarter}: {amount}, {gap} über dem Ziel von {target}.",
+  "reporting.writtenFinishOnTarget":
+    "Erwartetes Ergebnis für {quarter}: {amount}, genau das Ziel von {target}.",
+  "reporting.writtenCoverage":
+    "Offene Deals mit Abschluss in diesem Quartal decken {ratio}× der noch offenen {remaining}.",
+  "reporting.writtenAccepted_one":
+    "{count} Übergabe angenommen im Zeitraum {period}.",
+  "reporting.writtenAccepted_other":
+    "{count} Übergaben angenommen im Zeitraum {period}.",
+  "reporting.writtenAcceptedNone":
+    "Keine Übergaben angenommen im Zeitraum {period}.",
+  "reporting.writtenQualified_one":
+    "{count} Lead qualifiziert im Zeitraum {period}.",
+  "reporting.writtenQualified_other":
+    "{count} Leads qualifiziert im Zeitraum {period}.",
+  "reporting.writtenQualifiedNone":
+    "Keine Leads qualifiziert im Zeitraum {period}.",
+  "reporting.writtenMeetings_one":
+    "{count} Termin gehalten im Zeitraum {period}.",
+  "reporting.writtenMeetings_other":
+    "{count} Termine gehalten im Zeitraum {period}.",
+  "reporting.writtenMeetingsNone":
+    "Keine Termine gehalten im Zeitraum {period}.",
+  "reporting.writtenLeadsWaiting_one":
+    "{count} Lead wartet noch auf eine erste Antwort.",
+  "reporting.writtenLeadsWaiting_other":
+    "{count} Leads warten noch auf eine erste Antwort.",
+  "reporting.writtenHandoffsWaiting_one":
+    "{count} Übergabe wartet auf eine Entscheidung im Vertrieb.",
+  "reporting.writtenHandoffsWaiting_other":
+    "{count} Übergaben warten auf eine Entscheidung im Vertrieb.",
+  "reporting.prepared.prospectingTitle": "Mein Akquisefortschritt",
+  "reporting.prepared.prospectingPurpose":
+    "Gehaltene Termine, angenommene Übergaben und qualifizierte Leads dieser Woche, gegen die Monatsziele.",
+  "reporting.prepared.teamTitle": "Team-Akquise im Überblick",
+  "reporting.prepared.teamPurpose":
+    "Gehaltene Termine, angenommene Übergaben und qualifizierte Leads des Teams in dieser Woche, jeweils einmal fürs Team gezählt.",
   "reporting.prepared.title": "Vorbereitete Berichte",
   "reporting.prepared.open": "Öffnen",
   "reporting.prepared.preview": "Vorschau",
@@ -6909,6 +6956,121 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sections": "Analytics-Bereiche",
   "analytics.sectionForecast": "Prognose",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionOverview": "Überblick",
+  "analytics.overview.views": "Ansicht im Überblick",
+  "analytics.overview.sales": "Vertriebsüberblick",
+  "analytics.overview.prospecting": "Meine Akquise",
+  "analytics.overview.readings": "Wichtigste Kennzahlen",
+  "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
+  "analytics.overview.quarterOnly": "Nur dieses Quartal",
+  "analytics.overview.finishBasis":
+    "Ende dieses Geschäftsquartals, aus {basis}",
+  "analytics.overview.noTargetRate":
+    "Kein Umsatzziel gesetzt, daher steht hier die Gewinnquote",
+  "analytics.overview.notCompared": "Nicht verglichen",
+  "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
+  "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",
+  "analytics.overview.openDeals_one": "{count} offener Deal",
+  "analytics.overview.openDeals_other": "{count} offene Deals",
+  "analytics.overview.saveView": "Ansicht speichern",
+  "analytics.overview.templates": "Berichtsvorlagen",
+  "analytics.overview.salesNothing":
+    "Für diesen Bereich ist keine Prognoseprüfung offen.",
+  "analytics.overview.quarterOnlyTitle":
+    "Das erwartete Ergebnis gilt für dieses Quartal",
+  "analytics.overview.quarterOnlyBody":
+    "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
+  "analytics.overview.setTarget": "Ziele setzen",
+  "analytics.overview.setTargetBody":
+    "Setze ein Umsatzziel für dieses Quartal, um Abstand und Abdeckung zu sehen.",
+  "analytics.overview.targetWho":
+    "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
+  "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
+  "analytics.overview.historyStarts":
+    "Der Vergleich beginnt nach einer zweiten passenden Erfassung.",
+  "analytics.overview.noMovement":
+    "Die offene Pipeline hat sich zwischen den beiden Erfassungen nicht bewegt.",
+  "analytics.overview.partlyHidden":
+    "Ein Teil dieser Zahl ist für dich verborgen",
+  "analytics.overview.stillWaiting_one":
+    "{count} Lead wartet noch auf eine Antwort",
+  "analytics.overview.stillWaiting_other":
+    "{count} Leads warten noch auf eine Antwort",
+  "analytics.overview.monthlyTitle": "Monatsziele, {month}",
+  "analytics.overview.noMonthlyTarget": "Kein Monatsziel gesetzt",
+  "analytics.overview.setMonthlyTargetBody":
+    "Setze ein Monatsziel für Termine oder angenommene Übergaben, um zu sehen, was diesen Monat fehlt.",
+  "analytics.overview.noHandoffs":
+    "Qualifizierte Leads sind dein wichtigstes Ergebnis, weil dieses Unternehmen keine SDR-Übergaben nutzt.",
+  "analytics.overview.changeWorkflow": "In der Einrichtung ändern",
+  "analytics.overview.workflowWho":
+    "Admins können das in der Einrichtung festlegen.",
+  "analytics.attentionIncomplete":
+    "Einige Prüfungen konnten nicht gelesen werden, daher kann diese Liste unvollständig sein.",
+  "analytics.overview.mainOutcome": "Wichtigstes Ergebnis",
+  "analytics.overview.workflowFailed":
+    "Ob dieses Unternehmen SDR-Übergaben nutzt, konnte nicht gelesen werden.",
+  "analytics.overview.workflowTitle": "SDR-Übergaben",
+  "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
+  "analytics.overview.team": "Team-Akquise",
+  "analytics.team.chooseTeam": "Wähle ein Team",
+  "analytics.team.chooseTeamBody":
+    "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
+  "analytics.team.todaysMembers":
+    "Diese Zahlen folgen dem heutigen Team. Ein Mitglied, das gegangen ist, nimmt seine früheren Übergaben mit.",
+  "analytics.team.countedOnce":
+    "Jede Zahl zählt die Arbeit des Teams einmal. Ein Termin mit mehreren Mitgliedern ist hier ein Termin.",
+  "analytics.team.feedback": "Rückmeldung zu Übergaben",
+  "analytics.team.withheld":
+    "Die Einzelleistung ist ausgeschaltet, und diese Zahlen würden die Arbeit eines einzelnen Teammitglieds zeigen.",
+  "analytics.team.decided": "Entscheidungen in diesem Zeitraum",
+  "analytics.team.submitted": "Übergeben",
+  "analytics.team.submittedDetail":
+    "Übergaberunden, erneute Übergaben eingeschlossen",
+  "analytics.team.accepted": "Angenommen",
+  "analytics.team.acceptedDetail":
+    "Jeder Deal einmal, gutgeschrieben dem Mitglied, das übergeben hat",
+  "analytics.team.returned": "Zurückgegeben",
+  "analytics.team.returnedDetail": "Zurückgeschickt für einen neuen Versuch",
+  "analytics.team.rejected": "Abgelehnt",
+  "analytics.team.rejectedDetail": "Endgültig abgelehnt",
+  "analytics.team.cohort_one":
+    "Von {count} Runde aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
+  "analytics.team.cohort_other":
+    "Von {count} Runden aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
+  "analytics.team.medianDecision":
+    "Die Hälfte war innerhalb von {hours} entschieden.",
+  "analytics.team.smallSampleTitle": "Eine kleine Stichprobe",
+  "analytics.team.smallSample":
+    "Weniger als {below} Runden sind zu wenige für einen Vergleich. Lies die Anzahl, keine Quote. Nichts hier sagt, wie viel jemand gearbeitet hat.",
+  "analytics.team.waitingNow_one":
+    "{count} Übergabe wartet gerade auf eine Entscheidung.",
+  "analytics.team.waitingNow_other":
+    "{count} Übergaben warten gerade auf eine Entscheidung.",
+  "analytics.team.blocked_one":
+    "{count} davon wartet auf jemanden, der nicht mehr handeln kann.",
+  "analytics.team.blocked_other":
+    "{count} davon warten auf jemanden, der nicht mehr handeln kann.",
+  "analytics.team.unattributed_one":
+    "{count} Übergabe-Ereignis wurde erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt es.",
+  "analytics.team.unattributed_other":
+    "{count} Übergabe-Ereignisse wurden erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt sie.",
+  "analytics.team.reasons": "Genannte Gründe",
+  "analytics.team.reason": "Grund",
+  "analytics.team.outcome": "Ergebnis",
+  "analytics.team.count": "Anzahl",
+  "analytics.team.membersWithheld":
+    "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
+  "analytics.team.members": "Mitglieder",
+  "analytics.team.member": "Mitglied",
+  "analytics.team.meetings": "Gehaltene Termine",
+  "analytics.team.waiting": "Wartet gerade",
+  "analytics.team.waitingFor_one": "{count}, längste {age}",
+  "analytics.team.waitingFor_other": "{count}, längste {age}",
+  "analytics.team.rowsOverlap":
+    "Ein Termin mit mehreren Mitgliedern zählt in jeder ihrer Zeilen. Die Zeilen können daher zusammen mehr ergeben als das Team.",
+  "analytics.team.truncated":
+    "Das Team hat mehr Mitglieder, als diese Tabelle zeigt.",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",

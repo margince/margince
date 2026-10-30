@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
+import { Button, PendingBody } from "../../design-system/atoms";
 import { FilterBar } from "../../design-system/filterbar";
 import { Popover } from "../../design-system/popover";
 import { QueryStates } from "../../design-system/querystates";
@@ -29,6 +29,7 @@ import { DataCoverageView } from "./analytics.coverageview";
 import { FirstRunNotice } from "./analytics.firstrun";
 import { ForecastView, SharedForecastView } from "./analytics.forecast";
 import { MyOutcomesView } from "./analytics.outcomes";
+import { AnalyticsOverview } from "./analytics.overview";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import { SETUP_LABEL, useAnalyticsSections } from "./analytics.tabs";
@@ -64,8 +65,12 @@ export function AnalyticsScreen({
   const context = useAnalyticsContext();
   const { selection, selectScope } = useAnalyticsSelection(context.data);
 
+  const { route, section, tabs, setup, library, holding } =
+    useAnalyticsSections(context.data?.default_scope.kind);
   const pipelinesQuery = useQuery({
     queryKey: ["pipelines", "with-archived"],
+    // Only report cards name stages, so the other sections never wait on this.
+    enabled: !holding && SECTION_REPORTS[section].length > 0,
     // Archived too: a deal keeps its stage when its pipeline is archived.
     queryFn: async () =>
       unwrap(
@@ -74,9 +79,6 @@ export function AnalyticsScreen({
         }),
       ).data,
   });
-
-  const { route, section, tabs, setup, library, landing } =
-    useAnalyticsSections(context.data?.default_scope.kind);
   // Which population the figures cover, drawn first in the section's own
   // filter bar so every filter on the page sits in one row.
   const scopeControl =
@@ -102,6 +104,7 @@ export function AnalyticsScreen({
         value={section}
         onChange={openAnalyticsSection}
         labels={{
+          overview: t("analytics.sectionOverview"),
           reports: t("analytics.sectionReports"),
           targets: t("reporting.targets"),
           definitions: t("reporting.definitions"),
@@ -151,13 +154,8 @@ export function AnalyticsScreen({
       />
       <div className="analytics-body">
         <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
-          {landing ? (
-            <QueryStates
-              query={landing}
-              pendingLabel={t("analytics.sectionPerformance")}
-            >
-              {null}
-            </QueryStates>
+          {holding ? (
+            <PendingBody label={t("analytics.sections")} />
           ) : (
             <SectionBody
               section={section}
@@ -226,6 +224,16 @@ function SectionBody({
     ) : null;
   }
   switch (section) {
+    case "overview":
+      return (
+        <OverviewSection
+          context={context}
+          contextQuery={contextQuery}
+          selection={selection}
+          scopeControl={scopeControl}
+          emptyNotice={emptyNotice}
+        />
+      );
     case "reports":
       return (
         <ReportingLibrary
@@ -294,6 +302,40 @@ function SectionBody({
         </>
       );
   }
+}
+
+// Overview waits on the frame it measures, and shows a failed one.
+function OverviewSection({
+  context,
+  contextQuery,
+  selection,
+  scopeControl,
+  emptyNotice,
+}: Readonly<{
+  context: components["schemas"]["AnalyticsContext"] | undefined;
+  contextQuery: ContextQuery;
+  selection: AnalyticsSelection | null;
+  scopeControl: ReactNode;
+  emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
+}>) {
+  const t = useT();
+  if (selection && context)
+    return (
+      <AnalyticsOverview
+        context={context}
+        scope={selection.scope}
+        scopeControl={scopeControl}
+        emptyNotice={emptyNotice}
+      />
+    );
+  return (
+    <QueryStates
+      query={contextQuery}
+      pendingLabel={t("analytics.sectionOverview")}
+    >
+      {null}
+    </QueryStates>
+  );
 }
 
 type ContextQuery = Readonly<{

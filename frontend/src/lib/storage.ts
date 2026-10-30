@@ -115,6 +115,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // The Analytics Overview view a reader chose last. Seat: it is about their work.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

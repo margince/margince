@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // backlogCursor is the tail a walk carries: which sources it continues, where
@@ -47,6 +48,7 @@ type tailWindow struct {
 var tailSources = map[string][]crmcontracts.WorklistItemCategory{
 	string(sourceTask):    taskCategories,
 	string(sourceWaiting): {categoryOfSource(sourceWaiting)},
+	string(sourceAtRisk):  {categoryOfSource(sourceAtRisk)},
 }
 
 // valid says whether a client-held tail is one this binary could have minted.
@@ -99,8 +101,7 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 }
 
 // withTail fills what the ranked rows left of a page from the backlog, once
-// they have run out. above is what the ranked rows hold: the frozen walk when
-// one is resumed, else this read's own ranking with every group's members.
+// they have run out.
 func (s *Service) withTail(
 	ctx context.Context, page tailPage, shown []ranked, more bool, limit int, from *backlogCursor, ranking []ranked,
 ) ([]ranked, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
@@ -110,18 +111,24 @@ func (s *Service) withTail(
 	if from == nil || more {
 		return shown, from, nil
 	}
-	above := map[worklistsnap.Row]bool{}
-	if s.walk != nil {
-		for _, at := range s.walk.Rows {
-			above[at] = true
-		}
-	} else {
-		for _, at := range frozenRows(ranking) {
-			above[at] = true
-		}
-	}
+	above := s.aboveTheTail(ranking)
+	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
 	return append(shown, tail...), rest, failed
+}
+
+// aboveTheTail is what the ranked rows hold: the frozen walk when one is
+// resumed, else this read's own ranking with every group's members.
+func (s *Service) aboveTheTail(ranking []ranked) map[worklistsnap.Row]bool {
+	above := map[worklistsnap.Row]bool{}
+	rows := frozenRows(ranking)
+	if s.walk != nil {
+		rows = s.walk.Rows
+	}
+	for _, at := range rows {
+		above[at] = true
+	}
+	return above
 }
 
 // backlogTail reads up to need rows below the ranked ones and answers where
@@ -173,9 +180,11 @@ func (s *Service) readTail(
 		return tailBatch{}, err
 	}
 	batch.source = source
-	rows := make([]ranked, len(batch.rows))
-	for i, row := range batch.rows {
-		rows[i] = row.row
+	rows := make([]ranked, 0, len(batch.rows))
+	for _, row := range batch.rows {
+		if !row.elsewhere {
+			rows = append(rows, row.row)
+		}
 	}
 	admitted, err := s.admitTail(ctx, page, rest.Window.AsOf, rows)
 	if err != nil {
@@ -200,6 +209,8 @@ func (s *Service) tailReader(source crmcontracts.WorklistItemSource) func(
 		return s.moreTasks
 	case source == sourceWaiting && s.backlog.waiting != nil:
 		return s.moreWaiting
+	case source == sourceAtRisk && s.backlog.risk != nil:
+		return s.moreRisk
 	}
 	return nil
 }
@@ -211,6 +222,8 @@ type tailPage struct {
 	day           crmcontracts.Attention
 	bounded       map[crmcontracts.WorklistItemSource]bool
 	first         bool
+	// dealsAbove are the deals a ranked row already reports. A deal is one row.
+	dealsAbove map[ids.UUID]bool
 }
 
 // moreTasks reads the next batch of the task window this page's filter shows,
@@ -255,6 +268,25 @@ func (s *Service) moreWaiting(ctx context.Context, _ tailPage, walk tailWindow, 
 		batch.rows[i] = tailRow{row: classifyWaiting(card.Row, walk.AsOf), at: &since, after: card.After}
 	}
 	return batch, nil
+}
+
+// waitingInTail is, for a Done check, the asked waiting cards this scope's
+// tail would serve. A failed read answers none, so the Done is refused.
+func (s *Service) waitingInTail(ctx context.Context, asOf time.Time, bounded map[crmcontracts.WorklistItemSource]bool) []ranked {
+	asked := s.marked.asked[sourceWaiting]
+	if len(asked) == 0 || s.backlog.waiting == nil || !bounded[sourceWaiting] {
+		return nil
+	}
+	served, err := s.backlog.waiting.CardsAmong(ctx, asOf, s.waitingFor(ctx), asked)
+	if err != nil {
+		slog.Log(ctx, laneFailureLevel(ctx), "a Done check could not read the waiting tail", "error", err)
+		return nil
+	}
+	var rows []ranked
+	for card := range served {
+		rows = append(rows, ranked{item: crmcontracts.WorklistItem{Source: sourceWaiting, Id: card.String()}})
+	}
+	return rows
 }
 
 // waitingJudged is how many messages one waiting read judges for a batch of

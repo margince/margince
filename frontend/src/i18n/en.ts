@@ -1143,6 +1143,44 @@ export const en = {
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
   "reporting.writtenOpen_other": "Open on {date}: {amount} in {count} deals.",
+  "reporting.writtenSomeFailed":
+    "Some figures could not be read just now, so this summary leaves them out.",
+  "reporting.writtenTargetReached":
+    "Sales won in {quarter} have reached the {target} target.",
+  "reporting.writtenNoTarget":
+    "No sales target is set for {quarter}, so there is no gap to show.",
+  "reporting.writtenFinish": "Expected finish for {quarter}: {amount}.",
+  "reporting.writtenFinishShort":
+    "Expected finish for {quarter}: {amount}, {gap} short of the {target} target.",
+  "reporting.writtenFinishAhead":
+    "Expected finish for {quarter}: {amount}, {gap} above the {target} target.",
+  "reporting.writtenFinishOnTarget":
+    "Expected finish for {quarter}: {amount}, exactly the {target} target.",
+  "reporting.writtenCoverage":
+    "Open deals expected to close this quarter cover {ratio}× of the {remaining} still to win.",
+  "reporting.writtenAccepted_one": "{count} handoff accepted in {period}.",
+  "reporting.writtenAccepted_other": "{count} handoffs accepted in {period}.",
+  "reporting.writtenAcceptedNone": "No handoffs accepted in {period}.",
+  "reporting.writtenQualified_one": "{count} lead qualified in {period}.",
+  "reporting.writtenQualified_other": "{count} leads qualified in {period}.",
+  "reporting.writtenQualifiedNone": "No leads qualified in {period}.",
+  "reporting.writtenMeetings_one": "{count} meeting held in {period}.",
+  "reporting.writtenMeetings_other": "{count} meetings held in {period}.",
+  "reporting.writtenMeetingsNone": "No meetings held in {period}.",
+  "reporting.writtenLeadsWaiting_one":
+    "{count} lead is still waiting for a first reply.",
+  "reporting.writtenLeadsWaiting_other":
+    "{count} leads are still waiting for a first reply.",
+  "reporting.writtenHandoffsWaiting_one":
+    "{count} handoff is waiting for a decision from sales.",
+  "reporting.writtenHandoffsWaiting_other":
+    "{count} handoffs are waiting for a decision from sales.",
+  "reporting.prepared.prospectingTitle": "My prospecting progress",
+  "reporting.prepared.prospectingPurpose":
+    "This week’s meetings held, accepted handoffs and qualified leads, against monthly targets.",
+  "reporting.prepared.teamTitle": "Team prospecting review",
+  "reporting.prepared.teamPurpose":
+    "This week’s team meetings held, accepted handoffs and qualified leads, each counted once for the team.",
   "reporting.prepared.title": "Prepared reports",
   "reporting.prepared.open": "Open",
   "reporting.prepared.preview": "Preview",
@@ -6948,6 +6986,115 @@ export const en = {
   "analytics.sections": "Analytics sections",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
+  "analytics.sectionOverview": "Overview",
+  "analytics.overview.views": "Overview view",
+  "analytics.overview.sales": "Sales review",
+  "analytics.overview.prospecting": "My prospecting",
+  "analytics.overview.readings": "Opening readings",
+  "analytics.overview.expectedFinish": "Expected finish",
+  "analytics.overview.quarterOnly": "This quarter only",
+  "analytics.overview.finishBasis": "End of this fiscal quarter, from {basis}",
+  "analytics.overview.noTargetRate":
+    "No sales target set, so the win rate stands here",
+  "analytics.overview.notCompared": "Not compared",
+  "analytics.overview.notComparedDetail": "The note below says why",
+  "analytics.overview.covers": "Covers {ratio}× of {remaining} left to win",
+  "analytics.overview.openDeals_one": "{count} open deal",
+  "analytics.overview.openDeals_other": "{count} open deals",
+  "analytics.overview.saveView": "Save view",
+  "analytics.overview.templates": "Report templates",
+  "analytics.overview.salesNothing":
+    "No forecast check is open for this scope.",
+  "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
+  "analytics.overview.quarterOnlyBody":
+    "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
+  "analytics.overview.setTarget": "Set targets",
+  "analytics.overview.setTargetBody":
+    "Set a sales target for this quarter to see the gap and the coverage.",
+  "analytics.overview.targetWho":
+    "A colleague who manages targets, most often an admin or a sales manager, can set one.",
+  "analytics.overview.sinceTitle": "Since the last capture",
+  "analytics.overview.historyStarts":
+    "Comparison starts after a second compatible capture.",
+  "analytics.overview.noMovement":
+    "The open pipeline did not move between the two captures.",
+  "analytics.overview.partlyHidden": "Part of this figure is hidden from you",
+  "analytics.overview.stillWaiting_one":
+    "{count} lead still waiting for a reply",
+  "analytics.overview.stillWaiting_other":
+    "{count} leads still waiting for a reply",
+  "analytics.overview.monthlyTitle": "Monthly targets, {month}",
+  "analytics.overview.noMonthlyTarget": "No monthly target set",
+  "analytics.overview.setMonthlyTargetBody":
+    "Set a monthly target for meetings or accepted handoffs to see what is left this month.",
+  "analytics.overview.noHandoffs":
+    "Leads qualified is your main outcome, because this company does not use SDR handoffs.",
+  "analytics.overview.changeWorkflow": "Change in Setup",
+  "analytics.overview.workflowWho": "An admin can set this up in Setup.",
+  "analytics.attentionIncomplete":
+    "Some checks could not be read, so this list may be short.",
+  "analytics.overview.mainOutcome": "Main outcome",
+  "analytics.overview.workflowFailed":
+    "Could not read whether this company uses SDR handoffs.",
+  "analytics.overview.workflowTitle": "SDR handoffs",
+  "analytics.overview.gapMissing": "The comparison came back without a gap.",
+  "analytics.overview.team": "Team prospecting",
+  "analytics.team.chooseTeam": "Choose a team",
+  "analytics.team.chooseTeamBody":
+    "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
+  "analytics.team.todaysMembers":
+    "These figures follow today’s team. A member who left takes their past handoffs with them.",
+  "analytics.team.countedOnce":
+    "Each figure counts the team’s work once. A meeting several members attended is one meeting here.",
+  "analytics.team.feedback": "Handoff feedback",
+  "analytics.team.withheld":
+    "Individual performance is off, and these figures would show one colleague’s work.",
+  "analytics.team.decided": "Decisions in this period",
+  "analytics.team.submitted": "Submitted",
+  "analytics.team.submittedDetail": "Rounds handed on, resubmissions included",
+  "analytics.team.accepted": "Accepted",
+  "analytics.team.acceptedDetail":
+    "Each deal once, credited to who handed it on",
+  "analytics.team.returned": "Returned",
+  "analytics.team.returnedDetail": "Sent back to try again",
+  "analytics.team.rejected": "Rejected",
+  "analytics.team.rejectedDetail": "Refused for good",
+  "analytics.team.cohort_one":
+    "Of the {count} round handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
+  "analytics.team.cohort_other":
+    "Of the {count} rounds handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
+  "analytics.team.medianDecision": "Half were decided within {hours}.",
+  "analytics.team.smallSampleTitle": "A small sample",
+  "analytics.team.smallSample":
+    "Fewer than {below} rounds is too few to compare. Read the counts, not a rate, and nothing here says how hard anyone worked.",
+  "analytics.team.waitingNow_one":
+    "{count} handoff is waiting for a decision now.",
+  "analytics.team.waitingNow_other":
+    "{count} handoffs are waiting for a decision now.",
+  "analytics.team.blocked_one":
+    "{count} of them waits on someone who can no longer act.",
+  "analytics.team.blocked_other":
+    "{count} of them wait on someone who can no longer act.",
+  "analytics.team.unattributed_one":
+    "{count} handoff event was recorded before its submitter was kept, so no member’s row counts it.",
+  "analytics.team.unattributed_other":
+    "{count} handoff events were recorded before their submitter was kept, so no member’s row counts them.",
+  "analytics.team.reasons": "Reasons given",
+  "analytics.team.reason": "Reason",
+  "analytics.team.outcome": "Outcome",
+  "analytics.team.count": "Count",
+  "analytics.team.membersWithheld":
+    "Individual performance is off, so no member’s figures are shown.",
+  "analytics.team.members": "Members",
+  "analytics.team.member": "Member",
+  "analytics.team.meetings": "Meetings held",
+  "analytics.team.waiting": "Waiting now",
+  "analytics.team.waitingFor_one": "{count}, longest {age}",
+  "analytics.team.waitingFor_other": "{count}, longest {age}",
+  "analytics.team.rowsOverlap":
+    "A meeting several members attended counts in each of their rows, so the rows can add up to more than the team.",
+  "analytics.team.truncated":
+    "The team has more members than this table shows.",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",

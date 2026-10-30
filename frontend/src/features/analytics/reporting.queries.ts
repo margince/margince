@@ -4,7 +4,11 @@ import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
-import type { MetricNames } from "./reporting.model";
+import {
+  type MetricNames,
+  type ReportingSelection,
+  reportingQuery,
+} from "./reporting.model";
 
 export { reloadReportingFigures };
 
@@ -17,6 +21,29 @@ export function useReportingFramework(enabled = true) {
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/framework"));
     },
+  });
+}
+
+/**
+ * One evaluation, keyed by the whole selection. A dial that changes the answer
+ * changes the key, so an answer is never drawn under another selection's
+ * heading. The signal reaches the request, so a selection the reader has
+ * already left stops on the server.
+ */
+export function useReportingEvaluation(
+  selection: ReportingSelection,
+  enabled = true,
+) {
+  return useQuery({
+    enabled,
+    queryKey: ["reporting-evaluation", selection],
+    queryFn: async ({ signal }) =>
+      unwrap(
+        await api.GET("/analytics/evaluate", {
+          params: { query: reportingQuery(selection) },
+          signal,
+        }),
+      ),
   });
 }
 

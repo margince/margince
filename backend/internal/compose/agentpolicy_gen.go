@@ -256,6 +256,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/analytics/schema":                                              {Op: "getAnalyticsSchema", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/sdr-summary":                                         {Op: "getSdrSummary", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/sdr-summary/handoffs":                                {Op: "listSdrWaitingHandoffs", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/analytics/sdr-team":                                            {Op: "getSdrTeamReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/analytics/targets":                                             {Op: "listReportingTargets", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/targets/{id}":                                        {Op: "getReportingTarget", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/analytics/vocabulary":                                          {Op: "describeAnalyticsVocabulary", Access: "tool", Tool: "describe_analytics_vocabulary", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -62,5 +63,21 @@ func TestAPresetKeepsOnlyTheMetricsAndChartsTheReaderMayRead(t *testing.T) {
 	}
 	if none := catalogFor(t); len(none.Presets) != 0 || none.Presets == nil {
 		t.Fatalf("a reader of no metric gets presets %+v, want an empty list", none.Presets)
+	}
+}
+
+// Team prospecting reads handoffs beside its figures. A seat that may not read
+// them would be offered a view whose second read is refused.
+func TestTheTeamPresetIsOfferedOnlyToAHandoffReader(t *testing.T) {
+	offered := func(catalog crmcontracts.ReportingCatalog) bool {
+		return slices.ContainsFunc(catalog.Presets, func(preset crmcontracts.ReportingPreset) bool {
+			return preset.Id == crmcontracts.ReportingPresetIdTeam
+		})
+	}
+	if offered(catalogFor(t, "activity")) {
+		t.Error("a seat that reads meetings but not handoffs is offered Team prospecting")
+	}
+	if !offered(catalogFor(t, "activity", contacts.HandoffObject)) {
+		t.Error("a seat that reads meetings and handoffs is not offered Team prospecting")
 	}
 }

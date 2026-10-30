@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -55,6 +56,9 @@ var reportingMetrics = []metricSpec{
 var reportingPresets = []crmcontracts.ReportingPreset{
 	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge}},
 	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+	// A team's prospecting, counted once for the team: the handoff feedback
+	// beside it comes from GET /analytics/sdr-team.
+	{Id: crmcontracts.ReportingPresetIdTeam, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 }
 
 // openingSelection answers a request that names no metrics: the sales preset,
@@ -116,6 +120,11 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 		}
 	}
 	out.Presets = readablePresets(out.Metrics)
+	// Team prospecting reads handoffs beside its figures, so a seat that may
+	// not read them is not offered the view.
+	if !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
+		out.Presets = slices.DeleteFunc(out.Presets, func(preset crmcontracts.ReportingPreset) bool { return preset.Id == crmcontracts.ReportingPresetIdTeam })
+	}
 	return out, nil
 }
 
