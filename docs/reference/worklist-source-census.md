@@ -133,8 +133,8 @@ The `deal_at_risk` source is read on below the ranked rows to its end, in every 
   rows keep step B over the waiting lane's own scan. When that scan was cut, a ranked deal whose customer's card
   lies past it is still shown as at risk, and the card comes later in the tail. Asking `DealsWaiting` for the ranked
   deals closes that gap, but made the first page 10% slower at p50 on a team page and 3% on a seat's own page.
-- Step E: a tail row carries no brief item. A deal that a ranked row already names, such as a brief row the fold
-  left standing, is left out of the tail (`dealsReported` in `attention/backlogrisk.go`).
+- Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
+  out of the tail (`dealsReported` in `attention/backlogrisk.go`). A task about the deal does not leave it out.
 - Step F: the tail reads the reader's Done marks for its rows, and `dropDone` applies the came-back rule to each
   row's own dates. `MarkRowsDone` finds a tail deal through `riskInTail`.
 

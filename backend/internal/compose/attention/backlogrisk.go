@@ -125,12 +125,16 @@ func (s *Service) riskInTail(ctx context.Context, asOf time.Time, bounded map[cr
 	return rows
 }
 
-// dealsReported are the deals a ranked row above the tail already reports.
-// Step E folds a brief row onto the deal's at-risk row; a deal whose brief row
-// stands alone above keeps that one row.
+// dealsReported are the deals a ranked row above the tail reports in place of
+// an at-risk row. Step E folds a brief row onto it; step B prefers a waiting
+// card. A task about a deal sits beside its at-risk row.
 func dealsReported(ranking []ranked, above map[worklistsnap.Row]bool) map[ids.UUID]bool {
 	reported := map[ids.UUID]bool{}
 	for _, row := range ranking {
+		source := row.item.Source
+		if source != crmcontracts.WorklistItemSourceBriefItem && source != sourceWaiting {
+			continue
+		}
 		if subject := row.item.Subject; subject != nil && subject.Type == subjectDeal && above[rowIdentity(row)] {
 			reported[ids.UUID(subject.Id)] = true
 		}

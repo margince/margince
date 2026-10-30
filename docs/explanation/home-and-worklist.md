@@ -144,8 +144,8 @@ Three sources are read on in the tail today:
 - Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
   deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
   by expected close, and draws each deal as the lane does. A deal a waiting card names is left out, even when that
-  card is far down the waiting source (`DealsWaiting`). A deal a row above already names, such as a brief row, is left
-  out too, so one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
+  card is far down the waiting source (`DealsWaiting`). A deal a brief row above already names is left out too, so
+  one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
 
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
