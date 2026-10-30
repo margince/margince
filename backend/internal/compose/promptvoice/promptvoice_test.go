@@ -51,6 +51,7 @@ func TestTheVoiceCarriesEveryInstructionItExistsFor(t *testing.T) {
 		"speaks as Margince":         "Margince",
 		"says I for its own actions": "I",
 		"addresses the reader":       "you",
+		"hands the reader the move":  "the reader's to make",
 		"leads with the result":      "Lead with the result",
 		"one idea per sentence":      "One idea per sentence",
 		"admits what it cannot see":  "could not see",

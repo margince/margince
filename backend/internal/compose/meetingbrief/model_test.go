@@ -196,3 +196,27 @@ func TestASparseReplyKeepsTheFloorsCoverage(t *testing.T) {
 		}
 	}
 }
+
+func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	in := fullInput()
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}`
+	}
+	sections, err := ParseBriefSections(`{"sections":[{"kind":"goal","sentences":[`+
+		move("I'll send the revised pricing once legal finishes its review.")+`,`+
+		move("We'll confirm the pilot scope.")+`,`+
+		move("Ich schicke das Angebot.")+`,`+
+		move("Send them the revised pricing once legal finishes its review.")+`]}]}`, in)
+	if err != nil {
+		t.Fatalf("ParseBriefSections: %v", err)
+	}
+	var kept []string
+	for _, section := range sections {
+		for _, line := range section.Sentences {
+			kept = append(kept, line.Text)
+		}
+	}
+	if len(kept) != 1 || kept[0] != "Send them the revised pricing once legal finishes its review." {
+		t.Fatalf("kept %q, want only the move addressed to the reader", kept)
+	}
+}

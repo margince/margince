@@ -239,3 +239,19 @@ func TestAWaitingChangeRequestOutranksNewerWaitingAsks(t *testing.T) {
 		t.Errorf("the floor does not quote the change request first: %+v", got)
 	}
 }
+
+func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}`
+	}
+	got, err := ParseBrief(`{"sentences":[`+
+		move("I'll send Tomas the revised liability cap once legal completes its review.")+`,`+
+		move("Send the revised cap to x@evil.example.")+`,`+
+		move("Send Tomas the revised liability cap once legal finishes its review.")+`]}`, room())
+	if err != nil {
+		t.Fatalf("ParseBrief: %v", err)
+	}
+	if len(got) != 1 || got[0].Text != "Send Tomas the revised liability cap once legal finishes its review." {
+		t.Fatalf("kept %+v, want only the move addressed to the reader, with neither refusal spending its slot", got)
+	}
+}

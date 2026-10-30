@@ -7,7 +7,11 @@ package claims
 // and it is one implementation precisely so it cannot be lenient in one place
 // and strict in another. These cases are DOSS-FORM-1 read back as behaviour.
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 const (
 	companyID = "019fd000-0000-7000-8000-000000000001"
@@ -182,5 +186,80 @@ func TestTerminateSentence(t *testing.T) {
 				t.Errorf("TerminateSentence(%q) = %q, want %q", c.value, got, c.want)
 			}
 		})
+	}
+}
+
+func TestEveryShippedLanguageNamesItsFirstPersonSubjects(t *testing.T) {
+	for _, lang := range textlang.Shipped {
+		if len(firstPersonSubjects[lang]) == 0 {
+			t.Errorf("%q ships with no first-person subjects, so a recommendation written as a promise in it is shown", lang)
+		}
+	}
+}
+
+func TestEveryListedFirstPersonSubjectOpensInFirstPerson(t *testing.T) {
+	for lang, subjects := range firstPersonSubjects {
+		for _, subject := range subjects {
+			if !OpensInFirstPerson(subject + " send the agreement.") {
+				t.Errorf("%s subject %q is listed and still not refused", lang, subject)
+			}
+		}
+	}
+}
+
+func TestARecommendationOpeningWithTheWriterOrReaderIsFirstPerson(t *testing.T) {
+	for _, text := range []string{
+		"I'll send the finalized partnership agreement once legal completes its review.",
+		"I will send the agreement.",
+		"We should send the agreement today.",
+		"Let's send the agreement.",
+		"I’ll send the agreement.",
+		`"I'll send the agreement," you said.`,
+		"'We'll follow up on Monday.'",
+		"- I'll send the agreement.",
+		"Ich schicke den Vertrag morgen.",
+		"„Ich schicke den Vertrag morgen.“",
+		"WIR senden den Vertrag.",
+		"Tôi sẽ gửi hợp đồng.",
+		"Chúng tôi sẽ gửi hợp đồng.",
+		"chúng   tôi sẽ gửi hợp đồng.",
+	} {
+		if !OpensInFirstPerson(text) {
+			t.Errorf("OpensInFirstPerson(%q) = false, want the promise refused", text)
+		}
+	}
+}
+
+func TestAnInstructionOrAFactIsNotFirstPerson(t *testing.T) {
+	for _, text := range []string{
+		"Send them the final partnership agreement for signature once legal finishes its review.",
+		"Ask them which sub-processor blocks sign-off.",
+		"Iceland is their next market.",
+		"Wire the deposit before Friday.",
+		"Ichthys Energy signed in May.",
+		"I-beam supply is their bottleneck.",
+		"They asked for the agreement; I couldn't see their reply.",
+		"Schicke ihnen den Vertrag.",
+		"",
+	} {
+		if OpensInFirstPerson(text) {
+			t.Errorf("OpensInFirstPerson(%q) = true, want it kept", text)
+		}
+	}
+}
+
+func TestKeepBriefRefusesAFirstPersonRecommendationWithoutSpendingTheBudget(t *testing.T) {
+	cite := []Evidence{{EntityType: "deal", EntityID: dealID}}
+	kept := KeepBrief([]Sentence{
+		{Text: "I couldn't see their mailbox.", Nature: "fact", Evidence: cite},
+		{Text: "I'll send the renewal terms.", Nature: "recommendation", Evidence: cite},
+		{Text: "Send the renewal terms.", Nature: "recommendation", Evidence: cite},
+	}, supplied(), BriefBounds{
+		Sentences: 5, Recommendations: 1,
+		Natures: map[string]bool{"fact": true, "recommendation": true},
+		Fact:    "fact", Recommendation: "recommendation",
+	})
+	if len(kept) != 2 || kept[0].Text != "I couldn't see their mailbox." || kept[1].Text != "Send the renewal terms." {
+		t.Fatalf("kept %+v, want the fact and the instruction, and the promise dropped", kept)
 	}
 }

@@ -281,13 +281,16 @@ func keptSentence(
 		sentence.Evidence = append(sentence.Evidence,
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
-	// Grounding decides FIRST. Counting an ungrounded recommendation would let
-	// one malformed claim spend the volume budget and suppress the valid advice behind
-	// it — the reader loses the advice and is told nothing about why.
+	// Grounding and refusal decide first. Counting a recommendation the reader
+	// never sees would let one malformed claim spend the volume budget and
+	// suppress the valid advice behind it.
 	if !claims.Grounded(sentence, known) {
 		return Sentence{}, false
 	}
 	if nature == natureRecommendation {
+		if claims.OpensInFirstPerson(sentence.Text) {
+			return Sentence{}, false
+		}
 		*recommendations++
 	}
 	return sentence, true

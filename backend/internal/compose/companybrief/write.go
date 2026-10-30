@@ -301,14 +301,16 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 				continue
 			}
 			sentence.Nature = nature
-			// Grounding decides FIRST. Counting an ungrounded recommendation
-			// would let one malformed claim spend the volume budget and suppress the
-			// valid advice behind it — the reader loses the advice and is told
-			// nothing about why.
+			// Grounding and refusal decide first. Counting a recommendation the
+			// reader never sees would let one malformed claim spend the volume
+			// budget and suppress the valid advice behind it.
 			if !claims.Grounded(sentence, known) {
 				continue
 			}
 			if nature == natureRecommendation {
+				if claims.OpensInFirstPerson(sentence.Text) {
+					continue
+				}
 				recommendations++
 			}
 			byKind[section.Kind] = append(byKind[section.Kind], sentence)

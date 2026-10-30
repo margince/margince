@@ -23,8 +23,10 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/specifics"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -240,14 +242,15 @@ type BriefBounds struct {
 	Natures         map[string]bool
 	Fact            string
 	Recommendation  string
-	// Refuse drops a grounded recommendation the caller will not show. Nil
-	// refuses none.
+	// Refuse drops a grounded recommendation this caller will not show, on top
+	// of the first-person one KeepBrief refuses for every caller. Nil adds none.
 	Refuse func(Sentence) bool
 }
 
-// KeepBrief grounds a brief's sentences and then bounds it. Grounding goes
-// first, so one ungrounded recommendation cannot spend the budget a valid one
-// needed. An unknown nature reads as fact, the strictest reading.
+// KeepBrief grounds a brief's sentences and then bounds it. Grounding and
+// refusal go first, so a recommendation the reader never sees cannot spend the
+// budget a valid one needed. An unknown nature reads as fact, the strictest
+// reading.
 func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBounds) []Sentence {
 	out := make([]Sentence, 0, min(len(sentences), bounds.Sentences))
 	recommendations := 0
@@ -262,7 +265,8 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 			continue
 		}
 		if sentence.Nature == bounds.Recommendation {
-			if recommendations == bounds.Recommendations || (bounds.Refuse != nil && bounds.Refuse(sentence)) {
+			if recommendations == bounds.Recommendations || OpensInFirstPerson(sentence.Text) ||
+				(bounds.Refuse != nil && bounds.Refuse(sentence)) {
 				continue
 			}
 			recommendations++
@@ -270,6 +274,65 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 		out = append(out, sentence)
 	}
 	return Dedupe(out)
+}
+
+// firstPersonSubjects is, per shipped language, every subject that makes a
+// recommendation the writer's or the reader's own promise. Vietnamese anh, chị,
+// em and mình are absent: each also addresses the reader as "you".
+var firstPersonSubjects = map[textlang.Lang][]string{
+	textlang.English:    {"i", "i'll", "i'm", "i've", "i'd", "we", "we'll", "we're", "we've", "we'd", "let's"},
+	textlang.German:     {"ich", "wir"},
+	textlang.Vietnamese: {"tôi", "chúng tôi"},
+}
+
+// OpensInFirstPerson reports whether text opens with a first-person subject in
+// any shipped language. A recommendation that does is a promise, "I'll send the
+// agreement", where the reader needed an instruction, "Send the agreement".
+//
+// Every language is checked whatever the brief's own: a model can answer in the
+// wrong one, and the subjects do not collide across them.
+func OpensInFirstPerson(text string) bool {
+	words := leadingWords(text, 2)
+	for _, subjects := range firstPersonSubjects {
+		for _, subject := range subjects {
+			if opensWith(words, strings.Fields(subject)) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// leadingWords is text's first n words, lowercased, with quote marks and
+// punctuation around them stripped and ’ read as '.
+func leadingWords(text string, n int) []string {
+	normalised := strings.ToLower(strings.ReplaceAll(text, "’", "'"))
+	words := strings.FieldsFunc(normalised, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\'' && r != '-'
+	})
+	out := make([]string, 0, n)
+	for _, word := range words {
+		if len(out) == n {
+			break
+		}
+		// Trimmed so an opening ' quote or a dash bullet cannot hide the word after it.
+		if word = strings.Trim(word, "'-"); word != "" {
+			out = append(out, word)
+		}
+	}
+	return out
+}
+
+func opensWith(words, subject []string) bool {
+	if len(words) < len(subject) {
+		return false
+	}
+	for i, word := range subject {
+		if words[i] != word {
+			return false
+		}
+	}
+	return true
 }
 
 // Prose is a brief's sentences as one block of text, which is what a

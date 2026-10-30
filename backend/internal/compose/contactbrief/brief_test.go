@@ -257,3 +257,19 @@ func TestWriteKeepsWhatItGroundsAndNamesTheModel(t *testing.T) {
 		t.Errorf("nature = %q, want the judgment labelled as one", written[1].Nature)
 	}
 }
+
+func TestAFirstPersonMoveIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	t.Parallel()
+	kept, err := ParseBrief(`{"sentences":[
+		{"text":"I'll send the sub-processor list once legal completes its review.","nature":"recommendation","evidence":[
+			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
+		{"text":"Send them the sub-processor list once legal finishes its review.","nature":"recommendation","evidence":[
+			{"entity_type":"activity","entity_id":"`+objectionID+`"}]}
+	]}`, briefContactID, inputFixture())
+	if err != nil {
+		t.Fatalf("ParseBrief: %v", err)
+	}
+	if len(kept) != 1 || kept[0].Text != "Send them the sub-processor list once legal finishes its review." {
+		t.Fatalf("kept %+v, want only the move addressed to the reader", kept)
+	}
+}
