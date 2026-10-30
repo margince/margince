@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -204,6 +205,40 @@ func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.
 		}
 		if metric.Value == nil || *metric.Value != expected {
 			t.Fatalf("SDR metric: %+v", metric)
+		}
+	}
+}
+
+func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.T) {
+	f := reportingBusiness(t)
+	catalog, err := f.service.Catalog(f.human)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Presets) != len(reportingPresets) {
+		t.Fatalf("the fixture reader is offered %d presets, want %d", len(catalog.Presets), len(reportingPresets))
+	}
+	for _, preset := range catalog.Presets {
+		selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: preset.Metrics, Blocks: preset.Blocks}
+		if preset.Id == crmcontracts.ReportingPresetIdSales {
+			selection.PipelineId = ptrUUID(f.env.pipeline)
+		}
+		result, err := f.service.Evaluate(f.human, selection)
+		if err != nil {
+			t.Fatalf("%s preset: %v", preset.Id, err)
+		}
+		if len(result.Metrics) != len(preset.Metrics) {
+			t.Fatalf("%s preset answered %d metrics, asked %d", preset.Id, len(result.Metrics), len(preset.Metrics))
+		}
+		for _, metric := range result.Metrics {
+			if metric.Value == nil || (metric.Coverage.Status != crmcontracts.ReportingStatusOk && metric.Coverage.Status != crmcontracts.ReportingStatusPartial) {
+				t.Errorf("%s preset: %s answered no figure, status %s", preset.Id, metric.Id, metric.Coverage.Status)
+			}
+		}
+		for _, block := range preset.Blocks {
+			if !slices.ContainsFunc(result.Charts, func(chart crmcontracts.ReportingChart) bool { return chart.Kind == block }) {
+				t.Errorf("%s preset drew no %s chart", preset.Id, block)
+			}
 		}
 	}
 }

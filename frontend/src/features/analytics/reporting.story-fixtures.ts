@@ -247,6 +247,7 @@ export const reportingSectionMetrics: readonly MetricDefinition[] = [
 export const reportingSectionsCatalog: components["schemas"]["ReportingCatalog"] =
   {
     metrics: [...reportingStoryCatalog.metrics, ...reportingSectionMetrics],
+    presets: reportingStoryCatalog.presets,
   };
 
 const sectionCoverage = { status: "ok", withheld: false } as const;

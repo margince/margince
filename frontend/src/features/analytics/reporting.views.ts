@@ -1,6 +1,14 @@
+import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 import type { Section } from "../../lib/analytics.address";
-import type { ReportingBlockKind, ReportingMetricID } from "./reporting.model";
+import type {
+  ReportingBlockKind,
+  ReportingMetricID,
+  ReportingSelection,
+} from "./reporting.model";
+
+type Catalog = components["schemas"]["ReportingCatalog"];
+type PresetID = components["schemas"]["ReportingPreset"]["id"];
 
 // The views of Performance, in the order the tabs offer them.
 export const REPORTING_VIEWS = ["sales", "sdr", "leads", "partners"] as const;
@@ -27,36 +35,32 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   partner_activity: "partners",
 };
 
-// What each view is called, the tab that opens it, which charts it draws, and
-// whether its figures take a pipeline and a close window. Only deal views do:
-// the lead readers and the partner commission and activity readers refuse a
-// pipeline.
+// What each view is called, the tab that opens it, what it asks, and whether
+// its figures take a pipeline and a close window. Only deal views do: the lead
+// readers and the partner commission and activity readers refuse a pipeline.
+// A view asks either the server's preset of that name or the charts listed.
 export const VIEW_SHAPE: Readonly<
   Record<
     ReportingView,
-    Readonly<{
-      label: MessageKey;
-      section: Section;
-      blocks: readonly ReportingBlockKind[];
-      dealFilters: boolean;
-    }>
+    Readonly<
+      {
+        label: MessageKey;
+        section: Section;
+        dealFilters: boolean;
+      } & ({ preset: PresetID } | { blocks: readonly ReportingBlockKind[] })
+    >
   >
 > = {
   sales: {
     label: "reporting.sales",
     section: "performance",
-    blocks: [
-      "bookings_trend",
-      "stage_distribution",
-      "owner_attainment",
-      "stage_age",
-    ],
+    preset: "sales",
     dealFilters: true,
   },
   sdr: {
     label: "reporting.sdr",
     section: "sdr",
-    blocks: ["sdr_outcomes", "target_progress"],
+    preset: "sdr",
     dealFilters: false,
   },
   leads: {
@@ -78,15 +82,67 @@ export function viewOfSection(section: Section): ReportingView | undefined {
   return REPORTING_VIEWS.find((view) => VIEW_SHAPE[view].section === section);
 }
 
-// The views whose metrics this catalog holds: the ones a seat is offered.
+// The views a seat is offered on this catalog. A preset view is offered when
+// the catalog publishes its preset, because that preset is all it asks. Any
+// other view is offered when the catalog holds one of its metrics.
 export function readableViews(
-  metrics: readonly Readonly<{ id: ReportingMetricID }>[],
+  catalog: Pick<Catalog, "metrics" | "presets">,
 ): ReportingView[] {
-  return REPORTING_VIEWS.filter((view) =>
-    metrics.some((metric) => METRIC_VIEW[metric.id] === view),
-  );
+  return REPORTING_VIEWS.filter((view) => {
+    const shape = VIEW_SHAPE[view];
+    if ("preset" in shape) {
+      return catalog.presets.some((preset) => preset.id === shape.preset);
+    }
+    return catalog.metrics.some((metric) => METRIC_VIEW[metric.id] === view);
+  });
 }
 
 export function metricView(metric: ReportingMetricID): ReportingView {
   return METRIC_VIEW[metric];
+}
+
+// The expected finish is always this fiscal quarter's, so a view asks it only
+// on a page that reads this quarter too.
+const QUARTER_ONLY: ReportingMetricID = "forecast_landing";
+
+/**
+ * The metrics and charts a view asks on this catalog. A preset view asks the
+ * preset the server published for this reader, plus the expected finish on a
+ * page that reads this quarter. Any other view asks every metric it reads and
+ * the charts they draw.
+ */
+export function viewRequest(
+  view: ReportingView,
+  catalog: Catalog,
+  period: ReportingSelection["period"],
+): Readonly<{ metrics: ReportingMetricID[]; blocks: ReportingBlockKind[] }> {
+  const shape = VIEW_SHAPE[view];
+  const quarterly =
+    period === "this_quarter" &&
+    METRIC_VIEW[QUARTER_ONLY] === view &&
+    catalog.metrics.some((metric) => metric.id === QUARTER_ONLY);
+  if ("preset" in shape) {
+    const preset = catalog.presets.find((entry) => entry.id === shape.preset);
+    const metrics = [...(preset?.metrics ?? [])];
+    return {
+      metrics: quarterly ? [...metrics, QUARTER_ONLY] : metrics,
+      blocks: [...(preset?.blocks ?? [])],
+    };
+  }
+  const metrics = catalog.metrics
+    .filter(
+      (metric) =>
+        METRIC_VIEW[metric.id] === view &&
+        (metric.id !== QUARTER_ONLY || quarterly),
+    )
+    .map((metric) => metric.id);
+  return {
+    metrics,
+    blocks: shape.blocks.filter((block) =>
+      catalog.metrics.some(
+        (metric) =>
+          metrics.includes(metric.id) && metric.blocks.includes(block),
+      ),
+    ),
+  };
 }

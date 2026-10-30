@@ -18880,6 +18880,7 @@ components:
       additionalProperties: false
       required:
         - metrics
+        - presets
       properties:
         schedule_ready:
           type: boolean
@@ -18892,6 +18893,33 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReportingMetricDefinition'
+        presets:
+          type: array
+          description: The default selections the Analytics screen opens on. Each lists only metrics this reader may read and the charts those metrics draw; a preset with none of the reader's metrics is left out.
+          items:
+            $ref: '#/components/schemas/ReportingPreset'
+    ReportingPreset:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - metrics
+        - blocks
+      properties:
+        id:
+          type: string
+          enum:
+            - sales
+            - sdr
+        metrics:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ReportingMetricID'
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportingBlockKind'
     ReportingReport:
       type: object
       additionalProperties: false

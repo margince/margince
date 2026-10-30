@@ -363,4 +363,27 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
         blocks: ["sdr_outcomes", "target_progress", "metric_reading"],
       },
     ],
+    // The presets the server publishes to a reader of these metrics alone.
+    presets: [
+      {
+        id: "sales",
+        metrics: [
+          "bookings_won",
+          "open_pipeline",
+          "stage_age",
+          "qualified_pipeline_created",
+        ],
+        blocks: [
+          "bookings_trend",
+          "stage_distribution",
+          "owner_attainment",
+          "stage_age",
+        ],
+      },
+      {
+        id: "sdr",
+        metrics: ["meetings_held", "accepted_opportunities"],
+        blocks: ["sdr_outcomes", "target_progress"],
+      },
+    ],
   };
