@@ -65,7 +65,7 @@ func (s *Service) readingDealMoves(
 	return &scoped, note
 }
 
-// laneDeals is every deal the brief or the at-risk lane raised today.
+// laneDeals answers which deals the brief and the at-risk lane raised today.
 func laneDeals(day crmcontracts.Attention) map[ids.UUID]bool {
 	items := slices.Clone(day.ThisMorning)
 	if day.AtRisk != nil {
