@@ -145,8 +145,11 @@ func TestReportingHTTPLiveEvidenceReceiptAndExport(t *testing.T) {
 	handler := reportingHTTPRouter(f)
 	query := url.Values{"scope_kind": {"workspace"}, "pipeline_id": {f.env.pipeline.String()}, "period": {"this_month"}}
 	evaluation := reportingResponse[crmcontracts.ReportingEvaluation](t, reportingRequest(f.human, t, handler, http.MethodGet, "evaluate?"+query.Encode(), nil, -1, http.StatusOK))
-	if len(evaluation.Metrics) != 3 {
-		t.Fatalf("default metrics: %+v", evaluation.Metrics)
+	// Counted from the catalog's opening selection, which is what an unselected
+	// request now opens on. A literal here would be a second copy of it.
+	if want := len(openingSelection().Metrics); len(evaluation.Metrics) != want {
+		t.Fatalf("an unselected request answered %d metrics, want %d: %+v",
+			len(evaluation.Metrics), want, evaluation.Metrics)
 	}
 	query.Set("evaluation_key", evaluation.EvaluationKey)
 	query.Set("evaluated_at", evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano))
