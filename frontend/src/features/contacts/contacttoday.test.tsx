@@ -570,8 +570,8 @@ describe("Call on the move a call left owed", () => {
 describe("the face of the move's verb", () => {
   const FOLLOW_UP: ContactMoment = {
     ...QUIET,
-    claim_key: "moment:reply_overdue",
-    rule: "reply_overdue",
+    claim_key: "moment:gone_quiet",
+    rule: "gone_quiet",
     headline: "No reply recorded for 233 days",
     recommended_action: {
       kind: "draft_reply",
