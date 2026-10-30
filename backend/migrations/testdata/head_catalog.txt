@@ -3052,7 +3052,7 @@ public.consent_event.consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES
 public.consent_event.consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text])))
 public.consent_event.consent_event_pkey PRIMARY KEY (id)
 public.consent_event.consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
-public.consent_event.consent_event_subject CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.consent_event.consent_event_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.consent_event.consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
 public.consent_event.consent_text_version_id uuid gen=- def=-
 public.consent_event.contact_id uuid gen=- def=-
@@ -3299,7 +3299,7 @@ public.contact_consent.contact_consent_lead_unique UNIQUE (lead_id, purpose_id)
 public.contact_consent.contact_consent_pkey PRIMARY KEY (id)
 public.contact_consent.contact_consent_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
 public.contact_consent.contact_consent_state_check CHECK ((state = ANY (ARRAY['unknown'::text, 'granted'::text, 'withdrawn'::text])))
-public.contact_consent.contact_consent_subject CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))
+public.contact_consent.contact_consent_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.contact_consent.contact_consent_unique UNIQUE (contact_id, purpose_id)
 public.contact_consent.contact_id uuid gen=- def=-
 public.contact_consent.id uuid NOT NULL gen=- def=uuidv7()
