@@ -27,6 +27,8 @@ const RequestSettlementActor = "system:request_settlement"
 // bound. Every UPDATE on activity bumps version, so a body edit, an audience
 // change or a narrowing changes the value. A narrowed answer leaves the set.
 // The request sits inside the `IN` list: an `OR` beside it scans every row.
+//
+// Held by: TestSettlementEvidenceReadsEachActivityByItsID (backend/internal/modules/activities/requestsettlementevidenceplan_integration_test.go)
 func settlementEvidenceSQL() string {
 	return `SELECT string_agg(seen.id::text || ':' || seen.version, ',' ORDER BY seen.id)
    FROM activity seen
