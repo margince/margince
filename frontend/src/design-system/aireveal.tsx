@@ -9,7 +9,7 @@ import "./aireveal.css";
 // in for it under reduced motion. The wipe ends first and must not cut it short.
 const LAST_ANIMATION = new Set(["aireveal-color", "aireveal-fade"]);
 
-// Past this many screens tall the block arrives at rest: the reveal repaints
+// Past this many screens tall the block arrives at rest. The reveal repaints
 // the whole block each frame, and a reader sees one screen of it anyway.
 const MAX_SCREENS = 1.5;
 
@@ -23,8 +23,8 @@ const MAX_SCREENS = 1.5;
  * - Text that lands off screen waits, hidden, and plays when it scrolls in,
  *   so a reveal nobody watched is not spent.
  *
- * The run is a data attribute rather than a class: React owns `className` and
- * rewrites it on a render, while it never touches an attribute it did not set.
+ * The run is a data attribute rather than a class. React rewrites `className`
+ * on a render, but never touches an attribute it did not set.
  */
 export function useAiReveal(
   ref: RefObject<HTMLElement | null>,
@@ -78,7 +78,7 @@ export function useAiReveal(
 }
 
 /**
- * AiReveal is the arrival of words a model wrote: they wipe in under a band of
+ * AiReveal is the arrival of words a model wrote. They wipe in under a band of
  * moving indigo and green, and the colour drains into the page's own ink. It
  * follows `AiPending`, whose speck rows hold the place while the model works,
  * and plays only the first time its `text` is on this reader's screen.

@@ -137,8 +137,8 @@ export function useVoiceDraft({
     });
   };
 
-  // The last draft that reached the body, so it arrives on screen as a model's
-  // words do; a draft the rep's own words held back never shows.
+  // The last draft that reached the body, so it arrives as a model's words do.
+  // A draft the rep's own words held back never shows.
   const [drafted, setDrafted] = useState<string | null>(null);
 
   const draft = useDraftMutation({
