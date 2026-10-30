@@ -72,7 +72,7 @@ To edit a contact in Margince, open it and click the value to change in the **De
 1. If the panel is hidden, choose **Show details and permissions**.
 2. Click the value (an empty one says **Not set**), type and press Enter, or pick from the list. `Esc` stops.
 3. **Email**, **Phone** and **Address** open a small form with **Type**, **Primary** and **Remove**; press **Save**.
-**Full name**, **Title**, **LinkedIn**, **Owner** and custom fields change the same way. First and last name are set only when the contact is created.
+**Title**, **LinkedIn**, **Owner** and custom fields change the same way. To rename the contact, click its name at the top of the page, type the new **Full name** and press Enter; a blank name is refused. First and last name are set only when the contact is created.
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
@@ -145,7 +145,7 @@ To edit a company in Margince, open it and click the value to change in its **De
 1. If the panel is hidden, choose **Show details**.
 2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
 
-The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+To rename the company, click its name at the top of the page, type the new **Company name** and press Enter. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?

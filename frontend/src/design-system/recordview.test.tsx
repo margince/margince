@@ -4,8 +4,9 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../format/timezone";
 import { RecordView } from "./recordview";
 
@@ -95,5 +96,50 @@ describe("the record's feed", () => {
     expect(
       follows(screen.getByTestId("record-tabs"), screen.getByText("Body")),
     ).toBe(true);
+  });
+});
+
+describe("renaming the record", () => {
+  const rename = (onSave = vi.fn(async (_next: string) => {})) => ({
+    label: "Full name",
+    value: "Brandt Automotive GmbH",
+    canEdit: true,
+    onSave,
+  });
+
+  it("opens the name from the heading and saves it on Enter", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {});
+    render(<RecordView {...record} rename={rename(onSave)} />);
+    const heading = screen.getByRole("heading", { level: 1 });
+    await user.click(
+      within(heading).getByRole("button", { name: "Change Full name" }),
+    );
+    const field = screen.getByRole("textbox", { name: "Full name" });
+    await user.clear(field);
+    await user.type(field, "Brandt Mobility GmbH{Enter}");
+    expect(onSave).toHaveBeenCalledWith("Brandt Mobility GmbH");
+  });
+
+  it("refuses a blank name and keeps the field open", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {});
+    render(<RecordView {...record} rename={rename(onSave)} />);
+    await user.click(screen.getByRole("button", { name: "Change Full name" }));
+    const field = screen.getByRole("textbox", { name: "Full name" });
+    await user.clear(field);
+    await user.type(field, "   {Enter}");
+    expect(await screen.findByText("This field is required.")).toBeVisible();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps the name as text for a reader who cannot change it", () => {
+    render(<RecordView {...record} rename={{ ...rename(), canEdit: false }} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Brandt Automotive GmbH",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Change Full name" }),
+    ).toBeNull();
   });
 });
