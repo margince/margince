@@ -112,6 +112,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
 	"modules/activities/companyscope.go:ownQueueClause":                   "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",
+	"modules/activities/companyscope.go:teamQueueClause":                  "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/handover.go:openTasksAssignedTo":                  "a handover moves every open task the departed member holds, current or not, so none stays on the seat",
 	"modules/activities/homerepair.go:pristineRepairTaskSQL":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/homerepair.go:readHomeRepairTasksTx":              "the repair reads exactly the automatic tasks that are no longer current",
