@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162415,
+    "tool_catalog_bytes": 162584,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41918,
+    "approx_wire_tokens_total": 41960,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35673,
-      "input_schema_bytes": 67597,
+      "input_schema_bytes": 67766,
       "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 103270
+      "description_plus_input_schema_bytes": 103439
     }
   },
   "tools": {
@@ -1909,6 +1909,14 @@
             },
             "relationship_stage": {
               "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
+              "type": "string"
+            },
+            "settle": {
+              "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+              "enum": [
+                "complete",
+                "keep"
+              ],
               "type": "string"
             },
             "source_id": {
