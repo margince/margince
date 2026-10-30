@@ -25,7 +25,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	owner := ids.NewV7().String()
 	assertEveryFilterNarrows(t, "contact", contactListFilters, withListControls(map[string]string{
 		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all", "company_id": ids.NewV7().String(),
-		"relationship_mark": "vendor_marketing",
+		"relationship_mark": "vendor_marketing", "shared_with_me": "true",
 	}))
 	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
 		"domain": "kaercher-technik.example", "lifecycle": "customer", "owner_id": owner,
@@ -37,6 +37,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"min_score": "70", "owner_id": owner, "status": "working",
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
 		"source": "webinar", "origin": "referral", "sla_state": "breached",
+		"industry": "logistics_transport", "country": "de", "size_band": "51-200",
 	}))
 }
 
@@ -56,7 +57,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityContact, []string{
 			"ai_written", "captured_by_kind", "company_id", "include_archived", "list_id", "owner_id",
-			"owner_team_id", "relationship_mark", "sort", "tag_id", "tag_mode", "unassigned",
+			"owner_team_id", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
 			"ai_written", "captured_by_kind", "domain", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
@@ -64,8 +65,9 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"tag_mode", "unassigned",
 		}},
 		{datasource.EntityLead, []string{
-			"ai_written", "captured_by_kind", "from_contact_id", "include_archived", "list_id", "min_score",
-			"origin", "owner_id", "owner_team_id", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
+			"ai_written", "captured_by_kind", "country", "from_contact_id", "include_archived", "industry", "list_id",
+			"min_score", "origin", "owner_id", "owner_team_id", "size_band", "sla_state", "sort", "source", "status",
+			"tag_id", "tag_mode", "unassigned",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

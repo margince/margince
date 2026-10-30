@@ -3,19 +3,25 @@ import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import type { ActivityGate } from "../../components/activitygate";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
-import { mayOwnRecords } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
   patchCompanyField,
   searchCompanyTargets,
 } from "../../components/companyform";
-import { rosterOwnerName, useRoster } from "../../components/entityref";
+import {
+  rosterOwnerName,
+  useRosterHint,
+  useRosterPartial,
+} from "../../components/entityref";
 import { MergeAction } from "../../components/merge";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
 import {
+  useCan,
   useCanWrite,
   useCanWriteRecord,
   useRecordWriteRefusal,
@@ -24,7 +30,7 @@ import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { useViewerId } from "../../lib/session";
+import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
@@ -153,13 +159,9 @@ export function CompanyOwnerControl({
   const patch = useCompanyFieldPatch(company);
   const claim = useClaimRecord("company", company.id, company.version);
   const viewerId = useViewerId();
-  const roster = useRoster("user", true);
+  const { options: owners, roster } = useRecordOwnerOptions();
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   const ownerName = useMemberName(company.owner_id);
-  const owners = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry && mayOwnRecords(entry)
-      ? [{ value: entry.id, label: entry.display_name }]
-      : [],
-  );
   // The current owner may not be offerable (invited, deactivated, or past the
   // walk), and a select whose value is no option renders blank. Named by id
   // regardless: `rosterOwnerName` says the true sentence for the rest.
@@ -202,6 +204,7 @@ export function CompanyOwnerControl({
       options={options}
       canEdit={canUpdate && !readOnlyReason}
       readOnlyReason={readOnlyReason}
+      hint={rosterHint}
       // The closed control reads off the SAME labels the open one offers, so
       // the header cannot name the owner one way and the editor another. That
       // is also what keeps the uuid out: reading the owner through the generic
@@ -253,11 +256,17 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
 
 export function CompanyActionBadges({
   company,
+  activity,
+  onAddTask,
   onOpenHistory,
   onSetUpPartner,
   archivedReasonId,
 }: Readonly<{
   company: Company;
+  // The page's activity gate, which the strip's Log verb reads too; its
+  // refusal sentence is stated there, outside this menu.
+  activity: ActivityGate;
+  onAddTask: () => void;
   onOpenHistory: () => void;
   onSetUpPartner: () => void;
   // Stated by the caller for the whole strip; see companyheaderactions.tsx's
@@ -277,6 +286,12 @@ export function CompanyActionBadges({
   const menuReasonId = archivedReasonId ?? ownReasonId;
   const refusedReason = useCompanyVerbRefusal(company);
   const refusedByState = refusedReason ? menuReasonId : undefined;
+  // The program opens on the Partner tab, which reads the partner register.
+  const partnerUnreadableId = useId();
+  const readsPartners = useCan("partner", "read");
+  const partnerUnreadable =
+    useMe().data?.authorization !== undefined && !readsPartners;
+  const isPartner = (company.relationship_types ?? []).includes("partner");
   return (
     <>
       {/* What the company IS to us, and whether it is archived, are drawn
@@ -293,6 +308,15 @@ export function CompanyActionBadges({
         {refusedReason && !archivedReasonId && (
           <p id={ownReasonId}>{refusedReason}</p>
         )}
+        {/* First: the most frequent verb in the menu. It files the task
+            against this account, in the same drawer Log opens. */}
+        <Button
+          disabled={!company.archived_at && activity.pending}
+          reasonId={company.archived_at ? menuReasonId : activity.refusedId}
+          onClick={onAddTask}
+        >
+          {t("log.addTask")}
+        </Button>
 
         <MergeAction
           requires={{ object: "company", action: "update" }}
@@ -338,8 +362,17 @@ export function CompanyActionBadges({
             for rather than offered. Below Full history rather than beside
             Merge: every row above is a verb EVERY record carries, in the order
             they all carry them, and every row below is this account's own. */}
-        {!(company.relationship_types ?? []).includes("partner") && (
-          <Button reasonId={refusedByState} onClick={onSetUpPartner}>
+        {!isPartner && partnerUnreadable && !refusedByState && (
+          <p id={partnerUnreadableId}>{t("company.partnerSetUpUnreadable")}</p>
+        )}
+        {!isPartner && (
+          <Button
+            reasonId={
+              refusedByState ??
+              (partnerUnreadable ? partnerUnreadableId : undefined)
+            }
+            onClick={onSetUpPartner}
+          >
             {t("company.partnerSetUp")}
           </Button>
         )}

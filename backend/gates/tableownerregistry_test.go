@@ -223,6 +223,7 @@ var tableOwners = map[string]string{
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
 	"worklist_done":            "internal/modules/activities",
+	"meeting_readiness":        "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -497,6 +498,7 @@ var tableOwners = map[string]string{
 	"team_weekly_review_rep_funnel":  "internal/compose/weekly",
 	"team_weekly_review_rep_pattern": "internal/compose/weekly",
 	"assurance_run_finding":          "internal/modules/assurance",
+	"assurance_deal_receipt":         "internal/modules/assurance",
 	"assurance_run":                  "internal/modules/assurance",
 	"assurance_source_coverage":      "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to

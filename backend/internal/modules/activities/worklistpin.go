@@ -76,18 +76,23 @@ func (s *Store) PinWorklistRow(ctx context.Context, row WorklistRowRef) error {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		if row.Source == string(crmcontracts.WorklistItemSourceTask) {
+			if err := lockTaskAdoption(ctx, tx, row.RowID); err != nil {
+				return err
+			}
+		}
 		by, err := storekit.CapturedBy(ctx)
 		if err != nil {
 			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		tag, err := tx.Exec(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			INSERT INTO worklist_pin (reader_id, source, row_id, set_by)
 			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d)
 			ON CONFLICT (reader_id, source, row_id) DO NOTHING`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(by)),
-			args...)
+			arg(reader), arg(row.Source), arg(row.RowID), arg(by))
+		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: pinning a worklist row: %w", err)
 		}
@@ -117,10 +122,11 @@ func (s *Store) UnpinWorklistRow(ctx context.Context, row WorklistRowRef) error 
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		tag, err := tx.Exec(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			DELETE FROM worklist_pin
 			 WHERE reader_id = $%[1]d AND source = $%[2]d AND row_id = $%[3]d`,
-			arg(reader), arg(row.Source), arg(row.RowID)), args...)
+			arg(reader), arg(row.Source), arg(row.RowID))
+		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: unpinning a worklist row: %w", err)
 		}
@@ -153,8 +159,9 @@ func (s *Store) PinnedRows(ctx context.Context, tx pgx.Tx) (map[WorklistRowRef]b
 	// the pin a rep set most recently is the one they still mean.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, sprintf("SELECT source, row_id FROM %s pins WHERE reader_id = $%d",
-		auth.EffectiveWorklistPinsSQL(arg), arg(reader)), args...)
+	query := sprintf("SELECT source, row_id FROM %s pins WHERE reader_id = $%d",
+		auth.EffectiveWorklistPinsSQL(arg), arg(reader))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading worklist pins: %w", err)
 	}

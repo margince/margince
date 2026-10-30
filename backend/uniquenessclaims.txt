@@ -60,7 +60,6 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
@@ -306,7 +305,6 @@ internal/modules/approvals/expiry.go#func neverExpiringKinds
 internal/modules/approvals/inbox.go#func approvalWhere
 internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
-internal/modules/approvals/targetvisibility.go#func targetDecidable
 internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
 internal/modules/automation/engine.go#const systemSource

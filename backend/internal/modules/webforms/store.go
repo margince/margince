@@ -79,8 +79,6 @@ func (in *CreateInput) normalize() error {
 		return badInput("allowed_origins", "a browser form needs the website it is posted from")
 	case in.Sender != SenderBrowser && len(in.AllowedOrigins) > 0:
 		return badInput("allowed_origins", "only a browser form takes posts by website; a %s form is admitted by its signature", in.Sender)
-	case builderSender(in.Sender) && (in.SenderSecret == nil || *in.SenderSecret == ""):
-		return badInput("sender_secret", "a %s form needs the secret %s signs its webhook with", in.Sender, in.Sender)
 	case !builderSender(in.Sender) && in.SenderSecret != nil:
 		return badInput("sender_secret", "only a builder form takes a pasted secret")
 	}
@@ -107,8 +105,8 @@ func checkSettings(fieldMap map[string]string, consentRequired bool, wording, re
 	return checkSenderSecret(secret)
 }
 
-// CreateForm registers a form. For a server form it answers the signing
-// secret it minted; that is the only time the secret leaves the vault.
+// CreateForm registers a form. It answers the signing secret it minted, if it
+// minted one; that is the only time the secret leaves the vault.
 func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return Form{}, "", err

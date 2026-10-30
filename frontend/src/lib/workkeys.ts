@@ -4,6 +4,12 @@ export const worklistKey = ["worklist"] as const;
 export const magicKey = ["magic"] as const;
 export const briefKey = ["brief"] as const;
 export const digestKey = ["digest"] as const;
+// The reader's own set-aside or stop on a quiet contact. The Worklist writes
+// it and the contact page reads it, so both features key on this one prefix.
+export const nudgeDismissalKey = ["nudge-dismissal"] as const;
+// Every cached contact duplicate case. A case is read off its pairs, so a pair
+// decision anywhere makes all of them stale.
+export const contactCasesKey = ["contact-case"] as const;
 
 export async function invalidateHandledChange(
   client: QueryClient,

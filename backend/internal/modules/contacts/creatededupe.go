@@ -303,16 +303,12 @@ func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, cre
 		// merge rule gets bypassed unnoticed.
 		return false, fmt.Errorf("contacts: manual contact create routed on the %q exact lane, which has no create-path policy", m.MatchedLane)
 	}
-	var shared string
-	if err := tx.QueryRow(ctx, `
-		SELECT created.phone
-		  FROM contact_phone created
-		  JOIN contact_phone incumbent ON incumbent.phone = created.phone
-		 WHERE created.contact_id = $1 AND incumbent.contact_id = $2
-		   AND created.archived_at IS NULL AND incumbent.archived_at IS NULL
-		 ORDER BY created.phone
-		 LIMIT 1`, createdID, m.ContactID).Scan(&shared); err != nil {
-		return false, fmt.Errorf("reading the phone number both records hold: %w", err)
+	shared, found, err := sharedContactPhone(ctx, tx, createdID.UUID, m.ContactID.UUID)
+	if err != nil {
+		return false, err
+	}
+	if !found {
+		return false, fmt.Errorf("reading the phone number both records hold: %w", pgx.ErrNoRows)
 	}
 	// "collide" at its limit: the fuzzy tier uses it for two values that
 	// resemble each other, and an exact key hit is the same statement with

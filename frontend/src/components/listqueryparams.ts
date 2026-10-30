@@ -257,12 +257,16 @@ export function mergeScreenDials(
  */
 const CLEARED_OPENING_FILTER = "all";
 
+export function isClearedFilterMarker(value: string): boolean {
+  return value === CLEARED_OPENING_FILTER;
+}
+
 function isClearedOpening(
   key: string,
   value: string,
   opening: ListQuery,
 ): boolean {
-  return value === CLEARED_OPENING_FILTER && key in opening.filters;
+  return isClearedFilterMarker(value) && key in opening.filters;
 }
 
 /**

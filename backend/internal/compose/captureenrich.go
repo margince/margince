@@ -130,7 +130,7 @@ type CaptureEnricher struct {
 func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureEnricher {
 	return &CaptureEnricher{
 		pool:  pool,
-		store: contacts.NewStore(InstallationDB(pool)),
+		store: newContactsStore(InstallationDB(pool)),
 		brain: brain,
 		log:   log,
 		limit: enrichPassLimit,

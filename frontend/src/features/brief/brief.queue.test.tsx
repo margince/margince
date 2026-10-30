@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -118,7 +119,7 @@ it("restores the queue opener's keyboard focus after closing", async () => {
 // no third of its width to spend saying it twice.
 it("takes a review row in hand, and opens no column beside it", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/home?queue=1";
+  window.location.hash = "#/home?queue=1&queue_view=system";
   const review: components["schemas"]["WorklistItem"] = {
     ...taskRow("privacy", "Review the disclosure"),
     source: "notice_case",
@@ -188,7 +189,7 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
     source: "meeting_outcome",
     category: "meetings",
     because: [{ kind: "outcome_unrecorded" }],
-    actions: ["decide"],
+    actions: ["decide", "cancel"],
   };
   stubApi({
     "GET /worklist": () => jsonResponse(readingsDay({}, [meeting])),
@@ -227,12 +228,18 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
   ).toBeTruthy();
   expect(
     within(details).getByRole("button", {
-      name: en["worklist.verb.meetingUpdate"],
+      name: en["worklist.verb.meetingUpdateFor"].replace(
+        "{subject}",
+        "Discovery call with Turbinenbau",
+      ),
     }),
   ).toBeTruthy();
   expect(
     within(details).getByRole("button", {
-      name: en["worklist.verb.meetingCanceled"],
+      name: en["worklist.verb.meetingCanceledFor"].replace(
+        "{subject}",
+        "Discovery call with Turbinenbau",
+      ),
     }),
   ).toBeTruthy();
   // The row's own verbs answer a meeting; the read offers no "Done".
@@ -340,3 +347,34 @@ it.each(["failed", "bounded", "scope"])(
     expect(toggle.querySelector(".optioncount")).toBeNull();
   },
 );
+
+it("keeps optional reconnections reachable in the real Home queue drawer", async () => {
+  window.location.hash = "#/home?queue=1";
+  stubApi({
+    "GET /worklist": () =>
+      jsonResponse({
+        ...readingsDay({}, []),
+        optional_relationships: [
+          {
+            ...taskRow(
+              "01930000-0000-7000-8000-000000000031",
+              "Demo reconnection",
+            ),
+            source: "relationship_decay",
+            category: "relationships",
+            level: 6,
+            actions: ["open", "dismiss"],
+            because: [],
+          },
+        ],
+      }),
+  });
+  render(<BriefQueue />);
+  const drawer = await screen.findByRole("dialog", {
+    name: en["brief.queue.title"],
+  });
+  expect(
+    await within(drawer).findByText(en["worklist.relationships.optional"]),
+  ).toBeVisible();
+  expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
+});

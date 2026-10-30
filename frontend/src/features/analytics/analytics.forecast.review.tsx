@@ -15,13 +15,21 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
+import { EnforcementSwitch } from "./analytics.forecast.enforcement";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
 import { checkLabel, SubjectCell } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
-type Resolution = { id: string; answer: ResolveAnswer; dealId?: string };
+type Resolution = {
+  id: string;
+  answer: ResolveAnswer;
+  dealId?: string;
+  // A customer review's wait and lost answers also write the deal, through
+  // their own routes.
+  review?: boolean;
+};
 
 // What should be checked before the call.
 //
@@ -116,6 +124,7 @@ function ReviewPanel({
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
         <Recheck runId={run.run_id} />
+        <EnforcementSwitch />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
@@ -281,7 +290,10 @@ function CheckTable({
         returnFocusTo={focusAfterClose}
         onSubmit={(given, dealId) => {
           if (sheet !== null) {
-            resolve.mutate({ id: sheet.id, answer: given, dealId });
+            const review =
+              checks.find((check) => check.id === sheet.id)?.type ===
+              "deal_viability";
+            resolve.mutate({ id: sheet.id, answer: given, dealId, review });
           }
         }}
         onClose={close}
@@ -355,7 +367,25 @@ function checkColumns(
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, answer, dealId }: Resolution) => {
+    mutationFn: async ({ id, answer, dealId, review }: Resolution) => {
+      if (review && answer.outcome === "remind_later") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/wait", {
+            params: { path: { id } },
+            body: { until: answer.remindAt ?? "" },
+          }),
+        );
+        return;
+      }
+      if (review && answer.outcome === "not_relevant") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/close-lost", {
+            params: { path: { id } },
+            body: { lost_reason: answer.reason ?? "" },
+          }),
+        );
+        return;
+      }
       unwrap(
         await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },

@@ -22,7 +22,6 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 
 export {
   dealFactsText,
-  isUnprepared,
   phrasedReasons,
   reasonText,
   whenText,
@@ -399,6 +398,7 @@ export function sourceUnavailableText(
 export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
+  contact_case: true,
   deal_suggestion: true,
   tag_suggestion: true,
   task: true,

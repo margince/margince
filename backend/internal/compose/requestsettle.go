@@ -273,10 +273,10 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // judgeBatch judges one batch with ONE model call and commits each verdict.
 //
 // The per-call commit IS the checkpoint. A thread below the floor is re-asked
-// on its own — which escalates the routing ladder by being its own structured
-// call — and one still below it is recorded UNSURE rather than guessed: the
-// request stays owed and the watermark advances, so the same conversation is
-// not re-read until somebody writes on it again.
+// on its own, as a different request from its batch, so the model answers it
+// afresh. One still below the floor is recorded UNSURE rather than guessed. The
+// request stays owed and the watermark advances. The same conversation is not
+// re-read until somebody writes on it again.
 func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate, calls *sweepCalls) (int, error) {
 	if !calls.take() {
 		return 0, nil
@@ -299,7 +299,7 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
-		if v.Confidence < settleConfidenceFloor {
+		if v.Confidence < settleConfidenceFloor || !settleRemainderStands(v, batch) {
 			retry = append(retry, candidate)
 			continue
 		}

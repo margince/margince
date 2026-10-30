@@ -93,6 +93,7 @@ type measurement struct {
 	Status5xx     int     `json:"status_5xx,omitempty"`
 	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
 	Status422     int     `json:"status_422,omitempty"`
+	Allowed422    bool    `json:"allowed_422,omitempty"`
 	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
 	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
 	Acquires      int64   `json:"acquires,omitempty"`
@@ -111,6 +112,23 @@ type corpus struct {
 	Activities int     `json:"activities"`
 	Reps       int     `json:"reps"`
 	Managers   int     `json:"managers"`
+	// The Home sources the corpus fills beyond the records themselves.
+	AICalls          int `json:"ai_calls,omitempty"`
+	PendingApprovals int `json:"pending_approvals,omitempty"`
+	AppliedApprovals int `json:"applied_approvals,omitempty"`
+	ExpiredApprovals int `json:"expired_approvals,omitempty"`
+}
+
+// strictVerdict mirrors StrictVerdict in perfrecord.go: one strict Home cohort.
+type strictVerdict struct {
+	Requirement string  `json:"requirement"`
+	Name        string  `json:"name"`
+	Seat        string  `json:"seat"`
+	P95Ms       float64 `json:"p95_ms"`
+	BudgetMs    float64 `json:"budget_ms"`
+	Samples     int     `json:"samples"`
+	Pass        bool    `json:"pass"`
+	Failure     string  `json:"failure,omitempty"`
 }
 
 type record struct {
@@ -120,7 +138,8 @@ type record struct {
 	Budgets    []measurement `json:"budgets"`
 	Corpus     *corpus       `json:"corpus,omitempty"`
 	// Advisories mirrors PerfRecord's: known-issue entries the run found clear.
-	Advisories []string `json:"advisories,omitempty"`
+	Advisories []string        `json:"advisories,omitempty"`
+	StrictHome []strictVerdict `json:"strict_home,omitempty"`
 }
 
 const (

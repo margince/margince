@@ -172,13 +172,14 @@ func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	}
 	current := activities.CurrentTaskClause("a", now, identities, arg)
 	var hidden bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
 		    AND NOT coalesce((%s), false) AND %s AND %s%s)`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), current,
-		opts.projectScope(arg)), args...).Scan(&hidden)
+		opts.projectScope(arg))
+	err = tx.QueryRow(ctx, query, args...).Scan(&hidden)
 	return hidden, err
 }
 
@@ -218,8 +219,8 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if promisesOnly {
 		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
+	query := fmt.Sprintf(`
+		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -233,7 +234,8 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg), extra, identity.LiveMemberSQL("u")), args...)
+		opts.projectScope(arg), extra, identity.LiveMemberSQL("u"))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
@@ -252,7 +254,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		// go and find the version first would be two round trips for one click,
 		// and the version it found could already be the wrong one.
 		var version int64
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
+		if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
 			&dealID, &contactID); err != nil {
 			return step, err
 		}

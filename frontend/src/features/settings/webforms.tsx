@@ -19,14 +19,18 @@ import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { WebFormDrawer } from "./webformdrawer";
 import {
+  mintsSecret,
+  pastesSecret,
+  WEB_FORMS_GUIDE,
   WEB_FORMS_KEY,
   type WebForm,
   type WebFormCreated,
 } from "./webformkinds";
+import { FormOwnerLine } from "./webformowner";
 import { WebFormSetupModal } from "./webformsetup";
 import "./webforms.css";
 
-// Settings → Integrations: the website forms that turn a visitor's enquiry
+// Settings → Website forms: the website forms that turn a visitor's enquiry
 // into a lead. A form is an intake address; the setup dialog says how a
 // website, its server or a form builder posts to it.
 
@@ -164,6 +168,7 @@ function FormRow({
             {form.sender === "browser"
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
+            {form.owner_id && <FormOwnerLine ownerId={form.owner_id} />}
             <span className="webform-row-actions">
               <Button
                 data-testid="web-form-setup"
@@ -182,7 +187,7 @@ function FormRow({
               {(canEdit || canArchive) && (
                 <OverflowMenu label={t("record.moreActions")}>
                   {canEdit && <PauseAction form={form} />}
-                  {canEdit && form.sender === "server" && (
+                  {canEdit && mintsSecret(form.sender) && (
                     <RotateAction form={form} onRotated={onSetup} />
                   )}
                   {canArchive && (
@@ -210,6 +215,9 @@ function FormRow({
             <Badge tone="default">{t(`webForms.sender.${form.sender}`)}</Badge>
             {form.consent_required && (
               <Badge tone="default">{t("webForms.row.consent")}</Badge>
+            )}
+            {!form.secret_configured && pastesSecret(form.sender) && (
+              <Badge tone="warning">{t("webForms.row.secretMissing")}</Badge>
             )}
           </span>
         }
@@ -248,7 +256,12 @@ export function WebFormsCard() {
       }
     >
       <PanelBody>
-        <PanelIntro>{t("webForms.sub")}</PanelIntro>
+        <PanelIntro>
+          {t("webForms.sub")}{" "}
+          <a href={WEB_FORMS_GUIDE} target="_blank" rel="noreferrer">
+            {t("webForms.guide")}
+          </a>
+        </PanelIntro>
         {showReadOnly && <PanelIntro>{t("webForms.readOnly")}</PanelIntro>}
         <QueryGate
           pendingLabel={t("webForms.title")}

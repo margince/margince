@@ -13,14 +13,12 @@ items to check. It lives on **Home**. Press **Show Worklist** to open it as a pa
 ## Daily tasks
 
 ### How do I open my worklist?
-To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The
-Worklist opens as a panel headed **Worklist**, with the day's count on the button.
+To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The Worklist opens as a panel headed **Worklist**, with the day's count on the button.
 1. Click **Home** in the sidebar.
 2. Press **Show Worklist**. Press **Hide Worklist** to close it.
-3. A team lead can switch **Whose work** between **Mine**, **Unassigned**, **Team** and **All**.
+3. Switch **Whose work** to **Unassigned** for open work nobody holds. **Team** and **All** show when your role sees them.
 
-There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks,
-work queue, inbox, today list.
+There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks, work queue, inbox, today list.
 
 ### How do I make my worklist fill the window?
 To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
@@ -29,8 +27,7 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
    always fills the screen.
 
-On a big screen the panel stops before its rows get too long to read. Also called: full screen, big
-worklist, wide view.
+On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
@@ -44,13 +41,12 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
-To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to
-the top of your Worklist.
+To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
 2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
    it back in its ranked place.
 
-A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Also called: star, flag, keep on top.
+A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
 ### Why is a task at the top of my worklist?
 A task leads your Worklist and the **First** card on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With browser notifications allowed, the browser also shows the task once while Margince is open in a tab. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
@@ -58,7 +54,7 @@ A task leads your Worklist and the **First** card on **Home** when you hold it a
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** beside it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The **First** card on **Home** says what the row asks of you; **View details**, or a task opened on the Worklist, shows more. **Why this needs attention** repeats that sentence and lists the row's reasons and what happens if nothing is done. A meeting with no outcome opens the meeting itself, with **Update** and **Mark as canceled** if you may change it. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -66,8 +62,9 @@ To hand a task on in Margince, press **More actions** on its Worklist row and ch
 2. Press **More actions** at the end of the row and choose **Reassign**.
 3. Pick a colleague under **Reassign to** and press **Reassign**. **Cancel** keeps the task yours.
 
-The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on. If
-it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+The task leaves your list once the change is saved ("Reassigned"). Only tasks can be handed on, and only a task you may change offers **Reassign**. If it fails: "Item was not reassigned. Retry." Also called: give to someone else, assign to someone else.
+
+A task nobody holds shows **Take it** on its row when you may change it. Switch **Whose work** to **Unassigned**, press **Take it**, and the task moves to **Mine** ("Assigned to you"). If it fails: "Task was not assigned to you. Retry." Also called: take a task, claim a task, assign to me.
 
 ### How do I remove something from my worklist?
 To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not
@@ -82,8 +79,8 @@ a customer**, press **More actions** at the end of the row.
 A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list.
 A deal suggestion offers its next action, or **Open deal**, plus **Mark handled**. Marking it handled clears the suggestion; it does not change the deal.
 
-To clear several rows at once, tick them, or press **Select all**, then press **Mark done**. One
-**Undo** brings them all back.
+To clear several rows, press **Select** and tick them. **Complete** finishes ticked tasks and
+promises; **Take off my list** clears the rest. One **Undo** brings them all back.
 
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
@@ -188,10 +185,10 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 
 The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
-**Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
+**Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Keep date**, **Accept** or **Undo**.
 
 ### Check applied changes
-**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
+**Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. **Details** shows who made a change and when, each value before and after, and the email, call or meeting it came from. A source opens on a press, and one you cannot open is not named.
 
 **Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
@@ -201,9 +198,10 @@ Neither an undone change nor a replaced one can be accepted. To make Margince as
 ### What happens to a promise from a call or an email?
 A promise Margince reads in a meeting transcript or an email becomes something to watch or a task,
 by who made it.
-- A promise the customer made goes on their contact to watch, and never becomes a task. The deal
-  lists open ones under **Customer commitments**, with **Open message**. **Dismiss** removes a wrong
-  reading, if you may change the contact.
+- A promise the customer made goes on their contact to watch, and never becomes a task. The deal's
+  **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
+  removes a wrong reading, if you may change the contact. Past its due day a promise asks **Overdue:
+  did it happen?** (**Done**, **No longer true**). Another total price shows **Differs from the deal value**.
 - A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the
   task at once. If not, the colleague gets an **Add commitment task** proposal.
 - A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to
@@ -262,8 +260,9 @@ Worklist items are in bands, shown in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-Work to check is one more kind. It does not show a band in the list; it has its own panel under it,
-headed **To review**.
+The views are **Today** (your work), **Decisions** (choices someone must make) and **System**
+(problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
+the end of **Today**, holds tasks due later; its count is not in Today's total. Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
@@ -287,11 +286,11 @@ Each item shows its record, the current facts that call for action, and the acti
 A request can name who is waiting and when they asked. A task shows its due date.
 A deal can show days since the last recorded activity, a missing next step or a close date that needs review.
 
-A deal suggestion needs current facts before it enters this list. A score or a label such as
-“stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+Suggested deal steps are checked against current records before the list is cut. **Earlier assessment** shows saved words and their date. It does not change the order of work. A changed suggestion asks you to refresh before you can accept its task or open its prepared action. Tasks you create yourself keep their normal controls.
 
-The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work
-keep their order without a sentence comparing each item with the one below it.
+A deal suggestion needs current facts before it enters this list. A score or a label such as “stalled” cannot put it here alone. **Review deal suggestions** opens the saved brief, including suggestions without those facts.
+
+The order comes from the same checks for Home and the Worklist. Pins, deadlines and customer work keep their order without a sentence comparing each item with the one below it.
 
 ### Pinning
 
@@ -327,29 +326,28 @@ Each says what it did ("Back on your list tomorrow.", "Back on your list when th
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
 
-### "List changed"
+### "New priorities available"
 
 The Worklist holds still while you work through it. Something may come in, or someone may deal with
-something while you work. Then a notice headed **List changed** says which: "{arrived} new since you
-opened the list. Refresh to add them."
-
-Refresh updates the totals when work arrives or leaves the list.
+something while you work. Then a notice headed **New priorities available** says which: "{arrived}
+new since you opened the list. Refresh to add them." **Refresh list** updates the rows and totals.
 
 ### How complete is this?
-The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
+The Worklist counts items, not cards: 8 possible duplicates are one card. More rows load as you move down the list. If they fail to load, the list says "Could not load more." with **Retry**.
 
-- **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
-- "{kinds} may have more items than this list shows", such as "Approvals (200+)": no share,
-  because nobody knows the total. Each load checks a fixed number per category; **Load more** stops
-  there. A filter with no counts says "Some categories may have more items than this list shows."
+- **"{shown} of {considered} items loaded"**: a share, plus "{cards} cards on screen" for a group.
+- "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no share, because nobody
+  knows the total. Each load checks a fixed number per category, and the list stops there. Approvals are counted in
+  full in every view but Team, so Decisions can show the total. Tasks are counted in full, and the list loads all of
+  them as you move down. **Team** shows no task total, nor does **All**, which leaves weekly plans out. A filter with no counts
+  says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
 ### Change history
 
-**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press
-**Show recent changes** to read the action, record, time and status.
+**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Check applied changes**. A long list ends in **Show more**, which loads the next changes.
 
 When there is nothing: "No actions taken on your behalf today."
 

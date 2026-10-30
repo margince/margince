@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/compose/draftcore -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
 [Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
@@ -41,8 +41,8 @@ To send a follow-up email in Margince, open the contact's **History** tab and pr
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
-To reply to one message in Margince, open the composer from the record and pick the thread under **Threads**. Then click the message under the thread.
-The thread you picked is marked. The line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent.
+To reply to one message in Margince, open the email reader and press **Reply** below that message. Select an older message first to show its text and **Reply**. The newest message appears first and opens with the one you came from. Close the composer to return to the thread.
+You can also pick a message under **Threads** in the composer. The line above the recipients says which message you answer.
 
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
@@ -91,7 +91,7 @@ you can do about it there.
 
 To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
-has a copy.
+has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
@@ -278,7 +278,7 @@ Also called: send later, delayed send, timed email.
 ### How do I cancel or reschedule a scheduled email?
 To cancel or move a scheduled email in Margince, press the clock beside the bell in the top bar. Use **Reschedule**, **Edit** or **Withdraw** on the message.
 1. Press the clock, **Scheduled messages**. Its number counts waiting and held messages, and it changes colour when one is held.
-2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a time and press **Move message**. A toast offers **Undo**. Reschedule changes only the time.
+2. To move it, press **Reschedule**, then **Tomorrow morning**, **Tomorrow afternoon** or **Monday morning**. Or pick a day, type a time and press **Move message**. A toast offers **Undo**. Reschedule changes only the time.
 3. To change the words or the recipients, press **Edit**. The composer opens with your message. Press **Schedule send** to replace it. The old message is withdrawn once the new one is accepted. A reply stays in its thread. A message sent for a marketing purpose has no **Edit**; withdraw it and write it again.
 4. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
@@ -349,7 +349,7 @@ To ask a contact to confirm their details in Margince, open the contact. In the 
 1. Open the contact's page.
 2. In **Communication permissions**, press **Ask them to confirm their details**.
 
-Margince mails a private link to the contact's own recorded address; you cannot send it to any other address. The link lasts 14 days and works once.
+Margince first shows you the mail as it will go out, and sends nothing until you confirm. You can pick another language than the installation's, and the page the link opens asks in it too. Margince mails a private link to the contact's own recorded address; you cannot send it to any other address. The link lasts 14 days and works once.
 Also called: double opt-in, consent request, GDPR confirmation.
 
 ### How do I send a privacy notice to a contact?
@@ -358,7 +358,7 @@ To send a privacy notice in Margince, open the **Privacy notice owed** item on y
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or the law lets you skip it, press **End the duty…** and record why.
 
-The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
+Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does Margince say "this installation cannot send mail"?
@@ -369,7 +369,7 @@ Also called: privacy notice not sent, cannot send notice.
 
 ### Which mailbox does Margince send from?
 Mail you write in Margince goes out from your own connected mailbox, so the contact sees your address.
-Mail Margince writes by itself goes out from the installation's own address, never from yours. That is the privacy notice, the confirmation link, password reset, invitations, and the weekly review and morning brief sent by email. Your administrator sets that address up.
+Mail Margince writes by itself goes out from the installation's own address, never from yours. That is the privacy notice, the confirmation link, password reset, invitations, and the weekly review and morning brief sent by email. Your administrator sets that address up. A privacy notice or confirmation request you send shows in the contact's history as **Sent by Margince for you**, with that address.
 Also called: sender address, from address, send as me.
 
 ## Asking someone to confirm their own details

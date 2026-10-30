@@ -97,6 +97,9 @@ type Registry struct {
 	// changeWords describes what a write changed (changewords.go). Nil
 	// answers no changes.
 	changeWords ChangeWords
+	// contactCases is the case decision merge_records reaches; nil leaves
+	// the verb to pairs.
+	contactCases ContactCaseMerger
 	// importWait is how long preview_import waits for its test's report.
 	importWait importWait
 }
@@ -241,10 +244,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		}
 	}
 	switch {
-	// An auto-execute call may still carry approval_id: the retry of a per-field
-	// precedence staging (interfaces.md §2.1) admits at the auto-execute tier, so
-	// its asserted authority is consumed by redeemPresented — validated against
-	// the identical-call hash, never ignored.
+	// An auto-execute call may still carry approval_id. The retry of a staged
+	// call can resolve at the auto-execute tier, so a fresh run goes through
+	// redeemPresented, which validates the identical-call hash. A completed
+	// idempotent retry replays its recorded result before that.
 	case err == nil, !res.ApprovalID.IsZero() && errors.Is(err, apperrors.ErrRequiresApproval) && r.approvals != nil:
 		return r.runClaimed(ctx, t, spec, res)
 	case !errors.Is(err, apperrors.ErrRequiresApproval) || r.approvals == nil:

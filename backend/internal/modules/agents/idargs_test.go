@@ -192,6 +192,18 @@ func (seamProbeRetriever) AssembleContext(context.Context, datasource.EntityRef,
 // them" — the whole point of the probe.
 type seamProbeLifecycle struct{}
 
+func (seamProbeLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
+	return MeetingPreparationResult{}, false, errSeamReached
+}
+
+func (seamProbeLifecycle) Confirm(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, errSeamReached
+}
+
+func (seamProbeLifecycle) Withdraw(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, errSeamReached
+}
+
 func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
@@ -278,7 +290,7 @@ func (seamProbeDocuments) MaxBytes(context.Context) int64 { return 0 }
 func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil, nil)
+	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, nil, nil, nil)
 	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) {
 		return ReportingAnswer{}, errSeamReached
 	})
@@ -289,6 +301,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	}, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
+	})
+	RegisterReportDraftTool(r, func(context.Context, ReportDraftRequest) (crmcontracts.ReportingReport, error) {
+		return crmcontracts.ReportingReport{}, errSeamReached
 	})
 	RegisterAnalyticsQueryTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
@@ -309,7 +324,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterIntentTools(r, inertRetriever{}, nil, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, seamProbeLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },

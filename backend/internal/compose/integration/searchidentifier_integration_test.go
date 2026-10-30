@@ -115,7 +115,7 @@ func TestSearchFindsACompanyByItsDomain(t *testing.T) {
 func TestAnAddressFindsNoContactOutsideTheReadersScope(t *testing.T) {
 	e := Setup(t)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
-	private := seedContactWithEmail(owner, t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
+	private := seedContactWithEmail(e.Admin(), t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
 	visibility := "owner"
 	if _, err := e.Contacts.UpdateContact(owner, ids.From[ids.ContactKind](private),
 		contacts.UpdateContactInput{Visibility: &visibility}); err != nil {
@@ -247,5 +247,48 @@ func TestAClassificationJudgesAContactFoundOnlyByItsAddress(t *testing.T) {
 	}
 	if len(got.Matched) != 1 || got.Matched[0] != nameless {
 		t.Fatalf("classification = %+v, want %s matched", got, nameless)
+	}
+}
+
+// A fragment of an address reaches a record too. The part after the at sign
+// finds a company by its domain, and part of a lead's address finds the lead.
+// A fragment hit stays below the whole-word tier a whole address earns. So a
+// pasted address still ranks its own record above a partial match.
+func TestSearchFindsARecordByAFragmentOfItsAddress(t *testing.T) {
+	e := Setup(t)
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+		DisplayName: "Weber Maschinenbau",
+		Domains:     []contacts.CompanyDomainInput{{Domain: "example-weber.de", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("seeding the company: %v", err)
+	}
+	lead := seedLead(t, e, "Lena Fragment", "lead.one@prospect-fragment.test", nil)
+	anna := seedContactWithEmail(e.Admin(), t, e, "Anna Weber", "anna@example-weber.de", nil)
+	store := search.NewStore(e.DB())
+	perType := 5
+
+	scoreOf := func(query string, want ids.UUID) float64 {
+		t.Helper()
+		page, err := store.Search(e.Admin(), search.Input{Query: query, PerType: &perType, WithEmployees: true})
+		if err != nil {
+			t.Fatalf("search %q: %v", query, err)
+		}
+		for _, hit := range page.Hits {
+			if hit.ID == want {
+				return hit.Score
+			}
+		}
+		t.Fatalf("search %q found %+v, want %s among them", query, page.Hits, want)
+		return 0
+	}
+	if got := scoreOf("weber@exam", ids.UUID(company.Id)); got >= 1 {
+		t.Errorf("a domain fragment scores the company %v, want below the whole-word tier", got)
+	}
+	if got := scoreOf("lead.one", ids.UUID(lead.UUID)); got >= 1 {
+		t.Errorf("an address fragment scores the lead %v, want below the whole-word tier", got)
+	}
+	if got := scoreOf("anna@example-weber.de", anna); got < 1 {
+		t.Errorf("a whole address scores its contact %v, want the whole-word tier (at least 1)", got)
 	}
 }

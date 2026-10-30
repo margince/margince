@@ -6,6 +6,7 @@ import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AppLink } from "./applink";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import type {
   DecisionDiff,
@@ -104,14 +105,14 @@ export function DecisionContent({
     term: field.label,
     value:
       field.href && safeHref(field.href) ? (
-        <a
+        <AppLink
           className="dcard-fact"
           href={safeHref(field.href)}
           target="_blank"
           rel="noopener noreferrer"
         >
           {field.value}
-        </a>
+        </AppLink>
       ) : (
         <span className="dcard-fact">{field.value}</span>
       ),

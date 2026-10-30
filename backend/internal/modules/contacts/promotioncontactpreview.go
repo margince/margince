@@ -32,6 +32,7 @@ func promotionContactSpec(lead crmcontracts.Lead, name, by string) ContactSpec {
 	}
 	return ContactSpec{
 		FullName:            name,
+		Employer:            EmployerChoice{CompanyName: lead.CompanyName, CompanyID: idArg[ids.CompanyKind](lead.CompanyId), Role: lead.Title, Source: lead.Source},
 		Acquisition:         Acquisition{Kind: AcquiredUnknownLegacy},
 		Title:               lead.Title,
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
@@ -94,6 +95,8 @@ func promotionPhones(lead crmcontracts.Lead, held map[string][]heldPhone) []Cont
 
 // LeadContactChange binds contact changes to the lead and contact versions reviewed.
 type LeadContactChange struct {
+	EmployerPreview ContactEmployerPreview
+	Employer        EmployerChoice
 	LeadPromotionCarry
 	LeadVersion    int64
 	Create         *ContactSpec
@@ -103,6 +106,8 @@ type LeadContactChange struct {
 	Phones         []ContactPhoneInput
 	Deal           *QualifyDealInput
 	ReviewContact  *ids.ContactID
+	// CompanyIndustry is the industry the promotion writes to the linked company, or nil.
+	CompanyIndustry *string
 }
 
 // PreviewLeadContactChange holds the writer's row locks while resolving the
@@ -235,6 +240,19 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 		return LeadContactChange{}, err
 	}
 	if err := s.previewPromotionCarry(ctx, tx, id, candidate, &out.LeadPromotionCarry); err != nil {
+		return LeadContactChange{}, err
+	}
+	spec := promotionContactSpec(lead, leadIdentityName(lead), "")
+	out.Employer = spec.Employer
+	out.EmployerPreview, err = s.previewContactEmployerTx(ctx, tx, spec.Employer, spec.Emails)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	company, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry); err != nil {
 		return LeadContactChange{}, err
 	}
 	out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)

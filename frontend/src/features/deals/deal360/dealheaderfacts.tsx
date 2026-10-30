@@ -37,6 +37,7 @@ import {
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
+import { waitHolds } from "./dealstanding";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -246,7 +247,7 @@ export function closeWords(
   if (deal.forecast_category) {
     parts.push(forecastLabel(deal.forecast_category, t));
   }
-  if (deal.wait_until) {
+  if (waitHolds(deal.wait_until, zone, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
         date: formatDayMonth(deal.wait_until, locale, zone),

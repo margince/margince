@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -39,9 +39,16 @@ from them or from us. With no eligible evidence or no model, the request stays o
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
-So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
-change the title of a reminder with no date that the machine filed. The new title names what is still
-open ("Send the offer" in place of the mail's subject line). It never touches a reminder a human accepted, dated or opened again.
+So it carries the audit row and the event that a human who completes it by hand would carry.
+
+`still_owed` may change the title of a reminder with no date that the machine filed. The new title
+quotes the part of the customer's request that is still open ("send the revised offer" in place of the
+mail's subject line). The quote must be at least two words of their request, outside the quoted history
+and the signature. A text that is not such a quote is dropped, so a question we asked them never
+becomes our work. It never touches a reminder a human accepted, dated or opened again.
+
+Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
+again, and the title it gave a reminder may change once more.
 
 An open reminder always wins over the machine's verdict. Someone who takes the work back up is the
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
@@ -119,6 +126,17 @@ is counted under the past the horizon number in `/worklist/hidden`.
 
 That number counts conversations rather than single requests, and older ones are not counted. The record
 of such a request still offers **Create task** to take it back.
+
+The deal reads current requests apart from review, before either read reaches its page limit.
+Current requests share the existing intent, completion, recipient and source date checks. A request a human
+holds can stay current beyond the date limit. Review keeps old evidence and evidence not yet confirmed on the record,
+but does not set `reply_to` or start a waiting clock. The date of a message is no deadline.
+
+The card and its Worklist move carry the same source basis. The basis names its scope, source time,
+decision and the time of the check. Time since contact exchange, activity filed on a deal and current
+request arrival are separate figures. No one links mail to another record to make those dates match.
+Cache readers share a version check; a card from an older projection is a miss. The move's dismissal
+identity still names its action and source, so a new decision does not undo a reader's choice.
 
 The deal offers **Create task** for a request that waits to be accepted. Both task and activity create
 calls accept `request_activity_id`. The server checks that the caller may read the source evidence, and

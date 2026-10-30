@@ -157,7 +157,8 @@ type storedQuestion struct {
 // reader may see it.
 func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmcontracts.ReportingEdition) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT card_id,answer,reason FROM report_edition_question WHERE edition_id="+b.add(edition.Id)+" ORDER BY card_id", b.values...)
+	query := "SELECT card_id,answer,reason FROM report_edition_question WHERE edition_id=" + b.add(edition.Id) + " ORDER BY card_id"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}
@@ -217,7 +218,8 @@ func (s *Service) revealQuestion(ctx context.Context, tx pgx.Tx, edition *crmcon
 
 func questionSources(ctx context.Context, tx pgx.Tx, edition openapi_types.UUID, cardID string, rowCount int) ([][]QuestionSource, error) {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT row_index,source_type,source_id FROM report_edition_question_source WHERE edition_id="+b.add(edition)+" AND card_id="+b.add(cardID), b.values...)
+	query := "SELECT row_index,source_type,source_id FROM report_edition_question_source WHERE edition_id=" + b.add(edition) + " AND card_id=" + b.add(cardID)
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, err
 	}

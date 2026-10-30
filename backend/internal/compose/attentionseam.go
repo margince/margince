@@ -55,11 +55,10 @@ func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
 	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
 }
 
-// Counts use the same decidability probe and bounded scan as the inbox.
+// CountPending is the engine's exact count, under the scope the lane reads.
 func (a attentionApprovals) CountPending(ctx context.Context, in attention.ApprovalQuery) (int, error) {
-	in.Status, in.Limit = stagedAndUndecided, approvals.PendingScanCap
-	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
-	return len(rows), err
+	count, err := a.svc.CountPending(ctx, approvalListInput(in))
+	return count.Count, err
 }
 
 func (a attentionApprovals) PendingInScope(ctx context.Context, in attention.ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {
@@ -173,14 +172,14 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	// ONE deal-status service for both seams below: the move and the standing
 	// are two reads of the same cached card, and a second service value would
 	// be a second set of stores over the same pool for no reason.
-	cards := newDealStatusService(pool)
+	cards := newDealStatusService(pool, now)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
-		attentionDuplicates{store: contacts.NewStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: contacts.NewStore(db), db: db},
+		attentionDuplicates{store: newContactsStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), db: db},
 		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),
+			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
@@ -188,7 +187,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
 		attentionAtRisk{lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now), pool: pool, now: now},
-		attentionDecay{pool: pool, store: contacts.NewStore(db), now: now},
+		attentionDecay{pool: pool, store: newContactsStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
 		// The compliance clock: the open DSR cases, due-soonest first, served
@@ -231,11 +230,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a case recorded, dated and shown to nobody is a control that only
 		// looks like one.
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
+		// Contact pairs reach the queue as cases, one per group of contacts.
+		attention.WithContactCases(attentionContactCases{store: newContactsStore(db)}),
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		deals:    deals.NewStore(db, DealsInstallation()),
-		contacts: contacts.NewStore(db),
+		contacts: newContactsStore(db),
 		now:      now,
 	}).
 		// The mirror: the reader's own sends nobody has answered, once the
@@ -255,11 +256,14 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// still paging and a row crossing the page boundary is served twice or
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
+		// The task lane's whole count past its cap, so its categories state a total.
+		WithTaskBacklog(attentionTasks{store: activities.NewStore(db)}).
 		// The done lane's own window, so the worklist's receipts and Home's
 		// lane start at the same instant.
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
 		}).
+		WithReceiptDetails(attentionReceiptDetails{magic: newMagicService(pool, svc, now), names: newAttentionNames(db)}).
 		// The whole page as ONE unit of work. Every lane reader below opens its
 		// own transaction by default, which cost this surface ~40 of them and
 		// as many instants per assembled day; bound, they join one read-only
@@ -284,7 +288,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// answered against the same disposition ledger the admin list shows, so
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
-		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
+		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
@@ -298,7 +302,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
-		WithContactEmployers(contacts.NewStore(db)).
+		WithContactEmployers(newContactsStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page

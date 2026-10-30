@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useRoster } from "../../components/entityref";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -25,7 +26,7 @@ import {
   ConversationList,
   useChronologyCut,
 } from "../records/recordconversations";
-import { TimelineActions } from "../records/timelineactions";
+import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
 import type { Company, Company360View } from "./companies";
 import { recordNamesIn } from "./company360";
 import type { CitedRecord } from "./companyevidence";
@@ -73,6 +74,7 @@ export function useChronologySlots({
   // The workspace roster, for the ids a change row stores. Still walks rather
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
   // `values.nameOf`, called per row as it renders, so the ids are unknown here.
+  // roster-failure: names change rows only; nothing here is picked.
   const roster = useRoster("user", true);
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
@@ -240,4 +242,38 @@ export function useCitedReceipt() {
     closeEmail: () => setEmail(null),
     step: list.length > 1 ? step : undefined,
   };
+}
+
+/**
+ * The newest unanswered thing anyone at the account sent, for the Overview's
+ * Next bar, with the verbs its row has in the timeline.
+ */
+export function CompanyLatestInbound({
+  latest,
+  companyId,
+  onOpenEmail,
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  companyId: string;
+  onOpenEmail?: (activityId: string) => void;
+  children: ReactNode;
+}>) {
+  return (
+    <JustInScope
+      latest={latest}
+      entityType="company"
+      entityId={companyId}
+      onOpenEmail={onOpenEmail}
+      actions={(activity) => (
+        <RowAnswerActions
+          activity={activity}
+          entityType="company"
+          entityId={companyId}
+        />
+      )}
+    >
+      {children}
+    </JustInScope>
+  );
 }

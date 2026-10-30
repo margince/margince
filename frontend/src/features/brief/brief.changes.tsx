@@ -3,6 +3,9 @@
 
 import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
+import { ReceiptDetail } from "../../components/receiptdetail";
+import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptsMore } from "../../components/receiptsmore";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -14,12 +17,11 @@ import {
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { useHandledForYou } from "../../lib/handled";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { useHandledForYou } from "../worklist/worklist.queries";
 import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
-import { ReceiptReview } from "../worklist/worklist.receiptreview";
 
 // The changes made for the reader that they can still accept or take back, in
 // Home's rail. Drawn only when there is one: a heading over "none" would be a
@@ -51,8 +53,8 @@ export function BriefChanges() {
         >
           <ul className="magic-lines" aria-label={t("brief.changes.title")}>
             {receipts?.map((receipt) => (
-              // The receipt's own row, with no mark: a change carries no
-              // actor, and the mark's colour is a claim about who acted.
+              // The receipt's own row, with no mark: the mark's colour is a
+              // claim about who acted, and the detail names that in words.
               <li className="magic-line" key={receipt.id}>
                 <p className="magic-line-text">
                   {receiptSummary(receipt, t, locale, recordZone)}{" "}
@@ -67,6 +69,7 @@ export function BriefChanges() {
                     </span>
                   )}
                 </p>
+                <ReceiptDetail receipt={receipt} />
                 <div className="magic-line-controls">
                   <ReceiptReview receipt={receipt} />
                 </div>
@@ -80,9 +83,7 @@ export function BriefChanges() {
               </li>
             ))}
           </ul>
-          {query.data?.truncated && (
-            <p className="t-caption">{t("worklist.handled.truncated")}</p>
-          )}
+          <ReceiptsMore handled={query} />
         </SurfaceState>
       </PanelBody>
     </section>

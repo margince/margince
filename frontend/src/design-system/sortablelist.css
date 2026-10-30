@@ -24,9 +24,8 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-1);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-rest);
   transition:
     box-shadow var(--dur-state) var(--ease-out),

@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { mayOwnRecords } from "../../components/assigneepicker";
-import { useRoster } from "../../components/entityref";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { RosterFailedLine } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -108,7 +108,7 @@ export function LeadBulkBar({
   const plural = usePlural();
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
-  const roster = useRoster("user", true);
+  const owners = useRecordOwnerOptions();
   const [reasonId, setReasonId] = useState("");
   // The batch confirm's own open state. It is not part of the run's state:
   // a refused batch leaves the bar showing what failed, with the dialog
@@ -237,10 +237,7 @@ export function LeadBulkBar({
   });
 
   const ownerName =
-    (roster.data ?? [])
-      .filter((entry) => entry.id === ownerId)
-      .map((entry) => ("display_name" in entry ? entry.display_name : null))
-      .find((name) => typeof name === "string") ?? ownerId;
+    owners.options.find((option) => option.value === ownerId)?.label ?? ownerId;
   const assign = () =>
     run.mutate({
       action: { kind: "assign", ownerId, ownerName },
@@ -274,12 +271,7 @@ export function LeadBulkBar({
         placeholder={t("lead.bulkOwnerPick")}
         disabled={run.isPending}
         onChange={setOwnerId}
-        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
-          value: entry.id,
-          // The user roster: every entry carries a display name; a team
-          // (the other roster kind) is never asked for here.
-          label: "display_name" in entry ? entry.display_name : entry.id,
-        }))}
+        options={owners.options}
       />
       <Button
         variant="primary"
@@ -288,6 +280,7 @@ export function LeadBulkBar({
       >
         {t("lead.bulkAssign")}
       </Button>
+      <RosterFailedLine kind="user" roster={owners.roster} />
       <Select
         aria-label={t("lead.disqualify.reason")}
         value={reasonId}

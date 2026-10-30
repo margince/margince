@@ -59,7 +59,8 @@ func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, scope crmcon
 
 func (s *Service) targetHistory(ctx context.Context, tx pgx.Tx, target *crmcontracts.ReportingTarget) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT definition FROM sales_target_revision WHERE target_id="+b.add(target.Id)+" ORDER BY revision", b.values...)
+	query := "SELECT definition FROM sales_target_revision WHERE target_id=" + b.add(target.Id) + " ORDER BY revision"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}

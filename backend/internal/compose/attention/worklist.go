@@ -18,7 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,32 +29,6 @@ const worklistPage = 25
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
 const worklistMaxPage = 100
-
-// Worklist answers the ranked day.
-//
-// The filter narrows what is CARRIED, never what is read: a source is read,
-// classified and then dropped, so the summary's figures describe the same day
-// whichever filter is applied.
-func (s *Service) Worklist(
-	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
-) (crmcontracts.Worklist, error) {
-	// ONE snapshot around the whole page, for the two reasons assemble.go
-	// gives: the lanes cost one transaction between them, and they answer from
-	// one instant so the page cannot disagree with itself.
-	// Admission BEFORE the snapshot, not inside it: a refused caller must not
-	// cost a pooled connection, which is the posture WithWorkspaceTx's own doc
-	// states — refuse before any SQL runs.
-	if err := auth.RequireMember(ctx); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	var out crmcontracts.Worklist
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
-		var err error
-		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
-		return err
-	})
-	return out, err
-}
 
 // worklistIn is Worklist's body, reading inside the snapshot Worklist opened.
 func (s *Service) worklistIn(
@@ -83,7 +57,7 @@ func (s *Service) worklistIn(
 	// Refused BEFORE the day is read: a token minted for another question is the
 	// caller's mistake, and assembling a page to then discard it spends a dozen
 	// lane reads on an answer nobody receives.
-	cursor, err := decodeCursor(token, resolved, filter, namedOwner)
+	cursor, err := decodeCursor(token, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -95,7 +69,7 @@ func (s *Service) worklistIn(
 	//
 	// The caller re-issues without the cursor, which is the remedy a token
 	// minted under a different question already carries.
-	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, filter, namedOwner)
+	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -168,18 +142,20 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
+	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	teamWeek := teamWeekFor(ctx)
-	out.TeamWeek = &teamWeek
+	out.TeamWeek = new(identity.TeamWeekOf(ctx))
+	defer timeStage(ctx, "row_names")()
 	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -188,15 +164,23 @@ func (s *Service) worklistIn(
 			return crmcontracts.Worklist{}, err
 		}
 	}
+	if out.OptionalRelationships != nil {
+		if err := withPins.nameWorklistRows(ctx, *out.OptionalRelationships, beside.night.findings); err != nil {
+			return crmcontracts.Worklist{}, err
+		}
+	}
 	return out, nil
 }
 
 // stampSources files each missing source under its category and says whether
 // it is a lane. Only a side read marks itself, so every unmarked entry is one.
-func stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
+func (s *Service) stampSources(missing []crmcontracts.WorklistSourceUnavailable) []crmcontracts.WorklistSourceUnavailable {
 	for i := range missing {
 		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
 		missing[i].Category = &category
+		if missing[i].Source == string(sourceDecay) {
+			missing[i].ContributesRows = new(s.relationshipsChosen())
+		}
 		if missing[i].ContributesRows == nil {
 			lane := true
 			missing[i].ContributesRows = &lane
@@ -216,6 +200,7 @@ func (s *Service) worklistFrom(
 	// case where a tally would otherwise print a confident zero.
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
+	defer timeStage(ctx, "rank")()
 	if limit <= 0 {
 		limit = worklistPage
 	}
@@ -234,17 +219,6 @@ func (s *Service) worklistFrom(
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
-	// "they wrote last week and are waiting" are both true of the same contact
-	// and read as a contradiction side by side.
-	//
-	// Order does not matter among these three, and it is worth saying why
-	// rather than leaving the next reader to work it out: each drops rows of a
-	// source none of the others READS. This one decides on the waiting rows,
-	// and the pass above removes only `deal_at_risk` rows — so the set
-	// it judges against is the same wherever it sits. A fourth pass that
-	// removed waiting rows would break that, and would have to run last.
-	rows = dropDecayAlreadyWaiting(rows)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -255,6 +229,9 @@ func (s *Service) worklistFrom(
 	// nothing new: each filter is a per-row test, so a row it kept once it keeps
 	// again.
 	rows, rowNote := s.narrowToScope(ctx, rows, scope, s.taskOwner)
+	rows, optional, optionalRefused, optionalNote := s.relationshipChoices(ctx, day, rows, scope)
+	refused = append(refused, optionalRefused...)
+	rowNote = rowNote.merge(optionalNote)
 	// One deal is one row. A deal both the night and the day found arrives
 	// twice, and the surviving row keeps the brief's id and score.
 	//
@@ -267,6 +244,9 @@ func (s *Service) worklistFrom(
 	rows = dropDone(rows, s.marked, day.AsOf)
 	scoped := rowNote.merge(waitNote)
 	bounded := boundedSources(day)
+	if !s.relationshipsChosen() {
+		delete(bounded, sourceDecay)
+	}
 	// The same rule for the who-is-waiting source, and for the same reason it
 	// needed one: it is read beside the assembled day rather than as one of its
 	// lanes, so boundedSources never saw it and the page reported it complete
@@ -294,12 +274,12 @@ func (s *Service) worklistFrom(
 	// the count disagreeing — the defect these two filter values exist to fix. It
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
-	// Focus is independent of queue filters and pins, so it always folds routine work.
-	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
+	// Queue filters do not hide Focus candidates. Explicitly chosen reconnections
+	// are admitted beside ordinary current work.
+	focusRows := dropDone(foldRoutineDecisionsBounded(rows, bounded),
 		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
-	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
-	// eligibility, including when this reader has saved pins on the queue.
+	// Ordinary pins order the queue without changing Focus eligibility.
 	rows = applyPins(rows, s.pinned)
 	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
 	// own rule, and the reason it is conditional at all.
@@ -316,9 +296,10 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
-	if !opensTheDeck(filter) {
-		rows = dropDone(s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth), s.marked, day.AsOf)
+	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
+		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	}
+	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
@@ -349,12 +330,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := append(unavailable(ctx, day), refused...)
-	for _, refusal := range besideTheDay {
-		if refusal != nil {
-			missing = append(missing, *refusal)
-		}
-	}
+	missing := s.worklistRefusals(ctx, day, refused, besideTheDay, scoped)
 	// Ranked ONCE, here, whichever way this page is served. A frozen walk takes
 	// its sequence from the snapshot and a fresh read takes it from this sort,
 	// but both need the comparator to have run: the snapshot's order IS a
@@ -363,11 +339,11 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
-	missing = withRosterRefusal(stampSources(missing), scoped)
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == ""}, shown, more, limit, cursor.Rest, rows)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -384,9 +360,11 @@ func (s *Service) worklistFrom(
 	ordered := renderInOrder(stampAsOf(shown, day.AsOf), readerOf(ctx))
 	bands := bandsOf(ordered)
 	out := crmcontracts.Worklist{
-		AsOf:  day.AsOf,
-		Queue: ordered,
-		Focus: &focus,
+		AsOf:                               day.AsOf,
+		Queue:                              ordered,
+		Focus:                              &focus,
+		OptionalRelationships:              &optional,
+		OptionalRelationshipsMoreAvailable: new(boundedSources(day)[sourceDecay]),
 		// The headings, in draw order, over the rows this page actually holds.
 		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a
@@ -397,7 +375,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -410,7 +388,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: countsOf(considered, shown, bounded),
+		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped),
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.
@@ -423,10 +401,7 @@ func (s *Service) worklistFrom(
 		// count. A lane whose rows DID feed one would have to be named.
 		Readings: readingsOf(considered, bounded, missing),
 	}
-	if filter != "" {
-		narrowed := crmcontracts.WorklistFilter(filter)
-		out.Filter = &narrowed
-	}
+	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more
 	// behind it. A cursor on a final page invites one more request that can only
 	// answer empty, and a client walking until the cursor disappears would never
@@ -440,10 +415,11 @@ func (s *Service) worklistFrom(
 	// cut landed, not a running total of rows handed out. The two differ the
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
-	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, filter, s.taskOwner, walk.id)
+	if (more && len(shown) > 0) || (!more && rest != nil) {
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id, rest)
 		out.NextCursor = &token
 	}
+	out.SourcesUnavailable = append(out.SourcesUnavailable, s.stampSources(tailFailed)...)
 	// What has happened to this walk since it started, where there is a walk to
 	// say it about. A first page that froze nothing states nothing: the fields
 	// would be a claim about a walk that does not exist.
@@ -451,6 +427,19 @@ func (s *Service) worklistFrom(
 		out.Walk = state
 	}
 	return out
+}
+
+func (s *Service) worklistRefusals(ctx context.Context, day crmcontracts.Attention,
+	refused []crmcontracts.WorklistSourceUnavailable, besideTheDay []*crmcontracts.WorklistSourceUnavailable,
+	scoped scopeNote,
+) []crmcontracts.WorklistSourceUnavailable {
+	missing := append(unavailable(ctx, day), refused...)
+	for _, refusal := range besideTheDay {
+		if refusal != nil {
+			missing = append(missing, *refusal)
+		}
+	}
+	return withRosterRefusal(s.stampSources(missing), scoped)
 }
 
 // rankedWaits ranks the customers waiting on us, newest wait last.

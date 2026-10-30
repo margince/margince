@@ -142,6 +142,14 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/settings/rates.test.tsx",
+    why: "The model price form opens on the UTC day its server counts. Only a reader west of UTC, in the evening, makes that day differ from the reader's own.",
+  },
+  {
+    file: "features/deals/deal360/dealwaiting.test.ts",
+    why: "Current request age counts calendar days in the record zone; named zones on opposite sides of midnight prove that the count follows that zone.",
+  },
+  {
     file: "features/analytics/analytics.reports.stories.tsx",
     why: "The frame line names the installation zone as Intl's long name plus offset, and only a fixed zone makes that expected text independent of the machine.",
   },

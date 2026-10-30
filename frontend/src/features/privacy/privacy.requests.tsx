@@ -9,8 +9,8 @@ import {
   EntityRef,
   rosterOwnerName,
   useRoster,
+  useRosterHint,
   useRosterPartial,
-  useRosterPartialHint,
 } from "../../components/entityref";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -426,14 +426,14 @@ function DsrAssignee({
 }>) {
   const t = useT();
   const roster = useRoster("user", true);
-  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
+  const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   // An agent seat cannot hold the row scope a subject request needs.
   const assignable = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry && !entry.is_agent ? [entry] : [],
   );
   const current = useUnofferedAssignee(dsr.assignee_id, assignable, t);
   return (
-    <Field label={t("privacy.assignee")} hint={partialHint}>
+    <Field label={t("privacy.assignee")} hint={rosterHint}>
       {(control) => (
         <Select
           {...control}

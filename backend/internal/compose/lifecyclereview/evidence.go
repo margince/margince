@@ -79,7 +79,7 @@ func Matches(current Finding, shown *Finding) bool {
 
 // Read binds a signal's scope to words its reader can still open.
 func Read(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID) (Finding, error) {
-	signal, err := signals.ReadSignalTx(ctx, tx, ids.From[ids.SignalKind](signalID), storekit.LiveOnly)
+	signal, err := signals.ReadSignalTx(ctx, tx, ids.From[ids.SignalKind](signalID), storekit.LiveOnly, nil)
 	if err != nil {
 		return Finding{SignalID: signalID, Scope: scopeUnknown}, err
 	}

@@ -1,5 +1,8 @@
 # yaml-language-server: $schema=./margince.schema.json
 # Written by tools/gen-config; every setting at its default. Do not edit: copy from it.
+#
+# Copy only the lines you change: a stored setting set in a file is locked in the app. A secret
+# shows a file reference in place of a default, so point it at a file that holds the value.
 
 version: 1
 
@@ -72,6 +75,9 @@ ai:
 analytics:
   performance_enabled: false
 
+assurance:
+  qualified_forecast_enforced: false
+
 auth:
   password:
     enabled: true
@@ -105,6 +111,7 @@ consent:
 contacts:
   first_response_enabled: false
   first_response_target_minutes: 240
+  shared_merge_reviews: false
   signature_template: null
   unassigned_escalation_user_id: null
 

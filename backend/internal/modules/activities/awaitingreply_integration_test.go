@@ -14,8 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -57,6 +60,11 @@ func (e *loadEnv) sentTo(t *testing.T, contact ids.UUID, from string, ago time.D
 // followUpReader is the rep with read on every record kind the customer test
 // asks about, less the ones named in without.
 func (e *loadEnv) followUpReader(without ...string) context.Context {
+	return e.followUpReaderAs(e.rep, without...)
+}
+
+// followUpReaderAs is followUpReader for any seat.
+func (e *loadEnv) followUpReaderAs(seat ids.UUID, without ...string) context.Context {
 	grants := map[string]principal.ObjectGrant{}
 	for _, object := range []string{"activity", "contact", "deal", "company", "lead", "relationship"} {
 		grants[object] = principal.ObjectGrant{Read: true}
@@ -67,7 +75,7 @@ func (e *loadEnv) followUpReader(without ...string) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
 	})
 }
@@ -335,5 +343,85 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 	e.afterwards(t, customer, "email", "inbound", thread)
 	if awaited(t, s, e, plain) || moves()[plain] != crmcontracts.EmailSummaryMoveNone {
 		t.Error("the customer answered on the thread, yet the lane or the badge still waits on them")
+	}
+}
+
+// seatAddresses gives each seat its own mail addresses.
+type seatAddresses struct {
+	fixedDomains
+	bySeat map[ids.UUID][]string
+}
+
+func (s seatAddresses) ReaderAddresses(_ context.Context, _ pgx.Tx, reader ids.UUID) ([]string, error) {
+	return s.bySeat[reader], nil
+}
+
+// copiedMail seeds a mail the colleague sent to the customer, as the reader's
+// mailbox holds it. Each extra participant row is a role and a seat or address.
+func (e *loadEnv) copiedMail(t *testing.T, customer ids.UUID, colleagueAddress string, participants ...[3]any) ids.UUID {
+	t.Helper()
+	mail, _ := e.sentTo(t, customer, colleagueAddress, 3*24*time.Hour)
+	for _, p := range participants {
+		e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id, address)
+			VALUES ($1, $2, $3, $4, $5)`, ids.NewV7(), mail, p[0], p[1], p[2])
+	}
+	return mail
+}
+
+func (e *loadEnv) addressedSeats(colleagueAddress string, shared ...string) *Store {
+	return NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithOwnDomains(seatAddresses{bySeat: map[ids.UUID][]string{
+		e.rep: append([]string{readerAddress}, shared...), e.other: append([]string{colleagueAddress}, shared...),
+	}})
+}
+
+// A colleague's mail that names the reader on To or CC is the colleague's to
+// follow up, never the reader's.
+func TestAColleaguesMailToTheReaderIsTheColleaguesFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	colleagueAddress := "colleague-" + e.other.String() + "@ourco.test"
+	s := e.addressedSeats(colleagueAddress)
+	// One customer each: a later mail to the same customer would settle the first.
+	onTo := e.copiedMail(t, e.customerAt(t, "customer"), colleagueAddress, [3]any{"to", e.rep, nil})
+	onCC := e.copiedMail(t, e.customerAt(t, "customer"), colleagueAddress, [3]any{"cc", nil, readerAddress})
+
+	for name, mail := range map[string]ids.UUID{"on To": onTo, "on CC": onCC} {
+		if !awaitedAs(e.followUpReaderAs(e.other), t, s, mail) {
+			t.Errorf("the colleague's own mail with the reader %s is not the colleague's follow-up", name)
+		}
+		if awaitedAs(e.followUpReader(), t, s, mail) {
+			t.Errorf("a colleague's mail with the reader %s is on the reader's follow-ups", name)
+		}
+	}
+}
+
+// A mail captured from a colleague's send names that colleague in
+// sent_by_colleague and From. It is their follow-up, not the copied mailbox's.
+func TestAMailSentByAColleagueIsTheirFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	colleagueAddress := "colleague-" + e.other.String() + "@ourco.test"
+	s := e.addressedSeats(colleagueAddress)
+	mail := e.copiedMail(t, e.customerAt(t, "customer"), colleagueAddress, [3]any{"cc", e.rep, nil})
+	e.exec(t, `UPDATE activity SET sent_by_colleague = $2 WHERE id = $1`, mail, e.other)
+
+	if !awaitedAs(e.followUpReaderAs(e.other), t, s, mail) {
+		t.Error("the colleague named in sent_by_colleague is not given their own follow-up")
+	}
+	if awaitedAs(e.followUpReader(), t, s, mail) {
+		t.Error("the mailbox that holds a colleague's send is given the colleague's follow-up")
+	}
+}
+
+// Two seats that both list one mailbox address each read a mail logged from it
+// as their own: each seat's own address list decides.
+func TestASharedMailboxAddressIsEachListingSeatsFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	shared := "shared-" + e.rep.String() + "@ourco.test"
+	s := e.addressedSeats("colleague-"+e.other.String()+"@ourco.test", shared)
+	logged, _ := e.sentTo(t, e.customerAt(t, "customer"), shared, 3*24*time.Hour)
+
+	for seat, name := range map[ids.UUID]string{e.rep: "reader", e.other: "colleague"} {
+		if !awaitedAs(e.followUpReaderAs(seat), t, s, logged) {
+			t.Errorf("the %s, who lists the shared address, is not given the mail logged from it", name)
+		}
 	}
 }

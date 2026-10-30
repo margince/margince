@@ -13,6 +13,7 @@ import { tasksPeek } from "../../lib/standingpeeks";
 import { dealRoleLabel } from "../records/record360";
 import { DealApprovals } from "./deal360/dealapprovals";
 import { DealBrief } from "./deal360/dealbrief";
+import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
@@ -197,8 +198,6 @@ export function DealOverviewPane({
       ) : (
         <DealStatusCardPanel
           deal={deal}
-          timeline={activities}
-          asOf={inputs.asOf}
           onOpenEmail={onOpenEmail}
           more={more}
           renderStanding={(head) => (
@@ -221,6 +220,9 @@ export function DealOverviewPane({
             refusedReasonId={refusedReasonId}
             onCreate={onCreateOffer}
           />
+          {!deal.archived_at && (
+            <DealCommitmentsCard dealId={deal.id} onOpenEmail={onOpenEmail} />
+          )}
           {!deal.archived_at && (
             <DealCommitteeCard
               dealId={deal.id}

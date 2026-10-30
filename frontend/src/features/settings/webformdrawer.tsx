@@ -20,27 +20,31 @@ import {
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   problemFieldErrorsOf,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
 import {
-  isBuilder,
+  pastesSecret,
   WEB_FORM_SENDERS,
   WEB_FORMS_KEY,
   type WebForm,
   type WebFormCreated,
   type WebFormSender,
 } from "./webformkinds";
+import "./webforms.css";
+import { OwnerField } from "./webformowner";
+import { SenderField } from "./webformsender";
 
 export type WebFormDraft = Readonly<{
   name: string;
   sender: WebFormSender;
   origins: string;
   senderSecret: string;
+  ownerId: string;
   consentRequired: boolean;
   consentWording: string;
   consentPolicyVersion: string;
@@ -54,6 +58,7 @@ export function draftFor(form?: WebForm): WebFormDraft {
     sender: form?.sender ?? "browser",
     origins: (form?.allowed_origins ?? []).join("\n"),
     senderSecret: "",
+    ownerId: form?.owner_id ?? "",
     consentRequired: form?.consent_required ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
@@ -64,18 +69,76 @@ export function draftFor(form?: WebForm): WebFormDraft {
 
 const optional = (text: string) => (text.trim() === "" ? null : text.trim());
 
-// The settings create and update share. A builder's secret is sent only when
-// one was typed, so an edit that leaves the field empty keeps the stored one.
-export function webFormBodyOf(draft: WebFormDraft) {
-  const origins = draft.origins
+function originsOf(draft: WebFormDraft): string[] {
+  return draft.origins
     .split(/[\s,]+/)
     .map((origin) => origin.trim())
     .filter(Boolean);
+}
+
+/**
+ * Every required field the draft leaves empty, with the sentence it owes.
+ *
+ * The server refuses only the first empty field it meets. A form that waited
+ * for it would make the reader press Create once per missing field.
+ */
+export function missingFields(
+  draft: WebFormDraft,
+): ReadonlyMap<string, MessageKey> {
+  const missing = new Map<string, MessageKey>();
+  if (draft.name.trim() === "") {
+    missing.set("name", "webForms.required.name");
+  }
+  if (draft.sender === "browser" && originsOf(draft).length === 0) {
+    missing.set("allowed_origins", "webForms.required.origins");
+  }
+  if (draft.consentRequired && draft.consentWording.trim() === "") {
+    missing.set("consent_wording", "webForms.required.consentWording");
+  }
+  return missing;
+}
+
+// The website an entry names, as a post's Origin header spells it: scheme, host
+// and a port only when it is not the default. Null for text that is no address.
+function websiteOf(entry: string): string | null {
+  if (!URL.canParse(entry)) {
+    return null;
+  }
+  const { origin } = new URL(entry);
+  return origin === "null" ? null : origin;
+}
+
+/**
+ * The entries saved as some other spelling of their website, such as a page
+ * address or a default port. A path cannot narrow who may post, so the reader
+ * is told before saving.
+ */
+export function narrowedOrigins(
+  draft: WebFormDraft,
+): { entry: string; origin: string }[] {
+  return originsOf(draft).flatMap((entry) => {
+    const origin = websiteOf(entry);
+    const same = origin === entry || `${origin}/` === entry;
+    return origin !== null && !same ? [{ entry, origin }] : [];
+  });
+}
+
+// The settings create and update share. Webflow's secret is sent only when one
+// was typed, so an edit that leaves the field empty keeps the stored one. The
+// owner is sent only when it changed. The server checks that a sent owner can
+// still take leads, so one who left must not block renaming the form.
+export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
+  // Sent as the Origin header spells it, so a stored `:443` never refuses the
+  // site. Text that is no address goes as typed, for the server to refuse.
+  const origins = originsOf(draft).map((entry) => websiteOf(entry) ?? entry);
   return {
     name: draft.name.trim(),
     ...(draft.sender === "browser" ? { allowed_origins: origins } : {}),
-    ...(isBuilder(draft.sender) && draft.senderSecret.trim() !== ""
+    ...(pastesSecret(draft.sender) && draft.senderSecret.trim() !== ""
       ? { sender_secret: draft.senderSecret.trim() }
+      : {}),
+    ...(draft.ownerId !== (form?.owner_id ?? "")
+      ? { owner_id: optional(draft.ownerId) }
       : {}),
     consent_required: draft.consentRequired,
     consent_wording: optional(draft.consentWording),
@@ -95,7 +158,7 @@ async function saveWebForm({
     return unwrap(
       await api.PATCH("/web-forms/{id}", {
         params: { path: { id: form.id }, ...ifMatch(form.version) },
-        body: webFormBodyOf(draft),
+        body: webFormBodyOf(draft, form),
       }),
     );
   }
@@ -111,11 +174,38 @@ const FIELDS_WITH_A_SLOT = new Set([
   "sender",
   "allowed_origins",
   "sender_secret",
+  "owner_id",
   "consent_wording",
   "consent_policy_version",
   "redirect_url",
   "success_message",
 ]);
+
+// Each field's sentence, and the one line for a refusal no field can hold. A
+// missing field speaks over the server's word for it, which is a fragment.
+function useDrawerErrors(
+  failure: Error | null,
+  missing: ReadonlyMap<string, MessageKey>,
+) {
+  const t = useT();
+  const fieldErrors = new Map(
+    problemFieldErrorsOf(failure).map((p) => [p.field, p.message]),
+  );
+  for (const [field, key] of missing) {
+    fieldErrors.set(field, t(key));
+  }
+  const unplaced = [...fieldErrors.entries()].filter(
+    ([field]) => !FIELDS_WITH_A_SLOT.has(field),
+  );
+  let generalError: string | null = null;
+  if (failure) {
+    generalError =
+      fieldErrors.size === 0
+        ? problemMessageOf(failure, t)
+        : (unplaced[0]?.[1] ?? null);
+  }
+  return { fieldErrors, generalError };
+}
 
 export function WebFormDrawer({
   form,
@@ -132,6 +222,9 @@ export function WebFormDrawer({
   const titleId = useId();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<WebFormDraft>(() => draftFor(form));
+  // Set by the first press of Create, so an empty field is not flagged before
+  // the reader has had a chance to fill it.
+  const [checked, setChecked] = useState(false);
   const save = useMutation({
     mutationFn: saveWebForm,
     onSuccess: (saved, { form: edited }) => {
@@ -149,18 +242,13 @@ export function WebFormDrawer({
     }
     setDraft((prev) => ({ ...prev, ...patch }));
   };
-  const fieldErrors = new Map(
-    problemFieldErrorsOf(save.error).map((p) => [p.field, p.message]),
-  );
-  const unplaced = [...fieldErrors.entries()].filter(
-    ([field]) => !FIELDS_WITH_A_SLOT.has(field),
-  );
-  const generalError = !save.isError
-    ? null
-    : fieldErrors.size === 0
-      ? problemMessageOf(save.error, t)
-      : (unplaced[0]?.[1] ?? null);
   const editing = form !== undefined;
+  const missing = missingFields(draft);
+  const { fieldErrors, generalError } = useDrawerErrors(
+    save.error,
+    checked ? missing : new Map(),
+  );
+  const narrowed = draft.sender === "browser" ? narrowedOrigins(draft) : [];
   // Every sender but a browser verifies against a stored secret, so an
   // installation without a secret store offers the browser alone.
   const senders = secretsAvailable ? WEB_FORM_SENDERS : ["browser" as const];
@@ -178,154 +266,158 @@ export function WebFormDrawer({
         </Heading>
         <p>{t("webForms.drawer.sub")}</p>
       </DrawerHead>
-      <DrawerBody className="form-stack">
-        <Field
-          label={t("webForms.field.name")}
-          required
-          hint={t("webForms.field.nameHint")}
-          error={fieldErrors.get("name")}
-        >
-          {(field) => (
-            <TextInput
-              {...field}
-              value={draft.name}
-              onChange={(event) => set({ name: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label={t("webForms.field.sender")}
-          hint={
-            editing
-              ? t("webForms.field.senderFixed")
-              : t(`webForms.senderHint.${draft.sender}`)
-          }
+      <DrawerBody className="form-stack webform-parts">
+        <SenderField
+          sender={draft.sender}
+          editing={editing}
+          senders={senders}
           error={fieldErrors.get("sender")}
-        >
-          {(field) => (
-            <Select
-              {...field}
-              value={draft.sender}
-              disabled={editing}
-              options={senders.map((sender) => ({
-                value: sender,
-                label: t(`webForms.sender.${sender}`),
-              }))}
-              onChange={(sender) => set({ sender: sender as WebFormSender })}
-            />
-          )}
-        </Field>
-        {draft.sender === "browser" && (
+          onChange={(sender) => set({ sender })}
+        />
+        <div className="form-stack webform-part">
           <Field
-            label={t("webForms.field.origins")}
+            label={t("webForms.field.name")}
             required
-            hint={t("webForms.field.originsHint")}
-            error={fieldErrors.get("allowed_origins")}
-          >
-            {(field) => (
-              <Textarea
-                {...field}
-                rows={3}
-                value={draft.origins}
-                placeholder={t("webForms.field.originsPlaceholder")}
-                onChange={(event) => set({ origins: event.target.value })}
-              />
-            )}
-          </Field>
-        )}
-        {isBuilder(draft.sender) && (
-          <Field
-            label={t("webForms.field.senderSecret")}
-            required={!editing}
-            hint={
-              editing
-                ? t("webForms.field.senderSecretKeep")
-                : t("webForms.field.senderSecretHint")
-            }
-            error={fieldErrors.get("sender_secret")}
+            hint={t("webForms.field.nameHint")}
+            error={fieldErrors.get("name")}
           >
             {(field) => (
               <TextInput
                 {...field}
-                type="password"
-                autoComplete="off"
-                value={draft.senderSecret}
-                onChange={(event) => set({ senderSecret: event.target.value })}
+                value={draft.name}
+                onChange={(event) => set({ name: event.target.value })}
               />
             )}
           </Field>
-        )}
-        <Checkbox
-          checked={draft.consentRequired}
-          label={t("webForms.field.consentRequired")}
-          onChange={(event) => set({ consentRequired: event.target.checked })}
-        />
-        {draft.consentRequired && (
-          <>
+          {draft.sender === "browser" && (
             <Field
-              label={t("webForms.field.consentWording")}
+              label={t("webForms.field.origins")}
               required
-              hint={t("webForms.field.consentWordingHint")}
-              error={fieldErrors.get("consent_wording")}
+              hint={t("webForms.field.originsHint")}
+              error={fieldErrors.get("allowed_origins")}
             >
               {(field) => (
                 <Textarea
                   {...field}
                   rows={3}
-                  value={draft.consentWording}
-                  onChange={(event) =>
-                    set({ consentWording: event.target.value })
-                  }
+                  value={draft.origins}
+                  placeholder={t("webForms.field.originsPlaceholder")}
+                  onChange={(event) => set({ origins: event.target.value })}
                 />
               )}
             </Field>
+          )}
+          {narrowed.map(({ entry, origin }) => (
+            <p key={entry} className="t-caption">
+              {t("webForms.field.originKept", { entry, origin })}
+            </p>
+          ))}
+          {pastesSecret(draft.sender) && (
             <Field
-              label={t("webForms.field.consentPolicyVersion")}
-              hint={t("webForms.field.consentPolicyVersionHint")}
-              error={fieldErrors.get("consent_policy_version")}
+              label={t("webForms.field.senderSecret")}
+              hint={
+                editing && form.secret_configured
+                  ? t("webForms.field.senderSecretKeep")
+                  : t("webForms.field.senderSecretHint")
+              }
+              error={fieldErrors.get("sender_secret")}
             >
               {(field) => (
                 <TextInput
                   {...field}
-                  value={draft.consentPolicyVersion}
+                  type="password"
+                  autoComplete="off"
+                  value={draft.senderSecret}
                   onChange={(event) =>
-                    set({ consentPolicyVersion: event.target.value })
+                    set({ senderSecret: event.target.value })
                   }
                 />
               )}
             </Field>
-          </>
-        )}
-        {draft.sender === "browser" && (
+          )}
+        </div>
+        <OwnerField
+          ownerId={draft.ownerId}
+          error={fieldErrors.get("owner_id")}
+          onChange={(ownerId) => set({ ownerId })}
+        />
+        <div className="form-stack webform-part">
+          <Checkbox
+            checked={draft.consentRequired}
+            label={t("webForms.field.consentRequired")}
+            onChange={(event) => set({ consentRequired: event.target.checked })}
+          />
+          {draft.consentRequired && (
+            <>
+              <Field
+                label={t("webForms.field.consentWording")}
+                required
+                hint={t("webForms.field.consentWordingHint")}
+                error={fieldErrors.get("consent_wording")}
+              >
+                {(field) => (
+                  <Textarea
+                    {...field}
+                    rows={3}
+                    value={draft.consentWording}
+                    onChange={(event) =>
+                      set({ consentWording: event.target.value })
+                    }
+                  />
+                )}
+              </Field>
+              <Field
+                label={t("webForms.field.consentPolicyVersion")}
+                hint={t("webForms.field.consentPolicyVersionHint")}
+                error={fieldErrors.get("consent_policy_version")}
+              >
+                {(field) => (
+                  <TextInput
+                    {...field}
+                    value={draft.consentPolicyVersion}
+                    onChange={(event) =>
+                      set({ consentPolicyVersion: event.target.value })
+                    }
+                  />
+                )}
+              </Field>
+            </>
+          )}
+        </div>
+        <div className="form-stack webform-part">
+          {draft.sender === "browser" && (
+            <Field
+              label={t("webForms.field.redirectUrl")}
+              hint={t("webForms.field.redirectUrlHint")}
+              error={fieldErrors.get("redirect_url")}
+            >
+              {(field) => (
+                <TextInput
+                  {...field}
+                  type="url"
+                  value={draft.redirectUrl}
+                  placeholder={t("webForms.field.redirectUrlPlaceholder")}
+                  onChange={(event) => set({ redirectUrl: event.target.value })}
+                />
+              )}
+            </Field>
+          )}
           <Field
-            label={t("webForms.field.redirectUrl")}
-            hint={t("webForms.field.redirectUrlHint")}
-            error={fieldErrors.get("redirect_url")}
+            label={t("webForms.field.successMessage")}
+            hint={t("webForms.field.successMessageHint")}
+            error={fieldErrors.get("success_message")}
           >
             {(field) => (
               <TextInput
                 {...field}
-                type="url"
-                value={draft.redirectUrl}
-                placeholder={t("webForms.field.redirectUrlPlaceholder")}
-                onChange={(event) => set({ redirectUrl: event.target.value })}
+                value={draft.successMessage}
+                onChange={(event) =>
+                  set({ successMessage: event.target.value })
+                }
               />
             )}
           </Field>
-        )}
-        <Field
-          label={t("webForms.field.successMessage")}
-          hint={t("webForms.field.successMessageHint")}
-          error={fieldErrors.get("success_message")}
-        >
-          {(field) => (
-            <TextInput
-              {...field}
-              value={draft.successMessage}
-              onChange={(event) => set({ successMessage: event.target.value })}
-            />
-          )}
-        </Field>
+        </div>
         {generalError && <ErrorLine>{generalError}</ErrorLine>}
       </DrawerBody>
       <DrawerFoot className="actions">
@@ -336,7 +428,12 @@ export function WebFormDrawer({
           variant="primary"
           data-testid="save-web-form"
           pending={save.isPending}
-          onClick={() => save.mutate({ draft, form })}
+          onClick={() => {
+            setChecked(true);
+            if (missing.size === 0) {
+              save.mutate({ draft, form });
+            }
+          }}
         >
           {editing ? t("webForms.drawer.save") : t("webForms.drawer.create")}
         </Button>

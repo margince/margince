@@ -41,7 +41,7 @@ describe("what was handled for the reader", () => {
     // The record it was about is an address, not a verb.
     expect(
       screen.getByRole("link", { name: "Kirsten Vogel" }).getAttribute("href"),
-    ).toBe("#/contacts/p1");
+    ).toBe("/#/contacts/p1");
     // NO VERBS on a receipt for a DECISION. The work was agreed to and is
     // done, so a control here would ask the reader to redo it on the one
     // surface that exists to tell them they need not. A correction nobody was
@@ -62,7 +62,7 @@ describe("what was handled for the reader", () => {
     const links = Array.from(table.querySelectorAll("a"), (a) =>
       a.getAttribute("href"),
     );
-    expect(links).toEqual(["#/contacts/p1"]);
+    expect(links).toEqual(["/#/contacts/p1"]);
   });
 
   // The one row on this panel that carries a verb, and why it must.
@@ -172,7 +172,7 @@ describe("what was handled for the reader", () => {
     render(panel());
 
     const link = await screen.findByRole("link", { name: "Ablösung Checkout" });
-    expect(link.getAttribute("href")).toBe("#/deals/d1");
+    expect(link.getAttribute("href")).toBe("/#/deals/d1");
     expect(screen.queryByText(en["worklist.handled.noRecord"])).toBeNull();
   });
 

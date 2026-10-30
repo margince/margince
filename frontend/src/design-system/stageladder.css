@@ -337,7 +337,7 @@
   font: var(--fontBodySmall);
 }
 .stage-ladder-bar-step.btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .stage-ladder-bar-step.btn:disabled {
   opacity: 1;

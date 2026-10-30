@@ -31,6 +31,9 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   pipeline: ["create", "read", "update", "delete"],
   custom_field: ["create", "read", "update", "delete"],
   webhook_subscription: ["create", "read", "update", "delete"],
+  // Website forms, whose page opens on the integrations write. The provider
+  // and finance cards on Integrations ask the same object.
+  integrations: ["create", "read", "update", "delete"],
   capture_settings: ["read", "update"],
   embedding_reindex: ["read", "update"],
   fx_rate: ["create", "read", "update"],
@@ -816,6 +819,14 @@ export const aiUsage = {
     currency: "USD",
   },
 };
+
+export const aiUsageSummary = {
+  cost_est_minor: aiUsage.days
+    .flatMap((day) => day.tasks)
+    .reduce((total, task) => total + task.cost_est_minor, 0),
+  currency: aiUsage.budget.currency,
+  computed_at: "2026-07-05T12:00:00Z",
+} satisfies components["schemas"]["AiUsageSummary"];
 
 // The call figures every provider row and tier popover reads. `rows` is
 // required by AiCallStats. One row per provider and tier the fixtures above

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -33,13 +34,35 @@ const assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
 		       d.forecast_category, s.name,
+		       d.created_at, d.wait_until,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
-		           AND a.direction = 'inbound'
 		           AND a.archived_at IS NULL
-		           AND %[2]s) AS last_inbound_at,
+		           AND %[2]s) AS last_customer_progress_at,
+		       (SELECT max(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND %[6]s) AS last_customer_refusal_at,
+		       (SELECT min(a.occurred_at)
+		          FROM activity a
+		          JOIN activity_link al ON al.activity_id = a.id
+		         WHERE al.deal_id = d.id
+		           AND a.archived_at IS NULL
+		           AND a.kind = 'meeting'
+		           AND %[3]s
+		           AND %[7]s
+		           AND EXISTS (SELECT 1 FROM activity_participant p
+		                        WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL
+		                          AND p.response = 'accepted')) AS confirmed_meeting_at,
+		       %[8]s AS earlier_answer_until,
+		       EXISTS (SELECT 1 FROM assurance_exception x
+		                WHERE x.subject_kind = 'deal' AND x.subject_id = d.id
+		                  AND x.type = $4 AND x.status = 'open') AS open_review,
+		       %[4]s AS viability_fingerprint,
 		       (SELECT o.gross_minor
 		          FROM offer o
 		         WHERE o.deal_id = d.id
@@ -94,10 +117,10 @@ const assuranceSubjectsSQL = `
 		               AND e.deal_id = d.id
 		               AND e.met
 		               AND e.refuted_at IS NULL
-		               AND %[4]s)) AS unmet_exit_criteria
+		               AND %[5]s)) AS unmet_exit_criteria
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL AND d.status = 'open'
+		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
 		ORDER BY d.id`
 
 // closePushWindow bounds how far back the close-date-push count looks. One
@@ -129,49 +152,173 @@ const closePushWindow = 90 * 24 * time.Hour
 // offer or contract in a different currency is not comparable minor-for-minor,
 // and handing the rule such a number would report a "discrepancy" that is
 // entirely exchange rate.
-func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
-	now := time.Now().UTC()
-	args := []any{now.Add(-closePushWindow), now, dealrole.EconomicBuyer}
+func AssuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage,
+) ([]assurance.Subject, error) {
+	return assuranceSubjects(ctx, tx, asOf, coverage, nil)
+}
+
+// assuranceSubjects is AssuranceSubjects, narrowed to one deal when only is set:
+// a review answer is checked against the same evidence the nightly pass reads.
+func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only *ids.UUID,
+) ([]assurance.Subject, error) {
+	now := asOf.UTC()
+	zone, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	args := []any{now.Add(-closePushWindow), now, dealrole.EconomicBuyer, assurance.TypeDealViability}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
 		return nil, err
 	}
-	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg),
-		occurredday.BegunSQL("a", "now()"), relstrength.MeetingAheadSQL("a", "$2"),
-		deals.SettlingEvidenceSQL("c", "e"))
+	// A task the product filed itself asks for a next step; it is not one.
+	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
+	query := fmt.Sprintf(assuranceSubjectsSQL, humanTask,
+		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}
 	defer rows.Close()
 
+	mailCovered := sourceChecked(coverage, sourceMail)
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.Subject, error) {
-		var out assurance.Subject
-		var dealID ids.UUID
-		var owner *ids.UUID
-		var currency, category, stage *string
-		var lastInbound *time.Time
-		err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound,
-			&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-			&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
-		out.DealID = dealID.String()
-		if owner != nil {
-			out.Owner = owner.String()
-		}
-		if currency != nil {
-			out.Currency = *currency
-		}
-		if category != nil {
-			out.Category = *category
-		}
-		if stage != nil {
-			out.StageName = *stage
-		}
-		out.LastInboundAt = lastInbound
-		return out, err
+		return scanAssuranceSubject(row, now, zone, mailCovered)
 	})
+}
+
+func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Location, mailCovered bool) (assurance.Subject, error) {
+	var out assurance.Subject
+	var dealID ids.UUID
+	var owner *ids.UUID
+	var currency, category, stage *string
+	var evidence deals.ViabilityInput
+	var fingerprint string
+	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
+		&out.ExpectedClose, &out.CloseProvisional, &category, &stage,
+		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
+		&evidence.LastCustomerRefusalAt,
+		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
+		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
+	if err != nil {
+		return out, err
+	}
+	out.DealID = dealID.String()
+	if owner != nil {
+		out.Owner = owner.String()
+	}
+	if currency != nil {
+		out.Currency = *currency
+	}
+	if category != nil {
+		out.Category = *category
+	}
+	if stage != nil {
+		out.StageName = *stage
+	}
+	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
+	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered
+	assessed := deals.AssessViability(evidence, asOf, zone)
+	out.Viability = &assurance.SubjectViability{
+		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
+		NextChange: assessed.NextChange, Fingerprint: fingerprint,
+	}
+	return out, nil
+}
+
+// customerProgressSQL admits a row that is the CUSTOMER moving the deal. That is
+// a message a contact on it wrote, or a meeting or call with them that happened.
+// Our own mail, a task, a field edit and a machine's mail never count. Nor do a
+// message not every member may read, or a refusal. An unjudged message counts,
+// because every message from before the verdict existed is unjudged.
+func customerProgressSQL(alias, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) +
+		" AND ((" + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
+		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
+		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
+}
+
+// customerRefusalSQL admits a message a contact on the deal wrote that was
+// judged a refusal.
+func customerRefusalSQL(alias, asOf string) string {
+	return "(" + visibleToAllSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias) + " AND " + customerWroteSQL(alias) + " AND " +
+		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
+}
+
+// earlierAnswerSQL is when the newest answer to the retired buyer-silent check
+// on the deal runs out, if it has not yet. Its findings close on the first
+// night the mail is read, but the answers stay. A deal somebody answered is not
+// asked again before its answer ends. The answer was about one silence:
+// once the customer moved the deal after it, a later silence is a new one. A
+// reminder holds at most as long as any answer may hide a finding.
+func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
+	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
+		arg(int(assurance.MaxSuppression/(24*time.Hour))))
+	return fmt.Sprintf(`(SELECT CASE
+		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
+		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
+		                    AND NOT %[8]s AND %[7]s) THEN NULL
+		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		  FROM assurance_resolution r
+		  JOIN assurance_exception x ON x.id = r.exception_id
+		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
+		 ORDER BY r.created_at DESC, r.id DESC
+		 LIMIT 1)`,
+		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
+		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
+		occurredday.BegunSQL("pa", "r.created_at"))
+}
+
+// onlyDealSQL narrows the read to one deal, or to none of them when unset.
+func onlyDealSQL(only *ids.UUID, arg func(any) int) string {
+	if only == nil {
+		return ""
+	}
+	return fmt.Sprintf(" AND d.id = $%d", arg(*only))
+}
+
+// visibleToAllSQL admits an activity every member may read. The check runs as
+// the system and its answer reaches every reader of the forecast, so a limited
+// or restricted message must not move it.
+func visibleToAllSQL(alias string) string {
+	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+}
+
+// customerWroteSQL is a message one of the deal's contacts wrote.
+func customerWroteSQL(alias string) string {
+	return "EXISTS (SELECT 1 FROM (SELECT cp.contact_id FROM activity_participant cp WHERE cp.activity_id = " +
+		alias + ".id UNION SELECT cl.contact_id FROM activity_link cl WHERE cl.activity_id = " + alias +
+		".id) who WHERE who.contact_id IS NOT NULL AND " + relstrength.TheyWroteSQL("who.contact_id", alias) + ")"
+}
+
+// sourceChecked reports whether the run read one source on time.
+func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
+	for _, c := range coverage {
+		if c.Source == source {
+			return c.State == assurance.CoverageChecked
+		}
+	}
+	return false
+}
+
+// AssuranceConfig is the check's configuration, with a receipt lifetime taken
+// from the job catalog: one cadence plus one run's deadline. A receipt older
+// than that has outlived the check that should have replaced it.
+func AssuranceConfig() assurance.Config {
+	cfg := assurance.DefaultConfig()
+	if spec, ok := jobs.SpecFor(AssuranceSweepArgs{}.Kind()); ok {
+		cfg.ReceiptLifetime = spec.Cadence.Fixed + spec.Timeout.Duration()
+	}
+	return cfg
 }
 
 // AssuranceCoverage answers which sources the run could reach.

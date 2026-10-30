@@ -42,6 +42,7 @@ const theCompanyFKFloor = 35
 var mergePathFiles = []string{
 	"internal/modules/contacts/mergerelink_company.go",
 	"internal/modules/contacts/mergecompanycollisions.go",
+	"internal/modules/contacts/dedupemove.go",
 	"internal/modules/contacts/merge_company.go",
 	"internal/modules/contacts/merge.go",
 	"internal/modules/contacts/mergecompanyedges.go",
@@ -88,6 +89,9 @@ var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(
 // edgeWriteSet matches the SET clause handed to the contacts module's one edge
 // writer, which runs it as an UPDATE of relationship that no literal names.
 var edgeWriteSet = regexp.MustCompile("mergeEdgeWrite\\(\\s*ctx\\s*,\\s*tx\\s*,\\s*`([^`]*)`")
+
+// movesCompanyPairs matches the company merge's call of the shared pair mover.
+var movesCompanyPairs = regexp.MustCompile(`moveDedupeCandidates\(\s*ctx\s*,\s*tx\s*,\s*entityCompany\b`)
 
 // updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
 // to its `WHERE`.
@@ -240,6 +244,12 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			if concatenatedColumn.MatchString(stmt) {
 				written[table+".company_id"] = true
 			}
+		}
+		// moveDedupeCandidates renders its columns from dedupePairSides, so its
+		// call on the company side is what moves the pair's two company ends.
+		if movesCompanyPairs.MatchString(string(body)) {
+			written["dedupe_candidate.left_company_id"] = true
+			written["dedupe_candidate.right_company_id"] = true
 		}
 		for _, call := range edgeWriteSet.FindAllStringSubmatch(string(body), -1) {
 			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(call[1], -1) {

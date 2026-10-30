@@ -115,19 +115,38 @@ var dailyFlows = []dailyFlow{
 	{Name: "analytics", ID: "PERF-9", Budget: Perf9Budget, PerCall: true, Calls: analyticsCalls},
 }
 
-// appShellCalls are the reads App.tsx, the shell and its agent rail send on load
-// for a rep or a manager; reads the shell gates on an admin-only grant are left out.
+// appShellCalls are the reads a rep's or a manager's browser sends on load.
+// They come from App.tsx, the shell, its top bar and its agent rail. The
+// admin-only reads are adminRailCalls.
 func appShellCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "capabilities", Path: "/v1/auth/capabilities"},
 		{Name: "me", Path: "/v1/me"},
 		{Name: "company_context", Path: "/v1/company/context/capabilities"},
 		{Name: "installation_settings", Path: "/v1/installation/settings"},
+		{Name: "onboarding_state", Path: "/v1/onboarding/state", Optional: true},
 		{Name: "connectors", Path: "/v1/connectors"},
-		{Name: "approvals", Path: "/v1/approvals?status=pending&limit=50"},
+		{Name: "approvals", Path: "/v1/approvals/pending-count"},
 		{Name: "assistant_profile", Path: "/v1/assistant/profile"},
 		{Name: "ai_activity", Path: dailyAIActivityPath()},
+		{Name: "voice_profiles", Path: "/v1/voice-profiles"},
+		{Name: "scheduling_profile", Path: "/v1/scheduling/profile"},
+		{Name: "scheduled_sends", Path: "/v1/scheduled-sends"},
 		{Name: "notices", Path: "/v1/notices"},
+	}
+}
+
+// adminRailCalls are the shell reads only an admin's session sends. They feed
+// the installation card, the license strip, the rail's model line and spend,
+// the economy banner and the reindex banner.
+func adminRailCalls(dailyInput) []dailyCall {
+	return []dailyCall{
+		{Name: "company", Path: "/v1/company"},
+		{Name: "installation_license", Path: "/v1/installation/license"},
+		{Name: "ai_calls", Path: "/v1/ai/calls?limit=10"},
+		{Name: "ai_usage", Path: "/v1/ai/usage/summary"},
+		{Name: "ai_budget", Path: "/v1/ai/budget"},
+		{Name: "embed_reindex_identities", Path: "/v1/embeddings/reindex/identities"},
 	}
 }
 
@@ -141,26 +160,27 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
-// worklistCalls sends the scope the screen opens on: a rep's own queue, a manager's team.
+// worklistCalls sends the scope the screen opens on, which is the reader's own
+// queue for every seat. A manager also times the team scope they pick.
 func worklistCalls(in dailyInput) []dailyCall {
-	scope := "mine"
+	calls := []dailyCall{{Path: "/v1/worklist?scope=mine&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
-		scope = "team"
-	}
-	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
-}
-
-func homeCalls(in dailyInput) []dailyCall {
-	calls := []dailyCall{
-		{Name: "brief", Path: "/v1/brief", Optional: true},
-		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
-		{Name: "digest", Path: "/v1/digest", Optional: true},
-		{Name: "weekly_reviews", Path: "/v1/weekly-reviews", Optional: true},
-	}
-	if in.Seat.Role == "manager" {
-		calls = append(calls, dailyCall{Name: "weekly_reviews_team", Path: "/v1/weekly-reviews/team?team=" + in.Team, Optional: true})
+		calls = append(calls, dailyCall{Name: "team", Path: "/v1/worklist?scope=team&filter=all"})
 	}
 	return calls
+}
+
+// homeCalls are what a browser on Today sends once the shell's gates clear.
+// The weekly review is the Weekly view's read, which Today never sends. Every
+// seat has a brief from the brief step, so its 404 fails the run.
+func homeCalls(dailyInput) []dailyCall {
+	return []dailyCall{
+		{Name: "brief", Path: "/v1/brief"},
+		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
+		{Name: "handled", Path: "/v1/worklist/handled"},
+		{Name: "magic", Path: "/v1/magic?limit=100"},
+		{Name: "digest", Path: "/v1/digest", Optional: true},
+	}
 }
 
 // paletteCall is the command palette's request: three hits per type, colleagues included.
@@ -228,7 +248,11 @@ func dailyRowName(flow string, call dailyCall) string {
 // dailyTally counts what a row's responses answered, for the record and the gate.
 type dailyTally struct {
 	s5xx, s422 int
-	empty      bool
+	// incomplete counts 200 answers that named an unavailable source.
+	incomplete int
+	// lacking counts timed answers without the field strictHolds names.
+	lacking int
+	empty   bool
 	// emptyCalls names the calls of a composite row that answered empty.
 	emptyCalls []string
 	answer     []byte
@@ -248,6 +272,9 @@ type dailyResponse struct {
 func (f dailyFlow) admit(r dailyResponse, tally *dailyTally) error {
 	switch {
 	case r.status >= 200 && r.status < 300:
+		if unavailableSources(r.body) > 0 {
+			tally.incomplete++
+		}
 		return nil
 	case r.status >= 500:
 		if tally.s5xx++; tally.first5xx == "" {
@@ -307,18 +334,28 @@ func fetchRound(s Seat, base string, calls []dailyCall, parallel bool) ([]dailyR
 	return out, nil
 }
 
-// dailyUnwiredNote names a no-data row whose operation this composition does
-// not serve: the harness configures no mail connector, and these routes are
-// wired only with one. Any other 501 is a server fault and fails the run.
-const dailyUnwiredNote = "answers 501 until a mail connector is configured"
+// dailyUnwiredRoutes are the routes this composition does not serve, each with
+// the note its no-data row carries. The harness configures no mail connector,
+// binds no embedding model and serves no license. Any other 501 is a server
+// fault and fails the run.
+//
+// gatekit:fixture the unwired routes and the note each prints on its no-data row
+var dailyUnwiredRoutes = map[string]string{
+	"/v1/digest":                        "answers 501 until a mail connector is configured",
+	"/v1/connectors":                    "answers 501 until a mail connector is configured",
+	"/v1/embeddings/reindex/identities": "answers 501 until an embedding model is bound",
+	"/v1/installation/license":          "answers 501: this composition serves no license entitlement",
+}
 
-var dailyUnwiredRoutes = []string{"/v1/digest", "/v1/connectors"}
+// dailyAdminFlow is the admin's own shell, measured for the admin seat alone.
+var dailyAdminFlow = dailyFlow{Name: "admin_rail", ID: "PERF-2", Budget: Perf2Budget, PerCall: true, Calls: adminRailCalls}
 
 // unwiredAnswer is the generated 501 of a route on dailyUnwiredRoutes: the
 // composition's posture, not a server fault, and nothing to time.
 func unwiredAnswer(path string, status int, body []byte) bool {
 	route, _, _ := strings.Cut(path, "?")
-	return status == http.StatusNotImplemented && slices.Contains(dailyUnwiredRoutes, route) &&
+	_, unwired := dailyUnwiredRoutes[route]
+	return status == http.StatusNotImplemented && unwired &&
 		bytes.Contains(body, []byte(`"code":"not_implemented"`))
 }
 
@@ -456,9 +493,13 @@ func measureDailyRow(t *testing.T, e *apptest.AppEnv, f dailyFlow, s Seat, name 
 		if err != nil {
 			return nil, err
 		}
+		holds := strictHolds(name, s.Role)
 		for _, r := range answered {
 			if err := f.admit(r, tallied(&tally, counted)); err != nil {
 				return nil, err
+			}
+			if counted && holds != "" && r.status < 300 && !holdsData(r.body, holds) {
+				tally.lacking++
 			}
 		}
 		return []time.Duration{elapsed}, nil
@@ -566,7 +607,7 @@ func confirmBreaches(specs []dailyRowSpec, first [][]time.Duration, again func()
 		if stats.P95 >= specs[i].budget {
 			outcome = "confirmed"
 		}
-		kept[i] = second[i]
+		kept[i], specs[i].firstP95 = second[i], p95
 		specs[i].note = joinNotes(specs[i].note, fmt.Sprintf("first measurement p95 %d ms over budget; %s on a second measurement",
 			p95.Milliseconds(), outcome))
 	}
@@ -586,7 +627,8 @@ func dailyAbsentRows(log func(...any), f dailyFlow, id, name string, s Seat, bud
 		m.Seat, m.Flow, m.Verdict = s.Role, f.Name, string(DailyNoData)
 		m.Note = "answers 404: nothing of this kind on the seeded corpus"
 		if a.status == http.StatusNotImplemented {
-			m.Note = dailyUnwiredNote
+			route, _, _ := strings.Cut(a.call.Path, "?")
+			m.Note = dailyUnwiredRoutes[route]
 		}
 		log(fmt.Sprintf("perfbench [daily]: %s %s GET %s answered %d samples=0 %s", rowName, s.Role, a.call.Path, a.status, DailyNoData))
 		rows = append(rows, dailyRow{
@@ -603,6 +645,8 @@ type dailyRowSpec struct {
 	flow, id, name, note string
 	budget               time.Duration
 	allow422, gated      bool
+	// firstP95 is the breached first round confirmBreaches replaced.
+	firstP95 time.Duration
 }
 
 func callNames(calls []dailyCall) []string {
@@ -647,7 +691,8 @@ func dailyMeasuredRow(t *testing.T, s Seat, spec dailyRowSpec, durations []time.
 		Result: DailyResult{
 			Flow: flow, Row: name, Seat: s.Role, Verdict: verdict, Issue: issue,
 			Status5xx: tally.s5xx, Status422: tally.s422, Allow422: spec.allow422,
-			P95: stats.P95, Budget: budget,
+			P95: stats.P95, Budget: budget, Samples: stats.Samples,
+			FirstP95: spec.firstP95, Incomplete: tally.incomplete, Lacking: tally.lacking,
 		},
 		Empty:  tally.empty,
 		Answer: tally.answer,
@@ -769,12 +814,15 @@ func dailyAnalyticsTemplate(t *testing.T, e *apptest.AppEnv, s Seat) string {
 	return framework.Definition.Template
 }
 
-// dailyTemplateMetrics is the screen's metric filter and block wish list for a template.
+// dailyTemplateMetrics is the metric filter and block wish list of the view the
+// screen opens on for a template. METRIC_VIEW and VIEW_SHAPE in
+// frontend/src/features/analytics/reporting.views.ts hold the lists; a request
+// for more than eight metrics is refused, so one view is asked, never all.
 func dailyTemplateMetrics(template string) (func(id string) bool, []string) {
-	sdr := []string{"meetings_held", "accepted_opportunities"}
+	view := []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created"}
+	blocks := []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
 	if template == "sdr" {
-		return func(id string) bool { return slices.Contains(sdr, id) }, []string{"sdr_outcomes", "target_progress"}
+		view, blocks = []string{"meetings_held", "accepted_opportunities"}, []string{"sdr_outcomes", "target_progress"}
 	}
-	return func(id string) bool { return !slices.Contains(append(sdr, "forecast_landing"), id) },
-		[]string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
+	return func(id string) bool { return slices.Contains(view, id) }, blocks
 }

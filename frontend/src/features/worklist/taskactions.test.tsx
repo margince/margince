@@ -20,6 +20,7 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
+import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
   jsonResponse,
@@ -76,17 +77,19 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
 function openTask() {
   return render(
     <StoryProviders>
-      <TaskDetailModal
-        activityId="task-1"
-        readOnly={false}
-        onClose={() => {}}
-        update={
-          {
-            mutate: () => {},
-            isPending: false,
-          } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-        }
-      />
+      <SourceHost>
+        <TaskDetailModal
+          activityId="task-1"
+          readOnly={false}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </SourceHost>
     </StoryProviders>,
   );
 }
@@ -296,6 +299,24 @@ test("an email request is read in the task, with no click to open it", async () 
   ).toBeTruthy();
 });
 
+test("a task's source email opens whole, with its thread, from the task", async () => {
+  const user = userEvent.setup();
+  stubEmailRequest();
+  openTask();
+
+  await user.click(
+    await screen.findByRole("button", { name: "View full thread" }),
+  );
+
+  // The message drawer over the task: a second dialog, headed by the message.
+  await waitFor(() => {
+    expect(screen.getAllByRole("dialog")).toHaveLength(2);
+  });
+  expect(
+    screen.getAllByRole("heading", { name: "The original request" }),
+  ).not.toHaveLength(0);
+});
+
 test("the source email names who sent it and who was copied, above the words", async () => {
   stubEmailRequest({
     from: [
@@ -373,8 +394,11 @@ function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
       }),
     "GET /deals/deal-1": () =>
       jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
-    "GET /companies/co-1": () =>
-      jsonResponse({ id: "co-1", display_name: "Brandt Automotive" }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: "co-1", display_name: "Brandt Automotive" }],
+        next_cursor: null,
+      }),
   });
 }
 
@@ -391,7 +415,7 @@ test("a task filed under a deal and its company names the deal first", async () 
   const names = screen.getAllByRole("link").map((link) => link.textContent);
   expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
   // Opened in place: following the record is leaving the panel for it.
-  expect(deal.getAttribute("href")).toBe("#/deals/deal-1");
+  expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
   expect(deal.getAttribute("target")).toBeNull();
 });
 
@@ -479,11 +503,13 @@ function openTaskWith(
   );
   return render(
     <StoryProviders>
-      {options.writeTo ? (
-        <WriteToProvider writeTo={options.writeTo}>{modal}</WriteToProvider>
-      ) : (
-        modal
-      )}
+      <SourceHost>
+        {options.writeTo ? (
+          <WriteToProvider writeTo={options.writeTo}>{modal}</WriteToProvider>
+        ) : (
+          modal
+        )}
+      </SourceHost>
     </StoryProviders>,
   );
 }
@@ -507,7 +533,7 @@ test("a task from a call offers Call, Email and Open contact", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.getAttribute("href")).toBe("tel:+49301234567");
-  expect(openContact()?.getAttribute("href")).toBe("#/contacts/c-1");
+  expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
   await user.click(
     screen.getByRole("button", { name: en["record.verb.email"] }),
   );

@@ -34,7 +34,7 @@
       "persona": "team manager",
       "question": "Which stages are taking longer than normal for my team?",
       "tool": "run_analytics_query",
-      "expects": "Asked under the caller's own lens; a median below the five-value sample floor is null beside an honest count, never one deal's value wearing a statistic's name."
+      "expects": "Days in the current stage, read through the stage-age entity under the caller's own lens. Fewer than five deals are withheld whole, so one deal's age never wears a statistic's name."
     },
     {
       "id": "M05",
@@ -70,6 +70,132 @@
       "question": "Why are we losing, and how many deals support each recorded reason?",
       "tool": "run_analytics_query",
       "expects": "One row per reason somebody WROTE on the deal, counted. The won cohort is the discriminator: a won deal carries no reason, so an engine that skipped the status filter reports a bucket of wins under no reason at all and reads as the commonest cause of loss."
+    },
+    {
+      "id": "M01",
+      "persona": "team manager",
+      "question": "How much of my team's pipeline is commit, best case and pipeline right now?",
+      "tool": "run_analytics_query",
+      "expects": "One row per forecast category, in base currency. A commit deal past its close date reads as slipped, never as commit, and a colleague outside the team stays out."
+    },
+    {
+      "id": "M02",
+      "persona": "team manager",
+      "question": "How much of my team's open pipeline is due to close in each month?",
+      "tool": "run_analytics_query",
+      "expects": "One row per expected-close month over open deals only. A deal with no close date has its own row, and a closed or off-team deal stays out."
+    },
+    {
+      "id": "M03",
+      "persona": "team manager",
+      "question": "Which of my team's committed deals have slipped?",
+      "tool": "run_analytics_query",
+      "expects": "A commit or best-case deal with a past or missing close date counts. A pipeline-category deal with a past date does not, and neither does an off-team deal."
+    },
+    {
+      "id": "M09",
+      "persona": "team manager",
+      "question": "Who on my team owns the most open pipeline?",
+      "tool": "run_analytics_query",
+      "expects": "One row per teammate, ranked by open pipeline value. An owner outside the team is never named."
+    },
+    {
+      "id": "M10",
+      "persona": "team manager",
+      "question": "Which reps on my team won the most this quarter?",
+      "tool": "run_analytics_query",
+      "expects": "Wins closed this quarter only. A loss, a win from last quarter and a win by an off-team rep stay out."
+    },
+    {
+      "id": "G04",
+      "persona": "rep",
+      "question": "What did I win and lose this month?",
+      "tool": "run_analytics_query",
+      "expects": "Only the rep's own closed deals in the month. win-loss covers the company by default, so a colleague's deals and the rep's own older wins both have to stay out."
+    },
+    {
+      "id": "G08",
+      "persona": "management",
+      "question": "How much did we win this quarter compared with last quarter?",
+      "tool": "run_analytics_query",
+      "expects": "Won money in base currency per quarter. A lost deal never counts as won money."
+    },
+    {
+      "id": "G10",
+      "persona": "management",
+      "question": "Which customers have the most open deals?",
+      "tool": "run_analytics_query",
+      "expects": "One row per company over open deals only. A company whose deals are all closed is not listed."
+    },
+    {
+      "id": "G11",
+      "persona": "management",
+      "question": "How many leads do we have in each status, including the ones we promoted or disqualified?",
+      "tool": "run_analytics_query",
+      "expects": "The promoted and disqualified statuses are counted although those leads are archived."
+    },
+    {
+      "id": "G05",
+      "persona": "rep",
+      "question": "How many of my held meetings became opportunities?",
+      "tool": "run_report",
+      "expects": "Held meetings credited to the asker only. A prospect handed on twice counts once, a deal at the same company converts nothing, and the report needs the lead read grant."
+    },
+    {
+      "id": "G09",
+      "persona": "management",
+      "question": "How quickly do we reply to new leads?",
+      "tool": "read_reporting",
+      "expects": "The median hours from arrival to first response. An imported lead is not timed, and a lead nobody has answered is left out rather than read as zero."
+    },
+    {
+      "id": "G06",
+      "persona": "rep",
+      "question": "Which of my deals are slipping this week, and why?",
+      "tool": "read_attention",
+      "expects": "Each listed deal carries its evidence. A quiet deal with no next step says so, a quiet deal with a booked meeting ahead does not, and a deal touched today is not listed."
+    },
+    {
+      "id": "G07",
+      "persona": "rep",
+      "question": "What have I promised customers that is still open?",
+      "tool": "read_attention",
+      "expects": "Our open promises with their due dates. A promise the customer made is never listed as ours."
+    },
+    {
+      "id": "F01",
+      "persona": "management",
+      "question": "What do we expect to close this quarter, and how much of it is committed?",
+      "tool": "read_forecast",
+      "expects": "The open value of the quarter, its probability-weighted value, the best case and the committed part. A colleague's deal on another team and a deal due in a later period stay out."
+    },
+    {
+      "id": "F02",
+      "persona": "team manager",
+      "question": "Why did my team's forecast change between last week and today?",
+      "tool": "read_forecast",
+      "expects": "The opening and closing figure of the two snapshots, and the change split into the deals that grew, the deals that arrived and the deals that left. The parts add up to the whole change."
+    },
+    {
+      "id": "F03",
+      "persona": "management",
+      "question": "Can I trust the numbers behind the forecast?",
+      "tool": "read_forecast",
+      "expects": "How many deals the input check read, and a status that says incomplete while a source is not connected. A forecast with an unchecked source does not read as clean."
+    },
+    {
+      "id": "F04",
+      "persona": "team manager",
+      "question": "Which deals in the forecast have problems I should fix?",
+      "tool": "read_forecast",
+      "expects": "Each broken rule on each deal, with its severity and the value at stake. A deal that breaks none is not listed."
+    },
+    {
+      "id": "F05",
+      "persona": "management",
+      "question": "Which sources feed the forecast, and are they connected?",
+      "tool": "read_forecast",
+      "expects": "Each source with its state. A mailbox nobody connected is said to be not connected rather than left out."
     }
   ]
 }

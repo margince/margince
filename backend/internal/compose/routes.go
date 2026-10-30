@@ -77,7 +77,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// never recorded as "the" response for a key (the approved retry is
 	// the same request under the same key).
 	return contractRouter(srv,
-		agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), tagSeam(pool), gate),
+		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), gate),
 		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the
 		// idempotency replay: a refusal that cost a database read is a slow
@@ -208,17 +208,18 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 			),
 		),
 	)
+
 	// Which public routes carry a credential in the path — and so must not
 	// have it written to any log — is stated once in
 	// shared/kernel/capabilitypath, not named at each mount. The booking
-	// page's slug is deliberately absent from that list; it is a public
-	// identifier the host hands out, not a credential.
+	// page's slug is on that list because it is the only admission check on a
+	// route that writes.
 	// boundByResponseDeadline sits OUTSIDE the handler chain because a
 	// write deadline has to be set before anything starts writing — including
 	// the access log's own wrapper, which is what holds the ResponseWriter the
 	// controller reaches through.
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, authH.Middleware(publicEdge)))))
+		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728

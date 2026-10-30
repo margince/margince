@@ -100,7 +100,7 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
-	reminders, err := dueRemindersArm(ctx, in, arg)
+	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
@@ -128,6 +128,9 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		return nil, "", nil, nil, err
 	}
 	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
+	if where, err = appendAwaitingOutcomeClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
 	where = append(where, activityRowClauses(in, arg)...)
@@ -171,11 +174,20 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}
+	if in.SourceSystem != nil {
+		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
+	}
+	if in.AnswersThem {
+		where = append(where, answersThemSQL)
+	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
 	}
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
+	}
+	if in.TeamQueueOf != nil {
+		where = append(where, teamQueueClause(in.TeamQueueOf, arg))
 	}
 	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
 		where = append(where, clause)
@@ -186,24 +198,32 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.UnhostedMeetings {
 		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.AsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
 	return append(where, openTaskWindowClauses(in, reminders, arg)...)
 }
 
 // dueRemindersArm is the caller's due reminders as one clause, or empty when
-// the read asks for none. The widening arm carries the content gate itself,
-// because the rest of the Worklist read is discover-gated.
-func dueRemindersArm(ctx context.Context, in ListActivitiesInput, arg func(any) int) (string, error) {
-	if !in.RemindersDue && !in.OrRemindersDue {
+// the read asks for none. The widening arm must not read past the content gate.
+//
+// gated says whether the outer statement already scopes alias a. A content gate
+// there covers the arm whole. A discover gate leaves only its audience half to
+// add, since the content gate is discover and audience. Repeating the full gate
+// doubled the statement Postgres plans.
+func dueRemindersArm(ctx context.Context, in ListActivitiesInput, gated bool, arg func(any) int) (string, error) {
+	if !in.RemindersDue && !in.OrRemindersDue && !in.ExceptRemindersDue {
 		return "", nil
 	}
 	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)
-	if !in.OrRemindersDue {
+	if !in.OrRemindersDue || (gated && filtersOnContent(in)) {
 		return reminders, nil
 	}
-	readable, err := auth.ActivityContentClause(ctx, "a", arg)
+	gate := auth.ActivityContentClause
+	if gated {
+		gate = auth.ActivityAudienceArm
+	}
+	readable, err := gate(ctx, "a", arg)
 	if err != nil || readable == "" {
 		return reminders, err
 	}
@@ -221,7 +241,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.Cursor == nil || *in.Cursor == "" {
 		return "", nil
 	}
-	if in.RequestReviewAsOf != nil {
+	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
 	return sorted.KeysetClause(*in.Cursor, arg)
@@ -236,6 +256,9 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 // shrink that set further.
 func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
+	if in.InteractionsAsOf != nil {
+		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
@@ -256,10 +279,8 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
-	if in.AwaitingOutcome {
-		// NULL counts as awaiting: a captured calendar event carries no status,
-		// and excluding it would empty this question on a connected calendar.
-		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
+	if in.OpenStatusOnly {
+		where = append(where, openMeetingStatusSQL)
 	}
 	return where
 }
@@ -295,6 +316,6 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
 }

@@ -274,7 +274,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
 		WithContactArrivals(contactArrivalTeller{
-			store: contacts.NewStore(InstallationDB(pool)).
+			store: newContactsStore(InstallationDB(pool)).
 				WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), cfg.logger())),
 			log: cfg.logger(),
 		}).

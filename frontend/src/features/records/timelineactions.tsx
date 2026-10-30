@@ -14,9 +14,11 @@
 import { type ReactNode, useState } from "react";
 
 import type { components } from "../../api/schema";
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
@@ -47,35 +49,29 @@ type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
 type AudienceMember = components["schemas"]["AudienceMember"];
 
-// The per-row action cluster the 360 timelines mount in each entry's action
-// slot.
-//
-// rowAnswer picks the verb: Reply on mail, Write email on any other row the
-// server says it can address (`offers_email`).
-//
-// Relink, because a row on a 360 timeline is already linked to the entity whose
-// timeline renders it. Re-filing it to the right record always means something.
-//
-// It owns the two open states so the timeline mapper stays presentational.
-//
-// `extra` holds the contact page's meeting brief and Call; it renders before
-// Relink, so the row's own verbs lead.
-export function TimelineActions({
-  activity,
-  entityType,
-  entityId,
-  contactId,
-  extra,
-}: Readonly<{
+type RowVerbProps = Readonly<{
   activity: Activity;
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
   extra?: (activity: Activity) => ReactNode;
-}>) {
+}>;
+
+// The verbs that answer one activity: open its task, reply to it or write
+// about it, take up its invitation, and the caller's own `extra`. A timeline
+// row leads with these. The "Just in" panel draws these alone: it asks how to
+// answer what came in, not where it is filed.
+//
+// rowAnswer picks the verb: Reply on mail, Write email on any other row the
+// server says it can address (`offers_email`).
+export function RowAnswerActions({
+  activity,
+  entityType,
+  entityId,
+  contactId,
+  extra,
+}: RowVerbProps) {
   const t = useT();
-  const [relink, setRelink] = useState(false);
-  const writable = useCanWriteRecord("activity", activity);
   return (
     <>
       {activity.kind === "task" && activity.content_state !== "withheld" && (
@@ -106,57 +102,97 @@ export function TimelineActions({
           {t(`scheduling.${activity.invitation_status}`)}
         </Button>
       )}
+      <RecordMeetingOutcome
+        activity={activity}
+        invalidateKeys={entityTimelineKeys(entityType, entityId)}
+      />
       {extra?.(activity)}
-      <ActivityFilesAction activity={activity} />
-      <Button
-        onClick={() => setRelink(true)}
-        reason={writable ? undefined : t("activity.notYoursToChange")}
+    </>
+  );
+}
+
+// The per-row verbs of a 360 timeline: the answer verbs, then one menu for
+// filing and audience. One line in one place on every row. The menu mounts its
+// verbs and their dialogs on first open, so a page of rows does not pay for them.
+// Its name carries the row's subject, so a screen reader's button list can tell
+// the rows apart.
+export function TimelineActions(props: RowVerbProps) {
+  const { activity, entityType, entityId } = props;
+  const t = useT();
+  return (
+    <>
+      <RowAnswerActions {...props} />
+      <OverflowMenu
+        label={
+          activity.subject
+            ? t("record.moreActionsFor", { subject: activity.subject })
+            : t("record.moreActions")
+        }
       >
-        {t("compose.relink")}
-      </Button>
-      {/* Every row on a project's timeline is filed under that project, so this
-          is the one surface where taking the filing back is always meaningful. */}
-      {entityType === "project" && (
-        <ProjectFilingAction
-          activityId={activity.id}
-          projectId={entityId}
-          subject={activity.subject ?? undefined}
-        />
-      )}
-      {/* An EMAIL's audience is changed from the message, in the drawer, where
-          the server states which write it would accept as `change_mode` and the
-          editor opens on the set already standing. The row used to decide that
-          here by testing `captured_by` for a `connector:` prefix — a backend
-          ownership rule spelled in display code, in a second language, where
-          the next change to what makes an audience derived would not find it.
-
-          It could not simply be deleted: `change_mode` costs two per-row
-          authorization queries (EnsureActivityWritable and callerIsSenderSeat
-          in activities/emailaccess.go), which is why it rides the presentation
-          and not the summary a twenty-row page ships. What removes the guess is
-          having somewhere better to ask, and the drawer is that.
-
-          Every other kind is offered it, and AudienceAction itself withholds
-          it where the server says the audience was derived, or where
-          `captured_by` says an import wrote the row at all. That claim used to
-          live here as "its audience is never derived", which was false for a
-          connector-captured `message` and is the defect this comment now
-          records rather than repeats. */}
-      {activity.kind !== "email" && (
-        <AudienceAction
+        <ActivityFilesAction activity={activity} />
+        <RelinkAction
           activity={activity}
           entityType={entityType}
           entityId={entityId}
         />
-      )}
+        {/* Every row on a project's timeline is filed under that project, so
+            this is the one surface where taking the filing back is always
+            meaningful. */}
+        {entityType === "project" && (
+          <ProjectFilingAction
+            activityId={activity.id}
+            projectId={entityId}
+            subject={activity.subject ?? undefined}
+          />
+        )}
+        {/* An EMAIL's audience is changed from the message, in the drawer,
+            where the server states which write it would accept as
+            `change_mode`; that costs two per-row authorization queries, which
+            a twenty-row page does not ship. Every other kind is offered it
+            here, and AudienceAction withholds it where the audience was
+            derived or an import wrote the row. */}
+        {activity.kind !== "email" && (
+          <AudienceAction
+            activity={activity}
+            entityType={entityType}
+            entityId={entityId}
+          />
+        )}
+      </OverflowMenu>
+    </>
+  );
+}
+
+// Relink, because a row on a 360 timeline is already linked to the entity whose
+// timeline renders it. Re-filing it to the right record always means something.
+function RelinkAction({
+  activity,
+  entityType,
+  entityId,
+}: Readonly<{
+  activity: Activity;
+  entityType: RelinkKind;
+  entityId: string;
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const writable = useCanWriteRecord("activity", activity);
+  return (
+    <>
+      <Button
+        onClick={() => setOpen(true)}
+        reason={writable ? undefined : t("activity.notYoursToChange")}
+      >
+        {t("compose.relink")}
+      </Button>
       <RelinkModal
         activityId={activity.id}
         activityVersion={activity.version}
         threadKey={activity.thread_key}
         entityType={entityType}
         entityId={entityId}
-        open={relink}
-        onClose={() => setRelink(false)}
+        open={open}
+        onClose={() => setOpen(false)}
       />
     </>
   );

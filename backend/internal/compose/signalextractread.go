@@ -122,6 +122,11 @@ type settledThread struct {
 	// the window it chose is the only thing that knows.
 	ReadFromNow   *time.Time
 	ReadFromIDNow *ids.UUID
+	// Oldest and OldestID are the thread's own lower end as the queue measured
+	// it: the pair threadHasMoved holds the cursor against. Nil outside the
+	// queue, where no cursor is written.
+	Oldest   *time.Time
+	OldestID *ids.UUID
 	// PrivateTo is the one reader this conversation answers to, or the zero
 	// value when every message on it is workspace-readable.
 	//
@@ -239,8 +244,9 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		var privateTo *ids.UUID
 		if err := rows.Scan(&thread.Key, &thread.CompanyID,
 			&thread.Newest, &thread.Count, &privateTo,
-			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
-			return nil, err
+			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID,
+			&thread.Oldest, &thread.OldestID); err != nil {
+			return nil, fmt.Errorf("read a thread due for a read: %w", err)
 		}
 		if privateTo != nil {
 			thread.PrivateTo = *privateTo
@@ -248,7 +254,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		due = append(due, thread)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list the threads due for a read: %w", err)
 	}
 	for i := range due {
 		messages, err := threadMessages(ctx, tx, &due[i])

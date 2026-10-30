@@ -175,7 +175,7 @@ func (inertRetriever) AssembleContext(context.Context, datasource.EntityRef, ret
 func fullRegistry(t *testing.T) *Registry {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil, nil)
+	RegisterCoreTools(r, nil, nil, nil, nil, nil, nil)
 	RegisterRecordSearchTool(r, nil, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
 		return RecordSearchPage{}, nil
 	})
@@ -184,6 +184,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterPipelineTool(r, func(context.Context, bool) ([]Pipeline, error) { return nil, nil })
 	RegisterReportTool(r, nil, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, nil)
+	RegisterReportDraftTool(r, nil)
 	RegisterAnalyticsQueryTool(r, nil)
 	RegisterReportBlocksTool(r, NewReportBlocksResource(BlockGrammar{}))
 	RegisterForecastTool(r, nil)
@@ -191,7 +192,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, inertLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
@@ -261,6 +262,18 @@ func fullRegistry(t *testing.T) *Registry {
 // walks that only need a tool's SPEC and argument shape: they never reach a
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
+
+func (inertLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
+	return MeetingPreparationResult{}, false, nil
+}
+
+func (inertLifecycle) Confirm(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
+
+func (inertLifecycle) Withdraw(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
 
 func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, nil

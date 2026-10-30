@@ -114,6 +114,7 @@ type Meeting struct {
 	icalUID         string
 	subject         string
 	body            string
+	agenda          string
 	masked          bool
 	occurredAt      time.Time
 	allDay          bool
@@ -141,6 +142,7 @@ func Classify(ev Event, owner string) Meeting {
 		icalUID:         strings.TrimSpace(ev.ICalUID),
 		subject:         strings.TrimSpace(ev.Subject),
 		body:            body,
+		agenda:          agendaFingerprint(ev.Description),
 		masked:          masked,
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
@@ -237,6 +239,7 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 			Body:    m.body,
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
+			AgendaFingerprint: m.agenda,
 			OccurredAt:        m.occurredAt,
 			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,

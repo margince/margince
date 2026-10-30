@@ -88,10 +88,6 @@ The repeated request can still be refused:
 | `403 approval_token_invalid` | A different body, a rejected approval, one past its 15 minutes, or a second use. |
 | `409 version_skew` | The record changed after the approval. |
 
-An update that touches fields a human wrote last applies the other fields and answers `200` with a
-`staged_approval` member. Its `approval_id`, `fields` and `replay` name what waits and the body to
-send again once it is approved.
-
 ## What the server sets
 
 The server stamps `captured_by` from the passport and ignores it in a request body. `source`, which

@@ -142,9 +142,12 @@ function PastEmailService({
 function LastSynced({ conn }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
   const { locale } = useLocale();
-  return conn.last_synced_at
+  if (conn.last_success_at === undefined) {
+    return t("connectors.syncTimeUnknown");
+  }
+  return conn.last_success_at
     ? t("connectors.lastSynced", {
-        at: formatDateTime(conn.last_synced_at, locale, viewerZone()),
+        at: formatDateTime(conn.last_success_at, locale, viewerZone()),
       })
     : t("connectors.neverSynced");
 }

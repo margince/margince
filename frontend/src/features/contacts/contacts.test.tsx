@@ -207,13 +207,13 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     render(<ContactsScreen />);
 
     const company = await screen.findByRole("link", { name: "Brandt AG" });
-    expect(company.getAttribute("href")).toBe("#/companies/o-1");
+    expect(company.getAttribute("href")).toBe("/#/companies/o-1");
     // The row's own identity link still goes to the contact. Asserting BOTH is
     // what says these are two destinations rather than one of them having
     // quietly taken the other's place.
     const links = await screen.findAllByRole("link");
     const hrefs = links.map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/contacts/p-1");
+    expect(hrefs).toContain("/#/contacts/p-1");
   });
 
   it("renders the honest error state with the RFC7807 detail", async () => {

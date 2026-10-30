@@ -122,7 +122,8 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	in.Address = req.Address
 	in.Emails = contactEmailInputs(req.Emails)
 	in.Phones = contactPhoneInputs(req.Phones)
-	return in, nil
+	in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source)
+	return in, err
 }
 
 // contactEmailInputs maps the contract's addresses onto the store's, for both
@@ -402,6 +403,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
+		Industry:            req.Industry,
 		LinkedInURL:         req.LinkedinUrl,
 		SourceSystem:        req.SourceSystem,
 		SourceID:            req.SourceId,
@@ -464,6 +466,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		Title:               req.Title,
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
+		Industry:            req.Industry,
 		Source:              req.Source,
 		Origin:              req.Origin,
 		OriginDetail:        req.OriginDetail,

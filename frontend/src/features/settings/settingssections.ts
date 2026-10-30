@@ -120,7 +120,11 @@ export const SETTINGS_SECTIONS = {
   ],
   members: [],
   teams: [],
-  roles: ["roles.title"],
+  roles: [
+    "roles.title",
+    "sharedMergeReviews.title",
+    "sharedMergeReviews.switch",
+  ],
   seats: ["license.seats.title", "license.seats.inUse"],
   pipelines: [
     "pipeline.catalog",
@@ -163,10 +167,10 @@ export const SETTINGS_SECTIONS = {
   integrations: [
     "provider.title",
     "financeSource.title",
-    "webForms.title",
     "webhooks.title",
     "connectors.telegramTitle",
   ],
+  "web-forms": ["webForms.title"],
   knowledge: ["knowledge.title"],
   import: [
     "import.hub.title",

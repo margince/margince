@@ -20,8 +20,7 @@
 }
 .record-split-details,
 .record-split-sheet {
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   min-inline-size: 0;
@@ -116,6 +115,21 @@
   line-clamp: 3;
   overflow: hidden;
 }
+/* The name as its own edit button, in the heading's type at rest and open. */
+.record-split-rename {
+  flex: 1;
+  min-inline-size: 0;
+  font: var(--fontHeadingLarge);
+}
+.record-split-rename .record-split-name {
+  padding-inline: var(--space-1);
+  margin-inline: calc(-1 * var(--space-1));
+}
+.record-split-rename .inline-editable,
+.record-split-rename .input {
+  font: inherit;
+  color: inherit;
+}
 .record-split-lines {
   display: flex;
   flex-direction: column;
@@ -129,25 +143,21 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The verbs as one bordered bar of tiles, glyph over word, sharing the width.
-   A glyph-only verb shows its accessible name as the word, so the tile and
-   the screen reader say one thing. The one filled verb runs full width above
-   the tiles; a refusal sentence the verbs point at drops under them. */
+/* The verbs as one row of tiles, glyph over word, sharing the width, with no
+   box of their own. A glyph-only verb shows its accessible name as the word, so
+   the tile and the screen reader say one thing. The one filled verb runs full
+   width above the tiles; a refusal sentence the verbs point at drops under. */
 .record-split-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 0;
-  padding: 2px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-control);
-  background: var(--bgElevated);
 }
-/* Every tile starts from one basis, larger than any tile's own padding and
-   small enough that six fit the card, so the bar shares out equal widths
-   whether a verb is a bare button or wraps one. */
+/* A one-pixel basis keeps every tile on one row in equal widths, however
+   narrow the sheet; a wider one wrapped a verb or two onto a ragged second
+   row. Not zero, so the full-width filled verb still breaks a row of its own. */
 .record-split-verbs > * {
-  flex: 1 1 var(--space-10);
+  flex: 1 1 1px;
   display: flex;
   min-inline-size: 0;
 }
@@ -163,6 +173,9 @@
   justify-content: center;
   gap: var(--space-1);
   inline-size: auto;
+  /* Overrides the 6rem floor every .btn carries, which otherwise held Log and
+     Task wider than their neighbours whenever base.css loaded last. */
+  min-inline-size: 0;
   min-block-size: var(--space-12);
   block-size: 100%;
   padding: var(--space-2) 0;
@@ -170,7 +183,7 @@
   border-color: transparent;
   border-inline-width: 0;
   box-shadow: none;
-  background: var(--bgElevated);
+  background: var(--ground);
   font: var(--fontBodySmall);
   text-align: center;
   white-space: nowrap;
@@ -202,7 +215,7 @@
   background: var(--borderSubtle);
 }
 .record-split-verbs .btn:not(.btn-primary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full
@@ -219,11 +232,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The filled verb sits inset in the bar, with the same room to the bar's edge
+   as to the tiles under it, so it never presses against the border. */
+.record-split-verbs:has(> .btn-primary, > .btn-with-reason > .btn-primary) {
+  padding-block-start: var(--space-2);
+  padding-inline: var(--space-2);
+}
 .record-split-verbs > .btn-primary,
 .record-split-verbs > .btn-with-reason:has(> .btn-primary) {
   flex-basis: 100%;
   order: -1;
   justify-content: center;
+  margin-block-end: var(--space-2);
 }
 .record-split-verbs > .btn-with-reason:has(> .btn-primary) {
   flex-direction: column;
@@ -310,7 +330,7 @@
   display: inline;
   min-inline-size: 0;
   padding: 0;
-  background: var(--pane);
+  background: var(--ground);
   color: var(--textSecondary);
   font-weight: var(--fontWeightRegular);
 }

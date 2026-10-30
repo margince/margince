@@ -24,8 +24,29 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
   onSubmit: (answer: ResolveAnswer, dealId?: string) => void;
 };
 
+// The answers a customer review takes, as the server accepts them
+// (assurance.ReviewOutcomes). The sheet words them as a rep would: the
+// customer is back, asked to wait, the value is right anyway, or it is lost.
+const reviewOutcomes = new Set([
+  "fixed_record",
+  "remind_later",
+  "value_correct",
+  "not_relevant",
+]);
+
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
+  const t = useT();
+  if (props.check?.type === "deal_viability") {
+    return (
+      <ResolveSheet
+        {...props}
+        labels={reviewLabels(t, props.labels)}
+        asksExpiry={(outcome) => outcome !== "not_relevant"}
+        context={<CheckFacts check={props.check} />}
+      />
+    );
+  }
   if (props.check?.type !== "unlinked_signal") {
     return (
       <ResolveSheet
@@ -38,6 +59,34 @@ export function InputCheckAnswerSheet(props: Readonly<Props>) {
     throw new Error("The app shell must supply review actions");
   }
   return <SignalCheckAnswerSheet {...props} actions={actions} />;
+}
+
+function reviewLabels(
+  t: ReturnType<typeof useT>,
+  labels: Props["labels"],
+): Props["labels"] {
+  const words: Partial<Record<string, { label: string; description: string }>> =
+    {
+      fixed_record: {
+        label: t("review.revive"),
+        description: t("review.reviveHelp"),
+      },
+      remind_later: {
+        label: t("review.wait"),
+        description: t("review.waitHelp"),
+      },
+      not_relevant: {
+        label: t("review.closeLost"),
+        description: t("review.closeLostHelp"),
+      },
+    };
+  return {
+    ...labels,
+    remindAt: t("review.waitUntil"),
+    outcomes: labels.outcomes
+      .filter((outcome) => reviewOutcomes.has(outcome.value))
+      .map((outcome) => ({ ...outcome, ...words[outcome.value] })),
+  };
 }
 
 function SignalCheckAnswerSheet({

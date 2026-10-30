@@ -125,6 +125,12 @@ function Configured({ intent, children }) { const cfg = useCfg(); return <Modal 
 function Cfgd({ tone }) { const cfg = useCfg(); return <div className={cfg.tone}><p /></div>; }
 function fields() { return <><p /><Field /></>; }
 const held = <><p /><Field /></>;
+function Clo({ tone }) { const cls = () => tone; return <div className="s"><p /><div className={cls()} /></div>; }
+function Memoed({ tone }) { const cls = useMemo(() => tone, []); return <div className="s"><p /><div className={cls} /></div>; }
+function Keyed(props) { return <div className="s"><p /><div className={props["className"]} /></div>; }
+function Destr(props) { const { className } = props; return <div className="s"><p /><div className={className} /></div>; }
+const LzModal = lazy(() => import("./modal").then((m) => ({ default: m.Modal })));
+const LzRouted = lazy(routed(() => import("./modal").then((m) => ({ default: m.Modal }))));
 export { Modal as Pane };`;
 const keysOf = (source: ts.SourceFile) => dialogSet([source], dialogSet());
 // Fixture text writes an interpolation as `#{…}`, so no string here reads as one.
@@ -275,6 +281,22 @@ const A = () => <><Drawer /><div role="dialog" /><Trigger /><Typed /><S2 /><S3 /
     expect(textCensus([text]).dialogs).toBe(9);
     const trailing = `${text}\nconst B = () => <p />; // <Modal> after code`;
     expect(textCensus([trailing]).dialogs).toBe(9);
+  });
+
+  it("reads a tag in its own scope, not a same-named one beside it", () => {
+    const text = `function A() { const Icon = Sun; return <Icon />; }
+function B({ Icon }) { return <Icon />; }
+function C() { const Icon = Moon; return <Icon />; }
+function Sun() { return null; }
+function Moon() { return null; }`;
+    const tags = descendants(parseSource(AT, text)).filter(
+      ts.isJsxSelfClosingElement,
+    );
+    const named = tags.map((tag) => {
+      const def = defOf(tag);
+      return def && ts.isFunctionDeclaration(def) ? def.name?.text : undefined;
+    });
+    expect(named).toEqual(["Sun", undefined, "Moon"]);
   });
 
   it("follows a guest's guest into a third file", () => {
@@ -547,6 +569,12 @@ export const Named = Pick;`,
     ${"reads an alias of a prop as unknown, not the file's own name"}   | ${inModal("<Shadow />")}                                                                                                  | ${"no rows"}              | ${`${STACK} ${MARGIN}`}
     ${"judges a component again where it hands itself new props"}       | ${inModal("<Swap />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"judges a component that renders only itself once"}               | ${inModal("<Loop />")}                                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
+    ${"reads the classes a local function returns"}                     | ${inModal('<Clo tone="m" />')}                                                                                            | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads the classes a useMemo returns"}                            | ${inModal('<Memoed tone="m" />')}                                                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads a class read off the props by a literal key"}              | ${inModal('<Keyed className="m" />')}                                                                                     | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads a class unpacked from the props in the body"}              | ${inModal('<Destr className="m" />')}                                                                                     | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads a lazy component as the one it loads"}                     | ${'<LzModal intent="form"><p /><Field /></LzModal>'}                                                                      | ${"flush"}                | ${""}
+    ${"reads a lazy loader a helper wraps"}                             | ${'<LzRouted intent="form"><p /><Field /></LzRouted>'}                                                                    | ${"flush"}                | ${""}
     ${"judges a component that flips its own props and ends"}           | ${inModal('<Alt k="f" />')}                                                                                               | ${"doubled"}              | ${HOSTED_STACK}
   `("$spec", ({ jsx, verdict, sheet }: RowCase) => {
     expect(plantedRows(jsx, sheet ? ownersIn([sheet]) : owners())).toBe(

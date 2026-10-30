@@ -20,9 +20,10 @@ import (
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
-	mailIdentities map[string][]string
-	Cursor         *string
-	Limit          *int
+	InteractionsAsOf *time.Time
+	mailIdentities   map[string][]string
+	Cursor           *string
+	Limit            *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.
@@ -34,7 +35,11 @@ type ListActivitiesInput struct {
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
-	EntityType      *string
+	// SourceSystem narrows to rows one connector wrote, such as website forms.
+	SourceSystem *string
+	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
+	AnswersThem bool
+	EntityType  *string
 	// note: EntityType+EntityID is the polymorphic activity_link filter —
 	// the target is ANY entity kind, so the id stays untyped (rule 6).
 	EntityID *ids.UUID
@@ -65,8 +70,10 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
-	// TaskAsOf is required for transaction reads filtered by assignee; store reads supply their clock.
-	TaskAsOf *time.Time
+	// AsOf is the page's instant: open tasks, reminders and each row's
+	// awaiting_outcome are judged at it. Store reads supply their clock; a
+	// transaction read filtered by assignee must set it.
+	AsOf *time.Time
 
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
@@ -80,6 +87,9 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
+	// TeamQueueOf narrows to the open tasks one of these seats holds, or nobody
+	// holds: the rows a team view keeps. Nil leaves the read unnarrowed.
+	TeamQueueOf []ids.UUID
 	// WorklistAsOf marks the read as the Worklist's, judged at this instant. It
 	// drops automatic response escalations unsupported by an inquiry, and open
 	// tasks aged out of the Worklist (worklistageout.go) the reader did not pin.
@@ -142,15 +152,18 @@ type ListActivitiesInput struct {
 	// DayDates holds a day entry to a range of dates instead, as anchors: a day
 	// has no hour to fall inside the range above. Nil leaves days to that range.
 	DayDates *DayDates
-	// AwaitingOutcome narrows to meetings whose status is still open: booked,
-	// or NULL because capture writes calendar events with no status. Both
-	// meeting lanes set it so the status filter runs before the limit. A page
-	// cut first fills with held or canceled rows and hides the next real one.
-	AwaitingOutcome bool
+	// OpenStatusOnly keeps meetings whose status is still open: booked, or NULL
+	// because capture writes calendar events with no status. It says nothing of
+	// the start; AwaitingOutcomeAsOf does. The filter runs before the limit, so
+	// held or canceled rows cannot fill a page and hide the next open one.
+	OpenStatusOnly bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
 	// internal stand-up owes no customer follow-up.
 	CustomerMeetingsOnly bool
+	// AwaitingOutcomeAsOf keeps the meetings that owe an outcome at that instant
+	// (awaitingOutcomeClause), the rule each Activity read stamps as awaiting_outcome.
+	AwaitingOutcomeAsOf *time.Time
 	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
 	// answers for the Worklist: the newest inbound message per thread that
 	// nobody has answered, as of this instant. Nil means the filter is off.
@@ -164,7 +177,9 @@ type ListActivitiesInput struct {
 	// WaitingReply asks for the same narrowing judged now. The store reads its
 	// own clock, so the wait and its page judge one snapshot.
 	WaitingReply bool
-	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
+	// RequestCurrentAsOf admits confirmed current requests before the page limit.
+	RequestCurrentAsOf *time.Time
+	// RequestReviewAsOf reads request evidence independently of current-work admission.
 	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads
@@ -217,6 +232,9 @@ type ListActivitiesInput struct {
 	// content-gated, because a reminder offers the task to act on.
 	RemindersDue   bool
 	OrRemindersDue bool
+	// ExceptRemindersDue drops the caller's due reminders from the window. A
+	// reminded task is today's work, so the upcoming count leaves it out.
+	ExceptRemindersDue bool
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string

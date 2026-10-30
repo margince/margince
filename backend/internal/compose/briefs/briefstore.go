@@ -323,6 +323,36 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 	return run, nil
 }
 
+// LatestCutoff answers the as_of of the reader's run for today, under the
+// same gate, reader and local day as LatestRun. It reads no items and writes
+// nothing. A surface that only dates a window from the brief has not opened
+// it, so it must not record an open or resurface a snooze.
+func (e *BriefEngine) LatestCutoff(ctx context.Context, now time.Time) (time.Time, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return time.Time{}, err
+	}
+	userID, err := briefUser(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	var asOf time.Time
+	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		day, err := localDay(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+		err = tx.QueryRow(ctx, `SELECT as_of FROM brief_run WHERE user_id = $1 AND local_day = $2`, userID, day).Scan(&asOf)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return asOf, nil
+}
+
 // runSelect is the run's own columns, in one place.
 //
 // Shared by the day read above and the mail claim's read of one run by id
@@ -372,16 +402,16 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	}
 	// The activities inside the item are references too, re-checked here for
 	// the same reason the deal is.
-	evidence, returnedWith, err := servedActivityRefsSQL(ctx, arg)
+	with, evidence, returnedWith, err := servedActivityRefsSQL(ctx, arg, fmt.Sprintf("ri.brief_run_id = $%d", runPos))
 	if err != nil {
 		return nil, err
 	}
-	q := fmt.Sprintf(`
+	q := fmt.Sprintf(`%s
 		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, %s,
 		       bi.returned_after_dismissal_on, %s
 		FROM brief_item bi
 		JOIN deal d ON d.id = bi.deal_id
-		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed' AND d.archived_at IS NULL`, evidence, servedFindingSQL(evidence), returnedWith, runPos)
+		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed' AND d.archived_at IS NULL`, with, evidence, servedFindingSQL(evidence), returnedWith, runPos)
 	if scope != "" {
 		q += " AND " + scope
 	}

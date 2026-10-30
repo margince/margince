@@ -14,8 +14,14 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CustomField } from "../../components/customfields.form";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { draftFor, webFormBodyOf } from "./webformdrawer";
+import {
+  draftFor,
+  missingFields,
+  narrowedOrigins,
+  webFormBodyOf,
+} from "./webformdrawer";
 import type { WebForm } from "./webformkinds";
 import { WebFormsCard } from "./webforms";
 import { browserSnippet, intakeUrlOf, serverSnippet } from "./webformsnippet";
@@ -67,6 +73,35 @@ const budgetField: CustomField = {
   version: 1,
 };
 
+// The colleagues an owner picker offers: a colleague, plus an agent seat the
+// server refuses as an owner.
+const roster = {
+  data: [
+    {
+      id: "u-42",
+      display_name: "Jane Doe",
+      email: "jane@acme.test",
+      is_agent: false,
+    },
+    {
+      id: "agent-1",
+      display_name: "Runner Bot",
+      email: "bot@acme.test",
+      is_agent: true,
+    },
+  ],
+  page: { has_more: false },
+};
+
+// A colleague who left: named by the names read, absent from the roster.
+const departedSeat = {
+  id: "u-gone",
+  display_name: "Max Former",
+  email: "max@acme.test",
+  is_agent: false,
+  departed: true,
+};
+
 type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 
 // The backend the card talks to: the list, plus whatever a case writes. Every
@@ -88,6 +123,12 @@ function backendFor(
     }
     if (req.method === "GET" && req.url.includes("/v1/custom-fields")) {
       return jsonResponse({ data: [budgetField] });
+    }
+    if (req.method === "GET" && new URL(req.url).pathname === "/v1/users") {
+      return jsonResponse(roster);
+    }
+    if (new URL(req.url).pathname === "/v1/users/names") {
+      return jsonResponse({ data: [...roster.data, departedSeat] });
     }
     const route = `${req.method} ${new URL(req.url).pathname}`;
     const answer = writes[route];
@@ -129,7 +170,19 @@ describe("WebFormsCard", () => {
     expect(await screen.findByText("Contact page")).toBeTruthy();
     expect(screen.getByText("https://www.acme.test")).toBeTruthy();
     expect(screen.getByText("Active")).toBeTruthy();
-    expect(screen.getByText("Website")).toBeTruthy();
+    expect(screen.getByText("Your website")).toBeTruthy();
+  });
+
+  it("marks a Webflow form that is still waiting for Webflow's secret", async () => {
+    const waiting: WebForm = {
+      ...contactForm,
+      sender: "webflow",
+      allowed_origins: [],
+      secret_configured: false,
+    };
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [waiting]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
   });
 
   it("offers no write control to a role without the integrations grants", async () => {
@@ -174,6 +227,89 @@ describe("WebFormsCard", () => {
     ).toContain("cf_budget (Budget)");
   });
 
+  it("sends each new lead to the owner picked for the form", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () =>
+        jsonResponse({ ...contactForm, owner_id: "u-42" }, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.click(screen.getByLabelText(/^Owner of new leads/));
+    await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "Jane Doe" }));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
+  });
+
+  it("names the owner each form's leads go to", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-42" }]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Jane Doe")).toBeTruthy();
+    expect(screen.getByText(/Leads go to/)).toBeTruthy();
+  });
+
+  it("says leads arrive unassigned once the form's owner left", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-gone" }]).fetch,
+    );
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    expect(
+      await screen.findByText(
+        "Max Former left, so new leads arrive unassigned",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("edit-web-form"));
+    expect(
+      await screen.findByText(
+        "Max Former (left, so new leads arrive unassigned)",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("flags every empty required field on Create and sends nothing", async () => {
+    const backend = backendFor(OPERATOR, []);
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.click(screen.getByTestId("save-web-form"));
+
+    expect(screen.getByText(en["webForms.required.name"])).toBeTruthy();
+    expect(screen.getByText(en["webForms.required.origins"])).toBeTruthy();
+    expect(backend.sent).toHaveLength(0);
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    expect(screen.queryByText(en["webForms.required.name"])).toBeNull();
+  });
+
+  it("says a page address is kept as its website", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, []).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(
+      screen.getByLabelText(/^Websites/),
+      "https://a.example/path",
+    );
+
+    expect(
+      screen.getByText(
+        "https://a.example/path is kept as https://a.example: every page of that website can post.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("shows a server form's minted secret once, with the caution", async () => {
     const created = {
       ...contactForm,
@@ -189,10 +325,7 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     await user.click(await screen.findByTestId("new-web-form"));
     await user.type(screen.getByLabelText(/^Name/), "Demo request");
-    await user.click(screen.getByRole("combobox", { name: /Sent by/ }));
-    await user.click(
-      await screen.findByRole("option", { name: "Website server" }),
-    );
+    await user.click(screen.getByRole("radio", { name: /Website server/ }));
     await user.click(screen.getByTestId("save-web-form"));
 
     expect((await screen.findByTestId("web-form-secret")).textContent).toBe(
@@ -200,6 +333,38 @@ describe("WebFormsCard", () => {
     );
     expect(backend.sent[0]?.body).not.toHaveProperty("allowed_origins");
     expect(screen.getByText(/destroys the only copy/)).toBeTruthy();
+  });
+
+  it("sets a Tally form up with no secret to bring, and says where each value goes", async () => {
+    const created = {
+      ...contactForm,
+      sender: "tally",
+      allowed_origins: [],
+      signing_secret: "mwf_for_tally",
+    };
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(created, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.click(screen.getByRole("radio", { name: /^Tally/ }));
+    await user.type(screen.getByLabelText(/^Name/), "Tally survey");
+    expect(screen.queryByLabelText(/^Signing secret/)).toBeNull();
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({ sender: "tally" });
+    expect(backend.sent[0]?.body).not.toHaveProperty("sender_secret");
+    expect((await screen.findByTestId("web-form-secret")).textContent).toBe(
+      "mwf_for_tally",
+    );
+    expect(screen.getByText(/In Tally, open the form/)).toBeTruthy();
+    expect(
+      screen.getByText(/Paste the form secret in Signing secret/),
+    ).toBeTruthy();
+    expect(screen.queryByTestId("web-form-snippet")).toBeNull();
   });
 
   it("pauses a form against the version it was read at", async () => {
@@ -245,7 +410,7 @@ describe("WebFormsCard actions", () => {
     await user.click(await screen.findByTestId("rotate-web-form-secret"));
     expect(backend.sent).toHaveLength(0);
     const confirm = await screen.findAllByRole("button", {
-      name: "Rotate secret",
+      name: "Make a new secret",
     });
     await user.click(confirm[confirm.length - 1] as HTMLElement);
 
@@ -324,14 +489,61 @@ describe("WebFormsCard actions", () => {
 });
 
 describe("web form settings", () => {
-  it("keeps a builder's stored secret when the field is left empty", () => {
-    const builder = { ...contactForm, sender: "typeform" as const };
+  it("names each required field a draft leaves empty", () => {
+    const empty = draftFor();
+    expect([...missingFields(empty).keys()]).toEqual([
+      "name",
+      "allowed_origins",
+    ]);
+    const builder = { ...empty, name: "Leads", sender: "typeform" as const };
+    expect(missingFields(builder).size).toBe(0);
+    const consent = { ...builder, consentRequired: true };
+    expect([...missingFields(consent).keys()]).toEqual(["consent_wording"]);
+  });
+
+  it("names only the entries saved as another spelling of their website", () => {
+    const draft = {
+      ...draftFor(),
+      origins:
+        "https://a.example\nhttps://b.example/\nhttps://c.example/x?y\nhttps://d.example:443\nnot a url",
+    };
+    expect(narrowedOrigins(draft)).toEqual([
+      { entry: "https://c.example/x?y", origin: "https://c.example" },
+      { entry: "https://d.example:443", origin: "https://d.example" },
+    ]);
+  });
+
+  it("sends each website as a post's Origin header spells it", () => {
+    const draft = {
+      ...draftFor(),
+      origins: "https://c.example/x?y\nhttps://d.example:443\nnot-a-url",
+    };
+    expect(webFormBodyOf(draft).allowed_origins).toEqual([
+      "https://c.example",
+      "https://d.example",
+      "not-a-url",
+    ]);
+  });
+
+  it("keeps Webflow's stored secret when the field is left empty", () => {
+    const builder = { ...contactForm, sender: "webflow" as const };
     expect(webFormBodyOf(draftFor(builder))).not.toHaveProperty(
       "sender_secret",
     );
     expect(
       webFormBodyOf({ ...draftFor(builder), senderSecret: " s3cret " }),
     ).toMatchObject({ sender_secret: "s3cret" });
+  });
+
+  it("sends the owner only when it changed, and null to unassign", () => {
+    const owned = { ...contactForm, owner_id: "u-42" };
+    expect(webFormBodyOf(draftFor(owned), owned)).not.toHaveProperty(
+      "owner_id",
+    );
+    expect(
+      webFormBodyOf({ ...draftFor(owned), ownerId: "" }, owned).owner_id,
+    ).toBeNull();
+    expect(webFormBodyOf(draftFor())).not.toHaveProperty("owner_id");
   });
 
   it("clears an emptied optional setting instead of storing blank text", () => {

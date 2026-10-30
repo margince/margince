@@ -38,11 +38,15 @@ import {
   momentumOf,
   momentumTone,
 } from "./dealstanding";
+import { openDealVerdict } from "./dealverdict";
+import { currentReplyTarget } from "./dealwaiting";
 
 type Deal = components["schemas"]["Deal"];
 
 export type DealStandingHead = Readonly<{
   verdict: StandingVerdict;
+  // The card's own call, when it made one; the verdict says it in words.
+  standing?: string;
   sources: StandingSources;
   // The instant the verdict describes; absent, the page's own read.
   readAt?: string;
@@ -65,13 +69,20 @@ export function DealHowItStands({
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
   const closed = deal.status !== "open";
-  const verdict = closedVerdict(deal, { t, locale, zone }) ?? head.verdict;
-  // A closed deal's head is read off the record now, not off the last read.
-  const readAt = closed ? inputs.asOf : (head.readAt ?? inputs.asOf);
+  const open = openDealVerdict(head.verdict, head.standing, inputs, {
+    t,
+    locale,
+    zone,
+  });
+  const verdict = closedVerdict(deal, { t, locale, zone }) ?? open;
+  // A closed deal, or a fact that replaced the card's call, is read off the
+  // record now, not off the card's last read.
+  const fromRecords = closed || open !== head.verdict;
+  const readAt = fromRecords ? inputs.asOf : (head.readAt ?? inputs.asOf);
   return (
     <HowItStands
       date={formatDayMonth(readAt, locale, zone)}
-      sources={closed ? { by: "records" } : head.sources}
+      sources={fromRecords ? { by: "records" } : head.sources}
       verdict={verdict}
       heroLayout="below"
       hero={
@@ -172,7 +183,11 @@ export function dealDims(
   if (deal.status !== "open") {
     return [committee];
   }
-  return [momentumDim(deal, words), riskDim(inputs, words), committee];
+  return [
+    momentumDim(deal, new Date(inputs.asOf), words),
+    riskDim(inputs, words),
+    committee,
+  ];
 }
 
 // What the records already flag, counted rather than scored: nothing on the
@@ -185,7 +200,7 @@ export function riskDim(
   const base = { key: "risk", label: t("deal.standing.risk") };
   const closeDays = closeWords(deal, locale, zone, t).daysLeft;
   const signals = [
-    ...(card?.reply_to
+    ...(card && currentReplyTarget(card)
       ? [{ key: "reply", title: t("deal.standing.risk.replyOwed") }]
       : []),
     ...(closeTone(deal, closeDays) === "danger"
@@ -237,8 +252,12 @@ export function riskDim(
   };
 }
 
-function momentumDim(deal: Deal, { t, locale, zone }: Words): StandingDim {
-  const momentum = momentumOf(deal);
+function momentumDim(
+  deal: Deal,
+  asOf: Date,
+  { t, locale, zone }: Words,
+): StandingDim {
+  const momentum = momentumOf(deal, zone, asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
   const base = {
     key: "momentum",

@@ -60,7 +60,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 	var subject *string
 	var dealID *ids.UUID
 	var participants []byte
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.occurred_precision, a.subject, %s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
@@ -69,7 +69,8 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`
 		  AND (%s)%s
 		ORDER BY %s, a.id
-		LIMIT 1`, room, occurredday.AheadSQL("a", bind(nowPos)), scope, projectScope(opts, arg), occurredday.StartSQL("a")), args...).
+		LIMIT 1`, room, occurredday.AheadSQL("a", bind(nowPos)), scope, projectScope(opts, arg), occurredday.StartSQL("a"))
+	err = tx.QueryRow(ctx, query, args...).
 		Scan(&activityID, &meeting.StartsAt, &meeting.OccurredPrecision, &subject, &dealID, &participants)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing booked. That IS the answer, and the strip renders "None".

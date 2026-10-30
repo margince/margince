@@ -125,7 +125,7 @@ it("neither grows focus nor links the whole queue when more pages exist", () => 
     />,
   );
   expect(
-    screen.queryByRole("button", { name: en["worklist.more"] }),
+    screen.queryByRole("button", { name: en["list.loadMore"] }),
   ).toBeNull();
   // The page header's "Show Worklist" button is Home's one way into the queue.
   expect(container.querySelector('a[href*="filter=all"]')).toBeNull();
@@ -260,7 +260,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
   expect(head?.textContent).toContain(en["visibility.team"]);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("/#/contacts/contact-sonya?from=worklist");
 });
 
 it("names the sender of a thread filed under a deal", () => {
@@ -273,7 +273,7 @@ it("names the sender of a thread filed under a deal", () => {
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
   expect(
     screen.getByRole("link", { name: "Sonya Beck" }).getAttribute("href"),
-  ).toBe("#/contacts/contact-sonya");
+  ).toBe("/#/contacts/contact-sonya?from=worklist");
 });
 
 it("claims no moments when the server withheld them", () => {
@@ -455,7 +455,7 @@ it.each(["stalled", "closing_soon", "opportunity"])(
       card
         .getByRole("link", { name: en["deal.openDeal"] })
         .getAttribute("href"),
-    ).toBe("#/deals/deal-expansion");
+    ).toBe("/#/deals/deal-expansion");
   },
 );
 

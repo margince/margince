@@ -16,7 +16,11 @@ package contacts
 // writing to could then sit on a page nobody renders. Here the whole account
 // is in hand.
 
-import "sort"
+import (
+	"sort"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+)
 
 // Engagement is one contact's state, in the five values a rep acts on.
 type Engagement string
@@ -46,30 +50,38 @@ const (
 	EngagementUntried Engagement = "untried"
 )
 
-// EngagementOf reads the state off the §4 fold: the direction counts say
-// whether each side has written inside the 90-day window, and the two last-touch
-// dates say who wrote LAST — which is what separates answered from waiting.
+// EngagementOf reads the state off the strength fold. The direction counts say who
+// wrote inside the 90-day window. Answered needs our mail after their latest,
+// because an unprompted mail nobody answered is the account's most urgent row.
 //
-// Answered requires an outbound AFTER their latest inbound, not merely both
-// directions having traffic: a contact whose only mail arrived unprompted has
-// inbound and no reply from us, and reporting that as answered dresses the
-// account's most urgent row up as a success. The window is the fold's, so a
-// conversation older than it reads as untried — deliberately, because a
-// year-old exchange is not a way in.
-//
-// The account-level state strip answers the sibling question ("whose move is
-// the ACCOUNT") with its own age thresholds; this is per contact and has none,
-// because a mail from yesterday is already theirs to be answered.
+// When their latest message is a mail, its History badge says whether we owe
+// a reply. A mail it owes nothing on, such as a calendar copy, reads answered
+// when we wrote after it. Otherwise it reads as though it had not arrived.
 func EngagementOf(rs RelationshipStrength) Engagement {
+	replied := rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound)
+	owesNothing := rs.LastInboundMove != nil && *rs.LastInboundMove != crmcontracts.EmailSummaryMoveNeedsReply
 	switch {
-	case rs.Inbound90d > 0:
-		if rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound) {
-			return EngagementAnswered
-		}
+	case rs.Inbound90d > 0 && owesNothing && !replied:
+		return engagementFromOurSide(rs)
+	case rs.Inbound90d > 0 && !replied:
 		return EngagementWaiting
+	case rs.Inbound90d > 0:
+		if owed := rs.LastInboundMove != nil && !owesNothing; owed {
+			return EngagementWaiting
+		}
+		return EngagementAnswered
+	default:
+		return engagementFromOurSide(rs)
+	}
+}
+
+// engagementFromOurSide is the state when nothing they sent counts: our own
+// mail inside the window, then any traffic before it.
+func engagementFromOurSide(rs RelationshipStrength) Engagement {
+	switch {
 	case rs.Outbound90d > 0:
 		return EngagementNoReply
-	case rs.LastInbound != nil || rs.LastOutbound != nil:
+	case rs.LastOutbound != nil || (rs.LastInbound != nil && rs.Inbound90d == 0):
 		// Traffic, but all of it older than the window. Reported as untried this
 		// was a plain falsehood beside the contact's own last-touch date.
 		return EngagementLapsed

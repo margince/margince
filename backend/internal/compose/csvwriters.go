@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,12 +18,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -80,7 +78,8 @@ type csvWriters struct {
 	nativeIDs map[string]ids.UUID
 	// links finds the record a link cell names. One resolver serves every part
 	// of the run, so a contact can name a company of the same upload.
-	links *linkResolver
+	links              *linkResolver
+	predictedEmployers map[string]contacts.ContactEmployerPreview
 	// preset is the run's record every activity row is filed under.
 	preset presetSet
 	// companyRefColumn is the file's column mapped to company_ref, empty when
@@ -128,10 +127,7 @@ func newCSVWriters(
 		pool: db.Pool(),
 		// An imported contact can take a lead over, which carries the lead's
 		// stops and consent links (see newCounterpartyStore).
-		contacts: contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
-			WithStopCarrier(consent.NewStore(db)).
-			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithGrantCarrier(identity.NewServiceFor(db)).
+		contacts: withContactMergeCarriers(db, newContactsStore(db)).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 			WithShareRequests(contactShareRequests(db.Pool())).
 			WithLeadArrivals(newLeadWorkTasks(db, slog.Default())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
@@ -220,6 +216,11 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	}
 	if link.skip {
 		return skippedWithProblem(link.problem), nil
+	}
+	if link.problem != nil && link.problem.Kind == migration.ProblemDroppedLink {
+		row.Fields = maps.Clone(row.Fields)
+		delete(row.Fields, csvEmployerName)
+		delete(row.Fields, csvTargetCompanyRef)
 	}
 	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {

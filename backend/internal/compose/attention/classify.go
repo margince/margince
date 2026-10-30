@@ -46,7 +46,6 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceBounce, day.Bounces, asOf, classifyBounce)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceUndelivered, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceApproval, &day.NeedsYou, asOf, classifyDecision)
-	rows = appendLane(rows, crmcontracts.WorklistItemSourceRelationshipDecay, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceCaptureHealth, day.CaptureHealth, asOf, classifySystem)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceDomainQuestion, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceAiWorkHealth, day.AiWorkHealth, asOf, classifySystem)
@@ -132,9 +131,10 @@ func base(
 		// carrying the payload keeps the verb and the records it acts on
 		// travelling together: a row offering merge with no pair beneath it
 		// would be a button over records the client cannot name.
-		Pair:    item.Pair,
-		DueAt:   item.DueAt,
-		Overdue: item.Overdue,
+		Pair:        item.Pair,
+		ContactCase: item.ContactCase,
+		DueAt:       item.DueAt,
+		Overdue:     item.Overdue,
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and
 		// zone, and a second derivation here would need both again.
@@ -158,7 +158,7 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
 	}
-	row.Because = appendReadOnly(row)
+	row.Because = appendReadOnly(row, crmcontracts.WorklistItemActionsComplete)
 	return ranked{
 		ownerRef:   unassigned(),
 		item:       row,
@@ -280,7 +280,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if item.AssigneeId == nil {
 		row.Because = append(row.Because, reason("unassigned", nil))
 	}
-	row.Because = appendReadOnly(row)
+	row.Because = appendReadOnly(row, crmcontracts.WorklistItemActionsComplete)
 	out := ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -300,6 +300,11 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		out.reminded = true
 		raiseToTop(&out)
 	}
+	// Work due after today waits in Today's Upcoming section, unless its
+	// reminder already asks for it now.
+	if isUpcoming(item.DueGroup) && !out.reminded && !out.overdue {
+		out.item.Category = categoryUpcoming
+	}
 	return out
 }
 
@@ -316,10 +321,10 @@ func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
 	}
 }
 
-// appendReadOnly says why a task or a promise offers no Done. The reader may
-// read the record and not change it, so the verb that finishes it is withheld.
-func appendReadOnly(row crmcontracts.WorklistItem) []crmcontracts.WorklistReason {
-	if slices.Contains(row.Actions, crmcontracts.WorklistItemActionsComplete) {
+// appendReadOnly says why a row offers no verb that finishes it. The reader
+// may read the record and not change it, so verb is withheld.
+func appendReadOnly(row crmcontracts.WorklistItem, verb crmcontracts.WorklistItemActions) []crmcontracts.WorklistReason {
+	if slices.Contains(row.Actions, verb) {
 		return row.Because
 	}
 	return append(row.Because, reason("read_only", nil))

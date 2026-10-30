@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package contact360 assembles the contact record page in one round trip —
-// the contact half of the one-composite-read doctrine (PO-EXT-3).
-//
-// It is the company 360's sibling and deliberately its mirror: one
-// workspace transaction so the sections describe one moment, a mandatory
-// root read whose refusal is the whole read's refusal, and every other
-// section attempted independently and OMITTED-AND-NAMED when the caller
-// lacks its grant. Empty and forbidden are different facts, and a page
-// that renders them the same way tells the reader the relationship is
-// cold when it is only invisible.
+// Package contact360 names section denials instead of presenting them as empty records.
+// Record sections share a workspace transaction; mail coverage carries its own observation clock.
 package contact360
 
 import (
@@ -22,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -59,7 +52,8 @@ type Service struct {
 	now      func() time.Time
 	// providers is the adapter registry the provider section reads its
 	// category vocabulary from. Nil where no adapter is compiled in.
-	providers providerDescriptors
+	providers    providerDescriptors
+	mailCoverage mailcoverage.Reader
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -121,7 +115,7 @@ type AssembleOptions struct {
 	AsOf time.Time
 }
 
-// Assemble reads the whole contact page inside ONE workspace transaction.
+// Assemble keeps denied sections distinct from empty records.
 func (s *Service) Assemble(ctx context.Context, contactID ids.ContactID) (crmcontracts.Contact360, error) {
 	return s.AssembleScoped(ctx, contactID, AssembleOptions{})
 }
@@ -136,6 +130,9 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 		return crmcontracts.Contact360{}, err
 	}
 	now := s.now().UTC()
+	if opts.AsOf.IsZero() {
+		opts.AsOf = now
+	}
 	out := crmcontracts.Contact360{
 		AsOf:            now,
 		SectionsOmitted: []crmcontracts.Contact360SectionsOmitted{},
@@ -195,6 +192,14 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	})
 	if err != nil {
 		return crmcontracts.Contact360{}, err
+	}
+	if s.mailCoverage != nil {
+		var from *time.Time
+		if out.LastContactPrecision != nil && *out.LastContactPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+			from = out.LastContactAt
+		}
+		coverage := mailcoverage.Read(ctx, s.mailCoverage, from, s.now().UTC())
+		out.MailCoverage = &coverage
 	}
 	return out, nil
 }

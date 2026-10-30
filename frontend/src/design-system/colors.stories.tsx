@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
+import { CALLOUT_TONES } from "./callout";
 import { Heading } from "./heading";
 import {
   specimenColumn,
@@ -47,7 +48,10 @@ type Entry = Readonly<{
 const THEMES: readonly Theme[] = ["light", "dark"];
 
 const SURFACES: readonly Entry[] = [
-  { token: "--bgPage", usage: "The reading ground." },
+  {
+    token: "--bgPage",
+    usage: "The reading ground, flat under the app shell and the Deal Room.",
+  },
   {
     token: "--bgWell",
     usage: "A recess in an elevated surface, the well a board's stage is.",
@@ -59,13 +63,18 @@ const SURFACES: readonly Entry[] = [
   },
   { token: "--bgHover", usage: "A pointer resting on a row on the page." },
   {
+    token: "--bgStrip",
+    usage:
+      "A band on the ground: a table's toolbar and footer, a window's bar.",
+  },
+  {
     token: "--pane",
-    usage: "One translucent pane per zone, over the lit ground.",
+    usage: "One pane per zone, over the page ground.",
   },
   {
     token: "--bgChip",
     usage:
-      "A small inline fill drawn on a rung: a badge, a key-cap, a segmented strip, a meter trough. Translucent.",
+      "A small inline fill drawn on a rung: a badge, a key-cap, a segmented strip, a meter trough.",
   },
 ];
 
@@ -129,12 +138,13 @@ const ACCENT: readonly Entry[] = [
   },
   {
     token: "--accentLight",
-    usage: "The accent's translucent tint, and the colour of the focus glow.",
+    usage: "The accent's tint, and the colour of the focus glow.",
   },
   { token: "--accentMed" },
   {
     token: "--accentBrand",
-    usage: "Brand emerald that stays put when the dark accent lightens.",
+    usage:
+      "The brand mark's fill, one value in both themes: the workspace chip, the app icon, the browser's title bar.",
   },
   {
     token: "--teal",
@@ -161,6 +171,14 @@ const AI_TOKENS: readonly Entry[] = [
   { token: "--aiText", usage: "The agent's label." },
 ];
 
+const NOTICES: readonly Entry[] = CALLOUT_TONES.flatMap((tone) => {
+  const name = tone.charAt(0).toUpperCase() + tone.slice(1);
+  return [
+    { token: `--bgNotice${name}`, usage: "A notice card's ground." },
+    { token: `--borderNotice${name}`, usage: "The borders inside that card." },
+  ];
+});
+
 const TAGS: readonly Entry[] = [
   "--tagTeal",
   "--tagAmber",
@@ -183,28 +201,29 @@ const AVATARS: readonly Entry[] = [
   { token: "--avatarInkC", paint: "--avatarInk" },
 ];
 
-const RAIL: readonly Entry[] = [
+const INK_FIELD: readonly Entry[] = [
   {
-    token: "--bgRail",
+    token: "--bgInkField",
     on: "--bgPage",
-    usage: "The dark green field of the rail, the same in both themes.",
+    usage:
+      "The dark green plate under a toast, a tooltip and a docked window's title bar, the same in both themes. Never the sidebar.",
   },
   {
-    token: "--railIconActive",
-    on: "--bgRail",
-    usage: "White icons and labels on the dark green field.",
+    token: "--textOnInkField",
+    on: "--bgInkField",
+    usage: "White text and icons on the ink field.",
   },
 ];
 
 const ONBOARDING: readonly Entry[] = [
   {
     token: "--obDialogGlass",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The translucent white fill of the onboarding dialog's dark glass.",
   },
   {
     token: "--obDialogInkQuiet",
-    on: "--bgRail",
+    on: "--bgInkField",
     usage: "The dialog's secondary text on the dark glass.",
   },
   {
@@ -264,7 +283,7 @@ const FOCUS: readonly Entry[] = [
   },
 ];
 
-const ATMOSPHERE: readonly Entry[] = [
+const OVERLAYS: readonly Entry[] = [
   {
     token: "--overlayLight",
     on: "--bgInset",
@@ -279,22 +298,6 @@ const ATMOSPHERE: readonly Entry[] = [
     token: "--overlayScrim",
     on: "--bgPage",
     usage: "The scrim behind a modal.",
-  },
-  {
-    token: "--glowA",
-    on: "--bgPage",
-    usage: "The emerald light at the top-left corner, behind the sidebar.",
-  },
-  {
-    token: "--glowB",
-    on: "--bgPage",
-    usage: "The indigo light at the top-right corner.",
-  },
-  {
-    token: "--groundLit",
-    on: "--bgPage",
-    usage:
-      "The page colour with both lights painted in, shared by the app shell and the buyer's Deal Room.",
   },
 ];
 
@@ -674,7 +677,7 @@ export const Status: Story = {
           the rest is derived from it in tokens.css. Choose by what the colour
           is doing: the base for what is seen with nothing read on it, Text for
           ink, Surface for a badge, Bg for a wash, Border for a hairline.
-          Success stays a brighter green than the brand emerald on purpose.
+          Success stays a brighter green than the brand teal.
         </p>
         {THEMES.map((theme) => (
           <StatusPanel key={theme} theme={theme} values={values} />
@@ -684,12 +687,12 @@ export const Status: Story = {
   },
 };
 
-/** Emerald is brand and primary action, teal is identity. */
+/** The accent is brand and primary action, `--teal` is identity. */
 export const AccentAndBrand: Story = {
   name: "Accent and brand",
   render: () => (
     <Rows
-      intro="Emerald means primary action and brand, and nothing else: at most one filled control in view wears it, and a selected row takes its wash. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
+      intro="The accent means primary action and brand, and nothing else: at most one filled control in view wears it, and so does the current row of the side rail. The teal pair marks our side of a diagram apart from the agent's indigo and the counterparty's neutral. It says nothing about how anything is going."
       entries={ACCENT}
     />
   ),
@@ -701,6 +704,16 @@ export const AI: Story = {
     <Rows
       intro="Indigo means a machine did this: wrote the draft, found the thing, or holds the evidence behind a claim. It marks authorship and never status, so nothing good, bad or urgent is indigo and nothing a human wrote is. Choose the step by its shape: the base for a filled verb, Light for a tinted row, Chip for a chip, Med for an edge, Text for a label."
       entries={AI_TOKENS}
+    />
+  ),
+};
+
+/** The tinted ground of a notice, one per callout tone. */
+export const Notices: Story = {
+  render: () => (
+    <Rows
+      intro="A callout washes its card in its tone: the base at 12% over the elevated ground, and the borders inside it at 30%. Mixed into an opaque ground, so the wash reads the same over any pane."
+      entries={NOTICES}
     />
   ),
 };
@@ -725,13 +738,13 @@ export const Avatars: Story = {
   ),
 };
 
-/** The rail is the same in both themes. */
-export const RailAndWorkspaceChrome: Story = {
-  name: "Rail and workspace chrome",
+/** The ink field is the same in both themes. */
+export const InkField: Story = {
+  name: "Ink field",
   render: () => (
     <Rows
-      intro="The rail is deliberately unthemed: white-alpha icons on a dark green field in both themes, so the two columns match."
-      entries={RAIL}
+      intro="The ink field is the one dark plate, the same in both themes: a toast, the capture chip, a collapsed sidebar's tooltip, a docked window's title bar and the client surface's bar. The sidebar itself is not on it. The sidebar is glass: the --pane ground over the page, with a hairline on its right."
+      entries={INK_FIELD}
     />
   ),
 };
@@ -759,12 +772,12 @@ export const OrbsAndFocus: Story = {
 };
 
 /** Material effects, not brand colour. */
-export const OverlaysAndAtmosphere: Story = {
-  name: "Overlays and atmosphere",
+export const Overlays: Story = {
+  name: "Overlays",
   render: () => (
     <Rows
-      intro="Material effects, not brand colour: a highlight and a scrim are pure white and pure black at low alpha, unthemed so white stays white when the surface under it goes dark. The two glows are the chrome, the only decoration on the page, and atmosphere that moves is a feature, so they never animate."
-      entries={ATMOSPHERE}
+      intro="Material effects, not brand colour: a highlight and a scrim are pure white and pure black at low alpha, unthemed so white stays white when the surface under it goes dark."
+      entries={OVERLAYS}
     />
   ),
 };

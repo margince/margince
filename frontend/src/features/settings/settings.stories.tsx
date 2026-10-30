@@ -648,6 +648,7 @@ export const TagsPage: Story = catalogPage("tags");
 export const ProductsPage: Story = catalogPage("products");
 export const CapturePage: Story = catalogPage("capture");
 export const IntegrationsPage: Story = catalogPage("integrations");
+export const WebFormsPage: Story = catalogPage("web-forms");
 export const KnowledgePage: Story = catalogPage("knowledge");
 export const ImportPage: Story = catalogPage("import");
 export const UsagePage: Story = catalogPage("usage");

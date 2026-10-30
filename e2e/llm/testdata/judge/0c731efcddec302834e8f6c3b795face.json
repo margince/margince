@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer reports only three companies as prospect and explicitly states that Emsland Ventilbau needs the user's sign-off and is being held for approval, violating the requirement that all four be reported as prospect with no mention of approval or sign-off.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer reports all four companies, Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau, as set to prospect, and says nothing about any of them waiting for approval, sign-off or confirmation. Saying they were updated directly is a yes. Answer no if the answer names any of the four as held, pending, or needing the user's approval, or does not report all four as changed.",
+  "answer": "Kieler Pumpenwerk, Rhön Hydraulik and Altmark Fördertechnik are now set to prospect.\n\nEmsland Ventilbau needs your sign-off: its lifecycle was set to target by a person, so Margince is holding the change for approval. Approve it in the web app under Approvals and it will move to prospect."
+}

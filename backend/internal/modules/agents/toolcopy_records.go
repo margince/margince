@@ -92,17 +92,16 @@ var updateRecordCopy = toolCopy{
 	Purpose: "Change stored field values on a record that already exists — a corrected title, an " +
 		"amount, an expected close date.",
 	Limits: "Only the fields you send change, and only the fields the record type stores (a " +
-		"contact's email addresses are not among them). A field a HUMAN last set is not " +
-		"overwritten: that part is staged for a human and named in the result, and that part " +
-		"of the write has not happened. It names the record by id; when a name matches " +
+		"contact's email addresses are not among them). The whole patch applies in this call, " +
+		"and the result names each change so a human can Undo it. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
 		"An activity moved to another day keeps its time of day unless the user names one; " +
 		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.`,
 	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
-	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +
-		"result if you intend to retry the same change once a human has released it.",
+	Retain: "Send if_version with the version you read. If the call comes back staged, keep its " +
+		"approval id to retry the same change once a human has released it.",
 }
 
 // The Purpose names the records on purpose, and the ordering is the fix.
@@ -149,6 +148,25 @@ var relinkActivityCopy = toolCopy{
 	Instead: "log_activity records an event not recorded yet; relink_activities moves a " +
 		"picked set, such as a whole thread's activities.",
 	Retain: "Set replace_existing_of_type to move rather than associate.",
+}
+
+var confirmMeetingReadyCopy = toolCopy{
+	Purpose: "Say the user is ready for a meeting they attend, so their Worklist stops asking " +
+		"them to prepare it.",
+	Limits: "Only for a meeting the user attends, and only at the preparation revision " +
+		"prep_for_meeting answered: a meeting that changed since answers a conflict. It holds " +
+		"for the user alone, and a new start, agenda or guest list asks them again.",
+	Instead: "prep_for_meeting reads the meeting and its current preparation revision; " +
+		"undo_meeting_ready takes the confirmation back.",
+	Retain: "Keep the revision you confirmed; the undo sends it.",
+}
+
+var undoMeetingReadyCopy = toolCopy{
+	Purpose: "Take back the user's \"I'm ready\" for a meeting.",
+	Limits: "Removes the confirmation only while it is the one given at the revision you send, " +
+		"so a newer confirmation stays.",
+	Instead: "confirm_meeting_ready records readiness.",
+	Retain:  "The answer is the user's preparation after the undo.",
 }
 
 var relinkThreadCopy = toolCopy{

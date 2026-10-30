@@ -52,6 +52,7 @@ const (
 	filterCompanyID        = "company_id"
 	filterOwnerTeamID      = "owner_team_id"
 	filterUnassigned       = "unassigned"
+	filterSharedWithMe     = "shared_with_me"
 	filterIncludeArchived  = "include_archived"
 	filterSort             = "sort"
 	filterCapturedByKind   = "captured_by_kind"
@@ -76,6 +77,7 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 	filterOwnerID:          storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterOwnerTeamID:      storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
 	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
+	filterSharedWithMe:     storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.SharedWithMe = v }),
 	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
@@ -149,6 +151,9 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 		in.TagMode = tagModeOrDefault(v)
 	}),
 	filterFromContact: storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterIndustry:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
+	filterCountry:     storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
+	filterSizeBand:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

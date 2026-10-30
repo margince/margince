@@ -24,6 +24,13 @@ import (
 // sequential scans priced out. A scan left in the plan means no index serves it.
 func explainWithoutSeqScans(t *testing.T, extra, statement string, args ...any) planNode {
 	t.Helper()
+	return explainOnMailbox(t, extra, "SET LOCAL enable_seqscan = off", "EXPLAIN (FORMAT JSON) ", statement, args...)
+}
+
+// explainOnMailbox runs explain over statement on the seeded mailbox plus
+// extra, after the planner setting given.
+func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, args ...any) planNode {
+	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)
@@ -41,13 +48,19 @@ func explainWithoutSeqScans(t *testing.T, extra, statement string, args ...any) 
 			t.Fatalf("seeding %s: %v", extra, err)
 		}
 	}
-	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
+	if _, err := tx.Exec(ctx, setting); err != nil {
 		t.Fatal(err)
 	}
 	var raw string
-	if err := tx.QueryRow(ctx, "EXPLAIN (FORMAT JSON) "+statement, args...).Scan(&raw); err != nil {
+	if err := tx.QueryRow(ctx, explain+statement, args...).Scan(&raw); err != nil {
 		t.Fatalf("planning %s: %v", statement, err)
 	}
+	return decodePlan(t, raw)
+}
+
+// decodePlan reads the one plan an EXPLAIN (FORMAT JSON) answered.
+func decodePlan(t *testing.T, raw string) planNode {
+	t.Helper()
 	var plans []struct {
 		Plan planNode `json:"Plan"` //nolint:tagliatelle // fixed by the server's plan format
 	}
@@ -118,5 +131,32 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 	}
 	if youngByDate == 0 {
 		t.Errorf("no arm of the horizon reads a date range from an index: the scan reads every inbound message, not the ones inside the horizon")
+	}
+}
+
+// Old mail never reaches a per-message subquery: the horizon is a cheap
+// top-level test, and Postgres runs it first. The probe stands in for the
+// subqueries a full waiting scan carries.
+func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
+	at := clocktest.Now(t)
+	plan := explainOnMailbox(t, "", "SET LOCAL enable_bitmapscan = off; SET LOCAL max_parallel_workers_per_gather = 0",
+		"EXPLAIN (ANALYZE, FORMAT JSON) ", `SELECT a.id FROM activity a
+		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		  AND (SELECT count(*) FROM activity_participant probe WHERE probe.activity_id = a.id) >= 0
+		  AND `+withinWaitingHorizonSQL("$1::timestamptz", "30"), at)
+	var inbound, kept, probed float64
+	plan.walk(func(n planNode) {
+		switch {
+		case n.Alias == "a" && n.RelationName == "activity":
+			inbound, kept = n.ActualRows+n.RemovedByFilter, n.ActualRows
+		case n.Alias == "probe":
+			probed = n.ActualLoops
+		}
+	})
+	if inbound == 0 || kept == 0 || kept >= inbound {
+		t.Fatalf("the scan read %v inbound messages and kept %v: the mailbox does not straddle the horizon, so this test checks nothing", inbound, kept)
+	}
+	if probed > kept {
+		t.Errorf("the per-message probe ran %v times for %v messages inside the horizon: mail past the horizon is judged by every subquery before its age", probed, kept)
 	}
 }

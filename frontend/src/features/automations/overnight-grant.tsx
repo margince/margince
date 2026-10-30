@@ -13,7 +13,7 @@ import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
 import {
   type MyAgentGrant,
-  morningBriefGrant,
+  overnightGrants,
   useAgentGrants,
   useSetAgentGrant,
 } from "../../lib/overnight-grant";
@@ -27,18 +27,21 @@ import {
 // Settings writes on flip. Onboarding's switch holds the answer until the step
 // continues, and its description says so in words.
 
-// Lapsed and outgrown differ from a decline (the rep already agreed); each
-// names its cause, since either degrades the 2am run silently.
+// The rep's one answer as the overnight agents stand on it. It reads as granted
+// only when every agent has the grant. A rep who answered before the sweep was
+// offered sees the question open and can answer it for both. Lapsed and
+// outgrown differ from a decline, because the rep already agreed. Each names its
+// cause, since either degrades the 2am run silently.
 function grantStanding(grants: readonly MyAgentGrant[]) {
-  const grant = morningBriefGrant(grants);
-  const granted = grant?.state === "granted";
+  const own = overnightGrants(grants);
+  const granted = own.every((grant) => grant?.state === "granted");
   return {
     granted,
-    lapsed: granted && !grant?.credential_usable,
+    lapsed: granted && own.some((grant) => !grant?.credential_usable),
     outgrown:
       granted &&
-      grant?.credential_usable === true &&
-      !grant?.credential_funds_agent,
+      own.every((grant) => grant?.credential_usable === true) &&
+      own.some((grant) => !grant?.credential_funds_agent),
   };
 }
 
@@ -60,9 +63,7 @@ export function OvernightGrantCard() {
   // them as a fault.
   const [withdrew, setWithdrew] = useState(false);
   const stored =
-    query.data === undefined
-      ? undefined
-      : morningBriefGrant(query.data)?.state === "granted";
+    query.data === undefined ? undefined : grantStanding(query.data).granted;
   const shownOff = (optimistic ?? stored) === false;
 
   return (

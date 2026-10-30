@@ -23,6 +23,15 @@ afterEach(() => {
   cleanup();
 });
 
+// Add task is the first row of the header's menu, which mounts its rows on the
+// first open and portals them out of the header.
+async function addTaskRow(header: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(
+    within(header).getByRole("button", { name: "More actions" }),
+  );
+  return screen.findByRole("button", { name: "Add task" });
+}
+
 // The one thing a CRM must let a rep do on a contact is write down what
 // happened. Two ways in, one form. The header verb is always there, and the
 // moment card's action shows when its rung picks logging as the next step.
@@ -93,16 +102,18 @@ describe("logging an activity", () => {
     mount("overview", view, [], {}, { contact: ["read", "update"] });
 
     const header = await recordHeader();
-    const addTask = within(header).getByRole("button", { name: "Add task" });
-    const logActivity = within(header).getByRole("button", {
-      name: /Log activity/,
-    });
-    expect(addTask).toHaveProperty("disabled", true);
+    // Stated once on the page; the open menu then repeats it beside its
+    // refused rows, which is the menu's own rule.
     expect(
       screen.getAllByText(
         "You do not have permission to log activities on this record.",
       ),
     ).toHaveLength(1);
+    const addTask = await addTaskRow(header);
+    const logActivity = within(header).getByRole("button", {
+      name: /Log activity/,
+    });
+    expect(addTask).toHaveProperty("disabled", true);
     expect(addTask.getAttribute("aria-describedby")).toBe(
       logActivity.getAttribute("aria-describedby"),
     );
@@ -118,7 +129,7 @@ describe("logging an activity", () => {
     });
 
     const header = await recordHeader();
-    const addTask = within(header).getByRole("button", { name: "Add task" });
+    const addTask = await addTaskRow(header);
     const logActivity = within(header).getByRole("button", {
       name: /Log activity/,
     });
@@ -145,7 +156,7 @@ describe("logging an activity", () => {
     });
 
     const header = await recordHeader();
-    await user.click(within(header).getByRole("button", { name: "Add task" }));
+    await user.click(await addTaskRow(header));
     const dialog = await screen.findByRole("dialog", { name: "Add task" });
     await user.type(
       within(dialog).getByRole("textbox", { name: "Subject" }),
@@ -351,21 +362,6 @@ describe("logging a call started on the page", () => {
       kind: "call",
       links: [{ entity_type: "contact", entity_id: "p-1" }],
     });
-  });
-
-  it("opens the same drawer from the header's Call", async () => {
-    mountWithCalls();
-    await readyToLog();
-
-    const call = within(await recordHeader()).getByRole("link", {
-      name: "Call",
-    });
-    expect(fireEvent.click(call)).toBe(true);
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    expect(
-      within(dialog).getByRole("combobox", { name: "Type" }).textContent,
-    ).toContain("Call");
   });
 
   it("only dials for a reader without the create grant", async () => {

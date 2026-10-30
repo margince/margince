@@ -500,7 +500,6 @@ ghost
 give
 given
 glossary
-glow
 go
 goal
 good

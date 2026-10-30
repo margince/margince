@@ -1,0 +1,102 @@
+/* SetPicker: the chosen set as tokens in a field-shaped frame, and the list
+ * behind its add trigger. The frame wears the field's box so it sits in a
+ * form column as one more field. */
+
+.set-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fieldGap);
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+}
+
+.set-picker-legend {
+  padding: 0;
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+}
+
+.set-picker-frame {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  min-block-size: var(--inputHeight);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--inputPaddingX);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  background: var(--bgElevated);
+}
+
+.set-picker-frame[data-disabled] {
+  background: var(--bgInset);
+}
+
+.set-picker-invalid {
+  border-color: var(--dangerText);
+}
+
+/* The trigger closes the row, so a set that wraps keeps "Add" at its end. */
+.set-picker-add {
+  margin-inline-start: auto;
+}
+
+.popover-panel.set-picker-panel {
+  inline-size: min(22rem, calc(100vw - 2 * var(--space-4)));
+  max-inline-size: none;
+  padding: var(--space-3);
+}
+
+.popover-panel.set-picker-panel-wide {
+  inline-size: min(28rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.set-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Eight rows at rest, then the list scrolls inside the panel: forty teams
+ * never push Done off the screen. */
+.set-picker-list {
+  max-block-size: calc(8 * (var(--inputHeight) - var(--space-2)));
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.set-picker-list:empty {
+  display: none;
+}
+
+.set-picker-list .set-picker-row {
+  display: grid;
+  inline-size: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+}
+
+.set-picker-row:hover {
+  background: var(--bgWell);
+}
+
+.set-picker-label {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.set-picker-create {
+  justify-content: flex-start;
+}
+
+.set-picker-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+}

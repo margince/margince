@@ -229,45 +229,6 @@ func createRoomItemCommand(pol agentPolicy, deps restCommandDeps, r *http.Reques
 	}), nil
 }
 
-// roomItemPatch is the decoder for a PATCH on one item under a parent, keyed by
-// the path parameter that names the item.
-//
-// No live route uses it: the Deal Room document patch that did is human-only
-// now. It stays because patchTargetParam stays — an approval must bind to the
-// record the released call WRITES, and on a sub-resource route that is the
-// item, not the routed parent. TestASubResourcePatchProbesTheRecordItWrites
-// drives it, so the mechanism is exercised rather than merely present.
-func roomItemPatch(param string) func(agentPolicy, restCommandDeps, *http.Request, []byte) (agents.GovernedCall, error) {
-	return func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
-		return roomItemPatchCommand(pol, deps, r, body, param)
-	}
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte, param string) (agents.GovernedCall, error) {
-	if _, err := routedID(r); err != nil {
-		return nil, err
-	}
-	raw, err := pathOperand(r, param)
-	if err != nil {
-		return nil, err
-	}
-	// The existence-hiding 404 routedID gives, not the 422 contact_id gives.
-	// The item id names a ROW rather than an edge, so "that is not a uuid" and
-	// "there is no such item" must read alike, or the shape of a caller's id
-	// tells them which of a room's items exist. It is also not a contract field,
-	// so it has no name a validation fault could legitimately publish.
-	itemID, perr := ids.Parse(raw)
-	if perr != nil {
-		return nil, apperrors.ErrNotFound
-	}
-	return agents.NewPatchCall(deps.records, deps.language, agents.PatchCommand{
-		RecordType: string(pol.RecordType),
-		ID:         itemID,
-		Fields:     json.RawMessage(body),
-	}), nil
-}
-
 // withParents folds the routed parents into a create body, under the names a
 // create_record call gives them. The staged approval names where the item
 // lands, and both doors stage one command. A body that is not an object is

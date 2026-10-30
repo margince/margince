@@ -109,9 +109,10 @@ func (said teamCopy) planCoverage(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var since *time.Time
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT (SELECT min(p.local_week_start) FROM weekly_plan p WHERE p.owner_id = $%d)::timestamp
-		       AT TIME ZONE $%d`, arg(owner), arg(zone)), args...).Scan(&since); err != nil {
+		       AT TIME ZONE $%d`, arg(owner), arg(zone))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&since); err != nil {
 		return nil, fmt.Errorf("weekly: reading when the plan began: %w", err)
 	}
 	return said.figureCoverage(since, start, end, planNoun), nil

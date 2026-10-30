@@ -115,8 +115,17 @@ export function markLine(blocks: Block[], line: number | undefined): boolean {
   return true;
 }
 
+/** The first words a document says, as one plain line with no marks. */
+export function firstRunText(blocks: Block[]): string {
+  for (const run of runsOf(blocks)) {
+    const text = collapseSpace(runText(run.nodes));
+    if (text) return text;
+  }
+  return "";
+}
+
 /** Every run in the document, in reading order. */
-function runsOf(blocks: Block[]): Run[] {
+export function runsOf(blocks: Block[]): Run[] {
   return blocks.flatMap((block) => {
     if (block.kind === "list") return block.items;
     if (block.kind === "quote") return runsOf(block.blocks);

@@ -1,7 +1,11 @@
 import { type Dispatch, type SetStateAction, useMemo } from "react";
-import { admittedDealFilters } from "../../components/dealdials";
+import {
+  admittedDealFilters,
+  useAppliedCompanyName,
+} from "../../components/dealdials";
 import { searchCompanies } from "../../components/filterreference";
 import {
+  type FilterSpec,
   LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
@@ -15,20 +19,30 @@ import { SegmentedControl } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
+import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
-import { withheldDealDials, withoutWithheldDials } from "../../lib/dealranges";
+import {
+  roleRefusedDealDials,
+  withheldDealDials,
+  withoutWithheldDials,
+} from "../../lib/dealranges";
 import {
   DEAL_SCREEN_DIALS,
   type DealFilters,
   PIPELINE_PARAM,
   VIEW_PARAM,
 } from "../../lib/deals.queries";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
+import { useRecordZone } from "../../lib/recordzone";
+import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import { dealSurfaceChips } from "./deal360/dealfilterchips";
 import { DealBulkBar } from "./dealbulk";
 import type { Deal, Pipeline, Stage } from "./deals";
+import { dealRangeChips } from "./deals.rangefilters";
 
 // Bespoke selects for the filters whose option labels are runtime strings
 // (pipeline/stage/company names). A chip's option label is a MessageKey, so
@@ -205,19 +219,26 @@ export function useDealScreenDials({
       }),
     [baseCurrency, readsCompanies, refused],
   );
-  const query = useMemo(() => {
+  const { query, refusedDials } = useMemo(() => {
     const read = listQueryFromParams(
       withoutScreenDials(params, DEAL_SCREEN_DIALS),
       opening,
       true,
     );
-    // The address keeps a withheld dial, so it applies again once readable.
-    const filters = withoutWithheldDials(
-      admittedDealFilters(read.filters),
-      withheld,
-    );
-    return filters === read.filters ? read : { ...read, filters };
-  }, [params, opening, withheld]);
+    const admitted = admittedDealFilters(read.filters);
+    const roleRefused = roleRefusedDealDials({
+      readsCompanies,
+      refused: refused ?? [],
+    });
+    // The role's refusals stay, to be named here or refused by the server. Other
+    // withheld dials are dropped, and apply again once readable.
+    const quiet = new Set([...withheld].filter((d) => !roleRefused.has(d)));
+    const filters = withoutWithheldDials(admitted, quiet);
+    return {
+      query: filters === read.filters ? read : { ...read, filters },
+      refusedDials: heldRefusedDials(admitted, roleRefused),
+    };
+  }, [params, opening, withheld, readsCompanies, refused]);
   const setQuery = (update: SetStateAction<ListQuery>) => {
     const live = currentParams();
     const next =
@@ -264,6 +285,7 @@ export function useDealScreenDials({
 
   return {
     query,
+    refusedDials,
     setQuery,
     baseCurrency,
     withheld,
@@ -354,4 +376,88 @@ export function savableDealQuery(
   return narrowsTheDealList(query)
     ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
     : query;
+}
+
+// The refused dials a chip names, with those names. A dial no chip names is
+// left to the list's own refusal; a stripped partner dial still finds its chip.
+function refusedDealLabel(
+  dials: readonly (string | undefined)[],
+  {
+    dataChips,
+    surfaceOf,
+    t,
+  }: Readonly<{
+    dataChips: readonly ListChip[];
+    surfaceOf: (partnerApplied: string | undefined) => readonly FilterSpec[];
+    t: Translator;
+  }>,
+): { dials: string[]; names: string } | undefined {
+  const held = dials.filter((dial): dial is string => Boolean(dial));
+  const chips = surfaceOf(held.find((dial) => dial === "partner_company_id"));
+  const named = held.flatMap((dial) => {
+    const chip = dataChips.find((each) => each.key === dial);
+    if (chip) return [{ dial, name: chip.label }];
+    const spec = chips.find((each) => each.key === dial);
+    return spec ? [{ dial, name: t(spec.label) }] : [];
+  });
+  if (named.length === 0) return undefined;
+  return {
+    dials: named.map((each) => each.dial),
+    names: [...new Set(named.map((each) => each.name))].join(", "),
+  };
+}
+
+// The filter chips this list offers, and the names it gives a refused dial. A
+// withheld dial gets no chip, yet its chip still names it when it is refused.
+export function useDealChips({
+  stages,
+  query,
+  withheld,
+  baseCurrency,
+  partnerOptions,
+  acquisitionSources,
+}: Readonly<{
+  stages: Stage[];
+  query: ListQuery;
+  withheld: ReadonlySet<string>;
+  baseCurrency: string | undefined;
+  partnerOptions: { value: string; label: string }[];
+  acquisitionSources: AcquisitionSource[] | undefined;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  // A company this reader may not search for is not looked up either.
+  const companyName = useAppliedCompanyName(
+    withheld.has("company_id") ? undefined : query.filters.company_id,
+  );
+  const leading = useLeadingCurrencies();
+  const offered = (chip: { key: string }) => !withheld.has(chip.key);
+  const everyDealChip = dealFilterChips(stages, t, companyName);
+  const rangeOf = (held: ReadonlySet<string>) =>
+    dealRangeChips({
+      words: { t, locale, zone },
+      filters: query.filters,
+      baseCurrency,
+      withheld: held,
+      leading,
+    });
+  const surfaceOf = (partnerApplied: string | undefined) =>
+    dealSurfaceChips({
+      partnerOptions,
+      partnerApplied,
+      acquisitionSources,
+      retiredSuffix: t("deal.acquisitionRetired"),
+    });
+  return {
+    dealChips: everyDealChip.filter(offered),
+    rangeChips: rangeOf(withheld),
+    surfaceChips: surfaceOf(query.filters.partner_company_id).filter(offered),
+    nameRefusal: (dials: readonly (string | undefined)[]) =>
+      refusedDealLabel(dials, {
+        dataChips: [...everyDealChip, ...rangeOf(new Set())],
+        surfaceOf,
+        t,
+      }),
+  };
 }

@@ -3,8 +3,10 @@ import { rosterOwnerNaming } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
+import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
+import type { WorklistView } from "../../lib/worklistviews";
 import {
   bandSections,
   canReportEmptyBands,
@@ -13,11 +15,6 @@ import {
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
 import { clearSentence } from "./worklist.clear";
-import {
-  reviewShortfall,
-  reviewWork,
-  sellerWork,
-} from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
@@ -34,16 +31,17 @@ import type {
 import {
   NOTHING_IN_HAND,
   QueueRows,
-  ReviewPanel,
   type RowContext,
   rowInHand,
+  ViewPanel,
 } from "./worklist.queue";
 import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
+import { OptionalRelationships } from "./worklist.relationships";
 import { rowIdentity } from "./worklist.rowidentity";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
-import { LoadMoreOfTheDay, WalkNotice } from "./worklist.walknotice";
-import { represented } from "./worklistunits";
+import { UpcomingSection } from "./worklist.upcoming";
+import { WalkNotice } from "./worklist.walknotice";
 
 export function WorklistBody({
   embedded = false,
@@ -52,15 +50,17 @@ export function WorklistBody({
   onRefresh,
   queue,
   scope,
+  view,
   filter,
   owner,
   selectedId,
   onScope,
+  onView,
   onFilter,
   onOwner,
   onSelect,
   onOpenEmail,
-  hasMore,
+  cursor,
   loadingMore,
   moreFailed,
   onMore,
@@ -69,6 +69,8 @@ export function WorklistBody({
   day: Worklist;
   queue: readonly WorklistItem[];
   scope: WorklistScope;
+  view: WorklistView;
+  onView: (next: WorklistView) => void;
   filter: WorklistFilter;
   owner: string;
   selectedId: string;
@@ -83,7 +85,8 @@ export function WorklistBody({
   // one's copy goes stale once a reader pages.
   walk: WorklistWalk | undefined;
   onRefresh: () => void;
-  hasMore: boolean;
+  // Where the next batch starts; absent once the view is wholly loaded.
+  cursor: string | undefined;
   loadingMore: boolean;
   moreFailed: boolean;
   onMore: () => void;
@@ -95,27 +98,17 @@ export function WorklistBody({
   const colleague = rosterOwnerNaming(useMemberNames(owner ? [owner] : []))(
     owner,
   );
-  // Default context follows seller work. An explicit choice may also name a
-  // review row, whose record context must remain reachable from the queue.
+  const hasMore = cursor !== undefined;
+  // Only Today opens a row's context by default; another view opens it when
+  // the reader picks a row.
   const selected = rowInHand(
-    selectedId === "" ? sellerWork(queue) : queue,
+    view === "today" || selectedId !== "" ? queue : [],
     selectedId,
   );
-  // The day cut into the two jobs it holds. The server decides which, in
-  // `destination`, and the counts above the queue use the same field. A split
-  // derived here from `source` or `category` would drift from those figures.
-  const today = sellerWork(queue);
-  const review = reviewWork(queue);
-  // How much review work the day holds that this panel has not loaded, in
-  // items: `buckets.review` counts a folded group as its members.
-  const reviewItems = represented(review);
-  const reviewMissing = reviewShortfall(
-    reviewItems.items,
-    day.summary.buckets?.review,
-    reviewItems.floor,
-    filter,
+  const selection = useWorklistPicks(
+    queue,
+    `${scope}/${view}/${filter}/${owner}`,
   );
-  const selection = useWorklistPicks(queue, `${scope}/${filter}/${owner}`);
   const openOwnerDay = (next: string) => {
     onFilter("all");
     onOwner(next);
@@ -129,10 +122,9 @@ export function WorklistBody({
     // list that starts at 4 and skips 5 cannot tell a correct number from a
     // broken one. A rank answers "where in this list", and the day's own order
     // is what put the rows in these lists.
-    positions: new Map([
-      ...sellerWork(queue).map((item, at) => [rowIdentity(item), at] as const),
-      ...reviewWork(queue).map((item, at) => [rowIdentity(item), at] as const),
-    ]),
+    positions: new Map(
+      queue.map((item, at) => [rowIdentity(item), at] as const),
+    ),
     owner,
     // The resolved selection, not the raw state. The pane falls back to the
     // first row when the reader has chosen nothing. A highlight reading the
@@ -140,7 +132,7 @@ export function WorklistBody({
     selectedId: selected ? rowIdentity(selected) : "",
     onSelect,
     onOpenEmail,
-    onFilter,
+    onView,
     picks: selection.picks,
   };
   return (
@@ -159,9 +151,11 @@ export function WorklistBody({
             day={day}
             loaded={queue}
             scope={scope}
+            view={view}
             filter={filter}
             owner={owner}
             onScope={onScope}
+            onView={onView}
             onFilter={onFilter}
             onOwner={onOwner}
           />
@@ -211,15 +205,18 @@ export function WorklistBody({
             // midnight, so a task due tomorrow is absent. "Nothing is waiting on
             // you" read as "you have no work" to a rep who could see three tasks
             // on the company beside it. The page offered nothing to reconcile them.
-            <p className="t-body worklist-clear">
-              {clearSentence(
+            <EmptyView
+              view={view}
+              rows={rowProps}
+              sentence={clearSentence(
                 dayPartlyRead(day, queue),
                 filter,
                 colleague,
                 t,
                 hasMore,
+                view,
               )}
-            </p>
+            />
           ) : (
             // The queue, and beside it what the selected row is about.
             //
@@ -247,103 +244,130 @@ export function WorklistBody({
               }
               label={t("worklist.pane.title")}
               queue={
-                <Panel
-                  // Indigo, the band the Brief's Focus panel wears and a
-                  // record's "what needs you today" pane before it. These rows
-                  // are the agent's reading of the day: what it ranked and what
-                  // it prepared. Indigo is the one claim the product makes about
-                  // who did that. The same panel is drawn on this page and in
-                  // the queue drawer, so the claim reads the same in both.
-                  tone="ai"
-                  title={t("worklist.queue")}
-                  titleAction={
-                    <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-                  }
-                >
-                  {/* The headings come from the SERVER's band list, in its draw
+                view !== "today" ? (
+                  <ViewPanel view={view} items={queue} rows={rowProps} />
+                ) : (
+                  <Panel
+                    // Indigo, the band the Brief's Focus panel wears and a
+                    // record's "what needs you today" pane before it. These rows
+                    // are the agent's reading of the day: what it ranked and what
+                    // it prepared. Indigo is the one claim the product makes about
+                    // who did that. The same panel is drawn on this page and in
+                    // the queue drawer, so the claim reads the same in both.
+                    tone="ai"
+                    title={t("worklist.queue")}
+                    titleAction={
+                      <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                    }
+                  >
+                    {/* The headings come from the SERVER's band list, in its draw
                   order, rather than from the rows — which is the only way a
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-                  {bandSections(day, today).map((section) => (
-                    <QueueBand
-                      key={section.band}
-                      section={section}
-                      canReportEmpty={canReportEmptyBands(hasMore)}
-                      rows={QueueRows}
-                      rowProps={rowProps}
-                    />
-                  ))}
-                  {/* Rows an older server sent with no band. Real work, drawn under
+                    {bandSections(day, queue).map((section) => (
+                      <QueueBand
+                        key={section.band}
+                        section={section}
+                        canReportEmpty={canReportEmptyBands(hasMore)}
+                        rows={QueueRows}
+                        rowProps={rowProps}
+                      />
+                    ))}
+                    {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
-                  {unbandedRows(today).length > 0 && (
-                    <QueueRows items={unbandedRows(today)} {...rowProps} />
-                  )}
-                </Panel>
+                    {unbandedRows(queue).length > 0 && (
+                      <QueueRows items={unbandedRows(queue)} {...rowProps} />
+                    )}
+                  </Panel>
+                )
               }
             />
           )}
-          {/* What is not the seller's to execute, below their day rather than
-          inside it.
-          A duplicate pair, a stopped mailbox and an approval somebody owes are
-          three different jobs, and none of them is the next call to make. Drawn
-          in the queue they compete with it: a rep scanning for their next
-          customer steps over the product's own housekeeping to find one.
-          Below, and never hidden: this work is somebody's, and a screen that
-          swallowed it would be the reason it went undone. */}
-          <ReviewPanel
-            items={review}
-            shortfall={reviewMissing}
-            more={hasMore}
-            changed={Boolean(walk?.changed_since_snapshot)}
-            rows={rowProps}
+          {/* The view loads its next batch as the reader nears its end. */}
+          <ScrollSentinel
+            list={`${scope}/${view}/${filter}/${owner}`}
+            cursor={cursor}
+            loading={loadingMore}
+            failed={moreFailed}
+            onLoadMore={onMore}
+            end={queue.length > 0 ? t(`worklist.end.${view}`) : undefined}
           />
-          {/* One way on for the whole day, below both panels it fills. */}
-          {hasMore && (
-            <LoadMoreOfTheDay
-              pending={loadingMore}
-              failed={moreFailed}
-              onMore={onMore}
+          {view === "today" && filter === "all" && (
+            <UpcomingSection
+              day={day}
+              scope={scope}
+              owner={owner}
+              rows={rowProps}
             />
           )}
-          {/* Team oversight belongs to the explicitly selected wider scope. */}
-          {owner === "" &&
-            scope !== "mine" &&
-            scope !== "unassigned" &&
-            day.scope_options.includes("team") && (
-              <TeamExceptionsPanel
-                enabled={day.scope_options.includes("team")}
-                onOwner={openOwnerDay}
-              />
-            )}
-          {owner === "" &&
-            scope !== "mine" &&
-            scope !== "unassigned" &&
-            day.scope_options.includes("team") && (
-              <TeamBoard
-                onOwner={openOwnerDay}
-                onUnassigned={() => {
-                  onFilter("all");
-                  onScope("unassigned");
-                }}
-              />
-            )}
-          {/* This diagnostic counts all readable history, not personal obligations. */}
-          {owner === "" && scope === "all" && (
-            <HiddenBacklogPanel
-              enabled={day.scope_options.includes("team")}
-              onOpenEmail={onOpenEmail}
-            />
-          )}
+          <ScopePanels
+            day={day}
+            scope={scope}
+            owner={owner}
+            onOwnerDay={openOwnerDay}
+            onUnassigned={() => {
+              onFilter("all");
+              onScope("unassigned");
+            }}
+            onOpenEmail={onOpenEmail}
+          />
           {/* Last, and open. A reader opens this page to find what to do next.
           What is already finished answers a different question: worth having,
           and not worth leading with, which is what its position says. It is
           also the only panel here that asks for nothing. The receipt is why the
           acts above it are safe to take, and a receipt folded shut is one
           nobody checks. */}
+          <OptionalRelationships day={day} owner={owner} />
           <HandledForYouPanel />
         </div>
       </div>
+    </>
+  );
+}
+
+// A view with no rows says so in one line. An empty Decisions view keeps its
+// domain review launcher.
+function EmptyView({
+  view,
+  rows,
+  sentence,
+}: Readonly<{ view: WorklistView; rows: RowContext; sentence: string }>) {
+  return (
+    <>
+      <p className="t-body worklist-clear">{sentence}</p>
+      {view !== "today" && <ViewPanel view={view} items={[]} rows={rows} />}
+    </>
+  );
+}
+
+// The panels a wider scope adds below the day. Team oversight shows on a team
+// or all scope; the hidden-backlog diagnostic counts all readable history.
+function ScopePanels({
+  day,
+  scope,
+  owner,
+  onOwnerDay,
+  onUnassigned,
+  onOpenEmail,
+}: Readonly<{
+  day: Worklist;
+  scope: WorklistScope;
+  owner: string;
+  onOwnerDay: (next: string) => void;
+  onUnassigned: () => void;
+  onOpenEmail: (activityId: string) => void;
+}>) {
+  if (owner !== "") return null;
+  const leads = day.scope_options.includes("team");
+  const wide = scope !== "mine" && scope !== "unassigned" && leads;
+  return (
+    <>
+      {wide && <TeamExceptionsPanel enabled={leads} onOwner={onOwnerDay} />}
+      {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
+      {scope === "all" && (
+        <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+      )}
     </>
   );
 }

@@ -53,6 +53,7 @@ public.activity.activity_source_author_id_fkey FOREIGN KEY (source_author_id) RE
 public.activity.activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.activity.activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))
 public.activity.activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.activity.agenda_fingerprint text gen=- def=-
 public.activity.archived_at timestamp with time zone gen=- def=-
 public.activity.assignee_id uuid gen=- def=-
 public.activity.audience text NOT NULL gen=- def='workspace'::text
@@ -557,6 +558,7 @@ public.activity_request_settlement.judged_through_activity_id uuid NOT NULL gen=
 public.activity_request_settlement.remaining text gen=- def=-
 public.activity_request_settlement.request_activity_id uuid NOT NULL gen=- def=-
 public.activity_request_settlement.revalidation_requested_at timestamp with time zone gen=- def=-
+public.activity_request_settlement.rule_version text NOT NULL gen=- def=''::text
 public.activity_request_settlement.verdict text NOT NULL gen=- def=-
 public.activity_request_settlement_pkey CREATE UNIQUE INDEX activity_request_settlement_pkey ON public.activity_request_settlement USING btree (request_activity_id)
 public.activity_retention_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -1246,6 +1248,25 @@ public.assurance_cycle.opened_by text NOT NULL gen=- def=-
 public.assurance_cycle.scope text NOT NULL gen=- def=-
 public.assurance_cycle_one_open_per_scope CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL)
 public.assurance_cycle_pkey CREATE UNIQUE INDEX assurance_cycle_pkey ON public.assurance_cycle USING btree (id)
+public.assurance_deal_receipt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_deal_receipt.assessed_at timestamp with time zone NOT NULL gen=- def=-
+public.assurance_deal_receipt.assurance_deal_receipt_outcome_check CHECK ((outcome = ANY (ARRAY['eligible'::text, 'review_required'::text, 'unsupported'::text, 'waiting'::text, 'unknown'::text])))
+public.assurance_deal_receipt.assurance_deal_receipt_pkey PRIMARY KEY (deal_id)
+public.assurance_deal_receipt.assurance_deal_receipt_run_id_fkey FOREIGN KEY (run_id) REFERENCES assurance_run(id) ON DELETE CASCADE
+public.assurance_deal_receipt.assurance_deal_receipt_valid_after_assessed CHECK ((valid_until >= assessed_at))
+public.assurance_deal_receipt.captured_by text NOT NULL gen=- def=-
+public.assurance_deal_receipt.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_deal_receipt.deal_id uuid NOT NULL gen=- def=-
+public.assurance_deal_receipt.input_fingerprint text NOT NULL gen=- def=-
+public.assurance_deal_receipt.outcome text NOT NULL gen=- def=-
+public.assurance_deal_receipt.policy_version text NOT NULL gen=- def=-
+public.assurance_deal_receipt.reasons text[] NOT NULL gen=- def='{}'::text[]
+public.assurance_deal_receipt.run_id uuid NOT NULL gen=- def=-
+public.assurance_deal_receipt.silent_days integer NOT NULL gen=- def=-
+public.assurance_deal_receipt.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_deal_receipt.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.assurance_deal_receipt_by_run CREATE INDEX assurance_deal_receipt_by_run ON public.assurance_deal_receipt USING btree (run_id)
+public.assurance_deal_receipt_pkey CREATE UNIQUE INDEX assurance_deal_receipt_pkey ON public.assurance_deal_receipt USING btree (deal_id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
@@ -1255,11 +1276,13 @@ public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
 public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
 public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_exception.assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.assurance_exception.assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency text gen=- def=-
+public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.id uuid NOT NULL gen=- def=uuidv7()
@@ -1272,6 +1295,7 @@ public.assurance_exception.severity text NOT NULL gen=- def=-
 public.assurance_exception.status text NOT NULL gen=- def='open'::text
 public.assurance_exception.subject_id uuid NOT NULL gen=- def=-
 public.assurance_exception.subject_kind text NOT NULL gen=- def=-
+public.assurance_exception.task_activity_id uuid gen=- def=-
 public.assurance_exception.type text NOT NULL gen=- def=-
 public.assurance_exception.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.uq_assurance_exception_logical_key UNIQUE (logical_key)
@@ -1762,6 +1786,7 @@ public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_anchor timestamp with time zone gen=- def=-
 public.capture_connection.sync_cursor jsonb gen=- def=-
+public.capture_connection.sync_revision bigint NOT NULL gen=- def=0
 public.capture_connection.unread_from timestamp with time zone gen=- def=-
 public.capture_connection.unread_to timestamp with time zone gen=- def=-
 public.capture_connection.user_id uuid NOT NULL gen=- def=-
@@ -2171,6 +2196,7 @@ public.comms_outbound.consent_purpose text gen=- def=-
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
 public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
+public.comms_outbound.from_address text gen=- def=-
 public.comms_outbound.from_name text gen=- def=-
 public.comms_outbound.html_body text gen=- def=-
 public.comms_outbound.id uuid NOT NULL gen=- def=-
@@ -2498,7 +2524,7 @@ public.company.source_author_name text gen=- def=-
 public.company.source_id text gen=- def=-
 public.company.source_system text gen=- def=-
 public.company.trg_company_address_country_stale CREATE TRIGGER trg_company_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()
-public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
+public.company.trg_company_geocode_state_stale CREATE TRIGGER trg_company_geocode_state_stale AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_state_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
 public.company.trg_company_updated CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.company.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2671,30 +2697,28 @@ public.company_fact_revision.company_fact_revision_pkey PRIMARY KEY (company_id)
 public.company_fact_revision.company_id uuid NOT NULL gen=- def=-
 public.company_fact_revision.revision bigint NOT NULL gen=- def=0
 public.company_fact_revision_pkey CREATE UNIQUE INDEX company_fact_revision_pkey ON public.company_fact_revision USING btree (company_id)
-public.company_geocode_goes_stale() secdef=false cfg=- acl=- 
-BEGIN
-  -- Only when the coordinates exist and the writer did not speak for them:
-  -- stamping 'stale' on a row that was never resolved would say the
-  -- coordinates are out of date rather than absent, and overriding a writer
-  -- that set the status deliberately would undo the worker's own write.
-  IF NEW.geocode_status IS DISTINCT FROM OLD.geocode_status THEN
-    RETURN NEW;
-  END IF;
-  IF OLD.geocode_status IS NULL THEN
-    RETURN NEW;
-  END IF;
-  NEW.geocode_status := 'stale';
-  RETURN NEW;
-END;
-
 public.company_geocode_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_geocode_state.attempts integer NOT NULL gen=- def=0
 public.company_geocode_state.company_geocode_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_geocode_state.company_geocode_state_pkey PRIMARY KEY (company_id)
+public.company_geocode_state.company_geocode_state_status_check CHECK (((status IS NULL) OR (status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
 public.company_geocode_state.company_id uuid NOT NULL gen=- def=-
+public.company_geocode_state.geocoded_at timestamp with time zone gen=- def=-
+public.company_geocode_state.input_hash text gen=- def=-
 public.company_geocode_state.last_outcome text gen=- def=-
+public.company_geocode_state.lat double precision gen=- def=-
+public.company_geocode_state.lon double precision gen=- def=-
 public.company_geocode_state.next_attempt_at timestamp with time zone gen=- def=-
+public.company_geocode_state.provider text gen=- def=-
+public.company_geocode_state.status text gen=- def=-
 public.company_geocode_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_geocode_state_goes_stale() secdef=false cfg=- acl=- 
+BEGIN
+  UPDATE company_geocode_state SET status = 'stale'
+   WHERE company_id = NEW.id AND status IS NOT NULL AND status <> 'stale';
+  RETURN NULL;
+END;
+
 public.company_geocode_state_pkey CREATE UNIQUE INDEX company_geocode_state_pkey ON public.company_geocode_state USING btree (company_id)
 public.company_growth_fit acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.company_growth_fit.company_growth_fit_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
@@ -3276,6 +3300,7 @@ public.contact_email.contact_email_version_js_safe CHECK (((version >= '-9007199
 public.contact_email.contact_id uuid NOT NULL gen=- def=-
 public.contact_email.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_email.email text NOT NULL gen=- def=-
+public.contact_email.email_domain_folded text gen=- def=-
 public.contact_email.email_type text NOT NULL gen=- def='work'::text
 public.contact_email.from_correspondence boolean NOT NULL gen=- def=true
 public.contact_email.id uuid NOT NULL gen=- def=uuidv7()
@@ -4153,7 +4178,7 @@ public.dedupe_candidate.version bigint NOT NULL gen=- def=1
 public.dedupe_candidate_pkey CREATE UNIQUE INDEX dedupe_candidate_pkey ON public.dedupe_candidate USING btree (id)
 public.dedupe_scan_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.dedupe_scan_state.dedupe_scan_state_pkey PRIMARY KEY (stream)
-public.dedupe_scan_state.dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text])))
+public.dedupe_scan_state.dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text, 'company_fact'::text, 'relationship'::text])))
 public.dedupe_scan_state.scanned_through_at timestamp with time zone NOT NULL gen=- def=-
 public.dedupe_scan_state.scanned_through_id uuid NOT NULL gen=- def=-
 public.dedupe_scan_state.stream text NOT NULL gen=- def=-
@@ -4624,7 +4649,7 @@ public.idempotency_key.response_records integer NOT NULL gen=- def=0
 public.idempotency_key.response_status integer gen=- def=-
 public.idempotency_key_pkey CREATE UNIQUE INDEX idempotency_key_pkey ON public.idempotency_key USING btree (principal_id, key, endpoint)
 public.idx_aam_subject CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id)
-public.idx_activity_answer_mail CREATE INDEX idx_activity_answer_mail ON public.activity USING btree (counterparty_email, kind, occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
+public.idx_activity_answer_mail_subject CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_answer_touch CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL))
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
@@ -4667,6 +4692,7 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
+public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
@@ -4742,8 +4768,9 @@ public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_dispos
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_company_exact_legal_name_key CREATE INDEX idx_company_exact_legal_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(legal_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_company_exact_name_key CREATE INDEX idx_company_exact_name_key ON public.company USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(display_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
+public.idx_company_fact_dedupe_scan CREATE INDEX idx_company_fact_dedupe_scan ON public.company_fact USING btree (updated_at, id)
 public.idx_company_fact_lookup CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key)
-public.idx_company_geocoded CREATE INDEX idx_company_geocoded ON public.company USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
+public.idx_company_geocode_state_point CREATE INDEX idx_company_geocode_state_point ON public.company_geocode_state USING btree (lat, lon) WHERE (status = 'ok'::text)
 public.idx_company_import_display_name CREATE INDEX idx_company_import_display_name ON public.company USING btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))
 public.idx_company_import_legal_name CREATE INDEX idx_company_import_legal_name ON public.company USING btree (f_fold_import_name(legal_name)) WHERE ((legal_name IS NOT NULL) AND (archived_at IS NULL) AND (merged_into_id IS NULL))
 public.idx_company_last_activity_keyset CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -4769,6 +4796,7 @@ public.idx_contact_email_base CREATE INDEX idx_contact_email_base ON public.cont
 public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id)
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
 public.idx_contact_email_dedupe_scan CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id)
+public.idx_contact_email_domain_reversed CREATE INDEX idx_contact_email_domain_reversed ON public.contact_email USING btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)
 public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
@@ -4890,6 +4918,7 @@ public.idx_list_member_event_entity CREATE INDEX idx_list_member_event_entity ON
 public.idx_list_member_event_list CREATE INDEX idx_list_member_event_list ON public.list_member_event USING btree (list_id, occurred_at DESC, id DESC)
 public.idx_list_steward CREATE INDEX idx_list_steward ON public.list USING btree (steward_id)
 public.idx_list_visit_list CREATE INDEX idx_list_visit_list ON public.list_visit USING btree (list_id)
+public.idx_meeting_readiness_activity CREATE INDEX idx_meeting_readiness_activity ON public.meeting_readiness USING btree (activity_id)
 public.idx_mfa_challenge_spent_expires CREATE INDEX idx_mfa_challenge_spent_expires ON public.mfa_challenge_spent USING btree (expires_at)
 public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON public.mfa_recovery_code USING btree (user_id)
 public.idx_oauth_authorization_code_user CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id)
@@ -4932,6 +4961,7 @@ public.idx_rel_history_counterparty CREATE INDEX idx_rel_history_counterparty ON
 public.idx_rel_history_deal CREATE INDEX idx_rel_history_deal ON public.relationship USING btree (deal_id)
 public.idx_rel_history_project CREATE INDEX idx_rel_history_project ON public.relationship USING btree (project_id)
 public.idx_relationship_counterparty_contact CREATE INDEX idx_relationship_counterparty_contact ON public.relationship USING btree (counterparty_contact_id)
+public.idx_relationship_dedupe_scan CREATE INDEX idx_relationship_dedupe_scan ON public.relationship USING btree (updated_at, id) WHERE ((kind = 'employment'::text) AND (company_id IS NOT NULL))
 public.idx_report_run_asker CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC, id DESC)
 public.idx_restore_drill_recent CREATE INDEX idx_restore_drill_recent ON public.restore_drill USING btree (started_at DESC)
 public.idx_role_assignment_team CREATE INDEX idx_role_assignment_team ON public.role_assignment USING btree (team_id)
@@ -5299,11 +5329,13 @@ public.lead.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.disqualify_note text gen=- def=-
 public.lead.disqualify_reason_id uuid gen=- def=-
 public.lead.email text gen=- def=-
+public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
+public.lead.industry text gen=- def=-
 public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.lead.lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES lead_disqualify_reason(id) ON DELETE RESTRICT
 public.lead.lead_email_norm CHECK (((email IS NULL) OR (email = lower(email))))
@@ -5829,6 +5861,30 @@ public.meeting_proposal.token_hash text NOT NULL gen=- def=-
 public.meeting_proposal.used_at timestamp with time zone gen=- def=-
 public.meeting_proposal_pkey CREATE UNIQUE INDEX meeting_proposal_pkey ON public.meeting_proposal USING btree (activity_id)
 public.meeting_proposal_token_hash_key CREATE UNIQUE INDEX meeting_proposal_token_hash_key ON public.meeting_proposal USING btree (token_hash)
+public.meeting_readiness acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.meeting_readiness.activity_id uuid NOT NULL gen=- def=-
+public.meeting_readiness.agenda_fingerprint text NOT NULL gen=- def=-
+public.meeting_readiness.attendee_id uuid NOT NULL gen=- def=-
+public.meeting_readiness.captured_by text NOT NULL gen=- def=-
+public.meeting_readiness.confirmed_at timestamp with time zone NOT NULL gen=- def=-
+public.meeting_readiness.meeting_readiness_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.meeting_readiness.meeting_readiness_attendee_id_fkey FOREIGN KEY (attendee_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.meeting_readiness.meeting_readiness_pkey PRIMARY KEY (attendee_id, activity_id)
+public.meeting_readiness.meeting_readiness_revision_present CHECK ((revision <> ''::text))
+public.meeting_readiness.participants_fingerprint text NOT NULL gen=- def=-
+public.meeting_readiness.revision text NOT NULL gen=- def=-
+public.meeting_readiness.starts_at timestamp with time zone NOT NULL gen=- def=-
+public.meeting_readiness.starts_on_day boolean NOT NULL gen=- def=-
+public.meeting_readiness_pkey CREATE UNIQUE INDEX meeting_readiness_pkey ON public.meeting_readiness USING btree (attendee_id, activity_id)
+public.member_identity_family(member uuid) secdef=false cfg=- acl=- 
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+
 public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.mfa_challenge_spent.jti text NOT NULL gen=- def=-
@@ -7419,6 +7475,7 @@ public.signal.source text NOT NULL gen=- def=-
 public.signal.source_channel text NOT NULL gen=- def='derived'::text
 public.signal.status text NOT NULL gen=- def='open'::text
 public.signal.summary text NOT NULL gen=- def=-
+public.signal.summary_params jsonb gen=- def=-
 public.signal.trg_signal_entity_keys CREATE TRIGGER trg_signal_entity_keys BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()
 public.signal.trg_signal_updated CREATE TRIGGER trg_signal_updated BEFORE UPDATE ON public.signal FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed'::text, 'entity_deal_id'::text, 'entity_company_id'::text, 'entity_contact_id'::text, 'entity_project_id'::text])))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.signal.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -8500,7 +8557,7 @@ public.web_form.success_message text gen=- def=-
 public.web_form.trg_web_form_updated CREATE TRIGGER trg_web_form_updated BEFORE UPDATE ON public.web_form FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.web_form.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.web_form.version bigint NOT NULL gen=- def=1
-public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND (secret_ref IS NOT NULL) AND (cardinality(allowed_origins) = 0))))
+public.web_form.web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0))))
 public.web_form.web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000)))
 public.web_form.web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text))
 public.web_form.web_form_form_key_key UNIQUE (form_key)

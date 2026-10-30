@@ -86,6 +86,14 @@ type DailyResult struct {
 	P95, Budget     time.Duration
 	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
 	Allow422 bool
+	Samples  int
+	// FirstP95 is set when confirmBreaches replaced a breached first round;
+	// the strict lane judges it with the round that replaced it.
+	FirstP95 time.Duration
+	// Incomplete counts 200 answers that named an unavailable source.
+	Incomplete int
+	// Lacking counts timed answers without the field the strict lane needs filled.
+	Lacking int
 }
 
 const dailyScaleEnv = "MARGINCE_BENCH_DAILY_SCALE"
@@ -564,6 +572,9 @@ func TestAnUnlistedBreachIsJudgedOnASecondMeasurement(t *testing.T) {
 		}
 		if want := "empty; " + c.note; specs[0].note != want {
 			t.Errorf("note %q, want %q", specs[0].note, want)
+		}
+		if specs[0].firstP95 != 152*time.Millisecond {
+			t.Errorf("first p95 kept as %s, want 152ms: the strict lane judges the round the second one replaced", specs[0].firstP95)
 		}
 	}
 }

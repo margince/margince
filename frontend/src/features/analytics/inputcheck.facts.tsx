@@ -44,6 +44,7 @@ export function checkLabel(
     no_next_step: "review.noNextStep",
     no_economic_buyer: "review.noEconomicBuyer",
     buyer_silent: "review.buyerSilent",
+    deal_viability: "review.dealViability",
     commit_unpriced: "review.commitUnpriced",
     stage_exit_unmet: "review.stageExitUnmet",
   };

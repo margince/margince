@@ -7,14 +7,15 @@ import {
   EmptyState,
   Field,
   SegmentedControl,
-  TextInput,
 } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { isISODate } from "../../design-system/dateinput";
+import { MonthInput, type YearMonth } from "../../design-system/monthinput";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import {
@@ -27,7 +28,6 @@ import {
   reportingPeriodLabel,
 } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
-import { useReportingPipelines } from "./reporting.queries";
 import { ReportingTargetDialog } from "./reporting.targetdialog";
 
 type Target = components["schemas"]["ReportingTarget"];
@@ -37,12 +37,12 @@ export function ReportingTargets() {
   const context = useAnalyticsContext();
   const zone = useRecordZone();
   const { selection } = useAnalyticsSelection(context.data);
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const canCreate = useCanWrite("sales_target", "create");
   const canUpdate = useCanWrite("sales_target", "update");
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const [status, setStatus] = useState("active");
-  const [periodFilter, setPeriodFilter] = useState("");
+  const [periodFilter, setPeriodFilter] = useState<YearMonth | "">("");
   const [editing, setEditing] = useState<Target | "new" | null>(null);
   const query = useQuery({
     queryKey: ["reporting-targets", cursor, status, periodFilter],
@@ -92,12 +92,11 @@ export function ReportingTargets() {
           />
           <Field label={t("reporting.periodMonth")}>
             {(field) => (
-              <TextInput
+              <MonthInput
                 {...field}
-                type="month"
                 value={periodFilter}
-                onChange={(event) => {
-                  setPeriodFilter(event.target.value);
+                onChange={(month) => {
+                  setPeriodFilter(month);
                   setCursor(undefined);
                 }}
               />
@@ -132,7 +131,7 @@ export function ReportingTargets() {
                           </div>
                           <div className="t-caption">
                             {target.definition.pipeline_id
-                              ? (pipelines.data?.data.find(
+                              ? (pipelines.data?.find(
                                   (pipeline) =>
                                     pipeline.id ===
                                     target.definition.pipeline_id,

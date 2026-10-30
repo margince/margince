@@ -64,11 +64,19 @@ export function contactVerdict(
   const strength = view.strength;
   if (!strength) {
     return moment
-      ? { word: t("contact.moment.rule.nothing_needed"), tone: "neutral" }
+      ? {
+          word: t("contact.moment.rule.nothing_needed"),
+          sentence: t("contact.verdict.nothingOwed"),
+          tone: "neutral",
+        }
       : null;
   }
   if (strength.bucket === "none") {
-    return { word: bucketLabel(strength.bucket, t), tone: "neutral" };
+    return {
+      word: bucketLabel(strength.bucket, t),
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    };
   }
   return {
     word: bucketLabel(strength.bucket, t),
@@ -83,20 +91,6 @@ function bandSentence(view: Contact360, t: Translator): string | undefined {
     return changeSentence(change, t);
   }
   return omitted(view, "last_touch") ? undefined : directionSentence(view, t);
-}
-
-/**
- * awaitsOurReply says whether their message is the newest one either way. The
- * "Your move" pill, the gap's "no reply" and the Last reply figure's tone
- * all read it, so they turn on the same day.
- */
-export function awaitsOurReply(view: Contact360): boolean {
-  if (omitted(view, "last_touch") || !view.last_inbound_at) {
-    return false;
-  }
-  const inbound = Date.parse(view.last_inbound_at);
-  const outbound = Date.parse(view.last_outbound_at ?? "");
-  return Number.isNaN(outbound) || inbound > outbound;
 }
 
 /** The three rows beside the ring. A withheld section draws no row, because

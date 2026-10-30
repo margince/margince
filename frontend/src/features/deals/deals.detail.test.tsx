@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { DealScreen } from "./deals";
@@ -80,6 +81,9 @@ function stubDealBackend(
     if (url.includes("/activities")) {
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (url.includes("/deals/")) {
       return jsonResponse(onRecord);
     }
@@ -104,8 +108,10 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
       name: translate("en", "deal.editDetails"),
     }),
   );
+  // The drawer's own field; the page's head renames the deal too.
+  const drawer = await screen.findByRole("dialog");
   await user.click(
-    await screen.findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: "Change Deal name" }),
   );
 }
 
@@ -144,13 +150,12 @@ describe("DealScreen — edit, archive (A3)", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        const url = request.url;
-        // EntityRef resolves each reference by its own id read; a reference it
-        // cannot name is not a link.
-        if (url.includes("/companies/p1")) {
-          return jsonResponse({ id: "p1", display_name: "VietnamPartner JSC" });
-        }
-        return stubBackend([d], { single: d })(request);
+        // EntityRef names every company of the page in one list read; a
+        // reference it cannot name is not a link.
+        return (
+          companyNamesAnswer(request.url, { p1: "VietnamPartner JSC" }) ??
+          stubBackend([d], { single: d })(request)
+        );
       }),
     );
 
@@ -317,10 +322,10 @@ describe("DealScreen — edit, archive (A3)", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/companies/p1")) {
-          return jsonResponse({ id: "p1", display_name: "Xentral" });
-        }
-        return stubBackend([d], { single: d })(request);
+        return (
+          companyNamesAnswer(request.url, { p1: "Xentral" }) ??
+          stubBackend([d], { single: d })(request)
+        );
       }),
     );
 

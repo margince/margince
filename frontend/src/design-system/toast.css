@@ -55,7 +55,7 @@
    * as a banner rather than as something passing through.
    */
   max-width: min(34rem, 100%);
-  background: var(--bgRail);
+  background: var(--bgInkField);
   color: var(--textOnAccent);
   border-radius: var(--r-md);
   padding: 10px 14px;
@@ -81,7 +81,7 @@
  * the lead-qualified one puts an `EntityRef` to the new contact in its body.
  * That control paints itself in `--accentText`, which is tuned for the page,
  * and the toast is the one thing in the product that moves the ground out from
- * under it: accent green on the rail's dark plate measures 2.63:1 against the
+ * under it: accent green on the dark ink field measures 2.63:1 against the
  * 4.5:1 AA needs, and it had been doing so since before this region was a
  * global one — swept only once a sweep looked at a toast while it was up.
  *
@@ -99,7 +99,7 @@
  * The verb a confirmation carries: Undo, and the handful of things like it.
  *
  * Drawn as a text affordance rather than as a `Button`, for the same reason
- * `.toast-dismiss` beside it is: this sits on the rail's dark ground, where
+ * `.toast-dismiss` beside it is: this sits on the dark ink field, where
  * every one of `Button`'s fills reads as a second surface stacked on the
  * message. It keeps the underline so it is legible as a control without one.
  */
@@ -124,7 +124,7 @@
 
 /* A sticky confirmation's way out. Small and quiet: the message beside it is the
    point, and this is only the reader's answer to having read it. It sits on the
-   rail's dark ground like the rest of the toast, so it takes the on-accent text
+   dark ink field like the rest of the toast, so it takes the on-accent text
    colour rather than the page's. */
 .toast-dismiss {
   display: inline-flex;
@@ -164,7 +164,7 @@
  * are both things a reader has to notice, and the arrangement this replaces
  * could only DROP the dot for the second — so the message that mattered more
  * was the one drawn with less. The base hue rather than the Text ink, because
- * this is a 9px disc on the rail's dark plate and nothing is read on it.
+ * this is a 9px disc on the dark ink field and nothing is read on it.
  */
 .toast-dot-info {
   background: var(--info);

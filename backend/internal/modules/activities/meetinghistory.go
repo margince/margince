@@ -70,11 +70,16 @@ func meetingStatusOrNone(status *string) string {
 // request cannot tell the difference. Counting it would make one meeting held
 // twice.
 func changedMeetingStatus(before, after crmcontracts.Activity) string {
-	next := meetingStatusString(after.MeetingStatus)
-	if next == "" || next == meetingStatusString(before.MeetingStatus) {
+	return changedStatus(meetingStatusString(before.MeetingStatus), meetingStatusString(after.MeetingStatus))
+}
+
+// changedStatus is the status a write moved before to, or "" when it set none
+// or kept it.
+func changedStatus(before, after string) string {
+	if after == before {
 		return ""
 	}
-	return next
+	return after
 }
 
 // meetingStatusString flattens the contract's optional enum to the writer's

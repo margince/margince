@@ -96,7 +96,18 @@ describe("Back to Worklist on the record", () => {
 
     const back = screen.getByRole("link", { name: en["brief.queue.back"] });
     expect(back.getAttribute("href")).toBe(
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+      "/#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+    );
+  });
+
+  it("returns to the view the drawer was on", () => {
+    window.location.hash =
+      "#/contacts/c-1?from=worklist&queue_scope=team&queue_view=decisions";
+    render(<WorklistReturnLink />);
+
+    const back = screen.getByRole("link", { name: en["brief.queue.back"] });
+    expect(back.getAttribute("href")).toBe(
+      "/#/home?queue=1&queue_scope=team&queue_view=decisions",
     );
   });
 

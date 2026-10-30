@@ -82,6 +82,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
+- [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
+  review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
@@ -96,6 +98,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   it when you stop.
 - [mint-a-passport.md](how-to/mint-a-passport.md): make a passport token for an agent.
 - [connect-an-mcp-client.md](how-to/connect-an-mcp-client.md): connect a client to the MCP tools.
+- [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
@@ -162,6 +165,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
   Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
+- [worklist-source-census.md](reference/worklist-source-census.md): each source of work the Worklist reads, the
+  limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.

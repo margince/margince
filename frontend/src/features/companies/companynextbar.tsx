@@ -1,10 +1,11 @@
 import type { components } from "../../api/schema";
-import { NextBar } from "../../design-system/nextbar";
+import { RecordNextBar } from "../../components/latestinbound";
 import { formatNumber } from "../../format/format";
 import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
 import { useCompanySetAside } from "./companysetaside";
 import {
   MayBeDoneVerb,
@@ -144,11 +145,15 @@ export function CompanyNextBar({
   if (moment) {
     const defer = momentDefer(moment, deferOf);
     return (
-      <NextBar
+      <RecordNextBar
+        // A company moment is an owed promise, which outranks a new mail.
+        urgent
+        about={moment.evidence.map((item) => item.id)}
         // The task the moment cites is the thing to do; the headline is the
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
         late={lateTag}
+        detail={task && taskDetail(task)}
         sub={moment.why_now}
         insight={momentBasis(moment)}
         action={
@@ -164,9 +169,10 @@ export function CompanyNextBar({
     );
   }
   return (
-    <NextBar
+    <RecordNextBar
       title={task?.subject}
       late={lateTag}
+      detail={task && taskDetail(task)}
       sub={
         task?.due_at
           ? t("co.next.due", {

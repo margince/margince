@@ -350,12 +350,19 @@ function Page({
   view = populated,
   guardEntries = guardAllowsMail,
   tab = "overview",
+  justIn,
 }: Readonly<{
   view?: View;
   guardEntries?: components["schemas"]["ContactConsentGuardEntry"][];
   tab?: ContactTab;
+  // The newest unanswered thing they sent, served to the record's activity
+  // reads so the page leads with it.
+  justIn?: components["schemas"]["Activity"];
 }>) {
   installFetchStub({
+    ...(justIn && {
+      "GET /activities": () => jsonResponse({ data: [justIn], page }),
+    }),
     // The page mounts capability-aware chrome, so the session has to be routed:
     // the stub refuses to guess one, and an unrouted probe fails every grant
     // closed — the embedded rail would render read-only no matter what the
@@ -405,6 +412,49 @@ function Page({
 }
 
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
+
+// Dana wrote two hours ago and nobody has answered. The Overview leads with
+// her mail, and every other tab keeps it in one line under the pills.
+const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
+const danaWrote: components["schemas"]["Activity"] = {
+  id: "mail-just-in",
+  kind: "email",
+  direction: "inbound",
+  subject: "Re: Retrofit review next week",
+  occurred_at: twoHoursAgo,
+  occurred_precision: "instant",
+  offers_email: true,
+  is_done: false,
+  source: "email",
+  captured_by: "connector:email",
+  created_at: twoHoursAgo,
+  updated_at: twoHoursAgo,
+  links: [{ entity_type: "contact", entity_id: "p-1" }],
+  email_summary: {
+    activity_id: "mail-just-in",
+    occurred_at: twoHoursAgo,
+    occurred_precision: "instant",
+    display_status: "workspace",
+    attachment_count: 0,
+    move: "needs_reply",
+    version: 1,
+    subject: "Re: Retrofit review next week",
+    preview:
+      "Thursday works for us. Can you send the updated quote before then so finance can look at it?",
+    counterparty: "Dana Buyer",
+    counterparty_contact_id: "p-1",
+  },
+};
+
+export const PageJustIn: Story = {
+  name: "Page · just in",
+  render: () => <Page justIn={danaWrote} />,
+};
+
+export const PageJustInOtherTab: Story = {
+  name: "Page · just in, on another tab",
+  render: () => <Page justIn={danaWrote} tab="timeline" />,
+};
 
 // A provider is connected and nobody has looked this contact up, so the tab
 // strip carries a dot on "Research". The dot is decorative, since the panel

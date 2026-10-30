@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -177,7 +177,7 @@ func recordPendingDispositionTx(
 		INSERT INTO company_domain_disposition (domain, status, owner_id, last_evidence_at)
 		VALUES ($1, 'pending', $2, $3)
 		ON CONFLICT (domain) DO NOTHING`,
-		domain, ownerID, evidenceAt)
+		domain, domainQuestionOwner(ownerID), evidenceAt)
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
 	}
@@ -239,9 +239,8 @@ func newestEvidenceFor(ctx context.Context, tx pgx.Tx, domain string, activityID
 		  FROM activity a LEFT JOIN activity_participant ap ON ap.activity_id = a.id AND NOT ap.past_party_cap
 		 WHERE a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND `+occurredday.BegunSQL("a", "now() + $3::interval")+`
-		   AND (lower(split_part(ap.address, '@', 2)) = $1
-		    OR lower(split_part(ap.address, '@', 2)) LIKE '%.' || `+storekit.EscapeLikeSQL("$1")+`
-		    OR a.id = $2)`, domain, activityID, mailClockSkewAllowance).Scan(&occurred)
+		   AND (`+owndomain.CoversSQL("ap.address_domain_folded", "$1")+` OR a.id = $2)`,
+		owndomain.Fold(domain), activityID, mailClockSkewAllowance).Scan(&occurred)
 	if err != nil {
 		return nil
 	}
@@ -305,10 +304,6 @@ func (s *Store) ListDueDomains(ctx context.Context, limit int) ([]DueDomain, err
 			  -- vendor's real corporate site, answer "company", and create
 			  -- exactly the record the refusal exists to prevent.
 			  AND d.admission IS DISTINCT FROM 'suppressed'
-			  -- A domain nobody is accountable for may not mint rows, so it is
-			  -- not worth a crawl either (ResolveDomainTriage stamps the company's
-			  -- owner from this column).
-			  AND d.owner_id IS NOT NULL
 			  AND d.next_attempt_at IS NOT NULL
 			  AND d.next_attempt_at <= now()
 			  AND d.attempts < $1
@@ -382,7 +377,6 @@ func (s *Store) ExhaustedDomains(ctx context.Context, limit int) ([]DueDomain, e
 			SELECT domain FROM company_domain_disposition
 			WHERE status = 'pending'
 			  AND admission IS DISTINCT FROM 'suppressed'
-			  AND owner_id IS NOT NULL
 			  AND next_attempt_at IS NOT NULL
 			  AND next_attempt_at <= now()
 			  AND attempts >= $1
@@ -457,7 +451,7 @@ func (s *Store) RetireStaleTriageRead(ctx context.Context, domain string) error 
 // mail.acme.com works at the same place as someone at acme.com.
 func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.full_name, split_part(pe.email, '@', 1)
+		SELECT p.id, p.full_name, pe.email
 		FROM contact_email pe
 		JOIN contact p ON p.id = pe.contact_id
 		WHERE p.archived_at IS NULL
@@ -466,11 +460,9 @@ func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, e
 		  -- in, an old mailbox on this domain could turn a personal-domain
 		  -- refusal into a company, or the reverse.
 		  AND pe.archived_at IS NULL
-		  AND (split_part(pe.email, '@', 2) = $1
-		       -- A literal suffix compare, never LIKE: the domain reaches here
-		       -- from a forgeable header, and '%' in a LIKE pattern would match
-		       -- every address in the workspace.
-		       OR right(split_part(pe.email, '@', 2), length($1) + 1) = '.' || $1)`, domain)
+		  -- A literal suffix compare, never LIKE: the domain reaches here from a
+		  -- forgeable header, and '%' in a LIKE pattern would match every address.
+		  AND `+owndomain.CoversSQL("pe.email_domain_folded", "$1"), owndomain.Fold(domain))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: listing the contacts on %s: %w", domain, err)
 	}
@@ -482,10 +474,11 @@ func OnDomain(ctx context.Context, tx pgx.Tx, domain string) ([]DomainContact, e
 	var out []DomainContact
 	for rows.Next() {
 		var id ids.UUID
-		var name, local string
-		if err := rows.Scan(&id, &name, &local); err != nil {
+		var name, address string
+		if err := rows.Scan(&id, &name, &address); err != nil {
 			return nil, fmt.Errorf("contacts: scanning a contact on %s: %w", domain, err)
 		}
+		local, _, _ := strings.Cut(address, "@")
 		at, seen := byContact[id]
 		if !seen {
 			byContact[id] = len(out)

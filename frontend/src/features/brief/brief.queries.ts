@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  queryOptions,
   type UseQueryResult,
   useMutation,
   useQuery,
@@ -24,27 +25,28 @@ export type MorningDigest = components["schemas"]["MorningDigest"];
 export type Deal = components["schemas"]["Deal"];
 
 export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
-  return useQuery({
-    queryKey: briefKey,
-    // On the same schedule as the attention feed, because the Worklist's
-    // briefing lane is BOTH of them: the feed says which entries are still
-    // waiting and this says what each one is. Refreshing one without the other
-    // leaves the lane intersecting a fresh list of ids against a stale set of
-    // items, and an intersection that finds nothing draws the quiet-morning
-    // plate over a morning that has work in it.
-    queryFn: async (): Promise<MorningBrief | null> => {
-      const { data, error, response } = await api.GET("/brief");
-      // No run yet is not a failure: it is a page that offers to make one.
-      if (response.status === 404) {
-        return null;
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? null;
-    },
-  });
+  return useQuery(morningBriefOptions);
 }
+
+/** The read useMorningBrief makes, which Home's prefetch also starts. */
+export const morningBriefOptions = queryOptions({
+  queryKey: briefKey,
+  // On the same schedule as the attention feed. The Worklist's briefing lane
+  // is both: the feed says which entries still wait, and this says what each
+  // one is. Refreshed apart, a fresh list of ids meets a stale set of items.
+  // An empty intersection then draws the quiet-morning plate over real work.
+  queryFn: async (): Promise<MorningBrief | null> => {
+    const { data, error, response } = await api.GET("/brief");
+    // No run yet is not a failure: it is a page that offers to make one.
+    if (response.status === 404) {
+      return null;
+    }
+    if (error) {
+      throwProblem(error);
+    }
+    return data ?? null;
+  },
+});
 
 /**
  * The overnight digest (CAP-WIRE-6): the nightly build's stored counts — what
@@ -163,14 +165,17 @@ export function useBriefItemMark() {
 /**
  * The rep's weekly retrospective — the most recent, or a named week.
  *
- * `404` is not a failure: a rep whose first Monday has not come round yet has
- * no review, and that is a page saying so rather than an error.
+ * `404` is not a failure. A rep whose first Monday has not come round yet has
+ * no review, and the page says so rather than showing an error.
+ * `enabled` is false where nothing on screen reads the review, as on Today.
  */
 export function useWeeklyReview(
   week?: string,
+  enabled = true,
 ): UseQueryResult<WeeklyReview | null> {
   return useQuery({
     queryKey: ["weekly-review", week ?? "latest"],
+    enabled,
     queryFn: async (): Promise<WeeklyReview | null> => {
       const { data, error, response } = await api.GET(
         "/weekly-reviews/latest",

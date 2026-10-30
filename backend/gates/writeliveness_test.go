@@ -172,7 +172,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// and each entry names it — the scan reads one function at a time and cannot
 	// follow either edge.
 	"internal/modules/contacts:resolveOrCreateAnchor":      "guarded in its helper: anchorCompany carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
-	"internal/modules/contacts:recordGeocodeAfter":         "guarded by addressHashInTx, which re-reads the address `WHERE id = $1 AND archived_at IS NULL`: an archived company yields no hash, the comparison fails, and the function returns without writing. The liveness and the address-moved check are one test",
 	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE with IncludeArchived from the top of its transaction — deliberately, because the subject of a bought-data revert may be archived — so re-taking liveness here would refuse the case the function exists for",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock through visibleOfferLocked, except createOfferTx where the offer was inserted in the same transaction",
@@ -183,7 +182,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
 	// because of a predicate. Each says which fact makes that true.
 	"internal/modules/capture:limitLinkLessAudience":      "the activity was INSERTed by this same transaction a few statements earlier, so there is no archived row for it to find — the function's own check is that exactly one row moved",
-	"internal/modules/capture:commitSyncCursor":           "fenced by the generation, not by liveness: withdrawing a connection bumps it, so a sync that started before the withdrawal finds its generation gone and reports itself superseded instead of writing a watermark onto a retired grant",
 	"internal/modules/capture:AdvanceChannelPollOffsetTx": "the poller's watermark for a connection its own live selection handed it, and the statement only ever moves the offset FORWARD (`poll_offset < $3`), so a late write from a retired cycle matches nothing",
 	"internal/modules/capture:backfillWorkspace":          "a one-time relocation of credential material out of the `auth` column and into the vault. It MUST reach withdrawn connections: leaving their secrets in a column the vault was introduced to empty is the defect, and the row is claimed with `credential_ref IS NULL` so two boots relocate once",
 

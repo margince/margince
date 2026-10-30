@@ -136,7 +136,7 @@ func TestABatchWithNothingToFoldTouchesNothing(t *testing.T) {
 func TestABatchThatCannotFoldReturnsTheError(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	c := v.contact(t, "Unfolded")
-	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 
 	ctx, cancel := context.WithCancel(context.Background())

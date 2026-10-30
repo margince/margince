@@ -24,7 +24,12 @@ const approval = (id: string, targetId: string) => ({
   created_at: "2026-10-01T09:00:00Z",
 });
 
-function stubBackend(approvals: unknown[], onDecide?: (url: string) => void) {
+// Answers the target-scoped read the way the server does: only the rows staged
+// against the record the request names.
+function stubBackend(
+  approvals: ReturnType<typeof approval>[],
+  onDecide?: (url: string) => void,
+) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
@@ -37,10 +42,16 @@ function stubBackend(approvals: unknown[], onDecide?: (url: string) => void) {
       return jsonResponse(meFixture({ allow: REP_GRANTS }));
     }
     if (url.includes("/approvals")) {
+      const target = new URL(url).searchParams.get("target_entity_id");
       return jsonResponse({
-        data: approvals,
+        data: approvals.filter(
+          (approval) => approval.target_entity_id === target,
+        ),
         page: { next_cursor: null, has_more: false },
       });
+    }
+    if (url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
     }
     if (url.includes("/deals/d1") && !url.includes("/offers")) {
       return jsonResponse(deal({}));

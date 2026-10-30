@@ -71,6 +71,7 @@ import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
+import { SharedMergeReviewsCard } from "./sharedmergereviews";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { WebFormsCard } from "./webforms";
@@ -177,7 +178,14 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       // Team Lead's membership hands over, which is not the roster's question.
       return <TeamsCard />;
     case "roles":
-      return <RolesSettings />;
+      // Who may merge a colleague's duplicate of a contact is a question of
+      // who may change what.
+      return (
+        <>
+          <RolesSettings />
+          <SharedMergeReviewsCard />
+        </>
+      );
     case "seats":
       return <LicenseCard />;
 
@@ -227,6 +235,8 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "integrations":
       return <IntegrationsTab />;
+    case "web-forms":
+      return <WebFormsCard />;
     case "knowledge":
       return <KnowledgeCard />;
     case "import":
@@ -313,7 +323,7 @@ function ConnectionsTab() {
 }
 
 // What the INSTALLATION is wired to: one shared contact-data credential, the
-// website forms, the outbound subscriptions and the workspace's Telegram bot. Each is shared by
+// outbound subscriptions and the workspace's Telegram bot. Each is shared by
 // everybody, which is why they sit under the company heading and the personal
 // connections do not.
 function IntegrationsTab() {
@@ -321,7 +331,6 @@ function IntegrationsTab() {
     <>
       <ProviderCard />
       <FinanceSourceCard />
-      <WebFormsCard />
       <WebhooksCard />
       <TelegramConnectorsPanel />
       {/* A unit whose secret is `workspace`-scoped holds the installation's

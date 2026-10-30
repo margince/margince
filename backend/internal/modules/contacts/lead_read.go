@@ -146,7 +146,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL + `, company_id`, nil
+	legal_hold, ` + leadHasInboundSQL + `, company_id, ` + leadIndustryField + `, ` + leadCompanyFactsSQL(ctx), nil
 }
 
 // readLead resolves one lead row; active names the custom-field columns
@@ -240,6 +240,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	var hasInbound bool
 	var authorName, authorSeatName *string
 	var authorID *ids.UUID
+	var companyFacts []byte
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
@@ -251,6 +252,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
+		&l.Industry, &companyFacts,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -271,6 +273,9 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.MergedIntoId = uuidPtr(mergedInto)
 	l.FromContactId = uuidPtr(fromContact)
 	l.CompanyId = uuidPtr(companyID)
+	if err := scanLeadCompanyFacts(&l, companyFacts); err != nil {
+		return l, err
+	}
 	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
 	l.QualifiedDealId = uuidPtr(qualifiedDeal)
 	if statusSetBy != nil {

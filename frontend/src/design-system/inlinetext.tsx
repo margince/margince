@@ -1,6 +1,7 @@
 import {
   type ComponentPropsWithoutRef,
   forwardRef,
+  type ReactNode,
   type Ref,
   useEffect,
   useRef,
@@ -209,6 +210,7 @@ export function InlineText({
   multiline,
   type,
   step,
+  frame,
   onEditingChange,
   onDirtyChange,
   canEdit,
@@ -234,6 +236,10 @@ export function InlineText({
   maxLength?: number;
   type?: "text" | "email" | "number" | "date";
   step?: string;
+  // Holds the resting value in the element its text belongs to, such as a
+  // record's h1. The open editor is never held there: a field is not heading
+  // content.
+  frame?: (resting: ReactNode) => ReactNode;
   // A value that is a PARAGRAPH rather than a line: the account's own story
   // fields run to several sentences, and a single-line input shows a reader
   // one sentence of what they are editing. Enter then inserts a newline
@@ -316,26 +322,27 @@ export function InlineText({
       cancelling.current = false;
       setEditing(true);
     };
+    const held = frame ?? ((resting: ReactNode) => resting);
     if (verb)
-      return (
+      return held(
         <InlineEditVerb
           ref={trigger}
           label={label}
           disabled={!canEdit}
           onClick={open}
-        />
+        />,
       );
     if (!canEdit) {
-      return (
+      return held(
         <ReadOnlyText
           value={value}
           display={display}
           suggested={suggested}
           readOnlyReason={readOnlyReason}
-        />
+        />,
       );
     }
-    return (
+    return held(
       <button
         ref={trigger}
         type="button"
@@ -349,7 +356,7 @@ export function InlineText({
         onClick={open}
       >
         {shown}
-      </button>
+      </button>,
     );
   }
 

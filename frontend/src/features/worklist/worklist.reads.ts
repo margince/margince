@@ -1,9 +1,13 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
+import { categoryInView, type WorklistView } from "../../lib/worklistviews";
 import type {
-  HandledForYou,
   TeamBoard,
   TeamExceptions,
   Worklist,
@@ -13,6 +17,7 @@ import type {
 } from "./worklist.queries";
 import { represented } from "./worklistunits";
 
+export { useHandledForYou } from "../../lib/handled";
 export { worklistKey } from "../../lib/workkeys";
 
 // The whole day in one read, at one scope or one named owner, and one filter.
@@ -30,26 +35,74 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
   enabled = true,
+  view?: WorklistView,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
   return useInfiniteQuery({
+    ...worklistDayOptions(scope, filter, owner, view),
     enabled,
+  });
+}
+
+/** The read useWorklist makes, which Home's prefetch also starts. */
+export function worklistDayOptions(
+  scope: WorklistScope,
+  filter: WorklistFilter,
+  owner?: string,
+  view?: WorklistView,
+) {
+  // A view joins the key only when named, so Home's read keeps its own key.
+  const queryKey = [
+    ...worklistKey,
+    scope,
+    filter,
+    owner ?? "",
+    ...(view ? [view] : []),
+  ];
+  return infiniteQueryOptions({
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<Worklist> => {
-      const dials = owner ? { owner, filter } : { scope, filter };
-      return unwrap(
-        await api.GET("/worklist", {
-          params: {
-            query: pageParam ? { ...dials, cursor: pageParam } : dials,
-          },
-        }),
-      );
-    },
+    // React Query aborts the signal once no screen still observes this key, and
+    // the server then stops assembling the day instead of answering nobody.
+    queryFn: ({ pageParam, signal }) =>
+      readWorklistPage(scope, filter, owner, pageParam, signal, view),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
+}
+
+/** One page of the day at those dials, the request `useWorklist` makes. */
+export async function readWorklistPage(
+  scope: WorklistScope,
+  filter: WorklistFilter,
+  owner: string | undefined,
+  cursor: string | undefined,
+  signal?: AbortSignal,
+  view?: WorklistView,
+): Promise<Worklist> {
+  // Decisions and System also send their own filter, so a server that knows
+  // no `view` still answers with that view's rows.
+  const wire = view && view !== "today" && filter === "all" ? view : filter;
+  const whose = owner ? { owner, filter: wire } : { scope, filter: wire };
+  const dials = view ? { ...whose, view } : whose;
+  const page = unwrap(
+    await api.GET("/worklist", {
+      params: { query: cursor ? { ...dials, cursor } : dials },
+      signal,
+    }),
+  );
+  return view === undefined || page.view !== undefined
+    ? page
+    : withinView(page, view);
+}
+
+// A server that echoes no view ignored it, so the rows outside the view are
+// dropped here rather than drawn under the view's heading.
+function withinView(page: Worklist, view: WorklistView): Worklist {
+  return {
+    ...page,
+    queue: page.queue.filter((item) => categoryInView(item.category, view)),
+  };
 }
 
 /**
@@ -78,23 +131,6 @@ export function loadedQueue(pages: readonly Worklist[]): WorklistItem[] {
     }
   }
   return rows;
-}
-
-/**
- * What the product did on this reader's behalf.
- *
- * No `enabled` gate, unlike the manager reads beside it. A receipt is the
- * reader's own and every act it reports was taken for them, so there is no tier
- * to hold. The server refuses a caller with no human behind it, which is the
- * only refusal this read has.
- */
-export function useHandledForYou() {
-  return useQuery({
-    queryKey: [...worklistKey, "handled"],
-    queryFn: async (): Promise<HandledForYou> => {
-      return unwrap(await api.GET("/worklist/handled", {}));
-    },
-  });
 }
 
 /**

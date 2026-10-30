@@ -6,7 +6,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { EmbedReindexCard, embedReindexStatusQueryKey } from "./embedreindex";
+import { EmbedReindexCard } from "./embedreindex";
+import {
+  embedReindexIdentitiesQueryKey,
+  embedReindexStatusQueryKey,
+} from "./embedreindex.queries";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
 
@@ -118,7 +122,7 @@ function mount(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { fetchMock, requests };
+  return { fetchMock, requests, client };
 }
 
 afterEach(() => {
@@ -184,7 +188,7 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
 });
 
 it("posts previewed_identity from the status read and force:false on a plain confirm", async () => {
-  const { requests } = mount(REINDEX_OPERATOR, {
+  const { requests, client } = mount(REINDEX_OPERATOR, {
     "GET /embeddings/reindex/status": () => json(STATUS_NEEDED),
     "GET /embeddings/reindex/preview": () => json(PREVIEW),
     "POST /embeddings/reindex": () =>
@@ -212,6 +216,12 @@ it("posts previewed_identity from the status read and force:false on a plain con
   });
   // The dialog closes and the card now reflects the reembedding status.
   expect(await screen.findByText("Reindexing…")).toBeTruthy();
+  // The shell banner reads its own key, so the confirm seeds it too: an open
+  // banner follows the confirm without a reload.
+  expect(client.getQueryData(embedReindexIdentitiesQueryKey)).toEqual({
+    configured_identity: STATUS_NEEDED.configured_identity,
+    populated_identity: STATUS_NEEDED.populated_identity,
+  });
 });
 
 it("Rebuild index stays available even when no reindex is needed, and posts force:true", async () => {
@@ -378,7 +388,7 @@ it("says no embeddings model is bound, links to AI settings, and asks for no sta
   ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Open AI settings" }),
-  ).toHaveAttribute("href", "#/settings/models");
+  ).toHaveAttribute("href", "/#/settings/models");
   expect(screen.getByText("Search index")).toBeInTheDocument();
   expect(screen.queryByText("Index status")).toBeNull();
   expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();

@@ -84,7 +84,8 @@ func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
 		t.Fatalf("the card does not name the champion to meet: %v", args)
 	}
 	if reason, _ := next["reason"].(string); reason == "" ||
-		!strings.Contains(reason, "nothing is booked") || !strings.Contains(reason, "champion") {
+		!strings.Contains(reason, "last recorded exchange") ||
+		!strings.Contains(reason, "no meeting is recorded") || !strings.Contains(reason, "champion") {
 		t.Fatalf("the reason does not say why now or why them: %q", next["reason"])
 	}
 	// The pulse's own fact: nothing inbound is flagged, which is what the

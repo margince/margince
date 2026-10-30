@@ -25,8 +25,8 @@ import (
 type summaryCopy struct {
 	// Record writes. A record type reads as the language's noun (recordnouns.go);
 	// labels, field names and ids pass through.
-	archive, createHead, updateHead, logHead, settingFields, moreFields, overwriteHuman, merge,
-	enrich, ownDomain string
+	archive, createHead, updateHead, logHead, settingFields, moreFields, merge,
+	mergeCase, previewCase, enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
@@ -50,7 +50,7 @@ type summaryCopy struct {
 
 	// The agent's own work: decisions, reports, the morning brief and a volume
 	// step-up.
-	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, bulkChange,
+	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, draftReport, bulkChange,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
 	stepUpChanges string
 
@@ -72,8 +72,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Log a %s",
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
-		overwriteHuman:      "Update %s %s: overwrite %s, edited by hand",
 		merge:               "Merge %s %s into %s",
+		mergeCase:           "Merge %d contacts into %s",
+		previewCase:         "Preview merging %d contacts into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",
 		onDeal:              "%s on deal %s",
@@ -132,6 +133,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s every waiting proposal of act %s",
 		runReport:           "Run report %s",
 		composeReport:       "Compose a report of %d block(s)",
+		draftReport:         "Save a draft on report %s, which readers see only once it is published",
 		bulkChange:          "Change %d records at once",
 		analyticsQuery:      "Run an analytics query over %s",
 		annotateNothing:     "Record that tonight's pass ran and found nothing to say",
@@ -148,8 +150,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "%s erfassen",
 		settingFields:       ", Felder: %s",
 		moreFields:          "+%d weitere",
-		overwriteHuman:      "%s %s ändern: manuell bearbeitete Felder überschreiben (%s)",
 		merge:               "%s zusammenführen: %s in %s",
+		mergeCase:           "%d Kontakte in %s zusammenführen",
+		previewCase:         "Zusammenführung von %d Kontakten in %s prüfen",
 		enrich:              "%s von %s lesen und eine Anreicherung für %s vorschlagen",
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
@@ -208,6 +211,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s: alle wartenden Vorschläge des Vorgangs %s",
 		runReport:           "Bericht %s ausführen",
 		composeReport:       "Bericht aus %d Baustein(en) erstellen",
+		draftReport:         "Entwurf für den gespeicherten Bericht %s zur Veröffentlichung vorbereiten",
 		bulkChange:          "%d Datensätze auf einmal ändern",
 		analyticsQuery:      "Analyseabfrage über %s ausführen",
 		annotateNothing:     "Festhalten, dass der nächtliche Durchlauf lief und nichts zu berichten hatte",
@@ -224,8 +228,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Ghi nhận %s",
 		settingFields:       ", các trường: %s",
 		moreFields:          "+%d trường khác",
-		overwriteHuman:      "Cập nhật %s %s: ghi đè các trường đã được chỉnh sửa thủ công (%s)",
 		merge:               "Hợp nhất %s: %s vào %s",
+		mergeCase:           "Hợp nhất %d liên hệ vào %s",
+		previewCase:         "Xem trước việc hợp nhất %d liên hệ vào %s",
 		enrich:              "Đọc %s từ %s và đề xuất làm giàu dữ liệu cho %s",
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",
@@ -284,6 +289,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s mọi đề xuất đang chờ của lượt %s",
 		runReport:           "Chạy báo cáo %s",
 		composeReport:       "Soạn một báo cáo gồm %d khối",
+		draftReport:         "Chuẩn bị bản nháp cho báo cáo đã lưu %s để chờ xuất bản",
 		bulkChange:          "Thay đổi %d bản ghi cùng lúc",
 		analyticsQuery:      "Chạy truy vấn phân tích trên %s",
 		annotateNothing:     "Ghi nhận rằng lượt chạy đêm nay đã chạy và không có gì để báo cáo",

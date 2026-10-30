@@ -26,7 +26,7 @@ func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 	source := v.contact(t, "Merge Source")
 	survivor := v.contact(t, "Merge Survivor")
-	activity := v.interaction(t, v.e.Rep1, source, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, source, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	v.recompute(t, activity)
 	if len(v.edgesFor(t, source)) != 1 {
 		t.Fatal("the seed produced no edge to the merge source")
@@ -55,7 +55,7 @@ func TestRefoldingAContactRestoresItsEdgesAndDroppingRemovesThem(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	c := v.contact(t, "Refold Subject")
 	other := v.contact(t, "Refold Peer")
-	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'cc')`, activity, other); err != nil {
 		t.Fatalf("adding a peer to the activity: %v", err)
@@ -101,7 +101,7 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 	c := v.contact(t, "Refused Subject")
-	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	v.recompute(t, activity)
 
 	breakingTable := func(t *testing.T, table string, run func(tx pgx.Tx) error) error {

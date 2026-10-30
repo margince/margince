@@ -5,13 +5,12 @@ import type { Owners } from "./dialoglayout.css";
 import {
   childrenHosts,
   declarations,
-  definition,
+  defOf,
   descendants,
   keyOf,
   literalTypes,
   presetOf,
   primitiveKey,
-  tag,
 } from "./dialoglayout.tags";
 import { sourceFileAt } from "./source-tree";
 
@@ -63,12 +62,8 @@ export {
   within,
 } from "./dialoglayout.tags";
 
-export const isDialogTag = (
-  file: ts.SourceFile,
-  name: string,
-  keys: ReadonlySet<string>,
-) => {
-  const def = definition(file, name);
+export const isDialogTag = (element: ts.Node, keys: ReadonlySet<string>) => {
+  const def = defOf(element);
   return !!def && keys.has(keyOf(def));
 };
 
@@ -82,14 +77,14 @@ function dialogKeys(
   const candidates = files.flatMap((file) =>
     [...declarations(file)]
       .filter(([name]) => /^[A-Z]/.test(name))
-      .map(([, def]) => ({ file, def, around: childrenHosts(def) }))
+      .map(([, def]) => ({ def, around: childrenHosts(def) }))
       .filter((c) => c.around.length > 0),
   );
   for (let grew = true; grew; ) {
     grew = false;
-    for (const { file, def, around } of candidates) {
+    for (const { def, around } of candidates) {
       if (keys.has(keyOf(def))) continue;
-      if (around.some((e) => isDialogTag(file, tag(e), keys))) {
+      if (around.some((e) => isDialogTag(e, keys))) {
         keys.add(keyOf(def));
         grew = true;
       }

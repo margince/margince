@@ -51,6 +51,7 @@ const gmailConnected: CaptureConnection = {
   ],
   account_label: "lars@example.de",
   last_synced_at: "2026-07-23T09:30:00Z",
+  last_success_at: "2026-07-23T09:30:00Z",
   next_sync_due_at: "2026-07-23T09:35:00Z",
   watch_expires_at: "2026-08-01T00:00:00Z",
   // A finished import, so the Past email service draws its figures with no
@@ -76,6 +77,7 @@ const gcalReauth: CaptureConnection = {
   scopes: ["read"],
   account_label: "lars@example.de",
   last_synced_at: "2026-07-20T08:00:00Z",
+  last_success_at: "2026-07-20T08:00:00Z",
   last_sync_error_class: "auth",
 };
 
@@ -86,6 +88,7 @@ const imapError: CaptureConnection = {
   status: "error",
   scopes: [],
   last_synced_at: "2026-07-18T12:00:00Z",
+  last_success_at: "2026-07-18T12:00:00Z",
   last_sync_error_class: "unreachable",
 };
 
@@ -98,6 +101,7 @@ const imapPolled: CaptureConnection = {
   scopes: [],
   account_label: "sales@example.org",
   last_synced_at: "2026-07-23T09:00:00Z",
+  last_success_at: "2026-07-23T09:00:00Z",
   next_sync_due_at: "2026-07-23T09:15:00Z",
   watch_expires_at: null,
   backfill: { state: "none" },

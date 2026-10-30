@@ -1,10 +1,10 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { NextBar } from "../../design-system/nextbar";
 import { formatDate, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
@@ -14,8 +14,10 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import { useSourceOpener } from "../../lib/opensource";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
@@ -102,6 +104,11 @@ export function ContactToday({
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
 
+const URGENT_RULES: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "meeting_prep",
+  "overdue_promise",
+]);
+
 // The server's `why_now` is the only reason: one moment gives one reason, and
 // the facts in it are the part a rep judges.
 function MomentBar({
@@ -126,7 +133,11 @@ function MomentBar({
     <TaskCallAction task={task} pageContact={view.contact} />
   );
   return (
-    <NextBar
+    <RecordNextBar
+      // A meeting about to happen, or a promise past its date, outranks what
+      // just came in; the item then sits above the bar.
+      urgent={URGENT_RULES.has(moment.rule) || undefined}
+      about={moment.evidence.map((item) => item.id)}
       title={moment.headline}
       late={lateness(owedDue(moment, view), view, t, locale)}
       sub={moment.why_now}
@@ -181,18 +192,22 @@ function MomentSource({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const openerFor = useSourceOpener(onOpenEmail);
   const item = moment.evidence.find((entry) => entry.type === "activity");
   if (!item) {
     return null;
   }
-  const open = () => {
-    const activity = view.activities?.data.find((row) => row.id === item.id);
-    if (activity?.kind === "email" && onOpenEmail && item.id) {
-      onOpenEmail(item.id);
-    } else {
-      openContactTab(view.contact.id, "timeline");
-    }
-  };
+  // A source the page has read opens in its reader. Any other source, or one
+  // no reader may open, leads to the History tab.
+  const activity = view.activities?.data.find((row) => row.id === item.id);
+  const inPlace =
+    activity &&
+    openerFor({
+      id: activity.id,
+      kind: activity.kind,
+      contentState: activity.content_state,
+    });
+  const open = inPlace ?? (() => openContactTab(view.contact.id, "timeline"));
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
@@ -212,9 +227,10 @@ function TaskBar({
   const { locale } = useLocale();
   const zone = useRecordZone();
   return (
-    <NextBar
+    <RecordNextBar
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
+      detail={taskDetail(task)}
       sub={
         task.due_at
           ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
@@ -254,15 +270,17 @@ function AnswerBar({
   ];
   if (withheld.length > 0) {
     return (
-      <NextBar title={t("today.withheld", { sections: withheld.join(", ") })} />
+      <RecordNextBar
+        title={t("today.withheld", { sections: withheld.join(", ") })}
+      />
     );
   }
   if (!moment) {
-    return <NextBar title={t("record.notShown")} />;
+    return <RecordNextBar title={t("record.notShown")} />;
   }
   if (moment.rule === "thin_relationship") {
     return (
-      <NextBar
+      <RecordNextBar
         title={moment.headline}
         sub={t("contact.overview.coverage")}
         action={
@@ -271,7 +289,7 @@ function AnswerBar({
       />
     );
   }
-  return <NextBar />;
+  return <RecordNextBar />;
 }
 
 // What the move says is owed, in the order both readers below take it: the

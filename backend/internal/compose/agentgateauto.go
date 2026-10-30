@@ -30,19 +30,16 @@ const ifMatchHeader = "If-Match"
 
 // runAutoExecuted dispatches a call the gate admitted at the auto-execute tier.
 //
-// An X-Approval-Token on such a call is CONSUMED, whatever tool it names. A
-// staged 🟡 call can resolve 🟢 on its retry — the record moved, or the
-// per-field split staged an otherwise auto-execute patch — and the asserted
-// authority is then still an assertion: left unread, the approval stays pending
-// in a human's inbox for work that already happened, and an invalid or replayed
-// token is accepted by being ignored. The MCP door has always redeemed on this
-// arm (registry.go, runClaimed); this door redeemed for update_record alone
-// (margince/margince#812).
+// An X-Approval-Token on such a call is CONSUMED, whatever tool it names.
+// A staged 🟡 call can resolve 🟢 on its retry because the record moved.
+// The asserted authority is then still an assertion. Left unread, the approval
+// stays pending in a human's inbox for work that already happened.
+// An invalid or replayed token is rejected: consumePresentedToken writes the
+// error and the handler does not run. The MCP door redeems on this arm too
+// (registry.go, runClaimed).
 //
 // A REDEEMED call goes straight to the handler: it carries exactly the change a
-// human released, whose identity the diff_hash already bound, so re-running the
-// per-field ownership split over it would stage a second approval for the
-// overwrite that was just approved.
+// human released, whose identity the diff_hash already bound.
 func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, outcome admissionOutcome) {
 	redemption, redeemed, ok := consumePresentedToken(w, r, outcome.staging, outcome.pol, outcome.body)
 	if redeemed && !ok {
@@ -64,8 +61,7 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 		// released marker and the precondition travel together.
 		r = r.WithContext(redemption.released) //nolint:contextcheck // released is derived from r.Context() inside consumePresentedToken
 	}
-	// The effect is charged on BOTH arms — the field split forwards to the
-	// same handler through its own path — and on NEITHER when the handler
+	// The effect is charged when the handler performed it, and not when it
 	// refused. A volume budget counts what an agent did, so a rejected mutation that
 	// spent a write would let a caller exhaust its own allowance on requests
 	// that changed nothing, which is a bound nobody wrote.
@@ -77,13 +73,7 @@ func runAutoExecuted(w http.ResponseWriter, r *http.Request, next http.Handler, 
 	// effect is charged at that count rather than as one act.
 	r = r.WithContext(agentvolume.WithEffectTally(r.Context()))
 	performed := &effectRecorder{ResponseWriter: w}
-	if !redeemed && reachesTheHumanOwnedSplit(outcome.pol) {
-		splitHumanOwnedUpdate(performed, r, next,
-			splitUpdateDeps{staging: outcome.staging, commands: outcome.commands, ownership: outcome.ownership},
-			outcome.pol, outcome.body)
-	} else {
-		next.ServeHTTP(performed, r)
-	}
+	next.ServeHTTP(performed, r)
 	if performed.done() {
 		outcome.registry.ChargeEffect(r.Context(), outcome.spec)
 	}
@@ -200,19 +190,6 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))
 	return true
-}
-
-// reachesTheHumanOwnedSplit reports whether an admitted call is the shape the
-// field split governs: a whole-record update_record patch, whose body can mix
-// fields a human owns with fields an agent may write.
-//
-// Named rather than spelled inline because the gate that walks this path
-// (TestEveryWholeRecordPatchRunsItsGuardsBeforeTheAutoExecuteHalf) needs the
-// same answer, and a walk that restated the condition would go on driving the
-// set it was written against after this one moved — passing over a route that
-// had stopped being covered.
-func reachesTheHumanOwnedSplit(pol agentPolicy) bool {
-	return pol.Tool == toolUpdateRecord && !actionShapedUpdateOps[pol.Op]
 }
 
 // reportPinDisagreement leaves the witness for a condition the system believes

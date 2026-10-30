@@ -300,7 +300,7 @@ describe("the timeline tab", () => {
       <ContactTimelineTab contactId="p-1" view={threaded} />,
     );
 
-    expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
+    expect(container.querySelectorAll(".tl-thread-messages")).toHaveLength(1);
     expect(
       screen.getByText("2 messages · 1 from them, 1 from your team"),
     ).toBeTruthy();

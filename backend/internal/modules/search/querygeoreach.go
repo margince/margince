@@ -50,9 +50,9 @@ const (
 //
 // WHY THE QUESTION IS ASKED OF THE ROWS AND NOT THE SCHEMA. bindGeo settles
 // whether the deployment CAN rank by distance by looking at the columns, and
-// that was read as the whole capability. It is half of it: a workspace whose
-// companies all sit at geocode_status 'stale' runs the statement, matches
-// nothing, and answers zero rows at coverage complete_exact with no note — a
+// that was read as the whole capability. It is half of it. A workspace whose
+// companies all sit at point status 'stale' runs the statement and matches
+// nothing. It answers zero rows at coverage complete_exact with no note: a
 // search that failed short in the shape of a complete, exact answer. The caller
 // then reports that nobody is near the place asked about, which is a claim
 // about the customers made from a fact about the geocoder.

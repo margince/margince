@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { AppLink } from "../../design-system/applink";
 import {
   Badge,
   Button,
@@ -301,14 +302,14 @@ function TaskSettings({
         <Heading size="small" className="t-h3">
           {t("aiTaskSheet.settings")}
         </Heading>
-        <a
+        <AppLink
           className="t-caption"
           href={THINKING_GUIDE}
           target="_blank"
           rel="noreferrer"
         >
           {t("aiTaskSheet.thinkingGuide")}
-        </a>
+        </AppLink>
       </div>
       <Field
         label={t("aiTaskSheet.thinking")}
@@ -403,9 +404,9 @@ function ContractFacts({ route }: Readonly<{ route: Feature }>) {
       </dl>
       <p className="t-caption">
         {t("aiTaskSheet.fixed.help")}{" "}
-        <a href={ADD_TASK_GUIDE} target="_blank" rel="noreferrer">
+        <AppLink href={ADD_TASK_GUIDE} target="_blank" rel="noreferrer">
           {t("aiTaskSheet.addTask")}
-        </a>
+        </AppLink>
       </p>
     </section>
   );
@@ -459,9 +460,9 @@ function TaskRecentCalls({
         />
       ) : null}
       <p className="t-caption">
-        <a href={callsHrefFor({ [CALL_TASK_PARAM]: route.task })}>
+        <AppLink href={callsHrefFor({ [CALL_TASK_PARAM]: route.task })}>
           {t("aiTaskSheet.viewCalls")}
-        </a>{" "}
+        </AppLink>{" "}
         {t("aiTaskSheet.hostsUnder")}
       </p>
     </section>

@@ -162,7 +162,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     ).getByRole("link", {
       name: "Margince",
     });
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(brand.getAttribute("href")).toBe("/#/home");
     // The DESTINATIONS are the level's own rows, so they are counted there: the
     // brand above it and the More control below it are neither of them, and each
     // is asserted where it belongs.
@@ -528,7 +528,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       screen
         .getByRole("link", { name: "Privacy and retention" })
         .getAttribute("href"),
-    ).toBe("#/settings/deep");
+    ).toBe("/#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
     // resolved — the screen owns that answer, fallbacks included.
     const current = document.querySelectorAll('[aria-current="page"]');
@@ -706,7 +706,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
-    const parts = [".company-logo", ".ws-company-text", MARKER];
+    const parts = [".ws-chip", ".ws-company-text", MARKER];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
@@ -753,7 +753,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(levelLabels()).toEqual(["Fields"]);
     expect(
       screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
-    ).toBe("#/settings/deep/deeper");
+    ).toBe("/#/settings/deep/deeper");
     expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 

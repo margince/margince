@@ -192,6 +192,27 @@ func (e ActivityMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for ActivityMessageMove.
+const (
+	ActivityMessageMoveNeedsReply     ActivityMessageMove = "needs_reply"
+	ActivityMessageMoveNone           ActivityMessageMove = "none"
+	ActivityMessageMoveWaitingForThem ActivityMessageMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMessageMove enum.
+func (e ActivityMessageMove) Valid() bool {
+	switch e {
+	case ActivityMessageMoveNeedsReply:
+		return true
+	case ActivityMessageMoveNone:
+		return true
+	case ActivityMessageMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
 	ActivityAudienceParticipants ActivityAudience = "participants"
@@ -1097,22 +1118,22 @@ func (e PartnerRelationshipStage) Valid() bool {
 
 // Defines values for RelationshipStrengthBucket.
 const (
-	RelationshipStrengthBucketModerate RelationshipStrengthBucket = "moderate"
-	RelationshipStrengthBucketNone     RelationshipStrengthBucket = "none"
-	RelationshipStrengthBucketStrong   RelationshipStrengthBucket = "strong"
-	RelationshipStrengthBucketWeak     RelationshipStrengthBucket = "weak"
+	Moderate RelationshipStrengthBucket = "moderate"
+	None     RelationshipStrengthBucket = "none"
+	Strong   RelationshipStrengthBucket = "strong"
+	Weak     RelationshipStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the RelationshipStrengthBucket enum.
 func (e RelationshipStrengthBucket) Valid() bool {
 	switch e {
-	case RelationshipStrengthBucketModerate:
+	case Moderate:
 		return true
-	case RelationshipStrengthBucketNone:
+	case None:
 		return true
-	case RelationshipStrengthBucketStrong:
+	case Strong:
 		return true
-	case RelationshipStrengthBucketWeak:
+	case Weak:
 		return true
 	default:
 		return false
@@ -1465,13 +1486,19 @@ type Activity struct {
 
 	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
-	Body          *string                `json:"body,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -1492,7 +1519,10 @@ type Activity struct {
 
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
-	CreatedAt    time.Time             `json:"created_at"`
+
+	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -1537,7 +1567,13 @@ type Activity struct {
 
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+	// word with them, `none` otherwise.
+	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
+	OccurredAt  time.Time            `json:"occurred_at"`
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
@@ -1603,6 +1639,12 @@ type ActivityLanguage string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
+
+// ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+// word with them, `none` otherwise.
+type ActivityMessageMove string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
@@ -1936,6 +1978,13 @@ type ComputedField struct {
 // ComputedFieldKind defines model for ComputedField.Kind.
 type ComputedFieldKind string
 
+// ControllerSend Present on a mail sent through the installation's own relay rather than through a
+// member's mailbox. Its presence is the lane.
+type ControllerSend struct {
+	// FromAddress The From address the mail left from, or was staged with while it waits. Null when the relay names none.
+	FromAddress *string `json:"from_address"`
+}
+
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
@@ -1983,6 +2032,9 @@ type CreateActivityRequest struct {
 
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
+
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
@@ -2427,6 +2479,17 @@ type PartnerRelationshipStage string
 // states the invariant; `GET /v1/channel-providers` resolves the live set.
 type ProviderRef = string
 
+// RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+type RecommendationReceipt struct {
+	BasisFingerprint string `json:"basis_fingerprint"`
+
+	// CheckedAt Evaluation instant identifying this observation.
+	CheckedAt     time.Time `json:"checked_at"`
+	DealId        string    `json:"deal_id"`
+	PolicyVersion string    `json:"policy_version"`
+	Rule          string    `json:"rule"`
+}
+
 // RelationshipStrength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 // interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
 // interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -2544,8 +2607,13 @@ type Signal struct {
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
 	Status        SignalStatus        `json:"status"`
-	Summary       string              `json:"summary"`
-	UpdatedAt     time.Time           `json:"updated_at"`
+
+	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
+	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+	// the installation's base language. Every other summary, and a summary stored without its
+	// parts, reads as it was written.
+	Summary   string    `json:"summary"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -2745,6 +2813,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "automatic_kind")
 	}
 
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -2767,6 +2843,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
 		}
 		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
 	}
 
 	if raw, found := object["capture_label"]; found {
@@ -2815,6 +2899,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'content_state': %w", err)
 		}
 		delete(object, "content_state")
+	}
+
+	if raw, found := object["controller_send"]; found {
+		err = json.Unmarshal(raw, &a.ControllerSend)
+		if err != nil {
+			return fmt.Errorf("error reading 'controller_send': %w", err)
+		}
+		delete(object, "controller_send")
 	}
 
 	if raw, found := object["created_at"]; found {
@@ -2951,6 +3043,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'meeting_status': %w", err)
 		}
 		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["message_move"]; found {
+		err = json.Unmarshal(raw, &a.MessageMove)
+		if err != nil {
+			return fmt.Errorf("error reading 'message_move': %w", err)
+		}
+		delete(object, "message_move")
 	}
 
 	if raw, found := object["occurred_at"]; found {
@@ -3141,6 +3241,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
@@ -3159,6 +3266,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
 		}
 	}
 
@@ -3199,6 +3313,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["content_state"], err = json.Marshal(a.ContentState)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'content_state': %w", err)
+		}
+	}
+
+	if a.ControllerSend != nil {
+		object["controller_send"], err = json.Marshal(a.ControllerSend)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
 		}
 	}
 
@@ -3312,6 +3433,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.MessageMove != nil {
+		object["message_move"], err = json.Marshal(a.MessageMove)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'message_move': %w", err)
 		}
 	}
 
@@ -4342,6 +4470,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "raw")
 	}
 
+	if raw, found := object["recommendation"]; found {
+		err = json.Unmarshal(raw, &a.Recommendation)
+		if err != nil {
+			return fmt.Errorf("error reading 'recommendation': %w", err)
+		}
+		delete(object, "recommendation")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -4570,6 +4706,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.Recommendation != nil {
+		object["recommendation"], err = json.Marshal(a.Recommendation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
 		}
 	}
 

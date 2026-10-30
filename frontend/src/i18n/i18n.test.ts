@@ -23,7 +23,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "settings.tab.mcp",
   "webhooks.eventGroup.voice_dna",
   "webhooks.field.targetUrlPlaceholder",
-  "webForms.sender.webflow",
   "webForms.sender.typeform",
   "webForms.sender.tally",
   "webForms.field.originsPlaceholder",
@@ -209,6 +208,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.s4.provGoogle",
   "ob.s4.provMicrosoft",
   "magic.by.system",
+  // Only the name of whoever acted.
+  "magic.by.member",
   // A number and a plus sign, written alike in every locale.
   "lead.signal.employees.201+",
   // The same proper noun as connectors.provGmail and its neighbours, one

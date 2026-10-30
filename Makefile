@@ -68,7 +68,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -759,6 +759,18 @@ bench-mobile:
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
+## bench-home — R01 and R07: a full load of Home, a return to it and a
+## refresh of it, on a production build against a running stack's api, timed
+## by the app's own journey marks and judged by the answers the page received.
+## BENCH_API_PORT is the api port that stack's banner prints.
+## It records nothing and `pnpm e2e` does not collect its spec. BASE_URL and
+## the mobile switch are cleared, so it always measures the build it made.
+bench-home:
+	@test -n "$(BENCH_API_PORT)" || { echo "bench-home: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
+	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
+		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
+		pnpm exec playwright test
+
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside
 ## bench-perf.
@@ -786,7 +798,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.
-## e2e-llm — the six use cases driven by a REAL assistant, against a dedicated
+## e2e-llm — every scenario in e2e/llm/scenarios driven by a REAL assistant, against a dedicated
 ## stack. This is the half the Go suite cannot answer: those tests pin the
 ## payloads, the refusals and the legibility fields; this asks whether a model
 ## can actually drive the surface and say something true.
@@ -1702,7 +1714,7 @@ sbom-validate:
 	@$(CYCLONEDX) validate --input-file $(SBOM_DIR)/margince.cdx.json --fail-on-errors
 	@echo "validating $(SBOM_DIR)/margince.spdx221.json (SPDX 2.2.1, pyspdxtools)"
 	@$(PYSPDX) bash -c '\
-	  pip install --require-hashes --quiet --no-cache-dir --disable-pip-version-check -r $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
+	  bash scripts/install-sbom-python.sh $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"

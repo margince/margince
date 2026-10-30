@@ -1,9 +1,10 @@
 import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
-import { CompanyLogo } from "../design-system/companylogo";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import type { Route } from "../lib/router";
@@ -16,113 +17,82 @@ import { NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
+import { useSquareMark } from "./squaremark";
 
-// `narrow` is the panel at its 56px width: the caller's `collapsed &&
-// !sheetOpen`. shell.css uses the same condition for every rule that means
-// "this is a rail and not a column". The phone sheet is 600px wide whatever
-// the desktop preference was. A block reading `collapsed` alone would show the
-// square badge to a reader with room for the wordmark.
-function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
+// One lockup at every width: a square mark, the name, and what it runs on.
+// A square is the one shape every company's mark fits at one weight.
+// Only the name is the link, and the mark repeats it, so the mark is hidden
+// from assistive tech. shell.css stretches the link over the whole card.
+function BrandBlock() {
   const t = useT();
-  /* The stage this product is at, on the brand's second line. It stands
-   * beside the name, not at the foot of a column a demo never scrolls to.
-   * It shows on every branch below, even with no installation to attribute.
-   * The marker is a fact about the build, so it does not depend on a company
-   * name above it. Temporary: betabadge.tsx lists what its deletion takes. */
+  /* The stage this product is at, on every branch below. It is a fact about
+   * the build, not about the company above it.
+   * Temporary: betabadge.tsx lists what its deletion takes. */
   const marker = <BetaBadge />;
   // The installation's own name and marks (ADR-0061: one installation, one
   // company). They come from /me, which carries them to every seat. The full
   // company profile is an admin's read. A disabled observer: the auth gate
   // already fetched /me, and this re-renders when a company save refreshes it.
   const installation = useMe(false).data?.installation_brand;
-  // Whose product this is, above whose product it runs on. The reader works
-  // for the company named here, so the company is the heading and the product
-  // is the line under it.
-  //
+  const mark = useSquareMark(
+    installation?.logo_icon_url,
+    installation?.logo_url,
+  );
+  // On the link, not the heading: the link already holds the tab stop, and the
+  // measure reaches into the heading it clips. Folded, the name has no width,
+  // so hovering the mark always shows it.
+  const {
+    ref: nameRef,
+    trigger: nameTrigger,
+    tip: nameTip,
+  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
   // never invented to fill the line.
   if (!installation) {
     return (
       <>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
-          <span className="ws-chip">
-            <Logomark />
-          </span>
+        <span className="ws-chip" aria-hidden="true">
+          <Logomark />
+        </span>
+        <AppLink className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
-        </a>
-        {/* No attribution line here: the product's own mark is already above it,
-            and a company name is never invented to fill the row. */}
+        </AppLink>
+        {/* No attribution here: the product's own name is already above it. */}
         <span className="ws-company">{marker}</span>
-      </>
-    );
-  }
-  // Which of the company's two marks this width can carry. Collapsed, the
-  // panel is a 56px rail with a 32px square for a face. A wordmark there is a
-  // row of illegible strokes, so the square icon wins collapsed and the wide
-  // mark wins expanded. An installation with only a wide mark draws it in both,
-  // as the rail did before the icon existed. A real logo squeezed small still
-  // reads as that company; initials would not.
-  const mark =
-    narrow && installation.logo_icon_url
-      ? installation.logo_icon_url
-      : installation.logo_url;
-  if (mark) {
-    return (
-      <>
-        <a
-          className="ws ws-logo"
-          href="#/home"
-          aria-label={t("shell.companyLogoAria", {
-            company: installation.display_name,
-          })}
-        >
-          <CompanyLogo
-            name={installation.display_name}
-            src={mark}
-            fallback={<b>{installation.display_name}</b>}
-          />
-        </a>
-        <span className="ws-company">
-          <span className="ws-company-text">
-            {t("shell.poweredByPrefix")}{" "}
-            <span className="ws-logo-product">{t("shell.logoAria")}</span>
-          </span>
-          {marker}
-        </span>
       </>
     );
   }
   return (
     <>
-      <a
+      {/* The company's square mark. Avatar draws the deterministic monogram
+          underneath, so a company with no square mark has a face, not a gap. */}
+      <span className="ws-chip ws-chip-company" aria-hidden="true">
+        {/* The brand read carries no company id, so the name keys the chip. */}
+        <Avatar
+          identity={installation.display_name}
+          name={installation.display_name}
+          src={mark}
+        />
+      </span>
+      <AppLink
         className="ws"
         href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
+        ref={nameRef}
+        {...nameTrigger}
       >
-        {/* The mark the onboarding website read found on the company's site,
-            in the slot the product's mark holds otherwise. One slot keeps the
-            brand block still when onboarding finishes, and gives the rail's
-            rules one thing to name. Avatar draws its deterministic monogram
-            underneath, so a site with no icon gives a face, not a gap. */}
-        <span className="ws-chip ws-chip-company">
-          {/* The brand read carries no company id, so the name keys the chip. */}
-          <Avatar
-            identity={installation.display_name}
-            name={installation.display_name}
-          />
-        </span>
         {/* `as="div"`: the workspace name is the rail's identity, not a section
-            of the page. It sits above every h1 the content column draws, so an
-            h5 here would be a level nothing opened. */}
+            of the page, so an h5 here would be a level nothing opened. */}
         <Heading size="small" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
-      </a>
+        {nameTip}
+      </AppLink>
       <span className="ws-company">
         <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}
@@ -288,7 +258,7 @@ export function WorkspaceRail({
         aria-label={t("shell.railAria")}
       >
         <div className="railhead">
-          <BrandBlock narrow={collapsed && !sheetOpen} />
+          <BrandBlock />
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the same depth are the same level with

@@ -501,7 +501,11 @@ describe("the overnight question", () => {
     stub({
       "GET /connectors": roster(row("gmail", { backfill: { state: "done" } })),
       "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-        answers.push(body);
+        answers.push(["morning_brief", body]);
+        return jsonResponse({});
+      },
+      "PUT /me/agent-grants/overnight_at_risk_sweep": (body: unknown) => {
+        answers.push(["overnight_at_risk_sweep", body]);
         return jsonResponse({});
       },
     });
@@ -515,6 +519,12 @@ describe("the overnight question", () => {
     );
     await userEvent.click(onward);
 
-    await waitFor(() => expect(answers).toEqual([{ granted: false }]));
+    // One answer, written for both overnight agents.
+    await waitFor(() =>
+      expect(answers).toEqual([
+        ["morning_brief", { granted: false }],
+        ["overnight_at_risk_sweep", { granted: false }],
+      ]),
+    );
   });
 });

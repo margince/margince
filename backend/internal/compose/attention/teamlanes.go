@@ -59,8 +59,11 @@ type OverdueLoad interface {
 // rosterRead is one roster answer: its members, and whether it stopped at its cap.
 type rosterRead struct {
 	members []TeamMember
+	former  []ids.UUID
 	cut     bool
 }
+
+func (r *rosterRead) seats() []ids.UUID { return teamSeats(r.members, r.former) }
 
 // degradableRoster is the roster read for a page that names its failure: the
 // team scope reports a refused roster as unavailable, so the read must not

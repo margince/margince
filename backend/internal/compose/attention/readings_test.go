@@ -258,7 +258,7 @@ func TestReviewCountsTheFoldedWorkRatherThanTheRowsDrawn(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: needs}
 	considered := classifyDay(day, rankInstant, dayMoney{})
 
-	folded := foldRoutineDecisionsBounded(append([]ranked(nil), considered...), false)
+	folded := foldRoutineDecisionsBounded(append([]ranked(nil), considered...), nil)
 	got := readingsOf(considered, nil, nil)
 
 	// The fixture has to actually fold, or the assertion below passes for the

@@ -39,11 +39,11 @@ const GeocodeBackfillBatch = 50
 // ListGeocodeOrphans answers which companies have an address and no coordinates
 // coming.
 //
-// NEVER-ASKED only, deliberately. A row with any geocode_status has been
-// through the worker and carries its own retry ledger — `failed` waits for its
-// backoff, `no_match` waits for its address to change — and a sweep that
-// re-nominated those would spend the installation's rate on questions already
-// answered, and would defeat the backoff by asking again every pass.
+// Never-asked only. A company whose point has any status has been through the
+// worker. It carries its own retry ledger: `failed` waits for its backoff, and
+// `no_match` waits for its address to change. A sweep that re-nominated those
+// would spend the installation's rate on questions already answered. It would
+// also defeat the backoff by asking again every pass.
 //
 // `stale` IS swept, and that is not symmetry — it closes an orphan. The
 // trigger marks a row stale on any address column that changes, but only the
@@ -79,8 +79,10 @@ func (s *Store) ListGeocodeOrphans(ctx context.Context, limit int) ([]ids.Compan
 			   -- shape: configure one later and these are the rows it needs.
 			   --
 			   -- 'ok' and 'no_match' are answers and are never swept.
-			   AND (o.geocode_status IS NULL
-			     OR o.geocode_status IN ('stale', 'failed'))
+			   -- A point the copy task has not moved yet is still on the
+			   -- company row. Such a company was asked, so it is not swept.
+			   AND ((g.status IS NULL AND o.geocode_status IS NULL)
+			     OR g.status IN ('`+GeocodeStale+`', '`+GeocodeFailed+`'))
 			   -- A failure still inside its backoff is left alone: the ledger
 			   -- asked for that wait, and re-nominating every pass is how a
 			   -- rate limit becomes a block. AddressForGeocode re-checks this

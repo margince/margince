@@ -60,8 +60,8 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request, params cr
 // The optional team parameter selects a named live roster and no tier: a receipt is the reader's own, and every act it
 // reports was taken for them. The service refuses a principal with no human
 // behind it, because there is nobody for the acts to have been done for.
-func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.HandledForYou(r.Context())
+func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request, params crmcontracts.GetHandledForYouParams) {
+	out, err := h.svc.HandledForYou(r.Context(), params.Cursor)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -202,7 +202,11 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Cursor != nil {
 		token = *params.Cursor
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
+	view := ""
+	if params.View != nil {
+		view = string(*params.View)
+	}
+	out, err := h.svc.WorklistView(r.Context(), view, scope, filter, owner, limit, token)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

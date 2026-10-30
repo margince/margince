@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go -->
+<!-- describes: frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
 # Settings
 
 Margince settings open from the **account menu** at the top right. They are not in the sidebar. Which settings pages you see follows your permissions.
@@ -17,7 +17,7 @@ Margince Settings puts its pages in these groups:
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
 - **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
-- **Data**: Capture rules, Integrations, Knowledge, Data import.
+- **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
 - **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
 
@@ -44,7 +44,7 @@ Things for the whole company in Margince each have one settings page.
 - Change the company name, time zone, base currency, date format, time format or exchange rates: **Company profile**.
 - Set up single sign-on, the Google and Microsoft apps or the app an extension signs in to, or require two-step sign-in: **Sign-in and apps**.
 - Mark your own email domains, or refuse a domain: **Capture rules**.
-- Set up website forms, webhooks, a provider of contact data, or the company's Telegram bot: **Integrations**.
+- Set up webhooks, a provider of contact data, the accounting source, or the company's Telegram bot: **Integrations**.
 
 ### Which settings page do I need for sales and data?
 Sales and data settings in Margince each have one page.
@@ -54,6 +54,7 @@ Sales and data settings in Margince each have one page.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
 - The price list, rate card and offer templates: **Products and offers**.
+- Turn each question sent from a form on your website into a lead: **Website forms**.
 - Upload a document set to ask questions of: **Knowledge**.
 - Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
 
@@ -153,9 +154,9 @@ Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
 
-The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it.
+The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it. **Roles and permissions** also holds **Shared merge reviews**, off at the start, which only an admin can turn on. Then an owner of one duplicate contact may also merge the copies their colleagues own; see [what a merge keeps](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
 
-**Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record.
+**Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
 **Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
 
@@ -165,10 +166,9 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 The Integrations page in Settings (group **Data**) shows what the installation is connected to, as against what one colleague connected.
 
-**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Website forms** turn each form sent on your website into a lead. If a lead or contact already has that email, it gets a note instead; see [Connecting your website](connect-your-website.md). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
+**Contact data** is a licensed provider of contact data, with its budget and a policy for how often it refreshes the data. **Accounting source** connects the system your invoices come from and links its customers to companies; see [Contracts and invoices](contracts-and-invoices.md#how-do-i-connect-my-accounting-system). **Webhooks** send a signed message to another system when events you picked happen, and you can look at each one sent and send it again. How to set one up, such as a message to a chat channel when a deal is won: [Sending events to other tools](sending-events-to-other-tools.md).
 
-**Telegram bot** is the one bot that sends and receives messages for the whole
-company. Admin and Ops connect or change it; other readers see which bot it is.
+**Telegram bot** is the one bot that sends and receives messages for the whole company. Admin and Ops connect or change it; other readers see which bot it is. Forms on your website have a page of their own, **Website forms**; see [Connecting your website](connect-your-website.md).
 
 ## Extensions
 

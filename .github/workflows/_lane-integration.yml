@@ -59,7 +59,7 @@ jobs:
       # Six was right while a shard's own tests were the small half (~40s
       # against ~420s of restore and compile). The tests have grown since: the
       # `internal/compose/integration` package alone sums to ~2600s of test
-      # time, so six shards left it ~440s each against its 600s package budget,
+      # time, so six shards left it ~440s each, too near the package budget,
       # and a slow runner killed the shard with no test reported. Eight leaves
       # ~330s each. Raise it again only against a measurement of the same kind.
       matrix:

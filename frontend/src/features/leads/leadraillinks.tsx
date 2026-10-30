@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -50,13 +51,13 @@ function DealRecordCard({
   name,
 }: Readonly<{ dealId: string; name: string }>) {
   return (
-    <a
+    <AppLink
       className="record-card co-deal-card"
       href={routeHash({ screen: "deals", id: dealId })}
       aria-label={name}
     >
       <span className="record-card-name">{name}</span>
-    </a>
+    </AppLink>
   );
 }
 
@@ -103,7 +104,7 @@ function useLeadProjectLink(projectId: string | null | undefined) {
 // (companyrailprojects.css's `.co-project-card`/`.co-project-phase`).
 function ProjectRecordCard({ project }: Readonly<{ project: Project }>) {
   return (
-    <a
+    <AppLink
       className="record-card co-project-card"
       href={routeHash({ screen: "projects", id: project.id })}
       aria-label={project.name}
@@ -112,7 +113,7 @@ function ProjectRecordCard({ project }: Readonly<{ project: Project }>) {
       <span className="co-project-phase">
         <PhaseBadge phase={project.phase} />
       </span>
-    </a>
+    </AppLink>
   );
 }
 

@@ -4,7 +4,7 @@ import { UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { bucketLabel } from "../../lib/bucketlabel";
 import { directionSentence } from "./contactrail";
-import { awaitsOurReply, contactDims, contactVerdict } from "./contactstanding";
+import { contactDims, contactVerdict } from "./contactstanding";
 import {
   contactFigures,
   contactGap,
@@ -121,7 +121,11 @@ describe("contactVerdict", () => {
   it("says no interactions yet for the none band, never a zero", () => {
     expect(
       contactVerdict({ ...VIEW, strength: strength("none", 0) }, t),
-    ).toEqual({ word: "No interactions yet", tone: "neutral" });
+    ).toEqual({
+      word: "No interactions yet",
+      sentence: t("contact.verdict.noExchange"),
+      tone: "neutral",
+    });
   });
 
   it("falls back to the quiet rung's word when the strength is withheld", () => {
@@ -136,6 +140,7 @@ describe("contactVerdict", () => {
       ),
     ).toEqual({
       word: t("contact.moment.rule.nothing_needed"),
+      sentence: t("contact.verdict.nothingOwed"),
       tone: "neutral",
     });
   });
@@ -165,33 +170,6 @@ describe("directionSentence", () => {
     expect(directionSentence(VIEW, t)).toBe(
       t("contact.standing.direction.none"),
     );
-  });
-});
-
-describe("awaitsOurReply", () => {
-  it.each<[string | null, string | null, boolean]>([
-    ["2026-08-01T09:00:00Z", null, true],
-    ["2026-08-01T09:00:00Z", "2026-07-20T09:00:00Z", true],
-    ["2026-07-20T09:00:00Z", "2026-08-01T09:00:00Z", false],
-    [null, "2026-08-01T09:00:00Z", false],
-  ])("inbound %s, outbound %s: %s", (inbound, outbound, expected) => {
-    expect(
-      awaitsOurReply({
-        ...VIEW,
-        last_inbound_at: inbound,
-        last_outbound_at: outbound,
-      }),
-    ).toBe(expected);
-  });
-
-  it("never claims a move over withheld touch dates", () => {
-    expect(
-      awaitsOurReply({
-        ...VIEW,
-        sections_omitted: ["last_touch"],
-        last_inbound_at: "2026-08-01T09:00:00Z",
-      }),
-    ).toBe(false);
   });
 });
 
@@ -297,7 +275,7 @@ describe("contactFigures", () => {
       words,
     );
     expect(figures.map((cell) => [cell.key, cell.value, cell.tone])).toEqual([
-      ["lastReply", "1 Aug", "warning"],
+      ["lastReply", "1 Aug", "neutral"],
       ["unanswered", "1 email", "warning"],
       ["openDeal", "None", "neutral"],
       ["nextMeeting", "None scheduled", "neutral"],
@@ -347,7 +325,7 @@ describe("the timeline", () => {
     ]);
   });
 
-  it("names the silence after their message as no reply", () => {
+  it("names the contact clock as the last recorded exchange", () => {
     expect(
       contactGap(
         {
@@ -361,7 +339,7 @@ describe("the timeline", () => {
     ).toEqual({
       from: "2026-08-01T09:00:00Z",
       title: "12 days",
-      sub: "no reply",
+      sub: "since last recorded contact exchange",
     });
   });
 

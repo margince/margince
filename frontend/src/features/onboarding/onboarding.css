@@ -87,7 +87,6 @@
 .readfail {
   display: flex;
   gap: var(--space-3);
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-rest);
@@ -95,49 +94,12 @@
   margin-top: var(--space-6);
   align-items: flex-start;
 }
-.readfail .rfi {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-sm);
-  display: grid;
-  place-items: center;
-  flex: none;
-  margin-top: 1px; /* ds:ignore optical: sets the tile on the title's cap line */
-}
-.readfail.warning .rfi {
-  background: var(--warningBg);
-  color: var(--warningText);
-}
-
-.readfail .rfi svg {
-  width: 18px;
-  height: 18px;
-}
-.readfail .rft {
-  color: var(--textPrimary);
-}
-.readfail .rfp {
-  margin-top: var(--space-1);
-}
 
 /* The company form rides the design-system atoms (.form-stack/.field/.input —
    atoms.css owns their look); the only onboarding-specific rule is where the
    form starts relative to the notices above it. */
 .ob-companyform {
   margin-top: var(--space-6);
-}
-/* The saved note's tick, sized to the note's text; the failure card overrides
-   `.readfail`'s own margin, so it chains that class. */
-.ob-companyform-savedmark {
-  width: 14px;
-  height: 14px;
-  vertical-align: -2px;
-}
-.ob-companyform-saved {
-  margin: var(--space-3) 0 0;
-}
-.readfail.ob-companyform-savefail {
-  margin-top: var(--space-3);
 }
 /* The trust adornments ride the field label (a .t-label): read-from-site tag
    right-aligned, everything vertically centered with the label text. */
@@ -230,17 +192,17 @@
 
 /* The dialog's two inks, named because the PLATE decides them and every text
    inside reads one of the two. On the onboarding hero it is dark glass and the
-   pair is the rail's own, white on a lit backdrop; hosted in the workbench it
+   pair is the ink field's, white on a lit backdrop; hosted in the workbench it
    is a light panel and the pair is the content inks. Declared once per plate
    below rather than as a colour override per child — the heading, the hint, the
    answer box, the back link and the footnote all landed on white-on-light the
    day the light arms were written and only the first two were overridden. */
 .ob-core-dialog {
-  --ob-dialog-ink: var(--railIconActive);
+  --ob-dialog-ink: var(--textOnInkField);
   --ob-dialog-ink-quiet: var(--obDialogInkQuiet);
   padding: var(--space-8) var(--space-6);
   color: var(--ob-dialog-ink);
-  border: 1px solid color-mix(in srgb, var(--railIconActive) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--textOnInkField) 10%, transparent);
   border-radius: var(--r-lg);
   background: color-mix(in srgb, var(--obDialogGlass) 68%, transparent);
   box-shadow: 0 18px 46px
@@ -274,7 +236,7 @@
    design-system field and a screen does not re-space one. The box itself — its
    ground, its type, its ink, its placeholder's tone and its focus ring — is
    TextInput's and Textarea's; the rule that used to stand here spelled all of
-   them in rail tokens, which is what put white text in a white field the moment
+   them in ink-field tokens, which is what put white text in a white field the moment
    this board moved onto the workbench's light panel. */
 .ob-manual-question > p {
   margin-bottom: var(--space-4);
@@ -302,8 +264,8 @@
 .ob-conv-artifact .ob-core-dialog {
   --ob-dialog-ink: var(--textPrimary);
   --ob-dialog-ink-quiet: var(--textSecondary);
-  border: 1px solid var(--borderSubtle);
-  background: var(--bgInset);
+  border: 1px solid var(--groundEdge);
+  background: var(--ground);
   box-shadow: var(--shadow-rest);
   backdrop-filter: none;
 }
@@ -343,9 +305,8 @@
      form scrolls behind — and this bar is how the review is confirmed. */
   z-index: 1;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-3);
   margin-top: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
@@ -353,14 +314,20 @@
   background: color-mix(in srgb, var(--bgElevated) 94%, transparent);
   backdrop-filter: blur(10px);
 }
-.mw-confirm-company p {
+.mw-confirm-company-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.mw-confirm-company-row p {
   margin: 0;
 }
 @media (max-width: 640px) {
   .ob-company-review .ob-companyform {
     grid-template-columns: 1fr;
   }
-  .mw-confirm-company {
+  .mw-confirm-company-row {
     align-items: stretch;
     flex-direction: column;
   }

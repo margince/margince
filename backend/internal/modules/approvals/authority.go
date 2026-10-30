@@ -31,9 +31,6 @@ const objectUserAdmin = "user_admin"
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
 
-// objectPartner is the RBAC object a partner program write is governed by.
-const objectPartner = "partner"
-
 // objectDeal is the RBAC object a stage move is governed by. Spelled here
 // rather than imported, for targetImportRun's reason: approvals may not import
 // a module it governs.
@@ -169,9 +166,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
 	// A set-up writes the partner row and adds `partner` to the company's
-	// relationship types (contacts/partner.go UpsertPartner), which takes both
-	// update grants. Deciding takes the grants the write takes.
-	"set_up_partner": {{tableCompany, principal.ActionUpdate}, {objectPartner, principal.ActionUpdate}},
+	// relationship types (contacts/partner.go UpsertPartner). It carries no
+	// margin tier, so it takes the company grant alone, and so does deciding it.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
@@ -364,29 +361,6 @@ var targetResolvedGrants = map[string]principal.Action{
 	"change_record_parts": principal.ActionUpdate,
 }
 
-// decidable is the ONE visibility-and-authority predicate for the inbox
-// and the decision: true when p holds every grant approving a would
-// require AND could read the staged target itself — the object-read grant
-// on its type, then that record's own row rule (targetvisibility.go). It
-// backs List, Get and Decide alike, so triage visibility and the decision
-// gate can never drift apart — you see exactly what you could act on, and
-// what you cannot see you cannot decide (in either direction). Two shapes
-// narrow that to ONE seat, the member the row was staged for: a self-only
-// kind, a staged create against a table whose rows belong to one human
-// each, and a kind that is one rep's own morning work
-// (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
-// decidable: fail-closed.
-func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
-	readable, err := proposalReadable(ctx, tx, p, a)
-	if err != nil || !readable {
-		return false, err
-	}
-	if a.Kind == "demote_lead" {
-		return demotionTargetDecidable(ctx, tx, a.TargetType, a.TargetID)
-	}
-	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
-}
-
 // PendingDecidableBy rechecks current state and authority because a notification event may be stale.
 // Missing and inaccessible decisions both return false, so fan-out reveals neither.
 func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bool, error) {
@@ -419,10 +393,11 @@ func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 	if err != nil {
 		return false, err
 	}
-	if !a.PendingAt(now) || !requestedInScope(a, p.UserID, scope) {
-		return false, nil
+	eligible, err := pendingEligible(ctx, tx, p, scope, now)([]row{a})
+	if err != nil {
+		return false, err
 	}
-	return decidable(ctx, tx, p, a)
+	return eligible[0], nil
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

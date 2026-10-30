@@ -75,6 +75,10 @@ const ANSWERED_BY = {
   keep: { how: "inline", file: "worklist.domainquestion.tsx" },
   keep_as_vendor: { how: "inline", file: "worklist.domainquestion.tsx" },
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
+  // Taking a task nobody holds writes its assignee where the reader stands.
+  take: { how: "inline", file: "worklist.take.tsx" },
+  // Cancelling a meeting owed an outcome writes its status where the reader is.
+  cancel: { how: "inline", file: "worklist.row.answer.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is
@@ -82,7 +86,7 @@ const ANSWERED_BY = {
   // deal's history to find the entry themselves.
   undo: {
     how: "inline",
-    file: "worklist.receiptundo.tsx",
+    file: "../../components/receiptundo.tsx",
     // The receipt is not a queue row and carries no `actions` array, so the
     // control asks the field that decides it: a receipt with no `undo` is an
     // approval somebody agreed to, and there is nothing to take back.

@@ -6,15 +6,14 @@ import { reloadReportingFigures } from "../../lib/reportingfigures";
 
 export { reloadReportingFigures };
 
-export function useReportingPipelines() {
+// The workspace's reporting framework, under one key. The landing tab and the
+// framework editor read one answer, and one publish refreshes both.
+export function useReportingFramework(enabled = true) {
   return useQuery({
-    queryKey: ["reporting-pipelines"],
+    queryKey: ["reporting-framework"],
+    enabled,
     queryFn: async () => {
-      return unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
+      return unwrap(await api.GET("/analytics/framework"));
     },
   });
 }

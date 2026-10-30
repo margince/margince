@@ -42,6 +42,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -237,6 +238,9 @@ type MergeRecordsResult struct {
 	// SurvivorID is the target, never the source: the source is archived and
 	// redirected, so an id a caller keeps has to be the one that still resolves.
 	SurvivorID ids.UUID `json:"survivor_id"`
+	// Case is a contact case decision's outcome: who keeps access, who was
+	// skipped, and whether it was only a preview.
+	Case *crmcontracts.ContactCaseOutcome `json:"case,omitempty"`
 }
 
 // DraftEmailResult is what draft_email answers: a message nobody has sent.
@@ -351,6 +355,9 @@ type PrepForMeetingResult struct {
 	// other anchors name a record rather than a room, and there is no brief to
 	// write for them.
 	Brief *MeetingBriefResult `json:"brief,omitempty"`
+	// Preparation is the caller's own readiness for a meeting anchor they
+	// attend, with the revision confirm_meeting_ready takes.
+	Preparation *MeetingPreparationResult `json:"preparation,omitempty"`
 }
 
 // QualifiedField is one gap the tool filled and the evidence it filled it from.
@@ -417,21 +424,13 @@ type DraftFollowUpsResult struct {
 	Drafts  []FollowUpDraft `json:"drafts"`
 }
 
-// UpdateWithStagedApprovalResult is update_record's OTHER answer: the fields
-// that applied, plus the ones a human last edited, which did not.
+// UpdateResult is what update_record answers: the record as it stands after
+// the write, and what each field was and is now.
 //
-// It embeds the record rather than nesting it, because the applied half IS a
-// record read-back and a caller reading the result should find the fields where
-// every other tool puts them.
-type UpdateWithStagedApprovalResult struct {
+// It embeds the record rather than nesting it. The answer is a record read-back,
+// so a caller finds the fields where every other tool puts them.
+type UpdateResult struct {
 	wireRecord
-	// A POINTER, and therefore optional, because this type declares BOTH shapes
-	// update_record answers with: the plain read-back when every field applied,
-	// and the read-back plus the staged note when some did not. Two schemas for
-	// one tool would make a caller pick which it was reading; one schema with an
-	// optional member says exactly what is true — the note is there when a human
-	// last wrote one of the fields, and absent otherwise.
-	StagedApproval *stagedApprovalNote `json:"staged_approval,omitempty"`
 	// Changes names each field this call applied, as it was and as it is.
 	Changes []FieldChange `json:"changes,omitempty"`
 }

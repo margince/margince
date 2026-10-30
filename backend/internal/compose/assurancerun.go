@@ -60,7 +60,7 @@ func (h assuranceRunHandlers) PreviewForecastAssurance(w http.ResponseWriter, r 
 	}
 	ctx := r.Context()
 	store := assurance.NewStore(InstallationDB(h.pool))
-	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, AssuranceConfig()).WithSignalSubjects(AssuranceSignalSubjects)
 	// The gate is inside InPreviewTx, on create rather than read: the only
 	// reason to look is to decide whether to start a pass.
 	preview, err := scanner.Preview(ctx, h.now())

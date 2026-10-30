@@ -166,6 +166,9 @@ export function stubBackend(
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    if (method === "GET" && url.includes("/commitments")) {
+      return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
     if (method === "GET" && url.includes("/win-evidence")) {
       if (opts.winEvidenceRead === "unreadable") {
         return jsonResponse({ code: "internal" }, 500);

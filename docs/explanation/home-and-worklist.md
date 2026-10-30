@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -55,8 +55,77 @@ It uses current deal facts and the risk facts already read for this caller.
 A stored signal or finding cannot create current work alone. Suggestions without current facts stay in the stored brief.
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
-Cached deal facts add context after the page is cut; they do not admit work.
+
+Current deal actions use the deal page's rules over one batch of owning reads, before the page is cut.
+They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
+
+Saved model words are an earlier view, with their written date. They never admit work or change its rank.
+A reader must still have access to the source records used to write those words.
+
+The action has no separate stored copy for an event handler to refresh.
+Owner writes keep their normal audit and outbox path. Late or repeated jobs cannot make an old card supply a current action.
+The client keeps its existing live reads and refreshes after writes.
+
+A task from this action carries its rule and source basis into the normal task writer.
+That writer checks the same rules again inside a `Serializable` transaction.
+A changed basis returns a version conflict. Only one task can commit from the same basis.
+
+The other prepared actions check that basis before opening. Tasks you create keep their existing write path.
+
 Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
+
+## Ownership comes before scan limits
+
+`backend/internal/compose/attention/recordowners.go` resolves the queue's owners before the deal risk read.
+The deal store applies these owners and the caller's visibility rules before limiting either the quiet or overdue scan.
+An empty set reads no owners. No set means the visible workspace view.
+Team reads keep work from former team members and work with no owner.
+
+Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
+**Mine** and chosen member views skip those sources before building the decision page and counts.
+**Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
+A case is a group of contacts joined by open pairs, and its row id is the lowest member id.
+The case read binds the page's owner before it ranks.
+So **Mine** and a chosen member view show every case with a member that owner owns.
+The row names that owner as its requested decider, so each owner of a member sees the case on their own page.
+
+**Unassigned** shows the cases where no member has a live owner.
+A wider view names the reader if they own a member, then an owner in the team the page shows, then the first owner.
+**Done** hides a case for that owner alone, and the other owners keep it.
+Cases count into the open duplicates total, and they come first in each round of the decision lane.
+
+The final scope cut still checks the owner. It cannot add candidates a source has already left out.
+Home, Focus, source reach and summary counts use the same scoped day.
+
+## Totals and the rows below the ranked top
+
+Only the first rows are ranked. Ranking needs every candidate in hand, so each lane reads to its cap.
+The ranked rows are those candidates, frozen as a walk (`walk.go`).
+
+A category states an exact `total` only when every source behind it was read whole or counted by its store
+(`withTotals` in `attention/totals.go`). The count runs the source's own admission rules in SQL, so it
+matches what the list holds. `attention/backlog.go` holds the counts and runs them only for a source its lane cut.
+A count that fails leaves the category a floor and does not fail the page.
+
+Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on in
+its store's own order from its own keyset, skipping the rows the ranked top already holds. The tail rows go through
+the same admission, scope, Done, view and filter steps as the top. The cursor carries where each source stopped, and
+binds the same scope, owner, view and filter as before. The list ends when every source in the tail is read to its
+end. A source that fails while the tail loads is named in `sources_unavailable`, and the list stops short of it.
+
+The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
+when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
+time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
+names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
+
+Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
+Its today window and its later window each have a count, taken on the first page only. A team page counts no task
+window, because that count ran past the lane budget at 10,000 tasks a seat. Its task categories stay a floor.
+
+Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
+The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
 
 ## Personal work needs its own owner
 
@@ -256,9 +325,29 @@ Older notices got their facts back in migration
 to the stage change that caused it. It never matched by deal name or nearby times, since neither names one
 move. Recorded stage names come first; without them, only a stage setup nobody has edited gives a name.
 
+## What a row offers
+
+The verbs on a row that change a record come from its `actions`, which the server sets. So the screen never
+offers a write the server would refuse. A task row (`taskActions` in `taskactions.go`) offers `complete` and `snooze`, and `take`
+when nobody holds the task. `take` shows on every scope, because nobody holding a task is a fact about the
+task and not about the view.
+
+A meeting owed an outcome (`meetingOutcomeActions` in `meeting.go`) offers `decide`, and `cancel` only when
+no live calendar invite holds it. `PATCH /activities/{id}` refuses that cancel with `calendar_managed`,
+because the invite owns the meeting's time and words. Record pages ask the same question through
+`Activity.awaiting_outcome`, which uses the lane's rule without its look-back window.
+
+A reader who may see a task or meeting and not change it gets no verbs. The reason `read_only` says why,
+so an empty row does not look broken.
+
 ## Addresses
 
 Home's address is `#/home` in every language. `parseHash` in `router.tsx` sends `#/brief` to Home with its
 query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its owner or `unassigned` form
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
+
+Quiet relationships use the same scoped read and row renderer in a separate optional
+list. They join the work queue and Focus only when the reader pins them. A pin
+keeps the routine meaning and names the reader's choice; it adds no deadline or
+deal dependency. Existing tasks and waiting replies remove duplicate suggestions.

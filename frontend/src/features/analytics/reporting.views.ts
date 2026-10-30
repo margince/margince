@@ -1,7 +1,8 @@
 import type { MessageKey } from "../../i18n/en";
+import type { Section } from "../../lib/analytics.address";
 import type { ReportingBlockKind, ReportingMetricID } from "./reporting.model";
 
-// The views of Performance, in the order the switch offers them.
+// The views of Performance, in the order the tabs offer them.
 export const REPORTING_VIEWS = ["sales", "sdr", "leads", "partners"] as const;
 export type ReportingView = (typeof REPORTING_VIEWS)[number];
 
@@ -26,14 +27,16 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   partner_activity: "partners",
 };
 
-// What each view is called, which charts it draws, and whether its figures
-// take a pipeline and a close window. Only deal views do: the lead readers and
-// the partner commission and activity readers refuse a pipeline.
+// What each view is called, the tab that opens it, which charts it draws, and
+// whether its figures take a pipeline and a close window. Only deal views do:
+// the lead readers and the partner commission and activity readers refuse a
+// pipeline.
 export const VIEW_SHAPE: Readonly<
   Record<
     ReportingView,
     Readonly<{
       label: MessageKey;
+      section: Section;
       blocks: readonly ReportingBlockKind[];
       dealFilters: boolean;
     }>
@@ -41,6 +44,7 @@ export const VIEW_SHAPE: Readonly<
 > = {
   sales: {
     label: "reporting.sales",
+    section: "performance",
     blocks: [
       "bookings_trend",
       "stage_distribution",
@@ -51,27 +55,38 @@ export const VIEW_SHAPE: Readonly<
   },
   sdr: {
     label: "reporting.sdr",
+    section: "sdr",
     blocks: ["sdr_outcomes", "target_progress"],
     dealFilters: false,
   },
   leads: {
     label: "reporting.leads",
+    section: "leads",
     blocks: ["breakdown", "target_progress"],
     dealFilters: false,
   },
   partners: {
     label: "reporting.partners",
+    section: "partners",
     blocks: ["breakdown", "target_progress"],
     dealFilters: false,
   },
 };
 
-export function metricView(metric: ReportingMetricID): ReportingView {
-  return METRIC_VIEW[metric];
+/** The view a section draws, or undefined for a section that is no view. */
+export function viewOfSection(section: Section): ReportingView | undefined {
+  return REPORTING_VIEWS.find((view) => VIEW_SHAPE[view].section === section);
 }
 
-export function isReportingView(
-  value: string | null | undefined,
-): value is ReportingView {
-  return REPORTING_VIEWS.some((view) => view === value);
+// The views whose metrics this catalog holds: the ones a seat is offered.
+export function readableViews(
+  metrics: readonly Readonly<{ id: ReportingMetricID }>[],
+): ReportingView[] {
+  return REPORTING_VIEWS.filter((view) =>
+    metrics.some((metric) => METRIC_VIEW[metric.id] === view),
+  );
+}
+
+export function metricView(metric: ReportingMetricID): ReportingView {
+  return METRIC_VIEW[metric];
 }

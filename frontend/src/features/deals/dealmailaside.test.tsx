@@ -1,15 +1,22 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, useT } from "../../i18n";
 import { DealMailAside, lastMailColumn } from "./dealmailaside";
 
+// A fixed noon, so a day count never meets a midnight or a clock change.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-09-13T12:00:00Z"));
+});
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const DAY_MS = 86_400_000;
@@ -99,7 +106,7 @@ describe("DealMailAside", () => {
       screen
         .getByRole("link", { name: "View all activity" })
         .getAttribute("href"),
-    ).toBe("#/deals/d1");
+    ).toBe("/#/deals/d1");
     // ONE read, narrowed to this deal's mail and capped: the flyout is an
     // aside, and an aside that paged the whole timeline would be the page.
     expect(seen).toHaveLength(1);

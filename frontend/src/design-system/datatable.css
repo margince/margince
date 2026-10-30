@@ -82,7 +82,7 @@
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* A detail spans every column, so in a pinned table that scrolls it outgrows
    the box; its content pins to the box's start at the box's width instead. */
@@ -175,7 +175,7 @@
     border-bottom: 0;
   }
   .table-scroll-fold > .table > tbody > tr:hover {
-    background: var(--bgHover);
+    background: var(--groundHover);
   }
   .table-scroll-fold > .table > tbody > tr > td {
     padding: 0;
@@ -309,6 +309,6 @@
     > .table
     > tbody
     > tr.datatable-open:has(+ tr.datatable-detail:hover) {
-    background: var(--bgHover);
+    background: var(--groundHover);
   }
 }

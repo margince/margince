@@ -152,9 +152,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// setUpPartner, served by the registry. addListMember was another, retired
 	// with the list routes themselves.
 	//
-	// Four of the five share their operationId constant with agentsplit.go's
-	// own (opApplyTag's own comment says why); createOffer has no such twin
-	// at all, since create_record never reaches the split.
 	opApplyTag: applyTagCommand,
 	// removeTag binds to the same subject applyTag does — the tag — so it
 	// resolves the same command rather than a near-copy of it.
@@ -197,6 +194,9 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"advanceDeal":             advanceDealCommand,
 	"mergeContact":            mergeCommand,
 	"mergeCompany":            mergeCommand,
+	// A contact case decision is merge_records too (agentcommandcontactcase.go).
+	"mergeContactCase":        contactCaseMergeCommand,
+	"previewContactCaseMerge": contactCasePreviewCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
 	// provider serves, so it resolves against the tag seam instead.
@@ -215,6 +215,9 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"runAnalyticsQuery":      analyticsQueryCommand,
 	"renderAnalyticsReport":  composeReportCommand,
 	"uploadAttachment":       uploadAttachmentCommand,
+
+	// A draft waits for a human to publish it, so it stages nothing today.
+	"saveReportingReportDraft": draftReportCommand,
 
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a

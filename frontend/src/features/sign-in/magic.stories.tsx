@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { MagicReceipt } from "../../lib/magic.queries";
+import { BUSY_NIGHT } from "../../testing/magic.fixtures";
 import {
   jsonResponse,
   StoryProviders,
@@ -10,8 +12,6 @@ import {
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import { BriefChanges } from "../brief/brief.changes";
 import { MagicPanel } from "./magic";
-import { BUSY_NIGHT } from "./magic.fixtures";
-import type { MagicReceipt } from "./magic.queries";
 
 const meta: Meta<typeof MagicPanel> = {
   title: "Shell/Home/Receipt",

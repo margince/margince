@@ -1,6 +1,6 @@
 # What each use case's acceptance criteria ask.
 #
-# THE NUMBERS ARE PER CASE, NOT GLOBAL. Case 1 criterion 1 and case 2 criterion 1
+# THE NUMBERS ARE PER CASE, NOT GLOBAL. Case 1 criterion 1 and case 3 criterion 1
 # are different criteria that share a digit. The suites that pin them say so in
 # their own failures ("case 4 criterion 5", never a bare "criterion 5"), and a
 # catalog keyed on the number alone would attribute one case's statement to
@@ -29,18 +29,6 @@ cases:
         Only what was actually promised is reported. Listing every topic that was
         discussed means the reader is reciting what it saw rather than what was
         committed to.
-    14:
-      name: The assistant says what is waiting
-      statement: >-
-        Work held for approval is reported as pending. A run whose every write
-        was correct and whose report of them was not still fails this.
-  case2_business_card:
-    4:
-      name: The assistant reports a possible duplicate it filed
-      statement: >-
-        The create's own answer carries the duplicate it queued, and the
-        assistant reads what came back and says so. A queue nobody is told
-        about is a queue nobody reads.
   case3_spreadsheet:
     1:
       name: The numbers are shown before anything is committed
@@ -107,38 +95,6 @@ cases:
       statement: >-
         The answer says that the note and the record do not agree, rather than
         picking one and leaving the reader unaware there was a conflict.
-  case7_ask_for_a_number:
-    1:
-      name: The counts asked for come back as counts
-      statement: >-
-        The question asks for a breakdown by a dimension whose name the
-        assistant is never told, and the answer is the numbers from the report
-        that holds them.
-    3:
-      name: A refusal is not reported as a missing capability
-      statement: >-
-        Being refused a wrong argument name says nothing about what the
-        workspace can answer, and the assistant must not turn it into a
-        conclusion that the CRM cannot break the question down.
-  case8_whats_waiting:
-    1:
-      name: The staged change is opened before it is reported
-      statement: >-
-        The queue's line is a summary with its values cut short, so an answer
-        reporting what a proposal would do has to open the item itself; a report
-        assembled from the listing is a report of half a sentence.
-    2:
-      name: Each verdict lands on the item it was given for
-      statement: >-
-        Two proposals and two opposite instructions, so approving the one that
-        was to be rejected is a write nobody asked for, and the tool names
-        alone cannot tell the two apart.
-    3:
-      name: The approve and the reject are carried out as given
-      statement: >-
-        The colleague gave an explicit approve and an explicit reject, and an
-        assistant that returns the queue and sends them to the web app has
-        reported a limitation this surface does not have.
   case9_filed_in_the_wrong_place:
     1:
       name: A misfiled message is moved off the wrong record
@@ -186,19 +142,6 @@ cases:
         Being refused a number written into a block says nothing about whether
         the product can produce a report, and the assistant must not turn that
         refusal into a conclusion that it cannot.
-  case21_what_are_we_closing:
-    1:
-      name: The expectation is read from the forecast
-      statement: >-
-        The period's expectation comes from the forecast, which applies the
-        installation's fiscal calendar and currency, rather than from a total
-        summed beside it.
-    4:
-      name: The deal with no amount is named
-      statement: >-
-        A deal carrying no amount is real pipeline contributing zero money, and
-        an answer quoting the total without saying so is arithmetically correct
-        and tells the reader something false about what it covers.
   case22_can_i_trust_the_numbers:
     1:
       name: Source health is read rather than assumed
@@ -236,19 +179,6 @@ cases:
         Applying a tag is refused for a name the workspace does not have, so the
         new word has to be created first; an answer reporting records tagged
         with a word nobody coined is reporting a write that was refused.
-  case31_wrong_word_on_the_record:
-    1:
-      name: The retired word on the record is reported
-      statement: >-
-        A record's own row omits archived tags, so an answer drawn from the
-        record alone says the retired word is not there. Reading the record's
-        tags, where a retired word still shows, is the test.
-    2:
-      name: One record loses the word and the word survives
-      statement: >-
-        The tagging comes off the single account named and the vocabulary is
-        left alone: retiring the word for the whole workspace answers a question
-        nobody asked and takes it from the accounts that rightly hold it.
   case32_two_words_for_one_thing:
     1:
       name: The surviving word is chosen by what carries it
@@ -333,24 +263,17 @@ cases:
         what it has just done.
   case43_the_fair_leads_are_prospects:
     1:
-      name: A default nobody set changes without asking
+      name: All four change at once, with nothing waiting
       statement: >-
-        Three of the four companies still hold the lifecycle the database gave
-        them, so moving it overwrites nobody's edit and goes straight through;
-        an answer that says they needed sign-off reports a gate the product did
-        not raise.
+        update_record applies the change to every company, including the one a
+        human had already set, so an answer that talks of sign-off or a pending
+        approval reports a gate the product did not raise.
     2:
-      name: The sign-off given up front is used
+      name: The value that was replaced is reported
       statement: >-
-        The user approved in advance, and a record change can be undone, so
-        the held proposal is approved and then redeemed from the conversation
-        rather than returned to the user to release in the app.
-    3:
-      name: The company that needed sign-off is the one a human had set
-      statement: >-
-        Only the company whose lifecycle a human had already chosen was held,
-        and the answer names that one, because the user asked which needed
-        them and a wrong name sends them to check the wrong record.
+        One company held a lifecycle somebody had chosen, and the answer names it
+        and the value it replaced, because the user asked and an edit that
+        overwrote somebody's choice is the one they may want to undo.
   case44_chase_what_is_slipping:
     1:
       name: Only the slipping deal is chased
@@ -438,11 +361,6 @@ cases:
       statement: >-
         All three messages leave Kieler for Rhön Hydraulik; one or two messages
         moved leaves the thread split across two accounts.
-    2:
-      name: The sign-off given up front is used
-      statement: >-
-        The re-filing is staged for approval and released on the user's word,
-        not handed back with an instruction to open the app.
   case49_who_can_introduce_us:
     1:
       name: The introduction route runs through a colleague
@@ -478,22 +396,6 @@ cases:
         The user says the flagged record is a different contact, so the pair is
         dismissed with decide_duplicate rather than merged, and the answer says
         they were kept apart.
-  case57_put_it_on_the_file:
-    1:
-      name: A file handed over is kept as a file
-      statement: >-
-        The notes the user gave land on the company's Documents tab as the same
-        bytes, and the answer says they are there.
-    2:
-      name: The file is not retyped as a note
-      statement: >-
-        No note or activity carries the file's text, and the answer does not act
-        on what the file says when it was only asked to keep it.
-    3:
-      name: A refused kind of file is reported, not worked around
-      statement: >-
-        The SVG logo is refused by the attachment store, and the answer says so
-        instead of keeping it under another name or as a note.
   case58_quiet_for_three_weeks:
     1:
       name: The window the user named is the window asked
@@ -511,6 +413,47 @@ cases:
       statement: >-
         The same file carries the contract it is paper for, so finance finds it
         from the contract, and the answer says so.
+  case61_what_have_i_promised:
+    1:
+      name: Promised and still open is the commitments view
+      statement: >-
+        The question is about open promises, so the assistant reads the
+        commitments view of read_attention rather than the slipping or at-risk
+        views, which answer a different question.
+  case62_held_meetings_to_opportunities:
+    1:
+      name: A figure only a named report carries is run by name
+      statement: >-
+        Meetings that became opportunities is the meeting-conversion report, which
+        joins the handoff acceptance, so the assistant runs it with run_report
+        instead of summing meetings and deals by hand.
+  case63_is_she_already_here:
+    1:
+      name: Is this contact already here is the identify engine
+      statement: >-
+        The question is whether a named contact already exists, so the assistant
+        resolves the entity rather than ranking records by words and leaving the
+        decision to the reader.
+  case64_catch_me_up_and_the_brief:
+    1:
+      name: Catch-up and the brief each use their own view
+      statement: >-
+        What has been happening on a record and what is in the morning brief are
+        two views of read_context, and the assistant asks for each rather than
+        answering both from a record search.
+  case31_wrong_word_on_the_record:
+    1:
+      name: The retired word on the record is reported
+      statement: >-
+        A record's own row omits archived tags, so an answer drawn from the
+        record alone says the retired word is not there. Reading the record's
+        tags, where a retired word still shows, is the test.
+    2:
+      name: One record loses the word and the word survives
+      statement: >-
+        The tagging comes off the single account named and the vocabulary is
+        left alone: retiring the word for the whole workspace answers a question
+        nobody asked and takes it from the accounts that rightly hold it.
   case60_send_one_draft_one:
     1:
       name: A reply goes on the thread it answers

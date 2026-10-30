@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import type { UrlParams } from "../../lib/urlstate";
 import { briefSubjectLabel, subjectHref } from "./worklist.copy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
-import { withWorklistReturn } from "./worklist.return";
+import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import type { RowReadings } from "./worklist.row.compact";
 
 // The frame already carries the date; the row retains its evidence and figures.
@@ -31,6 +31,12 @@ export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
   return routeHash(ENTITY.contact.route(contact.id));
 }
 
+/** How a row links an address inside a Worklist: carrying that list's way back. */
+export function useListed(): (href: string) => string {
+  const drawer = useDrawerDials();
+  return (href) => withWorklistReturn(href, drawer);
+}
+
 /**
  * Whom a row is about, linked — where the row does not already say so.
  *
@@ -44,26 +50,24 @@ export function contactHref(contact: NonNullable<WorklistItem["contact"]>) {
 export function aboutRecord(
   item: WorklistItem,
   named: boolean,
-  drawer: UrlParams | null,
+  listed: (href: string) => string,
 ): RowReadings["about"] {
   const contact = item.contact;
   if (contact?.label && (named || contact.id !== item.subject?.id)) {
     const employer = employerOf(contact);
     return {
-      href: withWorklistReturn(contactHref(contact), drawer),
+      href: listed(contactHref(contact)),
       label: contact.label,
       company: employer && {
         ...employer,
-        href: withWorklistReturn(employer.href, drawer),
+        href: listed(employer.href),
       },
     };
   }
   if (!named) return undefined;
   const label = item.subject?.label;
   const href = subjectHref(item);
-  return label && href
-    ? { href: withWorklistReturn(href, drawer), label }
-    : undefined;
+  return label && href ? { href: listed(href), label } : undefined;
 }
 
 /**
@@ -119,16 +123,16 @@ export function RowCaptions({
             before how long it has waited. */}
         {about && (
           <p className="t-caption worklist-row-about">
-            <a className="entity-link" href={about.href}>
+            <AppLink className="entity-link" href={about.href}>
               {about.label}
-            </a>
+            </AppLink>
           </p>
         )}
         {about?.company && (
           <p className="t-caption worklist-row-about">
-            <a className="entity-link" href={about.company.href}>
+            <AppLink className="entity-link" href={about.company.href}>
               {about.company.label}
-            </a>
+            </AppLink>
           </p>
         )}
         {host && <p className="t-caption worklist-row-host">{host}</p>}

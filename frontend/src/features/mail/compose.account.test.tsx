@@ -237,9 +237,11 @@ describe("ComposeModal started from an account", () => {
       />,
     );
 
-    // The token reads as the contact, with the address beside the name.
+    // The token reads as the contact; the address is what its remove names.
     expect(await screen.findByText("Mark Hughes")).toBeTruthy();
-    expect(screen.getByText("mark@acme.test")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Remove mark@acme.test" }),
+    ).toBeTruthy();
   });
 
   // A check-in mail to an account nobody has written to in a while is the first

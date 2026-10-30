@@ -4,10 +4,15 @@
 An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
-Most tools run at once. These actions always wait for a human to approve them: `merge` on `change_tags`, `invite` on
-`schedule_meeting`, `set_up_partner` on `change_state`, `enrich`, and `merge_member_accounts` on `change_state`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These
-are `update_record`, `move_deal` on `change_state`, and the two relink actions on `change_activities`. A waiting call
-changes nothing until a human approves it in the CRM. The agent then repeats the call with the approval's ID.
+Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Some
+still wait for a human then. These are the `enrich` tool and these actions: `set_up_partner` and `merge_member_accounts` on
+`change_state`, and `relink` and `relink_many` on `change_activities`.
+
+Automatic work with no passport behind it waits on every 🟡 tool in the catalog below, such as `merge` on `change_tags` and
+`invite` on `schedule_meeting`. A few more wait only in some cases, such as moving a deal to `won` or `lost`. These are the
+`update_record` tool and these actions: `move_deal` on `change_state`, and `relink` and `relink_many` on `change_activities`.
+
+A waiting call changes nothing until a human approves it in the CRM. The agent then repeats the call with the approval's ID.
 
 ## Which page do you need?
 
@@ -66,9 +71,10 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `annotate_brief` | 🟢 | `write` | no | Write findings onto the morning brief |
 | `archive_record` | 🟢 | `write` | no | Archive a record |
 | `bulk_update_records` | 🟢 | `write` | no | Change many records at once |
-| `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢)</details> |
+| `change_activities` | dynamic | `write` | no | 🔀 Log, plan and file activities <details><summary>actions</summary>`attach` (`attach_document`, 🟢) `log` (`log_activity`, 🟢) `ready` (`confirm_meeting_ready`, 🟢) `relink` (`relink_activity`, dynamic) `relink_many` (`relink_activities`, dynamic) `task` (`create_task`, 🟢) `unready` (`undo_meeting_ready`, 🟢)</details> |
 | `change_lists` | 🟢 | `write` | no | Make and change lists |
 | `change_record_parts` | 🟢 | `write` | no | Change the parts of a record |
+| `change_reports` | 🟢 | `write` | no | 🔀 Write a draft of a saved report for a human to publish <details><summary>actions</summary>`draft` (`draft_report`, 🟢)</details> |
 | `change_state` | dynamic | `write` | no | 🔀 Move a lead, deal, project or partner <details><summary>actions</summary>`merge_member_accounts` (`merge_members`, 🟡) `demote` (`demote_lead`, 🟢) `disqualify` (`disqualify_lead`, 🟢) `move_deal` (`progress_deal`, dynamic) `move_project` (`advance_project_phase`, 🟢) `promote` (`promote_lead`, 🟢) `qualify` (`qualify_lead`, 🟢) `set_up_partner` (`set_up_partner`, 🟡)</details> |
 | `change_tags` | dynamic | `write` | no | 🔀 Change tags <details><summary>actions</summary>`apply` (`apply_tag`, 🟢) `archive` (`archive_tag`, 🟢) `create` (`create_tag`, 🟢) `merge` (`merge_tags`, 🟡) `remove` (`remove_tag`, 🟢) `update` (`update_tag`, 🟢)</details> |
 | `commit_import` | 🟢 | `write` | no | Commit an import |
@@ -83,16 +89,10 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 
 ## Rules for single tools
 
-- **`update_record` is 🟢, with a 🟡 part.** The patch works per field. The fields no human wrote last apply at once.
-  The fields a human *did* write last wait for approval. The result names them in `staged_approval`, with the replay
-  call that uses the approval. A machine never undoes the edit of a human unless asked, and the edit of a human never
-  blocks the own fields of the machine.
-
-  When every field waits, nothing applies and the call is refused. The refusal still carries the same result,
-  `staged_approval` included, so a view can offer the choice.
-- **A write says what it changed.** `create_record` and `update_record` list each field they set in `changes`, and
-  `staged_approval` lists each field that waits. Each entry has the field's label and its value before and after,
-  with a name in place of an ID. The approval inbox shows a change in the same words. `read_approval` carries the
+- **`update_record` is 🟢.** The whole patch applies in the one call, whoever last wrote the fields. The audit row and
+  Undo put a wrong edit back. A call the contract marks confirm-first stages the whole call instead.
+- **A write says what it changed.** `create_record` and `update_record` list each field they set in `changes`. Each
+  entry has the field's label and its value before and after, with a name in place of an ID. The approval inbox shows a change in the same words. `read_approval` carries the
   same `changes` for a change that waits in the inbox.
 - **A deal move follows its stage.** It waits or runs by what the stage means. A column renamed `"Won"` still waits.
   `advanceDealTier` trusts the meaning set up for the stage. A stage it cannot prove is `open` waits too.

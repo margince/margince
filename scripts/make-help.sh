@@ -13,7 +13,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 groups=(
   "Start|install dev dev-stop dev-logs seed-dev check-config"
-  "Check before you push|check check-go check-gates check-fe test-it"
+  "Check before ready|check check-go check-gates check-fe test-it"
   "Frontend|fe-unit fe-lint fe-typecheck storybook"
   "Database|db-up migrate migrate-create psql"
   "Generate|gen config-gen drift"

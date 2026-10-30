@@ -1,8 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../components/activitygate";
+import {
+  LatestInboundLine,
+  useLatestInbound,
+} from "../../components/latestinbound";
+import { useRailRename } from "../../components/railfield";
 import { liveProjects } from "../../design-system/projectpicker";
-import { RecordView } from "../../design-system/recordview";
+import {
+  RecordView,
+  type RecordViewProps,
+} from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { contactPageState, contactQuery } from "../../lib/contact.queries";
@@ -17,14 +29,17 @@ import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useContact360 } from "./contact360";
-import { ContactActions, useActivityGate } from "./contactactions";
+import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
 import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
+import { useContactEdit } from "./contactedit";
+import { ContactFollowState } from "./contactfollowstate";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
+import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
 import {
   navigateKeepingReturn,
@@ -45,6 +60,7 @@ import { ContactRecordTabs, ContactTabPanel } from "./contactpage.tabs";
 export { runContactMomentAction } from "./contactpage.drawers";
 
 export type Contact360 = components["schemas"]["Contact360"];
+type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 
@@ -53,7 +69,7 @@ export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 function refusalsOf(
   readOnlyReason: string | undefined,
   readOnlyReasonId: string,
-  activity: ReturnType<typeof useActivityGate>,
+  activity: ActivityGate,
   t: ReturnType<typeof useT>,
 ): ReactNode {
   const activityRefused = activity.refusedId !== undefined;
@@ -92,6 +108,7 @@ export function ContactPageV2({
 
   const guard = useConsentGuard(id, live);
   const activity = useActivityGate();
+  const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
   // Which drawer is open, if any. One at a time: two surfaces over the same
@@ -219,7 +236,8 @@ export function ContactPageV2({
           canLog={!activity.pending && activity.refusedId === undefined}
           onCall={openCallLog}
         >
-          <RecordView
+          <ContactRecordView
+            contact={contact}
             back={<WorklistReturnLink />}
             // The contact's details, under the head in the left card. They hold
             // for the contact, not the open tab, so a tab change leaves them put.
@@ -231,6 +249,14 @@ export function ContactPageV2({
             // to reach them are details, and live in the aside.
             nameBadge={<ContactSubtitle view={view.data} />}
             pulse={<ContactMarks view={view.data} />}
+            latest={
+              tab !== "overview" && (
+                <LatestInboundLine
+                  latest={latest}
+                  onOpen={() => openTab("overview")}
+                />
+              )
+            }
             actions={
               // refusedReasonId is the same sentence the band below states.
               // It is one write gate for the whole header, not a narrower one per
@@ -261,12 +287,21 @@ export function ContactPageV2({
             }
           >
             {tab === "overview" && (
-              <ContactOverview
-                view={view.data}
-                onAction={runAction}
-                onOpenEmail={setOpenEmail}
-                onOpenTab={openTab}
-              />
+              <>
+                <ContactFollowState contactId={id} />
+                <ContactLatestInbound
+                  latest={latest}
+                  contactId={id}
+                  view={view.data}
+                >
+                  <ContactOverview
+                    view={view.data}
+                    onAction={runAction}
+                    onOpenEmail={setOpenEmail}
+                    onOpenTab={openTab}
+                  />
+                </ContactLatestInbound>
+              </>
             )}
 
             <ContactTabPanel
@@ -320,7 +355,7 @@ export function ContactPageV2({
             opens, driven by the same address, so a link to it from here
             and from there is one link. */}
             <BriefQueue />
-          </RecordView>
+          </ContactRecordView>
         </ContactCallStart>
       </ContactWriteTo>
     </div>
@@ -357,4 +392,18 @@ function useBriefedMeeting(): [
     setParams(out);
   };
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
+}
+
+// The record with its name renamed in place, through the details' own edit.
+function ContactRecordView({
+  contact,
+  ...view
+}: RecordViewProps & Readonly<{ contact: Contact }>) {
+  const t = useT();
+  const rename = useRailRename(
+    useContactEdit(contact),
+    "full_name",
+    t("create.fullName"),
+  );
+  return <RecordView {...view} rename={rename} />;
 }

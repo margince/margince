@@ -21,6 +21,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /dedupe/candidates/{id}` | getDedupeCandidate | One candidate with its full detection-time evidence. | Read records | at once |
 | `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
 | `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
+| `GET /dedupe/contact-cases` | listContactCases | The open contact duplicate cases, strongest first. | Read records | at once |
+| `GET /dedupe/contact-cases/{contact_id}` | getContactCase | The duplicate case this contact belongs to. | Read records | at once |
+| `POST /dedupe/contact-cases/{contact_id}/preview` | previewContactCaseMerge | What merging these members would do, without writing anything. | Change records | at once |
+| `POST /dedupe/contact-cases/{contact_id}/merge` | mergeContactCase | Merge the selected members of a case into one contact. Not reversible. | Change records | at once |
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | Read records | at once |
 
 ## Companies
@@ -137,6 +141,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /tasks` | createTask | Create a task — a commitment with an owner, on the records it is about. | Change records | at once |
 | `GET /activities` | listActivities | List activities (the timeline; cursor-paginated, filterable by type/entity). | Read records | at once |
 | `POST /activities` | logActivity | Log an activity (the `log_activity` MCP verb). | Change records | at once |
+| `GET /activities/latest-inbound` | listLatestInbound | What they sent on one record in the last 7 days that nobody has answered. | Read records | at once |
 | `GET /activities/{id}` | getActivity | Get an activity by id (includes its links and raw capture payload). | Read records | at once |
 | `PATCH /activities/{id}` | updateActivity | Update an activity (e.g. complete a task). | Change records | at once |
 | `DELETE /activities/{id}` | archiveActivity | Archive (soft-delete) an activity. | Change records | at once |
@@ -233,6 +238,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | Read records | at once |
 | `GET /analytics/reports` | listReportingReports | List reporting reports | Read records | at once |
 | `GET /analytics/reports/{id}` | getReportingReport | Get reporting report | Read records | at once |
+| `PUT /analytics/reports/{id}/draft` | saveReportingReportDraft | Save a reporting report draft | Change records | at once |
 | `GET /analytics/reports/{id}/evaluation` | evaluateReportingReport | Evaluate reporting report | Read records | at once |
 | `GET /analytics/targets` | listReportingTargets | List reporting targets | Read records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |
@@ -334,6 +340,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `PUT /worklist/ready` | confirmMeetingReady | Say you are ready for a meeting you attend. | Change records | at once |
+| `POST /worklist/ready/undo` | undoMeetingReady | Take back your "I'm ready" for a meeting — the undo behind it. | Change records | at once |
 | `GET /brief` | getMorningBrief | The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). | Read records | at once |
 | `PUT /brief/annotations` | annotateMorningBrief | Write the overnight pass's findings onto the acting rep's own brief for today. | Change records | at once |
 

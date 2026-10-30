@@ -8,6 +8,7 @@ package deals
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -84,16 +85,18 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 const dealTaggableType = "deal"
 
 type ListDealsInput struct {
+	IDs []ids.UUID
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
-	TagIDs     []ids.UUID
-	TagMode    storekit.TagMode
-	Cursor     *string
-	Limit      *int
-	Query      *string
-	PipelineID *ids.PipelineID
-	StageID    *ids.StageID
-	OwnerID    *ids.UserID
+	TagIDs      []ids.UUID
+	TagMode     storekit.TagMode
+	Cursor      *string
+	Limit       *int
+	Query       *string
+	PipelineID  *ids.PipelineID
+	StageID     *ids.StageID
+	OwnerID     *ids.UserID
+	ScopeOwners *storekit.OwnerSet
 	// OwnerTeamID and Unassigned are the other two owner dials; with OwnerID
 	// they are one predicate, storekit.OwnershipClause.
 	OwnerTeamID      *ids.TeamID
@@ -309,6 +312,9 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
 func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if len(in.IDs) > 0 {
+		where = append(where, fmt.Sprintf("id = ANY($%d)", arg(in.IDs)))
+	}
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
@@ -320,6 +326,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.StageID != nil {
 		where = append(where, storekit.SQLf("stage_id = $%d", arg(*in.StageID)))
+	}
+	if scoped := storekit.OwnerSetClause("owner_id", in.ScopeOwners, arg); scoped != "" {
+		where = append(where, scoped)
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {
@@ -355,24 +364,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		}
 		where = append(where, clause)
 	}
-	if in.PartnerSourced != nil {
-		// Whether a partner is named at all is a reading of partner_company_id,
-		// and the page's membership is the answer the mask declined to give.
-		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
-			return nil, err
-		}
-		if *in.PartnerSourced {
-			where = append(where, PartnerSourcedSQL(""))
-		} else {
-			where = append(where, "NOT "+PartnerSourcedSQL(""))
-		}
-	}
-	if in.PartnerAttribution != nil {
-		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
-		if err != nil {
-			return nil, err
-		}
-		where = append(where, clause)
+	where, err = appendPartnerFilters(ctx, where, in, arg)
+	if err != nil {
+		return nil, err
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
@@ -409,16 +403,6 @@ func appendIdleFilters(where []string, in ListDealsInput) []string {
 		where = append(where, QuietSQL("", *in.QuietForDays))
 	}
 	return where
-}
-
-// uuidOfFilter widens one optional typed filter id to the untyped UUID the
-// reference table above walks. It is deliberately the only widening here: the
-// phantom kind is what stops a project id being probed against company.
-func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
-	if id == nil {
-		return nil
-	}
-	return &id.UUID
 }
 
 // referenceFilterClause narrows a filter on a column that NAMES another record
@@ -483,4 +467,27 @@ func partnerAttributionFilterClause(ctx context.Context, attribution string, arg
 	}
 	return clause + storekit.SQLf(
 		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
+}
+
+func appendPartnerFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if in.PartnerSourced != nil {
+		// Whether a partner is named at all is a reading of partner_company_id,
+		// and the page's membership is the answer the mask declined to give.
+		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
+			return nil, err
+		}
+		if *in.PartnerSourced {
+			where = append(where, PartnerSourcedSQL(""))
+		} else {
+			where = append(where, "NOT "+PartnerSourcedSQL(""))
+		}
+	}
+	if in.PartnerAttribution != nil {
+		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, clause)
+	}
+	return where, nil
 }

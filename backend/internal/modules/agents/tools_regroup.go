@@ -91,6 +91,27 @@ func (readReports) routeTargets() map[string]string {
 	return map[string]string{"standard": "read_reporting", "run": "run_report", "evidence": "search_report_evidence"}
 }
 
+// changeReports fronts the reporting writes an agent may make. Each stays its
+// own tool, so a later report write joins as one more action, not one more
+// listed tool.
+type changeReports struct{ routed }
+
+func (changeReports) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "change_reports", Title: "Prepare saved reports", Version: toolVersionV1,
+		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
+		InputSchema: schema(`{"type":"object","properties":{
+			"action":{"description":"draft: save a report's next charts as a draft for a human to publish, or create a new report only they see"},
+			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
+	}
+}
+
+func (changeReports) routeField() string { return actionArg }
+
+func (changeReports) routeTargets() map[string]string {
+	return map[string]string{"draft": draftReportTool}
+}
+
 type readAnalytics struct{ routed }
 
 func (readAnalytics) Spec() mcp.ToolSpec {
@@ -115,7 +136,7 @@ func (changeActivities) Spec() mcp.ToolSpec {
 		Name: "change_activities", Title: "Log, plan and file activities", Version: toolVersionV1,
 		Description: changeActivitiesCopy.render(), Instead: changeActivitiesCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set"}}}`),
+			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back"}}}`),
 	}
 }
 
@@ -125,6 +146,7 @@ func (changeActivities) routeTargets() map[string]string {
 	return map[string]string{
 		"log": "log_activity", resultTypeTask: "create_task", "attach": "attach_document",
 		"relink": relinkActivityTool, "relink_many": relinkActivitiesTool,
+		"ready": confirmMeetingReadyTool, "unready": undoMeetingReadyTool,
 	}
 }
 

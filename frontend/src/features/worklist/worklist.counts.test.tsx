@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 import { completenessText, pillCount } from "./worklist.completeness";
 
@@ -30,7 +31,7 @@ function stub(day: Worklist) {
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       return url.includes("/worklist")
-        ? jsonResponse(day)
+        ? jsonResponse(echoView(url, day))
         : jsonResponse({ data: [] });
     }),
   );
@@ -83,7 +84,13 @@ function renderWorklist() {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
+
+/** Opens the Worklist on the Decisions view, where approvals are counted. */
+function onDecisions() {
+  globalThis.location.hash = "#/worklist?view=decisions";
+}
 
 describe("what the page says about what it is not showing", () => {
   it("counts each cut on the pill that opens it", async () => {
@@ -101,10 +108,10 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     // The number rides inside the button, so it joins the accessible name: a
-    // reader hears "Approvals, 12" rather than meeting a bare figure.
+    // reader hears "Decisions, 12" rather than meeting a bare figure.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /Approvals.*12/ }),
+        screen.getByRole("button", { name: /Decisions.*12/ }),
       ).toBeTruthy();
     });
   });
@@ -120,7 +127,7 @@ describe("what the page says about what it is not showing", () => {
     // One row drawn out of nine read. Before this line the reader had no way
     // to tell that page from a finished day.
     await waitFor(() => {
-      expect(screen.getByText(/1 of 9 items shown/)).toBeTruthy();
+      expect(screen.getByText(/1 of 9 items loaded/)).toBeTruthy();
     });
   });
 
@@ -153,11 +160,11 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Approvals/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /Decisions/ })).toBeTruthy();
     });
     // The server knows a floor, not a total. A floor printed as a count is a
-    // wrong number rather than a missing one, so the pill draws none.
-    expect(screen.queryByRole("button", { name: /Approvals.*200/ })).toBeNull();
+    // wrong number rather than a missing one, so the button draws none.
+    expect(screen.queryByRole("button", { name: /Decisions.*200/ })).toBeNull();
   });
 
   it("does not print a fraction whose denominator is a floor", async () => {
@@ -171,6 +178,7 @@ describe("what the page says about what it is not showing", () => {
         },
       ]),
     );
+    onDecisions();
     renderWorklist();
 
     // Waited on the caveat, so the absence below is asserted over a drawn line.
@@ -195,12 +203,13 @@ describe("what the page says about what it is not showing", () => {
         },
       ]),
     );
+    onDecisions();
     renderWorklist();
 
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Approvals (200+) may have more items than this list shows.",
+          "1 item loaded · Approvals (200+) may have more items than this list shows.",
         ),
       ).toBeTruthy();
     });
@@ -210,24 +219,21 @@ describe("what the page says about what it is not showing", () => {
     stub(
       day([
         {
-          category: "decisions",
+          category: "deals_at_risk",
           considered: 200,
           shown: 1,
           more_available: true,
         },
-        {
-          category: "tasks",
-          considered: 40,
-          shown: 2,
-          more_available: true,
-        },
+        { category: "tasks", considered: 40, shown: 2, more_available: true },
       ]),
     );
     renderWorklist();
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Approvals \(200\+\), Tasks \(40\+\) may have more/),
+        screen.getByText(
+          /Deals at risk \(200\+\), Tasks \(40\+\) may have more/,
+        ),
       ).toBeTruthy();
     });
   });
@@ -235,12 +241,7 @@ describe("what the page says about what it is not showing", () => {
   it("names a bounded cut that read nothing without a zero beside it", async () => {
     stub(
       day([
-        {
-          category: "decisions",
-          considered: 200,
-          shown: 1,
-          more_available: true,
-        },
+        { category: "tasks", considered: 40, shown: 1, more_available: true },
         {
           category: "deals_at_risk",
           considered: 0,
@@ -254,10 +255,32 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Approvals (200+), Deals at risk may have more items than this list shows.",
+          "1 item loaded · Tasks (40+), Deals at risk may have more items than this list shows.",
         ),
       ).toBeTruthy();
     });
+  });
+
+  // A view counts only its own categories: an approval read to its bound is
+  // the Decisions view's caveat, never Today's.
+  it("keeps another view's limit off Today's line", async () => {
+    stub(
+      day([
+        { category: "tasks", considered: 1, shown: 1, more_available: false },
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText("Task 0")).toBeTruthy();
+    });
+    expect(screen.queryByText(/Approvals/)).toBeNull();
   });
 
   // A narrowed page reads only the cut the reader is looking at.
@@ -354,30 +377,6 @@ describe("the line compares items with items", () => {
   const t = ((key: string, vars?: Record<string, string>) =>
     translate("en", key as never, vars)) as never;
 
-  it("gives the review panel no exact fraction over a group cut at its limit", async () => {
-    const page = day([
-      {
-        category: "decisions",
-        considered: 230,
-        shown: 200,
-        more_available: true,
-      },
-    ]);
-    page.queue = [pairs(200, true)];
-    page.summary.buckets = { urgent: 0, due_today: 0, planned: 0, review: 230 };
-    stub(page);
-    renderWorklist();
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(
-          /^200\+ shown\. There may be more items than this list shows\.$/,
-        ),
-      ).toBeTruthy();
-    });
-    expect(screen.queryByText(/200 of 230/)).toBeNull();
-  });
-
   it("calls eight pairs on one card complete, on the line and in review", async () => {
     const page = day([
       { category: "decisions", considered: 8, shown: 8, more_available: false },
@@ -401,7 +400,7 @@ describe("the line compares items with items", () => {
 
     expect(
       completenessText(page, "all", t, "en", [pairs(8), task(1), task(2)]),
-    ).toBe("10 of 38 items shown · 3 cards on screen");
+    ).toBe("10 of 38 items loaded · 3 cards on screen");
   });
 
   it("prints no fraction over a group cut at its read limit", () => {
@@ -410,7 +409,7 @@ describe("the line compares items with items", () => {
     ]);
 
     expect(completenessText(page, "all", t, "en", [pairs(8, true)])).toBe(
-      "8 items shown · 1 card on screen",
+      "8 items loaded · 1 card on screen",
     );
   });
 
@@ -429,10 +428,25 @@ describe("the line compares items with items", () => {
     ];
 
     expect(completenessText(page, "all", t, "en", [task(1)])).toBe(
-      "1 of 1 items shown · 1 source did not load",
+      "1 of 1 items loaded · 1 source did not load",
     );
     page.sources_unavailable = page.sources_unavailable.slice(1);
     expect(completenessText(page, "all", t, "en", [task(1)])).toBeNull();
+  });
+
+  it("names no limit on a category the server counted in full", () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 200,
+        shown: 25,
+        more_available: true,
+        total: 340,
+      },
+    ]);
+    const line = completenessText(page, "decisions", t, "en") ?? "";
+    expect(line).toMatch(/^25 of 340 items loaded/);
+    expect(line).not.toContain("200");
   });
 });
 
@@ -447,4 +461,23 @@ it("does not print an exact pill total over a failed or withheld source", () => 
   }
   page.sources_unavailable = [];
   expect(pillCount(page, "tasks")).toBe(0);
+});
+
+it("prints the server's exact total over a category read short of it", () => {
+  const page = day([
+    {
+      category: "decisions",
+      considered: 200,
+      shown: 25,
+      more_available: true,
+      total: 340,
+    },
+    { category: "tasks", considered: 3, shown: 3, more_available: false },
+  ]);
+  expect(pillCount(page, "decisions")).toBe(340);
+  expect(pillCount(page, "all")).toBe(343);
+
+  page.counts[0] = { ...page.counts[0], total: undefined };
+  expect(pillCount(page, "decisions")).toBeUndefined();
+  expect(pillCount(page, "all")).toBeUndefined();
 });

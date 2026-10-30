@@ -4,10 +4,9 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
-import { useMagic } from "../features/sign-in/magic.queries";
 import { useHandledForYou } from "../features/worklist/worklist.reads";
-import { usePendingApprovals } from "../lib/approvals.queries";
-import { proposal } from "./brief.fixtures";
+import { usePendingApprovalCount } from "../lib/approvals.queries";
+import { useMagic } from "../lib/magic.queries";
 import { jsonResponse, line, receipt } from "./magic.testkit";
 import { automaticDateReceipt } from "./worklist.receiptreview.fixtures";
 
@@ -20,7 +19,7 @@ function wrapper({ children }: { children: ReactNode }) {
 function useHome() {
   const magic = useMagic();
   const handled = useHandledForYou();
-  const pending = usePendingApprovals();
+  const pending = usePendingApprovalCount();
   return { magic: magic.data, handled: handled.data, pending: pending.data };
 }
 async function advance(ms: number) {
@@ -39,10 +38,10 @@ beforeEach(() => {
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
       reads.push(path);
-      if (path.endsWith("/approvals"))
+      if (path.endsWith("/approvals/pending-count"))
         return jsonResponse({
-          data: settled ? [] : [proposal("waiting", "Move deal to Won")],
-          page: { has_more: false, next_cursor: null },
+          count: settled ? 0 : 1,
+          as_of: "2026-09-13T08:00:00Z",
         });
       return path.endsWith("/magic")
         ? jsonResponse(
@@ -84,7 +83,7 @@ it("refreshes externally decided actions and reversed receipts in an open Home",
   settled = true;
   await advance(60_001);
   expect(result.current.magic?.needs_you).toEqual([]);
-  expect(result.current.pending?.data).toEqual([]);
+  expect(result.current.pending?.count).toBe(0);
   expect(result.current.handled?.receipts).toHaveLength(1);
   expect(result.current.handled?.receipts[0]?.review?.reversed).toBe(true);
   expect(result.current.handled?.receipts[0]?.review?.can_undo).toBe(false);
@@ -101,7 +100,7 @@ it("pauses hidden reads and refreshes on return even inside the cache window", a
   });
   await advance(0);
   expect(result.current.magic?.needs_you).toEqual([]);
-  expect(result.current.pending?.data).toEqual([]);
+  expect(result.current.pending?.count).toBe(0);
   expect(result.current.handled?.receipts[0]?.review?.reversed).toBe(true);
   focusManager.setFocused(false);
   const before = reads.length;

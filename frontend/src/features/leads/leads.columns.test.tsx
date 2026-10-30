@@ -100,7 +100,10 @@ describe("the lead table's columns", () => {
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({ id: "c-7", display_name: "Northwind Holding" }),
+            JSON.stringify({
+              data: [{ id: "c-7", display_name: "Northwind Holding" }],
+              next_cursor: null,
+            }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           ),
       ),

@@ -45,7 +45,7 @@ func TestABoundedReadSaysSoRatherThanLookingComplete(t *testing.T) {
 		receipts: fixedReceipts(handledCap + 1),
 	}
 
-	out, err := svc.HandledForYou(leadReader())
+	out, err := svc.HandledForYou(leadReader(), nil)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestAFullPageIsNotABoundedOne(t *testing.T) {
 		receipts: fixedReceipts(handledCap),
 	}
 
-	out, err := svc.HandledForYou(leadReader())
+	out, err := svc.HandledForYou(leadReader(), nil)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestAnUnwiredReaderShowsNothingRatherThanRefusing(t *testing.T) {
 	t.Parallel()
 	svc := &Service{now: func() time.Time { return rankInstant }}
 
-	out, err := svc.HandledForYou(leadReader())
+	out, err := svc.HandledForYou(leadReader(), nil)
 	if err != nil {
 		t.Fatalf("an unwired reader refused the page: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestAHandledReceiptNamesTheRecordItChanged(t *testing.T) {
 		names: names,
 	}
 
-	out, err := svc.HandledForYou(leadReader())
+	out, err := svc.HandledForYou(leadReader(), nil)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}

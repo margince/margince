@@ -118,9 +118,12 @@ func (s dailySeeder) analyze(tables ...string) {
 	s.exec("analyze", `ANALYZE `+strings.Join(names, ", "))
 }
 
-// execDeferringTrigger turns a per-row last-activity trigger (quadratic per company)
-// off for one insert, in one transaction so a failure never leaves it off.
-func (s dailySeeder) execDeferringTrigger(step, table, trigger, sql string, args ...any) {
+// execDeferringTriggers turns per-row triggers off for one insert, in one
+// transaction so a failure never leaves them off. The last-activity triggers
+// are quadratic per company. The settlement-evidence trigger takes one advisory
+// lock per row, and a tier-sized insert runs out of lock slots. No other session
+// writes while the seed runs, so that trigger has nothing to serialize.
+func (s dailySeeder) execDeferringTriggers(step, table string, triggers []string, sql string, args ...any) {
 	s.t.Helper()
 	ctx := context.Background()
 	tx, err := s.owner.Begin(ctx)
@@ -132,19 +135,33 @@ func (s dailySeeder) execDeferringTrigger(step, table, trigger, sql string, args
 			s.t.Errorf("seeding the daily corpus (%s): rollback: %v", step, err)
 		}
 	}()
-	alter := "ALTER TABLE " + pgx.Identifier{table}.Sanitize() + " %s TRIGGER " + pgx.Identifier{trigger}.Sanitize()
-	for _, statement := range []struct {
-		sql  string
-		args []any
-	}{{fmt.Sprintf(alter, "DISABLE"), nil}, {sql, args}, {fmt.Sprintf(alter, "ENABLE"), nil}} {
-		if _, err := tx.Exec(ctx, statement.sql, statement.args...); err != nil {
+	alter := func(verb string) []string {
+		statements := make([]string, 0, len(triggers))
+		for _, trigger := range triggers {
+			statements = append(statements, "ALTER TABLE "+pgx.Identifier{table}.Sanitize()+" "+verb+" TRIGGER "+pgx.Identifier{trigger}.Sanitize())
+		}
+		return statements
+	}
+	run := func(sql string, args ...any) {
+		if _, err := tx.Exec(ctx, sql, args...); err != nil {
 			s.t.Fatalf("seeding the daily corpus (%s): %v", step, err)
 		}
+	}
+	for _, statement := range alter("DISABLE") {
+		run(statement)
+	}
+	run(sql, args...)
+	for _, statement := range alter("ENABLE") {
+		run(statement)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		s.t.Fatalf("seeding the daily corpus (%s): commit: %v", step, err)
 	}
 }
+
+// settlementEvidenceTrigger is the per-row lock trigger on the tables that hold
+// an answer to a request.
+const settlementEvidenceTrigger = "settlement_evidence_share"
 
 // moveLastActivity replays the deferred triggers once per record through the
 // product's own move_last_activity, so the end state is the triggers' own.
@@ -189,12 +206,14 @@ func seedDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	s.timed("capture_import", s.captureImports)
 	s.timed("activity_participant", s.participants)
 	s.analyze("activity_participant", "capture_import")
+	s.timed("graph_interaction_edge", s.interactionEdges)
 	s.timed("activity_link", s.links)
 	s.analyze("activity_link", "contact", "deal", "company", "relationship")
 	s.timed("last_activity_at", s.moveLastActivity)
 	s.timed("vacuum analyze", func() {
 		s.exec("vacuum", `VACUUM ANALYZE company, company_domain, contact, contact_email, relationship, deal,
-		      lead, project, activity, capture_import, activity_participant, activity_link`)
+		      lead, project, activity, capture_import, activity_participant, activity_link,
+		      graph_interaction_edge`)
 	})
 	t.Logf("seed total %s at scale %g", time.Since(start).Round(time.Millisecond), scale)
 
@@ -258,13 +277,13 @@ func (s dailySeeder) contacts() {
 	             CASE WHEN p.private THEN 'owner' ELSE 'workspace' END,
 	             'manual', 'human:' || p.owner_id, now() - random() * interval '730 days'
 	      FROM daily_seed_contact p ORDER BY p.i`, dailyTitles)
-	s.exec("contact_email", `INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
+	s.execDeferringTriggers("contact_email", "contact_email", []string{settlementEvidenceTrigger}, `INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
 	      SELECT p.id, p.email, 'work', true, 'manual', 'human:' || p.owner_id FROM daily_seed_contact p ORDER BY p.i`)
 	s.analyze("contact", "contact_email")
 }
 
 func (s dailySeeder) employment() {
-	s.execDeferringTrigger("employment", "relationship", "relationship_last_activity", `INSERT INTO relationship (kind, contact_id, company_id, is_current_primary,
+	s.execDeferringTriggers("employment", "relationship", []string{"relationship_last_activity"}, `INSERT INTO relationship (kind, contact_id, company_id, is_current_primary,
 	                                               employment_status, started_at, source, captured_by)
 	      SELECT 'employment', p.id, c.id, true, 'current', (now() - random() * interval '3000 days')::date,
 	             'manual', 'human:' || p.owner_id
@@ -420,7 +439,7 @@ func (s dailySeeder) activities() {
 // for some and plain words for the rest; a body greets the contact, names every topic, then reads on.
 func (s dailySeeder) insertActivities() {
 	termSubjects, termSentences := dailyTermPools()
-	s.exec("activity", `INSERT INTO activity (id, kind, subject, body, occurred_at, due_at, assignee_id, direction,
+	s.execDeferringTriggers("activity", "activity", []string{settlementEvidenceTrigger}, `INSERT INTO activity (id, kind, subject, body, occurred_at, due_at, assignee_id, direction,
 	                                         meeting_status, duration_seconds, source_system, source_id, source,
 	                                         captured_by, thread_key, audience, language, created_at)
 	      SELECT a.id, a.kind,
@@ -466,7 +485,7 @@ func (s dailySeeder) captureImports() {
 // participants writes capture's shape, which the Worklist reads: the rep by seat (no address),
 // the rep's address on their side, the contact on the other, one or two colleagues on cc.
 func (s dailySeeder) participants() {
-	s.exec("activity_participant", `INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role, display_name)
+	s.execDeferringTriggers("activity_participant", "activity_participant", []string{settlementEvidenceTrigger}, `INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role, display_name)
 	      SELECT a.id, x.user_id, x.contact_id, x.address, x.role, x.display_name
 	      FROM daily_seed_activity a
 	      JOIN daily_seed_contact p ON p.i = a.contact_i
@@ -487,7 +506,7 @@ func (s dailySeeder) participants() {
 // links file every activity under its contact, email/notes/tasks also under the employer,
 // and 30% under its first deal. Meetings and calls never link a company: a trigger refuses it.
 func (s dailySeeder) links() {
-	s.execDeferringTrigger("activity_link", "activity_link", "activity_link_last_activity", `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
+	s.execDeferringTriggers("activity_link", "activity_link", []string{"activity_link_last_activity", settlementEvidenceTrigger}, `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
 	      SELECT a.id, 'contact', p.id, NULL::uuid, NULL::uuid
 	      FROM daily_seed_activity a JOIN daily_seed_contact p ON p.i = a.contact_i
 	      UNION ALL

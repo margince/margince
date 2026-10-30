@@ -153,9 +153,10 @@ func (s *Store) OpenTagSuggestions(ctx context.Context, limit int) ([]TagSuggest
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, visible+`
+		query := visible + `
 			 ORDER BY s.created_at DESC, s.id DESC
-			 LIMIT $`+fmt.Sprint(arg(limit)), args...)
+			 LIMIT $` + fmt.Sprint(arg(limit))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("collections: reading open tag suggestions: %w", err)
 		}

@@ -58,11 +58,18 @@ type BadgeTone = (typeof BADGE_TONES)[number];
 
 type PlainTone = Exclude<BadgeTone, "ai">;
 
-// One leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
+// One leading mark, a glyph, the `live` dot or a caller's own `mark` (a tag's
+// tone dot); an `ai` badge's is Sparkles. Every mark sits outside the label, so
+// the badge's gap spaces it and a truncating label never clips it.
+type NoMark = { icon?: never; live?: never; dot?: never; mark?: never };
 type BadgeMark =
-  | { tone?: PlainTone; icon?: LucideIcon; live?: never; dot?: never }
-  | { tone?: PlainTone; icon?: never; live?: boolean; dot?: boolean }
-  | { tone: "ai"; icon?: never; live?: never; dot?: never };
+  | ({ tone?: PlainTone } & Omit<NoMark, "icon"> & { icon?: LucideIcon })
+  | ({ tone?: PlainTone } & Omit<NoMark, "live" | "dot"> & {
+        live?: boolean;
+        dot?: boolean;
+      })
+  | ({ tone?: PlainTone } & Omit<NoMark, "mark"> & { mark?: ReactNode })
+  | ({ tone: "ai" } & NoMark);
 
 export function Badge({
   variant = "soft",
@@ -70,6 +77,7 @@ export function Badge({
   icon,
   live,
   dot,
+  mark,
   wrap,
   children,
 }: Readonly<
@@ -96,6 +104,7 @@ export function Badge({
         <span className="badge-dot" aria-hidden />
       )}
       {Icon && <Icon size={12} aria-hidden="true" />}
+      {!provenance && mark}
       <span className="badge-label">{children}</span>
     </span>
   );

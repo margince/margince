@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
   MARKER,
@@ -24,38 +24,58 @@ import { WorkspaceRail } from "./shell";
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
+const ABSURD_NAME =
+  "Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien e. V.";
+
+// The happy-dom render lays nothing out, so the two widths the tip reads
+// are stubbed to say whether the name fit its one line.
+function nameFits(fits: boolean) {
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+    fits ? 120 : 640,
+  );
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(160);
+}
+
 describe("The rail's brand block", () => {
-  // Whose product this is, above whose product it runs on. Every reader of a
-  // live installation, a rep included, is in this case — the cases above are the pre-onboarding
-  // one — so the heading is the company they work for and the product is the
-  // line beneath it.
-  it("heads the rail with the full company logo and puts the product under it", () => {
+  // The company is the heading. The product it runs on is the line beneath
+  // it, outside the link.
+  it("heads the rail with the company's square mark and puts the product under it", () => {
     const client = newClient();
-    client.setQueryData(
-      ["me"],
-      repSeeing({
-        display_name: "Demo GmbH",
-        logo_url: "/v1/companies/11111111-1111-4111-8111-111111111111/logo",
-      }),
-    );
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
     renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
     const brand = screen.getByRole("link", {
       name: "Demo GmbH home, powered by Margince",
     });
-    const logo = within(brand).getByRole("img", { name: "Demo GmbH" });
-    const image = logo.querySelector("img");
-    if (!image) throw new Error("the company logo image was not rendered");
-    fireEvent.load(image);
-    expect(logo.classList.contains("company-logo")).toBe(true);
-    // Beside the link rather than inside it: the attribution and the build badge
-    // are one row of the head, and neither is somewhere a press should lead.
+    expect(brand.textContent).toBe("Demo GmbH");
+    expect(document.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+      TWO_MARKS.logo_icon_url,
+    );
+    // The attribution and the build badge stand beside the link. Neither is
+    // somewhere a press should lead.
     const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toContain("Powered by");
-    expect(attribution?.textContent).toContain("Margince");
-    expect(within(brand).queryByText("Powered by")).toBeNull();
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(attribution?.textContent).toContain("Powered by Margince");
+    expect(within(brand).queryByText("Powered by Margince")).toBeNull();
+    expect(brand.getAttribute("href")).toBe("/#/home");
+  });
+
+  // The head is one line tall for a name of any length. The tooltip shows the
+  // whole name, and only when the line cut it.
+  it.each([
+    ["shows the whole name when its line cut it", false, ABSURD_NAME],
+    ["stays away when the name fits", true, null],
+  ])("%s", (_name, fits, shown) => {
+    nameFits(fits);
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing({ display_name: ABSURD_NAME }));
+    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+
+    fireEvent.focus(screen.getByRole("link", { name: /Bundesverband/ }));
+
+    expect(screen.queryByRole("tooltip")?.textContent ?? null).toBe(shown);
   });
 
   // A company save refreshes /me (storeCompany). The rail has to be OBSERVING
@@ -72,21 +92,22 @@ describe("The rail's brand block", () => {
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
     );
-    expect(container.querySelector(".company-logo img")).toBeNull();
+    expect(container.querySelector(".ws-chip img")).toBeNull();
 
     act(() => {
       client.setQueryData(
         ["me"],
         repSeeing({
           ...profile,
-          logo_url: "/v1/companies/44444444-4444-4444-8444-444444444444/logo",
+          logo_icon_url:
+            "/v1/companies/44444444-4444-4444-8444-444444444444/logo/icon",
         }),
       );
     });
     await waitFor(() =>
-      expect(
-        container.querySelector(".company-logo img")?.getAttribute("src"),
-      ).toBe("/v1/companies/44444444-4444-4444-8444-444444444444/logo"),
+      expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+        "/v1/companies/44444444-4444-4444-8444-444444444444/logo/icon",
+      ),
     );
   });
 
@@ -102,36 +123,14 @@ describe("The rail's brand block", () => {
     expect(
       screen.getByRole("link", { name: en["shell.logoAria"] }),
     ).toBeTruthy();
-    expect(container.querySelector(".company-logo")).toBeNull();
+    expect(container.querySelector(".ws-chip-company")).toBeNull();
     expect(container.querySelector(".ws-name")?.textContent).toBe(
       en["shell.logoAria"],
     );
   });
 
-  // The mark is the company's own, drawn from the site the onboarding read
-  // resolved it from — not the product's, and not a monogram standing in for a
-  // logo the installation actually has.
-  it("draws the company's resolved logo as the rail's mark", () => {
-    const client = newClient();
-    client.setQueryData(
-      ["me"],
-      repSeeing({
-        display_name: "Demo GmbH",
-        logo_url: "/v1/companies/22222222-2222-4222-8222-222222222222/logo",
-      }),
-    );
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe("/v1/companies/22222222-2222-4222-8222-222222222222/logo");
-  });
-
-  // A company whose site declared no icon has a face rather than a gap: the
-  // monogram is the floor under the mark, so an absent logo_url is a rendering
-  // decision and never an empty slot.
+  // A company whose site declared no icon has a face rather than a gap. The
+  // monogram is the floor under the mark, so the slot is never empty.
   it("draws the company's monogram when no logo resolved", () => {
     const client = newClient();
     client.setQueryData(
@@ -172,45 +171,67 @@ describe("The rail's brand block", () => {
     expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
   });
 
-  it("draws the square icon when the panel is collapsed", () => {
+  // One shape at both widths: the head never swaps marks when the panel
+  // collapses, so the company keeps one face.
+  it.each([
+    ["expanded", false],
+    ["collapsed", true],
+  ])("draws the square icon when the panel is %s", (_name, collapsed) => {
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
     const { container } = renderWith(
       client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+      <WorkspaceRail route={{ screen: "home" }} collapsed={collapsed} />,
     );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
+    expect(container.querySelectorAll(".ws-chip img")).toHaveLength(1);
+    expect(container.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
+      TWO_MARKS.logo_icon_url,
+    );
   });
 
-  it("draws the wide mark when the panel is expanded", () => {
-    const client = newClient();
-    client.setQueryData(["me"], repSeeing(TWO_MARKS));
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
-  });
-
-  it("keeps the wide mark in the collapsed panel when no icon was uploaded", () => {
-    const client = newClient();
-    client.setQueryData(
-      ["me"],
-      repSeeing({
-        ...TWO_MARKS,
-        logo_icon_url: undefined,
-      }),
-    );
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(
-      container.querySelector(".company-logo img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_url);
-  });
+  // The site read stores a square lockup in the wide slot alone. A square
+  // there is the company's mark; a wordmark squeezed into one is illegible.
+  it.each([
+    ["a square lockup", 200, 200, TWO_MARKS.logo_url],
+    ["a wordmark", 700, 200, undefined],
+  ])(
+    "draws %s from the wide slot only when it is square",
+    async (_name, width, height, drawn) => {
+      vi.stubGlobal("Image", imageOfSize(width, height));
+      const client = newClient();
+      client.setQueryData(
+        ["me"],
+        repSeeing({ ...TWO_MARKS, logo_icon_url: undefined }),
+      );
+      const { container } = renderWith(
+        client,
+        <WorkspaceRail route={{ screen: "home" }} />,
+      );
+      await waitFor(() =>
+        expect(
+          container.querySelector(".ws-chip img")?.getAttribute("src") ??
+            undefined,
+        ).toBe(drawn),
+      );
+      if (!drawn) {
+        expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe(
+          "DG",
+        );
+      }
+    },
+  );
 });
+
+// An Image whose every load succeeds at one size, so the probe's answer is the
+// case's and not the test environment's network.
+function imageOfSize(width: number, height: number) {
+  return class {
+    naturalWidth = width;
+    naturalHeight = height;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) {
+      queueMicrotask(() => this.onload?.());
+    }
+  };
+}

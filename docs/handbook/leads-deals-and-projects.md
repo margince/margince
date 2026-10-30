@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -47,7 +47,7 @@ status** ladder. Margince itself only ever moves it forward.
 
 ### How do I qualify a lead or convert it into a deal?
 To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also open a deal** to create a deal in the same step.
-1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there.
+1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead.
 2. For a deal, tick **Also open a deal** and set **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
 4. Choose **Qualify**, or **Qualify and open deal**.
@@ -137,8 +137,8 @@ Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
-1. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
-2. Fields: **Full name**, **Email**, **Title**, **Company**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+1. Click a value or the name at the top, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
+2. Fields: **Full name**, **Email**, **Title**, **Company**, **Industry**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
@@ -199,7 +199,7 @@ Also called: opportunity.
 ### How do I edit a deal?
 To edit a deal in Margince, open it from **Deals** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. If the panel is hidden, choose **Show details**.
-2. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Value** and **Company** open a small form with **Save**.
+2. Click a value or the name at the top, change it, and press Enter or pick from the list. Esc cancels. **Value** and **Company** open a small form with **Save**.
 
 Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **via partner**, **Forecast category**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
@@ -214,7 +214,7 @@ Also called: change the amount, update deal size, switch to dollars.
 ### How do I change a deal's expected close date?
 To change when a deal is expected to close, open the deal, click **Expected close** in its **Details** panel and pick the date.
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
-To hold a deal until a date without moving its close date, set **Wait until** instead.
+To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
 Also called: push the close date, change closing date, slip a deal.
 
 ### How do I change a deal's company or project?
@@ -288,8 +288,8 @@ Then comes **Open tasks**: the open tasks filed under the project, soonest due f
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
-To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.
-You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it.
+To rename a project in Margince, open it from **Projects**, click its name at the top and press Enter. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
+You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), click its value in the project's **Details** panel instead.
 
 The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.

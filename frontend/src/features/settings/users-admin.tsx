@@ -36,6 +36,7 @@ import {
 import { usePageReadOnly } from "./settingsnav";
 import { InviteUserForm } from "./users-invite-form";
 import {
+  matchingMembers,
   memberAnchorId,
   type User,
   useMemberRefresh,
@@ -192,16 +193,6 @@ function MembersCard({
   );
 }
 
-function matchingMembers(members: readonly User[], search: string): User[] {
-  const term = search.trim().normalize("NFKC").toLowerCase();
-  return members.filter((member) =>
-    `${member.display_name} ${member.email}`
-      .normalize("NFKC")
-      .toLowerCase()
-      .includes(term),
-  );
-}
-
 // Server order is join order (created_at, id), which the Added line reads
 // back; re-sorting the first page here would misstate the pages after it.
 function MembersTable({
@@ -283,6 +274,7 @@ function MembersTable({
 }
 
 function useTeamNames(enabled: boolean): ReadonlyMap<string, string> {
+  // roster-failure: names a member's teams only; nothing here is picked.
   const teams = useRoster("team", enabled);
   const names = new Map<string, string>();
   for (const entry of teams.data ?? []) {

@@ -24,9 +24,10 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
-	calendar        SchedulingCalendar
-	schedulingBrand SchedulingBrand
-	meetingVault    keyvault.Vault
+	taskRecommendation TaskRecommendation
+	calendar           SchedulingCalendar
+	schedulingBrand    SchedulingBrand
+	meetingVault       keyvault.Vault
 
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
@@ -208,8 +209,8 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // txRetryingLockCycles is tx for a write that files under shared records and
 // has no effect outside its transaction, so a deadlock victim is run again.
-func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
-	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
+func (s *Store) txRetryingLockCycles(ctx context.Context, isolation pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.TxIsolated(ctx, isolation, fn) })
 }
 
 // sprintf keeps SQL assembly lines readable; arguments are always

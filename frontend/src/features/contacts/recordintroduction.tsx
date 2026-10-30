@@ -9,6 +9,7 @@
 
 import { useId, useState } from "react";
 import {
+  RosterFailedLine,
   RosterPartialNote,
   useRoster,
   useRosterPartial,
@@ -164,6 +165,7 @@ export function RecordIntroductionDialog({
             />
           )}
         </Field>
+        <RosterFailedLine kind="user" roster={roster} />
         <RosterPartialNote partial={rosterPartial} />
         {record.isError ? (
           <ErrorLine>{t(failureKey(problemStatus(record.error)))}</ErrorLine>

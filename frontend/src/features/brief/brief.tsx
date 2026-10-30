@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -12,6 +12,8 @@ import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
+import { markJourney } from "../../lib/journeymarks";
+import { useMagic } from "../../lib/magic.queries";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -24,7 +26,7 @@ import {
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
-import { drawerScope } from "../worklist/worklist.address";
+import { drawerQueue } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
@@ -40,6 +42,7 @@ import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
+import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
@@ -62,13 +65,16 @@ export function BriefScreen() {
   // The queue the button opens, which keeps the drawer's scope and owner from
   // the address. It shares the drawer's query key, so the two report one total.
   const owner = params.get("owner") ?? "";
+  const drawer = drawerQueue(params);
   const queued = useWorklist(
-    drawerScope(params),
+    drawer.scope,
     "all",
     owner === "" ? undefined : owner,
+    true,
+    drawer.view,
   );
   const queuedDay = briefDay(queued.data?.pages);
-  const review = useWeeklyReview(address.week);
+  const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
   const morning = address.view === "morning";
@@ -85,7 +91,7 @@ export function BriefScreen() {
     <PageAsideToggle
       controlled={{
         open: params.get("queue") === "1",
-        count: queuedDay ? pillCount(queuedDay, "all") : undefined,
+        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
@@ -202,6 +208,17 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
+  const magic = useMagic();
+  const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
+  useEffect(() => {
+    const marks = homeJourneyMarks({
+      state,
+      day,
+      settled,
+      receipt: magic.data,
+    });
+    for (const mark of marks) markJourney(mark);
+  }, [state, day, settled, magic.data]);
   return (
     <>
       {/* The brief and the work it names in one column; beside it, the
