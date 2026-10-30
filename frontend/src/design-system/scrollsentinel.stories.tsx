@@ -48,6 +48,9 @@ export const End: Story = {
   ),
 };
 
+// The cursor after each batch of ten; the fourth batch is the last.
+const GROWING_CURSORS = ["after-10", "after-20", "after-30"];
+
 // A list of forty rows in a short scroll box, loaded ten at a time.
 function Growing() {
   const [rows, setRows] = useState(10);
@@ -70,7 +73,7 @@ function Growing() {
       </ol>
       <ScrollSentinel
         list="growing"
-        cursor={rows < 40 ? String(rows) : undefined}
+        cursor={GROWING_CURSORS[rows / 10 - 1]}
         loading={loading}
         failed={false}
         onLoadMore={more}
