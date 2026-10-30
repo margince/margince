@@ -76,8 +76,8 @@ it("drops nothing when a session opens with the switch already off", async () =>
   expect(client.getQueryState(FIGURES_KEY)?.isInvalidated).toBe(false);
 });
 
-// Turning it back on leaves the cache alone: the figures a reader may see again
-// are read when a screen asks, not dropped on the way in.
+// Turning it back on leaves the cache alone. The figures a reader may see again
+// are read when a screen asks for them.
 it("drops nothing when the switch goes back on", async () => {
   const client = new QueryClient();
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {

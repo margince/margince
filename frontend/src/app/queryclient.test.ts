@@ -112,10 +112,9 @@ describe("the query client defaults", () => {
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
-  // both answers of each are load-bearing. A record read repeats, and it
-  // refetches on the way back to the tab along with the installation read.
-  // Asked of both kinds of key, because what a change could get wrong is one
-  // kind while the other stays right.
+  // each is asked for both of its answers. A record read repeats, and it
+  // refetches on return along with the installation read. Both kinds of key
+  // are asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
   // wired to is proved end to end in features/records/liverecord.test.tsx,

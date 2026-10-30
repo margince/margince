@@ -9,10 +9,10 @@ import { useInstallationSettings } from "./uploadlimit";
 /**
  * Whether a cached answer could be carrying a colleague's own figures.
  *
- * Generous on purpose. It decides what to drop when the installation turns
- * individual performance off, which is a thing an admin does rarely, so the
- * cost of dropping too much is one refetch of a screen somebody is looking at.
- * Dropping too little leaves a colleague's figures on that screen.
+ * Generous, because it decides what to drop when the installation turns
+ * individual performance off, and an admin does that rarely. Dropping too much
+ * costs one refetch of a screen somebody is looking at. Dropping too little
+ * leaves a colleague's figures on that screen.
  */
 export function mayCarryIndividualFigures(key: QueryKey): boolean {
   const head = key[0];
@@ -25,17 +25,16 @@ export function mayCarryIndividualFigures(key: QueryKey): boolean {
 }
 
 /**
- * Drops figures already on screen in THIS session when the installation stops
+ * Drops the figures this session already holds when the installation stops
  * showing individual performance.
  *
- * The server refuses every new request as soon as the switch flips, so what is
- * left is what a session already fetched. A screen nobody touches holds it
- * until something asks again, which is why the settings read this watches
- * refetches when the reader comes back to the tab.
+ * The server refuses every new request as soon as the switch flips. What is
+ * left is what a session already fetched, and a screen nobody touches holds it
+ * until something asks again. So the settings read this watches comes back when
+ * the reader does.
  *
- * It fires on the change, never on the first answer: a session that opens with
- * the switch already off has nothing cached to drop, and invalidating there
- * would refetch every report on every sign-in.
+ * It fires on the change, never on the first answer. A session opening with the
+ * switch already off has nothing to drop.
  */
 export function useFiguresFollowTheSwitch(enabled = true): void {
   const client = useQueryClient();

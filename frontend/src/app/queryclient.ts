@@ -49,9 +49,9 @@ export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
   );
 }
 
-// The installation read comes back with the reader. It is one small object, and
-// a policy on it decides whether figures already on screen may stay there, so a
-// session that sat on a tab all afternoon must not go on showing them.
+// The installation read comes back with the reader, and it is one small object.
+// A policy on it decides whether figures already on screen may stay there. So a
+// session left on a tab must not go on showing them.
 function isInstallationRead(key: QueryKey): boolean {
   return key[0] === INSTALLATION_SETTINGS_KEY[0];
 }
