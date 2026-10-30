@@ -47,6 +47,9 @@ type Sink struct {
 	// a ladder that files without classifying is the one outcome this must
 	// never reach.
 	stampProject StampProjectCorrespondence
+	// taskAssignee refuses a task filed for a seat that cannot hold work. Nil
+	// is a role that lands no task for anyone: such a record is refused.
+	taskAssignee TaskAssigneeCheck
 	// deals files captured mail under its one deal. A zero value files none.
 	deals DealAttribution
 	// purgeRemoved acts on a message the provider says the owner deleted. Nil
@@ -180,6 +183,19 @@ type ContactArrivals interface {
 func (s *Sink) WithContactArrivals(arrivals ContactArrivals) *Sink {
 	c := *s
 	c.contactArrivals = arrivals
+	return &c
+}
+
+// TaskAssigneeCheck answers whether a seat may be given a new task, with the
+// refusal the task form gives a user who tries the same. Compose binds it, so
+// capture and the task form read one rule.
+type TaskAssigneeCheck func(ctx context.Context, tx pgx.Tx, seat ids.UserID) error
+
+// WithTaskAssigneeCheck returns a copy that lets a record file a task for a
+// colleague.
+func (s *Sink) WithTaskAssigneeCheck(check TaskAssigneeCheck) *Sink {
+	c := *s
+	c.taskAssignee = check
 	return &c
 }
 

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -28,6 +29,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -50,8 +52,8 @@ type crmLanding struct {
 	overwrite bool
 }
 
-// ingestOtherKind lands a company or deal under the member's live authority.
-func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, rec extension.Record) (extension.Result, error) {
+// ingestOtherKind lands a company, deal or signal under the member's live authority.
+func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, rec extension.Record, declared extension.IngressSource) (extension.Result, error) {
 	ctx, err := r.scoped(ctx)
 	if err != nil {
 		return extension.Result{}, err
@@ -60,6 +62,9 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 	if err != nil {
 		return extension.Result{}, err
 	}
+	if rec.Kind() == extension.KindSignal {
+		return r.landSignal(runCtx, rec, declared)
+	}
 	db := InstallationDB(r.deps.pool)
 	overwrite, err := r.overwritesEditedFields(ctx)
 	if err != nil {
@@ -67,7 +72,7 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 	}
 	land := crmLanding{
 		contacts:   contacts.NewStore(db),
-		deals:      deals.NewStore(db, DealsInstallation()),
+		deals:      deals.NewStore(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(r.deps.pool, nil)),
 		activities: activities.NewStore(db),
 		system:     r.sourceSystem(rec.System),
 		owner:      fieldOwnership{pool: r.deps.pool},
@@ -277,6 +282,14 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 	if err != nil {
 		return extension.Ref{}, nil, fmt.Errorf("%w: the stage id is not a canonical UUID", extension.ErrInvalid)
 	}
+	var company *ids.CompanyID
+	if f.CompanyID != "" {
+		parsed, err := ids.Parse(f.CompanyID)
+		if err != nil {
+			return extension.Ref{}, nil, fmt.Errorf("%w: the company id is not a canonical UUID", extension.ErrInvalid)
+		}
+		company = new(ids.From[ids.CompanyKind](parsed))
+	}
 	one := 1
 	find := func() (ids.UUID, bool, error) {
 		rows, _, err := l.deals.ListDeals(ctx, deals.ListDealsInput{SourceSystem: &l.system, SourceID: &key, Limit: &one})
@@ -287,7 +300,7 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 	}
 	create := func() (ids.UUID, error) {
 		made, err := l.deals.CreateDeal(ctx, deals.CreateDealInput{
-			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency),
+			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency), CustomFields: f.CustomFields, CompanyID: company,
 			PipelineID: ids.From[ids.PipelineKind](pipeline), StageID: ids.From[ids.StageKind](stage),
 			ReferencesFromRequest: true, Source: l.system, SourceSystem: &l.system, SourceID: &key,
 		})
@@ -346,10 +359,50 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	} else {
 		in.AmountMinor, in.Currency = amount, currency
 	}
+	custom, heldBack, err := l.customToWrite(ctx, id, current, f.CustomFields)
+	if err != nil {
+		return nil, err
+	}
+	in.CustomFields = custom
+	skipped = append(skipped, heldBack...)
 	if _, err := l.deals.UpdateDeal(ctx, dealID, in); err != nil {
 		return nil, err
 	}
 	return skipped, l.advanceDeal(ctx, dealID, current, stage, f)
+}
+
+// customToWrite answers the offered custom fields that differ from the deal and
+// that no user last edited, and names the ones a user owns. A field has no
+// pairing like amount and currency, so each is held back on its own.
+func (l crmLanding) customToWrite(ctx context.Context, id ids.UUID, current crmcontracts.Deal, offered map[string]any) (map[string]any, []string, error) {
+	if len(offered) == 0 {
+		return nil, nil, nil
+	}
+	// The stored value reads back as decoded JSON. The offer is put through JSON
+	// too, or a []string would never equal the []any it was saved as.
+	raw, err := json.Marshal(offered)
+	if err != nil {
+		return nil, nil, fmt.Errorf("compose: encoding the offered custom fields: %w", err)
+	}
+	var normalized map[string]any
+	if err := json.Unmarshal(raw, &normalized); err != nil {
+		return nil, nil, fmt.Errorf("compose: reading the offered custom fields back: %w", err)
+	}
+	changed := map[string]any{}
+	for key, value := range normalized {
+		if !reflect.DeepEqual(current.AdditionalProperties[key], value) {
+			changed[key] = value
+		}
+	}
+	held, err := l.skippedFields(ctx, string(recordTypeDeal), id, changed)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, key := range held {
+		delete(changed, key)
+	}
+	slices.Sort(held)
+	return changed, held, nil
 }
 
 // advanceDeal moves the stage when it differs. A stage move is the one change

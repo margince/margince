@@ -156,6 +156,15 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 // newServer assembles the module handler sets. Every cross-module edge is
 // injected here, or in the assembly step this calls for it
 // (serverassembly.go) — never as a sibling import (ADR-0054).
+// newPrivacyHandlers wires every seam the privacy surface needs at construction.
+func newPrivacyHandlers(pool *pgxpool.Pool) privacy.Handlers {
+	return privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
+		WithCountry(identity.CountryForDecision).
+		WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
+		WithLegalHoldWriter(NewLegalHoldSeam(pool)).
+		WithRecordLabeler(newAttentionNames(InstallationDB(pool)))
+}
+
 func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH dealsHandlers) Server {
 	// The compiled-in ceilings, taken from the deployment-config defaults rather
 	// than restated here: one place resolves a default, so no composition can
@@ -236,11 +245,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// the purger above is not: a role that forgot it would answer 404 to a
 		// controller placing a litigation hold, which reads as "no such record"
 		// rather than as "this installation cannot hold one".
-		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
-			WithCountry(identity.CountryForDecision).
-			WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-			WithLegalHoldWriter(NewLegalHoldSeam(pool)).
-			WithRecordLabeler(newAttentionNames(InstallationDB(pool))),
+		privacyHandlers: newPrivacyHandlers(pool),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the

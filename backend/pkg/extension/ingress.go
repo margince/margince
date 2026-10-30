@@ -14,7 +14,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 )
 
 // RecordKind is which kind of record a unit lands. It is the vocabulary a unit
@@ -28,17 +27,6 @@ type RecordKind string
 // when a captured lead collides. The natural key never enters the table, so a
 // kind without idempotency would offer a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
-
-// ActivityKindMessage is the timeline kind a message on a messaging channel
-// lands as, published here because a unit cannot reach the core's own
-// vocabulary and would otherwise spell the string blind.
-//
-// It is the ONE kind whose transport is separable from it (ADR-0107/A158): a
-// message names what carried it on ActivityFields.ChannelProvider, and every
-// other kind names nothing there. A fitness test outside this package holds
-// this constant equal to the core's own, so the two cannot drift into a unit
-// filing a kind the core no longer calls a message.
-const ActivityKindMessage = "message"
 
 // IngressSource is one provider a unit brings records in from: the unit's own
 // stable key for it, and which kinds it lands.
@@ -98,8 +86,8 @@ func (s IngressSource) Validate() error {
 	}
 	for _, kind := range s.Lands {
 		if !slices.Contains(landableKinds, kind) {
-			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q or %q",
-				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal))
+			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q, %q or %q",
+				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal), string(KindSignal))
 		}
 	}
 	for _, key := range s.Merges {
@@ -154,37 +142,6 @@ type Counterparty struct {
 	//
 	// Zero for every record that identifies its counterparty by address.
 	ChannelIdentity ChannelIdentity
-}
-
-// ActivityFields is a captured interaction bound for the timeline. It mirrors
-// the core's own shape; a fitness test outside this package compares the two so
-// a field added there cannot go unnoticed here.
-type ActivityFields struct {
-	// Kind is the timeline kind — the core admits a closed set, and a value
-	// outside it is refused rather than coerced.
-	Kind string
-	// ChannelProvider is the transport that carried this record, and it is
-	// meaningful for exactly one kind: ActivityKindMessage.
-	//
-	// The pairing rule — a message names a transport, nothing else does, and a
-	// unit may name only a transport it DECLARED — is enforced by the core at
-	// the write door rather than here. This package does not know the core's
-	// kind vocabulary and cannot see which channels the calling unit declared,
-	// so a rule spelled here would be a second version of one that can disagree
-	// with the first.
-	ChannelProvider string
-	// Subject and Body are the message as a human reads it. Both are bounded
-	// (see the Max* constants): a provider is a remote party, and an unbounded
-	// field is that party choosing how much this installation stores.
-	Subject string
-	Body    string
-	// OccurredAt is when the message happened at the PROVIDER, not when the
-	// poll saw it — a timeline ordered by discovery is a timeline of this
-	// system's own scheduling.
-	OccurredAt      time.Time
-	DateOnly        bool // OccurredAt names a date with no time of day, as an all-day event does.
-	DurationSeconds *int
-	Direction       string
 }
 
 // The bounds every ingested record is held to, applied before any transaction
@@ -268,14 +225,14 @@ type Record struct {
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
 	KeyNamesAContact bool
 
-	// Activity is the record itself when it is an activity. A company or a deal
-	// arrives in its own field instead. At most one of the three is set.
+	// Activity is the record when it is an activity; the other kinds use their own field.
 	Activity ActivityFields
 
-	// Company and Deal carry the other two kinds, matched by the outside id that
-	// System and Key name. They take no Counterparty, Addresses, Participants or ThreadKey.
+	// Company, Deal and Signal are matched by the outside id that System and Key
+	// name. They take no Counterparty, Addresses, Participants or ThreadKey.
 	Company *CompanyFields
 	Deal    *DealFields
+	Signal  *SignalFields
 
 	// ThreadKey is the conversation this belongs to, and it MUST be namespaced
 	// by the provider — a bare provider id shares one column with every other

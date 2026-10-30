@@ -64,6 +64,12 @@ type ActivityFields struct {
 	// names an author only: no participant row, so it grants no reading.
 	InvitationFromSeat ids.UUID
 
+	// AssigneeID and DueAt are the task a unit filed for a colleague; zero for
+	// every other record. They are stored as the task's own columns, so the
+	// assignee's Worklist shows it.
+	AssigneeID ids.UUID
+	DueAt      time.Time
+
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.
 	Envelope *MailEnvelope

@@ -1,6 +1,6 @@
 # Land companies and deals from an extension
 
-An extension can hand the core a company or a deal it read from another system. The core matches the record by the id the other system gave it, then creates, updates or adopts. This page is for an extension author. It assumes you already capture activities as in [add-an-extension.md](add-an-extension.md#capture-records-from-your-own-provider).
+An extension can hand the core a company or a deal it read from another system, or raise a signal about a record ([below](#land-a-signal)). The core matches the record by the id the other system gave it, then creates, updates or adopts. This page is for an extension author. It assumes you already capture activities as in [add-an-extension.md](add-an-extension.md#capture-records-from-your-own-provider).
 
 ## What you send
 
@@ -10,7 +10,8 @@ A `Record` carries one payload. Set `Company` or `Deal` instead of `Activity`. `
 |---|---|---|
 | Outside id | `System` + `Key` on the record | `System` + `Key` on the record |
 | Required | `DisplayName` | `Name`, `PipelineID`, `StageID` (core ids) |
-| Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency` |
+| Belongs to | none | `CompanyID`, a core company id the member can see, set when the deal is born and never moved by a later record |
+| Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency`, `CustomFields` (`cf_*` keys of active custom fields, at most `extension.MaxLandedCustomFields`, which is 50) |
 | Natural key to adopt by | `AdoptOn: extension.AdoptKeyDomain`, which needs a non-empty `Domain` | none |
 | Stage move | none | a different `StageID`; `LostReason` for a lost stage |
 | Move activities onto it | `RelinkActivities` (activity keys, at most `extension.MaxRelinkActivities`, which is 50) | `RelinkActivities` (same cap) |
@@ -37,7 +38,7 @@ flowchart TD
 ```
 
 - **The pair is unique across the workspace.** `(source_system, source_id)` is one record, whoever may see it. A clash with a record the member may not see answers the same fixed conflict (`ErrConflict`) as any other taken pair. It reveals only that the pair is taken, and never the record, its owner or its name.
-- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor` and `Currency`. It never checks the stage.
+- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor`, `Currency` and each key of `CustomFields`. It never checks the stage.
 - **An amount and its currency go together.** If a user edited either one, even one you did not send, the core withholds both, so the user's amount is never re-priced in another currency.
 - **The withheld fields come back.** `Result.Withheld` lists them by name, for example `industry`, or `amount_minor` and `currency` together. It is empty when nothing was withheld. The record is still accepted: this is not the `Skipped` disposition, which drops the whole record.
 - **An admin can let a unit overwrite.** With the setting on, the core writes the field and `Withheld` stays empty. The core reads the setting on each call, before it checks the fields, so a change applies to the next record.
@@ -109,6 +110,28 @@ flowchart LR
 ```
 
 After a stop, the next run reads the old position and offers the half-done page again. Records that already landed are matched by their outside id, so the second offer changes nothing. The integration tests are in `backend/internal/compose/extingressbatch_integration_test.go`.
+
+## Land a signal
+
+An unattended run can also raise a signal about a record, with the evidence layout the unit declared in [Declare a signal type](add-an-extension.md#declare-a-signal-type). Set `Signal` instead of `Activity`, and list `extension.KindSignal` in `Lands`.
+
+| Field | Meaning |
+|---|---|
+| `Key` | Your own key for the event, the same on every re-read. Core builds the fingerprint from the signal kind, the subject and this key, so two units cannot collide. |
+| `Signal.Kind` | The short name of a signal type you declared. Core spells the stored kind `ext:<unit>:<kind>`. |
+| `Signal.Subject` | The record's `Type` and `ID`. The type must be a record kind the source lists in `Lands`, and the member must be able to see the record. |
+| `Signal.Evidence` | A summary and the layout members. They are checked against the declared layout. |
+
+| Rule | What happens |
+|---|---|
+| Authority | The signal is written as the member in `on`, with their live rights. It needs their grant to create signals. A member demoted since the last call is refused with `ErrForbidden`. |
+| Subject | A record the member cannot see answers `ErrNotFound`. A subject type the source did not list answers `ErrIngressNotDeclared`. |
+| Repeat | The same kind, subject and key answers `DispositionAlreadyRaised` with the held signal's `Ref`. That is a success, so move your cursor on. A signal a user dismissed stays dismissed, and a replay does not raise it again. |
+| New signal | `DispositionAccepted`. Core writes the signal, its audit row and its `signal.detected` event in one transaction. |
+| Edits | A unit cannot change a signal's kind or evidence afterwards. |
+| Personal data | A layout member marked `Personal` is removed when the contact it is about is erased. |
+
+An attended call is refused with `ErrAttendedIngest`, as for every kind. The integration tests are in `backend/internal/compose/extingresssignal_integration_test.go`.
 
 ## Run it twice
 

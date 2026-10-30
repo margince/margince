@@ -161,6 +161,38 @@ func TestTheSameFingerprintFromTwoReportersIsOneSignal(t *testing.T) {
 	}
 }
 
+func TestADismissedExtensionSignalIsNotRaisedAgainByAReplay(t *testing.T) {
+	f := newExtensionSignalFixture(t)
+	_, first, err := f.file(loss("dismissed-event"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.owner.Exec(f.ctx, `UPDATE signal SET status = 'dismissed' WHERE id = $1`, first); err != nil {
+		t.Fatal(err)
+	}
+	created, again, err := f.file(loss("dismissed-event"))
+	if err != nil || created || again != first {
+		t.Fatalf("replay of a dismissed signal: created=%v id=%s err=%v, want the dismissed row and no new one", created, again, err)
+	}
+}
+
+func TestTheSameKeyOnTwoSubjectsIsTwoSignals(t *testing.T) {
+	f := newExtensionSignalFixture(t)
+	if _, _, err := f.file(loss("shared-key")); err != nil {
+		t.Fatal(err)
+	}
+	other := ids.NewV7()
+	if _, err := f.owner.Exec(f.ctx,
+		`INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'human:test')`, other); err != nil {
+		t.Fatal(err)
+	}
+	f.company = other
+	created, _, err := f.file(loss("shared-key"))
+	if err != nil || !created {
+		t.Fatalf("the same key on another subject: created=%v err=%v, want a second signal", created, err)
+	}
+}
+
 func TestAnExtensionSignalThatBreaksTheRulesIsRefused(t *testing.T) {
 	f := newExtensionSignalFixture(t)
 	mutate := func(fn func(*ExtensionSignal)) ExtensionSignal {

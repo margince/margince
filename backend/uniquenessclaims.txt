@@ -563,7 +563,6 @@ pkg/extension/crm/doc.go#package crm
 pkg/extension/extension.go#const MigrationsDir
 pkg/extension/extension.go#const NamespacePrefix
 pkg/extension/extension.go#var nameGrammar
-pkg/extension/ingress.go#const ActivityKindMessage
 pkg/extension/ingress.go#method IngressSource.Validate
 pkg/extension/ingress.go#type Record.Addresses
 pkg/extension/job.go#const JobKindSuffix

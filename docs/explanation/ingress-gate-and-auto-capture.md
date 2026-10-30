@@ -543,6 +543,7 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 | `ThreadKey` | Starts with the provider name | Two providers can use the same key and merge conversations that have nothing to do with each other |
 | `OccurredAt` | The provider's own time | The timeline is in the order we pulled, not the order things happened |
 | `Raw` | The original payload | You lose the original record |
+| `Activity.AssigneeID` and `Activity.DueAt` | On a `task` and nothing else. `AssigneeID` names a live colleague, and `DueAt` puts the task on their Worklist | Any other kind is refused. An agent seat or a user who is not there is refused and lands nothing. A task with no due date is on nobody's Worklist |
 | `Counterparty.ChannelIdentity` | On a channel record: both parts (provider and account ID), or neither | Half an identity is refused. An empty one lands a message with no way to reply |
 | `Counterparty.Email` on a channel record | Send it every time the provider knows it, and declare `email` in the source's `Merges` | No declaration, no record. No address, and a human already captured from mail becomes a second contact |
 | `Activity.ChannelProvider` | On a `message` and nothing else, naming a channel the unit declared | A record that is not a message but names a transport is a note the reply path would answer on |

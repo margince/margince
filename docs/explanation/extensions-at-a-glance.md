@@ -83,7 +83,7 @@ stale page.
 
 | A unit can… | Company | Deal | Contact | Activity | Signal |
 |---|:-:|:-:|:-:|:-:|:-:|
-| **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | · |
+| **Land** it from its own system (create or update, by the id that system gave it) | ✅ | ✅ | · | ✅ | ✅ |
 | **Move** it to another stage | · | ✅ | · | · | · |
 | **Create** it inside the unit's own transaction (`Tx.Core()`) | · | · | · | ✅ | ✅ |
 | **Read** and list it, as the user who asked | ✅ | ✅ | · | ✅ | ✅ |
@@ -194,8 +194,8 @@ What stops a unit, in each case:
    |                                shown on the page by a Panel or a mark
 ```
 
-Whole new record kinds, typed links between records, signal types and report counts are being added to the
-declaration one feature at a time. The state of each is in
+Whole new record kinds, typed links between records, signal types and report counts are declared the same way.
+The state of each feature is in
 [an-extension-cannot-add-its-own-record-k.md](../reference/an-extension-cannot-add-its-own-record-k.md).
 
 ## What every extension gets for free
