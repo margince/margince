@@ -128,6 +128,30 @@ func TestAnUnansweredMessageToACustomerIsAFollowUp(t *testing.T) {
 	}
 }
 
+// An account in set-up or live is one we deliver for. Unanswered mail to it is
+// owed a follow-up, and mail to an account that is over is not.
+func TestUnansweredMailToAnAccountWeDeliverForIsAFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	for stage, want := range map[string]bool{"onboarding": true, "live": true, "former_customer": false} {
+		sent, _ := e.sentTo(t, e.customerAt(t, stage), "", 3*24*time.Hour)
+		if got := awaited(t, s, e, sent); got != want {
+			t.Errorf("unanswered mail to a %s account: follow-up = %v, want %v", stage, got, want)
+		}
+	}
+}
+
+// Without the company arm the statement carries no lifecycle list. A reader
+// who may not read companies still gets an answer rather than an error.
+func TestAReaderWhoMayNotReadCompaniesLearnsNoStageFromAFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	sent, _ := e.sentTo(t, e.customerAt(t, "live"), "", 3*24*time.Hour)
+	if awaitedAs(e.followUpReader("company"), t, s, sent) {
+		t.Error("a reader who may not read companies learned through a reminder that an account is live")
+	}
+}
+
 // A newer message to the same contact settles the older one: the newer one
 // is the follow-up the reader is now waiting on.
 func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {

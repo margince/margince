@@ -143,6 +143,14 @@ func (s *Service) WorklistView(
 	return out, err
 }
 
+// OmittingRelationships answers a copy whose Worklist reads skip the optional
+// reconnections, the costliest lane on a day a reader rarely opens them.
+func (s *Service) OmittingRelationships() *Service {
+	omitting := *s
+	omitting.omitDecay = true
+	return &omitting
+}
+
 // echoAsked tells the client which narrowing and which view this page answers.
 func (s *Service) echoAsked(out *crmcontracts.Worklist, filter string) {
 	if filter != "" {

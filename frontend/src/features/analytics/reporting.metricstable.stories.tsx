@@ -5,7 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { StoryProviders } from "../../testing/story-utils";
 import { MetricsTable } from "./reporting.metricstable";
-import { reportingStoryEvaluation } from "./reporting.story-fixtures";
+import {
+  reportingCatalogClient,
+  reportingStoryEvaluation,
+} from "./reporting.story-fixtures";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/All metrics",
@@ -18,7 +21,7 @@ type Story = StoryObj;
 function Preview() {
   const [reference, select] = useState("");
   return (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <MetricsTable
         evaluation={reportingStoryEvaluation}
         onEvidence={(reference) => select(JSON.stringify(reference))}

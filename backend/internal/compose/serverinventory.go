@@ -120,6 +120,7 @@ type Server struct {
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
 	claimHandlers
+	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
 	importHandlers

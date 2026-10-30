@@ -2493,6 +2493,7 @@ const (
 	AttentionContactCaseMergeModeDelegated AttentionContactCaseMergeMode = "delegated"
 	AttentionContactCaseMergeModeNone      AttentionContactCaseMergeMode = "none"
 	AttentionContactCaseMergeModeOrdinary  AttentionContactCaseMergeMode = "ordinary"
+	AttentionContactCaseMergeModePair      AttentionContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the AttentionContactCaseMergeMode enum.
@@ -2503,6 +2504,8 @@ func (e AttentionContactCaseMergeMode) Valid() bool {
 	case AttentionContactCaseMergeModeNone:
 		return true
 	case AttentionContactCaseMergeModeOrdinary:
+		return true
+	case AttentionContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -4758,6 +4761,8 @@ const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
 	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
 	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
+	CompanyLifecycleLive           CompanyLifecycle = "live"
+	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
 	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
 	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
 	CompanyLifecycleTarget         CompanyLifecycle = "target"
@@ -4772,6 +4777,10 @@ func (e CompanyLifecycle) Valid() bool {
 	case CompanyLifecycleDisqualified:
 		return true
 	case CompanyLifecycleFormerCustomer:
+		return true
+	case CompanyLifecycleLive:
+		return true
+	case CompanyLifecycleOnboarding:
 		return true
 	case CompanyLifecycleOpportunity:
 		return true
@@ -5088,6 +5097,8 @@ const (
 	Company360StateStripAccountLifecycleCustomer       Company360StateStripAccountLifecycle = "customer"
 	Company360StateStripAccountLifecycleDisqualified   Company360StateStripAccountLifecycle = "disqualified"
 	Company360StateStripAccountLifecycleFormerCustomer Company360StateStripAccountLifecycle = "former_customer"
+	Company360StateStripAccountLifecycleLive           Company360StateStripAccountLifecycle = "live"
+	Company360StateStripAccountLifecycleOnboarding     Company360StateStripAccountLifecycle = "onboarding"
 	Company360StateStripAccountLifecycleOpportunity    Company360StateStripAccountLifecycle = "opportunity"
 	Company360StateStripAccountLifecycleProspect       Company360StateStripAccountLifecycle = "prospect"
 	Company360StateStripAccountLifecycleTarget         Company360StateStripAccountLifecycle = "target"
@@ -5102,6 +5113,10 @@ func (e Company360StateStripAccountLifecycle) Valid() bool {
 	case Company360StateStripAccountLifecycleDisqualified:
 		return true
 	case Company360StateStripAccountLifecycleFormerCustomer:
+		return true
+	case Company360StateStripAccountLifecycleLive:
+		return true
+	case Company360StateStripAccountLifecycleOnboarding:
 		return true
 	case Company360StateStripAccountLifecycleOpportunity:
 		return true
@@ -7077,6 +7092,7 @@ const (
 	ContactCaseMergeModeDelegated ContactCaseMergeMode = "delegated"
 	ContactCaseMergeModeNone      ContactCaseMergeMode = "none"
 	ContactCaseMergeModeOrdinary  ContactCaseMergeMode = "ordinary"
+	ContactCaseMergeModePair      ContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseMergeMode enum.
@@ -7087,6 +7103,8 @@ func (e ContactCaseMergeMode) Valid() bool {
 	case ContactCaseMergeModeNone:
 		return true
 	case ContactCaseMergeModeOrdinary:
+		return true
+	case ContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -7154,6 +7172,7 @@ func (e ContactCaseEdgeStatus) Valid() bool {
 const (
 	ContactCaseOutcomeModeDelegated ContactCaseOutcomeMode = "delegated"
 	ContactCaseOutcomeModeOrdinary  ContactCaseOutcomeMode = "ordinary"
+	ContactCaseOutcomeModePair      ContactCaseOutcomeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseOutcomeMode enum.
@@ -7162,6 +7181,8 @@ func (e ContactCaseOutcomeMode) Valid() bool {
 	case ContactCaseOutcomeModeDelegated:
 		return true
 	case ContactCaseOutcomeModeOrdinary:
+		return true
+	case ContactCaseOutcomeModePair:
 		return true
 	default:
 		return false
@@ -15499,6 +15520,39 @@ func (e OutcomeReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for OwnershipRequestRecordType.
+const (
+	OwnershipRequestRecordTypeCompany OwnershipRequestRecordType = "company"
+	OwnershipRequestRecordTypeContact OwnershipRequestRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipRequestRecordType enum.
+func (e OwnershipRequestRecordType) Valid() bool {
+	switch e {
+	case OwnershipRequestRecordTypeCompany:
+		return true
+	case OwnershipRequestRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OwnershipRequestStatus.
+const (
+	OwnershipRequestStatusPending OwnershipRequestStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipRequestStatus enum.
+func (e OwnershipRequestStatus) Valid() bool {
+	switch e {
+	case OwnershipRequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PartnerCertStatus.
 const (
 	PartnerCertStatusApplied   PartnerCertStatus = "applied"
@@ -20331,6 +20385,8 @@ const (
 	UpdateCompanyRequestLifecycleCustomer       UpdateCompanyRequestLifecycle = "customer"
 	UpdateCompanyRequestLifecycleDisqualified   UpdateCompanyRequestLifecycle = "disqualified"
 	UpdateCompanyRequestLifecycleFormerCustomer UpdateCompanyRequestLifecycle = "former_customer"
+	UpdateCompanyRequestLifecycleLive           UpdateCompanyRequestLifecycle = "live"
+	UpdateCompanyRequestLifecycleOnboarding     UpdateCompanyRequestLifecycle = "onboarding"
 	UpdateCompanyRequestLifecycleOpportunity    UpdateCompanyRequestLifecycle = "opportunity"
 	UpdateCompanyRequestLifecycleProspect       UpdateCompanyRequestLifecycle = "prospect"
 	UpdateCompanyRequestLifecycleTarget         UpdateCompanyRequestLifecycle = "target"
@@ -20345,6 +20401,10 @@ func (e UpdateCompanyRequestLifecycle) Valid() bool {
 	case UpdateCompanyRequestLifecycleDisqualified:
 		return true
 	case UpdateCompanyRequestLifecycleFormerCustomer:
+		return true
+	case UpdateCompanyRequestLifecycleLive:
+		return true
+	case UpdateCompanyRequestLifecycleOnboarding:
 		return true
 	case UpdateCompanyRequestLifecycleOpportunity:
 		return true
@@ -24495,6 +24555,8 @@ const (
 	ListCompaniesParamsLifecycleCustomer       ListCompaniesParamsLifecycle = "customer"
 	ListCompaniesParamsLifecycleDisqualified   ListCompaniesParamsLifecycle = "disqualified"
 	ListCompaniesParamsLifecycleFormerCustomer ListCompaniesParamsLifecycle = "former_customer"
+	ListCompaniesParamsLifecycleLive           ListCompaniesParamsLifecycle = "live"
+	ListCompaniesParamsLifecycleOnboarding     ListCompaniesParamsLifecycle = "onboarding"
 	ListCompaniesParamsLifecycleOpportunity    ListCompaniesParamsLifecycle = "opportunity"
 	ListCompaniesParamsLifecycleProspect       ListCompaniesParamsLifecycle = "prospect"
 	ListCompaniesParamsLifecycleTarget         ListCompaniesParamsLifecycle = "target"
@@ -24509,6 +24571,10 @@ func (e ListCompaniesParamsLifecycle) Valid() bool {
 	case ListCompaniesParamsLifecycleDisqualified:
 		return true
 	case ListCompaniesParamsLifecycleFormerCustomer:
+		return true
+	case ListCompaniesParamsLifecycleLive:
+		return true
+	case ListCompaniesParamsLifecycleOnboarding:
 		return true
 	case ListCompaniesParamsLifecycleOpportunity:
 		return true
@@ -26680,6 +26746,24 @@ func (e GetWorklistParamsView) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsRelationships.
+const (
+	GetWorklistParamsRelationshipsInclude GetWorklistParamsRelationships = "include"
+	GetWorklistParamsRelationshipsOmit    GetWorklistParamsRelationships = "omit"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsRelationships enum.
+func (e GetWorklistParamsRelationships) Valid() bool {
+	switch e {
+	case GetWorklistParamsRelationshipsInclude:
+		return true
+	case GetWorklistParamsRelationshipsOmit:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetHiddenBacklogRowsParamsRule.
 const (
 	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
@@ -26921,6 +27005,8 @@ type ActingIdentity struct {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssigneeId Task only.
@@ -30957,6 +31043,9 @@ type AttentionPair struct {
 	// database rather than their own records.
 	Evidence []AttentionPairEvidence `json:"evidence"`
 
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id,omitempty"`
+
 	// Left One side of a proposed merge, named and weighed so a reader can tell which record to keep.
 	Left AttentionPairSide `json:"left"`
 
@@ -33787,10 +33876,13 @@ type Company struct {
 	CreatedAt    time.Time `json:"created_at"`
 
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-	Description *string            `json:"description,omitempty"`
-	DisplayName string             `json:"display_name"`
-	Domains     *[]CompanyDomain   `json:"domains,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
+	Description *string          `json:"description,omitempty"`
+	DisplayName string           `json:"display_name"`
+	Domains     *[]CompanyDomain `json:"domains,omitempty"`
+
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+	Id    openapi_types.UUID   `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -33812,7 +33904,7 @@ type Company struct {
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -33842,8 +33934,11 @@ type Company struct {
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
-	Partner *Partner                `json:"partner,omitempty"`
-	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	Partner *Partner `json:"partner,omitempty"`
+
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string                 `json:"phone,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
@@ -33875,7 +33970,7 @@ type Company struct {
 // CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
 type CompanyIndustry string
 
-// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyLifecycle string
 
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
@@ -37356,7 +37451,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37382,7 +37477,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -37414,14 +37509,18 @@ type ContactCaseEdge struct {
 	CanDismiss bool `json:"can_dismiss"`
 
 	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
-	// route. True only with write access to both ends. `policy_enabled` does not widen it:
-	// the policy admits a merge of the whole case, never of a single pair.
-	CanMerge   bool               `json:"can_merge"`
-	Confidence float32            `json:"confidence"`
-	Evidence   []DedupeEvidence   `json:"evidence"`
-	LeftId     openapi_types.UUID `json:"left_id"`
-	PairId     openapi_types.UUID `json:"pair_id"`
-	RightId    openapi_types.UUID `json:"right_id"`
+	// route. True with write access to both ends, or to one end: then that end is the one
+	// merged away and `keep_id` names the end that survives. `policy_enabled` does not
+	// widen it further.
+	CanMerge   bool             `json:"can_merge"`
+	Confidence float32          `json:"confidence"`
+	Evidence   []DedupeEvidence `json:"evidence"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId  *openapi_types.UUID `json:"keep_id,omitempty"`
+	LeftId  openapi_types.UUID  `json:"left_id"`
+	PairId  openapi_types.UUID  `json:"pair_id"`
+	RightId openapi_types.UUID  `json:"right_id"`
 
 	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
 	Status ContactCaseEdgeStatus `json:"status"`
@@ -37455,10 +37554,12 @@ type ContactCaseMember struct {
 // ContactCaseOutcome What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
 type ContactCaseOutcome struct {
 	// Committed `false` for a preview: nothing was written.
-	Committed bool                   `json:"committed"`
-	MergedIds []openapi_types.UUID   `json:"merged_ids"`
-	Mode      ContactCaseOutcomeMode `json:"mode"`
-	OwnerId   openapi_types.UUID     `json:"owner_id"`
+	Committed bool                 `json:"committed"`
+	MergedIds []openapi_types.UUID `json:"merged_ids"`
+
+	// Mode The authority the merge ran under, as `merge_mode` on the case names it.
+	Mode    ContactCaseOutcomeMode `json:"mode"`
+	OwnerId openapi_types.UUID     `json:"owner_id"`
 
 	// Shares The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
 	Shares []ContactCaseShare `json:"shares"`
@@ -37471,7 +37572,7 @@ type ContactCaseOutcome struct {
 	SurvivorId openapi_types.UUID `json:"survivor_id"`
 }
 
-// ContactCaseOutcomeMode defines model for ContactCaseOutcome.Mode.
+// ContactCaseOutcomeMode The authority the merge ran under, as `merge_mode` on the case names it.
 type ContactCaseOutcomeMode string
 
 // ContactCaseOwner defines model for ContactCaseOwner.
@@ -38863,13 +38964,19 @@ type CreateCompanyRequest struct {
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string                       `json:"industry,omitempty"`
-	LegalName       *string                       `json:"legal_name,omitempty"`
-	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source          string                        `json:"source"`
+	Industry        *string             `json:"industry,omitempty"`
+	LegalName       *string             `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone    *string                       `json:"phone,omitempty"`
+	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source   string                        `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -40040,9 +40147,12 @@ type DeactivateUserRequest struct {
 // Deal A deal. Mirrors the `deal` table.
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
-	AcquisitionSource *string    `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64     `json:"amount_minor,omitempty"`
-	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
@@ -41068,23 +41178,29 @@ type DeclaredExtensionSettingKind string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
-	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
-	// or undo a decision. Deciding needs write authority over BOTH ends:
-	// dismissing suppresses both records as duplicates for the whole
-	// workspace, and merging rewrites one into the other.
+	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
+	// That needs write authority over BOTH ends: dismissing suppresses both
+	// records as duplicates for the whole workspace. Whether the caller may
+	// merge the pair is `can_merge`.
 	//
-	// A pair whose ends have different owners is therefore undecidable by
-	// any bounded seat, and it is a common shape — capture creates the
-	// near-duplicate owned by the mailbox owner while the incumbent belongs
-	// to whoever worked it. The pair is still LISTED, because the contact
-	// who can see a duplicate is the contact best placed to notice it; this
-	// says whether the buttons will work, which the client should gate on
-	// rather than discovering through a 403 after the POST.
+	// The pair is LISTED either way, because the contact who can see a
+	// duplicate is the contact best placed to notice it; this says whether
+	// the buttons will work, which the client should gate on rather than
+	// discovering through a 403 after the POST.
 	//
 	// With `contacts.shared_merge_reviews` on, an owner of one end of a
-	// contact pair may dismiss it and undo that, though not merge it. That
-	// answer is the pair's `can_dismiss` in its contact case.
+	// contact pair may dismiss it and undo that. That answer is the pair's
+	// `can_dismiss` in its contact case.
 	CanDecide bool `json:"can_decide"`
+
+	// CanMerge Whether THIS caller could merge the pair: an open pair whose two
+	// records they can see, with write authority over both ends or over
+	// one. With write authority over one end, that end is the one merged
+	// away, and `keep_id` names the end that survives with its owner. So a
+	// caller can give their own record away but never archive a
+	// colleague's. A merge of two records nobody filed as duplicates still
+	// needs write authority over both.
+	CanMerge bool `json:"can_merge"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
 	Confidence float32             `json:"confidence"`
@@ -41098,6 +41214,9 @@ type DedupeCandidate struct {
 	// Evidence Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.
 	Evidence []DedupeEvidence   `json:"evidence"`
 	Id       openapi_types.UUID `json:"id"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id"`
 
 	// LeftId Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.
 	LeftId  openapi_types.UUID    `json:"left_id"`
@@ -49053,6 +49172,30 @@ type OverrideWarning struct {
 	Version string `json:"version"`
 }
 
+// OwnershipRequest defines model for OwnershipRequest.
+type OwnershipRequest struct {
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+
+	// OwnerId The owner the request is put to.
+	OwnerId    openapi_types.UUID         `json:"owner_id"`
+	RecordId   openapi_types.UUID         `json:"record_id"`
+	RecordType OwnershipRequestRecordType `json:"record_type"`
+	Status     OwnershipRequestStatus     `json:"status"`
+}
+
+// OwnershipRequestRecordType defines model for OwnershipRequest.RecordType.
+type OwnershipRequestRecordType string
+
+// OwnershipRequestStatus defines model for OwnershipRequest.Status.
+type OwnershipRequestStatus string
+
+// OwnershipRequestInput defines model for OwnershipRequestInput.
+type OwnershipRequestInput struct {
+	// Note A line for the owner, shown on the card.
+	Note *string `json:"note,omitempty"`
+}
+
 // PageInfo defines model for PageInfo.
 type PageInfo struct {
 	HasMore bool `json:"has_more"`
@@ -56196,17 +56339,23 @@ type UpdateCompanyRequest struct {
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string `json:"phone,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
 	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
@@ -56235,7 +56384,7 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 type UpdateCompanyRequestLifecycle string
 
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.
@@ -58914,6 +59063,7 @@ type Worklist struct {
 	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
 	// deal or relationship score does not establish an obligation. A reader may
 	// pin a suggestion into their personal queue or create an explicit task.
+	// Absent when the request sent `relationships=omit`.
 	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
 
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
@@ -66723,6 +66873,30 @@ type ClaimRecordParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// RequestOwnershipTransferParams defines parameters for RequestOwnershipTransfer.
+type RequestOwnershipTransferParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // CreateRecordAssignmentParams defines parameters for CreateRecordAssignment.
 type CreateRecordAssignmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -68116,6 +68290,12 @@ type GetWorklistParams struct {
 	// owner take it silently would echo back the scope that had been ignored, so one
 	// rep's work would arrive labelled `"scope": "unassigned"`.
 	Owner *openapi_types.UUID `form:"owner,omitempty" json:"owner,omitempty"`
+
+	// Relationships Whether to read the optional reconnections. `omit` skips that read, and the
+	// page carries neither `optional_relationships` nor
+	// `optional_relationships_more_available`. A reconnection the reader pinned
+	// is still read and still reaches the queue. Nothing else on the page changes.
+	Relationships *GetWorklistParamsRelationships `form:"relationships,omitempty" json:"relationships,omitempty"`
 }
 
 // GetWorklistParamsScope defines parameters for GetWorklist.
@@ -68126,6 +68306,9 @@ type GetWorklistParamsFilter string
 
 // GetWorklistParamsView defines parameters for GetWorklist.
 type GetWorklistParamsView string
+
+// GetWorklistParamsRelationships defines parameters for GetWorklist.
+type GetWorklistParamsRelationships string
 
 // GetHandledForYouParams defines parameters for GetHandledForYou.
 type GetHandledForYouParams struct {
@@ -69127,6 +69310,9 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
 
+// RequestOwnershipTransferJSONRequestBody defines body for RequestOwnershipTransfer for application/json ContentType.
+type RequestOwnershipTransferJSONRequestBody = OwnershipRequestInput
+
 // CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
 type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
 
@@ -69363,6 +69549,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &object)
 	if err != nil {
 		return err
+	}
+
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
 	}
 
 	if raw, found := object["archived_at"]; found {
@@ -69815,6 +70009,13 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
 
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
@@ -70449,6 +70650,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -70567,6 +70776,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["raw"]; found {
@@ -70754,6 +70971,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -70854,6 +71078,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -72544,6 +72775,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -72574,6 +72813,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["size_band"]; found {
@@ -72669,6 +72916,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -72694,6 +72948,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -74290,6 +74551,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "amount_minor")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -74680,6 +74949,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 
@@ -78421,6 +78697,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -78467,6 +78751,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["relationship_types"]; found {
@@ -78547,6 +78839,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -78586,6 +78885,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -82903,6 +83209,15 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open request to be handed this record.
+	// (DELETE /records/{record_type}/{id}/ownership-request)
+	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open request to be handed this record.
+	// (GET /records/{record_type}/{id}/ownership-request)
+	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Ask a record's owner to hand it over to the caller.
+	// (POST /records/{record_type}/{id}/ownership-request)
+	RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams)
 	// Who is responsible for this record, by role.
 	// (GET /records/{record_type}/{record_id}/assignments)
 	ListRecordAssignments(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID)
@@ -88147,6 +88462,24 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open request to be handed this record.
+// (DELETE /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open request to be handed this record.
+// (GET /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a record's owner to hand it over to the caller.
+// (POST /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -122467,6 +122800,153 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// WithdrawOwnershipRequest operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawOwnershipRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOwnershipRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOwnershipRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestOwnershipTransfer operation middleware
+func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestOwnershipTransferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestOwnershipTransfer(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListRecordAssignments operation middleware
 func (siw *ServerInterfaceWrapper) ListRecordAssignments(w http.ResponseWriter, r *http.Request) {
 
@@ -129331,6 +129811,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "relationships" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationships", r.URL.Query(), &params.Relationships, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationships"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationships", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorklist(w, r, params)
 	}))
@@ -132277,6 +132770,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.WithdrawOwnershipRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.GetOwnershipRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.RequestOwnershipTransfer)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{record_type}/{record_id}/assignments", wrapper.ListRecordAssignments)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowRight, CalendarDays, History, Mail } from "lucide-react";
+import { ArrowRight, History } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ServiceList, ServiceRow } from "../../design-system/servicerow";
@@ -15,6 +15,7 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { ImportWindow } from "../../lib/connect-account";
+import { SERVICE_ICON, SERVICE_WORDS } from "../../lib/connect-services";
 import {
   missingCalendarWriteGrant,
   serviceBadge,
@@ -95,19 +96,12 @@ export function AccountServices({
 
 type ServiceKind = "mail" | "calendar";
 
-const SERVICE_ICON = { mail: Mail, calendar: CalendarDays } as const;
-
 function useServiceWords(kind: ServiceKind) {
   const t = useT();
-  return kind === "mail"
-    ? {
-        name: t("connectors.svc.newMail"),
-        desc: t("connectors.svc.newMailDesc"),
-      }
-    : {
-        name: t("connectors.svc.calendar"),
-        desc: t("connectors.svc.calendarDesc"),
-      };
+  return {
+    name: t(SERVICE_WORDS[kind].name),
+    desc: t(SERVICE_WORDS[kind].desc),
+  };
 }
 
 function PastEmailService({

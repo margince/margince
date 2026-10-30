@@ -451,3 +451,40 @@ it("keeps optional reconnections reachable in the real Home queue drawer", async
   ).toBeVisible();
   expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
 });
+
+it("reads optional reconnections only when the reader opens them", async () => {
+  window.location.hash = "#/home?queue=1";
+  const asked: string[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      asked.push(query.get("relationships") ?? "");
+      if (query.get("relationships") === "omit") {
+        return jsonResponse(readingsDay({}, []));
+      }
+      return jsonResponse({
+        ...readingsDay({}, []),
+        optional_relationships: [
+          {
+            ...taskRow("01930000-0000-7000-8000-000000000032", "Quiet buyer"),
+            source: "relationship_decay",
+            category: "relationships",
+            level: 6,
+            actions: ["open", "dismiss"],
+            because: [],
+          },
+        ],
+      });
+    },
+  });
+  render(<BriefQueue />);
+  const drawer = await screen.findByRole("dialog", {
+    name: en["brief.queue.title"],
+  });
+  const show = await within(drawer).findByRole("button", {
+    name: en["worklist.relationships.show"],
+  });
+  expect(asked).not.toContain("include");
+  await userEvent.click(show);
+  expect(await within(drawer).findByText("Quiet buyer")).toBeVisible();
+  expect(asked.filter((value) => value === "include")).toHaveLength(1);
+});

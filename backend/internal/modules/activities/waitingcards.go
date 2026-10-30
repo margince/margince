@@ -200,7 +200,7 @@ func (s *Store) waitingCandidates(
 		   AND ` + content + `
 		   AND ` + occurredday.BegunSQL("a", instant) + `
 		   AND (` + waitingYoungSQL(instant, fmt.Sprint(horizon)) + ` OR ` + heldRequestSQL() + `)
-		   AND (` + seats.responsibilitySQL(identities, arg) + `)` + among(arg) + " ORDER BY a.occurred_at, a.id"
+		   AND (` + seats.responsibilitySQL(identities, arg, waitingMailKeptSQL(instant, fmt.Sprint(horizon))) + `)` + among(arg) + " ORDER BY a.occurred_at, a.id"
 	if judge > 0 {
 		query += fmt.Sprintf(" LIMIT %d", judge+1)
 	}

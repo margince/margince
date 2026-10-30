@@ -72,6 +72,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}

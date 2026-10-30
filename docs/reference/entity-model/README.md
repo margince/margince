@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 338 |
-| Columns | 4022 |
+| Columns | 4024 |
 | Foreign keys | 558 |
 | Owning areas | 37 |
 
@@ -40,7 +40,7 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 146 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 49 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 49 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 40 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 46 | 27 |
@@ -225,7 +225,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 45 | 49 |
+| [`company`](contacts.md#company) | contacts | 47 | 49 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 11 | 0 |

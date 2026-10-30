@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 49,
-    "sites_best_current": 29,
+    "sites_best_current": 28,
     "sites_best_partial": 1,
-    "sites_best_stale": 18,
+    "sites_best_stale": 19,
     "sites_absent": 1,
     "scenarios": 271,
     "records": 355,
@@ -395,7 +395,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -405,7 +405,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 33,
@@ -1234,7 +1234,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1245,7 +1245,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 33,
@@ -2211,7 +2211,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2222,7 +2222,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.6-flash",
@@ -4026,7 +4026,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4036,7 +4036,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 33,
@@ -4853,7 +4853,7 @@
             "env": "eu_hosted"
           },
           "band": "not_supported",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -4863,7 +4863,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 39,
@@ -5680,7 +5680,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -5690,7 +5690,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 33,
@@ -6960,7 +6960,7 @@
       "ready": 27,
       "usable_with_care": 15,
       "not_reliable_yet": 3,
-      "recheck_pending": 22,
+      "recheck_pending": 23,
       "models": [
         {
           "binding": {
@@ -7009,9 +7009,9 @@
             "env": "cloud_frontier"
           },
           "sites": 43,
-          "sites_current": 22,
+          "sites_current": 21,
           "sites_partial": 0,
-          "sites_stale": 21,
+          "sites_stale": 22,
           "runs": 594,
           "passed": 564,
           "reliability": 0.9494949494949495,
@@ -7327,7 +7327,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 33,
           "passed": 33,
           "records": 1
@@ -7664,7 +7664,7 @@
       "ready": 31,
       "usable_with_care": 10,
       "not_reliable_yet": 3,
-      "recheck_pending": 21,
+      "recheck_pending": 22,
       "models": [
         {
           "binding": {
@@ -7673,9 +7673,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 22,
+          "sites_current": 21,
           "sites_partial": 0,
-          "sites_stale": 19,
+          "sites_stale": 20,
           "runs": 576,
           "passed": 553,
           "reliability": 0.9600694444444444,
@@ -7693,9 +7693,9 @@
             "env": "cloud_frontier"
           },
           "sites": 38,
-          "sites_current": 21,
+          "sites_current": 20,
           "sites_partial": 0,
-          "sites_stale": 17,
+          "sites_stale": 18,
           "runs": 462,
           "passed": 448,
           "reliability": 0.9696969696969697,
@@ -7713,9 +7713,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 22,
+          "sites_current": 21,
           "sites_partial": 0,
-          "sites_stale": 19,
+          "sites_stale": 20,
           "runs": 762,
           "passed": 694,
           "reliability": 0.910761154855643,
@@ -8031,7 +8031,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 33,
           "passed": 33,
           "records": 3
@@ -8354,7 +8354,7 @@
       "ready": 30,
       "usable_with_care": 13,
       "not_reliable_yet": 1,
-      "recheck_pending": 19,
+      "recheck_pending": 20,
       "models": [
         {
           "binding": {
@@ -8363,9 +8363,9 @@
             "env": "cloud_frontier"
           },
           "sites": 42,
-          "sites_current": 23,
+          "sites_current": 22,
           "sites_partial": 1,
-          "sites_stale": 18,
+          "sites_stale": 19,
           "runs": 654,
           "passed": 642,
           "reliability": 0.981651376146789,
@@ -8384,9 +8384,9 @@
             "thinking_level": "low"
           },
           "sites": 38,
-          "sites_current": 21,
+          "sites_current": 20,
           "sites_partial": 1,
-          "sites_stale": 16,
+          "sites_stale": 17,
           "runs": 417,
           "passed": 414,
           "reliability": 0.9928057553956835,
@@ -8705,7 +8705,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 33,
           "passed": 33,
           "records": 2
@@ -9037,7 +9037,7 @@
       "ready": 24,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 21,
+      "recheck_pending": 22,
       "models": [
         {
           "binding": {
@@ -9046,9 +9046,9 @@
             "env": "eu_hosted"
           },
           "sites": 39,
-          "sites_current": 21,
+          "sites_current": 20,
           "sites_partial": 0,
-          "sites_stale": 18,
+          "sites_stale": 19,
           "runs": 537,
           "passed": 429,
           "reliability": 0.7988826815642458,
@@ -9086,9 +9086,9 @@
             "env": "cloud_frontier"
           },
           "sites": 38,
-          "sites_current": 21,
+          "sites_current": 20,
           "sites_partial": 0,
-          "sites_stale": 17,
+          "sites_stale": 18,
           "runs": 561,
           "passed": 531,
           "reliability": 0.946524064171123,
@@ -9106,9 +9106,9 @@
             "env": "eu_hosted"
           },
           "sites": 38,
-          "sites_current": 21,
+          "sites_current": 20,
           "sites_partial": 0,
-          "sites_stale": 17,
+          "sites_stale": 18,
           "runs": 537,
           "passed": 507,
           "reliability": 0.9441340782122905,
@@ -9424,7 +9424,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 33,
           "passed": 33,
           "records": 3
@@ -10398,9 +10398,9 @@
         "env": "cloud_frontier"
       },
       "sites": 45,
-      "sites_current": 25,
+      "sites_current": 24,
       "sites_partial": 1,
-      "sites_stale": 19,
+      "sites_stale": 20,
       "runs": 813,
       "passed": 784,
       "reliability": 0.964329643296433,
@@ -10439,9 +10439,9 @@
         "thinking_level": "low"
       },
       "sites": 40,
-      "sites_current": 19,
+      "sites_current": 18,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 468,
       "passed": 468,
       "reliability": 1,
@@ -10459,9 +10459,9 @@
         "env": "cloud_frontier"
       },
       "sites": 40,
-      "sites_current": 22,
+      "sites_current": 21,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 684,
       "passed": 661,
       "reliability": 0.966374269005848,
@@ -10500,9 +10500,9 @@
         "thinking_level": "low"
       },
       "sites": 38,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 1,
-      "sites_stale": 16,
+      "sites_stale": 17,
       "runs": 417,
       "passed": 414,
       "reliability": 0.9928057553956835,
@@ -10560,9 +10560,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 22,
+      "sites_current": 21,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 594,
       "passed": 564,
       "reliability": 0.9494949494949495,
@@ -10580,9 +10580,9 @@
         "env": "eu_hosted"
       },
       "sites": 41,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 0,
-      "sites_stale": 20,
+      "sites_stale": 21,
       "runs": 615,
       "passed": 488,
       "reliability": 0.7934959349593496,
@@ -10620,9 +10620,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 585,
       "passed": 555,
       "reliability": 0.9487179487179487,
@@ -10640,9 +10640,9 @@
         "env": "eu_hosted"
       },
       "sites": 39,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 561,
       "passed": 531,
       "reliability": 0.946524064171123,
@@ -10680,9 +10680,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 22,
+      "sites_current": 21,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 645,
       "passed": 616,
       "reliability": 0.9550387596899225,
@@ -10700,9 +10700,9 @@
         "env": "cloud_frontier"
       },
       "sites": 39,
-      "sites_current": 21,
+      "sites_current": 20,
       "sites_partial": 0,
-      "sites_stale": 18,
+      "sites_stale": 19,
       "runs": 495,
       "passed": 474,
       "reliability": 0.9575757575757575,
@@ -10720,9 +10720,9 @@
         "env": "cloud_frontier"
       },
       "sites": 43,
-      "sites_current": 22,
+      "sites_current": 21,
       "sites_partial": 0,
-      "sites_stale": 21,
+      "sites_stale": 22,
       "runs": 840,
       "passed": 761,
       "reliability": 0.905952380952381,
@@ -19279,17 +19279,8 @@
         "offer",
         "market"
       ],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -19365,9 +19356,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19380,7 +19371,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19389,9 +19400,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19404,7 +19415,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19412,9 +19443,9 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19427,7 +19458,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19436,9 +19487,9 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19451,7 +19502,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19459,9 +19530,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19474,7 +19545,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19482,9 +19573,9 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 39,
           "passed": 30,
@@ -19497,7 +19588,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19505,9 +19616,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19520,7 +19631,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19528,9 +19659,9 @@
             "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19543,7 +19674,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19551,9 +19702,9 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19566,7 +19717,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19574,9 +19745,9 @@
             "model": "openai/gpt-6-sol",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19589,7 +19760,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -19597,9 +19788,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 11,
+          "scenarios_measured": 7,
           "scenarios_total": 11,
           "runs": 33,
           "passed": 33,
@@ -19612,7 +19803,27 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): nl_search_counts_a_record_nobody_contacted_as_quiet, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_not_as_a_negation, nl_search_refuses_a_value_outside_a_picklist",
+          "stale_cause": {
+            "case_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "prompt_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ],
+            "grader_changed": [
+              "nl_search_counts_a_record_nobody_contacted_as_quiet",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         }
       ]
     },

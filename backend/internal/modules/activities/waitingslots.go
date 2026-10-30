@@ -102,7 +102,7 @@ func (s *Store) waitingQueueSlots(
 		liveRecord(workingLeadPredicate, "ld"),
 		liveRecord(openDealPredicate, "openDeal"),
 		reader,
-		seats.responsibilitySQL(identities, arg),
+		seats.responsibilitySQL(identities, arg, waitingMailKeptSQL(fmt.Sprintf("$%d", instant), fmt.Sprint(horizon))),
 		neverRelaxed, neverRelaxed,
 		neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),

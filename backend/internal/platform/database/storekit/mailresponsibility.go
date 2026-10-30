@@ -165,9 +165,15 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 // DirectMailActivitiesSQL lists the live inbound mail whose parsed To line
 // names one seat, built once as an array. A seat's own reads start from it,
 // over the address index, rather than testing each mail in the workspace.
-func DirectMailActivitiesSQL(identities, seat string) string {
+// keep narrows the mail, aliased `mail`, to what the caller can still use;
+// empty keeps it all.
+func DirectMailActivitiesSQL(identities, seat, keep string) string {
+	kept := ""
+	if keep != "" {
+		kept = " AND (" + keep + ")"
+	}
 	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
- JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL
+ JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL` + kept + `
  WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
 }
 

@@ -394,6 +394,12 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on company/deal/project",
 		tableField: "record_type", idPath: "record_id",
 	},
+	// A handover request answers the request and names the record it asks for,
+	// so a replay re-probes that record as the assignment routes do.
+	"POST /v1/records/{record_type}/{id}/ownership-request": {
+		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
+		tableField: "record_type", idPath: "record_id",
+	},
 	"PATCH /v1/assignments/{id}": {
 		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on the stored parent",
 		tableField: "record_type", idPath: "record_id",
