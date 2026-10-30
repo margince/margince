@@ -47,8 +47,8 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 
   componentDidCatch(error: unknown): void {
-    // A screen whose code a deploy replaced is not a defect, and a retry
-    // cannot load it either: only a reload onto the new build can.
+    // A screen whose code a deploy replaced is not a defect. A retry cannot
+    // load it either; only a reload onto the new build can.
     if (isStaleChunkError(error)) {
       reloadForNewBuild();
     }
