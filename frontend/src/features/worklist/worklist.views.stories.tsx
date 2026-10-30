@@ -48,6 +48,11 @@ const counted = [
   exact("system", 2),
 ];
 
+// The name a screen reader announces, such as "Today, 12". The jsdom name
+// computation puts a space before the comma the browser joins to the label.
+const named = (expected: string) => (name: string) =>
+  name.replace(/\s+,/g, ",") === expected;
+
 const meta: Meta<typeof WorklistViewPicker> = {
   title: "Records/Worklist/Views",
   component: WorklistViewPicker,
@@ -67,7 +72,9 @@ export const EveryCountExact: Story = {
       within(canvasElement).getByRole("group", { name: "Work view" }),
     );
     for (const name of ["Today, 12", "Decisions, 4", "System, 2"]) {
-      await expect(picker.getByRole("button", { name })).toBeVisible();
+      await expect(
+        picker.getByRole("button", { name: named(name) }),
+      ).toBeVisible();
     }
   },
 };
@@ -95,10 +102,10 @@ export const DecisionsAFloor: Story = {
       within(canvasElement).getByRole("group", { name: "Work view" }),
     );
     await expect(
-      picker.getByRole("button", { name: "Decisions" }),
+      picker.getByRole("button", { name: named("Decisions") }),
     ).toBeVisible();
     await expect(
-      picker.getByRole("button", { name: "Today, 12" }),
+      picker.getByRole("button", { name: named("Today, 12") }),
     ).toBeVisible();
   },
 };
