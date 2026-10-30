@@ -60,6 +60,51 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	return out, nil
 }
 
+// PendingOnTarget is one record's decidable proposals: the first PendingScanCap
+// of them, and how many there are in all.
+type PendingOnTarget struct {
+	Approvals []crmcontracts.Approval
+	Total     int
+}
+
+// PendingForTargetCounted lists what PendingForTarget lists and counts every
+// row past its cap in the same walk. So the two cannot disagree, and a record
+// with one page of proposals costs one page read.
+func (s *Service) PendingForTargetCounted(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (PendingOnTarget, error) {
+	if err := actingForAHuman(ctx); err != nil {
+		return PendingOnTarget{}, err
+	}
+	p, _ := principal.Actor(ctx)
+	now := s.now()
+	in := targetPending(targetType, targetID)
+	eligible := pendingEligible(ctx, tx, p, in, now)
+	var out PendingOnTarget
+	err := walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
+		visible, err := eligible(batch)
+		if err != nil {
+			return false, err
+		}
+		for i, a := range batch {
+			if !visible[i] {
+				continue
+			}
+			out.Total++
+			if len(out.Approvals) < PendingScanCap {
+				out.Approvals = append(out.Approvals, wire(a, now))
+			}
+		}
+		return false, nil
+	})
+	if err != nil {
+		return PendingOnTarget{}, err
+	}
+	if err := s.assignmentStates(ctx, tx, out.Approvals, commitmentAssignees(out.Approvals)); err != nil {
+		return PendingOnTarget{}, err
+	}
+	withoutOwnersRecords(ctx, out.Approvals)
+	return out, nil
+}
+
 // targetPending selects the stored-pending rows standing against one record.
 // It names no requested decider and binds no mutes, so the record page lists
 // and counts every proposal the caller could decide there.

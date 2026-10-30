@@ -16,17 +16,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// targetCount reads the record count and the record list in one transaction,
-// as the company page does.
+// targetCount reads the record count and the record list the company page
+// reads.
 func (e *stagingEnv) targetCount(as context.Context, t *testing.T, target ids.UUID) (count, listed int) {
 	t.Helper()
 	if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-		var err error
-		if count, err = e.svc.CountPendingForTarget(as, tx, tableCompany, target); err != nil {
-			return err
-		}
-		rows, err := e.svc.PendingForTarget(as, tx, tableCompany, target, PendingScanCap)
-		listed = len(rows)
+		pending, err := e.svc.PendingForTargetCounted(as, tx, tableCompany, target)
+		count, listed = pending.Total, len(pending.Approvals)
 		return err
 	}); err != nil {
 		t.Fatalf("reading the record's pending proposals: %v", err)
