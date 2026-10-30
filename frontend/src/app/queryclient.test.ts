@@ -112,9 +112,9 @@ describe("the query client defaults", () => {
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
-  // each is asked for both of its answers. A record read repeats, and it
-  // refetches on return along with the installation read. Both kinds of key
-  // are asked, because a change can get one wrong and the other right.
+  // each is asked for both of its answers. A record read repeats; what comes
+  // back on return is what a stale answer misstates. Both kinds of key are
+  // asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
   // wired to is proved end to end in features/records/liverecord.test.tsx,
@@ -129,11 +129,25 @@ describe("the query client defaults", () => {
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
-  it("refetches a record and the installation on the way back to the tab", () => {
+  it("reads again on return whatever a stale answer would misstate", () => {
     // "always" and not `true`: `true` refetches only a read already stale, so
     // inside the staleness window above the return would be served the cache.
     expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
+    // A timeline comes back with the reader. Every row it serves says whether
+    // the reader may change it, and a grant expires without a signal.
+    expect(liveOnReturn({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      "always",
+    );
+    // It does not poll: it pages, so a cadence would refetch every page a
+    // reader has scrolled through.
+    expect(liveInterval({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      false,
+    );
+    // Not every key whose first word is activities: a one-word prefix is a
+    // write path's invalidation target, not a read.
+    expect(liveOnReturn({ queryKey: ["activities"] })).toBe(false);
+
     // The installation read carries the policy that decides whether figures
     // already on screen may stay there, so it comes back with the reader.
     expect(liveOnReturn({ queryKey: ["installation-settings"] })).toBe(
