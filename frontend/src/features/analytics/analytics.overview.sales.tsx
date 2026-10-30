@@ -9,7 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDecimal } from "../../format/format";
+import { formatDecimal, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
@@ -304,7 +304,7 @@ function SalesReadings({
               })
             : openCount != null
               ? plural("analytics.overview.openDeals", openCount, {
-                  count: String(openCount),
+                  count: formatNumber(openCount, locale),
                 })
               : undefined
         }

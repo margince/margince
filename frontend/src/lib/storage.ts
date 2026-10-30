@@ -29,12 +29,6 @@ export const STORAGE_KEYS = {
     lifetime: "device",
   },
   edgeLight: { name: "margince.edgeLight", area: "local", lifetime: "device" },
-  // The Analytics Overview view a reader chose last. Seat: it is about their work.
-  analyticsOverviewView: {
-    name: "margince.analytics.overviewView",
-    area: "local",
-    lifetime: "seat",
-  },
   worklistDrawerWide: {
     name: "margince.worklist.drawerWide",
     area: "local",
@@ -118,6 +112,12 @@ export const STORAGE_KEYS = {
   // arrives with the reveal once. Seat: the next seat to sign in starts afresh.
   aiRevealSeen: {
     name: "margince.aiReveal.seen",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Analytics Overview view a reader chose last. Seat: it is about their work.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
     area: "local",
     lifetime: "seat",
   },

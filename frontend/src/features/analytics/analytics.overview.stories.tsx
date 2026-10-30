@@ -11,7 +11,7 @@ import {
   overviewRoutes,
   prospectingEvaluation,
   salesEvaluation,
-} from "./analytics.overview.testkit";
+} from "./analytics.overview.fixtures";
 import type { ReportingEvaluation } from "./reporting.model";
 
 // Analytics' opening page as each reader meets it. The address names the view,
