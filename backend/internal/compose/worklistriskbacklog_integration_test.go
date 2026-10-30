@@ -91,6 +91,8 @@ func (b *riskBacklog) deal(t *testing.T, seat ids.UUID, name string) ids.UUID {
 func (b *riskBacklog) healthy(t *testing.T, seat ids.UUID, name string) ids.UUID {
 	t.Helper()
 	id := b.r.e.SeedDeal(t, name, b.pipeline, b.stage, &seat)
+	// Active at the list's own instant, which the writer's clock need not share.
+	b.quiet(t, id, 0)
 	b.never[id.String()] = true
 	return id
 }

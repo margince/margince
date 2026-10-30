@@ -20191,7 +20191,11 @@ components:
           type: string
           description: >-
             Which question noticed it. The key set in `claim` and `observed` depends on this.
-        subject_kind: {type: string, enum: [deal, signal, offer, contract]}
+        subject_kind:
+          type: string
+          enum: [deal, signal, offer, contract, forecast_call]
+          description: >-
+            What the finding is about.
         subject_id: {type: string, format: uuid}
         subject:
           allOf: [{$ref: '#/components/schemas/AttentionSubject'}]
@@ -20362,6 +20366,13 @@ components:
           description: >-
             The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
         approval_id: {type: string, format: uuid}
+        causes:
+          type: array
+          description: >-
+            Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+          items:
+            type: string
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, qualification]
       additionalProperties: false
     ForecastCall:
       type: object
@@ -20382,6 +20393,11 @@ components:
           description: >-
             The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
         created_at: {type: string, format: date-time}
+        baseline:
+          type: string
+          enum: [captured, unavailable]
+          description: >-
+            Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
       additionalProperties: false
     AnalyticsQuery:
       type: object

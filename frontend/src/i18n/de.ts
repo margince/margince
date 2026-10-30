@@ -2057,6 +2057,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
+  "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
   "systemJob.ai_activity_reconcile": "Abgleich der KI-Aktivität",
   "systemJob.ai_activity_retention": "Bereinigung der KI-Aktivität",
@@ -2106,6 +2107,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
+  "systemJob.forecast_evaluation": "Prognose-Auswertung",
   "systemJob.geocode": "Adresssuche für Unternehmen",
   "systemJob.geocode_backfill": "Nachholen der Adresssuche",
   "systemJob.address_country_check": "Abgleich des Adresslands",
@@ -7607,6 +7609,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.enforcementNotStarted": "Starte zuerst die erste Prüfung.",
   "review.commitUnpriced": "Commit ohne Betrag",
   "review.stageExitUnmet": "Austrittskriterien der Phase nicht erfüllt",
+  "review.callMovedHelp_one":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert: {count} Deal hat sich so bewegt, dass es die Prognose betrifft.",
+  "review.callMovedHelp_other":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert: {count} Deals haben sich so bewegt, dass es die Prognose betrifft.",
+  "review.callMovedWithheldHelp":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert, auch bei Deals, die du nicht öffnen kannst.",
+  "review.callLimitedHelp":
+    "Team, Basiswährung oder Geschäftsjahr haben sich seit dieser Prognose geändert, daher lässt sich die Prognose nicht mehr mit der heutigen Pipeline vergleichen.",
+  "review.callOpenItsForecast":
+    "Öffne die Prognose für Team und Zeitraum dieser Abgabe, um eine neue Prognose abzugeben.",
+  "review.callAuthorOnly":
+    "Nur die Führungskraft, die diese Prognose abgegeben hat, kann eine neue abgeben.",
+  "review.submitNewCall": "Neue Prognose abgeben",
+  "review.forecastCallMoved": "Abgegebene Prognose prüfen",
   "review.unknownCheck": "Unbenannte Prüfung",
   "review.sheetTitle": "Prüfung beantworten",
   "review.outcomeLegend": "Antworttyp",
@@ -7639,6 +7655,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktualisiert {date} · {gap} über gewonnenen + bestätigten Commit-Deals",
   "forecast.currentCallDetailUnder":
     "Aktualisiert {date} · {gap} unter gewonnenen + bestätigten Commit-Deals",
+  "forecast.callHistoryUnavailable":
+    "Diese Prognose wurde abgegeben, bevor Prognosen die zugrunde liegende Pipeline gespeichert haben. Was sich seitdem bewegt hat, lässt sich nicht sagen.",
   "forecast.currentCallDetailEven":
     "Aktualisiert {date} · entspricht gewonnenen + bestätigten Commit-Deals",
   "forecast.evidence": "Commit · bestätigtes Datum",
@@ -8930,6 +8948,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.approval_auto_apply": "Automatische Freigabe",
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
+  "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",

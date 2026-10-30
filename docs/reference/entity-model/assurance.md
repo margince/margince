@@ -82,7 +82,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `severity` | `text` | yes | One of `low`, `medium`, `high`. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `resolved`, `expired`, `condition_cleared`, `subject_departed`. |
 | `subject_id` | `uuid` | yes |  |
-| `subject_kind` | `text` | yes | One of `deal`, `signal`, `offer`, `contract`. |
+| `subject_kind` | `text` | yes | One of `deal`, `signal`, `offer`, `contract`, `forecast_call`. |
 | `task_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `type` | `text` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -103,7 +103,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_exception_seen_ordered`: `CHECK ((last_seen_at >= first_seen_at))`
 - `assurance_exception_severity_check`: `CHECK ((severity = ANY (ARRAY['low', 'medium', 'high'])))`
 - `assurance_exception_status_check`: `CHECK ((status = ANY (ARRAY['open', 'resolved', 'expired', 'condition_cleared', 'subject_departed'])))`
-- `assurance_exception_subject_kind_check`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract'])))`
+- `assurance_exception_subject_kind_check`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'offer', 'contract', 'forecast_call'])))`
 - `assurance_exception_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_assurance_exception_logical_key`: `UNIQUE (logical_key)`
 
@@ -178,7 +178,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-14 columns · primary key `(id)` · referenced by 3 foreign keys
+15 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -192,6 +192,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `requested_by` | `text` |  |  |
 | `rule_versions` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `status` | `text`, default `'running'::text` | yes | One of `running`, `complete`, `incomplete`. |
+| `subject_deal_id` | `uuid` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

@@ -945,6 +945,7 @@ Payload for forecast.assurance_created. A nightly input check finished, and the 
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
+| `data.deal_id` | string (uuid) | no | Set on a pass over this one deal, queued because the deal changed. Its counts describe that deal alone and never the pipeline. Absent on a pass over every deal. |
 | `data.eligible_deals` | integer | yes | How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline. |
 | `data.eligible_signals` | integer | no |  |
 | `data.readiness` | string: `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete` | no |  |

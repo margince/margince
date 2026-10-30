@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 338 |
-| Columns | 4019 |
+| Columns | 4024 |
 | Foreign keys | 558 |
 | Owning areas | 37 |
 
@@ -176,7 +176,7 @@ erDiagram
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 21 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 14 | 3 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 15 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |
@@ -313,8 +313,8 @@ erDiagram
 | [`finance_payment`](finance.md#finance_payment) | finance | 16 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 27 | 0 |
-| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 26 | 2 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 28 | 0 |
+| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 29 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |

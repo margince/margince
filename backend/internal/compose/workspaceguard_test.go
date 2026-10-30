@@ -158,6 +158,9 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		AssuranceRunArgs{}.Kind(): func(ctx context.Context) error {
 			return (&assuranceRunWorker{}).Work(ctx, &river.Job[AssuranceRunArgs]{})
 		},
+		AssuranceDealRescanArgs{}.Kind(): func(ctx context.Context) error {
+			return (&assuranceDealRescanWorker{}).Work(ctx, &river.Job[AssuranceDealRescanArgs]{})
+		},
 		FinanceSyncArgs{}.Kind(): func(ctx context.Context) error {
 			return (&financeSyncWorker{}).Work(ctx, &river.Job[FinanceSyncArgs]{})
 		},

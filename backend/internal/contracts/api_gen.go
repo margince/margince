@@ -11242,6 +11242,24 @@ func (e ForecastAssuranceSourceState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastCallBaseline.
+const (
+	ForecastCallBaselineCaptured    ForecastCallBaseline = "captured"
+	ForecastCallBaselineUnavailable ForecastCallBaseline = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastCallBaseline enum.
+func (e ForecastCallBaseline) Valid() bool {
+	switch e {
+	case ForecastCallBaselineCaptured:
+		return true
+	case ForecastCallBaselineUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastCallScopeKind.
 const (
 	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
@@ -11368,6 +11386,51 @@ func (e ForecastMovementBucketName) Valid() bool {
 	case ForecastMovementBucketNameStageWeight:
 		return true
 	case ForecastMovementBucketNameWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementDealCauses.
+const (
+	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
+	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
+	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
+	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
+	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
+	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
+	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
+	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
+	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
+	ForecastMovementDealCausesWon                ForecastMovementDealCauses = "won"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementDealCauses enum.
+func (e ForecastMovementDealCauses) Valid() bool {
+	switch e {
+	case ForecastMovementDealCausesAmount:
+		return true
+	case ForecastMovementDealCausesCategory:
+		return true
+	case ForecastMovementDealCausesFx:
+		return true
+	case ForecastMovementDealCausesLost:
+		return true
+	case ForecastMovementDealCausesNew:
+		return true
+	case ForecastMovementDealCausesPulledIn:
+		return true
+	case ForecastMovementDealCausesPushedOut:
+		return true
+	case ForecastMovementDealCausesQualification:
+		return true
+	case ForecastMovementDealCausesReopenedOrArchived:
+		return true
+	case ForecastMovementDealCausesStageWeight:
+		return true
+	case ForecastMovementDealCausesWon:
 		return true
 	default:
 		return false
@@ -12609,10 +12672,11 @@ func (e InputCheckStatus) Valid() bool {
 
 // Defines values for InputCheckSubjectKind.
 const (
-	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
-	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
-	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
-	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+	InputCheckSubjectKindContract     InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal         InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindForecastCall InputCheckSubjectKind = "forecast_call"
+	InputCheckSubjectKindOffer        InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal       InputCheckSubjectKind = "signal"
 )
 
 // Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
@@ -12621,6 +12685,8 @@ func (e InputCheckSubjectKind) Valid() bool {
 	case InputCheckSubjectKindContract:
 		return true
 	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindForecastCall:
 		return true
 	case InputCheckSubjectKindOffer:
 		return true
@@ -42480,8 +42546,11 @@ type ForecastAssuranceSourceState string
 
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
-	AmountMinor int64                 `json:"amount_minor"`
-	AuthorId    openapi_types.UUID    `json:"author_id"`
+	AmountMinor int64              `json:"amount_minor"`
+	AuthorId    openapi_types.UUID `json:"author_id"`
+
+	// Baseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+	Baseline    *ForecastCallBaseline `json:"baseline,omitempty"`
 	CreatedAt   time.Time             `json:"created_at"`
 	Currency    string                `json:"currency"`
 	Id          openapi_types.UUID    `json:"id"`
@@ -42494,6 +42563,9 @@ type ForecastCall struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// ForecastCallBaseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+type ForecastCallBaseline string
 
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
@@ -42571,12 +42643,18 @@ type ForecastMovementDeal struct {
 	// AuditId The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
 	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
 	Bucket  string              `json:"bucket"`
-	DealId  openapi_types.UUID  `json:"deal_id"`
+
+	// Causes Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+	Causes *[]ForecastMovementDealCauses `json:"causes,omitempty"`
+	DealId openapi_types.UUID            `json:"deal_id"`
 
 	// FromMinor Absent for a deal that was not in the opening snapshot at all.
 	FromMinor *int64 `json:"from_minor,omitempty"`
 	ToMinor   *int64 `json:"to_minor,omitempty"`
 }
+
+// ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
+type ForecastMovementDealCauses string
 
 // ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 // A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
@@ -44251,8 +44329,10 @@ type InputCheck struct {
 
 	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
 	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
-	Subject     *AttentionSubject     `json:"subject,omitempty"`
-	SubjectId   openapi_types.UUID    `json:"subject_id"`
+	Subject   *AttentionSubject  `json:"subject,omitempty"`
+	SubjectId openapi_types.UUID `json:"subject_id"`
+
+	// SubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
 
 	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
@@ -44265,7 +44345,7 @@ type InputCheckSeverity string
 // InputCheckStatus defines model for InputCheck.Status.
 type InputCheckStatus string
 
-// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+// InputCheckSubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 type InputCheckSubjectKind string
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
@@ -58715,20 +58795,36 @@ type WorkingHours struct {
 // | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
 // | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
 // | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+// | `counts[].total` | items | every admitted item of the category for this scope and owner, counted in SQL on this read | exact; absent when not counted |
 // | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
 // | `batch.count` | items | the members of one card | floor when `batch.at_least` |
 // | `bands[].shown` | cards | the rows of this page under one heading | exact |
 // | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
 // | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
-// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen ranked items that left; never tail rows | exact |
 //
 // A client that has loaded several pages sums items over its loaded cards (one per
 // card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
-// a count of loaded cards with `considered` mixes the two units. A source listed in
-// `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
-// claim it holds everything, even after `next_cursor` is gone. Items past a source's
-// read limit are not reachable through `next_cursor`. They join a later read as the
-// items in front of them are handled.
+// a count of loaded cards with `considered` mixes the two units.
+//
+// **Totals.** No later read or background job finishes a count. A category states
+// `total` when each source behind it was read whole, or was cut and counted in SQL under
+// the same admission rules as the list. The task counts run on the first page of a walk
+// only, so a client keeps the totals that page gave and does not expect them on later
+// pages. Any other category whose sources were cut has no `total`, and its `considered`
+// is a floor: a client draws it as "N+" or draws no number.
+//
+// A source named in `sources_unavailable` because it failed on the first page leaves its
+// category without a `total`. A tail source that fails while a later page loads is named
+// there too, but the totals the first page stated stay as they were: they still count
+// the rows that source holds, and the list stops short of them.
+//
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
+// and deals at risk that the ranked rows left out continue as a tail, merged in one
+// order (oldest due date, arrival or expected close first) and reached through
+// `next_cursor` to their end. Items past the read limit of any other source are not
+// reachable through `next_cursor`. They join a later read as the items in front of
+// them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -58778,20 +58874,25 @@ type Worklist struct {
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
 	// parameter for what a walk does and does not guarantee.
 	//
-	// ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
-	// deliberately not minted on a final page: a cursor there invites one more request
-	// that can only answer empty, and a client walking until the cursor disappears
+	// ABSENT MEANS THE WALK IS OVER — no ranked row and no tail source is left to resume.
+	// It is deliberately not minted on a final page: a cursor there invites one more
+	// request that can only answer empty, and a client walking until the cursor disappears
 	// would never stop.
+	//
+	// Absent does not mean every row was read. A tail source that fails while a page loads
+	// is dropped from the cursor and named in `sources_unavailable`, and the rows past its
+	// position stay unread; a source cut on the first page and not continued in the tail
+	// stops at its read limit.
 	//
 	// Absent is therefore a claim, not a silence, and it is the one this field must
 	// never make wrongly. It is a claim about THIS READ of the day: work that arrives
 	// afterwards, or that overtakes rows already handed out, appears on the next read
 	// rather than extending a finished walk.
 	//
-	// `reach` and `counts` answer a different question — how deep each SOURCE was read,
-	// which is a bound on work rather than the end of a page — so a walk that has ended
-	// can still sit above sources that were cut short, and both statements are true at
-	// once.
+	// `reach` and `counts` answer a different question — how deep each SOURCE was read
+	// on the first page. A walk that has ended has read every tail source (tasks, waiting
+	// customers, deals at risk) that did not fail to its end, but can still sit above other
+	// sources that were cut short, and both statements are true at once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
@@ -59210,7 +59311,11 @@ type WorklistCount struct {
 	// MoreAvailable True when any source behind this category was read to its work bound, so items
 	// MAY exist past what was considered. A category inherits its sources' honesty:
 	// reporting "12 decisions" over a pile the read never finished counting is the
-	// failure this flag exists to prevent.
+	// failure this flag exists to prevent. When `total` is present it is the exact
+	// figure even while this is true. Only the tail categories (tasks, customers waiting,
+	// deals at risk) reach their rest through `next_cursor`; an exact category outside the
+	// tail, such as approvals in `decisions`, is counted in full but listed only to its
+	// read limit.
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the page carries, counting a folded group as its members.
@@ -60066,8 +60171,10 @@ type WorklistPromiseRecipientStatus string
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
-// saw, and no field here claims to know how many. A reader who needs the rest
-// narrows the queue or opens that source's own screen, which pages its own data.
+// saw, and no field here claims to know how many; `counts[].total` is the exact figure
+// per category where one exists. For tasks, waiting customers and deals at risk the
+// rest is reached through `next_cursor`. For any other source a reader who needs the
+// rest narrows the queue or opens that source's own screen, which pages its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -67881,7 +67988,7 @@ type GetWorklistParams struct {
 	// than everything: absent is not false, and a reader asking what changed since a
 	// night that never happened is owed nothing, not the whole queue.
 	//
-	// `upcoming` is planned work due after today: the Upcoming and backlog section
+	// `upcoming` is planned work due in the 14 days after today: the Upcoming and backlog section
 	// at the end of the Today view. These rows never appear in a queue that does not
 	// ask for them, and `summary` never counts them; `counts` reports them under the
 	// `upcoming` category.
@@ -67922,7 +68029,7 @@ type GetWorklistParams struct {
 	// ranking, and the next page re-assembles the day, ranks it the same way, and starts
 	// there.
 	//
-	// It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+	// It encodes the `scope`, `view`, `filter` and `owner` it was minted under, NORMALISED, so
 	// that two spellings of one question share a cursor: an omitted `filter` and
 	// `filter=all` weigh the same candidates, and naming yourself as `owner` is the
 	// question the default already answers. Sending a cursor alongside a genuinely
@@ -67943,15 +68050,22 @@ type GetWorklistParams struct {
 	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
 	//
 	// Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
-	// every row exactly once. The offset advances on every page and the candidate set is
-	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
-	// client paging to exhaustion loop.
+	// every row exactly once. The offset advances on every page and the ranked candidate
+	// set is bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+	// client paging to exhaustion loop. Past the ranked rows, each tail source resumes
+	// from its own position in its own order, which also only moves forward.
 	//
-	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
-	// are fixed, so paging does not race the day. `walk` on the response says what has
-	// happened since — how many of those rows have gone, and how much has arrived that is
-	// deliberately not in this walk. Membership moves one way: new work waits for a fresh
-	// read, work that was resolved or is no longer visible leaves at once.
+	// The RANKED rows of a walk are FROZEN at its first page: the rows they cover and the
+	// order they sit in are fixed, so paging does not race the day. `walk` on the response
+	// says what has happened to those ranked rows since — how many have gone, and how much
+	// has arrived that is deliberately not in this walk. Membership moves one way: new work
+	// waits for a fresh read, work that was resolved or is no longer visible leaves at once.
+	//
+	// The tail below the ranked rows is not frozen. Each page reads every tail source live,
+	// after the position the cursor holds for it, inside the time window the first page
+	// fixed (its instant, day end and time zone). A tail row handled between pages is not
+	// served; a new row that sorts after a source's position can still be. `walk` does not
+	// count tail rows.
 	//
 	// An installation that does not hold walks pages the older way instead, and there the
 	// cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
@@ -67961,9 +68075,10 @@ type GetWorklistParams struct {
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
 	// is there, not as a transaction over it. There is no way to ask for the whole day
-	// at one instant: `limit` stops at 100 and a single category can hold more than that,
-	// because the sources are read to their own bounds well past a page (the decision
-	// lane alone weighs 200). `counts` is what says how much is behind the page.
+	// at one instant: `limit` stops at 100 and a single category can hold more than that.
+	// Tasks, waiting customers and deals at risk are reached in full by walking to the end;
+	// the other sources are read to their own bounds (the decision lane alone weighs 200).
+	// `counts` is what says how much is behind the page.
 	//
 	// The alternative was a token naming the last row it handed you, which is the
 	// obvious design and is worse here. When that row is answered between pages, or

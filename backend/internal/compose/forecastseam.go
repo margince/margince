@@ -230,14 +230,25 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 // While enforcement is on it is each deal's viability treatment. While it is
 // off it is empty, so no reading can claim a qualification nobody switched on.
 func forecastQualificationSQL(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, error) {
+	policy, err := forecastQualifiedPolicy(ctx, tx)
+	if err != nil || policy == "" {
+		return "''", err
+	}
+	return viabilityQualificationSQL("d", arg), nil
+}
+
+// forecastQualifiedPolicy is the viability policy the forecast read applies
+// now, empty while enforcement is off. A snapshot stores it beside the
+// qualification the same read put on its deals.
+func forecastQualifiedPolicy(ctx context.Context, tx pgx.Tx) (string, error) {
 	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
 	}
 	if !enforced {
-		return "''", nil
+		return "", nil
 	}
-	return viabilityQualificationSQL("d", arg), nil
+	return viability.PolicyVersion, nil
 }
 
 // requestedFromForecastScope carries the forecast module's scope vocabulary
