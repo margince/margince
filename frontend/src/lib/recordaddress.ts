@@ -16,8 +16,7 @@ const RECORD_PATH = new RegExp(
  * Whether a pathname is the record address this module publishes.
  *
  * Exported so the served-path check reads this notion rather than keeping a
- * second copy of the shape, which would disagree the moment one of them gains
- * a record kind.
+ * second copy. Two copies disagree the first time one gains a record kind.
  */
 export function namesARecordAddress(pathname: string): boolean {
   return RECORD_PATH.test(pathname);
