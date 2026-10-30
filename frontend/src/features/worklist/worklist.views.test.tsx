@@ -76,7 +76,8 @@ describe("the work views", () => {
     await screen.findByText("Two records for one company");
     const read = worklistReads()[0];
     expect(read?.get("view")).toBe("decisions");
-    expect(read?.get("filter")).toBe("all");
+    // The view's own filter rides along for a server that knows no views.
+    expect(read?.get("filter")).toBe("decisions");
   });
 
   it("shows only Today's category buttons inside Today", async () => {
@@ -112,7 +113,7 @@ describe("the work views", () => {
     await vi.waitFor(() => {
       const last = worklistReads().at(-1);
       expect(last?.get("view")).toBe("decisions");
-      expect(last?.get("filter")).toBe("all");
+      expect(last?.get("filter")).toBe("decisions");
     });
   });
 });

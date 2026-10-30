@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 import { completenessText, pillCount } from "./worklist.completeness";
 
@@ -30,7 +31,7 @@ function stub(day: Worklist) {
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       return url.includes("/worklist")
-        ? jsonResponse(day)
+        ? jsonResponse(echoView(url, day))
         : jsonResponse({ data: [] });
     }),
   );

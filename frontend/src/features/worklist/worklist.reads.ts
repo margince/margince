@@ -6,7 +6,7 @@ import {
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
-import type { WorklistView } from "../../lib/worklistviews";
+import { categoryInView, type WorklistView } from "../../lib/worklistviews";
 import type {
   TeamBoard,
   TeamExceptions,
@@ -80,14 +80,29 @@ export async function readWorklistPage(
   signal?: AbortSignal,
   view?: WorklistView,
 ): Promise<Worklist> {
-  const whose = owner ? { owner, filter } : { scope, filter };
+  // Decisions and System also send their own filter, so a server that knows
+  // no `view` still answers with that view's rows.
+  const wire = view && view !== "today" && filter === "all" ? view : filter;
+  const whose = owner ? { owner, filter: wire } : { scope, filter: wire };
   const dials = view ? { ...whose, view } : whose;
-  return unwrap(
+  const page = unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },
       signal,
     }),
   );
+  return view === undefined || page.view !== undefined
+    ? page
+    : withinView(page, view);
+}
+
+// A server that echoes no view ignored it, so the rows outside the view are
+// dropped here rather than drawn under the view's heading.
+function withinView(page: Worklist, view: WorklistView): Worklist {
+  return {
+    ...page,
+    queue: page.queue.filter((item) => categoryInView(item.category, view)),
+  };
 }
 
 /**

@@ -10,6 +10,7 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
 // The supporting line, and the words for a group's cause.
@@ -70,7 +71,14 @@ function day(queue: WorklistItem[]): Worklist {
 function draw(queue: WorklistItem[]) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => jsonResponse(day(queue))),
+    vi.fn(async (input: RequestInfo | URL) =>
+      jsonResponse(
+        echoView(
+          String(input instanceof Request ? input.url : input),
+          day(queue),
+        ),
+      ),
+    ),
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
