@@ -12421,6 +12421,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.dropHint":
     "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
+  "settings.voice.pasteLabel": "Text einfügen",
+  "settings.voice.pasteAdd": "Text hinzufügen",
+  "settings.voice.pasteSource": "Eingefügter Text",
   "settings.voice.worksTitle": "Die besten Proben",
   "settings.voice.worksEmails":
     "Gesendete E-Mails, gespeichert als .txt, .md, .pdf oder .docx.",
@@ -12449,7 +12452,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.noticeSkippedType":
     "{name} wurde übersprungen. Unterstützte Formate: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "settings.voice.noticeSkippedUnreadable":
-    "{name} konnte nicht geöffnet werden. Wenn die Datei passwortgeschützt oder beschädigt ist, füge stattdessen ihren Text ein.",
+    "{name} konnte nicht geöffnet werden. Wenn die Datei passwortgeschützt oder beschädigt ist, füge ihren Text stattdessen oben in das Feld ein.",
   "settings.voice.noticeSkippedEmpty":
     "{name} wurde übersprungen. Die Datei enthält keinen Text.",
   "settings.voice.noticeDismissed":

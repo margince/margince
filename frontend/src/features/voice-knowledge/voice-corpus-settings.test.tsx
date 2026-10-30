@@ -233,6 +233,55 @@ describe("handing a file to the Settings voice card", () => {
     expect(onChanged).toHaveBeenCalled();
   });
 
+  // A paste is the way in for text whose file the browser cannot open.
+  it("takes pasted text as a sample and empties the box", async () => {
+    const bodies = stubApi(PROSE);
+    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    const box = screen.getByLabelText("Paste text");
+    const add = screen.getByRole("button", { name: "Add text" });
+    expect(add).toHaveProperty("disabled", true);
+
+    await userEvent.type(box, "Short sentences. Concrete nouns.");
+    await userEvent.click(add);
+
+    expect(
+      await screen.findByText(/Pasted text: 640 words added/),
+    ).toBeTruthy();
+    expect(bodies[0]).toMatchObject({
+      kind: "other",
+      source_label: "Pasted text",
+      content: "Short sentences. Concrete nouns.",
+    });
+    expect(String(bodies[0]?.source_ref)).toMatch(/^voice:paste:/);
+    expect(box).toHaveProperty("value", "");
+  });
+
+  it("keeps pasted text in the box when the server refuses it", async () => {
+    stubApi({
+      status: 422,
+      body: {
+        code: "validation_error",
+        title: "Unprocessable",
+        detail: "That source is not eligible.",
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+      },
+    });
+    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    const box = screen.getByLabelText("Paste text");
+
+    await userEvent.type(box, "some words");
+    await userEvent.click(screen.getByRole("button", { name: "Add text" }));
+
+    expect(
+      await screen.findByText(/Pasted text could not be added/),
+    ).toBeTruthy();
+    expect(box).toHaveProperty("value", "some words");
+    expect(screen.getByRole("button", { name: "Add text" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
   // This is the defect the card shipped with: a meeting transcript was posted
   // straight through as kind:"other", counting every speaker's words as the
   // owner's own. Nothing may reach the corpus before the question is answered.

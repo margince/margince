@@ -12439,6 +12439,9 @@ export const en = {
   "settings.voice.dropHint":
     "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
+  "settings.voice.pasteLabel": "Paste text",
+  "settings.voice.pasteAdd": "Add text",
+  "settings.voice.pasteSource": "Pasted text",
   "settings.voice.worksTitle": "Best samples",
   "settings.voice.worksEmails":
     "Sent emails saved as .txt, .md, .pdf or .docx.",
@@ -12465,7 +12468,7 @@ export const en = {
   "settings.voice.noticeSkippedType":
     "{name} was skipped. Supported formats: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "settings.voice.noticeSkippedUnreadable":
-    "{name} could not be opened. If it is password-protected or damaged, paste its text instead.",
+    "{name} could not be opened. If it is password-protected or damaged, paste its text in the box above instead.",
   "settings.voice.noticeSkippedEmpty":
     "{name} was skipped. It contains no text.",
   "settings.voice.noticeDismissed":
