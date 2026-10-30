@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -59,10 +60,9 @@ type stubDuplicates struct {
 	// asked records every batch the lane requested, so a test can count the
 	// reads rather than assume them.
 	asked *[]string
-	// undecidable is a record this caller may READ but could not CHANGE — the
-	// case a rep meets on every pair a colleague owns. The pair is still named
-	// in full; only the verb is withheld.
-	undecidable ids.UUID
+	// undecidable are records this caller may read but not change, as a rep
+	// meets on a colleague's records. The pair is still named in full.
+	undecidable []ids.UUID
 	// decideErr is an authority read that BROKE rather than one that refused.
 	decideErr error
 }
@@ -119,7 +119,7 @@ func (s stubDuplicates) DecidableSubset(
 	}
 	writable := make(map[ids.UUID]bool, len(rowIDs))
 	for _, id := range rowIDs {
-		writable[id] = id != s.undecidable
+		writable[id] = !slices.Contains(s.undecidable, id)
 	}
 	return writable, nil
 }
