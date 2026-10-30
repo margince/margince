@@ -13,13 +13,16 @@ package integration
 // reference the caller cannot see (auth.EnsureLinkTarget).
 
 import (
+	"errors"
 	"maps"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // dealReferenceFixture is one deal pointing at a hidden company pair and
@@ -289,5 +292,41 @@ func TestFilteringByAnUnreadableReferenceAnswersTheEmptyPage(t *testing.T) {
 	}
 	if len(visible) != 1 || ids.UUID(visible[0].Id) != fx.hiddenProj.UUID {
 		t.Errorf("filtering by a readable company returned %d deal(s), want the one deal on it", len(visible))
+	}
+}
+
+// A role without the company grant has every deal's company masked. So the
+// list refuses it the filter by company, which would name the deals a company
+// holds. The same seat with the grant is answered above.
+func TestFilteringByACompanyWithoutTheCompanyGrantIsRefused(t *testing.T) {
+	e := Setup(t)
+	fx := seedDealReferenceFixture(t, e)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(AccountRepPerms, "company"))
+
+	all, _, err := e.Deals.ListDeals(rep, deals.ListDealsInput{})
+	if err != nil {
+		t.Fatalf("listing deals without the company grant: %v", err)
+	}
+	onOpenCompany := 0
+	for _, d := range all {
+		if ids.UUID(d.Id) != fx.hiddenProj.UUID {
+			continue
+		}
+		onOpenCompany++
+		if d.CompanyId != nil {
+			t.Errorf("company_id = %v, want it withheld from a role without the company grant", d.CompanyId)
+		}
+		// The fixture's project is Team2's, so Rep1 loses it to row scope too.
+		assertMaskNames(t, d, "company_id", "project_id")
+	}
+	if onOpenCompany != 1 {
+		t.Fatalf("the list holds %d copies of the deal on the open company, want 1", onOpenCompany)
+	}
+
+	openCompany := ids.From[ids.CompanyKind](fx.openCompany)
+	_, _, err = e.Deals.ListDeals(rep, deals.ListDealsInput{CompanyID: &openCompany})
+	var refusal *values.ParseError
+	if !errors.As(err, &refusal) || refusal.Code != auth.CodeFieldMasked || refusal.Field != "company_id" {
+		t.Fatalf("filtering by a company without the company grant → %v, want the masked-field refusal", err)
 	}
 }
