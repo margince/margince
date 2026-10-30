@@ -237,7 +237,7 @@ describe("handing a file to the Settings voice card", () => {
   it("takes pasted text as a sample and empties the box", async () => {
     const bodies = stubApi(PROSE);
     render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
-    const box = screen.getByLabelText("Or paste text");
+    const box = screen.getByLabelText("Paste text");
     const add = screen.getByRole("button", { name: "Add text" });
     expect(add).toHaveProperty("disabled", true);
 

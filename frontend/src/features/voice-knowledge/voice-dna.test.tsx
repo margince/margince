@@ -191,7 +191,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     expect(screen.getByText(/which only you can see/)).toBeTruthy();
     // A paste box beside the files, for text whose file will not open.
-    expect(screen.getByRole("textbox", { name: "Or paste text" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Paste text" })).toBeTruthy();
   });
 
   it("mints exactly one profile on the first add and then shows the build control", async () => {

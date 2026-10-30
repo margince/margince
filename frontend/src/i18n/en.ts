@@ -12339,7 +12339,7 @@ export const en = {
   "settings.voice.dropHint":
     "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
-  "settings.voice.pasteLabel": "Or paste text",
+  "settings.voice.pasteLabel": "Paste text",
   "settings.voice.pasteAdd": "Add text",
   "settings.voice.pasteSource": "Pasted text",
   "settings.voice.worksTitle": "Best samples",

@@ -277,7 +277,7 @@ learns only from samples you add.
 <!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
 1. Under **Make it sharper**, choose **Add writing samples** and drop or pick files, several at once. **Add writing** at the top of the page takes you there.
-2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Or paste text** and choose **Add text**.
+2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. Under **Builds**, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 

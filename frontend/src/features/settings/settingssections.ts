@@ -37,7 +37,11 @@ export const SETTINGS_SECTIONS = {
     "scheduling.acceptBookings",
     "workingHours.timezone",
   ],
-  voice: ["settings.voice.title", "settings.voice.addFirstLabel"],
+  voice: [
+    "settings.voice.title",
+    "settings.voice.addFirstLabel",
+    "settings.voice.pasteLabel",
+  ],
   agents: [
     "aiAccess.connect.title",
     "agents.connected",

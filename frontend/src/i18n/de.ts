@@ -12319,7 +12319,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.dropHint":
     "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
-  "settings.voice.pasteLabel": "Oder Text einfügen",
+  "settings.voice.pasteLabel": "Text einfügen",
   "settings.voice.pasteAdd": "Text hinzufügen",
   "settings.voice.pasteSource": "Eingefügter Text",
   "settings.voice.worksTitle": "Die besten Proben",
