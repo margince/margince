@@ -65,8 +65,9 @@ The shell comes last in this group: it is the part users see most, and the safes
    Add `--aiBg` (the row colour) and `--aiLine` if `--aiLight` and `--aiMed` do not match the mock.
    Or map the mock to them, and update the mock.
 4. **Ink field tokens.** The design has no dark sidebar.
-   `--bgInkField` and `--textOnInkField` stay declared (pinned) for what passes over the page, such
-   as a tooltip. The sidebar never uses them.
+   `--bgInkField`, `--textOnInkField` and `--textOnInkFieldQuiet` stay declared for what passes over
+   the page, such as a tooltip. The sidebar never uses them. `inkfield.css` points the page inks at
+   them on each component that paints the field.
 5. **Fonts.** Outfit (display, 600), Geist (body, 400/500/600, numbers included), Geist Mono (code only,
    400/500).
    A number lines up through `font-variant-numeric: tabular-nums` (`.t-num`), not a mono font.
