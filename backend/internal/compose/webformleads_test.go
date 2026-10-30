@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -59,5 +60,28 @@ func TestAFormThatAsksNoConsentRecordsNone(t *testing.T) {
 	note := webFormNote(webforms.Landing{Enquiry: webforms.Enquiry{Email: "ada@visitor.example", Consent: true}})
 	if note != "> Email: ada@visitor.example" {
 		t.Errorf("note = %q, want only the visitor's quote", note)
+	}
+}
+
+func TestTheNotesRawKeepsTheSubmissionFieldByField(t *testing.T) {
+	wording, version := "You may contact me.", "2026-10"
+	raw, err := webFormRaw(webforms.Landing{
+		ConsentWording: &wording, ConsentPolicyVersion: &version,
+		Enquiry: webforms.Enquiry{
+			Email: "ada@visitor.example", Message: "Please call me", Consent: true, PageURL: "https://www.example.com/",
+			Extra: []webforms.Field{{Name: "budget", Value: "10k"}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{
+		"email": "ada@visitor.example", "message": "Please call me", "page_url": "https://www.example.com/",
+		"extra":    []any{map[string]any{"name": "budget", "value": "10k"}},
+		"campaign": []any{},
+		"consent":  map[string]any{"ticked": true, "wording": wording, "policy_version": version},
+	}
+	if !reflect.DeepEqual(raw, want) {
+		t.Errorf("raw = %#v\nwant %#v", raw, want)
 	}
 }

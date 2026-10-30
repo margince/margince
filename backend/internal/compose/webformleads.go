@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -45,9 +46,13 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := "Website form: " + landing.FormName
 	body := webFormNote(landing)
+	raw, err := webFormRaw(landing)
+	if err != nil {
+		return err
+	}
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
-		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource,
+		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the website form's note: %w", err)
@@ -194,6 +199,42 @@ func webFormNote(landing webforms.Landing) string {
 		return consent + sent
 	}
 	return consent + "\n\n" + sent
+}
+
+// webFormRaw keeps the submission field by field on the note, where the
+// activity read answers it as `web_form`. The body says the same as text.
+//
+//craft:ignore naked-any raw is the activity's free-form source payload column
+func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+	e := landing.Enquiry
+	sent := crmcontracts.WebFormSubmission{
+		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
+		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
+		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
+		Campaign: webFormValues(e.UTM),
+	}
+	if landing.ConsentWording != nil {
+		sent.Consent = &crmcontracts.WebFormConsent{
+			Ticked: e.Consent, Wording: *landing.ConsentWording, PolicyVersion: landing.ConsentPolicyVersion,
+		}
+	}
+	encoded, err := json.Marshal(sent)
+	if err != nil {
+		return nil, fmt.Errorf("compose: encoding the website form's fields: %w", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return nil, fmt.Errorf("compose: decoding the website form's fields: %w", err)
+	}
+	return raw, nil
+}
+
+func webFormValues(fields []webforms.Field) []crmcontracts.WebFormValue {
+	out := make([]crmcontracts.WebFormValue, len(fields))
+	for i, f := range fields {
+		out[i] = crmcontracts.WebFormValue{Name: f.Name, Value: f.Value}
+	}
+	return out
 }
 
 // webFormConsent is the form's own record of its consent box. The admin's

@@ -34,7 +34,11 @@ Margince also reads common names such as `name`, `your-email` or `Firma`. Every 
 Also called: field names, map fields, custom fields, my own form, Contact Form 7.
 
 ### What happens when someone sends the form?
-Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline, shown as a quote. If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
+Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline.
+
+Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version.
+
+If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
 
 A line outside the quote was written by Margince, so a prospect cannot type one.
 
@@ -110,7 +114,7 @@ Also called: spam, bots, junk leads.
 ### How do I ask for consent?
 To ask for consent, edit the form and tick **Require consent before a submission is taken**. Type the text beside the tick box in **Consent wording**, and the version of your privacy policy if you have one. A post without the box ticked is refused. The note on each lead keeps the wording and the version, above the quote, as a record of what the prospect agreed to.
 
-If the box is not required and the prospect leaves it empty, the note says **Consent: not ticked**. Consent to be contacted about a question is not consent to newsletters, so Margince does not add the lead to any mailing list.
+If the box is not required and the prospect leaves it empty, the note shows the consent as **Not agreed**. Consent to be contacted about a question is not consent to newsletters, so Margince does not add the lead to any mailing list.
 Also called: GDPR, privacy tick box, DSGVO, opt-in.
 
 ### How do I stop a form?

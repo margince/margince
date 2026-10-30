@@ -36739,6 +36739,49 @@ components:
             deciding this sender is business cancels the deletion. Later mail from the same sender
             runs its own window, so this date names the next message to go rather than all of them.
 
+    WebFormSubmission:
+      type: object
+      description: |
+        One website form submission as the visitor sent it. Every value is the visitor's own
+        text and nothing Margince checked, except `consent`, which is the form's own record of
+        its consent box.
+      required: [email, extra, campaign]
+      properties:
+        message: { type: string, description: 'The free text the visitor wrote.' }
+        full_name: { type: string }
+        email: { type: string, description: 'The address the lead was matched or created by.' }
+        phone: { type: string, description: 'As typed; it may lack the country prefix a lead''s phone needs.' }
+        company: { type: string }
+        title: { type: string }
+        extra:
+          type: array
+          description: The form's other fields, in the order they were sent, under the names the form gave them.
+          items: { $ref: '#/components/schemas/WebFormValue' }
+        page_url: { type: string, description: 'The page the form was sent from.' }
+        referrer: { type: string }
+        campaign:
+          type: array
+          description: The `utm_` parameters the page carried.
+          items: { $ref: '#/components/schemas/WebFormValue' }
+        consent: { $ref: '#/components/schemas/WebFormConsent' }
+
+    WebFormValue:
+      type: object
+      required: [name, value]
+      properties:
+        name: { type: string }
+        value: { type: string }
+
+    WebFormConsent:
+      type: object
+      description: |
+        The consent box the form showed. Absent when the form shows none.
+      required: [ticked, wording]
+      properties:
+        ticked: { type: boolean }
+        wording: { type: string, description: 'The words the box showed, as the admin wrote them when the form was sent.' }
+        policy_version: { type: string, description: 'The privacy policy version the form named, when it named one.' }
+
     SourceAuthor:
       type: object
       description: |
@@ -50228,6 +50271,16 @@ components:
             those are different colleagues, and showing only the first is how a migration
             comes to claim one colleague wrote a decade of everybody else's
             correspondence.
+        web_form:
+          allOf: [{ $ref: '#/components/schemas/WebFormSubmission' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            What a website form sent, field by field, on the note it wrote (`source_system`
+            `web_form`). `body` carries the same facts as text for search and for readers that
+            draw text only; a surface that draws fields reads them here. Null on every other
+            row, and on a form note written before the fields were kept. Withheld with the
+            content, like `body`.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
