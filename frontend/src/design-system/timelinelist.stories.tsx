@@ -539,3 +539,59 @@ export const SentByMarginceForYou: Story = {
     await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
   },
 };
+
+const PASSPORT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+function agentNote(
+  id: string,
+  body: string,
+  createdBy: Activity["created_by"],
+): Activity {
+  return {
+    offers_email: false,
+    id,
+    kind: "note",
+    body,
+    occurred_at: "2026-10-21T10:00:00Z",
+    occurred_precision: "instant",
+    is_done: false,
+    source: "manual",
+    captured_by: PASSPORT,
+    created_at: "2026-10-21T10:00:00Z",
+    updated_at: "2026-10-21T10:00:00Z",
+    created_by: createdBy,
+  };
+}
+
+// A note a colleague logged through their agent names the colleague and the
+// tool; a background agent with nobody behind it keeps the unnamed tag.
+export const NotesAnAgentLogged: Story = {
+  render: () => (
+    <StoryProviders>
+      <GroupedTimelineList
+        zone={ZONE}
+        groups={groupChronology(
+          activityTimeline([
+            agentNote("for-anna", "Asked for the renewal terms.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+              on_behalf_of_name: "Anna Weber",
+              agent_client: "Claude",
+            }),
+            agentNote("background", "Matched the signature to the contact.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+            }),
+          ]),
+        )}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Made by Claude for Anna Weber"),
+    ).toBeVisible();
+    await expect(canvas.getByText("Automated by an agent")).toBeVisible();
+  },
+};

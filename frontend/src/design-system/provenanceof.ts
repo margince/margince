@@ -95,21 +95,21 @@ export function provenanceOf(
 }
 
 /**
- * An agent's tag with what the record's create audit row adds: the tool it
- * was typed through and the colleague it worked for. captured_by names only
- * a passport, so without the row the tag can say neither.
+ * An agent's tag with what its audit row adds: the tool it was typed through
+ * and the colleague it worked for. captured_by and actor_id name only a
+ * passport, so without the row the tag can say neither.
  */
 export function withCreator(
   provenance: Provenance,
-  createdBy: PrincipalAttribution | undefined,
+  attribution: PrincipalAttribution | undefined,
 ): Provenance {
-  if (provenance.kind !== "agent" || createdBy?.actor_type !== "agent") {
+  if (provenance.kind !== "agent" || attribution?.actor_type !== "agent") {
     return provenance;
   }
   return {
     ...provenance,
-    agent: createdBy.agent_client ?? provenance.agent,
-    forName: createdBy.on_behalf_of_name ?? undefined,
+    agent: attribution.agent_client ?? provenance.agent,
+    forName: attribution.on_behalf_of_name ?? undefined,
   };
 }
 

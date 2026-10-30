@@ -16213,6 +16213,15 @@ components:
           nullable: true
           description: >-
             Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who recorded the activity, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         web_form:
           allOf: [{$ref: '#/components/schemas/WebFormSubmission'}]
           readOnly: true

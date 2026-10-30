@@ -308,6 +308,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := AttachLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := WithCreators(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	if err := WithOffersEmail(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}

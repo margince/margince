@@ -250,6 +250,7 @@ To see everything that happened with a contact or company in Margince, open the 
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and the From and To dates.
 A company's History also holds what reached it through its deals and the contacts who work there.
+An agent's entry names the colleague it worked for: "Made by Claude for Anna Weber". An agent that worked for nobody reads "Automated by an agent".
 Also called: timeline, activity log, customer history, interaction history, newest email.
 
 ### How do I log a note, call or meeting on a record?
