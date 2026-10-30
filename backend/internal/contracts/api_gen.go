@@ -17239,6 +17239,24 @@ func (e ReportingMetricID) Valid() bool {
 	}
 }
 
+// Defines values for ReportingPresetId.
+const (
+	ReportingPresetIdSales ReportingPresetId = "sales"
+	ReportingPresetIdSdr   ReportingPresetId = "sdr"
+)
+
+// Valid indicates whether the value is a known member of the ReportingPresetId enum.
+func (e ReportingPresetId) Valid() bool {
+	switch e {
+	case ReportingPresetIdSales:
+		return true
+	case ReportingPresetIdSdr:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingReportAudience.
 const (
 	ReportingReportAudiencePrivate   ReportingReportAudience = "private"
@@ -51104,6 +51122,9 @@ type ReportingCatalog struct {
 	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
 	Metrics              []ReportingMetricDefinition `json:"metrics"`
 
+	// Presets The default selections the Analytics screen opens on. Each lists only metrics this reader may read and the charts those metrics draw; a preset with none of the reader's metrics is left out.
+	Presets []ReportingPreset `json:"presets"`
+
 	// ScheduleReady Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
 	ScheduleReady *bool `json:"schedule_ready,omitempty"`
 }
@@ -51370,6 +51391,16 @@ type ReportingPoint struct {
 	Upper  *float64        `json:"upper,omitempty"`
 	Value  *float64        `json:"value"`
 }
+
+// ReportingPreset defines model for ReportingPreset.
+type ReportingPreset struct {
+	Blocks  []ReportingBlockKind `json:"blocks"`
+	Id      ReportingPresetId    `json:"id"`
+	Metrics []ReportingMetricID  `json:"metrics"`
+}
+
+// ReportingPresetId defines model for ReportingPreset.Id.
+type ReportingPresetId string
 
 // ReportingQualification defines model for ReportingQualification.
 type ReportingQualification struct {

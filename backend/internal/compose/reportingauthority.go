@@ -70,7 +70,19 @@ func (a reportingAuthority) Members(ctx context.Context, tx pgx.Tx) ([]ids.UUID,
 	return reportingMembers(ctx, tx, crmcontracts.ReportingScope{})
 }
 
+// MeasurableOwners narrows candidates to the reader's own population. That
+// population holds the live members an owner scope admits and no one else.
+func (a reportingAuthority) MeasurableOwners(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) ([]ids.UUID, error) {
+	return reportingMembersAmong(ctx, tx, crmcontracts.ReportingScope{}, candidates)
+}
+
 func reportingMembers(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) ([]ids.UUID, error) {
+	return reportingMembersAmong(ctx, tx, scope, nil)
+}
+
+// reportingMembersAmong answers the scope's live members, only among
+// candidates when candidates is not nil.
+func reportingMembersAmong(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, candidates []ids.UUID) ([]ids.UUID, error) {
 	var b reportingBindings
 	_, clause, err := analyticsPopulationExpression(ctx, tx, reportingRequested(scope), "u.id", b.arg, unownedIsExcluded)
 	if err != nil {
@@ -78,6 +90,9 @@ func reportingMembers(ctx context.Context, tx pgx.Tx, scope crmcontracts.Reporti
 	}
 	if clause == "" {
 		clause = sqlUnnarrowed
+	}
+	if candidates != nil {
+		clause += " AND u.id=ANY(" + b.add(candidates) + ")"
 	}
 	rows, err := tx.Query(ctx, "SELECT u.id FROM app_user u WHERE "+identity.LiveMemberSQL("u")+" AND NOT u.is_agent AND "+clause+" ORDER BY u.id", b.values...)
 	if err != nil {

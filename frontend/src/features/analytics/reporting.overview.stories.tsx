@@ -161,6 +161,13 @@ function renderSdr(withTargets: boolean) {
           "Independent confirmed outcomes credited to their original SDR.",
         blocks: ["sdr_outcomes", "target_progress"],
       })),
+      presets: [
+        {
+          id: "sdr",
+          metrics: sdrEvaluation.metrics.map((metric) => metric.id),
+          blocks: ["sdr_outcomes", "target_progress"],
+        },
+      ],
     });
   installFetchStub(routes);
   return (

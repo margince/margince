@@ -228,7 +228,10 @@ type Service struct {
 	// queue takes a census, because a batch row that says "10" over a pile of
 	// a hundred and fifty is a wrong number rather than a bounded one.
 	decisionDepth int
-	now           Clock
+	// skipReceipts leaves the receipt lane unread. The ranked queue sets it:
+	// a receipt is never one of its rows (handled.go), so reading it is waste.
+	skipReceipts bool
+	now          Clock
 	// taskScope narrows the task lane to whose work this read answers for. Set
 	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
 	// resolved scope sets it), because the same service answers both surfaces.
@@ -354,10 +357,12 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	omitted = roll.omitted
 
-	done, err := s.done(ctx, asOf)
-	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
-	if err != nil {
-		return crmcontracts.Attention{}, besideDay{}, err
+	if !s.skipReceipts {
+		done, err := s.done(ctx, asOf)
+		omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
+		if err != nil {
+			return crmcontracts.Attention{}, besideDay{}, err
+		}
 	}
 
 	if len(omitted) > 0 {

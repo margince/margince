@@ -40243,6 +40243,14 @@ export interface components {
             /** @description How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on. */
             edition_retention_days?: number;
             metrics: components["schemas"]["ReportingMetricDefinition"][];
+            /** @description The default selections the Analytics screen opens on. Each lists only metrics this reader may read and the charts those metrics draw; a preset with none of the reader's metrics is left out. */
+            presets: components["schemas"]["ReportingPreset"][];
+        };
+        ReportingPreset: {
+            /** @enum {string} */
+            id: "sales" | "sdr";
+            metrics: components["schemas"]["ReportingMetricID"][];
+            blocks: components["schemas"]["ReportingBlockKind"][];
         };
         ReportingReportInput: {
             name: string;
