@@ -21,6 +21,7 @@ package imap
 import (
 	"context"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -47,7 +48,7 @@ func TestAPullThatOutlivesItsBoundFails(t *testing.T) {
 		t.Fatal("a pull past its bound answered normally — the phase is bounded by nothing, " +
 			"and a server that dribbles inside its own per-response timeout holds the worker")
 	}
-	if !held.fired {
+	if !held.didFire() {
 		t.Fatal("the phase never armed an abort, so this case passed on some other failure: " +
 			"the bound is not wired into the pull at all")
 	}
@@ -72,7 +73,7 @@ func TestAPullInsideItsBoundIsNotAborted(t *testing.T) {
 	if len(sink.records) == 0 {
 		t.Fatal("no records captured, so the case above could pass over a pull that reads nothing")
 	}
-	if !held.armed {
+	if !held.didArm() {
 		t.Error("an ordinary pull armed no abort, so nothing bounds it and the case above " +
 			"was proving something else entirely")
 	}
@@ -95,12 +96,12 @@ func TestTheBoundIsDisarmedWhenThePhaseEnds(t *testing.T) {
 	held := &heldTimer{}
 
 	disarm := abortAfter(client, time.Hour, held.schedule)
-	if !held.armed {
+	if !held.didArm() {
 		t.Fatal("no abort was armed, so the disarm below has nothing to prove")
 	}
 	disarm()
 
-	if !held.disarmed {
+	if !held.didDisarm() {
 		t.Fatal("the phase ended without disarming its abort: the timer outlives the pull, " +
 			"and closes whatever connection the pool has handed on by the time it fires")
 	}
@@ -125,26 +126,82 @@ func TestTheBoundIsDisarmedWhenThePhaseEnds(t *testing.T) {
 
 // heldTimer is a phase timer nothing but the test advances. It models the one
 // property abortAfter depends on: a disarmed timer does not fire.
+//
+// Guarded, because the trip runs on the goroutine go-imap reads on while the
+// phase arms the timer from the pull's own. Unguarded, fire can read a nil run
+// it has already been given, and then do nothing. That answers as the defect
+// these cases exist to catch.
 type heldTimer struct {
+	mu       sync.Mutex
 	armed    bool
 	disarmed bool
 	fired    bool
-	run      func()
+	// pending is an abort that arrived before the phase armed one. It fires on
+	// arming rather than being dropped, so no case depends on which of the two
+	// goroutines got there first.
+	pending bool
+	run     func()
 }
 
 func (h *heldTimer) schedule(_ time.Duration, fire func()) func() {
+	h.mu.Lock()
 	h.armed = true
 	h.run = fire
-	return func() { h.disarmed = true }
+	run := h.takePending()
+	h.mu.Unlock()
+	if run != nil {
+		run()
+	}
+	return h.disarm
 }
 
-// fire runs the abort, unless it has been disarmed.
-func (h *heldTimer) fire() {
-	if h.disarmed || h.run == nil {
-		return
+// takePending answers the abort owed from before arming, and marks it spent.
+func (h *heldTimer) takePending() func() {
+	if !h.pending || h.disarmed || h.run == nil {
+		return nil
 	}
+	h.pending = false
 	h.fired = true
-	h.run()
+	return h.run
+}
+
+func (h *heldTimer) disarm() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.disarmed = true
+}
+
+// fire runs the abort, unless it has been disarmed. One that arrives before the
+// phase armed its timer waits for it.
+func (h *heldTimer) fire() {
+	h.mu.Lock()
+	run := h.run
+	switch {
+	case h.disarmed:
+		run = nil
+	case run == nil:
+		h.pending = true
+	default:
+		h.fired = true
+	}
+	h.mu.Unlock()
+	if run != nil {
+		run()
+	}
+}
+
+// didArm, didDisarm and didFire read the timer's state from the test's own
+// goroutine, which the trip's does not synchronize with.
+func (h *heldTimer) didArm() bool { return h.read(func() bool { return h.armed }) }
+
+func (h *heldTimer) didDisarm() bool { return h.read(func() bool { return h.disarmed }) }
+
+func (h *heldTimer) didFire() bool { return h.read(func() bool { return h.fired }) }
+
+func (h *heldTimer) read(of func() bool) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return of()
 }
 
 // abortingOnFirstRead dials the memory server and trips the phase timer the
@@ -169,7 +226,7 @@ func abortingOnFirstRead(addr string, held *heldTimer) func(context.Context, Cre
 		}
 		// Armed only AFTER login, so the abort lands in the phase rather than
 		// in the session setup the bound says nothing about.
-		wrapped.trip = held.fire
+		wrapped.arm(held.fire)
 		return client, wrapped, nil
 	}
 }
@@ -179,14 +236,30 @@ func abortingOnFirstRead(addr string, held *heldTimer) func(context.Context, Cre
 // round trip needs.
 type tripOnRead struct {
 	net.Conn
+	mu      sync.Mutex
 	trip    func()
 	tripped bool
 }
 
+// arm sets the trip from the dialer, which runs on the pull's goroutine while
+// the client already reads on its own.
+func (c *tripOnRead) arm(trip func()) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.trip = trip
+}
+
 func (c *tripOnRead) Read(b []byte) (int, error) {
-	if c.trip != nil && !c.tripped {
+	c.mu.Lock()
+	trip := c.trip
+	if trip == nil || c.tripped {
+		trip = nil
+	} else {
 		c.tripped = true
-		c.trip()
+	}
+	c.mu.Unlock()
+	if trip != nil {
+		trip()
 	}
 	return c.Conn.Read(b)
 }
