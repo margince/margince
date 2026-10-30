@@ -229,15 +229,20 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
-  // An owner with no voice yet has one thing to do. Splitting the surface into
-  // a card per subject would hand them headings over empty bodies — a
-  // description of a profile that does not exist.
-  it("stays one card, naming no subject the owner has nothing in yet", async () => {
+  // An owner with no voice yet has one thing to do: add writing. The page says
+  // what that buys and takes it, and names no card over an empty body.
+  it("names only the promise and the first add, no subject the owner has nothing in yet", async () => {
     stubApi();
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByRole("heading", { name: "Voice DNA" }),
+      await screen.findByRole("heading", {
+        name: "Teach Margince how you write",
+      }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Add your writing" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("list", { name: "What works best" })).toBeTruthy();
     for (const absent of ["Writing samples", "Builds"]) {
       expect(screen.queryByRole("heading", { name: absent })).toBeNull();
     }
@@ -582,6 +587,45 @@ describe("what the build button is called", () => {
     render(<VoiceDnaCard />);
     expect(
       await screen.findByRole("button", { name: /Build Voice DNA/ }),
+    ).toBeTruthy();
+  });
+
+  // The hero walks the writer to the first build, so it is drawn there only.
+  // The Builds card takes over once a version exists.
+  it("offers the first build in the hero, not at the foot of the page", async () => {
+    stubWith({ ...PROFILE, maturity: "provisional" });
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const build = await within(hero).findByRole("button", {
+      name: /Build Voice DNA/,
+    });
+    expect(build.hasAttribute("disabled")).toBe(false);
+    expect(screen.getAllByRole("button", { name: /Build Voice DNA/ })).toEqual([
+      build,
+    ]);
+    expect(screen.queryByText("Build from samples")).toBeNull();
+  });
+
+  // Below the floor the next step is more writing: the hero leads with adding
+  // and says how far the build still is.
+  it("leads with adding writing while the corpus is too thin to build", async () => {
+    stubWith(PROFILE);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(
+      await within(hero).findByText(/A first build needs about 380 more words/),
+    ).toBeTruthy();
+    const steps = within(hero).getByRole("list", {
+      name: "How Margince learns your voice",
+    });
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      within(hero)
+        .getByRole("button", { name: /Build Voice DNA/ })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      within(hero).getByRole("button", { name: /Add writing/ }),
     ).toBeTruthy();
   });
 

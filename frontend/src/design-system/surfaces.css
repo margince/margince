@@ -87,10 +87,10 @@
   .jumpbar,
   .vdna-hero,
   .vdna-sharpen,
-  .ob-voice-kind,
   .ob-voice-print,
   .ob-voice-result-hero,
-  .ob-voice-building
+  .ob-voice-building,
+  .voicekind
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -185,10 +185,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -268,10 +268,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -366,10 +366,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -449,10 +449,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -532,10 +532,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -630,10 +630,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -713,10 +713,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -796,10 +796,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -879,10 +879,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1032,10 +1032,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1150,10 +1150,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -1233,10 +1233,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1351,10 +1351,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -1434,10 +1434,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   )
   :where(
     .panel,
@@ -1517,10 +1517,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1654,10 +1654,10 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .voicekind
   ) {
   background-color: var(--ground);
 }
