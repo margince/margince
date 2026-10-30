@@ -11,6 +11,7 @@ import { Heading } from "./heading";
 import { InlineText } from "./inlinetext";
 import { RecordStory } from "./recordstory";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
+import "./pagepane.css";
 import "./recordview.css";
 
 /** The way back to where the reader opened a record from, drawn over its head. */
@@ -130,7 +131,7 @@ export function RecordView({
     <div className="record-split">
       {back}
       <div className="record-split-row">
-        <div className="record-split-details">
+        <div className="page-pane record-split-details">
           <RecordHead {...head} />
           {aside && (
             <aside className="record-aside" aria-label={t("record.context")}>
@@ -138,7 +139,7 @@ export function RecordView({
             </aside>
           )}
         </div>
-        <div className="record-split-sheet">
+        <div className="page-pane record-split-sheet">
           {tabs && (
             <div className="record-split-tabs" data-testid="record-tabs">
               {tabs}

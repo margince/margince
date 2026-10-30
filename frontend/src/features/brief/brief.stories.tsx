@@ -69,6 +69,22 @@ type Frame = {
   extra?: RouteMap;
 };
 
+// Every lane and caveat list is required by the contract, so the fallback list
+// page would crash Home on a receipt no server sends.
+function quietReceipt(asOf: string): Response {
+  return jsonResponse({
+    as_of: asOf,
+    since: asOf,
+    done: [],
+    needs_you: [],
+    could_not_complete: [],
+    watching: [],
+    totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+    not_shown: [],
+    sources_unavailable: [],
+  });
+}
+
 function brief({
   approvals,
   digest: overnight = digest,
@@ -150,6 +166,16 @@ function brief({
           truncated: false,
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
+      "GET /magic": () => quietReceipt(morning().as_of),
+      // The plan's week is required by the contract, which the fallback list
+      // page lacks.
+      "GET /weekly-plans/current": () =>
+        jsonResponse({
+          id: "01a00000-0000-7000-8000-0000000000c1",
+          local_week_start: WEEK_START,
+          status: "open",
+          commitments: [],
+        }),
       ...extra,
     });
     return (
@@ -481,6 +507,7 @@ export const WorkingMorning: Story = {
           jsonResponse({ id: dealID, name: "PIM Rollout phase 2" }),
         "POST /reports/deals-by-stage": () =>
           jsonResponse({ rows: [], columns: [] }),
+        "GET /magic": () => quietReceipt(day.as_of),
       },
       { deal: ["read", "update"], activity: ["read", "update"] },
     );
@@ -497,4 +524,47 @@ export const DigestUnavailable: Story = {
     approvals: [...singles],
     extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
   }),
+};
+
+// ── The panes ───────────────────────────────────────────────────────────────
+
+// The work and the rail each on one pane, folded into one column on a phone.
+export const TodayPhone: Story = {
+  render: brief({ approvals: [...singles] }),
+  tags: ["uat-phone"],
+};
+
+// A dark pane is see-through; the focus card on it stays opaque over its ring.
+export const TodayDark: Story = {
+  globals: { theme: "dark" },
+  render: brief({ approvals: [...singles] }),
+};
+
+function onWeekly() {
+  const prior = globalThis.location.hash;
+  globalThis.location.hash = "#/home?view=weekly";
+  return () => {
+    globalThis.location.hash = prior;
+  };
+}
+
+// One pane as wide as the morning's two, so the dial stays put across views.
+export const Week: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [] }),
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(canvasElement.querySelector(".brief-weekly-page")).not.toBeNull(),
+    );
+  },
+};
+
+export const WeekPhone: Story = {
+  ...Week,
+  tags: ["uat-phone"],
+};
+
+export const WeekNotWrittenYet: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [], weekly: null }),
 };

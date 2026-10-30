@@ -85,25 +85,8 @@
  * on the far edge where a record's verbs stand. The readings line closes it,
  * the way the facts strip closes a record's head.
  *
- * The first line: the greeting takes the room, the controls sit at the far
- * edge on the greeting's own top line, and on a phone they drop under it. */
-.brief-head {
-  display: flex;
-  flex-wrap: wrap;
-  /* The controls sit on the greeting block's LAST line: the day, the greeting
-     and the day's sentence are read top to bottom, and the dials and the way
-     into the queue meet the eye at the end of that read rather than beside
-     its first line. */
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-5);
-  padding-block: var(--space-2) var(--space-4);
-}
-.brief-head > .glance {
-  flex: 1 1 32rem;
-  min-width: 0;
-}
-
+ * The first line: the controls sit at its far edge at every width, and the
+ * day wraps beside them, so the dial stands in one place in either view. */
 .glance {
   display: flex;
   flex-direction: column;
@@ -118,12 +101,13 @@
 .glance-topline {
   order: -1;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
+  justify-content: flex-end;
   gap: var(--space-2) var(--space-4);
 }
 .glance-date {
+  flex: 1 1 0;
+  min-width: 0;
   margin: 0;
   color: var(--accentText);
 }
@@ -200,16 +184,6 @@
   margin: 0;
 }
 
-/* ── The work ──────────────────────────────────────────────────────────────
- * The Focus panel across the page, then the zones under it: what was done
- * for the reader and the notices as the work column, and the rail beside
- * them — the schedule as the day's line, and the night. `PageZones` draws the
- * grid. The interval over each is the register change from the block before
- * it, one rung wider than any gap inside either register. */
-.brief-head + #brief-weekly {
-  margin-top: var(--space-6);
-}
-
 /* ── The follow-through ────────────────────────────────────────────────────
  * The panels of the work column, in the order the day decides, and beside
  * them the context rail. The gap between blocks is wider than the gap between
@@ -220,49 +194,32 @@
   gap: var(--space-4);
 }
 
-/* ── The morning ───────────────────────────────────────────────────────────
- * The greeting, the day in one sentence, the card in hand and the rest of the
- * order in one column, read top to bottom with a section's air between each
- * block; beside it, the figures and the day's meetings. The two columns hold
- * a reading width rather than the window's, so a wide screen gets margins
- * instead of longer lines. */
-.brief-morning {
+/* ── The frame ─────────────────────────────────────────────────────────────
+ * Both views hold one reading width rather than the window's, so a wide
+ * screen gets margins instead of longer lines. */
+.brief-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
   max-width: 70rem;
   margin-inline: auto;
   padding-block-start: var(--space-10);
 }
-@media (min-width: 1201px) {
-  .brief-morning {
-    column-gap: var(--space-16);
-  }
-}
-.brief-morning > .brief-main {
-  gap: var(--space-12);
-}
-.brief-morning .brief-head {
-  flex-direction: column;
-  /* One line: a wrapping column is as wide as its widest item, which pushed
-     the greeting past a phone's edge. */
-  flex-wrap: nowrap;
-  align-items: stretch;
-  padding-block: 0;
-}
-/* The head is a column here, so the row layout's basis would be a HEIGHT. */
-.brief-morning .brief-head > .glance {
-  flex: none;
-}
-.brief-morning .glance {
+.brief-head .glance {
   gap: var(--space-3);
 }
-.brief-morning .glance-greeting {
+.brief-head .glance-greeting {
   font: var(--fontDisplayLarge);
 }
-.brief-morning .glance-sentence {
+.brief-head .glance-sentence {
   font: var(--fontLead);
   max-width: none;
   margin-block-start: var(--space-3);
   -webkit-line-clamp: 4;
   line-clamp: 4;
+}
+.brief-morning > .brief-main {
+  gap: var(--space-12);
 }
 .brief-morning .brief-overview {
   margin: 0;
@@ -277,20 +234,13 @@
   font-weight: var(--fontWeightMedium);
   color: var(--textSecondary);
 }
-/* A section on the page ground: its label, then its rows. With no box
-   around them, the rows and groups keep no gutter of their own either. */
+/* A section in its pane: its label, then its rows. With no box around them,
+   the rows and groups keep no gutter of their own either. */
 .brief-section {
   --padPanel: 0px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-@media (min-width: 1201px) {
-  .brief-morning > .brief-rail {
-    position: sticky;
-    top: var(--space-10);
-    align-self: start;
-  }
 }
 
 /* ── The context rail ─────────────────────────────────────────────────────

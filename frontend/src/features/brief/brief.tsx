@@ -123,6 +123,7 @@ export function BriefScreen() {
       }}
     />
   );
+  // The dial stands on the date's line, and the week stepper on the title's.
   const glance = (
     <BriefGlance
       view={address.view}
@@ -149,8 +150,6 @@ export function BriefScreen() {
       titleAside={morning ? undefined : <WeekStepper />}
     />
   );
-  // The dial stands on the date's line, and the week stepper on the title's.
-  const head = <div className="brief-head">{glance}</div>;
   return (
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
@@ -158,12 +157,12 @@ export function BriefScreen() {
       {morning && (
         <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
       )}
-      <BriefBody
-        address={address}
-        query={query}
-        head={head}
-        queueToggle={queueToggle}
-      />
+      {/* The head stands over the panes in both views, so the dial never
+          moves when it is pressed. */}
+      <div className="brief-frame">
+        <div className="brief-head">{glance}</div>
+        <BriefBody address={address} query={query} queueToggle={queueToggle} />
+      </div>
       <BriefQueue />
     </div>
   );
@@ -174,33 +173,29 @@ export { deckItems } from "../../lib/brief.decisions.items";
 function BriefBody({
   address,
   query,
-  head,
   queueToggle,
 }: Readonly<{
   address: BriefAddress;
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   if (address.view === "weekly")
     return (
-      <div className="brief-weekly-page">
-        {head}
-        <WeeklySection plan={<PlanSection />} />
-      </div>
+      <PageZones
+        shape="single"
+        panes
+        mainClassName="brief-weekly-page"
+        main={<WeeklySection plan={<PlanSection />} />}
+      />
     );
-  return (
-    <PersonalMorning query={query} head={head} queueToggle={queueToggle} />
-  );
+  return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
 function PersonalMorning({
   query,
-  head,
   queueToggle,
 }: Readonly<{
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   const t = useT();
@@ -243,13 +238,13 @@ function PersonalMorning({
           figures and the meetings the work is read against. */}
       <PageZones
         shape="aside"
+        panes
         className="brief-morning"
         mainClassName="brief-main"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>
-            {head}
             <BriefFeed
               day={day}
               onContext={(item) => setSelected(`${item.source}-${item.id}`)}

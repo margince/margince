@@ -16,20 +16,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--space-6);
-}
-.record-split-details,
-.record-split-sheet {
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-rest);
-  min-inline-size: 0;
-}
-/* Only the two main cards rest on a shadow. A pane inside one is a box in a
-   box, and its hairline alone separates it. */
-.record-split-details .panel,
-.record-split-sheet .panel {
-  box-shadow: none;
+  gap: var(--gapPanes);
 }
 
 .record-split-details {
@@ -37,7 +24,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-5);
+  padding: var(--padPane);
   position: sticky;
   inset-block-start: 0;
   max-block-size: calc(
@@ -94,8 +81,8 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-block-end: var(--space-5);
-  margin-inline: calc(-1 * var(--space-5));
-  padding-inline: var(--space-5);
+  margin-inline: calc(-1 * var(--padPane));
+  padding-inline: var(--padPane);
   border-block-end: 1px solid var(--borderSubtle);
 }
 .record-split-identity {

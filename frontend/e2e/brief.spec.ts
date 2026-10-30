@@ -244,13 +244,31 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     await expect(page.locator(".brief-rail")).toHaveCount(0);
-    const review = await page.locator("#brief-weekly").boundingBox();
+    const pane = await page.locator(".brief-weekly-page").boundingBox();
     const header = await page.locator(".brief-head").boundingBox();
-    if (!review || !header) {
-      throw new Error("the weekly view drew no review to measure");
+    if (!pane || !header) {
+      throw new Error("the weekly view drew no pane to measure");
     }
-    // The review fills the same content width as the page header.
-    expect(review.width).toBeGreaterThan(header.width * 0.9);
+    expect(Math.abs(pane.width - header.width)).toBeLessThan(1);
+  });
+
+  // The head stands over the panes in both views, so pressing the dial does
+  // not move it from under the pointer.
+  test("keeps the dial in place when the view changes", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openBrief(page);
+    await expectShellRendered(page);
+    const dial = page.getByRole("group", { name: copy("brief.view.label") });
+    const before = await dial.boundingBox();
+
+    await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
+    await expect(page.locator("#brief-weekly")).toBeVisible();
+    const after = await dial.boundingBox();
+    if (!before || !after) throw new Error("the view dial has no box");
+    expect(
+      Math.abs(after.x + after.width - before.x - before.width),
+    ).toBeLessThan(2);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(2);
   });
 
   // The weekly is a dial away, not a section further down the morning.
@@ -301,11 +319,11 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     const focus = await page.locator(FOCUS).boundingBox();
-    const header = await page.locator(".brief-head").boundingBox();
-    if (!focus || !header) {
+    const column = await page.locator(".brief-main").boundingBox();
+    if (!focus || !column) {
       throw new Error("the morning drew no focus panel to measure");
     }
-    expect(focus.width).toBeGreaterThan(header.width * 0.9);
+    expect(focus.width).toBeGreaterThan(column.width * 0.9);
   });
 });
 
