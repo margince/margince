@@ -165,8 +165,8 @@ func queryItems(values []string) []string {
 // ones the query names.
 //
 // Metrics named alone carry no charts. The opening's charts belong to the
-// opening's metrics, so drawing them over metrics the caller chose fails the
-// rule that a chart belongs to the metrics it draws.
+// opening's metrics. Drawing them over metrics the caller chose breaks the
+// rule that a chart belongs to what it draws.
 func chooseMembers(q url.Values, selection *crmcontracts.ReportingSelection) {
 	if q.Has("metrics") {
 		selection.Metrics = nil
