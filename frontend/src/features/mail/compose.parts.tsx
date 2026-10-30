@@ -324,6 +324,7 @@ export function ComposeBody({
         disabled={frozen}
         actions={attach}
         footIn={marksIn}
+        revealText={voice.drafted}
       />
       <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
       {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
