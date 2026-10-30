@@ -6,7 +6,7 @@ import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   openAnalyticsSection,
   type Section,
@@ -75,6 +75,30 @@ export function AttentionPanel({
   );
 }
 
+// Who answers for a finding, what is at stake, and whether the records moved
+// since the check found it. An absent part is left out, never drawn empty.
+function findingDetail(
+  check: InputCheck,
+  owner: string | undefined,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  const amount =
+    check.affected_minor == null
+      ? undefined
+      : t("analytics.attentionAtStake", {
+          amount: formatMoneyOrAbsent(
+            check.affected_minor,
+            check.currency,
+            locale,
+          ),
+        });
+  const outOfDate = check.inputs_changed
+    ? t("analytics.attentionOutOfDate")
+    : undefined;
+  return [owner, amount, outOfDate].filter(Boolean).join(" · ");
+}
+
 // Each source is read under the key its own section reads it by, so opening
 // that section shows the same answer this list summarised. A source that fails
 // to load drops its line instead of the panel: the section it links to states
@@ -106,21 +130,11 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
     const owner = check.owner_id
       ? owners.get(check.owner_id)
       : t("analytics.attentionNoOwner");
-    const amount =
-      check.affected_minor == null
-        ? undefined
-        : t("analytics.attentionAtStake", {
-            amount: formatMoneyOrAbsent(
-              check.affected_minor,
-              check.currency,
-              locale,
-            ),
-          });
     items.push({
       key: `check:${check.id}`,
       title: t(checkLabel(check.type)),
       subject: check.subject,
-      detail: [owner, amount].filter(Boolean).join(" · "),
+      detail: findingDetail(check, owner, t, locale),
       action: t("analytics.attentionReview"),
       section: "forecast",
     });

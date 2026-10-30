@@ -75,9 +75,8 @@ const (
 	wantMinimumScopedSites = 10
 )
 
-// unscopedReferenceReads ratifies a compose read that hands back a row-scoped
-// record's id without applying that record's row scope. Keyed
-// "package-dir:FuncName", each entry stating what stands in for the clause.
+// unscopedReferenceReads ratifies a compose read that hands back a row-scoped record's id without
+// applying that record's row scope. Keyed "package-dir:FuncName", each entry stating what stands in.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
@@ -111,6 +110,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// goes to the signal being written rather than to any caller. What a REP may
 	// then see of those signals is decided on the read side, by
 	// auth.SignalScopeClause.
+	"internal/compose:resolve":            "the input check's freshness marker, under its system principal: each deal and signal it finds is recorded as changed in assurance_input_change and never served; a finding reaches a reader only through assuranceExceptionsOwnedBy, which applies the row scope",
 	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the company it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",

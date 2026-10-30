@@ -1911,6 +1911,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
   "systemJob.ai_activity_reconcile": "Abgleich der KI-Aktivität",
   "systemJob.ai_activity_retention": "Bereinigung der KI-Aktivität",
@@ -3253,13 +3254,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.neverWritten":
     "Keine Nachricht dieses Kontakts und kein Termin erfasst.",
   "co.health.reason.quiet_one":
-    "Seit {days} Tag keine Antwort und kein Termin erfasst.",
+    "Seit {days} Tag keine Antwort von ihnen und kein Termin.",
   "co.health.reason.quiet_other":
-    "Seit {days} Tagen keine Antwort und kein Termin erfasst.",
+    "Seit {days} Tagen keine Antwort von ihnen und kein Termin.",
   "co.health.reason.quietSince_one":
-    "Seit {at} ({days} Tag) keine Antwort und kein Termin erfasst.",
+    "Seit {at} ({days} Tag) keine Antwort von ihnen und kein Termin.",
   "co.health.reason.quietSince_other":
-    "Seit {at} ({days} Tagen) keine Antwort und kein Termin erfasst.",
+    "Seit {at} ({days} Tagen) keine Antwort von ihnen und kein Termin.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
@@ -4224,6 +4225,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "und {count} weitere Gäste, nicht aufgeführt",
   "activity.detail.colleagues": "Teammitglieder",
   "activity.detail.filedUnder": "Abgelegt unter",
+  "activity.webForm.title": "Von der Website gesendet",
+  "activity.webForm.message": "Nachricht",
+  "activity.webForm.name": "Name",
+  "activity.webForm.email": "E-Mail",
+  "activity.webForm.phone": "Telefon",
+  "activity.webForm.company": "Unternehmen",
+  "activity.webForm.jobTitle": "Position",
+  "activity.webForm.page": "Seite",
+  "activity.webForm.referrer": "Kam von",
+  "activity.webForm.consent": "Einwilligung",
+  "activity.webForm.consentGiven": "Zugestimmt",
+  "activity.webForm.consentMissing": "Nicht zugestimmt",
+  "activity.webForm.policy": "Richtlinie {version}",
+  "activity.webForm.utmSource": "Kampagnenquelle",
+  "activity.webForm.utmMedium": "Kampagnenmedium",
+  "activity.webForm.utmCampaign": "Kampagne",
+  "activity.webForm.utmTerm": "Kampagnen-Suchbegriff",
+  "activity.webForm.utmContent": "Kampagneninhalt",
   "email.detail.bccWithheld":
     "Einige Empfangende stehen in Blindkopie und werden nicht angezeigt.",
   "compose.audienceWorkspace": "Alle im Unternehmen",
@@ -6850,6 +6869,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
+  "analytics.attentionOutOfDate": "veraltet, seit der Prüfung geändert",
   "analytics.attentionAtStake": "{amount} betroffen",
   "analytics.attentionReview": "Prüfen",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
@@ -7126,6 +7146,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.readyWithExceptions": "Bereit, mit Hinweisen",
   "review.needsReview": "Prüfung nötig",
   "review.checksIncomplete": "Prüfungen unvollständig",
+  "review.outOfDate": "Veraltet",
+  "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
+  "review.outOfDateDeals_other":
+    "{count} Deals haben sich seit dieser Prüfung geändert.",
+  "review.outOfDateWorkspace":
+    "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
+  "review.outOfDateSignals_one":
+    "1 Kaufsignal hat sich seit dieser Prüfung geändert.",
+  "review.outOfDateSignals_other":
+    "{count} Kaufsignale haben sich seit dieser Prüfung geändert.",
+  "review.outOfDateRefresh":
+    "Wähle „Erneut prüfen“, um die Änderungen jetzt zu lesen, oder warte auf den nächsten nächtlichen Lauf.",
+  "review.freshnessUnknown":
+    "Ob sich die Daten seit dieser Prüfung geändert haben, ist nicht bekannt: Seit Margince Änderungen verfolgt, lief keine Prüfung, die jede Quelle gelesen hat. Wähle „Erneut prüfen“, um eine zu starten.",
   "review.allSourcesRead": "Alle Quellen geprüft.",
   "review.source.mail": "Postfach",
   "review.source.calendar": "Kalender",

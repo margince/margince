@@ -279,6 +279,21 @@ type ForecastAssuranceResult struct {
 	// different from one it attempted and could not read, and the state field
 	// is where that distinction lives.
 	Sources []ForecastAssuranceSourceResult `json:"sources"`
+	// Freshness says whether the records moved after the run read them. An
+	// out_of_date reading is the run's verdict on records that have changed.
+	Freshness ForecastAssuranceFreshnessResult `json:"freshness"`
+}
+
+// ForecastAssuranceFreshnessResult is what changed after the run read it.
+type ForecastAssuranceFreshnessResult struct {
+	// State is current, out_of_date, or unknown when no run has recorded what
+	// it read since changes were first tracked.
+	State            string `json:"state"`
+	ChangedDeals     int    `json:"changed_deals"`
+	ChangedSignals   int    `json:"changed_signals"`
+	WorkspaceChanged bool   `json:"workspace_changed"`
+	// ChangedSince is the oldest change the run has not read, absent when none.
+	ChangedSince string `json:"changed_since,omitempty"`
 }
 
 // ForecastAssuranceSourceResult is one source and the state the run reached.
@@ -365,6 +380,10 @@ type InputCheckResult struct {
 	// LastSeenAt is the most recent run that still found it. Something seen for
 	// weeks is a different problem from something that appeared last night.
 	LastSeenAt string `json:"last_seen_at"`
+	// InputsChanged is true when the subject, or a stage or forecast call,
+	// changed after the run that found this. Quote such a finding as out of
+	// date. Null when that is not known.
+	InputsChanged *bool `json:"inputs_changed"`
 }
 
 // SourceCoverageReader answers how current the sources behind the numbers are.

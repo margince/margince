@@ -1292,7 +1292,6 @@ public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.id uuid NOT NULL gen=- def=uuidv7()
-public.assurance_exception.input_changed_at timestamp with time zone gen=- def=-
 public.assurance_exception.last_seen_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.logical_key text NOT NULL gen=- def=-
 public.assurance_exception.observed jsonb NOT NULL gen=- def='{}'::jsonb
@@ -1307,6 +1306,18 @@ public.assurance_exception.updated_at timestamp with time zone NOT NULL gen=- de
 public.assurance_exception.uq_assurance_exception_logical_key UNIQUE (logical_key)
 public.assurance_exception.version bigint NOT NULL gen=- def=1
 public.assurance_exception_pkey CREATE UNIQUE INDEX assurance_exception_pkey ON public.assurance_exception USING btree (id)
+public.assurance_input_change acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.assurance_input_change.assurance_input_change_pkey PRIMARY KEY (subject_kind, subject_id)
+public.assurance_input_change.assurance_input_change_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'workspace'::text])))
+public.assurance_input_change.changed_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_input_change.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_input_change.generation bigint NOT NULL gen=- def=-
+public.assurance_input_change.subject_id uuid NOT NULL gen=- def=-
+public.assurance_input_change.subject_kind text NOT NULL gen=- def=-
+public.assurance_input_change.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.assurance_input_change_by_generation CREATE INDEX assurance_input_change_by_generation ON public.assurance_input_change USING btree (generation)
+public.assurance_input_change_pkey CREATE UNIQUE INDEX assurance_input_change_pkey ON public.assurance_input_change USING btree (subject_kind, subject_id)
+public.assurance_input_generation_seq acl=margince_owner=rwU/margince_owner,margince_app=rU/margince_owner rls=false force=false
 public.assurance_resolution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_resolution.actor_id uuid NOT NULL gen=- def=-
 public.assurance_resolution.assurance_resolution_actor_fkey FOREIGN KEY (actor_id) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -1344,6 +1355,7 @@ public.assurance_run.digest text gen=- def=-
 public.assurance_run.eligible_deals integer NOT NULL gen=- def=0
 public.assurance_run.eligible_signals integer NOT NULL gen=- def=0
 public.assurance_run.id uuid NOT NULL gen=- def=uuidv7()
+public.assurance_run.read_through_generation bigint gen=- def=-
 public.assurance_run.readiness text gen=- def=-
 public.assurance_run.requested_by text gen=- def=-
 public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb

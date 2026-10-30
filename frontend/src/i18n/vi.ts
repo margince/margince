@@ -1860,6 +1860,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
+  "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
   "systemJob.ai_activity_reconcile": "Cập nhật bù hoạt động AI",
   "systemJob.ai_activity_retention": "Dọn dẹp hoạt động AI",
@@ -3158,13 +3159,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.neverWritten":
     "Chưa ghi nhận tin nhắn nào từ họ hoặc cuộc họp nào.",
   "co.health.reason.quiet_one":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào trong {days} ngày.",
   "co.health.reason.quiet_other":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào trong {days} ngày.",
   "co.health.reason.quietSince_one":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào từ {at} ({days} ngày).",
   "co.health.reason.quietSince_other":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào từ {at} ({days} ngày).",
   "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
@@ -4111,6 +4112,24 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "và {count} khách khác không được liệt kê",
   "activity.detail.colleagues": "Đồng nghiệp",
   "activity.detail.filedUnder": "Xếp vào",
+  "activity.webForm.title": "Gửi từ trang web",
+  "activity.webForm.message": "Lời nhắn",
+  "activity.webForm.name": "Tên",
+  "activity.webForm.email": "Email",
+  "activity.webForm.phone": "Điện thoại",
+  "activity.webForm.company": "Công ty",
+  "activity.webForm.jobTitle": "Chức danh",
+  "activity.webForm.page": "Trang",
+  "activity.webForm.referrer": "Đến từ",
+  "activity.webForm.consent": "Đồng ý",
+  "activity.webForm.consentGiven": "Đã đồng ý",
+  "activity.webForm.consentMissing": "Chưa đồng ý",
+  "activity.webForm.policy": "Chính sách {version}",
+  "activity.webForm.utmSource": "Nguồn chiến dịch",
+  "activity.webForm.utmMedium": "Kênh chiến dịch",
+  "activity.webForm.utmCampaign": "Chiến dịch",
+  "activity.webForm.utmTerm": "Từ khóa chiến dịch",
+  "activity.webForm.utmContent": "Nội dung chiến dịch",
   "email.detail.bccWithheld":
     "Một số người nhận ở Bcc nên không được hiển thị.",
   "compose.audienceWorkspace": "Mọi thành viên trong công ty",
@@ -6678,6 +6697,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
+  "analytics.attentionOutOfDate": "đã cũ, đã thay đổi kể từ lần kiểm tra",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
   "analytics.attentionReview": "Xem xét",
   "analytics.attentionChecks_one": "1 mục kiểm tra dự báo cần trả lời",
@@ -6949,6 +6969,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
   "review.needsReview": "Cần xem lại",
   "review.checksIncomplete": "Kiểm tra chưa hoàn tất",
+  "review.outOfDate": "Đã cũ",
+  "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateDeals_other":
+    "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateWorkspace":
+    "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateSignals_one":
+    "1 tín hiệu mua đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateSignals_other":
+    "{count} tín hiệu mua đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateRefresh":
+    "Chọn Kiểm tra lại để đọc các thay đổi ngay, hoặc chờ lần chạy hằng đêm tiếp theo.",
+  "review.freshnessUnknown":
+    "Chưa biết dữ liệu có thay đổi kể từ lần kiểm tra này hay không: từ khi Margince bắt đầu theo dõi thay đổi, chưa có lần kiểm tra nào đọc được mọi nguồn. Chọn Kiểm tra lại để chạy một lần.",
   "review.allSourcesRead": "Đã kiểm tra mọi nguồn.",
   "review.source.mail": "hộp thư",
   "review.source.calendar": "lịch",

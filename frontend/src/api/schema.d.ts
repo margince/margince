@@ -25054,6 +25054,42 @@ export interface components {
             deletes_at?: string;
         };
         /**
+         * @description One website form submission as the visitor sent it. Every value is the visitor's own
+         *     text and nothing Margince checked, except `consent`, which is the form's own record of
+         *     its consent box.
+         */
+        WebFormSubmission: {
+            /** @description The free text the visitor wrote. */
+            message?: string;
+            full_name?: string;
+            /** @description The address the lead was matched or created by. */
+            email: string;
+            /** @description As typed; it may lack the country prefix a lead's phone needs. */
+            phone?: string;
+            company?: string;
+            title?: string;
+            /** @description The form's other fields, in the order they were sent, under the names the form gave them. */
+            extra: components["schemas"]["WebFormValue"][];
+            /** @description The page the form was sent from. */
+            page_url?: string;
+            referrer?: string;
+            /** @description The `utm_` parameters the page carried. */
+            campaign: components["schemas"]["WebFormValue"][];
+            consent?: components["schemas"]["WebFormConsent"];
+        };
+        WebFormValue: {
+            name: string;
+            value: string;
+        };
+        /** @description The consent box the form showed. Absent when the form shows none. */
+        WebFormConsent: {
+            ticked: boolean;
+            /** @description The words the box showed, as the admin wrote them when the form was sent. */
+            wording: string;
+            /** @description The privacy policy version the form named, when it named one. */
+            policy_version?: string;
+        };
+        /**
          * @description Who wrote a record in the system it was imported from, when that is not
          *     whoever recorded it here.
          *
@@ -36308,6 +36344,8 @@ export interface components {
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
+            /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
+            readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -41189,6 +41227,8 @@ export interface components {
              * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
              */
             last_seen_at: string;
+            /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way. */
+            inputs_changed: boolean | null;
         };
         ResolveInputCheck: {
             /**
@@ -41290,6 +41330,26 @@ export interface components {
             eligible_signals?: number;
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
+            freshness: components["schemas"]["AssuranceFreshness"];
+        };
+        /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
+        AssuranceFreshness: {
+            /**
+             * @description `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+             * @enum {string}
+             */
+            state: "current" | "out_of_date" | "unknown";
+            /** @description Deals whose record, offers, contracts or activities changed after the check. */
+            changed_deals: number;
+            /** @description Buying signals whose signal, company or deal suggestion changed after the check. */
+            changed_signals: number;
+            /** @description A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check. */
+            workspace_changed: boolean;
+            /**
+             * Format: date-time
+             * @description The oldest change the check has not read. Absent when there is none.
+             */
+            changed_since?: string;
         };
         ForecastAssuranceSource: {
             /** @enum {string} */

@@ -2140,6 +2140,27 @@ func (e AssuranceFindingCountSeverity) Valid() bool {
 	}
 }
 
+// Defines values for AssuranceFreshnessState.
+const (
+	AssuranceFreshnessStateCurrent   AssuranceFreshnessState = "current"
+	AssuranceFreshnessStateOutOfDate AssuranceFreshnessState = "out_of_date"
+	AssuranceFreshnessStateUnknown   AssuranceFreshnessState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceFreshnessState enum.
+func (e AssuranceFreshnessState) Valid() bool {
+	switch e {
+	case AssuranceFreshnessStateCurrent:
+		return true
+	case AssuranceFreshnessStateOutOfDate:
+		return true
+	case AssuranceFreshnessStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssuranceRunAcceptedStatus.
 const (
 	AssuranceRunAcceptedStatusAssuranceRunEnqueued AssuranceRunAcceptedStatus = "enqueued"
@@ -26585,6 +26606,9 @@ type Activity struct {
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
 
+	// WebForm What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`.
+	WebForm *WebFormSubmission `json:"web_form,omitempty"`
+
 	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -29423,6 +29447,27 @@ type AssuranceFindingCount struct {
 
 // AssuranceFindingCountSeverity defines model for AssuranceFindingCount.Severity.
 type AssuranceFindingCountSeverity string
+
+// AssuranceFreshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
+type AssuranceFreshness struct {
+	// ChangedDeals Deals whose record, offers, contracts or activities changed after the check.
+	ChangedDeals int `json:"changed_deals"`
+
+	// ChangedSignals Buying signals whose signal, company or deal suggestion changed after the check.
+	ChangedSignals int `json:"changed_signals"`
+
+	// ChangedSince The oldest change the check has not read. Absent when there is none.
+	ChangedSince *time.Time `json:"changed_since,omitempty"`
+
+	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+	State AssuranceFreshnessState `json:"state"`
+
+	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
+	WorkspaceChanged bool `json:"workspace_changed"`
+}
+
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+type AssuranceFreshnessState string
 
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
@@ -41856,6 +41901,9 @@ type ForecastAssurance struct {
 	EligibleDeals   int  `json:"eligible_deals"`
 	EligibleSignals *int `json:"eligible_signals,omitempty"`
 
+	// Freshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
+	Freshness AssuranceFreshness `json:"freshness"`
+
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
 	RunId     openapi_types.UUID          `json:"run_id"`
@@ -43680,6 +43728,9 @@ type InputCheck struct {
 	Currency    *string                 `json:"currency,omitempty"`
 	FirstSeenAt time.Time               `json:"first_seen_at"`
 	Id          openapi_types.UUID      `json:"id"`
+
+	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
+	InputsChanged *bool `json:"inputs_changed"`
 
 	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
 	LastSeenAt time.Time `json:"last_seen_at"`
@@ -56674,6 +56725,16 @@ type WebForm struct {
 // WebFormState defines model for WebForm.State.
 type WebFormState string
 
+// WebFormConsent The consent box the form showed. Absent when the form shows none.
+type WebFormConsent struct {
+	// PolicyVersion The privacy policy version the form named, when it named one.
+	PolicyVersion *string `json:"policy_version,omitempty"`
+	Ticked        bool    `json:"ticked"`
+
+	// Wording The words the box showed, as the admin wrote them when the form was sent.
+	Wording string `json:"wording"`
+}
+
 // WebFormCreated defines model for WebFormCreated.
 type WebFormCreated struct {
 	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
@@ -56758,6 +56819,42 @@ type WebFormReceiptStatus string
 // builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
 // and `tally` one this installation minted when none was.
 type WebFormSender string
+
+// WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
+// text and nothing Margince checked, except `consent`, which is the form's own record of
+// its consent box.
+type WebFormSubmission struct {
+	// Campaign The `utm_` parameters the page carried.
+	Campaign []WebFormValue `json:"campaign"`
+	Company  *string        `json:"company,omitempty"`
+
+	// Consent The consent box the form showed. Absent when the form shows none.
+	Consent *WebFormConsent `json:"consent,omitempty"`
+
+	// Email The address the lead was matched or created by.
+	Email string `json:"email"`
+
+	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
+	Extra    []WebFormValue `json:"extra"`
+	FullName *string        `json:"full_name,omitempty"`
+
+	// Message The free text the visitor wrote.
+	Message *string `json:"message,omitempty"`
+
+	// PageUrl The page the form was sent from.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// Phone As typed; it may lack the country prefix a lead's phone needs.
+	Phone    *string `json:"phone,omitempty"`
+	Referrer *string `json:"referrer,omitempty"`
+	Title    *string `json:"title,omitempty"`
+}
+
+// WebFormValue defines model for WebFormValue.
+type WebFormValue struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -68346,6 +68443,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "voice")
 	}
 
+	if raw, found := object["web_form"]; found {
+		err = json.Unmarshal(raw, &a.WebForm)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form': %w", err)
+		}
+		delete(object, "web_form")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -68709,6 +68814,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["voice"], err = json.Marshal(a.Voice)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.WebForm != nil {
+		object["web_form"], err = json.Marshal(a.WebForm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form': %w", err)
 		}
 	}
 

@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 335 |
-| Columns | 3983 |
+| Tables | 336 |
+| Columns | 3989 |
 | Foreign keys | 555 |
 | Owning areas | 37 |
 
@@ -96,7 +96,7 @@ erDiagram
 | [aiactivity](aiactivity.md) | 1 |
 | [approvals](approvals.md) | 3 |
 | [assignments](assignments.md) | 2 |
-| [assurance](assurance.md) | 8 |
+| [assurance](assurance.md) | 9 |
 | [automation](automation.md) | 3 |
 | [capture](capture.md) | 25 |
 | [collections](collections.md) | 13 |
@@ -173,9 +173,10 @@ erDiagram
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
 | [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 12 | 0 |
-| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 22 | 3 |
+| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 21 | 3 |
+| [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 3 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 14 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 9 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 13 | 0 |

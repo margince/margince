@@ -79,8 +79,8 @@ const (
 	maxMessageChars = 10000
 )
 
-// field is one submitted name and value, in the order the sender gave them.
-type field struct {
+// Field is one submitted name and value, in the order the sender gave them.
+type Field struct {
 	Name  string
 	Value string
 }
@@ -97,8 +97,8 @@ type Enquiry struct {
 	Consent   bool
 	PageURL   string
 	Referrer  string
-	UTM       []field
-	Extra     []field
+	UTM       []Field
+	Extra     []Field
 	controls  map[string]string
 	firstName string
 	lastName  string
@@ -116,7 +116,7 @@ func fold(name string) string {
 
 // readEnquiry maps submitted fields onto lead fields: the form's own field_map
 // first, then the common spellings. The first value for a target wins.
-func readEnquiry(fields []field, fieldMap map[string]string) Enquiry {
+func readEnquiry(fields []Field, fieldMap map[string]string) Enquiry {
 	mapped := make(map[string]string, len(fieldMap))
 	for from, to := range fieldMap {
 		mapped[fold(from)] = to
@@ -145,9 +145,9 @@ func readEnquiry(fields []field, fieldMap map[string]string) Enquiry {
 			seen[target] = true
 			e.set(target, value)
 		case strings.HasPrefix(strings.ToLower(f.Name), "utm_"):
-			e.UTM = append(e.UTM, field{Name: strings.ToLower(f.Name), Value: textcut.Runes(value, maxValueLength)})
+			e.UTM = append(e.UTM, Field{Name: strings.ToLower(f.Name), Value: textcut.Runes(value, maxValueLength)})
 		default:
-			e.Extra = append(e.Extra, field{Name: textcut.Runes(f.Name, maxFieldNameLength), Value: textcut.Runes(value, maxValueLength)})
+			e.Extra = append(e.Extra, Field{Name: textcut.Runes(f.Name, maxFieldNameLength), Value: textcut.Runes(value, maxValueLength)})
 		}
 	}
 	if e.FullName == "" {
@@ -203,10 +203,10 @@ func plausibleEmail(email string) bool {
 
 // sortedFields answers a map's entries by name, for senders whose payload
 // carries no order of its own.
-func sortedFields(m map[string]string) []field {
-	out := make([]field, 0, len(m))
+func sortedFields(m map[string]string) []Field {
+	out := make([]Field, 0, len(m))
 	for k, v := range m {
-		out = append(out, field{Name: k, Value: v})
+		out = append(out, Field{Name: k, Value: v})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
