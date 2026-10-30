@@ -344,45 +344,48 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               }
             >
               {shownTab === "overview" && (
-                <DealLatestInbound latest={latest} dealId={deal.id} />
-              )}
-              {shownTab === "overview" && (
-                <DealOverviewPane
-                  inputs={{
-                    deal,
-                    stages,
-                    asOf,
-                    activities: threadQuery.activities,
-                    offers: offersQuery.data?.data,
-                    coverage: coverageRead,
-                    card: statusQuery.data,
-                    ladder: {
-                      advancing: advance.isPending,
-                      // A deal that takes no changes is not moved through
-                      // the pipeline. A closed one is reopened by its own
-                      // action, whose dialog says what reopening clears.
-                      advanceRefused: readOnly || deal.status !== "open",
-                      refusedReasonId,
-                      onAdvance,
-                    },
-                  }}
+                <DealLatestInbound
+                  latest={latest}
+                  dealId={deal.id}
                   onOpenEmail={setOpenEmail}
-                  onOpenTab={(next) => {
-                    setTab(next);
-                    scrollPageToTop();
-                  }}
-                  onEditDetails={() => setEditingDetails(true)}
-                  threadComplete={
-                    threadQuery.isSuccess && !threadQuery.hasNextPage
-                  }
-                  creatingOffer={createOffer.isPending}
-                  locale={locale}
-                  onCreateOffer={(currency) => createOffer.mutate(currency)}
-                  readOnly={readOnly}
-                  refusedReasonId={refusedReasonId}
-                  dealApprovals={dealApprovals}
-                  onDecide={(input) => decide.mutate(input)}
-                />
+                >
+                  <DealOverviewPane
+                    inputs={{
+                      deal,
+                      stages,
+                      asOf,
+                      activities: threadQuery.activities,
+                      offers: offersQuery.data?.data,
+                      coverage: coverageRead,
+                      card: statusQuery.data,
+                      ladder: {
+                        advancing: advance.isPending,
+                        // A deal that takes no changes is not moved through
+                        // the pipeline. A closed one is reopened by its own
+                        // action, whose dialog says what reopening clears.
+                        advanceRefused: readOnly || deal.status !== "open",
+                        refusedReasonId,
+                        onAdvance,
+                      },
+                    }}
+                    onOpenEmail={setOpenEmail}
+                    onOpenTab={(next) => {
+                      setTab(next);
+                      scrollPageToTop();
+                    }}
+                    onEditDetails={() => setEditingDetails(true)}
+                    threadComplete={
+                      threadQuery.isSuccess && !threadQuery.hasNextPage
+                    }
+                    creatingOffer={createOffer.isPending}
+                    locale={locale}
+                    onCreateOffer={(currency) => createOffer.mutate(currency)}
+                    readOnly={readOnly}
+                    refusedReasonId={refusedReasonId}
+                    dealApprovals={dealApprovals}
+                    onDecide={(input) => decide.mutate(input)}
+                  />
+                </DealLatestInbound>
               )}
               {shownTab === "room" && (
                 <DealRoomTab dealId={deal.id} dealName={deal.name} />

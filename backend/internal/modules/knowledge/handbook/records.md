@@ -6,15 +6,11 @@ Margince holds five kinds of record: contacts, companies, leads, deals and proje
 
 ## Each record in one line
 
-**Contact**: a single human you do business with. The sidebar calls this **Contacts**.
-
-**Company**: a company you work with. The sidebar calls this **Companies**.
-
-**Lead**: a possible customer you have not qualified yet, kept apart from your contacts.
-
-**Deal**: one piece of business, moving through stages to won or lost.
-
-**Project**: the work that a client relationship is made of. It starts while a deal is still open and goes on after the deal closes.
+- **Contact**: a single human you do business with. The sidebar calls this **Contacts**.
+- **Company**: a company you work with. The sidebar calls this **Companies**.
+- **Lead**: a possible customer you have not qualified yet, kept apart from your contacts.
+- **Deal**: one piece of business, moving through stages to won or lost.
+- **Project**: the work that a client relationship is made of. It starts while a deal is still open and goes on after the deal closes.
 
 Next to these are **activities** (the timeline of emails, calls, meetings, notes and tasks) and **documents**. Each has its own page.
 
@@ -253,7 +249,7 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and the From and To dates.
-A company's History also holds what reached it through its deals and the contacts who work there. A record's **Overview** tab opens with the newest thing someone sent in the last 7 days that nobody has answered. It shows as **New email**, **New message** or **New website form**, with **Reply** or **Write email**. **Noticed** hides it until you sign out, and on the other tabs it is one line under the record's name.
+A company's History also holds what reached it through its deals and the contacts who work there.
 Also called: timeline, activity log, customer history, interaction history, newest email.
 
 ### How do I log a note, call or meeting on a record?
@@ -274,7 +270,11 @@ Also called: open a note, see the full call notes, read a meeting in full.
 To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Due date** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
-The **Next** bar on a contact's or company's **Overview** shows a task's subject over the first line of its details. A task read out of an email shows that email under its buttons. **View full thread** opens the whole conversation, and closing it goes back to the task.
+The **Next** bar on a contact's or company's **Overview** shows a task's subject over the first line of its details. A task read out of an email shows that email under its buttons. **View full thread** opens the whole conversation, and closing it goes back to the task. With nothing next, the bar says **Waiting on them** if you wrote last, or **Your turn to answer** if they did.
+
+### What does "New email" in the Next bar mean?
+A mail, chat message or website form nobody has replied to shows in the record's **Next** bar for up to 7 days. **Read email** (or **Read message**, **Read form**) opens it. **Create task** makes it a task, and finishing a task for a request marks the request as done. When a late task or something else urgent is next, it is one line above the bar, and clicking the line opens it. It goes away once you reply or a task stands for it, and **Noticed** hides it in this browser.
+Also called: just in, new mail on a record, email with no reply, website form lead.
 
 One activity can link to many records at once, such as a contact and a deal. Everyone can see one you log with no links. A *captured* message with nothing to link to stays held, because nothing has judged who it belongs to.
 

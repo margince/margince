@@ -90,7 +90,10 @@ function stubLead(overrides: Partial<Lead> = {}, grants: unknown[] = []) {
           authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
         });
       }
-      if (request.url.endsWith("/v1/connectors")) {
+      if (
+        request.url.endsWith("/v1/connectors") ||
+        new URL(request.url).pathname.endsWith("/activities/latest-inbound")
+      ) {
         return jsonResponse({ data: [] });
       }
       return jsonResponse({ ...lead, ...overrides });

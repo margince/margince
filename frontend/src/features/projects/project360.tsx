@@ -190,8 +190,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         ) : undefined
       }
     >
-      <ProjectLatestInbound projectId={project.id} />
-      <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
+      <ProjectLatestInbound projectId={project.id}>
+        <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
+      </ProjectLatestInbound>
       <ProjectStanding
         view={view}
         refusedReasonId={readOnly ? readOnlyReasonId : undefined}

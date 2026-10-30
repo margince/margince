@@ -29,9 +29,6 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
-### How do I go to the next record on my worklist?
-To go to the next record in Margince, press **Next task** on the **Next** bar of a contact, company, lead or deal. It opens the next record on your Worklist, in list order. A record you opened from the Worklist follows that list, with its **Whose work** and filters; any other record follows your own list. After the last record it starts again at the top. With no other record on the list, the button says "No more records". Also called: next record, work through my list, go through the queue.
-
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
 **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").

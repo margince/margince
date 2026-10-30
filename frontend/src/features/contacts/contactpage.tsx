@@ -288,18 +288,19 @@ export function ContactPageV2({
           >
             {tab === "overview" && (
               <>
+                <ContactFollowState contactId={id} />
                 <ContactLatestInbound
                   latest={latest}
                   contactId={id}
                   view={view.data}
-                />
-                <ContactFollowState contactId={id} />
-                <ContactOverview
-                  view={view.data}
-                  onAction={runAction}
-                  onOpenEmail={setOpenEmail}
-                  onOpenTab={openTab}
-                />
+                >
+                  <ContactOverview
+                    view={view.data}
+                    onAction={runAction}
+                    onOpenEmail={setOpenEmail}
+                    onOpenTab={openTab}
+                  />
+                </ContactLatestInbound>
               </>
             )}
 

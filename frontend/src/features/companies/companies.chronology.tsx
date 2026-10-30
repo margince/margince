@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useRoster } from "../../components/entityref";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -248,16 +245,26 @@ export function useCitedReceipt() {
 }
 
 /**
- * The newest unanswered thing anyone at the account sent, leading the
- * Overview, with the verbs its row has in the timeline.
+ * The newest unanswered thing anyone at the account sent, for the Overview's
+ * Next bar, with the verbs its row has in the timeline.
  */
 export function CompanyLatestInbound({
   latest,
   companyId,
-}: Readonly<{ latest: JustIn | undefined; companyId: string }>) {
+  onOpenEmail,
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  companyId: string;
+  onOpenEmail?: (activityId: string) => void;
+  children: ReactNode;
+}>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="company"
+      entityId={companyId}
+      onOpenEmail={onOpenEmail}
       actions={(activity) => (
         <RowAnswerActions
           activity={activity}
@@ -265,6 +272,8 @@ export function CompanyLatestInbound({
           entityId={companyId}
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }
