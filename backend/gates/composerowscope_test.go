@@ -87,6 +87,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose/momentaction:DoneSetAsidesTx": "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
 	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
 	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
 	// --- The module tier, one package at a time (censusedModules). ---
 	//
@@ -152,7 +153,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
 	// the query joins no deal, and the review is already the acting rep's own.
-	//
 	// The scope is applied on the WRITE side instead, which is where it can
 	// still mean something: compose/weeklyforecastseam.go's dealLabels takes
 	// auth.ScopeClauseFor for "deal" when it chooses which deals to freeze, so a
