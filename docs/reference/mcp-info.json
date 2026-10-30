@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 141888,
+    "tool_catalog_bytes": 141878,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36559,
+    "approx_wire_tokens_total": 36557,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 35879,
+      "description_bytes": 35869,
       "input_schema_bytes": 65893,
       "output_schema_bytes": 30862,
-      "description_plus_input_schema_bytes": 101772
+      "description_plus_input_schema_bytes": 101762
     }
   },
   "tools": {
@@ -1723,7 +1723,7 @@
           "readOnlyHint": false,
           "title": "Move a lead, deal, project or partner"
         },
-        "description": "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program on a company, with company_id, partner_role and optionally relationship_stage, next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the actions disqualify, promote cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "merge_member_accounts consolidates an unused member into a different surviving colleague after a confirmed retirement preview. Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already implies, today the company name from its email domain, and names the fields still empty. promote turns a lead who has genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a partner program on a company, with company_id, partner_role and optionally relationship_stage, next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the action disqualify cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {

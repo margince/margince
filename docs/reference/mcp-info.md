@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 11 |
 | Tool catalog | 138.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36559 |
+| Approx. wire tokens | 36557 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -2103,10 +2103,9 @@ stage ids. Use update_record for a record's other fields, and enrich to learn ab
 its website. A promotion answers with the new contact's id. A staged answer's approval id is what
 the retry carries; do not report the change until the retry has answered. (Governance: runs
 immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
-merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the
-actions disqualify, promote cannot be undone, so tell the user what the call will change and get
-their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the action
+disqualify cannot be undone, so tell the user what the call will change and get their yes before
+calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

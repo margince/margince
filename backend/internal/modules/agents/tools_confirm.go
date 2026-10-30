@@ -225,7 +225,6 @@ type promoteLead struct {
 func (t promoteLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "promote_lead", Title: "Promote a lead to a contact", Version: toolVersionV1,
-		AskUserFirst:  true,
 		Description:   promoteLeadCopy.render(),
 		Instead:       promoteLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
