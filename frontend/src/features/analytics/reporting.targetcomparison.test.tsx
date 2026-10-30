@@ -69,7 +69,7 @@ const sample: Comparison = {
   target: 80_000_000,
   landing: 76_000_000,
   won: 42_000_000,
-  gap: 4_000_000,
+  gap: 4_000_000, // ds:ignore the target comparison money gap, not a CSS gap
   remaining: 38_000_000,
   open_pipeline: 136_000_000,
   coverage: 136 / 38,
@@ -101,7 +101,7 @@ it("reads a target already won as reached, never as an endless coverage", () => 
     status: "target_reached",
     remaining: 0,
     coverage: undefined,
-    gap: -15_000_000,
+    gap: -15_000_000, // ds:ignore the target comparison money gap, not a CSS gap
   });
   expect(screen.getAllByText("Target reached").length).toBeGreaterThan(0);
   expect(screen.queryByText(/×$/)).toBeNull();
