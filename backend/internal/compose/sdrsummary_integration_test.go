@@ -305,3 +305,19 @@ func TestLeadsAwaitingResponseCountsTheUnansweredArrivalCohort(t *testing.T) {
 		t.Fatalf("the evidence is the waiting lead: %+v", rows)
 	}
 }
+
+func TestLeadEvidenceLabelHidesAMaskedCompanyName(t *testing.T) {
+	e := setupForecast(t)
+	now := clocktest.Now(t)
+	e.seedID(t, `INSERT INTO lead(id,full_name,company_name,source,captured_by,owner_id,created_at) VALUES($1,'','Masked Company Ltd','inbound','human:x',$2,$3)`, e.Rep1, now.AddDate(0, 0, -1))
+	reader := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
+	actor, _ := principal.Actor(reader)
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "lead", Field: "company_name", Condition: principal.MaskAlways}}
+	reader = principal.WithActor(reader, actor)
+	service := newReportingService(e.Pool, func() time.Time { return now })
+	result := sectionsEvaluation(reader, t, service, now.AddDate(0, 0, -2), crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, "leads_created")
+	rows := sectionsEvidence(reader, t, service, result, "leads_created", "interval", "")
+	if len(rows) != 1 || rows[0].Label == "Masked Company Ltd" {
+		t.Fatalf("a lead labelled by a masked company name must not show it: %+v", rows)
+	}
+}

@@ -25,10 +25,22 @@ const countedLeadSQL = "l.merged_into_id IS NULL AND (l.archived_at IS NULL OR l
 
 const leadOwnerColumn = "l.owner_id"
 
-// leadNameSQL labels a lead's evidence row by its name, its company, or else
-// the word for a lead, bound at the given position.
-func leadNameSQL(fallback string) string {
-	return "COALESCE(NULLIF(l.full_name,''),NULLIF(l.company_name,'')," + fallback + ")"
+// leadLabelSQL labels a lead's row by its name, else by its company when the
+// seat may read that column, else by the fallback bound at that position. A
+// reader's field scope already withholds a lead whose name is masked.
+func leadLabelSQL(ctx context.Context, b *reportingBindings, fallback string) (string, error) {
+	company := "NULLIF(l.company_name,'')"
+	visible, masked, err := auth.MaskExcludedClause(ctx, string(recordTypeLead), companyNameField, "l", b.arg)
+	if err != nil {
+		return "", err
+	}
+	if masked {
+		company = "NULL"
+		if visible != "" {
+			company = "CASE WHEN " + visible + " THEN NULLIF(l.company_name,'') END"
+		}
+	}
+	return "COALESCE(NULLIF(l.full_name,'')," + company + "," + fallback + ")", nil
 }
 
 func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
@@ -83,7 +95,11 @@ func readReportingLeadsCreated(ctx context.Context, tx pgx.Tx, frame crmcontract
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	said := reporting.ExplanationCopy(frame)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,1::float8,'lead_created',
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,1::float8,'lead_created',
  'origin:'||COALESCE(l.origin,''),COALESCE(lo.label,` + b.add(said.Say(reportingBreakdownLabels.NoOrigin)) + `)
  FROM lead l LEFT JOIN lead_origin lo ON lo.key=l.origin LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + b.add(frame.EvaluatedAt) + ` AND ` + scope + `
@@ -111,7 +127,11 @@ func readReportingLeadStatusMoves(ctx context.Context, tx pgx.Tx, frame crmcontr
 	label.WriteString(" END")
 	leads := "(SELECT l.id FROM lead l WHERE " + scope + ") scoped"
 	moves := weekly.LeadMovesSQL(leads, b.add(reportingEarliest(frame)), b.add(frame.EvaluatedAt))
-	query := `SELECT m.audit_id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),m.occurred_at,1::float8,'lead_status_move',
+	name, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT m.audit_id::text,l.id,` + name + `,l.owner_id,COALESCE(u.display_name,''),m.occurred_at,1::float8,'lead_status_move',
  'status:'||m.to_status,` + label.String() + `
  FROM (` + moves + `) m JOIN lead l ON l.id=m.lead_id LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE m.move IS NOT NULL ORDER BY m.audit_id LIMIT ` + b.add(reportingFactLimit+1)
@@ -132,7 +152,11 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	}
 	said := reporting.ExplanationCopy(frame)
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
  CASE WHEN l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<` + at + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + at + ` AND ` + scope + `
@@ -162,7 +186,11 @@ func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcon
 	}
 	said := reporting.ExplanationCopy(frame)
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
  GREATEST(EXTRACT(EPOCH FROM (l.first_response_at-` + leadArrivalSQL + `))/3600,0)::float8,'lead_first_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.first_response_at<` + at + ` AND ` + scope + `
@@ -184,7 +212,11 @@ func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame cr
 	}
 	said := reporting.ExplanationCopy(frame)
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=` + at + `)
  AND ` + auth.LiveLeadInquiryClause("l") + ` AND ` + scope + `

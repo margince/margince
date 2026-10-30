@@ -210,11 +210,15 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	if after != nil {
 		page = " AND (cycle.occurred_at,h.id)>(" + b.add(after.CreatedAt) + "," + b.add(after.ID) + ")"
 	}
+	label, err := leadLabelSQL(ctx, &b, "''")
+	if err != nil {
+		return nil, nil, err
+	}
 	subject := "CASE WHEN h.lead_id IS NOT NULL AND " + leadVisible + " THEN 'lead' WHEN h.contact_id IS NOT NULL AND " + contactVisible + " THEN 'contact' END"
 	query := `SELECT h.id,cycle.occurred_at,cycle.submitter_id_at_change,
  (SELECT count(*) FROM sdr_handoff_event s WHERE s.handoff_id=h.id AND s.to_status=h.status)>1,
  sv.kind,CASE sv.kind WHEN 'lead' THEN l.id WHEN 'contact' THEN c.id END,
- CASE sv.kind WHEN 'lead' THEN ` + leadNameSQL("''") + ` WHEN 'contact' THEN c.full_name ELSE '' END,
+ CASE sv.kind WHEN 'lead' THEN ` + label + ` WHEN 'contact' THEN c.full_name ELSE '' END,
  h.assigned_to,COALESCE(r.display_name,''),COALESCE(` + identity.LiveMemberSQL("r") + `,false)
  ` + handoffCycleSQL + `
  LEFT JOIN lead l ON l.id=h.lead_id LEFT JOIN contact c ON c.id=h.contact_id
@@ -241,7 +245,7 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	return out, &next, nil
 }
 
-// leadNameFields are the columns leadNameSQL reads, so the label is built only
+// leadNameFields are the columns leadLabelSQL reads, so the label is built only
 // from fields whose mask was checked.
 var leadNameFields = []string{fieldFullName, companyNameField}
 
