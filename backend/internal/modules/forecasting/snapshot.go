@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Why a snapshot was taken. Each is a real cause with different rules: only
@@ -166,7 +167,7 @@ func (s *Store) writeContributions(
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
-			"audit_id", "approval_id", "captured_by",
+			"qualification", "audit_id", "approval_id", "captured_by",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -200,7 +201,7 @@ func (s *Store) writeContributions(
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(row.Category),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
-				nullIfEmpty(row.ExclusionReason),
+				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
 			}, nil
 		}))
@@ -280,25 +281,16 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	if s.lens == nil {
 		return snapshotSide{}, errors.New("forecasting: no snapshot lens is bound, so a snapshot's rows cannot be narrowed")
 	}
-	var out snapshotSide
-	var scope Scope
-	err := tx.QueryRow(ctx,
-		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency
-		 FROM forecast_snapshot WHERE id = $1`, id).
-		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
-			&out.PipelineID, &out.BaseCurrency)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return snapshotSide{}, apperrors.ErrNotFound
-	}
+	out, scope, err := snapshotHeader(ctx, tx, id)
 	if err != nil {
-		return snapshotSide{}, fmt.Errorf("forecasting: reading the snapshot: %w", err)
+		return snapshotSide{}, err
 	}
 
 	rows, err := tx.Query(ctx, `
 		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
 		       effective_close_date, close_provisional, category, stage_probability,
 		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
-		       exclusion_reason, audit_id, approval_id
+		       exclusion_reason, qualification, audit_id, approval_id
 		FROM forecast_contribution
 		WHERE snapshot_id = $1
 		ORDER BY deal_id`, id)
@@ -311,13 +303,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		var c Contribution
 		var dealID ids.UUID
 		var owner *ids.UUID
-		var currency, category, exclusion *string
+		var currency, category, exclusion, qualification *string
 		var probability *int
 		var weighted *int64
 		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
 			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
-			&exclusion, &c.AuditID, &c.ApprovalID)
+			&exclusion, &qualification, &c.AuditID, &c.ApprovalID)
 		c.DealID = dealID.String()
 		if owner != nil {
 			c.Owner = owner.String()
@@ -334,6 +326,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		if probability != nil {
 			c.StageProbability = *probability
 		}
+		c.Qualification = viability.Qualification(derefString(qualification))
 		if weighted != nil {
 			c.WeightedMinor = *weighted
 		}
@@ -350,6 +343,29 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 	}
 	out.Withheld = len(out.Contributions) < frozen
 	return out, nil
+}
+
+// snapshotHeader reads a snapshot's own row: what it was frozen over.
+func snapshotHeader(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, Scope, error) {
+	out := snapshotSide{ID: id}
+	var scope Scope
+	var population, fingerprint, policy *string
+	err := tx.QueryRow(ctx,
+		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency,
+		        taken_at, population_fingerprint, input_fingerprint, qualified_policy_version
+		 FROM forecast_snapshot WHERE id = $1`, id).
+		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
+			&out.PipelineID, &out.BaseCurrency, &out.TakenAt, &population, &fingerprint, &policy)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return snapshotSide{}, Scope{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return snapshotSide{}, Scope{}, fmt.Errorf("forecasting: reading the snapshot: %w", err)
+	}
+	out.PopulationFingerprint = derefString(population)
+	out.InputFingerprint = derefString(fingerprint)
+	out.QualifiedPolicy = derefString(policy)
+	return out, scope, nil
 }
 
 // Movement classifies the difference between two snapshots.

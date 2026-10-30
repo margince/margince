@@ -88,31 +88,14 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 		if err != nil {
 			return err
 		}
-		requested := forecasting.Scope{Kind: string(scope.Kind), ID: (*ids.UUID)(scope.Id)}
-		deals, resolved, _, err := forecastDealsForPipeline(ctx, tx, period, requested, at, currency, (*ids.UUID)(capture.PipelineId))
-		if err != nil {
-			return err
-		}
-		readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-		if err != nil {
-			return err
-		}
-		members, err := reportingMembers(ctx, tx, scope)
-		if err != nil {
-			return err
-		}
-		names := make([]string, len(members))
-		for i, id := range members {
-			names[i] = id.String()
-		}
-		fingerprint, err := reportingPopulationFingerprint(scope, names)
+		captured, err := captureReadings(ctx, tx, scope, (*ids.UUID)(capture.PipelineId), period, at, currency)
 		if err != nil {
 			return err
 		}
 		snapshot := forecasting.NewSnapshot{
-			Period: period, Scope: resolved,
-			Trigger: forecasting.TriggerDaily, BaseCurrency: currency, Readings: readings, TakenAt: at,
-			PipelineID: (*ids.UUID)(capture.PipelineId), PopulationFingerprint: fingerprint,
+			Period: period, Scope: captured.Scope,
+			Trigger: forecasting.TriggerDaily, BaseCurrency: currency, Readings: captured.Readings, TakenAt: at,
+			PipelineID: (*ids.UUID)(capture.PipelineId), PopulationFingerprint: captured.PopulationFingerprint,
 		}
 		if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
 			return err
@@ -120,6 +103,39 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 		_, err = store.TakeSnapshot(ctx, tx, snapshot)
 		return err
 	})
+}
+
+// captureReadings is what a capture freezes: the readings over the scope's
+// deals, the scope they resolved to, and the fingerprint of its members. The
+// daily capture, a call's baseline and the comparison with it all read here.
+// So a call is compared with today on one definition.
+func captureReadings(
+	ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, pipeline *ids.UUID,
+	period forecasting.Period, at time.Time, currency string,
+) (forecasting.Baseline, error) {
+	out := forecasting.Baseline{BaseCurrency: currency}
+	requested := forecasting.Scope{Kind: string(scope.Kind), ID: (*ids.UUID)(scope.Id)}
+	deals, resolved, _, err := forecastDealsForPipeline(ctx, tx, period, requested, at, currency, pipeline)
+	if err != nil {
+		return out, err
+	}
+	out.Scope = resolved
+	if out.Readings, err = forecasting.Compute(period, period.LocalDay(at), deals); err != nil {
+		return out, err
+	}
+	if out.ForwardMeasure, out.QualifiedPolicy, err = forecastBasis(ctx, tx); err != nil {
+		return out, err
+	}
+	members, err := reportingMembers(ctx, tx, scope)
+	if err != nil {
+		return out, err
+	}
+	names := make([]string, len(members))
+	for i, id := range members {
+		names[i] = id.String()
+	}
+	out.PopulationFingerprint, err = reportingPopulationFingerprint(scope, names)
+	return out, err
 }
 
 func reportingCaptureAttempts(ctx context.Context, store *forecasting.Store, contexts []crmcontracts.ReportingCaptureContext) (map[string]time.Time, error) {
@@ -145,14 +161,18 @@ func reportingCaptureAttempts(ctx context.Context, store *forecasting.Store, con
 // its reader saw. Both snapshot writers call it, so a vintage cannot be
 // stamped one way by the daily pass and another way by the week's close.
 func stampForecastBasis(ctx context.Context, tx pgx.Tx, snapshot *forecasting.NewSnapshot) error {
+	measure, policy, err := forecastBasis(ctx, tx)
+	snapshot.ForwardMeasure, snapshot.QualifiedPolicyVersion = measure, policy
+	return err
+}
+
+// forecastBasis reads the forward measure and the qualified policy in force.
+// A call's baseline carries the same two through forecasting.Baseline.
+func forecastBasis(ctx context.Context, tx pgx.Tx) (forecasting.ForwardMeasure, string, error) {
 	measure, err := ForecastForwardMeasure(ctx, tx)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 	policy, err := forecastQualifiedPolicy(ctx, tx)
-	if err != nil {
-		return err
-	}
-	snapshot.ForwardMeasure, snapshot.QualifiedPolicyVersion = measure, policy
-	return nil
+	return measure, policy, err
 }

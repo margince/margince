@@ -11242,6 +11242,24 @@ func (e ForecastAssuranceSourceState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastCallBaseline.
+const (
+	ForecastCallBaselineCaptured    ForecastCallBaseline = "captured"
+	ForecastCallBaselineUnavailable ForecastCallBaseline = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastCallBaseline enum.
+func (e ForecastCallBaseline) Valid() bool {
+	switch e {
+	case ForecastCallBaselineCaptured:
+		return true
+	case ForecastCallBaselineUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastCallScopeKind.
 const (
 	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
@@ -11368,6 +11386,51 @@ func (e ForecastMovementBucketName) Valid() bool {
 	case ForecastMovementBucketNameStageWeight:
 		return true
 	case ForecastMovementBucketNameWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementDealCauses.
+const (
+	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
+	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
+	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
+	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
+	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
+	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
+	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
+	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
+	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
+	ForecastMovementDealCausesWon                ForecastMovementDealCauses = "won"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementDealCauses enum.
+func (e ForecastMovementDealCauses) Valid() bool {
+	switch e {
+	case ForecastMovementDealCausesAmount:
+		return true
+	case ForecastMovementDealCausesCategory:
+		return true
+	case ForecastMovementDealCausesFx:
+		return true
+	case ForecastMovementDealCausesLost:
+		return true
+	case ForecastMovementDealCausesNew:
+		return true
+	case ForecastMovementDealCausesPulledIn:
+		return true
+	case ForecastMovementDealCausesPushedOut:
+		return true
+	case ForecastMovementDealCausesQualification:
+		return true
+	case ForecastMovementDealCausesReopenedOrArchived:
+		return true
+	case ForecastMovementDealCausesStageWeight:
+		return true
+	case ForecastMovementDealCausesWon:
 		return true
 	default:
 		return false
@@ -12609,10 +12672,11 @@ func (e InputCheckStatus) Valid() bool {
 
 // Defines values for InputCheckSubjectKind.
 const (
-	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
-	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
-	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
-	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+	InputCheckSubjectKindContract     InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal         InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindForecastCall InputCheckSubjectKind = "forecast_call"
+	InputCheckSubjectKindOffer        InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal       InputCheckSubjectKind = "signal"
 )
 
 // Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
@@ -12621,6 +12685,8 @@ func (e InputCheckSubjectKind) Valid() bool {
 	case InputCheckSubjectKindContract:
 		return true
 	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindForecastCall:
 		return true
 	case InputCheckSubjectKindOffer:
 		return true
@@ -42468,8 +42534,11 @@ type ForecastAssuranceSourceState string
 
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
-	AmountMinor int64                 `json:"amount_minor"`
-	AuthorId    openapi_types.UUID    `json:"author_id"`
+	AmountMinor int64              `json:"amount_minor"`
+	AuthorId    openapi_types.UUID `json:"author_id"`
+
+	// Baseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+	Baseline    *ForecastCallBaseline `json:"baseline,omitempty"`
 	CreatedAt   time.Time             `json:"created_at"`
 	Currency    string                `json:"currency"`
 	Id          openapi_types.UUID    `json:"id"`
@@ -42482,6 +42551,9 @@ type ForecastCall struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// ForecastCallBaseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+type ForecastCallBaseline string
 
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
@@ -42559,12 +42631,18 @@ type ForecastMovementDeal struct {
 	// AuditId The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
 	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
 	Bucket  string              `json:"bucket"`
-	DealId  openapi_types.UUID  `json:"deal_id"`
+
+	// Causes Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+	Causes *[]ForecastMovementDealCauses `json:"causes,omitempty"`
+	DealId openapi_types.UUID            `json:"deal_id"`
 
 	// FromMinor Absent for a deal that was not in the opening snapshot at all.
 	FromMinor *int64 `json:"from_minor,omitempty"`
 	ToMinor   *int64 `json:"to_minor,omitempty"`
 }
+
+// ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
+type ForecastMovementDealCauses string
 
 // ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 // A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
@@ -44239,8 +44317,10 @@ type InputCheck struct {
 
 	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
 	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
-	Subject     *AttentionSubject     `json:"subject,omitempty"`
-	SubjectId   openapi_types.UUID    `json:"subject_id"`
+	Subject   *AttentionSubject  `json:"subject,omitempty"`
+	SubjectId openapi_types.UUID `json:"subject_id"`
+
+	// SubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
 
 	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
@@ -44253,7 +44333,7 @@ type InputCheckSeverity string
 // InputCheckStatus defines model for InputCheck.Status.
 type InputCheckStatus string
 
-// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+// InputCheckSubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 type InputCheckSubjectKind string
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.

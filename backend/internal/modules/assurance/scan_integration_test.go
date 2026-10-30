@@ -276,7 +276,7 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
-		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		DealID: e.seedDeal(t), Owner: e.rep.String(),
 		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{sick}
@@ -331,7 +331,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
-		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		DealID: e.seedDeal(t), Owner: e.rep.String(),
 		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{sick}
@@ -392,7 +392,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 
 	amount, offered := int64(100_000_00), int64(60_000_00)
 	silent := Subject{
-		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		DealID: e.seedDeal(t), Owner: e.rep.String(),
 		AmountMinor: &amount, Currency: "EUR", Category: "commit",
 		OfferTotalMinor: &offered, HasNextStep: true, HasEconomicBuyer: true,
 	}
@@ -704,7 +704,7 @@ func TestNeitherClosingSweepRunsForAReaderWhoMayNotUpdate(t *testing.T) {
 	}
 
 	if err := e.store.InTx(e.readOnly(), func(ctx context.Context, tx pgx.Tx) error {
-		if _, err := e.store.CloseDeparted(ctx, tx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if _, err := e.store.CloseDeparted(ctx, tx, nil, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("CloseDeparted answered %v, want %v", err, apperrors.ErrPermissionDenied)
 		}
 		if _, err := e.store.CloseCleared(ctx, tx, []string{TypeClosePast}, []string{dealID}, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {

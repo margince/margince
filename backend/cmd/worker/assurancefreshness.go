@@ -15,21 +15,27 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // startAssuranceFreshness subscribes the marker that keeps a changed deal from
 // reading as checked. Deterministic, so it runs on every worker: without it the
 // input check's findings read as current until the next night, whatever moved.
-// Coalesced, so a burst of edits to one deal is one write per read.
+// Coalesced, so a burst of edits to one deal is one write per read. Each
+// changed deal also queues a one-deal check on the inserter.
 func startAssuranceFreshness(
 	ctx context.Context,
 	pool *pgxpool.Pool,
 	rdb *redis.Client,
 	background *sync.WaitGroup,
+	inserter *jobs.Runner,
 	logger *slog.Logger,
 	stdout io.Writer,
 ) {
 	marker := compose.NewAssuranceFreshness(pool, identity.NewService(pool))
+	if inserter != nil {
+		marker = marker.WithRescans(inserter)
+	}
 	_, _ = fmt.Fprintln(stdout, "worker marking input checks out of date as deals change (cg:assurance-freshness)")
 	background.Go(func() {
 		runCoalescingSubscriber(ctx, rdb, "cg:assurance-freshness", marker.HandleEvent, marker.HandleBatch, logger)

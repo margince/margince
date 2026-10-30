@@ -42024,8 +42024,11 @@ export interface components {
             id: string;
             /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
             type: string;
-            /** @enum {string} */
-            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /**
+             * @description What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
+             * @enum {string}
+             */
+            subject_kind: "deal" | "signal" | "offer" | "contract" | "forecast_call";
             /** Format: uuid */
             subject_id: string;
             /**
@@ -42235,6 +42238,8 @@ export interface components {
             audit_id?: string;
             /** Format: uuid */
             approval_id?: string;
+            /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading. */
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
         };
         NewForecastCall: {
             /**
@@ -42284,6 +42289,11 @@ export interface components {
             supersedes_id?: string;
             /** Format: date-time */
             created_at: string;
+            /**
+             * @description Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+             * @enum {string}
+             */
+            baseline?: "captured" | "unavailable";
         };
         /** @description A request to issue a share link. */
         NewForecastShare: {

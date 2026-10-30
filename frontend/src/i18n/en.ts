@@ -1982,6 +1982,7 @@ export const en = {
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.assurance_freshness": "Forecast check freshness",
+  "systemJob.forecast_call_baseline": "Forecast call baseline",
   "systemJob.ai_activity": "AI activity record",
   "systemJob.ai_activity_reconcile": "AI activity catch-up",
   "systemJob.ai_activity_retention": "AI activity cleanup",
@@ -7622,6 +7623,20 @@ export const en = {
     "Run the first check before you turn this on.",
   "review.commitUnpriced": "Committed with no amount",
   "review.stageExitUnmet": "Stage exit criteria not met",
+  "review.callMovedHelp_one":
+    "The pipeline this call was made against has changed since: {count} deal moved in a way the forecast counts.",
+  "review.callMovedHelp_other":
+    "The pipeline this call was made against has changed since: {count} deals moved in a way the forecast counts.",
+  "review.callMovedWithheldHelp":
+    "The pipeline this call was made against has changed since, including deals you cannot open.",
+  "review.callLimitedHelp":
+    "The team, base currency or financial year changed since this call, so it can no longer be compared with today’s pipeline.",
+  "review.callOpenItsForecast":
+    "Open the forecast for this call’s team and period to submit a new call.",
+  "review.callAuthorOnly":
+    "Only the manager who made this call can submit a new one.",
+  "review.submitNewCall": "Submit a new call",
+  "review.forecastCallMoved": "Forecast call needs review",
   "review.unknownCheck": "Unnamed check",
   "review.sheetTitle": "Answer check",
   "review.outcomeLegend": "Answer type",
@@ -7654,6 +7669,8 @@ export const en = {
     "Updated {date} · {gap} above won + confirmed commits",
   "forecast.currentCallDetailUnder":
     "Updated {date} · {gap} below won + confirmed commits",
+  "forecast.callHistoryUnavailable":
+    "This call was made before calls kept the pipeline they were made against, so what moved since cannot be said.",
   "forecast.currentCallDetailEven":
     "Updated {date} · matches won + confirmed commits",
   "forecast.evidence": "Committed · confirmed dates",
@@ -8973,6 +8990,7 @@ export const en = {
   "jobs.kind.approval_auto_apply": "Automatic approval",
   "jobs.kind.assurance_run": "Forecast check on request",
   "jobs.kind.assurance_sweep": "Forecast check",
+  "jobs.kind.assurance_deal_rescan": "Forecast check of a changed deal",
   "jobs.kind.brief_generate": "Morning brief",
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",

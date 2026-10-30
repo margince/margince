@@ -1103,6 +1103,11 @@ export interface components {
             /** @description How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline. */
             eligible_deals: number;
             eligible_signals?: number;
+            /**
+             * Format: uuid
+             * @description Set on a pass over this one deal, queued because the deal changed. Its counts describe that deal alone and never the pipeline. Absent on a pass over every deal.
+             */
+            deal_id?: string;
         };
         /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
         PublicEventForecastExceptionResolved: {

@@ -61,16 +61,46 @@ type HoldsDealsFunc func(ctx context.Context, tx pgx.Tx, scope Scope) (bool, err
 // its landing from.
 type MeasureFunc func(ctx context.Context, tx pgx.Tx) (ForwardMeasure, error)
 
+// Baseline is a reading as a capture takes it: over the scope's whole
+// population, with the fingerprint of who that population was.
+type Baseline struct {
+	Readings              Readings
+	Scope                 Scope
+	PopulationFingerprint string
+	BaseCurrency          string
+	// ForwardMeasure is the measure the landing was built from when read.
+	ForwardMeasure ForwardMeasure
+	// QualifiedPolicy is the viability rule the qualified readings applied,
+	// empty while enforcement is off. Read from the setting, so a period with
+	// no deal still records it.
+	QualifiedPolicy string
+}
+
+// BaselineFunc reads the population a call is made about the way a capture
+// does. Injected, because the population and its members are resolved in the
+// composition layer. A call keeps this reading as its baseline, and the input
+// check compares the call with a fresh one.
+type BaselineFunc func(ctx context.Context, tx pgx.Tx, scope Scope, period Period, at time.Time) (Baseline, error)
+
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
-	store   *Store
-	deals   DealsFunc
-	period  PeriodFunc
-	resolve ResolveScopeFunc
-	history HistoryFunc
-	measure MeasureFunc
-	holds   HoldsDealsFunc
-	now     func() time.Time
+	store    *Store
+	deals    DealsFunc
+	period   PeriodFunc
+	resolve  ResolveScopeFunc
+	history  HistoryFunc
+	measure  MeasureFunc
+	holds    HoldsDealsFunc
+	baseline BaselineFunc
+	now      func() time.Time
+}
+
+// WithCallBaseline keeps a baseline with every call recorded through these
+// handlers. Without one a call has no baseline, and its history reads as
+// unavailable.
+func (h Handlers) WithCallBaseline(baseline BaselineFunc) Handlers {
+	h.baseline = baseline
+	return h
 }
 
 // NewHandlers binds the routes to the store and its seams.
@@ -330,7 +360,7 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		out, err = h.store.RecordCallTx(ctx, tx, NewCall{
+		out, err = h.recordWithBaseline(ctx, tx, NewCall{
 			Period: period, Scope: allowed, AmountMinor: body.AmountMinor,
 			Currency: body.Currency, Note: derefString(body.Note),
 		})
@@ -341,6 +371,39 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, callToWire(out))
+}
+
+// recordWithBaseline records a call and the reading it was made against. The
+// baseline is stamped and read at the server's clock; the period, which the
+// caller's as_of chose, rides on the snapshot's own period columns. So a
+// caller cannot stamp a capture with a day of their choosing. The reading is
+// taken before the write, so the population-sized read runs before the
+// previous call is locked. The transaction stays read committed: under repeatable read
+// a call waiting on that lock would supersede a call it cannot see, and fork
+// the chain.
+func (h Handlers) recordWithBaseline(ctx context.Context, tx pgx.Tx, in NewCall) (Call, error) {
+	if h.baseline == nil {
+		return h.store.RecordCallTx(ctx, tx, in)
+	}
+	submitted := h.now()
+	baseline, err := h.baseline(ctx, tx, in.Scope, in.Period, submitted)
+	if err != nil {
+		return Call{}, err
+	}
+	out, err := h.store.RecordCallTx(ctx, tx, in)
+	if err != nil {
+		return Call{}, err
+	}
+	if _, err := h.store.TakeSnapshot(ctx, tx, NewSnapshot{
+		Period: in.Period, Scope: baseline.Scope, Trigger: TriggerCall,
+		BaseCurrency: baseline.BaseCurrency, Readings: baseline.Readings, TakenAt: submitted,
+		CallID: &out.ID, PopulationFingerprint: baseline.PopulationFingerprint,
+		ForwardMeasure: baseline.ForwardMeasure, QualifiedPolicyVersion: baseline.QualifiedPolicy,
+	}); err != nil {
+		return Call{}, err
+	}
+	out.HasBaseline = true
+	return out, nil
 }
 
 // scopeFromParams turns the two query keys into one scope, refusing the pairs

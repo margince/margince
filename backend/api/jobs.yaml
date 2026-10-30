@@ -127,6 +127,13 @@ queues:
       bound by the sites it reads and by the model rather than by the
       process: each one spends its time waiting on the network, holds little
       memory, and does not touch Postgres while it waits.
+  assurance_rescan:
+    max_workers: 1
+    reason: >-
+      A one-deal input check takes the same database lock as the nightly pass
+      over every deal, so a second worker would only wait on it. One worker
+      also bounds how much of the database a burst of edits can hold: each
+      changed deal is one job, and the jobs run one after another.
   geocode:
     max_workers: 1
     reason: >-
@@ -617,6 +624,22 @@ kinds:
       eligible deals and one bundling pass. Uniqueness on the workspace makes a
       second press while one is in flight a refusal rather than a second walk.
 
+
+  assurance_deal_rescan:
+    role: worker
+    go_type: AssuranceDealRescanArgs
+    queue: assurance_rescan
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      Deal: id
+    reason: >-
+      The input check over one deal, queued when a change marked that deal's
+      findings out of date. One deal's rules and one bundling pass take
+      seconds; two minutes leaves room to wait for the nightly pass's lock.
+      Unique on the workspace and the deal while one is waiting or running, so
+      a burst of edits to one deal is one job.
 
   close_date_sweep:
     role: worker

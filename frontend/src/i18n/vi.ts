@@ -2000,6 +2000,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
+  "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
   "systemJob.ai_activity_reconcile": "Cập nhật bù hoạt động AI",
   "systemJob.ai_activity_retention": "Dọn dẹp hoạt động AI",
@@ -7413,6 +7414,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.enforcementNotStarted": "Hãy chạy lần kiểm tra đầu tiên trước.",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
   "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
+  "review.callMovedHelp_one":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi: {count} giao dịch đã thay đổi theo cách ảnh hưởng đến dự báo.",
+  "review.callMovedHelp_other":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi: {count} giao dịch đã thay đổi theo cách ảnh hưởng đến dự báo.",
+  "review.callMovedWithheldHelp":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi, kể cả các giao dịch bạn không mở được.",
+  "review.callLimitedHelp":
+    "Nhóm, đơn vị tiền tệ gốc hoặc năm tài chính đã thay đổi kể từ dự báo này, nên không thể so sánh với pipeline hiện tại.",
+  "review.callOpenItsForecast":
+    "Mở dự báo cho nhóm và kỳ của dự báo này để chốt dự báo mới.",
+  "review.callAuthorOnly":
+    "Chỉ quản lý đã chốt dự báo này mới có thể chốt dự báo mới.",
+  "review.submitNewCall": "Chốt dự báo mới",
+  "review.forecastCallMoved": "Cần xem lại dự báo đã chốt",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",
@@ -7445,6 +7460,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cập nhật {date} · cao hơn {gap} so với đã chốt + Commit đã xác nhận",
   "forecast.currentCallDetailUnder":
     "Cập nhật {date} · thấp hơn {gap} so với đã chốt + Commit đã xác nhận",
+  "forecast.callHistoryUnavailable":
+    "Dự báo này được chốt trước khi hệ thống lưu lại pipeline làm căn cứ, nên không thể biết điều gì đã thay đổi kể từ đó.",
   "forecast.currentCallDetailEven":
     "Cập nhật {date} · bằng đã chốt + Commit đã xác nhận",
   "forecast.evidence": "Commit · ngày đã xác nhận",
@@ -8685,6 +8702,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.approval_auto_apply": "Duyệt tự động",
   "jobs.kind.assurance_run": "Kiểm tra dự báo theo yêu cầu",
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
+  "jobs.kind.assurance_deal_rescan":
+    "Kiểm tra dự báo cho một giao dịch đã thay đổi",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
