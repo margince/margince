@@ -65,7 +65,7 @@ func textOrEmpty(value *string) string {
 
 // EvaluateReporting uses the same selection parser as evidence reads.
 func (h Handlers) EvaluateReporting(w http.ResponseWriter, r *http.Request, _ crmcontracts.EvaluateReportingParams) {
-	selection, err := SelectionFromQuery(r.URL.Query())
+	selection, err := SelectionFromQuery(r.URL.Query(), h.opening)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -76,7 +76,7 @@ func (h Handlers) EvaluateReporting(w http.ResponseWriter, r *http.Request, _ cr
 
 // GetReportingEvidence checks the live evaluation receipt before returning source rows.
 func (h Handlers) GetReportingEvidence(w http.ResponseWriter, r *http.Request, params crmcontracts.GetReportingEvidenceParams) {
-	selection, err := SelectionFromQuery(r.URL.Query())
+	selection, err := SelectionFromQuery(r.URL.Query(), h.opening)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -91,9 +91,23 @@ func (h Handlers) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Req
 	respond(w, r, out, err)
 }
 
+// OpeningSelection is what a request that names no metrics opens on.
+//
+// It is passed in rather than spelled here. The catalog publishes it as a
+// preset, the Analytics screen and the daily benchmark both read that preset,
+// and a second copy here drifted from it: the preset had gained two metrics
+// this default never did.
+type OpeningSelection struct {
+	Metrics []crmcontracts.ReportingMetricID
+	Blocks  []crmcontracts.ReportingBlockKind
+}
+
 // SelectionFromQuery gives live views and evidence identical filter parsing.
-func SelectionFromQuery(q url.Values) (crmcontracts.ReportingSelection, error) {
-	selection := crmcontracts.ReportingSelection{Period: reportingThisMonth, TargetBasis: "month", CloseWindow: reportingFiscalQuarter, Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "open_pipeline", reportingStageAge}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "stage_distribution", reportingOwnerAttainment, reportingStageAge}}
+func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.ReportingSelection, error) {
+	selection := crmcontracts.ReportingSelection{
+		Period: reportingThisMonth, TargetBasis: "month", CloseWindow: reportingFiscalQuarter,
+		Metrics: opening.Metrics, Blocks: opening.Blocks,
+	}
 	selection.Scope.Kind = crmcontracts.ReportingScopeKind(q.Get("scope_kind"))
 	for _, binding := range []struct {
 		name        string

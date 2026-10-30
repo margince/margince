@@ -56,6 +56,25 @@ var reportingPresets = []crmcontracts.ReportingPreset{
 	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 }
 
+// openingSelection is what the reporting doors answer a request that names no
+// metrics with: the sales preset, which is what the Analytics screen opens on
+// and what the daily benchmark measures.
+//
+// The doors took a copy of this before, and it had drifted: the preset gained
+// closed_win_rate and qualified_pipeline_created, and the copy did not.
+//
+// An absent sales preset yields an empty selection, which the reporting door
+// refuses as naming no metric. TestTheOpeningSelectionIsTheSalesPreset holds
+// that it is present and that the two agree.
+func openingSelection() reporting.OpeningSelection {
+	for _, preset := range reportingPresets {
+		if preset.Id == crmcontracts.ReportingPresetIdSales {
+			return reporting.OpeningSelection{Metrics: preset.Metrics, Blocks: preset.Blocks}
+		}
+	}
+	return reporting.OpeningSelection{}
+}
+
 // readablePresets narrows each preset to the offered metrics and the charts
 // they draw, so the screen's opening request is one the reader may ask.
 func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcontracts.ReportingPreset {

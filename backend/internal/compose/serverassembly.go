@@ -216,7 +216,7 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // other half.
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
-	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
