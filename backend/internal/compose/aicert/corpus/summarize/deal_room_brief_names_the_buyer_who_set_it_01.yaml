@@ -1,0 +1,75 @@
+name: deal_room_brief_names_the_buyer_who_set_it
+task: summarize
+site: deal_room_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# Two buyers in one thread, one of whom sets the unmet condition. A brief that
+# names the wrong buyer sends the seller to the wrong one of them, and the
+# words alone do not say which it was.
+fixture:
+  title: Clinical records migration
+  state: live
+  buyers:
+    - label: aino
+      name: Aino Lehtinen
+      signed_in: true
+      last_seen_on: "2026-10-24"
+    - label: rasmus
+      name: Rasmus Dahl
+      signed_in: true
+      last_seen_on: "2026-10-24"
+      downloaded: [Security review]
+  documents:
+    - label: security
+      title: Security review
+      group: legal
+  # Three threads wait. The floor counts the two newest, both routine, so
+  # reading the oldest is the model's contribution. Both buyers speak in that
+  # oldest thread, and only one of them sets the condition.
+  threads:
+    - label: schedule
+      comments:
+        - speaker: buyer
+          author: Aino Lehtinen
+          "on": "2026-10-24"
+          body: Could you send the migration schedule for the first wave?
+    - label: contacts
+      comments:
+        - speaker: buyer
+          author: Rasmus Dahl
+          "on": "2026-10-23"
+          body: Who is our named contact during the cutover weekend?
+    - label: penetration
+      document_label: security
+      comments:
+        - speaker: buyer
+          author: Aino Lehtinen
+          "on": "2026-10-21"
+          body: Thanks for the security review, this covers what we asked for.
+        - speaker: buyer
+          author: Rasmus Dahl
+          "on": "2026-10-22"
+          body: >
+            Our board will not approve the migration without a penetration
+            test from the last twelve months.
+expect:
+  outcome: accepted
+  answer:
+    cites_label: penetration
+    names_token: penetration
+    # The opening carries both halves: what the room turns on, and which of
+    # the two buyers set it.
+    leads_with: penetration
+    names_author: Rasmus
+    # Naming the other buyer is the failure, and she is in the same thread
+    # saying the review was fine.
+    avoids: ["aino will not", "aino's board", "aino requires"]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief opens with the unmet condition, a penetration test
+    from the last twelve months, and says Rasmus Dahl set it. Penalise naming
+    Aino Lehtinen as the one withholding approval: her only comment in this
+    thread accepts the review. Penalise any date the summary did not supply.
