@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { DateFormatsProvider } from "../../app/dateformats";
+import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
 import { LocaleProvider, useLocale } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -70,6 +71,13 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
       const url = new URL(req.url, "http://localhost");
       if (url.pathname.endsWith("/me")) {
         return jsonResponse(meFixture({ allow }));
+      }
+      if (url.pathname.endsWith("/installation/settings/fiscal-year-impact")) {
+        return jsonResponse({
+          saved_questions: 14,
+          reports_with_kept_periods: 1,
+          reports_with_relative_periods: 3,
+        });
       }
       if (url.pathname.endsWith("/installation/settings")) {
         if (req.method === "PATCH") {
@@ -687,4 +695,44 @@ describe("the calling switches", () => {
         .disabled,
     ).toBe(false);
   });
+});
+
+// Before a new fiscal start is saved, the admin reads how much saved work it
+// concerns and what happens to it. Nothing is counted until the start moves.
+it("states how many saved questions and reports a new fiscal start concerns, before it is saved", async () => {
+  const user = userEvent.setup();
+  const { fetchMock } = backendFor(SETTINGS_EDITOR);
+  vi.stubGlobal("fetch", fetchMock);
+  const impactAsked = () =>
+    fetchMock.mock.calls.some(([input]) =>
+      String(input instanceof Request ? input.url : input).includes(
+        "fiscal-year-impact",
+      ),
+    );
+
+  render(<InstallationSettingsCard />);
+  const dialog = await openFrom(user, /edit fiscal year starts/i);
+  expect(impactAsked()).toBe(false);
+  await pickOption(
+    user,
+    within(dialog).getByLabelText(/fiscal year starts/i),
+    /^April/,
+  );
+  await waitFor(() => expect(impactAsked()).toBe(true));
+
+  expect(
+    await within(dialog).findByText(
+      "14 saved questions filter on a period. They keep the dates they were saved with.",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(dialog).getByText(
+      "1 report has a card that filters on a period. It keeps its dates.",
+    ),
+  ).toBeTruthy();
+  expect(
+    within(dialog).getByText(
+      "3 reports read this quarter or a fiscal-quarter target. They follow the new start.",
+    ),
+  ).toBeTruthy();
 });

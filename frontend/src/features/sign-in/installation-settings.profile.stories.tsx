@@ -7,7 +7,11 @@ import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
-import { StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import type { InstallationSettings } from "./installation-settings";
 import { InstallationProfileDialog } from "./installation-settings.profile";
 
@@ -36,8 +40,11 @@ const SETTINGS: InstallationSettings = {
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },
 };
 
-function ProfileForm({ locale }: Readonly<{ locale?: "de" | "vi" }>) {
-  const [draft, setDraft] = useState(SETTINGS);
+function ProfileForm({
+  locale,
+  start = SETTINGS,
+}: Readonly<{ locale?: "de" | "vi"; start?: InstallationSettings }>) {
+  const [draft, setDraft] = useState(start);
   return (
     <StoryProviders locale={locale}>
       <DateFormatsProvider>
@@ -72,4 +79,20 @@ export const BaseCurrencyLocked: Story = { render: () => <ProfileForm /> };
 
 export const BaseCurrencyLockedVietnamese: Story = {
   render: () => <ProfileForm locale="vi" />,
+};
+
+// A new fiscal start in the draft: the dialog counts the saved work it
+// concerns and says what happens to it before anything is saved.
+export const FiscalStartMoved: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /installation/settings/fiscal-year-impact": () =>
+        jsonResponse({
+          saved_questions: 14,
+          reports_with_kept_periods: 2,
+          reports_with_relative_periods: 1,
+        }),
+    });
+    return <ProfileForm start={{ ...SETTINGS, fiscal_year_start_month: 4 }} />;
+  },
 };

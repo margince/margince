@@ -1048,8 +1048,21 @@ export const en = {
     "Sent reports keep their readings and question answers for {count} days, then retention erases them.",
   "reporting.questionNotPreviewed":
     "Not shown in a role preview. Each reader’s own access answers this question when they open the report.",
-  "reporting.questionFiltered":
-    "This custom report has filters, which a report card cannot keep. Save a copy without filters; the report’s scope narrows the card.",
+  "reporting.questionBrowse": "Choose from your saved questions",
+  "reporting.questionPopulation": "Saved questions about",
+  "reporting.questionPopulationAll": "Any population",
+  "reporting.questionPickEmpty": "No saved questions here",
+  "reporting.questionPickFiltered": "filtered",
+  "reporting.questionBoundUnsaved":
+    "Save the report to see this question’s answer. The report keeps its filters.",
+  "reporting.questionRestricted":
+    "This question filters on records your access does not cover, so its answer is not shown.",
+  "reporting.questionBoundFiltered":
+    "This question has filters. The report keeps them, and each reader sees what their own access covers.",
+  "reporting.questionBoundPeriod":
+    "This question has filters. Its periods keep the dates they had when it was placed: a fiscal year starting in {month}, in {zone}.",
+  "reporting.fiscalQuarterNote":
+    "This quarter follows the fiscal year that starts in {month}.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":
@@ -13207,7 +13220,22 @@ export const en = {
     "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
-    "Reports group by this year and quarter. Changing it relabels every report and shifts the months saved period filters cover.",
+    "Reports group by this year and quarter. Changing it relabels every report. A saved period such as 2026 keeps the months it covered.",
+  "installationSettings.fiscalImpactTitle": "What this change does",
+  "installationSettings.fiscalImpactQuestions_one":
+    "{count} saved question filters on a period. It keeps the dates it was saved with.",
+  "installationSettings.fiscalImpactQuestions_other":
+    "{count} saved questions filter on a period. They keep the dates they were saved with.",
+  "installationSettings.fiscalImpactKept_one":
+    "{count} report has a card that filters on a period. It keeps its dates.",
+  "installationSettings.fiscalImpactKept_other":
+    "{count} reports have a card that filters on a period. They keep their dates.",
+  "installationSettings.fiscalImpactRelative_one":
+    "{count} report reads this quarter or a fiscal-quarter target. It follows the new start.",
+  "installationSettings.fiscalImpactRelative_other":
+    "{count} reports read this quarter or a fiscal-quarter target. They follow the new start.",
+  "installationSettings.fiscalImpactLoading":
+    "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",
   "installationSettings.forwardMeasureHint":
     "Which open deals the projection adds to won revenue.",

@@ -15,7 +15,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import {
   savedQuestionLabel,
   savedQuestionShape,
-  useAllSavedQuestions,
+  useSavedQuestions,
 } from "./analytics.questions.saved";
 import { customLabels, entityLabel } from "./analytics.questions.vocab";
 import { useAnalyticsSchema } from "./analytics.schema";
@@ -366,8 +366,10 @@ function AddCard({
 
 /**
  * Adds a saved custom question: one of the reader's own from a list, or any
- * other from its link. The card keeps a copy of the question, so a later save
- * of another question does not move a published report.
+ * other from its link. The card is bound to the question when the report is
+ * saved, filters included. The server keeps the filters, so no reader of the
+ * report receives them, and a later save of another question does not move a
+ * published report.
  */
 function AddQuestion({
   layout,
@@ -378,27 +380,14 @@ function AddQuestion({
 }>) {
   const t = useT();
   const [link, setLink] = useState("");
-  // A filtered question cannot ride a report: every reader receives the
-  // question, and a filter value can name a record they may not open.
-  const [filtered, setFiltered] = useState(false);
   const runId = runIdOf(link);
-  const saved = useAllSavedQuestions();
-  const { locale } = useLocale();
-  const zone = useRecordZone();
-  const schema = useAnalyticsSchema();
-  const fields = customLabels(t, schema.data?.entities ?? []);
-  // A filtered one is left out, as it is refused by link. One the report
-  // already holds is left out so it is not placed twice.
-  const placed = new Set(
-    layout
-      .flatMap((section) => section.cards)
-      .flatMap((card) => (card.question ? [sameQuestion(card.question)] : [])),
-  );
-  const pickable = saved.filter(
-    (run) =>
-      !run.filtered &&
-      !placed.has(sameQuestion(cardQuestion(savedQuestionShape(run)))),
-  );
+  const add = (run: string, asked: Parameters<typeof cardQuestion>[0]) =>
+    onChange(
+      edit.addQuestion(layout, {
+        ...cardQuestion(asked),
+        saved_question_id: run,
+      }),
+    );
   const read = useMutation({
     mutationFn: async (id: string) =>
       unwrap(
@@ -407,11 +396,7 @@ function AddQuestion({
         }),
       ),
     onSuccess: (run) => {
-      if (run.query.filters?.length) {
-        setFiltered(true);
-        return;
-      }
-      onChange(edit.addQuestion(layout, cardQuestion(run.query)));
+      add(run.id, run.query);
       setLink("");
     },
   });
@@ -419,24 +404,7 @@ function AddQuestion({
     return null;
   return (
     <div className="form-stack">
-      {pickable.length > 0 && (
-        <Select
-          aria-label={t("reporting.questionPick")}
-          value=""
-          placeholder={t("reporting.questionPickNone")}
-          options={pickable.map((run) => ({
-            value: run.id,
-            label: `${savedQuestionLabel(t, run, fields)} · ${formatDate(run.asked_at, locale, zone)}`,
-          }))}
-          onChange={(id) => {
-            const run = pickable.find((candidate) => candidate.id === id);
-            if (run)
-              onChange(
-                edit.addQuestion(layout, cardQuestion(savedQuestionShape(run))),
-              );
-          }}
-        />
-      )}
+      <SavedQuestionPicker layout={layout} onPick={add} />
       <Field
         label={t("reporting.questionLink")}
         hint={link && !runId ? t("reporting.questionLinkInvalid") : undefined}
@@ -445,15 +413,11 @@ function AddQuestion({
           <TextInput
             {...field}
             value={link}
-            onChange={(event) => {
-              setLink(event.target.value);
-              setFiltered(false);
-            }}
+            onChange={(event) => setLink(event.target.value)}
           />
         )}
       </Field>
       <ErrorLine error={read.error} />
-      {filtered && <ErrorLine>{t("reporting.questionFiltered")}</ErrorLine>}
       <div>
         <Button
           disabled={!runId}
@@ -463,6 +427,103 @@ function AddQuestion({
           {t("reporting.addQuestion")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The author's own saved questions, read a page at a time once the author asks
+ * for them, about one population when one is chosen. A row names its question
+ * and asks nothing.
+ */
+function SavedQuestionPicker({
+  layout,
+  onPick,
+}: Readonly<{
+  layout: ReportingLayout;
+  onPick: (run: string, asked: Parameters<typeof cardQuestion>[0]) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const schema = useAnalyticsSchema();
+  const fields = customLabels(t, schema.data?.entities ?? []);
+  const [browsing, setBrowsing] = useState(false);
+  const [entity, setEntity] = useState("");
+  const saved = useSavedQuestions(entity || undefined, browsing);
+  if (!browsing)
+    return (
+      <div>
+        <Button variant="ghost" onClick={() => setBrowsing(true)}>
+          {t("reporting.questionBrowse")}
+        </Button>
+      </div>
+    );
+  // An unfiltered question the report already asks is not offered again. A
+  // filtered one is told apart by filters the page never sees, so it stays.
+  const placed = new Set(
+    layout
+      .flatMap((section) => section.cards)
+      .flatMap((card) =>
+        card.question && !card.question.binding
+          ? [sameQuestion(card.question)]
+          : [],
+      ),
+  );
+  const pickable = (saved.data?.pages ?? [])
+    .flatMap((page) => page.data)
+    .filter(
+      (run) =>
+        run.filtered ||
+        !placed.has(sameQuestion(cardQuestion(savedQuestionShape(run)))),
+    );
+  return (
+    <div className="form-stack">
+      <Select
+        aria-label={t("reporting.questionPopulation")}
+        value={entity}
+        options={[
+          { value: "", label: t("reporting.questionPopulationAll") },
+          ...(schema.data?.entities ?? []).map((candidate) => ({
+            value: candidate.name,
+            label: entityLabel(t, candidate.name),
+          })),
+        ]}
+        onChange={setEntity}
+      />
+      {saved.isError && <ErrorLine error={saved.error} />}
+      {saved.isPending ? (
+        <p className="t-caption">{t("analytics.q.savedLoading")}</p>
+      ) : (
+        <Select
+          aria-label={t("reporting.questionPick")}
+          value=""
+          placeholder={
+            pickable.length > 0
+              ? t("reporting.questionPickNone")
+              : t("reporting.questionPickEmpty")
+          }
+          options={pickable.map((run) => ({
+            value: run.id,
+            label: `${savedQuestionLabel(t, run, fields)} · ${formatDate(run.asked_at, locale, zone)}${run.filtered ? ` · ${t("reporting.questionPickFiltered")}` : ""}`,
+          }))}
+          onChange={(id) => {
+            const run = pickable.find((candidate) => candidate.id === id);
+            if (run) onPick(run.id, savedQuestionShape(run));
+          }}
+        />
+      )}
+      {saved.hasNextPage && (
+        <div>
+          <Button
+            variant="ghost"
+            pending={saved.isFetchingNextPage}
+            onClick={() => saved.fetchNextPage()}
+          >
+            {t("analytics.q.savedMore")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -9060,6 +9060,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/reports/{id}/questions/{card_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A question card's answer, asked on the server for this reader.
+         * @description Asks the question a card holds, as the reader may ask it now. A bound card asks the
+         *     saved question the report keeps, filters included, and the reader never receives the
+         *     filters. Before anything is asked, every value the question filters on is checked
+         *     against what the reader may see: a record they may not open, an owner they may not
+         *     measure or a field outside their vocabulary answers `restricted`.
+         *
+         *     The report's population and the question's own must both hold, and so must every
+         *     filter. A question that cannot hold inside the report is refused with the reason;
+         *     nothing is dropped to make it run. The floor and its complementary withholding apply
+         *     as they do to `/analytics/query`.
+         */
+        get: operations["answerReportingQuestionCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/questions/{card_id}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records behind one cell of a question card.
+         * @description The evidence for one cell of a card's answer, the question taken from the report as
+         *     the answer is. A reader for whom the answer is `restricted` is answered 404.
+         */
+        post: operations["explainReportingQuestionCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/targets": {
         parameters: {
             query?: never;
@@ -12797,6 +12855,28 @@ export interface paths {
          *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
+        trace?: never;
+    };
+    "/installation/settings/fiscal-year-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much saved work reads a period, before the fiscal start moves (admin/ops).
+         * @description Counts the saved questions and reports a move of `fiscal_year_start_month` concerns, so
+         *     the admin reads the number before saving. Governed by the `installation_settings`
+         *     RBAC object's update grant.
+         */
+        get: operations["getFiscalYearImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/installation/configuration": {
@@ -23217,12 +23297,12 @@ export interface components {
              *     a reader can tell which twelve months a bucket covers without knowing the
              *     convention. A January year is not a span and keeps the plain `2026`.
              *
-             *     One thing it does NOT carry, and a client storing report filters should know it:
-             *     a SAVED report view holds the bucket's text, so a view saved under one fiscal
-             *     start names a different span after the start moves — or no span at all, since a
-             *     calendar year maps onto parts of two fiscal years. The report still runs and
-             *     still looks right. Whether such a view is re-pointed, invalidated or merely
-             *     warned about is undecided: margince/margince#2569.
+             *     A saved question, or a report card bound to one, that filters on a period keeps
+             *     the zone and fiscal start it was saved under, so `2026` saved under a January start
+             *     still means January to December 2026 after the start moves: the move writes down the
+             *     calendar in force before it. A relative period, such as this quarter, follows the
+             *     current setting.
+             *     `/installation/settings/fiscal-year-impact` counts both before a move.
              */
             fiscal_year_start_month: number;
             /**
@@ -23351,10 +23431,8 @@ export interface components {
              *     reports on read and stores nothing, so moving it re-labels every period report at
              *     once and re-means no stored row.
              *
-             *     It does not re-point a SAVED report view, which holds the bucket's TEXT and so
-             *     names a different span afterwards. Sending this field is enough to leave those
-             *     views filtering on a span nobody asked for; nothing here reports how many.
-             *     margince/margince#2569.
+             *     A saved period filter keeps the dates it was saved with, and a relative period
+             *     follows the new start. `/installation/settings/fiscal-year-impact` counts both.
              */
             fiscal_year_start_month?: number;
             /**
@@ -40258,11 +40336,10 @@ export interface components {
         ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "question";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
-         *     `question`. The page asks it through `/analytics/query` for each reader, under their
-         *     own grants and over the report's scope. Every reader of the report receives it, so it
-         *     carries no filters (a filter value can name a record a reader may not open), no scope
-         *     and no save. A sent edition keeps the answer its sender was given, as
-         *     `ReportingEditionQuestion` describes.
+         *     `question`. Every reader of the report receives it, so it carries no filters (a filter
+         *     value can name a record a reader may not open), no scope and no save. A sent edition
+         *     keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+         *     with `binding` asks a saved question the server keeps, filters and all.
          */
         ReportingCardQuestion: {
             /** @description The population, by name. */
@@ -40271,6 +40348,49 @@ export interface components {
             measures: components["schemas"]["AnalyticsMeasure"][];
             /** @description The rows the card shows; 100 when absent. */
             limit?: number;
+            /**
+             * Format: uuid
+             * @description Sent on a save to bind the card to this saved question. Never served back.
+             */
+            saved_question_id?: string;
+            /** @description The opaque reference to the saved question a bound card asks. Send it back unchanged to keep it. */
+            binding?: string;
+        };
+        /** @description What every reader of a report may know of the saved question a card is bound to. */
+        ReportingQuestionBinding: {
+            /** @description Whether the question narrows its population with filters. */
+            filtered: boolean;
+            period_basis?: components["schemas"]["ReportingPeriodBasis"];
+        };
+        /** @description The calendar a kept question's period filters keep their dates in. */
+        ReportingPeriodBasis: {
+            timezone: string;
+            fiscal_year_start_month: number;
+        };
+        /**
+         * @description A bound question card's answer for this reader. `restricted`: the reader may not see a
+         *     value the question filters on, so nothing of the answer is shown: no rows, no labels
+         *     and no total.
+         */
+        ReportingQuestionAnswer: {
+            /** @enum {string} */
+            status: "answered" | "restricted";
+            binding?: components["schemas"]["ReportingQuestionBinding"];
+            answer?: components["schemas"]["AnalyticsAnswer"];
+        };
+        /**
+         * @description What a move of the fiscal year start does to saved work, counted before the move is
+         *     saved. A saved question or a report card that filters on a period such as `2026` keeps
+         *     the dates it was saved with. A report that reads a relative period, such as this
+         *     quarter, follows the new start.
+         */
+        InstallationFiscalYearImpact: {
+            /** @description Saved questions, of every member, that filter on a period. */
+            saved_questions: number;
+            /** @description Live reports with a card whose saved question filters on a period. */
+            reports_with_kept_periods: number;
+            /** @description Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window. */
+            reports_with_relative_periods: number;
         };
         ReportingCard: {
             /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
@@ -40306,6 +40426,8 @@ export interface components {
             framework_revision: number;
             definition_version: string;
             member_ids: string[];
+            /** @description The fiscal start month in force. Absent on older editions. */
+            fiscal_year_start_month?: number;
             /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
             scope_holds_deals?: boolean;
         };
@@ -67862,6 +67984,88 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    answerReportingQuestionCard: {
+        parameters: {
+            query?: {
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The answer, or that it is restricted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingQuestionAnswer"];
+                };
+            };
+            /** @description The question cannot be asked inside this report, or for this reader. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainReportingQuestionCard: {
+        parameters: {
+            query?: {
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCell"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this reader may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The question cannot be asked inside this report, or the cell does not fit it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listReportingTargets: {
         parameters: {
             query?: {
@@ -73083,6 +73287,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getFiscalYearImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationFiscalYearImpact"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getInstallationConfiguration: {
@@ -83278,6 +83504,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Only the questions about this population. */
+                entity?: string;
             };
             header?: never;
             path?: never;
