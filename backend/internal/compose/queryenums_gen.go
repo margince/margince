@@ -236,8 +236,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
-		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief"}, Array: false, Explode: true},
+		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
+		{Name: "view", Values: []string{"today", "decisions", "system"}, Array: false, Explode: true},
 	},
 }
 

@@ -49740,7 +49740,7 @@ export interface components {
          *
          *     | Figure | Unit | Counted over | Exact or floor |
          *     |---|---|---|---|
-         *     | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+         *     | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
          *     | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
          *     | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
          *     | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
@@ -49789,7 +49789,12 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            /**
+             * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
+             * @enum {string}
+             */
+            view?: "today" | "decisions" | "system";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -50273,7 +50278,7 @@ export interface components {
              * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "upcoming";
             /** @description How many items of this kind were read and ranked, before any narrowing. */
             considered: number;
             /** @description How many of them the page carries, counting a folded group as its members. */
@@ -50327,7 +50332,7 @@ export interface components {
             in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
-            /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
+            /** @description How many candidates the requested view holds. The same population as the `considered` figures of that view's categories. Upcoming work is never counted here: none of it is due today. */
             total: number;
             buckets?: components["schemas"]["WorklistBuckets"];
             /**
@@ -50884,7 +50889,7 @@ export interface components {
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "upcoming";
             /** @description Whether this work contributes to the urgent summary, independent of a personal pin. */
             urgent?: boolean;
             owner?: components["schemas"]["WorklistOwner"];
@@ -72077,8 +72082,34 @@ export interface operations {
                  *     already draws as cards. With no run to compare against it answers empty rather
                  *     than everything: absent is not false, and a reader asking what changed since a
                  *     night that never happened is owed nothing, not the whole queue.
+                 *
+                 *     `upcoming` is planned work due after today: the Upcoming and backlog section
+                 *     at the end of the Today view. These rows never appear in a queue that does not
+                 *     ask for them, and `summary` never counts them; `counts` reports them under the
+                 *     `upcoming` category.
+                 *
+                 *     Every value belongs to one view. `decisions` belongs to the Decisions view,
+                 *     `system` to the System view, `all` to every view, and the rest to Today.
+                 *     Without `view`, `filter=decisions` and `filter=system` are read as that view.
+                 *     A filter sent with a view it does not belong to returns
+                 *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                /**
+                 * @description Which work view to answer. `today` is work a seller executes: every category
+                 *     except `decisions` and `system`. `decisions` is judgements somebody owes, and
+                 *     `system` is problems the product reports about itself. A view narrows the
+                 *     queue before the page is cut, so paging never reaches another view's rows.
+                 *
+                 *     Omitted means no view: the whole day, as before views existed, except that
+                 *     `filter=decisions` and `filter=system` open their view. `summary` counts the
+                 *     requested view only; `counts` still reports every category, so a client can
+                 *     label the other views without a second read.
+                 *
+                 *     A cursor encodes the view it was minted under, and a cursor sent with another
+                 *     view returns `422 code: cursor_param_mismatch`.
+                 */
+                view?: "today" | "decisions" | "system";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**

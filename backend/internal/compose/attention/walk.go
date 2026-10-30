@@ -363,7 +363,7 @@ func (s *Service) freezeWalk(
 	}
 	id, err := s.walks.Freeze(
 		s.detached(ctx), fingerprint(scope, filter, s.taskOwner), asOf,
-		frozenBuckets(bucketsOf(rows)), frozenRows(rows))
+		frozenBuckets(bucketsOf(outstanding(rows, s.view))), frozenRows(rows))
 	if err != nil {
 		return walkState{}
 	}
