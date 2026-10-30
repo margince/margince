@@ -11,10 +11,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type redecodableMailText struct {
@@ -41,42 +39,12 @@ const redecodableMailTextScope = `FROM activity a ` + mailOriginalJoin + `
 
 // redecodeMailTextBatch inspects a page of stored mail and rewrites the text a
 // parser wrote before it read the message's charset.
-//
-// It advances over every row it inspects, because whether a row needs the
-// repair is a comparison against the re-parse that no SQL expresses. So a page
-// that changes nothing still moves the cursor.
 func redecodeMailTextBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	after, err := datatask.UUIDCursor(in.Cursor)
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.subject, a.body, a.body_completeness, rc.payload `+
-		redecodableMailTextScope+`
-		AND a.id > @redecodable_after ORDER BY a.id LIMIT @redecodable_limit FOR UPDATE OF a`,
-		pgx.NamedArgs{"redecodable_after": after, "redecodable_limit": in.Limit})
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[redecodableMailText])
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	scanned := make([]ids.UUID, 0, len(candidates))
-	changed := 0
-	for _, candidate := range candidates {
-		scanned = append(scanned, candidate.ID)
-		rewritten, err := redecodeMailText(ctx, tx, candidate)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if rewritten {
-			changed++
-		}
-	}
-	return datatask.AdvanceUUID(in, scanned, changed)
+	return pageStoredMail(ctx, tx, in,
+		"a.id, a.version, a.subject, a.body, a.body_completeness, rc.payload",
+		redecodableMailTextScope,
+		func(c redecodableMailText) ids.UUID { return c.ID },
+		redecodeMailText)
 }
 
 // redecodeMailText rewrites one row's text from its stored original. The
@@ -118,11 +86,5 @@ func redecodeMailText(ctx context.Context, tx pgx.Tx, candidate redecodableMailT
 // left to correct. That is why this step is not EmptyWhenDone. A finished pass
 // still has rows in scope, which is the pass having read them.
 func estimateRedecodableMailText(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
-		return 0, false, err
-	}
-	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+redecodableMailTextScope+" LIMIT @redecodable_cap) candidates",
-		pgx.NamedArgs{"redecodable_cap": maximum + 1}).Scan(&count)
-	return min(count, maximum), count > maximum, err
+	return countStoredMail(ctx, q, redecodableMailTextScope, maximum)
 }
