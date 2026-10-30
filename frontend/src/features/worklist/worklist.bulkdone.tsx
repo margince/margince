@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
@@ -199,6 +199,7 @@ export function WorklistBulkBar({
   const { eligible, rows, selecting, select, selectAll, untick, stop } =
     selection;
   const putDown = usePutDownRows();
+  const trigger = useFocusBackToSelect(selecting);
   if (eligible.length === 0 && request === null) {
     return null;
   }
@@ -208,7 +209,9 @@ export function WorklistBulkBar({
   if (!selecting && request === null) {
     return (
       <SelectionBar>
-        <Button onClick={select}>{t("worklist.bulk.select")}</Button>
+        <Button ref={trigger} onClick={select}>
+          {t("worklist.bulk.select")}
+        </Button>
       </SelectionBar>
     );
   }
@@ -262,11 +265,25 @@ export function WorklistBulkBar({
         onClose={() => setRequest(null)}
         onDone={() => {
           setRequest(null);
-          stop();
+          // Only the completed rows leave; other picks stay ticked.
+          untick(completing);
+          if (leaving.length === 0) stop();
         }}
       />
     </SelectionBar>
   );
+}
+
+// Selection mode removes the button that was pressed to close it, so focus
+// returns to Select once the mode ends.
+function useFocusBackToSelect(selecting: boolean) {
+  const trigger = useRef<HTMLButtonElement>(null);
+  const wasSelecting = useRef(selecting);
+  useEffect(() => {
+    if (wasSelecting.current && !selecting) trigger.current?.focus();
+    wasSelecting.current = selecting;
+  }, [selecting]);
+  return trigger;
 }
 
 // Each record once: two rows may name one record, and the change refuses an

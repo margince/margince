@@ -307,6 +307,85 @@ describe("marking the ticked rows done", () => {
   });
 });
 
+describe("completing part of a mixed selection", () => {
+  it("unticks only the completed rows and stays in selection mode", async () => {
+    stub(
+      day({
+        queue: [aTask, aDealAtRisk],
+        summary: { urgent: 0, due: 0, lower_priority: 2, total: 2 },
+      }),
+    );
+    const passthrough = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/bulk/preview")) {
+          return jsonResponse({
+            record_type: "worklist_item",
+            verb: "complete",
+            count: 1,
+            affected: [aTask.id],
+            excluded: [],
+            sample: [],
+            requires_confirmation: false,
+            confirm_token: "token-1",
+          });
+        }
+        if (url.endsWith("/bulk/execute")) {
+          return jsonResponse({
+            batch_id: "01a05500-0000-7000-8000-0000000000b2",
+            changed: 1,
+            skipped: [],
+          });
+        }
+        return passthrough(input, init);
+      }),
+    );
+    renderUnderAToastRegion();
+    const user = await startSelecting();
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.bulk.selectAll_other"].replace("{count}", "2"),
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.bulk.complete_one"].replace("{count}", "1"),
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["bulk.confirmComplete"] }),
+    );
+
+    await waitFor(() => {
+      expect(
+        (selectBox("Send the retrofit quote") as HTMLInputElement).checked,
+      ).toBe(false);
+    });
+    expect(
+      (selectBox("Retrofit for the north plant") as HTMLInputElement).checked,
+    ).toBe(true);
+  });
+});
+
+describe("leaving selection mode", () => {
+  it("gives focus back to Select when Cancel closes the mode", async () => {
+    stub(theDay());
+    renderUnderAToastRegion();
+    const user = await startSelecting();
+
+    await user.click(
+      screen.getByRole("button", { name: en["worklist.bulk.cancel"] }),
+    );
+
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: en["worklist.bulk.select"] }),
+    );
+  });
+});
+
 describe("a queue that mixes rows that can be ticked with rows that cannot", () => {
   it("keeps a slot where a row has no box, so the ranks line up", async () => {
     stub(theDay());
