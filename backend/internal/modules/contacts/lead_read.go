@@ -146,7 +146,8 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL + `, company_id, ` + leadIndustryField + `, ` + leadCompanyFactsSQL(ctx), nil
+	legal_hold, ` + leadHasInboundSQL + `, company_id, ` + leadIndustryField + `, ` + leadCompanyFactsSQL(ctx) + `,
+	partner_company_id, partner_accepted_at, partner_accepted_by`, nil
 }
 
 // readLead resolves one lead row; active names the custom-field columns
@@ -190,9 +191,13 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 }
 
 // withholdUnreadableLinks blanks each record id on a lead its reader cannot
-// open. Those are the contact it was worked from and its linked company.
+// open. Those are the contact it was worked from, its linked company and the
+// partner that referred it.
 func withholdUnreadableLinks(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
 	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
+		return err
+	}
+	if err := withholdUnreadablePartners(ctx, tx, leads); err != nil {
 		return err
 	}
 	return withholdUnreadableCompanies(ctx, tx, leads)
@@ -229,7 +234,7 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID *ids.UUID
+	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
@@ -252,7 +257,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&statusSetBy, &qualifiedDeal, &evidence,
 		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
 		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
-		&l.Industry, &companyFacts,
+		&l.Industry, &companyFacts, &partnerCompany, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -273,6 +278,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.MergedIntoId = uuidPtr(mergedInto)
 	l.FromContactId = uuidPtr(fromContact)
 	l.CompanyId = uuidPtr(companyID)
+	l.PartnerCompanyId = uuidPtr(partnerCompany)
 	if err := scanLeadCompanyFacts(&l, companyFacts); err != nil {
 		return l, err
 	}

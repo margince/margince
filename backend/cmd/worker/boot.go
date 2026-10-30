@@ -370,6 +370,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
 
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
+	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
 	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)

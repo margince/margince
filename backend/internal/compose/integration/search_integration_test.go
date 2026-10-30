@@ -344,7 +344,7 @@ func TestThePartnerMarkerNeverOutseesTheCompanyRowScope(t *testing.T) {
 	// Captured privately by a rep on the other team, so rep1 may not read it.
 	hidden := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 	                       VALUES ($1, 'Wismar Private AG', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
-	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, hidden)
+	e.SeedID(t, `INSERT INTO partner (id, company_id, relationship_stage, source, captured_by) VALUES ($1, $2, 'research', 'manual', 'human:x')`, hidden)
 	rep := searchSeat(e, []ids.UUID{e.Team1}, principal.RowScopeTeam, searchGrantsWithPartner())
 
 	page, err := partnerMarkingStore(e).Search(rep, search.Input{Query: "wismar", Types: []string{"company"}})
@@ -378,8 +378,8 @@ func seedWismarAccounts(t *testing.T, e *SearchEnv) (partner, none, retired ids.
 		return e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
 	}
 	partner, none, retired = company("Wismar Werft AG"), company("Wismar Freight GmbH"), company("Wismar Rigging KG")
-	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, partner)
-	e.SeedID(t, `INSERT INTO partner (id, company_id, source, captured_by, archived_at) VALUES ($1, $2, 'manual', 'human:x', now())`, retired)
+	e.SeedID(t, `INSERT INTO partner (id, company_id, relationship_stage, source, captured_by) VALUES ($1, $2, 'research', 'manual', 'human:x')`, partner)
+	e.SeedID(t, `INSERT INTO partner (id, company_id, relationship_stage, source, captured_by, archived_at) VALUES ($1, $2, 'research', 'manual', 'human:x', now())`, retired)
 	return partner, none, retired
 }
 

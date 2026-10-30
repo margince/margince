@@ -11,7 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
+import { toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { PartnersScreen, PartnerTab } from "./partners";
@@ -19,7 +19,7 @@ import { PartnersScreen, PartnerTab } from "./partners";
 // Partner tab (company 360) + #/partners list (P-6): the Partner tab treats
 // GET /companies/{id}/partner's 404 as "not a partner yet" (an honest
 // empty state + setup form), never as an error; the list reads GET /partners
-// with role/cert filters and a row click goes to that company's 360.
+// with kind, stage and cert filters and a row click goes to that company's 360.
 
 afterEach(() => {
   cleanup();
@@ -61,8 +61,12 @@ function stubFetch(
 ) {
   const urls: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
-    if (new URL(request.url).pathname.endsWith("/me")) {
+    const path = new URL(request.url).pathname;
+    if (path.endsWith("/me")) {
       return jsonResponse(me);
+    }
+    if (path.endsWith("/partner-stages")) {
+      return jsonResponse({ data: STAGES });
     }
     urls.push(request.url);
     return responder(request.url, request.method, request);
@@ -71,12 +75,41 @@ function stubFetch(
   return { fetchMock, urls };
 }
 
+function stage(key: string, label: string, sort: number, active = true) {
+  return {
+    id: `s-${key}`,
+    key,
+    label,
+    label_key: null,
+    meaning: "candidate",
+    sort_order: sort,
+    active,
+    system: true,
+    partner_count: 0,
+    version: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+// An installation's own ladder: renamed, with a stage retired.
+const STAGES = [
+  stage("scouting", "Scouting", 5),
+  stage("research", "Research", 10, false),
+  stage("contract_signed", "Signed up", 70),
+  stage("active", "Live", 100),
+];
+
 const partner = {
   company_id: "o-1",
+  partner_kinds: ["hosting", "referral"],
   partner_role: "hosting",
   cert_status: "certified",
   margin_tier: "tier2_20",
   relationship_stage: "active",
+  stage_label: "Live",
+  stage_meaning: "active",
+  activated_at: "2026-05-04T10:00:00Z",
   next_step: "Renew certification",
   next_step_due_at: "2026-08-01",
   served_segments: ["mid-market"],
@@ -86,7 +119,7 @@ const partner = {
 };
 
 describe("PartnerTab — not yet a partner", () => {
-  it("shows the setup form and PUTs the chosen role with no If-Match", async () => {
+  it("shows the setup form and PUTs the chosen kinds with no If-Match", async () => {
     const user = userEvent.setup();
     let putBody: unknown = null;
     let putHeader: string | null = null;
@@ -107,15 +140,19 @@ describe("PartnerTab — not yet a partner", () => {
     await waitFor(() =>
       expect(screen.getByText("Not a partner yet")).toBeTruthy(),
     );
-    await pickOption(
-      user,
-      screen.getByLabelText("Partner role *"),
+    const create = screen.getByRole("button", { name: "Create" });
+    expect(create).toBeDisabled();
+    await toggleOptions(user, screen.getByLabelText("Partner kinds *"), [
+      "Referral",
       "Consulting",
-    );
-    await user.click(screen.getByRole("button", { name: "Create" }));
+    ]);
+    await user.click(create);
 
     await waitFor(() => expect(putBody).toBeTruthy());
-    expect(putBody).toMatchObject({ partner_role: "consulting" });
+    expect(putBody).toMatchObject({
+      partner_kinds: ["consulting", "referral"],
+    });
+    expect(putBody).not.toHaveProperty("relationship_stage");
     expect(putHeader).toBeNull();
   });
 
@@ -162,6 +199,9 @@ describe("PartnerTab — a company editor without the partner grant", () => {
     return {
       tier,
       create: async () => {
+        await toggleOptions(user, screen.getByLabelText("Partner kinds *"), [
+          "Hosting",
+        ]);
         await user.click(screen.getByRole("button", { name: "Create" }));
         await waitFor(() => expect(putBody).toBeTruthy());
         return putBody ?? {};
@@ -179,7 +219,7 @@ describe("PartnerTab — a company editor without the partner grant", () => {
     );
     expect(tier).toBeDisabled();
     const body = await create();
-    expect(body).toMatchObject({ partner_role: "hosting" });
+    expect(body).toMatchObject({ partner_kinds: ["hosting"] });
     expect(body).not.toHaveProperty("margin_tier");
   });
 
@@ -248,6 +288,8 @@ describe("PartnerTab — existing partner", () => {
     await waitFor(() =>
       expect(screen.getByText("Renew certification")).toBeTruthy(),
     );
+    expect(screen.getByText("Hosting, Referral")).toBeTruthy();
+    expect(screen.getByText("Live")).toBeTruthy();
     await userEvent.click(screen.getByTestId("edit-partner"));
 
     const nextStep = await screen.findByLabelText("Next step");
@@ -257,7 +299,35 @@ describe("PartnerTab — existing partner", () => {
 
     await waitFor(() => expect(putBody).toBeTruthy());
     expect(putHeader).toBe("3");
-    expect(putBody).toMatchObject({ next_step: "Book QBR" });
+    expect(putBody).toMatchObject({
+      next_step: "Book QBR",
+      partner_kinds: ["hosting", "referral"],
+      relationship_stage: "active",
+    });
+  });
+
+  it("offers the active stages in ladder order and the retired one the partner stands on", async () => {
+    const user = userEvent.setup();
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse({
+          ...partner,
+          relationship_stage: "research",
+          stage_label: "Research",
+        });
+      }
+      throw new Error(`unexpected request ${method} ${url}`);
+    });
+    render(<PartnerTab companyId="o-1" />);
+
+    await user.click(await screen.findByTestId("edit-partner"));
+    await user.click(await screen.findByLabelText("Relationship stage"));
+    const listbox = await screen.findByRole("listbox");
+    expect(
+      within(listbox)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Scouting", "Research", "Signed up", "Live"]);
   });
 });
 
@@ -304,7 +374,7 @@ describe("PartnerTab — the margin tier", () => {
   });
 });
 
-// The columns picker also offers a "Partner role"/"Certification status"
+// The columns picker also offers a "Partner kinds"/"Certification status"
 // checkbox (one per column, sharing the column header text), so a plain name
 // match is ambiguous — each click is scoped to the filter menu, which names
 // the step it is on: "Filter" while listing attributes, the attribute once one
@@ -326,7 +396,7 @@ async function pickFilter(attribute: string, value: string) {
 }
 
 describe("PartnersScreen", () => {
-  it("lists partners and sends the role filter", async () => {
+  it("lists partners and sends the kind filter", async () => {
     const { urls } = stubFetch(async () =>
       jsonResponse({
         data: [partner],
@@ -336,18 +406,19 @@ describe("PartnersScreen", () => {
     render(<PartnersScreen />);
 
     await waitFor(() => expect(screen.getByText("o-1")).toBeTruthy());
-    expect(screen.getByText("Active")).toBeTruthy();
+    expect(screen.getByText("Live")).toBeTruthy();
+    expect(screen.getByText("Referral")).toBeTruthy();
 
-    await pickFilter("Partner role", "Hosting");
+    await pickFilter("Partner kinds", "Referral");
 
     await waitFor(() =>
-      expect(urls.some((url) => url.includes("partner_role=hosting"))).toBe(
+      expect(urls.some((url) => url.includes("partner_kind=referral"))).toBe(
         true,
       ),
     );
   });
 
-  it("renders no search box (GET /partners has no q param) but keeps the role/cert filters", async () => {
+  it("renders no search box (GET /partners has no q param) but keeps the kind/stage/cert filters", async () => {
     stubFetch(async () =>
       jsonResponse({
         data: [partner],
@@ -361,9 +432,13 @@ describe("PartnersScreen", () => {
     expect(screen.queryByPlaceholderText("Search")).toBeNull();
     expect(screen.queryByLabelText("Show archived")).toBeNull();
     const menu = await openFilterMenu();
-    expect(
-      within(menu).getByRole("button", { name: "Partner role" }),
-    ).toBeTruthy();
+    for (const name of [
+      "Partner kinds",
+      "Stage meaning",
+      "Relationship stage",
+    ]) {
+      expect(within(menu).getByRole("button", { name })).toBeTruthy();
+    }
     expect(
       within(menu).getByRole("button", { name: "Certification status" }),
     ).toBeTruthy();
@@ -382,5 +457,39 @@ describe("PartnersScreen", () => {
     await userEvent.click(screen.getByText("o-1"));
 
     expect(window.location.hash).toBe("#/companies/o-1");
+  });
+});
+
+describe("PartnerTab — activation", () => {
+  function stubPartner(body: Record<string, unknown>) {
+    stubFetch(async (url, method) => {
+      if (url.includes("/companies/o-1/partner") && method === "GET") {
+        return jsonResponse(body);
+      }
+      return jsonResponse({ id: "l-7", full_name: "First Referral" });
+    });
+  }
+
+  it("says a partner active before the stage list has no recorded date", async () => {
+    stubPartner({
+      ...partner,
+      activated_at: null,
+      activation_basis: "recorded_before_ladder",
+    });
+    render(<PartnerTab companyId="o-1" />);
+    expect(
+      await screen.findByText(/Active before the stage list was introduced/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Activated/)).toBeNull();
+  });
+
+  it("names the lead that activated the partner", async () => {
+    stubPartner({
+      ...partner,
+      activation_basis: "lead_accepted",
+      activation_lead_id: "l-7",
+    });
+    render(<PartnerTab companyId="o-1" />);
+    expect(await screen.findByText(/through this lead/)).toBeTruthy();
   });
 });

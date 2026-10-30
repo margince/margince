@@ -476,6 +476,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		ClearScoreOverride:  req.scoreNull || req.reasonNull,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,
 	}

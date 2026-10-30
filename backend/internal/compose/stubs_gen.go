@@ -2423,6 +2423,10 @@ func (stubs) ClearLeadManualSignal(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "ClearLeadManualSignal")
 }
 
+func (stubs) AcceptPartnerLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptPartnerLeadParams) {
+	httperr.NotImplemented(w, r, "AcceptPartnerLead")
+}
+
 func (stubs) PromoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PromoteLeadParams) {
 	httperr.NotImplemented(w, r, "PromoteLead")
 }
@@ -2825,6 +2829,22 @@ func (stubs) PutOnboardingState(w nethttp.ResponseWriter, r *nethttp.Request, pa
 
 func (stubs) GetAgentOpenAPIDocument(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAgentOpenAPIDocument")
+}
+
+func (stubs) ListPartnerStages(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListPartnerStages")
+}
+
+func (stubs) CreatePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreatePartnerStageParams) {
+	httperr.NotImplemented(w, r, "CreatePartnerStage")
+}
+
+func (stubs) DeletePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeletePartnerStage")
+}
+
+func (stubs) UpdatePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdatePartnerStageParams) {
+	httperr.NotImplemented(w, r, "UpdatePartnerStage")
 }
 
 func (stubs) ListPartners(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPartnersParams) {

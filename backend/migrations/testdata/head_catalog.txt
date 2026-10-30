@@ -4992,6 +4992,7 @@ public.idx_lead_merged_into CREATE INDEX idx_lead_merged_into ON public.lead USI
 public.idx_lead_name_trgm CREATE INDEX idx_lead_name_trgm ON public.lead USING gin (f_fold_apostrophes(lower(((COALESCE(full_name, ''::text) || ' '::text) || COALESCE(company_name, ''::text)))) gin_trgm_ops)
 public.idx_lead_origin CREATE INDEX idx_lead_origin ON public.lead USING btree (origin)
 public.idx_lead_owner CREATE INDEX idx_lead_owner ON public.lead USING btree (owner_id) WHERE (archived_at IS NULL)
+public.idx_lead_partner_company CREATE INDEX idx_lead_partner_company ON public.lead USING btree (partner_company_id) WHERE (partner_company_id IS NOT NULL)
 public.idx_lead_project CREATE INDEX idx_lead_project ON public.lead USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_lead_promoted_contact CREATE INDEX idx_lead_promoted_contact ON public.lead USING btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)
 public.idx_lead_qualified_deal CREATE INDEX idx_lead_qualified_deal ON public.lead USING btree (qualified_deal_id) WHERE (qualified_deal_id IS NOT NULL)
@@ -5028,7 +5029,8 @@ public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (d
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
-public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage) WHERE (archived_at IS NULL)
+public.idx_partner_kinds CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds)
+public.idx_partner_stage CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage)
 public.idx_partner_tier CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL)
 public.idx_passport_on_behalf_of CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of)
 public.idx_pph_project CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC)
@@ -5449,6 +5451,8 @@ public.lead.lead_origin_fkey FOREIGN KEY (origin) REFERENCES lead_origin(key) ON
 public.lead.lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))
 public.lead.lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.lead FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.lead.lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))
+public.lead.lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.lead.lead_pkey PRIMARY KEY (id)
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
@@ -5469,6 +5473,9 @@ public.lead.merged_into_id uuid gen=- def=-
 public.lead.origin text gen=- def=-
 public.lead.origin_detail text gen=- def=-
 public.lead.owner_id uuid gen=- def=-
+public.lead.partner_accepted_at timestamp with time zone gen=- def=-
+public.lead.partner_accepted_by text gen=- def=-
+public.lead.partner_company_id uuid gen=- def=-
 public.lead.phone text gen=- def=-
 public.lead.project_id uuid gen=- def=-
 public.lead.promoted_at timestamp with time zone gen=- def=-
@@ -6287,6 +6294,11 @@ public.onboarding_wizard_state.website_url text gen=- def=-
 public.onboarding_wizard_state_pkey CREATE UNIQUE INDEX onboarding_wizard_state_pkey ON public.onboarding_wizard_state USING btree (id)
 public.onboarding_wizard_state_user_id_key CREATE UNIQUE INDEX onboarding_wizard_state_user_id_key ON public.onboarding_wizard_state USING btree (user_id)
 public.partner acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.partner.activated_at timestamp with time zone gen=- def=-
+public.partner.activated_by text gen=- def=-
+public.partner.activation_basis text gen=- def=-
+public.partner.activation_deal_id uuid gen=- def=-
+public.partner.activation_lead_id uuid gen=- def=-
 public.partner.archived_at timestamp with time zone gen=- def=-
 public.partner.captured_by text NOT NULL gen=- def=-
 public.partner.cert_status text NOT NULL gen=- def='applied'::text
@@ -6299,6 +6311,8 @@ public.partner.last_contact_at timestamp with time zone gen=- def=-
 public.partner.margin_tier text gen=- def=-
 public.partner.next_step text gen=- def=-
 public.partner.next_step_due_at date gen=- def=-
+public.partner.partner_activation_basis_check CHECK (((activation_basis IS NULL) OR (activation_basis = ANY (ARRAY['lead_accepted'::text, 'customer_won'::text, 'recorded_before_ladder'::text]))))
+public.partner.partner_activation_pairing CHECK ((((activation_basis IS NULL) AND (activated_at IS NULL) AND (activated_by IS NULL) AND (activation_lead_id IS NULL) AND (activation_deal_id IS NULL)) OR ((activation_basis = 'recorded_before_ladder'::text) AND (activated_at IS NULL) AND (activation_lead_id IS NULL) AND (activation_deal_id IS NULL)) OR ((activation_basis = 'lead_accepted'::text) AND (activated_at IS NOT NULL) AND (activation_lead_id IS NOT NULL)) OR ((activation_basis = 'customer_won'::text) AND (activated_at IS NOT NULL) AND (activation_deal_id IS NOT NULL))))
 public.partner.partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['applied'::text, 'certified'::text, 'suspended'::text])))
 public.partner.partner_certified_staff_check CHECK ((certified_staff >= 0))
 public.partner.partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
@@ -6306,19 +6320,19 @@ public.partner.partner_company_id_key UNIQUE (company_id)
 public.partner.partner_fit_override_reason text gen=- def=-
 public.partner.partner_fit_score smallint gen=- def=-
 public.partner.partner_fit_score_computed smallint gen=- def=-
+public.partner.partner_kinds text[] NOT NULL gen=- def='{}'::text[]
 public.partner.partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text]))))
 public.partner.partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0)))
 public.partner.partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))
 public.partner.partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))
-public.partner.partner_partner_role_check CHECK (((partner_role IS NULL) OR (partner_role = ANY (ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text]))))
+public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text]))
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_health_check CHECK (((relationship_health IS NULL) OR ((relationship_health >= (0)::numeric) AND (relationship_health <= (1)::numeric))))
-public.partner.partner_relationship_stage_check CHECK ((relationship_stage = ANY (ARRAY['research'::text, 'identified'::text, 'contacted'::text, 'in_conversation'::text, 'fit_confirmed'::text, 'agreement_pending'::text, 'active'::text, 'active_referring'::text, 'dormant'::text, 'no_fit'::text])))
+public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
-public.partner.partner_role text gen=- def=-
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_health numeric(3,2) gen=- def=-
-public.partner.relationship_stage text NOT NULL gen=- def='research'::text
+public.partner.relationship_stage text NOT NULL gen=- def=-
 public.partner.renews_at date gen=- def=-
 public.partner.retention_rate smallint gen=- def=-
 public.partner.served_segments text[] gen=- def=-
@@ -6328,6 +6342,29 @@ public.partner.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.partner.version bigint NOT NULL gen=- def=1
 public.partner_company_id_key CREATE UNIQUE INDEX partner_company_id_key ON public.partner USING btree (company_id)
 public.partner_pkey CREATE UNIQUE INDEX partner_pkey ON public.partner USING btree (id)
+public.partner_stage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.partner_stage.active boolean NOT NULL gen=- def=true
+public.partner_stage.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.partner_stage.id uuid NOT NULL gen=- def=uuidv7()
+public.partner_stage.key text NOT NULL gen=- def=-
+public.partner_stage.label text NOT NULL gen=- def=-
+public.partner_stage.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
+public.partner_stage.meaning text NOT NULL gen=- def=-
+public.partner_stage.partner_stage_key_key UNIQUE (key)
+public.partner_stage.partner_stage_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text))
+public.partner_stage.partner_stage_label_present CHECK ((length(btrim(label)) > 0))
+public.partner_stage.partner_stage_meaning_check CHECK ((meaning = ANY (ARRAY['candidate'::text, 'signed'::text, 'ready'::text, 'active'::text, 'dormant'::text, 'ended'::text])))
+public.partner_stage.partner_stage_pkey PRIMARY KEY (id)
+public.partner_stage.partner_stage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.partner_stage.shipped_label text gen=- def=-
+public.partner_stage.shipped_label_key text gen=- def=-
+public.partner_stage.sort_order integer NOT NULL gen=- def=0
+public.partner_stage.system boolean NOT NULL gen=- def=false
+public.partner_stage.trg_partner_stage_updated CREATE TRIGGER trg_partner_stage_updated BEFORE UPDATE ON public.partner_stage FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.partner_stage.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.partner_stage.version bigint NOT NULL gen=- def=1
+public.partner_stage_key_key CREATE UNIQUE INDEX partner_stage_key_key ON public.partner_stage USING btree (key)
+public.partner_stage_pkey CREATE UNIQUE INDEX partner_stage_pkey ON public.partner_stage USING btree (id)
 public.passport acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.passport.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.passport.expires_at timestamp with time zone NOT NULL gen=- def=-

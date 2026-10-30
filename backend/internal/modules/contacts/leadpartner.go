@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// A lead a partner referred: the link to that partner, and the acceptance a
+// partner manager gives it. The first accepted lead activates the partner.
+
+import (
+	"context"
+	"fmt"
+	"slices"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+const leadPartnerField = "partner_company_id"
+
+// PartnerLeadAcceptedError refuses a second acceptance, or a change of partner
+// on a lead already accepted for one: the stamp names the partner it was given
+// for.
+type PartnerLeadAcceptedError struct{ code string }
+
+func (e *PartnerLeadAcceptedError) Error() string {
+	return "the lead was already accepted for its partner"
+}
+
+func (e *PartnerLeadAcceptedError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the contract's code.
+func (e *PartnerLeadAcceptedError) MessageFault() (code, message string) {
+	return e.code, e.Error()
+}
+
+// setLeadPartner folds a new or cleared referring partner onto the patch. The
+// partner must be a live programme the caller can read, and the link is fixed
+// once the lead was accepted for it.
+func setLeadPartner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
+	cleared := slices.Contains(in.Clear, leadPartnerField)
+	if in.PartnerCompanyID == nil && !cleared {
+		return nil
+	}
+	if current.PartnerAcceptedAt != nil {
+		return &PartnerLeadAcceptedError{code: "partner_already_accepted"}
+	}
+	if in.PartnerCompanyID == nil {
+		return nil
+	}
+	partner := *in.PartnerCompanyID
+	if err := auth.EnsureReferenceTarget(ctx, tx, leadPartnerField, companyEntity, partner.UUID); err != nil {
+		return err
+	}
+	if err := EnsureCompanyIsPartner(ctx, tx, partner); err != nil {
+		return err
+	}
+	p.Set(leadPartnerField, current.PartnerCompanyId, partner.UUID)
+	return nil
+}
+
+// withholdUnreadablePartners blanks the referring partner on every lead whose
+// partner company the caller cannot open.
+func withholdUnreadablePartners(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
+	var partnerIDs []ids.UUID
+	for _, l := range leads {
+		if l.PartnerCompanyId != nil {
+			partnerIDs = append(partnerIDs, ids.UUID(*l.PartnerCompanyId))
+		}
+	}
+	if len(partnerIDs) == 0 {
+		return nil
+	}
+	visible, err := auth.VisibleSubset(ctx, tx, companyEntity, partnerIDs)
+	if err != nil {
+		return err
+	}
+	for i := range leads {
+		if leads[i].PartnerCompanyId != nil && !visible[ids.UUID(*leads[i].PartnerCompanyId)] {
+			leads[i].PartnerCompanyId = nil
+		}
+	}
+	return nil
+}
+
+// AcceptPartnerLead records that a partner manager accepted the lead for the
+// partner that referred it, and activates that partner when it is not yet. It
+// takes the partner update grant and write access to the lead and to the
+// partner company.
+func (s *Store) AcceptPartnerLead(ctx context.Context, id ids.LeadID) (crmcontracts.Lead, error) {
+	if err := auth.Require(ctx, partnerMaskObject, principal.ActionUpdate); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	var out crmcontracts.Lead
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
+			return err
+		}
+		lock, err := storekit.LockRow(ctx, tx, "lead", id.UUID, storekit.IncludeArchived)
+		if err != nil {
+			return err
+		}
+		current, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
+		if err != nil {
+			return err
+		}
+		// The stored partner, not the read's: a read blanks a partner the caller
+		// cannot see, and that caller must hear 404, not "no partner".
+		var stored *ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT partner_company_id FROM lead WHERE id = $1`, id).Scan(&stored); err != nil {
+			return fmt.Errorf("read the lead's partner: %w", err)
+		}
+		partner, err := acceptablePartnerLead(ctx, tx, current, stored)
+		if err != nil {
+			return err
+		}
+		if _, err := storekit.LockRow(ctx, tx, "company", partner.UUID, storekit.LiveOnly); err != nil {
+			return err
+		}
+		if err := EnsureCompanyIsPartner(ctx, tx, partner); err != nil {
+			return err
+		}
+		if err := stampPartnerAcceptance(ctx, tx, lock, current, by); err != nil {
+			return err
+		}
+		lead := id.UUID
+		if _, err := activatePartnerTx(ctx, tx, partner,
+			partnerActivationEvidence{basis: activationLeadAccepted, by: by, leadID: &lead}); err != nil {
+			return err
+		}
+		out, err = readLead(ctx, tx, id, storekit.IncludeArchived, nil)
+		return err
+	})
+	return out, err
+}
+
+// acceptablePartnerLead answers the partner a lead may be accepted for, or why
+// it may not be: no partner, a lead that left the open ladder, a stamp already
+// given, or a partner company the caller may not write.
+func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, stored *ids.UUID) (ids.CompanyID, error) {
+	switch {
+	case current.PartnerAcceptedAt != nil:
+		return ids.CompanyID{}, &PartnerLeadAcceptedError{code: "already_accepted"}
+	case current.MergedIntoId != nil:
+		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "lead_merged",
+			"this lead was merged into another; accept the surviving lead instead")
+	case current.Status == crmcontracts.LeadStatusDisqualified:
+		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "lead_disqualified",
+			"a disqualified lead cannot be accepted for a partner; reopen it first")
+	case current.ArchivedAt != nil:
+		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "lead_archived",
+			"an archived lead cannot be accepted for a partner; restore it first")
+	case stored == nil:
+		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "no_partner",
+			"name the partner that referred this lead before accepting it")
+	}
+	partner := ids.From[ids.CompanyKind](*stored)
+	// Acceptance writes the partner's activation, so it takes the write gate
+	// every partner writer takes: an unseen partner is 404, a read share 403.
+	if err := auth.EnsureWritable(ctx, tx, "company", partner.UUID); err != nil {
+		return ids.CompanyID{}, err
+	}
+	return partner, nil
+}
+
+// stampPartnerAcceptance writes who accepted the lead and when, with its audit
+// row and lead.updated.
+func stampPartnerAcceptance(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, current crmcontracts.Lead, by string) error {
+	p := storekit.NewPatch()
+	now := leadSLAClock().UTC()
+	p.Set("partner_accepted_at", current.PartnerAcceptedAt, now)
+	p.Set("partner_accepted_by", current.PartnerAcceptedBy, by)
+	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
+		return fmt.Errorf("stamp the partner acceptance: %w", err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "lead", ids.UUID(current.Id), p.Before(), p.After())
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, ids.UUID(current.Id), crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()})
+}

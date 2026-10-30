@@ -9,6 +9,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -18,7 +19,8 @@ import (
 // SetUpPartnerCommand is one partner set-up, whichever door asked for it.
 type SetUpPartnerCommand struct {
 	CompanyID ids.UUID
-	Role      string
+	Kinds     []string
+	Stage     *string
 }
 
 // NewSetUpPartnerCall binds one set-up to the resolver that answers for it.
@@ -48,16 +50,17 @@ func (r *setUpPartnerResolver) Subject(ctx context.Context, cmd SetUpPartnerComm
 		TargetType:    string(datasource.EntityCompany),
 		TargetID:      cmd.CompanyID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).setUpPartner, recordLabel(rec), cmd.Role),
+		Summary:       fmt.Sprintf(summaryIn(ctx, r.language).setUpPartner, recordLabel(rec), strings.Join(cmd.Kinds, ", ")),
 	}, nil
 }
 
 // Guards refuses before anything is staged what the write would refuse
 // afterwards. Those are an unseen company, a company another system holds, a
-// missing grant, an unwritable company, and a live program.
+// missing grant, an unwritable company, a live program, and a stage the
+// program cannot start on.
 func (r *setUpPartnerResolver) Guards(ctx context.Context, cmd SetUpPartnerCommand) error {
 	if err := r.company.refuse(ctx, cmd.CompanyID); err != nil {
 		return err
 	}
-	return r.partners.Check(ctx, cmd.CompanyID)
+	return r.partners.Check(ctx, cmd.CompanyID, cmd.Stage)
 }

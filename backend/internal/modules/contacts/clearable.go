@@ -67,5 +67,6 @@ func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearab
 		"owner_id":              {Column: ownerIDColumn, Current: current.OwnerId},
 		"origin":                {Column: leadOriginField, Current: current.Origin},
 		"origin_detail":         {Column: leadOriginDetailField, Current: current.OriginDetail},
+		"partner_company_id":    {Column: leadPartnerField, Current: current.PartnerCompanyId},
 	}
 }

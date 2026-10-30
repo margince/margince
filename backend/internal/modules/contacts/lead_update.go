@@ -59,7 +59,9 @@ type UpdateLeadInput struct {
 	ClearScoreOverride bool
 	OwnerID            *ids.UserID
 	ProjectID          *ids.ProjectID
-	IfVersion          *int64
+	// PartnerCompanyID names the partner that referred the lead (setLeadPartner).
+	PartnerCompanyID *ids.CompanyID
+	IfVersion        *int64
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
@@ -255,6 +257,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
 	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := setLeadPartner(ctx, tx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := refuseContactHeldLeadEdit(ctx, tx, current, in); err != nil {

@@ -136,9 +136,11 @@ Also called: restore a lead, undo a disqualification.
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
 1. Click a value or the name at the top, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
-2. Fields: **Full name**, **Email**, **Title**, **Company**, **Industry**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+2. Fields: **Full name**, **Email**, **Title**, **Company**, **Industry**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
+
+**Referred by partner** shows once a company is a partner. A role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean).
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead and choose **Assign** beside **Owner** at its top. Then pick a colleague under **Choose a colleague**.

@@ -262,13 +262,14 @@ var replayableOperations = map[string]replayTarget{
 	},
 	// The reopen answers the lead it put back, keyed on the same row the
 	// disqualify it reverses was keyed on.
-	"POST /v1/leads/{id}/reopen":        {object: tableLead, table: tableLead, idPath: "id"},
-	"POST /v1/activities":               {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/tasks":                    {object: tableActivity, table: tableActivity, idPath: "id"},
-	"PATCH /v1/activities/{id}":         {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/{id}/relink":   {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/relink-thread": {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
-	"POST /v1/activities/relink-bulk":   {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
+	"POST /v1/leads/{id}/reopen":             {object: tableLead, table: tableLead, idPath: "id"},
+	"POST /v1/leads/{id}/partner-acceptance": {object: tableLead, table: tableLead, idPath: "id"},
+	"POST /v1/activities":                    {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/tasks":                         {object: tableActivity, table: tableActivity, idPath: "id"},
+	"PATCH /v1/activities/{id}":              {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/{id}/relink":        {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/relink-thread":      {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
+	"POST /v1/activities/relink-bulk":        {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
 	// A send answers its outbound ACTIVITY when it went now, and its SCHEDULED
 	// SEND when the caller asked for it later — different tables behind the
 	// same "id". scheduled_at is the discriminator because only the second
@@ -421,6 +422,8 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/partner-stages":            {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/partner-stages/{id}":      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/loss-reasons/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PUT /v1/loss-reasons/legacy/{text_hash}": {
 		object: objectCustomField, rowNote: "a mapping is workspace config keyed by a note's hash: it names no deal and has no owner column",
