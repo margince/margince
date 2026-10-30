@@ -161,9 +161,9 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
-// worklistDay is the day read the app sends: reconnections are read only when
-// their panel opens, so the day read omits them.
-const worklistDay = "/v1/worklist?filter=all&relationships=omit&scope="
+// worklistDay is the day read the app sends: its largest page, and no
+// reconnections, which are read only when their panel opens.
+const worklistDay = "/v1/worklist?filter=all&limit=100&relationships=omit&scope="
 
 // worklistCalls sends the view and scope the screen opens on: Today, over the
 // reader's own queue. A manager also times the team scope they pick. Home's
