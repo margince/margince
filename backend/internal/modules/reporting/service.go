@@ -56,6 +56,10 @@ func (f Fact) At() *time.Time {
 type Evaluation struct {
 	Result crmcontracts.ReportingEvaluation
 	Facts  []Fact
+	// Forecast is what the forecast landing was read from, nil when the
+	// selection holds no forecast or its reading failed. The comparison it
+	// feeds is part of Result, so the key does not hash it a second time.
+	Forecast *ForecastOperands `json:"-"`
 }
 
 // Evaluator shares calculations across transport and publication boundaries.

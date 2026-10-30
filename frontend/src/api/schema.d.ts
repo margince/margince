@@ -40268,6 +40268,101 @@ export interface components {
             attainment?: number;
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
+            target_comparison?: components["schemas"]["ReportingTargetComparison"];
+        };
+        /**
+         * @description Where the current fiscal quarter's expected landing stands against a
+         *     compatible `bookings_won` target, and how far the open pipeline covers
+         *     what is left to win. Present only on the `forecast_landing` metric.
+         *     Every amount is in minor units of the context currency.
+         *
+         *     - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+         *     - `remaining` is `target` minus `won`, never below zero.
+         *     - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+         *       expected to close in the quarter, over what is left to win.
+         *
+         *     `won` and `open_pipeline` come from the same forecast reading as
+         *     `landing`, so a won deal is never counted twice. A manager call is a
+         *     whole-quarter figure and is never added to `won`.
+         */
+        ReportingTargetComparison: {
+            /**
+             * @description `compared` carries every figure. `target_reached` means `remaining`
+             *     is zero; it carries no `coverage`, never an infinite one.
+             *     `no_target` means no target is set for this metric, scope,
+             *     pipeline and quarter, or the reader may not read targets; a missing
+             *     target is never zero. `fx_missing` means a deal amount has no
+             *     exchange rate to the base currency, so the totals are incomplete
+             *     and no gap or coverage is given. `partial_visibility` means the
+             *     reader cannot see every deal of the scope, so its figures cannot
+             *     stand against the scope's whole target. `incompatible` names why
+             *     in `incompatibility` and offers `supported_selection`.
+             * @enum {string}
+             */
+            status: "compared" | "target_reached" | "no_target" | "fx_missing" | "partial_visibility" | "incompatible";
+            /**
+             * @description Present only with status `incompatible`. `period`: the target
+             *     interval is not the current fiscal quarter. `scope`: the forecast
+             *     does not read this scope as one population. `pipeline`: only a
+             *     target for the whole scope exists, and it is not split across
+             *     pipelines. `manager_call_pipeline`: the landing is a manager call,
+             *     which covers every pipeline. `currency`: the target was set in
+             *     another currency than the base currency.
+             * @enum {string}
+             */
+            incompatibility?: "period" | "scope" | "pipeline" | "manager_call_pipeline" | "currency";
+            /** @description Present only with status `incompatible`. The same selection, changed so the comparison is supported. */
+            supported_selection?: components["schemas"]["ReportingSelection"];
+            target_metric: components["schemas"]["ReportingMetricID"];
+            /** Format: uuid */
+            target_id?: string;
+            /** Format: int64 */
+            target_revision?: number;
+            /** Format: double */
+            target?: number;
+            /**
+             * @description The forward measure the landing was projected with.
+             * @enum {string}
+             */
+            basis?: "commit_evidence" | "weighted" | "manager_call";
+            /** Format: double */
+            landing?: number;
+            /** Format: double */
+            won?: number;
+            /** Format: double */
+            gap?: number;
+            /** Format: double */
+            remaining?: number;
+            /** Format: double */
+            open_pipeline?: number;
+            /** Format: double */
+            coverage?: number;
+            qualified?: components["schemas"]["ReportingQualifiedCoverage"];
+            operands?: components["schemas"]["ReportingComparisonOperands"];
+        };
+        /**
+         * @description Coverage over the deals the qualified forecast keeps, beside the
+         *     coverage over all open deals. Present when the comparison carries
+         *     figures.
+         */
+        ReportingQualifiedCoverage: {
+            /**
+             * @description `not_enforced` means the qualified forecast is switched off, so no
+             *     open deal is judged and no qualified figure exists.
+             * @enum {string}
+             */
+            status: "compared" | "target_reached" | "not_enforced";
+            /** Format: double */
+            open_pipeline?: number;
+            /** Format: double */
+            coverage?: number;
+        };
+        /** @description The evidence each figure of a target comparison was read from. */
+        ReportingComparisonOperands: {
+            won: components["schemas"]["ReportingEvidenceRef"];
+            landing: components["schemas"]["ReportingEvidenceRef"];
+            open_pipeline: components["schemas"]["ReportingEvidenceRef"];
+            qualified_open_pipeline?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingEvaluation: {
             evaluation_key: string;

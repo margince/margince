@@ -95,6 +95,7 @@ var caseSurfaces = map[string]string{
 	"F03": "read_forecast",
 	"F04": "read_forecast",
 	"F05": "read_forecast",
+	"F06": "read_reporting",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -128,6 +129,7 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"F03": proveF03ForecastInputsCanBeTrusted,
 		"F04": proveF04DealsWithInputProblems,
 		"F05": proveF05ForecastSources,
+		"F06": proveF06QuarterAgainstItsTarget,
 	}
 }
 

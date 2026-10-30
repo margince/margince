@@ -62,6 +62,9 @@ type Deal struct {
 // found unsupported; an unknown one could not be judged. Counting it as
 // excluded would report a gap in the mailbox as a gap in the pipeline.
 type QualifiedReadings struct {
+	// OpenMinor is the open money of the deals the qualified readings keep, the
+	// qualified counterpart of Readings.OpenMinor.
+	OpenMinor     int64
 	EvidenceMinor int64
 	BestCaseMinor int64
 	WeightedMinor int64
@@ -265,6 +268,7 @@ func qualify(out *Readings, c Contribution, base int64) error {
 		by   int64
 		when bool
 	}{
+		{&q.OpenMinor, base, c.Qualification == viability.QualificationEligible},
 		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
 		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
 		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},

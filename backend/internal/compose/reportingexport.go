@@ -71,6 +71,11 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 	}
 	for _, metric := range evaluation.Metrics {
 		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		if comparison := metric.TargetComparison; comparison != nil {
+			for _, figure := range targetComparisonCSV(*comparison, metric.Unit) {
+				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, figure.status)
+			}
+		}
 	}
 	for _, chart := range evaluation.Charts {
 		for _, point := range chart.Points {
@@ -112,4 +117,43 @@ func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err e
 	if _, err := w.Write(raw); err != nil { // #nosec G705 -- a CSV attachment, never rendered as a page
 		slog.WarnContext(r.Context(), "reporting export connection closed", "error", err)
 	}
+}
+
+const (
+	reportingTargetComparisonBlock = "target_comparison"
+	comparisonStatusRow            = "status"
+)
+
+type comparisonFigure struct {
+	label, unit, context, status string
+	value                        *float64
+}
+
+// targetComparisonCSV is a comparison's status, then each figure it carries.
+// A figure it does not carry has no row, so no blank reads as a zero.
+func targetComparisonCSV(comparison crmcontracts.ReportingTargetComparison, unit string) []comparisonFigure {
+	status := string(comparison.Status)
+	why := ""
+	if comparison.Incompatibility != nil {
+		why = string(*comparison.Incompatibility)
+	}
+	out := []comparisonFigure{{label: comparisonStatusRow, context: why, status: status}}
+	add := func(label, unit, status string, value *float64) {
+		if value != nil {
+			out = append(out, comparisonFigure{label: label, unit: unit, context: reportingTargetComparisonBlock, status: status, value: value})
+		}
+	}
+	add("target", unit, status, comparison.Target)
+	add("landing", unit, status, comparison.Landing)
+	add("won", unit, status, comparison.Won)
+	add("gap", unit, status, comparison.Gap)
+	add("remaining", unit, status, comparison.Remaining)
+	add("open_pipeline", unit, status, comparison.OpenPipeline)
+	add("coverage", "ratio", status, comparison.Coverage)
+	if qualified := comparison.Qualified; qualified != nil {
+		out = append(out, comparisonFigure{label: "qualified_status", context: reportingTargetComparisonBlock, status: string(qualified.Status)})
+		add("qualified_open_pipeline", unit, string(qualified.Status), qualified.OpenPipeline)
+		add("qualified_coverage", "ratio", string(qualified.Status), qualified.Coverage)
+	}
+	return out
 }

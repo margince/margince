@@ -54944,6 +54944,109 @@ components:
           $ref: '#/components/schemas/ReportingCoverage'
         evidence:
           $ref: '#/components/schemas/ReportingEvidenceRef'
+        target_comparison:
+          $ref: '#/components/schemas/ReportingTargetComparison'
+    ReportingTargetComparison:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the current fiscal quarter's expected landing stands against a
+        compatible `bookings_won` target, and how far the open pipeline covers
+        what is left to win. Present only on the `forecast_landing` metric.
+        Every amount is in minor units of the context currency.
+
+        - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+        - `remaining` is `target` minus `won`, never below zero.
+        - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+          expected to close in the quarter, over what is left to win.
+
+        `won` and `open_pipeline` come from the same forecast reading as
+        `landing`, so a won deal is never counted twice. A manager call is a
+        whole-quarter figure and is never added to `won`.
+      required: [status, target_metric]
+      properties:
+        status:
+          type: string
+          enum: [compared, target_reached, no_target, fx_missing, partial_visibility, incompatible]
+          description: |
+            `compared` carries every figure. `target_reached` means `remaining`
+            is zero; it carries no `coverage`, never an infinite one.
+            `no_target` means no target is set for this metric, scope,
+            pipeline and quarter, or the reader may not read targets; a missing
+            target is never zero. `fx_missing` means a deal amount has no
+            exchange rate to the base currency, so the totals are incomplete
+            and no gap or coverage is given. `partial_visibility` means the
+            reader cannot see every deal of the scope, so its figures cannot
+            stand against the scope's whole target. `incompatible` names why
+            in `incompatibility` and offers `supported_selection`.
+        incompatibility:
+          type: string
+          enum: [period, scope, pipeline, manager_call_pipeline, currency]
+          description: |
+            Present only with status `incompatible`. `period`: the target
+            interval is not the current fiscal quarter. `scope`: the forecast
+            does not read this scope as one population. `pipeline`: only a
+            target for the whole scope exists, and it is not split across
+            pipelines. `manager_call_pipeline`: the landing is a manager call,
+            which covers every pipeline. `currency`: the target was set in
+            another currency than the base currency.
+        supported_selection:
+          allOf: [{ $ref: '#/components/schemas/ReportingSelection' }]
+          description: Present only with status `incompatible`. The same selection, changed so the comparison is supported.
+        target_metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        target_id:
+          type: string
+          format: uuid
+        target_revision:
+          type: integer
+          format: int64
+        target: *id003
+        basis:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          description: The forward measure the landing was projected with.
+        landing: *id003
+        won: *id003
+        gap: *id003
+        remaining: *id003
+        open_pipeline: *id003
+        coverage: *id003
+        qualified:
+          $ref: '#/components/schemas/ReportingQualifiedCoverage'
+        operands:
+          $ref: '#/components/schemas/ReportingComparisonOperands'
+    ReportingQualifiedCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        Coverage over the deals the qualified forecast keeps, beside the
+        coverage over all open deals. Present when the comparison carries
+        figures.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [compared, target_reached, not_enforced]
+          description: |
+            `not_enforced` means the qualified forecast is switched off, so no
+            open deal is judged and no qualified figure exists.
+        open_pipeline: *id003
+        coverage: *id003
+    ReportingComparisonOperands:
+      type: object
+      additionalProperties: false
+      description: The evidence each figure of a target comparison was read from.
+      required: [won, landing, open_pipeline]
+      properties:
+        won:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        landing:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        open_pipeline:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        qualified_open_pipeline:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
     ReportingEvaluation:
       type: object
       additionalProperties: false

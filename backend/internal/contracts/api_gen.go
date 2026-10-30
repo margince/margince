@@ -17278,6 +17278,27 @@ func (e ReportingPresetId) Valid() bool {
 	}
 }
 
+// Defines values for ReportingQualifiedCoverageStatus.
+const (
+	ReportingQualifiedCoverageStatusCompared      ReportingQualifiedCoverageStatus = "compared"
+	ReportingQualifiedCoverageStatusNotEnforced   ReportingQualifiedCoverageStatus = "not_enforced"
+	ReportingQualifiedCoverageStatusTargetReached ReportingQualifiedCoverageStatus = "target_reached"
+)
+
+// Valid indicates whether the value is a known member of the ReportingQualifiedCoverageStatus enum.
+func (e ReportingQualifiedCoverageStatus) Valid() bool {
+	switch e {
+	case ReportingQualifiedCoverageStatusCompared:
+		return true
+	case ReportingQualifiedCoverageStatusNotEnforced:
+		return true
+	case ReportingQualifiedCoverageStatusTargetReached:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingReportAudience.
 const (
 	ReportingReportAudiencePrivate   ReportingReportAudience = "private"
@@ -17479,6 +17500,84 @@ func (e ReportingStatus) Valid() bool {
 	case ReportingStatusUnavailable:
 		return true
 	case ReportingStatusUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonBasis.
+const (
+	ReportingTargetComparisonBasisCommitEvidence ReportingTargetComparisonBasis = "commit_evidence"
+	ReportingTargetComparisonBasisManagerCall    ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisWeighted       ReportingTargetComparisonBasis = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
+func (e ReportingTargetComparisonBasis) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonBasisCommitEvidence:
+		return true
+	case ReportingTargetComparisonBasisManagerCall:
+		return true
+	case ReportingTargetComparisonBasisWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonIncompatibility.
+const (
+	ReportingTargetComparisonIncompatibilityCurrency            ReportingTargetComparisonIncompatibility = "currency"
+	ReportingTargetComparisonIncompatibilityManagerCallPipeline ReportingTargetComparisonIncompatibility = "manager_call_pipeline"
+	ReportingTargetComparisonIncompatibilityPeriod              ReportingTargetComparisonIncompatibility = "period"
+	ReportingTargetComparisonIncompatibilityPipeline            ReportingTargetComparisonIncompatibility = "pipeline"
+	ReportingTargetComparisonIncompatibilityScope               ReportingTargetComparisonIncompatibility = "scope"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonIncompatibility enum.
+func (e ReportingTargetComparisonIncompatibility) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonIncompatibilityCurrency:
+		return true
+	case ReportingTargetComparisonIncompatibilityManagerCallPipeline:
+		return true
+	case ReportingTargetComparisonIncompatibilityPeriod:
+		return true
+	case ReportingTargetComparisonIncompatibilityPipeline:
+		return true
+	case ReportingTargetComparisonIncompatibilityScope:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonStatus.
+const (
+	ReportingTargetComparisonStatusCompared          ReportingTargetComparisonStatus = "compared"
+	ReportingTargetComparisonStatusFxMissing         ReportingTargetComparisonStatus = "fx_missing"
+	ReportingTargetComparisonStatusIncompatible      ReportingTargetComparisonStatus = "incompatible"
+	ReportingTargetComparisonStatusNoTarget          ReportingTargetComparisonStatus = "no_target"
+	ReportingTargetComparisonStatusPartialVisibility ReportingTargetComparisonStatus = "partial_visibility"
+	ReportingTargetComparisonStatusTargetReached     ReportingTargetComparisonStatus = "target_reached"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonStatus enum.
+func (e ReportingTargetComparisonStatus) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonStatusCompared:
+		return true
+	case ReportingTargetComparisonStatusFxMissing:
+		return true
+	case ReportingTargetComparisonStatusIncompatible:
+		return true
+	case ReportingTargetComparisonStatusNoTarget:
+		return true
+	case ReportingTargetComparisonStatusPartialVisibility:
+		return true
+	case ReportingTargetComparisonStatusTargetReached:
 		return true
 	default:
 		return false
@@ -51236,6 +51335,14 @@ type ReportingComparison struct {
 	Right      ReportingEdition `json:"right"`
 }
 
+// ReportingComparisonOperands The evidence each figure of a target comparison was read from.
+type ReportingComparisonOperands struct {
+	Landing               ReportingEvidenceRef  `json:"landing"`
+	OpenPipeline          ReportingEvidenceRef  `json:"open_pipeline"`
+	QualifiedOpenPipeline *ReportingEvidenceRef `json:"qualified_open_pipeline,omitempty"`
+	Won                   ReportingEvidenceRef  `json:"won"`
+}
+
 // ReportingContext defines model for ReportingContext.
 type ReportingContext struct {
 	CloseInterval         *ReportingWindow     `json:"close_interval,omitempty"`
@@ -51408,18 +51515,33 @@ type ReportingFrameworkInputTemplate string
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment     *float64             `json:"attainment,omitempty"`
-	Coverage       ReportingCoverage    `json:"coverage"`
-	Denominator    *float64             `json:"denominator,omitempty"`
-	Evidence       ReportingEvidenceRef `json:"evidence"`
-	Id             ReportingMetricID    `json:"id"`
-	Numerator      *float64             `json:"numerator,omitempty"`
-	Target         *float64             `json:"target,omitempty"`
-	TargetActual   *float64             `json:"target_actual,omitempty"`
-	TargetRevision *int64               `json:"target_revision,omitempty"`
-	Unit           string               `json:"unit"`
-	Value          *float64             `json:"value"`
-	Version        string               `json:"version"`
+	Attainment   *float64             `json:"attainment,omitempty"`
+	Coverage     ReportingCoverage    `json:"coverage"`
+	Denominator  *float64             `json:"denominator,omitempty"`
+	Evidence     ReportingEvidenceRef `json:"evidence"`
+	Id           ReportingMetricID    `json:"id"`
+	Numerator    *float64             `json:"numerator,omitempty"`
+	Target       *float64             `json:"target,omitempty"`
+	TargetActual *float64             `json:"target_actual,omitempty"`
+
+	// TargetComparison Where the current fiscal quarter's expected landing stands against a
+	// compatible `bookings_won` target, and how far the open pipeline covers
+	// what is left to win. Present only on the `forecast_landing` metric.
+	// Every amount is in minor units of the context currency.
+	//
+	// - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+	// - `remaining` is `target` minus `won`, never below zero.
+	// - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+	//   expected to close in the quarter, over what is left to win.
+	//
+	// `won` and `open_pipeline` come from the same forecast reading as
+	// `landing`, so a won deal is never counted twice. A manager call is a
+	// whole-quarter figure and is never added to `won`.
+	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
+	TargetRevision   *int64                     `json:"target_revision,omitempty"`
+	Unit             string                     `json:"unit"`
+	Value            *float64                   `json:"value"`
+	Version          string                     `json:"version"`
 }
 
 // ReportingMetricDefinition defines model for ReportingMetricDefinition.
@@ -51483,6 +51605,22 @@ type ReportingQualification struct {
 	PipelineId openapi_types.UUID   `json:"pipeline_id"`
 	StageIds   []openapi_types.UUID `json:"stage_ids"`
 }
+
+// ReportingQualifiedCoverage Coverage over the deals the qualified forecast keeps, beside the
+// coverage over all open deals. Present when the comparison carries
+// figures.
+type ReportingQualifiedCoverage struct {
+	Coverage     *float64 `json:"coverage,omitempty"`
+	OpenPipeline *float64 `json:"open_pipeline,omitempty"`
+
+	// Status `not_enforced` means the qualified forecast is switched off, so no
+	// open deal is judged and no qualified figure exists.
+	Status ReportingQualifiedCoverageStatus `json:"status"`
+}
+
+// ReportingQualifiedCoverageStatus `not_enforced` means the qualified forecast is switched off, so no
+// open deal is judged and no qualified figure exists.
+type ReportingQualifiedCoverageStatus string
 
 // ReportingReport defines model for ReportingReport.
 type ReportingReport struct {
@@ -51668,6 +51806,90 @@ type ReportingTarget struct {
 	Unit     string                  `json:"unit"`
 	Version  int64                   `json:"version"`
 }
+
+// ReportingTargetComparison Where the current fiscal quarter's expected landing stands against a
+// compatible `bookings_won` target, and how far the open pipeline covers
+// what is left to win. Present only on the `forecast_landing` metric.
+// Every amount is in minor units of the context currency.
+//
+//   - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+//   - `remaining` is `target` minus `won`, never below zero.
+//   - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+//     expected to close in the quarter, over what is left to win.
+//
+// `won` and `open_pipeline` come from the same forecast reading as
+// `landing`, so a won deal is never counted twice. A manager call is a
+// whole-quarter figure and is never added to `won`.
+type ReportingTargetComparison struct {
+	// Basis The forward measure the landing was projected with.
+	Basis    *ReportingTargetComparisonBasis `json:"basis,omitempty"`
+	Coverage *float64                        `json:"coverage,omitempty"`
+	Gap      *float64                        `json:"gap,omitempty"`
+
+	// Incompatibility Present only with status `incompatible`. `period`: the target
+	// interval is not the current fiscal quarter. `scope`: the forecast
+	// does not read this scope as one population. `pipeline`: only a
+	// target for the whole scope exists, and it is not split across
+	// pipelines. `manager_call_pipeline`: the landing is a manager call,
+	// which covers every pipeline. `currency`: the target was set in
+	// another currency than the base currency.
+	Incompatibility *ReportingTargetComparisonIncompatibility `json:"incompatibility,omitempty"`
+	Landing         *float64                                  `json:"landing,omitempty"`
+	OpenPipeline    *float64                                  `json:"open_pipeline,omitempty"`
+
+	// Operands The evidence each figure of a target comparison was read from.
+	Operands *ReportingComparisonOperands `json:"operands,omitempty"`
+
+	// Qualified Coverage over the deals the qualified forecast keeps, beside the
+	// coverage over all open deals. Present when the comparison carries
+	// figures.
+	Qualified *ReportingQualifiedCoverage `json:"qualified,omitempty"`
+	Remaining *float64                    `json:"remaining,omitempty"`
+
+	// Status `compared` carries every figure. `target_reached` means `remaining`
+	// is zero; it carries no `coverage`, never an infinite one.
+	// `no_target` means no target is set for this metric, scope,
+	// pipeline and quarter, or the reader may not read targets; a missing
+	// target is never zero. `fx_missing` means a deal amount has no
+	// exchange rate to the base currency, so the totals are incomplete
+	// and no gap or coverage is given. `partial_visibility` means the
+	// reader cannot see every deal of the scope, so its figures cannot
+	// stand against the scope's whole target. `incompatible` names why
+	// in `incompatibility` and offers `supported_selection`.
+	Status ReportingTargetComparisonStatus `json:"status"`
+
+	// SupportedSelection Present only with status `incompatible`. The same selection, changed so the comparison is supported.
+	SupportedSelection *ReportingSelection `json:"supported_selection,omitempty"`
+	Target             *float64            `json:"target,omitempty"`
+	TargetId           *openapi_types.UUID `json:"target_id,omitempty"`
+	TargetMetric       ReportingMetricID   `json:"target_metric"`
+	TargetRevision     *int64              `json:"target_revision,omitempty"`
+	Won                *float64            `json:"won,omitempty"`
+}
+
+// ReportingTargetComparisonBasis The forward measure the landing was projected with.
+type ReportingTargetComparisonBasis string
+
+// ReportingTargetComparisonIncompatibility Present only with status `incompatible`. `period`: the target
+// interval is not the current fiscal quarter. `scope`: the forecast
+// does not read this scope as one population. `pipeline`: only a
+// target for the whole scope exists, and it is not split across
+// pipelines. `manager_call_pipeline`: the landing is a manager call,
+// which covers every pipeline. `currency`: the target was set in
+// another currency than the base currency.
+type ReportingTargetComparisonIncompatibility string
+
+// ReportingTargetComparisonStatus `compared` carries every figure. `target_reached` means `remaining`
+// is zero; it carries no `coverage`, never an infinite one.
+// `no_target` means no target is set for this metric, scope,
+// pipeline and quarter, or the reader may not read targets; a missing
+// target is never zero. `fx_missing` means a deal amount has no
+// exchange rate to the base currency, so the totals are incomplete
+// and no gap or coverage is given. `partial_visibility` means the
+// reader cannot see every deal of the scope, so its figures cannot
+// stand against the scope's whole target. `incompatible` names why
+// in `incompatibility` and offers `supported_selection`.
+type ReportingTargetComparisonStatus string
 
 // ReportingTargetInput defines model for ReportingTargetInput.
 type ReportingTargetInput struct {
