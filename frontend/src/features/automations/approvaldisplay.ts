@@ -120,11 +120,8 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // A colleague asks the owner to share a contact. The summary names who
-    // asked; the payload holds only the ids the accept writes the share with.
+    // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
-    // A colleague asks the owner to hand over a record. The summary names who
-    // asked and what moves with it; the note is what they wrote.
     ownership_transfer: [textRow("note", "approval.field.note")],
     // Two records that look like one contact. The names are the comparison; the
     // position and the title beside them are what "Use as job title" weighs.
