@@ -14,6 +14,7 @@ import {
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
@@ -365,14 +366,18 @@ function ContactsCard({
       }
       footTone="warn"
     >
-      {contacts.length > 0 &&
-        contacts.map((contact) => (
-          <CompanyContactCard
-            key={contact.contact_id}
-            contact={contact}
-            companyName={view.company.display_name}
-          />
-        ))}
+      {contacts.length > 0 && (
+        <RecordCardList>
+          {contacts.map((contact) => (
+            <li key={contact.contact_id}>
+              <CompanyContactCard
+                contact={contact}
+                companyName={view.company.display_name}
+              />
+            </li>
+          ))}
+        </RecordCardList>
+      )}
     </OverviewCard>
   );
 }
