@@ -284,8 +284,10 @@ func (e *promoteConsentEnv) asStranger() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"lead":    {Create: true, Read: true, Update: true, Delete: true},
-				"contact": {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true, Delete: true},
+				"contact":      {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true},
+				"relationship": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -342,8 +344,10 @@ func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
 func TestDemoteNeedsNoArchiveGrantToUndoACreatedContact(t *testing.T) {
 	e := setupPromoteConsent(t)
 	rep := e.withGrants(map[string]principal.ObjectGrant{
-		"lead":    {Create: true, Read: true, Update: true, Delete: true},
-		"contact": {Create: true, Read: true, Update: true},
+		"lead":         {Create: true, Read: true, Update: true, Delete: true},
+		"contact":      {Create: true, Read: true, Update: true},
+		"company":      {Create: true, Read: true},
+		"relationship": {Create: true, Read: true},
 	})
 	lead := e.seedLead(t, "undo@example.test")
 	contact, _, err := e.store.PromoteLead(rep, lead, PromoteLeadInput{Trigger: "human_qualify"})

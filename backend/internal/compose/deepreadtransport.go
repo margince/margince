@@ -250,7 +250,7 @@ func requestedBy(ctx context.Context) string {
 func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		engine := &deepReadEngine{
-			contacts: contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
+			contacts: newContactsStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
 				WithGeocodeEnqueue(boundGeocodeEnqueue),
 			approvals: NewApprovalsService(InstallationDB(pool)),
 			runtime:   ai.NewRunTransparency(InstallationDB(pool)), brain: brain, enqueue: inserter, log: s.log,
@@ -263,12 +263,12 @@ func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 		rollout := s.companyContextRollout
 		s.siteReadHandlers = siteReadHandlers{engine: engine, start: engine.start, report: engine.report, latest: engine.latestReport, companyContextRollout: rollout}
 		s.assistant = &onboardingCompanyAssistant{
-			state: s.state, contacts: contacts.NewStore(InstallationDB(pool)),
+			state: s.state, contacts: newContactsStore(InstallationDB(pool)),
 			brain: brain, runtime: ai.NewRunTransparency(InstallationDB(pool)),
 			rollout: &s.companyContextRollout,
 			voice:   ai.NewVoiceStore(InstallationDB(pool)),
-			company: contacts.NewStore(InstallationDB(pool)),
-			offers:  contacts.NewStore(InstallationDB(pool)),
+			company: newContactsStore(InstallationDB(pool)),
+			offers:  newContactsStore(InstallationDB(pool)),
 		}
 	}
 }
