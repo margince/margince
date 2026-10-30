@@ -47,6 +47,9 @@ type Field struct {
 	// Coverage is how many records hold a value in a field the installation
 	// defined. Nil where nobody counted, which every question run leaves it.
 	Coverage *Coverage
+	// Currency is set on a measure kept in each row's own currency, and nil
+	// on every other field.
+	Currency *PerRowCurrency
 }
 
 // Coverage counts the live records a reader can see, and how many hold a value.
