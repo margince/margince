@@ -304,6 +304,7 @@ describe("which views a seat reads", () => {
       metrics: [
         {
           id: "forecast_landing",
+          label: "Forecast landing",
           version: "1",
           unit: "money",
           temporal_basis: "state_at",
