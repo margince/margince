@@ -10,12 +10,13 @@ package gates
 // Mail reminders, ghosted-thread nudges and the offer to move an account to
 // former customer all ask values.EngagedLifecycles. A stage the contract gains
 // and that list never judged would drop out of all three with no error, so the
-// judged list must equal each of the contract's lifecycle enums. The browser's
+// judged list must equal every contract enum that spells a lifecycle. The browser's
 // picker list is a declared mirror of it, in the same wire order.
 
 import (
 	"go/ast"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -28,15 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// companyLifecycleEnums names the generated types of the four inline
-// lifecycle enums in crm.yaml.
-var companyLifecycleEnums = []string{
-	"CompanyLifecycle",
-	"Company360StateStripAccountLifecycle",
-	"UpdateCompanyRequestLifecycle",
-	"ListCompaniesParamsLifecycle",
-}
-
 const frontendLifecycleList = "../frontend/src/format/companylifecycle.ts"
 
 func TestEveryCompanyLifecycleIsJudgedEngagedOrNot(t *testing.T) {
@@ -46,9 +38,9 @@ func TestEveryCompanyLifecycleIsJudgedEngagedOrNot(t *testing.T) {
 		t.Fatalf("values judges the lifecycle %q twice; keep one entry", dup)
 	}
 	want := slices.Sorted(slices.Values(judged))
-	members := contractEnumValues(t)
-	for _, enum := range companyLifecycleEnums {
-		got := slices.Sorted(slices.Values(members[enum]))
+	enums := companyLifecycleEnums(t, contractEnumValues(t), judged)
+	for _, enum := range slices.Sorted(maps.Keys(enums)) {
+		got := slices.Sorted(slices.Values(enums[enum]))
 		if !slices.Equal(got, want) {
 			t.Errorf("crm.yaml's %s holds %v, and values judges %v. "+
 				"Add the stage to companyLifecycles in internal/shared/kernel/values/lifecycle.go "+
@@ -100,10 +92,28 @@ func contractEnumValues(t *testing.T) map[string][]string {
 		}
 		collectEnumValues(t, file, out)
 	}
-	for _, enum := range companyLifecycleEnums {
-		if len(out[enum]) == 0 {
-			t.Fatalf("no constants of %s under %s; the enum was renamed, so update companyLifecycleEnums", enum, contractsPkgDir)
+	return out
+}
+
+// companyLifecycleEnums is the census of generated enums that spell a company
+// lifecycle: any enum holding two or more judged stages. A lead's status shares
+// one word with it, so one shared value does not count.
+func companyLifecycleEnums(t *testing.T, members map[string][]string, judged []string) map[string][]string {
+	t.Helper()
+	out := map[string][]string{}
+	for enum, values := range members {
+		shared := 0
+		for _, value := range values {
+			if slices.Contains(judged, value) {
+				shared++
+			}
 		}
+		if shared >= 2 {
+			out[enum] = values
+		}
+	}
+	if _, ok := out["CompanyLifecycle"]; !ok {
+		t.Fatalf("no enum under %s holds the company lifecycle; the census found %v, so the derivation is broken", contractsPkgDir, slices.Sorted(maps.Keys(out)))
 	}
 	return out
 }

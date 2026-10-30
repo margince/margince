@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -198,6 +199,30 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 				t.Errorf("the account reads %q after the accept, want former_customer", got)
 			}
 		})
+	}
+}
+
+// A decider who edits the offer to live still cannot set it: the effect runs as
+// the system, and only a signed-in user may say the first scope is in use.
+func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "onboarding")
+	seedOpenContractEnded(t, e, company)
+	proposePass(t, e)
+	offer := stagedOffer(t, e, company)
+	edited := e.WsScalar(t, `
+		SELECT jsonb_set(proposed_change, '{proposed_lifecycle}', '"live"')::text
+		  FROM approval WHERE id = $1`, offer)
+
+	_, err := approvalsServiceWithEffects(e.Pool).DecideEdited(
+		e.As(e.Rep1, nil, integration.AdminWithSignals),
+		ids.From[ids.ApprovalKind](offer), []byte(edited))
+	var refusal *httperr.DetailedError
+	if !errors.As(err, &refusal) || len(refusal.Fields) != 1 || refusal.Fields[0].Code != "lifecycle_live_needs_a_human" {
+		t.Fatalf("an offer edited to live: want the live refusal, got %v", err)
+	}
+	if got := accountStage(t, e, company); got != "onboarding" {
+		t.Errorf("the account reads %q after the edited accept, want onboarding", got)
 	}
 }
 
