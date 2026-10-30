@@ -50,9 +50,9 @@ export function reportingAmount(
   return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
-export function metricLabel(metric: ReportingMetricID, t: Translator): string {
-  return t(`reporting.${metric}`);
-}
+// Names a metric as the catalog does, in the reader's language.
+export type MetricNames = (metric: ReportingMetricID) => string;
+
 export function blockLabel(block: ReportingBlockKind, t: Translator): string {
   return t(`reporting.${block}`);
 }

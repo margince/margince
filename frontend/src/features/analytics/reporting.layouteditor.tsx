@@ -28,7 +28,8 @@ import {
   type ReportingLayout,
   runIdOf,
 } from "./reporting.layout";
-import { blockLabel, metricLabel } from "./reporting.model";
+import { blockLabel, type MetricNames } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 type Card = ReportingLayout[number]["cards"][number];
 
@@ -36,6 +37,7 @@ type Card = ReportingLayout[number]["cards"][number];
 export function cardLabel(
   card: Pick<Card, "kind" | "metric" | "question"> | CardChoice,
   t: Translator,
+  metricName: MetricNames,
 ): string {
   if (card.kind === "question")
     return t("reporting.questionCard", {
@@ -44,8 +46,9 @@ export function cardLabel(
         ("question" in card && card.question?.entity) || "",
       ),
     });
+  if (card.metric && card.kind === card.metric) return metricName(card.metric);
   const chart = blockLabel(card.kind, t);
-  return card.metric ? `${chart} · ${metricLabel(card.metric, t)}` : chart;
+  return card.metric ? `${chart} · ${metricName(card.metric)}` : chart;
 }
 
 /**
@@ -66,6 +69,7 @@ export function LayoutEditor({
   preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const hintId = useId();
   const sections = useSectionKeys(layout.length);
@@ -108,12 +112,12 @@ export function LayoutEditor({
             labels={{
               handle: (item, position, count) =>
                 t("reporting.cardHandle", {
-                  chart: cardLabel(item.card, t),
+                  chart: cardLabel(item.card, t, metricName),
                   ...place(position, count),
                 }),
               moved: (item, position, count) =>
                 t("reporting.cardMoved", {
-                  chart: cardLabel(item.card, t),
+                  chart: cardLabel(item.card, t, metricName),
                   ...place(position, count),
                 }),
             }}
@@ -252,7 +256,8 @@ function CardRow({
   onChange: (next: ReportingLayout) => void;
 }>) {
   const t = useT();
-  const name = cardLabel(card, t);
+  const metricName = useMetricNames();
+  const name = cardLabel(card, t, metricName);
   return (
     <div className="reporting-layout-card">
       <span className="reporting-layout-name">{name}</span>
@@ -309,6 +314,7 @@ function AddCard({
   preview?: (choice: CardChoice) => ReactNode;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const [picked, setPicked] = useState("");
   const [previewing, setPreviewing] = useState(false);
   const keyOf = (choice: CardChoice) => `${choice.kind}:${choice.metric ?? ""}`;
@@ -324,7 +330,7 @@ function AddCard({
             placeholder={t("reporting.chooseChart")}
             options={choices.map((candidate) => ({
               value: keyOf(candidate),
-              label: cardLabel(candidate, t),
+              label: cardLabel(candidate, t, metricName),
             }))}
             onChange={setPicked}
           />

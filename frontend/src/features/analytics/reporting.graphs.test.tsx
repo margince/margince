@@ -9,6 +9,7 @@ import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import { forecastEvaluation, sdrEvaluation } from "./reporting.scenarios";
 import {
+  reportingCatalogClient,
   reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
@@ -27,7 +28,7 @@ it("keeps meeting and accepted-handoff evidence distinct in the paired graph", a
   const evidence = vi.fn();
   installFetchStub(reportingStoryRoutes(sdrEvaluation));
   const { container } = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={sdrEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
@@ -57,7 +58,7 @@ it("renders forecast support and reconciled movement with boundary evidence", as
   const evidence = vi.fn();
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={forecastEvaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
@@ -84,7 +85,7 @@ it("labels snapshot selection as sharing and keeps the forecast at one quarterly
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingForecastGraphs scope={reportingStoryScope} />
     </StoryProviders>,
   );
@@ -121,7 +122,7 @@ it("shows missing capture history as unavailable instead of drawing a fabricated
       })),
   } satisfies typeof forecastEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -150,7 +151,7 @@ it("names every movement bar in words, never by the server's bucket key", () => 
       })),
   } satisfies typeof forecastEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -172,7 +173,7 @@ it("opens forecast source evidence and returns to the chart", async () => {
   installFetchStub(reportingStoryRoutes(forecastEvaluation));
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingForecastGraphs scope={reportingStoryScope} />
     </StoryProviders>,
   );
@@ -207,7 +208,7 @@ it.each(["Capture failed; retry the scheduled capture", undefined])(
     } satisfies typeof forecastEvaluation;
     installFetchStub(reportingStoryRoutes(evaluation));
     render(
-      <StoryProviders>
+      <StoryProviders client={reportingCatalogClient()}>
         <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
       </StoryProviders>,
     );
@@ -227,7 +228,7 @@ it("opens the stage-age chart evidence context", async () => {
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={evidence} />
     </StoryProviders>,
   );
@@ -256,12 +257,12 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("heading", { name: "Accepted handoffs" }),
+    await screen.findByRole("heading", { name: "Accepted handoffs" }),
   ).toBeVisible();
   expect(
     document.querySelectorAll(".report-chart-column").length,
@@ -285,7 +286,7 @@ it.each([
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -308,7 +309,7 @@ it("omits unassigned target columns for SDR outcomes", async () => {
   };
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -340,7 +341,7 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   } satisfies typeof reportingStoryEvaluation;
   installFetchStub(reportingStoryRoutes(evaluation));
   const { container } = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -405,7 +406,7 @@ it("keeps the movement label readable in its evidence drawer", async () => {
   } satisfies typeof forecastEvaluation;
   installFetchStub(reportingStoryRoutes(evaluation));
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingEvidenceDrawer
         evaluation={evaluation}
         reference={reference}
@@ -420,7 +421,7 @@ it("keeps the movement label readable in its evidence drawer", async () => {
 it("marks one failed chart and keeps drawing the others", () => {
   installFetchStub(reportingStoryRoutes());
   const baseline = render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={reportingStoryEvaluation}
         onEvidence={() => {}}
@@ -447,7 +448,7 @@ it("marks one failed chart and keeps drawing the others", () => {
     ],
   } satisfies typeof reportingStoryEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -475,7 +476,7 @@ it("keeps the accepted-opportunities series when only the meetings reading faile
     ),
   } satisfies typeof sdrEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -500,7 +501,7 @@ it("shows how many priced deals make each stage's value", () => {
       })),
   } satisfies typeof reportingStoryEvaluation;
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
@@ -541,7 +542,7 @@ function ownerChartEvaluation(withTargets: boolean) {
 it("says whom an owner chart credits and how much of the target period has passed", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(true)}
         onEvidence={() => {}}
@@ -559,7 +560,7 @@ it("says whom an owner chart credits and how much of the target period has passe
 it("says nothing about the target period where no target applies to the chart", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(false)}
         onEvidence={() => {}}
@@ -572,7 +573,7 @@ it("says nothing about the target period where no target applies to the chart", 
 it("credits a saved edition's sales to the owner it captured", () => {
   installFetchStub(reportingStoryRoutes());
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={ownerChartEvaluation(true)}
         editionId="e-1"

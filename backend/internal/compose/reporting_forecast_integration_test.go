@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -14,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -103,6 +105,38 @@ func TestReportingForecastReconcilesEverySupportSegmentWithSourceEvidence(t *tes
 				t.Fatalf("%s: chart %v, evidence %v", point.Key, *point.Value, total)
 			}
 		}
+	}
+}
+
+// The forecast reads its deals with no ORDER BY. Rewriting every deal row in
+// reverse id order moves them on disk and changes no figure. The receipt still
+// holds, and a changed amount must refuse it.
+func TestReportingForecastReceiptHoldsWhenTheDealRowsMoveAndRefusesARealChange(t *testing.T) {
+	f := reportingBusiness(t)
+	selection := f.selection()
+	selection.Metrics = []crmcontracts.ReportingMetricID{"forecast_landing"}
+	selection.Blocks = []crmcontracts.ReportingBlockKind{"forecast_support"}
+	evaluation, err := f.service.Evaluate(f.human, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
+	won := func() error {
+		_, err := f.service.Evidence(f.human, selection, "forecast_landing", "forecast_won", "", nil, nil, 100, receipt)
+		return err
+	}
+	ctx := context.Background()
+	if _, err := f.env.Pool.Exec(ctx, `DO $$ DECLARE d uuid; BEGIN FOR d IN SELECT id FROM deal ORDER BY id DESC LOOP UPDATE deal SET name = name WHERE id = d; END LOOP; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if err := won(); err != nil {
+		t.Fatalf("the same deals stored in another order refused the receipt: %v", err)
+	}
+	if _, err := f.env.Pool.Exec(ctx, `UPDATE deal SET amount_minor = amount_minor + 100 WHERE id = (SELECT id FROM deal WHERE status = 'won' ORDER BY id LIMIT 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := won(); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("a changed forecast amount kept the old receipt: %v", err)
 	}
 }
 

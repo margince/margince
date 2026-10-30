@@ -205,7 +205,7 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 	case reportingTargetProgress:
 		chart.ContextId = reportingTarget
 		chart.Interval = out.Result.Context.TargetInterval
-		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: string(metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
+		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: reportingMetricName(out.Result.Context, metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
 	case reportingSdrOutcomes:
 		chart = reportingWeekly(out, chart)
 	case "forecast_support":

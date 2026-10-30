@@ -51424,13 +51424,16 @@ type ReportingMetric struct {
 
 // ReportingMetricDefinition defines model for ReportingMetricDefinition.
 type ReportingMetricDefinition struct {
-	AllowedFilters   *[]string                              `json:"allowed_filters,omitempty"`
-	Attribution      *string                                `json:"attribution,omitempty"`
-	Blocks           []ReportingBlockKind                   `json:"blocks"`
-	Definition       string                                 `json:"definition"`
-	FrozenSupport    *bool                                  `json:"frozen_support,omitempty"`
-	Id               ReportingMetricID                      `json:"id"`
-	IncompletePolicy *string                                `json:"incomplete_policy,omitempty"`
+	AllowedFilters   *[]string            `json:"allowed_filters,omitempty"`
+	Attribution      *string              `json:"attribution,omitempty"`
+	Blocks           []ReportingBlockKind `json:"blocks"`
+	Definition       string               `json:"definition"`
+	FrozenSupport    *bool                `json:"frozen_support,omitempty"`
+	Id               ReportingMetricID    `json:"id"`
+	IncompletePolicy *string              `json:"incomplete_policy,omitempty"`
+
+	// Label The metric's name in the reader's language, as the screen and the CSV export show it. Presentation only; `id` stays the machine identifier, and no receipt depends on it.
+	Label            string                                 `json:"label"`
 	MaxContributions *int                                   `json:"max_contributions,omitempty"`
 	MinimumCohort    *int                                   `json:"minimum_cohort,omitempty"`
 	ReadObject       *string                                `json:"read_object,omitempty"`

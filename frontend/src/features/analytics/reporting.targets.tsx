@@ -22,17 +22,15 @@ import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import {
-  metricLabel,
-  reportingAmount,
-  reportingPeriodLabel,
-} from "./reporting.model";
+import { reportingAmount, reportingPeriodLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
+import { useMetricNames } from "./reporting.queries";
 import { ReportingTargetDialog } from "./reporting.targetdialog";
 
 type Target = components["schemas"]["ReportingTarget"];
 export function ReportingTargets() {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const context = useAnalyticsContext();
   const zone = useRecordZone();
@@ -121,7 +119,7 @@ export function ReportingTargets() {
                             {target.definition.scope.label ??
                               target.definition.scope.kind}
                           </strong>
-                          <div>{metricLabel(target.definition.metric, t)}</div>
+                          <div>{metricName(target.definition.metric)}</div>
                           <div className="t-caption">
                             {reportingPeriodLabel(
                               target.interval,

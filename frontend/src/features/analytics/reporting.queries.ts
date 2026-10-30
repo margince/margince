@@ -1,8 +1,10 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
+import type { MetricNames } from "./reporting.model";
 
 export { reloadReportingFigures };
 
@@ -20,14 +22,31 @@ export function useReportingFramework(enabled = true) {
 
 // The metric catalog this seat may read, under one query key so every surface
 // that reads it shares one answer.
+export const reportingCatalogKey = ["reporting-catalog"];
+
 export function useReportingCatalog(enabled = true) {
   return useQuery({
-    queryKey: ["reporting-catalog"],
+    queryKey: reportingCatalogKey,
     enabled,
     queryFn: async () => {
       return unwrap(await api.GET("/analytics/metrics"));
     },
   });
+}
+
+// The catalog's name for each metric, the one the CSV export writes too. It is
+// blank until the catalog answers. A metric the catalog does not offer this
+// reader, retired or not readable, is named as unavailable and never by id.
+export function useMetricNames(): MetricNames {
+  const t = useT();
+  const catalog = useReportingCatalog();
+  return (metric) => {
+    if (catalog.isPending) return "";
+    return (
+      catalog.data?.metrics.find((definition) => definition.id === metric)
+        ?.label ?? t("reporting.metricUnavailable")
+    );
+  };
 }
 
 function firstPage(): string | undefined {
