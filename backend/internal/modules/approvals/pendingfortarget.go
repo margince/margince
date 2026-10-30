@@ -78,7 +78,7 @@ func (s *Service) PendingForTargetCounted(ctx context.Context, tx pgx.Tx, target
 	now := s.now()
 	in := targetPending(targetType, targetID)
 	eligible := pendingEligible(ctx, tx, p, in, now)
-	var out PendingOnTarget
+	out := PendingOnTarget{Approvals: []crmcontracts.Approval{}}
 	err := walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
 		visible, err := eligible(batch)
 		if err != nil {
