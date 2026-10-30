@@ -5,7 +5,7 @@
 -- NULL means unknown: the row was recorded before this column, and a noon
 -- start on such a row cannot say whether it was a time or a date. Rows the old
 -- noon repair restored to a known instant are enriched by the data task
--- core/1793264333_meeting_history_precision; no other row is guessed.
+-- core/1793336397_meeting_history_precision; no other row is guessed.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE activity_meeting_history ADD COLUMN scheduled_precision text;

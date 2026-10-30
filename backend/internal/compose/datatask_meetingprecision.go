@@ -19,9 +19,9 @@ import (
 // run in either order. Any other old start stays unknown.
 func meetingHistoryPrecisionDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1793264333_meeting_history_precision", Version: 1,
+		ID: "core/1793336397_meeting_history_precision", Version: 1,
 		Title:    "Recording which restored meeting times are exact",
-		Requires: []string{"core/1793264333"},
+		Requires: []string{"core/1793336397"},
 		Steps: []datatask.Step{{
 			Name: "prove_restored_instants", Limit: 500, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{Reason: "activities.recordMeetingTransition stamps the same precision on every new transition, without a separate audit row"},
