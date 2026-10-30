@@ -6,6 +6,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -70,9 +71,9 @@ func leakedRunners() string {
 	if len(liveRunners.byTest) == 0 {
 		return ""
 	}
-	out := ""
+	var out strings.Builder
 	for name, count := range liveRunners.byTest {
-		out += fmt.Sprintf("\n  %s holds %d undrained job runner(s)", name, count)
+		fmt.Fprintf(&out, "\n  %s holds %d undrained job runner(s)", name, count)
 	}
-	return out
+	return out.String()
 }
