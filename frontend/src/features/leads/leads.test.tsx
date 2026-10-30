@@ -248,6 +248,43 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(promoteBody).toMatchObject({ create_company: true });
   });
 
+  it("a company choice ticked and cancelled is not sent by the next opening", async () => {
+    const user = userEvent.setup();
+    let promoteBody: unknown = null;
+    let cancelled = false;
+    stubFetch(async (url, method, request) => {
+      if (url.includes("/promote-preview")) {
+        return jsonResponse(
+          cancelled
+            ? { outcome: "create" }
+            : { outcome: "create", typed_company: "Nordwind Labs" },
+        );
+      }
+      if (method === "POST" && url.includes("/leads/l-1/promote")) {
+        promoteBody = JSON.parse(await request.text());
+        return jsonResponse({ contact: anna, merged: false, lead_id: "l-1" });
+      }
+      return jsonResponse(lead);
+    });
+    render(<LeadScreen id="l-1" />);
+    await user.click(await screen.findByTestId("lead-qualify"));
+    await user.click(await screen.findByTestId("lead-qualify-create-company"));
+    cancelled = true;
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /cancel/i,
+      }),
+    );
+    await user.click(await screen.findByTestId("lead-qualify"));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^Qualify/,
+      }),
+    );
+    await waitFor(() => expect(promoteBody).toBeTruthy());
+    expect(promoteBody).toMatchObject({ create_company: false });
+  });
+
   it("the qualify dialog asks nothing about the company when the preview names none to place", async () => {
     const user = userEvent.setup();
     let promoteBody: unknown = null;

@@ -202,6 +202,7 @@ export function QualifyDialog({
 
   const close = () => {
     qualify.reset();
+    setCreateCompany(false);
     onClose();
   };
 
@@ -213,7 +214,8 @@ export function QualifyDialog({
         activity_id: lead.qualification_evidence?.activity_id ?? null,
         note: trimmedNote || null,
       },
-      create_company: createCompany,
+      // Only a box the reader saw ticked in this opening may mint a company.
+      create_company: Boolean(typedCompany) && createCompany,
       deal: withDeal
         ? dealBlock({
             pipelineId: chosenPipeline?.id,
