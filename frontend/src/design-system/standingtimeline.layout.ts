@@ -101,8 +101,14 @@ export function axisOf(
   const near = moments.filter((at) => at <= reach);
   const room = Math.max(7 * DAY_MS, (today - first) / 6);
   const range = rangeOf([today, today + room, ...near]);
-  const beyond = moments.filter((at) => at > range.end);
+  const beyond = moments.filter((at) => pastRange(at, range));
   return beyond.length > 0 ? { range, far: Math.min(...beyond) } : { range };
+}
+
+// The range ends on its last day's midnight, so an instant later that day is
+// still on it.
+function pastRange(at: number, range: TimelineRange): boolean {
+  return at >= range.end + DAY_MS;
 }
 
 /** Where a moment sits on the canvas, as a percentage: on the dated span, or
@@ -111,7 +117,7 @@ export function axisPct(at: number, axis: TimelineAxis): number {
   if (axis.far === undefined) {
     return pct(at, axis.range);
   }
-  if (at > axis.range.end) {
+  if (pastRange(at, axis.range)) {
     return 100;
   }
   return Math.round(pct(at, axis.range) * BREAK_AT) / 100;

@@ -134,6 +134,15 @@ describe("a date far ahead", () => {
     expect(axisPct(day("2026-09-23"), axis)).toBeGreaterThan(15);
   });
 
+  it("keeps an instant late on the span's last day on the span", () => {
+    const axis = axisOf(day("2026-10-30"), [
+      day("2026-09-07"),
+      day("2026-11-30T17:00:00Z"),
+    ]);
+    expect(axis.far).toBeUndefined();
+    expect(axisPct(day("2026-11-30T17:00:00Z"), axis)).toBe(100);
+  });
+
   it("is drawn to scale while it is no further ahead than the line looks back", () => {
     const axis = axisOf(today, [day("2025-10-01"), day("2027-06-30")]);
     expect(axis.far).toBeUndefined();
