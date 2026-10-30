@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 138.5 KB |
+| Tool catalog | 138.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36553 |
+| Approx. wire tokens | 36570 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.0 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 35.1 KB | 25% | Yes, every step |
 | Input schemas | 64.3 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
 | **Description + input schema** | **99.4 KB** | **71%** | **the recurring cost** |
@@ -68,8 +68,8 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 553 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1247 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1022 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 473 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -2095,13 +2095,14 @@ next_step and next_step_due_at. promote needs a trigger naming the engagement; c
 answered never promotes. demote needs a reason and is refused once the contact owns a deal.
 set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's
 Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost
-stage waits for a human; to an open stage it runs at once. move_project to closed needs a reason and
-leaves the project's tasks open. When the user asked for the close, report what is still open and
-close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines
-gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a
-company from its website. A promotion answers with the new contact's id. A staged answer's approval
-id is what the retry carries; do not report the change until the retry has answered. (Governance:
-runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
+stage closes or reopens the deal, which is the user's decision: unless they named the deal and
+stage, name them and get their yes first. move_project to closed needs a reason and leaves the
+project's tasks open. When the user asked for the close, report what is still open and close: an
+open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the
+stage ids. Use update_record for a record's other fields, and enrich to learn about a company from
+its website. A promotion answers with the new contact's id. A staged answer's approval id is what
+the retry carries; do not report the change until the retry has answered. (Governance: runs
+immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
 merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the
 actions disqualify, promote cannot be undone, so tell the user exactly what the call will change and
 get their yes before calling, unless they already asked for exactly this; requires passport scope
@@ -2285,16 +2286,16 @@ get their yes before calling, unless they already asked for exactly this; requir
 Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
 deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
 word. update renames, recolours or describes one; fields left out are unchanged. merge folds a
-duplicate word into the one kept, once a human approves. apply never creates a tag: an unknown name
-is refused, a name matches case-insensitively, an archived word is refused as archived, and the same
-tag twice is a conflict. Before create, read the list — a near-duplicate splits records that
-belong together, and a taken name is a conflict, even a retired one, which only Settings restores.
-create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag
-right before editing; it changes what a word is called, never what carries it. Removing a tag that
-is not there succeeds. archive retires a word for every record; the records keep it. (Governance:
-runs immediately for apply, archive, create, remove, update; a human approves first for merge; the
-action archive cannot be undone, so tell the user exactly what the call will change and get their
-yes before calling, unless they already asked for exactly this; requires passport scope "write".)
+duplicate word into the one kept. apply never creates a tag: an unknown name is refused, a name
+matches case-insensitively, an archived word is refused as archived, and the same tag twice is a
+conflict. Before create, read the list — a near-duplicate splits records that belong together, and
+a taken name is a conflict, even a retired one, which only Settings restores. create and update need
+tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
+changes what a word is called, never what carries it. Removing a tag that is not there succeeds.
+archive retires a word for every record; the records keep it. (Governance: runs immediately for
+apply, archive, create, remove, update; a human approves first for merge; the action archive cannot
+be undone, so tell the user exactly what the call will change and get their yes before calling,
+unless they already asked for exactly this; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7723,10 +7724,10 @@ yes before calling, unless they already asked for exactly this; requires passpor
 
 ```text
 Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for.
-invite sends the invitation to its attendees. book runs at once; invite reaches attendees outside
-the workspace and waits for a human. Read check_availability before booking a time. Use
-change_activities with log to record a meeting that already happened. Keep the meeting's id to send
-its invitation. (Governance: runs immediately for book; a human approves first for invite; the
+invite sends the invitation to its attendees. invite reaches attendees outside the workspace, so
+name them and the time and get the user's yes first. Read check_availability before booking a time.
+Use change_activities with log to record a meeting that already happened. Keep the meeting's id to
+send its invitation. (Governance: runs immediately for book; a human approves first for invite; the
 action book cannot be undone, so tell the user exactly what the call will change and get their yes
 before calling, unless they already asked for exactly this; requires passport scope "send".)
 ```

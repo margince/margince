@@ -233,27 +233,29 @@ var mergeRecordsCopy = toolCopy{
 var advanceDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
-		"carries only its current stage. Moving onto or off a won/lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
+		"the deal, which is the user's decision: unless they named this deal and stage, name " +
+		"them and get their yes first. A losing stage needs a lost_reason. Read the target " +
 		"stage's semantic rather than guessing from its name.",
 	Instead: "Use progress_deal when the move should also leave a note explaining it, which is " +
 		"almost always what a human means by moving a deal on.",
-	Retain: "Send if_version with the version you read of the deal, and keep the staged approval " +
-		"id when a closing move comes back for approval.",
+	Retain: "Send if_version with the version you read of the deal. When the answer is staged, " +
+		"keep its approval id, and do not report the move until the retry has answered.",
 }
 
 var progressDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
 		"timeline saying why, in one call.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
-		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
+		"the deal, which is the user's decision: unless they named this deal and stage, name " +
+		"them and get their yes first. A losing stage needs a lost_reason. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +
 		"note follows it, so a note that fails to write does not put the deal back — the answer " +
 		"says so, and the note is then log_activity's to retry.",
 	Instead: "Use log_activity when something happened but the deal did not move.",
-	Retain: "Send if_version with the version you read of the deal; keep the staged approval id " +
-		"if a closing move is sent for approval.",
+	Retain: "Send if_version with the version you read of the deal. When the answer is staged, " +
+		"keep its approval id, and do not report the move until the retry has answered.",
 }
 
 var qualifyLeadCopy = toolCopy{
