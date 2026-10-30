@@ -53,7 +53,7 @@ function Arc() {
     const answered = setTimeout(() => setAsking(false), 1800);
     return () => clearTimeout(answered);
   }, [asking]);
-  const brief = BRIEFS[asked % BRIEFS.length];
+  const brief = BRIEFS[asked % BRIEFS.length] ?? [];
   return (
     <Panel
       title="This week on the deal"

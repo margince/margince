@@ -87,8 +87,11 @@ export function AiReveal({
   text,
   children,
 }: Readonly<{
-  /** The words the block shows, as plain text: what "seen before" is about. */
-  text: string;
+  /**
+   * The words the block shows, as plain text: what "seen before" is about.
+   * Without words there is nothing to reveal, and the block stands still.
+   */
+  text: string | null | undefined;
   children: ReactNode;
 }>) {
   const block = useRef<HTMLDivElement>(null);
