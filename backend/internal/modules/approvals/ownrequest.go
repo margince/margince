@@ -85,3 +85,24 @@ func ownRequestStager(ctx context.Context, kind string) (string, error) {
 	}
 	return p.ID, nil
 }
+
+// OpenRequestsForTargetTx answers every open request of kind on one record,
+// whoever staged it, locked so a concurrent decision waits for the caller.
+// The caller has already passed the record's own gate for the request it files.
+func OpenRequestsForTargetTx(ctx context.Context, tx pgx.Tx, kind, targetType string, targetID ids.UUID) ([]OwnRequest, error) {
+	if !ownRequestKinds[kind] {
+		return nil, fmt.Errorf("crmapprovals: %q is not a request a colleague stages", kind)
+	}
+	rows, err := tx.Query(ctx, `SELECT id, proposed_change, expires_at FROM approval
+		 WHERE kind = $1 AND target_entity_type = $2 AND target_entity_id = $3
+		   AND status = 'pending' AND expires_at > now()
+		 `+lockOrder+` FOR UPDATE`, kind, targetType, targetID)
+	if err != nil {
+		return nil, fmt.Errorf("crmapprovals: reading the open requests on a record: %w", err)
+	}
+	open, err := pgx.CollectRows(rows, pgx.RowToStructByPos[OwnRequest])
+	if err != nil {
+		return nil, fmt.Errorf("crmapprovals: reading the open requests on a record: %w", err)
+	}
+	return open, nil
+}

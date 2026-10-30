@@ -151,6 +151,7 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/approvals/offerdecidable.go:offeredRecordQueries":           "whether an offered record is still live, for the colleague it is offered to; only ids leave. Its one caller is decidableRows, which first requires the decision grants (update on the record type) and the payload naming the reader as receiver",
 	"internal/compose/ownershiptransfernotice.go:transferRecords":                 "the owner and name of a record a handover request moves. Read for the decision precheck and the line telling the colleague who asked, under the decider, whose decision grants already required update on the record type, or under the expiry sweep's system principal; the name goes only to the colleague who asked for that record while they could see it",
 	"internal/compose/assurancesignals.go:assuranceSignalSubjectsQuery":           "the statement AssuranceSignalSubjects runs, its one caller, which asks the company, signal and activity read gates first",
 	"internal/modules/contacts/addressrepair.go:unsplitCompanyAddress":            "one company's unsplit address, read by unsplitProposal to split it. Its one caller chain is repairUnsplitCompanyAddress ← RepairUnsplitCompanyAddressesTx, which asks auth.RequireSystem and auth.Require(ctx, entityCompany, read) first",

@@ -3,7 +3,10 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+)
 
 // ownershipTransferWords are the sentences a transfer's card and its notices
 // carry, in the installation's base language. The record and colleague names
@@ -24,6 +27,18 @@ var ownershipTransferWords = struct {
 	Declined, DeclinedBody   langcopy.Phrase
 	Expired, ExpiredBody     langcopy.Phrase
 	Withdrawn, WithdrawnBody langcopy.Phrase
+	// OfferedContact and OfferedCompany: the owner offering, then the counts
+	// AskedContact carries.
+	OfferedContact, OfferedCompany langcopy.Phrase
+	// OfferAccepted: the colleague who took it, then the record.
+	OfferAccepted langcopy.Phrase
+	// OfferAcceptedMoved: the deals, then the tasks that moved with it.
+	OfferAcceptedMoved langcopy.Phrase
+	// OfferDeclined, OfferExpired and OfferWithdrawn: the colleague offered
+	// to, then the record.
+	OfferDeclined, OfferDeclinedBody   langcopy.Phrase
+	OfferExpired, OfferExpiredBody     langcopy.Phrase
+	OfferWithdrawn, OfferWithdrawnBody langcopy.Phrase
 }{
 	AskedContact: langcopy.Phrase{
 		En: "%s asks you to hand over this contact. Open deals that move with it: %d. Open tasks: %d.",
@@ -85,4 +100,71 @@ var ownershipTransferWords = struct {
 		De: "Der Datensatz hat den Inhaber gewechselt, deshalb wurde deine Bitte geschlossen. Frag den neuen Inhaber, wenn du ihn noch brauchst.",
 		Vi: "Bản ghi đã đổi chủ nên đề nghị của bạn đã được đóng. Hãy hỏi chủ mới nếu bạn vẫn cần.",
 	},
+	OfferedContact: langcopy.Phrase{
+		En: "%s wants to hand you this contact. Open deals that move with it: %d. Open tasks: %d.",
+		De: "%s möchte dir diesen Kontakt übergeben. Offene Deals, die mitgehen: %d. Offene Aufgaben: %d.",
+		Vi: "%s muốn chuyển giao liên hệ này cho bạn. Số giao dịch đang mở đi kèm: %d. Số việc đang mở: %d.",
+	},
+	OfferedCompany: langcopy.Phrase{
+		En: "%s wants to hand you this company. Open deals that move with it: %d. Open tasks: %d.",
+		De: "%s möchte dir dieses Unternehmen übergeben. Offene Deals, die mitgehen: %d. Offene Aufgaben: %d.",
+		Vi: "%s muốn chuyển giao công ty này cho bạn. Số giao dịch đang mở đi kèm: %d. Số việc đang mở: %d.",
+	},
+	OfferAccepted: langcopy.Phrase{
+		En: "%s took over %s",
+		De: "%s hat %s übernommen",
+		Vi: "%s đã nhận %s",
+	},
+	OfferAcceptedMoved: langcopy.Phrase{
+		En: "It is theirs now. Open deals that moved with it: %d. Open tasks: %d.",
+		De: "Es gehört jetzt ihnen. Offene Deals, die mitgegangen sind: %d. Offene Aufgaben: %d.",
+		Vi: "Giờ nó thuộc về họ. Số giao dịch đang mở đã chuyển theo: %d. Số việc đang mở: %d.",
+	},
+	OfferDeclined: langcopy.Phrase{
+		En: "%s declined %s",
+		De: "%s hat %s abgelehnt",
+		Vi: "%s đã từ chối %s",
+	},
+	OfferDeclinedBody: langcopy.Phrase{
+		En: "Your offer to hand it over was declined. It stays with you.",
+		De: "Dein Übergabeangebot wurde abgelehnt. Der Datensatz bleibt bei dir.",
+		Vi: "Đề nghị chuyển giao của bạn đã bị từ chối. Bản ghi vẫn thuộc về bạn.",
+	},
+	OfferExpired: langcopy.Phrase{
+		En: "%s did not answer about %s",
+		De: "%s hat zu %s nicht geantwortet",
+		Vi: "%s chưa trả lời về %s",
+	},
+	OfferExpiredBody: langcopy.Phrase{
+		En: "Your offer ran out after 7 days with no answer. It stays with you.",
+		De: "Dein Angebot ist nach 7 Tagen ohne Antwort abgelaufen. Der Datensatz bleibt bei dir.",
+		Vi: "Đề nghị của bạn đã hết hạn sau 7 ngày không có trả lời. Bản ghi vẫn thuộc về bạn.",
+	},
+	OfferWithdrawn: langcopy.Phrase{
+		En: "Your offer of %[2]s to %[1]s was closed",
+		De: "Dein Angebot von %[2]s an %[1]s wurde geschlossen",
+		Vi: "Đề nghị chuyển %[2]s cho %[1]s đã được đóng",
+	},
+	OfferWithdrawnBody: langcopy.Phrase{
+		En: "The record changed hands, so it is no longer yours to offer.",
+		De: "Der Datensatz hat den Inhaber gewechselt, deshalb kannst du ihn nicht mehr anbieten.",
+		Vi: "Bản ghi đã đổi chủ nên bạn không còn có thể chuyển giao nó.",
+	},
+}
+
+// cardPhrase is the decider's card sentence for the transfer's direction and
+// record type.
+func cardPhrase(transfer approvalsubject.OwnershipTransfer) langcopy.Phrase {
+	words := ownershipTransferWords
+	company := transfer.RecordType == string(recordTypeCompany)
+	switch {
+	case transfer.Offered() && company:
+		return words.OfferedCompany
+	case transfer.Offered():
+		return words.OfferedContact
+	case company:
+		return words.AskedCompany
+	default:
+		return words.AskedContact
+	}
 }

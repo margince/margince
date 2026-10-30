@@ -24720,8 +24720,9 @@ paths:
         the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
         its own audit row and updated event. A second press while a request is open answers that request
         with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
-        (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
-        suspended or has left; ask an administrator).
+        (take ownership instead), `already_yours_to_change`, `owner_unavailable` (the owner is
+        suspended or has left; ask an administrator), or `transfer_pending` (the owner has offered the
+        record to a colleague, and that offer is still open).
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -24743,7 +24744,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`).'
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `transfer_pending`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -24772,6 +24773,114 @@ paths:
       description: The card leaves the owner's inbox. `404` when the caller has no open request.
       responses:
         '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-offer:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: offerOwnershipTransfer
+      x-agent-access: human-only
+      # Session cookie only: giving a record away is the owner's own act.
+      security: [{ cookieAuth: [] }]
+      summary: Offer the caller's own record to a colleague.
+      description: |
+        Only the record's owner may offer it, and only while they may change it; anyone else gets
+        `403` (a manager who is not the owner reassigns the record directly). The offer is an
+        `ownership_transfer` approval in the colleague's inbox; only that colleague can accept it, and
+        it stays open for 7 days. The colleague may be any active human seat that can write and whose
+        role may read and change records of this type, inside the owner's own write scope or not,
+        because they agree to take the record; `listOwnershipOfferCandidates` names them. When they
+        accept, the record moves to them, and so do the open deals linked to it and the open tasks on it that the
+        owner holds. Each moved row gets its own audit row and updated event. A second press for the
+        same colleague answers the open offer with `200`; a new offer answers `201`. `422` with
+        `owner_not_assignable` when the colleague cannot hold the record. `409 transfer_pending` when
+        another offer or a colleague's request for this record is still open; the message names it.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnershipOfferInput' }
+      responses:
+        '200':
+          description: The offer already open for this record and colleague.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '201':
+          description: The offer is in the colleague's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Another handover of this record is open (`code`: `transfer_pending`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getOwnershipOffer
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The caller's open offer of this record.
+      responses:
+        '200':
+          description: The caller's open offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawOwnershipOffer
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Withdraw the caller's open offer of this record.
+      description: The card leaves the colleague's inbox. `404` when the caller has no open offer.
+      responses:
+        '204': { description: The offer is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-offer/candidates:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: listOwnershipOfferCandidates
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The colleagues the caller may offer this record to.
+      description: |
+        Only the record's owner, while they may change it, reads the list; anyone else gets `403` or
+        `404`. It names every colleague `offerOwnershipTransfer` would accept for this record: an active
+        human seat that can write and whose role may read and change records of this type, inside the
+        owner's own write scope or not. The caller is left out.
+      responses:
+        '200':
+          description: The colleagues, by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOfferCandidates' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -63524,6 +63633,36 @@ components:
       additionalProperties: false
       properties:
         note: { type: string, maxLength: 500, description: 'A line for the owner, shown on the card.' }
+    OwnershipOfferInput:
+      type: object
+      additionalProperties: false
+      required: [to_id]
+      properties:
+        to_id: { type: string, format: uuid, description: The colleague the record is offered to. }
+        note: { type: string, maxLength: 500, description: 'A line for the colleague, shown on the card.' }
+    OwnershipOfferCandidates:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/OwnershipOfferCandidate' }
+    OwnershipOfferCandidate:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+    OwnershipOffer:
+      type: object
+      required: [approval_id, record_type, record_id, to_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company] }
+        record_id: { type: string, format: uuid }
+        to_id: { type: string, format: uuid, description: The colleague the offer is put to. }
+        status: { type: string, enum: [pending] }
+        expires_at: { type: string, format: date-time }
     OwnershipRequest:
       type: object
       required: [approval_id, record_type, record_id, owner_id, status, expires_at]

@@ -136,6 +136,7 @@ func ownerChangeAudits(t *testing.T, e *integration.Env, table string, id, from,
 // and a third colleague's work stay where they are.
 func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T) {
 	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "BAER Pharma", &e.Rep1)
 	stages := newHandoverPipeline(t, e)
 	openDeal := dealOn(t, e, stages, "BAER renewal", e.Rep1, company)
@@ -202,6 +203,7 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 // alone. Everything else is somebody else's business too and stays.
 func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
 	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
 	contact := e.SeedContact(t, "Pat Example", &e.Rep1)
 	colleague := e.SeedContact(t, "Sam Example", &e.Rep1)
 	kept := e.SeedCompany(t, "Example AG", &e.Rep1)
@@ -318,6 +320,7 @@ func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) 
 // path that told nobody is refused on accept, and stays pending to decline.
 func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "Moved AG", &e.Rep1)
 	request, _ := requestHandover(asker(e), t, e, "company", company)
 

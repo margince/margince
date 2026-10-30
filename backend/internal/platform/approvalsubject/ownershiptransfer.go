@@ -46,3 +46,21 @@ func (t OwnershipTransfer) decider() ids.UUID {
 	}
 	return t.DeciderID
 }
+
+// OwnershipTransferOfferedTo is the receiver of an offer: a transfer the giver
+// staged, which the receiver decides. It is zero for a request and for a
+// malformed payload.
+func OwnershipTransferOfferedTo(body json.RawMessage) ids.UUID {
+	var transfer OwnershipTransfer
+	if err := json.Unmarshal(body, &transfer); err != nil {
+		return ids.Nil
+	}
+	if transfer.decider().IsZero() || !transfer.Offered() {
+		return ids.Nil
+	}
+	return transfer.ToID
+}
+
+// Offered reports whether the giver staged the transfer, which makes it an
+// offer rather than a request.
+func (t OwnershipTransfer) Offered() bool { return t.RequestedBy == t.FromID }

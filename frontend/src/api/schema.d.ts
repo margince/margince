@@ -16725,8 +16725,9 @@ export interface paths {
          *     the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
          *     its own audit row and updated event. A second press while a request is open answers that request
          *     with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
-         *     (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
-         *     suspended or has left; ask an administrator).
+         *     (take ownership instead), `already_yours_to_change`, `owner_unavailable` (the owner is
+         *     suspended or has left; ask an administrator), or `transfer_pending` (the owner has offered the
+         *     record to a colleague, and that offer is still open).
          */
         post: operations["requestOwnershipTransfer"];
         /**
@@ -16734,6 +16735,72 @@ export interface paths {
          * @description The card leaves the owner's inbox. `404` when the caller has no open request.
          */
         delete: operations["withdrawOwnershipRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{record_type}/{id}/ownership-offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open offer of this record. */
+        get: operations["getOwnershipOffer"];
+        put?: never;
+        /**
+         * Offer the caller's own record to a colleague.
+         * @description Only the record's owner may offer it, and only while they may change it; anyone else gets
+         *     `403` (a manager who is not the owner reassigns the record directly). The offer is an
+         *     `ownership_transfer` approval in the colleague's inbox; only that colleague can accept it, and
+         *     it stays open for 7 days. The colleague may be any active human seat that can write and whose
+         *     role may read and change records of this type, inside the owner's own write scope or not,
+         *     because they agree to take the record; `listOwnershipOfferCandidates` names them. When they
+         *     accept, the record moves to them, and so do the open deals linked to it and the open tasks on it that the
+         *     owner holds. Each moved row gets its own audit row and updated event. A second press for the
+         *     same colleague answers the open offer with `200`; a new offer answers `201`. `422` with
+         *     `owner_not_assignable` when the colleague cannot hold the record. `409 transfer_pending` when
+         *     another offer or a colleague's request for this record is still open; the message names it.
+         */
+        post: operations["offerOwnershipTransfer"];
+        /**
+         * Withdraw the caller's open offer of this record.
+         * @description The card leaves the colleague's inbox. `404` when the caller has no open offer.
+         */
+        delete: operations["withdrawOwnershipOffer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{record_type}/{id}/ownership-offer/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The colleagues the caller may offer this record to.
+         * @description Only the record's owner, while they may change it, reads the list; anyone else gets `403` or
+         *     `404`. It names every colleague `offerOwnershipTransfer` would accept for this record: an active
+         *     human seat that can write and whose role may read and change records of this type, inside the
+         *     owner's own write scope or not. The caller is left out.
+         */
+        get: operations["listOwnershipOfferCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -46279,6 +46346,40 @@ export interface components {
         OwnershipRequestInput: {
             /** @description A line for the owner, shown on the card. */
             note?: string;
+        };
+        OwnershipOfferInput: {
+            /**
+             * Format: uuid
+             * @description The colleague the record is offered to.
+             */
+            to_id: string;
+            /** @description A line for the colleague, shown on the card. */
+            note?: string;
+        };
+        OwnershipOfferCandidates: {
+            data: components["schemas"]["OwnershipOfferCandidate"][];
+        };
+        OwnershipOfferCandidate: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        OwnershipOffer: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The colleague the offer is put to.
+             */
+            to_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
         };
         OwnershipRequest: {
             /** Format: uuid */
@@ -78930,7 +79031,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`). */
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `transfer_pending`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -78961,6 +79062,157 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getOwnershipOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    offerOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnershipOfferInput"];
+            };
+        };
+        responses: {
+            /** @description The offer already open for this record and colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            /** @description The offer is in the colleague's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another handover of this record is open (`code`: `transfer_pending`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawOwnershipOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offer is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listOwnershipOfferCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOfferCandidates"];
+                };
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

@@ -6680,6 +6680,17 @@ export const en = {
   "handover.withdraw": "Withdraw request",
   "handover.sent": "Request sent to {owner}",
   "handover.withdrawn": "Request withdrawn",
+  // The owner offering a record to a colleague, from the access panel.
+  "handover.offer": "Hand over to…",
+  "handover.offerTo": "Hand over to",
+  "handover.offerPick": "Choose a colleague",
+  "handover.offerNote": "Note (optional)",
+  "handover.offerSend": "Send offer",
+  "handover.offerCancel": "Cancel",
+  "handover.offerSent": "Offered to {name}",
+  "handover.offered": "Offered to {name}. The offer stays open until {date}.",
+  "handover.withdrawOffer": "Withdraw offer",
+  "handover.offerWithdrawn": "Offer withdrawn",
   // The full answer on the share screen: every colleague who can open the
   // record, grouped by why, and the reader's own access on one line.
   "whoCanSee.title": "Who can see this record",
