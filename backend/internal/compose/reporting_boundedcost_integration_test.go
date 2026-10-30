@@ -152,7 +152,7 @@ func TestReportingTargetCostDoesNotGrowWithTheMetricsHeldAgainstTargets(t *testi
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
 	admin := reportingActor(e)
-	seedTargetExclusions(t, service, admin, e)
+	seedTargetExclusions(admin, t, service, e)
 	blind := reportingTieredReader(admin, principal.RowScopeAll)
 	actor, _ := principal.Actor(blind)
 	actor.Permissions.Objects["sales_target"] = principal.ObjectGrant{}
@@ -176,7 +176,7 @@ func TestReportingBatchedTargetsKeepEveryExclusion(t *testing.T) {
 	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	service := newReportingService(e.Pool, func() time.Time { return at })
 	admin := reportingActor(e)
-	seedTargetExclusions(t, service, admin, e)
+	seedTargetExclusions(admin, t, service, e)
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held", "qualified_pipeline_created", "accepted_opportunities", "partner_pipeline"}, Blocks: []crmcontracts.ReportingBlockKind{"owner_attainment", "target_progress"}}
 	result, err := service.Evaluate(admin, selection)
 	if err != nil {
@@ -184,7 +184,7 @@ func TestReportingBatchedTargetsKeepEveryExclusion(t *testing.T) {
 	}
 	// The October and the pipeline target of sales won, the retired partner
 	// target and Rep1's own credit target must all stay out.
-	want := map[crmcontracts.ReportingMetricID]*float64{"bookings_won": ptrFloat(30000000), "meetings_held": ptrFloat(12), "qualified_pipeline_created": ptrFloat(5000000), "accepted_opportunities": nil, "partner_pipeline": nil}
+	want := map[crmcontracts.ReportingMetricID]*float64{"bookings_won": new(float64(30000000)), "meetings_held": new(float64(12)), "qualified_pipeline_created": new(float64(5000000)), "accepted_opportunities": nil, "partner_pipeline": nil}
 	for _, metric := range result.Metrics {
 		if expected := want[metric.Id]; (expected == nil) != (metric.Target == nil) || (expected != nil && *expected != *metric.Target) {
 			t.Errorf("%s: target = %s, want %s", metric.Id, valueOf(metric.Target), valueOf(expected))
@@ -198,7 +198,7 @@ func TestReportingBatchedTargetsKeepEveryExclusion(t *testing.T) {
 
 // seedTargetExclusions writes the September targets an evaluation should
 // hold, beside targets that differ in one part of the key each.
-func seedTargetExclusions(t *testing.T, service *reporting.Service, admin context.Context, e *forecastEnv) {
+func seedTargetExclusions(admin context.Context, t *testing.T, service *reporting.Service, e *forecastEnv) {
 	t.Helper()
 	september := openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}
 	october := openapi_types.Date{Time: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)}
@@ -228,8 +228,6 @@ func seedTargetExclusions(t *testing.T, service *reporting.Service, admin contex
 		t.Fatal(err)
 	}
 }
-
-func ptrFloat(value float64) *float64 { return &value }
 
 func valueOf(value *float64) string {
 	if value == nil {
