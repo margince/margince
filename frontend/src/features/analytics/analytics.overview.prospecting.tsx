@@ -23,10 +23,12 @@ import {
   useSdrSummary,
   WaitingOnOthers,
 } from "./analytics.outcomes.sdr";
+import { targetCard } from "./analytics.outcomes.targets";
 import {
   MetricReading,
   metricOf,
   OverviewLinks,
+  OverviewSaveActions,
 } from "./analytics.overview.readings";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
@@ -34,7 +36,6 @@ import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
-  reportingCompactAmount,
   reportingPeriodLabel,
 } from "./reporting.model";
 import {
@@ -51,6 +52,21 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
 type Framework = components["schemas"]["ReportingFramework"];
 type Workflow = "handoff" | "qualification";
+// Which outcome counts is known from the framework, or else the summary. Until
+// one answers it is pending; when neither can, it failed and nothing assumes it.
+type WorkflowState = Workflow | "pending" | "failed";
+
+function workflowOf(
+  framework: UseQueryResult<Framework>,
+  summary: ReturnType<typeof useSdrSummary>,
+): WorkflowState {
+  if (framework.data)
+    return framework.data.definition.template === "sdr"
+      ? "handoff"
+      : "qualification";
+  if (summary.data) return summary.data.workflow;
+  return framework.isLoading || summary.isLoading ? "pending" : "failed";
+}
 
 /**
  * My prospecting: the reader's own outcomes this week, their monthly targets
@@ -78,7 +94,11 @@ export function MyProspecting({
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const readsLeads = useCan("lead", "read");
   const summary = useSdrSummary(self?.id ?? "", !!self?.id && readsLeads);
-  const { metrics } = viewRequest("sdr", catalog, filters.period);
+  const { metrics, blocks: sdrBlocks } = viewRequest(
+    "sdr",
+    catalog,
+    filters.period,
+  );
   const selection: ReportingSelection = {
     scope: { kind: "owner", id: self?.id, label: self?.label },
     period: filters.period,
@@ -106,15 +126,21 @@ export function MyProspecting({
       </SurfaceState>
     );
   }
-  const workflow: Workflow = framework.data
-    ? framework.data.definition.template === "sdr"
-      ? "handoff"
-      : "qualification"
-    : (summary.data?.workflow ?? "handoff");
+  const workflow = workflowOf(framework, summary);
+  const known = workflow === "handoff" || workflow === "qualification";
   return (
     <>
       <FilterBar
         label={t("analytics.filters")}
+        actions={
+          <OverviewSaveActions
+            selection={
+              query.data
+                ? { ...query.data.selection, blocks: sdrBlocks }
+                : undefined
+            }
+          />
+        }
         caption={
           validDates
             ? resultsThrough(query.data, locale, t)
@@ -161,7 +187,7 @@ export function MyProspecting({
               <OpeningSummary
                 sentences={prospectingSummary(
                   evaluation,
-                  workflow,
+                  known ? workflow : undefined,
                   summary.data?.handoffs?.waiting,
                   { t, plural, locale },
                 )}
@@ -180,10 +206,15 @@ export function MyProspecting({
         </QueryGate>
       )}
       <NeedsYourAction locale={locale} />
-      {workflow === "handoff" ? (
-        <Waiting self={self.id} summary={summary} />
-      ) : (
-        <QualificationNote />
+      {workflow === "handoff" && <Waiting self={self.id} summary={summary} />}
+      {workflow === "qualification" && <QualificationNote />}
+      {workflow === "failed" && (
+        <WorkflowFailed
+          onRetry={() => {
+            void framework.refetch();
+            void summary.refetch();
+          }}
+        />
       )}
       <OverviewLinks
         sections={[
@@ -204,7 +235,7 @@ function ProspectingReadings({
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
-  workflow: Workflow;
+  workflow: WorkflowState;
   upcoming: number | undefined;
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
@@ -241,7 +272,7 @@ function ProspectingReadings({
         detail={period}
         onEvidence={onEvidence}
       />
-      {workflow === "handoff" ? (
+      {workflow === "handoff" && (
         <>
           <MetricReading
             evaluation={evaluation}
@@ -251,7 +282,8 @@ function ProspectingReadings({
           />
           {qualifiedReading}
         </>
-      ) : (
+      )}
+      {workflow === "qualification" && (
         <>
           {qualifiedReading}
           <StatCard
@@ -263,6 +295,27 @@ function ProspectingReadings({
                 : formatNumber(upcoming, locale)
             }
             detail={t("analytics.sdrUpcomingMeetingsDetail")}
+          />
+        </>
+      )}
+      {(workflow === "pending" || workflow === "failed") && (
+        <>
+          {qualifiedReading}
+          {/* Accepted handoffs or meetings ahead: which one counts here is
+              not known yet, so neither is shown in its place. */}
+          <StatCard
+            narrow="row"
+            label={t("analytics.overview.mainOutcome")}
+            value={t(
+              workflow === "pending"
+                ? "analytics.readingLoading"
+                : "analytics.readingUnavailable",
+            )}
+            detail={
+              workflow === "failed"
+                ? t("analytics.overview.workflowFailed")
+                : undefined
+            }
           />
         </>
       )}
@@ -300,11 +353,8 @@ function MonthlyTargets({
     locale,
   );
   const held = evaluation.metrics.filter(
-    (metric) =>
-      metric.target != null && metric.target > 0 && !metric.coverage.withheld,
+    (metric) => metric.target != null && !metric.coverage.withheld,
   );
-  const amount = (value: number, unit: string) =>
-    reportingCompactAmount(value, unit, context.currency, locale);
   return (
     <Panel title={t("analytics.overview.monthlyTitle", { month })}>
       <PanelBody>
@@ -332,25 +382,21 @@ function MonthlyTargets({
         ) : (
           <StatStrip label={t("analytics.overview.monthlyTitle", { month })}>
             {held.map((metric) => {
-              const target = metric.target ?? 0;
-              const actual = metric.target_actual ?? 0;
+              const card = targetCard(
+                metric,
+                context,
+                metricName(metric.id),
+                t,
+                locale,
+              );
               return (
                 <StatCard
-                  key={metric.id}
+                  key={card.key}
                   narrow="row"
-                  label={metricName(metric.id)}
-                  value={t("analytics.overview.ofTarget", {
-                    actual: amount(actual, metric.unit),
-                    target: amount(target, metric.unit),
-                  })}
-                  detail={
-                    actual >= target
-                      ? t("reporting.compare.reached")
-                      : t("analytics.overview.moreToTarget", {
-                          amount: amount(target - actual, metric.unit),
-                        })
-                  }
-                  meter={{ filled: actual, total: target }}
+                  label={card.label}
+                  value={card.value}
+                  detail={card.detail}
+                  meter={card.meter}
                 />
               );
             })}
@@ -419,5 +465,25 @@ function QualificationNote() {
         t("analytics.overview.workflowWho")
       )}
     </p>
+  );
+}
+
+// Neither the framework nor the summary said which workflow applies, so the
+// page shows no handoff panel and no qualification note in its place.
+function WorkflowFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  const t = useT();
+  return (
+    <Panel title={t("analytics.overview.workflowTitle")}>
+      <PanelBody>
+        <SurfaceState
+          state="failed"
+          emptyLabel={t("common.empty")}
+          loadingLabel={t("analytics.overview.workflowTitle")}
+          detail={{ onRetry }}
+        >
+          {null}
+        </SurfaceState>
+      </PanelBody>
+    </Panel>
   );
 }

@@ -7024,14 +7024,17 @@ export const en = {
   "analytics.overview.noMonthlyTarget": "No monthly target set",
   "analytics.overview.setMonthlyTargetBody":
     "Set a monthly target for meetings or accepted handoffs to see what is left this month.",
-  "analytics.overview.ofTarget": "{actual} of {target}",
-  "analytics.overview.moreToTarget": "{amount} more to target",
   "analytics.overview.noHandoffs":
     "Leads qualified is your main outcome, because this company does not use SDR handoffs.",
   "analytics.overview.changeWorkflow": "Change in Setup",
   "analytics.overview.workflowWho": "An admin can set this up in Setup.",
   "analytics.attentionIncomplete":
     "Some checks could not be read, so this list may be short.",
+  "analytics.overview.mainOutcome": "Main outcome",
+  "analytics.overview.workflowFailed":
+    "Could not read whether this company uses SDR handoffs.",
+  "analytics.overview.workflowTitle": "SDR handoffs",
+  "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",

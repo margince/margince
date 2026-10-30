@@ -11,6 +11,7 @@ import { jsonResponse } from "../../testing/story-utils";
 import {
   ADMIN_GRANTS,
   bySeat,
+  compared,
   isMovement,
   metric,
   openOverview as open,
@@ -312,7 +313,8 @@ describe("My prospecting", () => {
     });
     const panel = within(month.closest("section") ?? document.body);
     expect(panel.getByText("18 of 24")).toBeVisible();
-    expect(panel.getByText("6 more to target")).toBeVisible();
+    // The share reached is the server's attainment, never worked out here.
+    expect(panel.getByText(/75% of target/)).toBeVisible();
     expect(
       screen.getByText(/2 handoffs are waiting for a decision/),
     ).toBeVisible();
@@ -380,5 +382,82 @@ describe("My prospecting", () => {
     );
     expect(await screen.findByText("No monthly target set")).toBeVisible();
     expect(screen.getByText(/A colleague who manages targets/)).toBeVisible();
+  });
+
+  it("says a monthly figure failed instead of counting it as zero", async () => {
+    open(
+      "#/analytics",
+      () =>
+        prospectingEvaluation([
+          metric("meetings_held", null, {
+            target: 24,
+            coverage: { status: "failed", withheld: false },
+          }),
+        ]),
+      { seat: "sdr" },
+    );
+    const month = await screen.findByRole("heading", {
+      name: /^Monthly targets, /,
+    });
+    const panel = within(month.closest("section") ?? document.body);
+    expect(panel.getByText("Could not be calculated")).toBeVisible();
+    expect(panel.queryByText(/^0 of/)).toBeNull();
+  });
+
+  it("names no workflow's outcome until one is known", async () => {
+    open("#/analytics/overview?overview=prospecting", bySeat("sdr"), {
+      seat: "sdr",
+      framework: () => new Promise<Response>(() => {}),
+      summary: () => new Promise<Response>(() => {}),
+    });
+    const strip = await readings();
+    expect(strip.getByText("Main outcome")).toBeVisible();
+    expect(strip.queryByText("Accepted handoffs")).toBeNull();
+    expect(strip.queryByText("Meetings coming up")).toBeNull();
+    expect(screen.queryByText(/handoffs? accepted/)).toBeNull();
+    expect(screen.queryByText(/does not use SDR handoffs/)).toBeNull();
+  });
+
+  it("says the workflow could not be read when neither source answers", async () => {
+    const failed = () =>
+      jsonResponse({ title: "Unavailable", status: 503 }, 503);
+    open("#/analytics/overview?overview=prospecting", bySeat("sdr"), {
+      seat: "sdr",
+      framework: failed,
+      summary: failed,
+    });
+    expect(
+      await screen.findByText(
+        "Could not read whether this company uses SDR handoffs.",
+      ),
+    ).toBeVisible();
+    const strip = await readings();
+    expect(strip.queryByText("Accepted handoffs")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "Handoffs waiting on others" }),
+    ).toBeNull();
+    const panel = await screen.findByRole("heading", { name: "SDR handoffs" });
+    expect(
+      within(panel.closest("section") ?? document.body).getByRole("button", {
+        name: /retry/i,
+      }),
+    ).toBeVisible();
+  });
+});
+
+describe("Sales review gap", () => {
+  it("shows no gap when the comparison carries none", async () => {
+    const { gap: _gap, ...withoutGap } = compared;
+    open("#/analytics", (url) =>
+      isMovement(url)
+        ? startingMovement()
+        : salesEvaluation({ comparison: withoutGap }),
+    );
+    const strip = await readings();
+    expect(strip.getByText("Not compared")).toBeVisible();
+    expect(
+      strip.getByText("The comparison came back without a gap."),
+    ).toBeVisible();
+    expect(strip.queryByText("€0")).toBeNull();
   });
 });

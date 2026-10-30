@@ -6997,8 +6997,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.noMonthlyTarget": "Kein Monatsziel gesetzt",
   "analytics.overview.setMonthlyTargetBody":
     "Setze ein Monatsziel für Termine oder angenommene Übergaben, um zu sehen, was diesen Monat fehlt.",
-  "analytics.overview.ofTarget": "{actual} von {target}",
-  "analytics.overview.moreToTarget": "Noch {amount} bis zum Ziel",
   "analytics.overview.noHandoffs":
     "Qualifizierte Leads sind dein wichtigstes Ergebnis, weil dieses Unternehmen keine SDR-Übergaben nutzt.",
   "analytics.overview.changeWorkflow": "In der Einrichtung ändern",
@@ -7006,6 +7004,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Admins können das in der Einrichtung festlegen.",
   "analytics.attentionIncomplete":
     "Einige Prüfungen konnten nicht gelesen werden, daher kann diese Liste unvollständig sein.",
+  "analytics.overview.mainOutcome": "Wichtigstes Ergebnis",
+  "analytics.overview.workflowFailed":
+    "Ob dieses Unternehmen SDR-Übergaben nutzt, konnte nicht gelesen werden.",
+  "analytics.overview.workflowTitle": "SDR-Übergaben",
+  "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",

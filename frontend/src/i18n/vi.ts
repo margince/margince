@@ -6816,8 +6816,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.noMonthlyTarget": "Chưa đặt mục tiêu tháng",
   "analytics.overview.setMonthlyTargetBody":
     "Đặt mục tiêu tháng cho cuộc họp hoặc bàn giao được chấp nhận để xem còn thiếu bao nhiêu trong tháng.",
-  "analytics.overview.ofTarget": "{actual} trên {target}",
-  "analytics.overview.moreToTarget": "Còn {amount} để đạt mục tiêu",
   "analytics.overview.noHandoffs":
     "Lead đủ điều kiện là kết quả chính của bạn, vì công ty này không dùng bàn giao SDR.",
   "analytics.overview.changeWorkflow": "Đổi trong Thiết lập",
@@ -6825,6 +6823,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quản trị viên có thể thiết lập việc này trong Thiết lập.",
   "analytics.attentionIncomplete":
     "Không đọc được một số kiểm tra, nên danh sách này có thể chưa đủ.",
+  "analytics.overview.mainOutcome": "Kết quả chính",
+  "analytics.overview.workflowFailed":
+    "Không đọc được công ty này có dùng bàn giao SDR hay không.",
+  "analytics.overview.workflowTitle": "Bàn giao SDR",
+  "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",

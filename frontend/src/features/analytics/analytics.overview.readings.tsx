@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -9,13 +9,17 @@ import {
   openAnalyticsSection,
   type Section,
 } from "../../lib/analytics.address";
+import { useCanWrite } from "../../lib/capability";
+import { navigate } from "../../lib/router";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
+  type ReportingSelection,
   reportingCompactAmount,
   reportingMoneyUnit,
 } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
+import { SaveReportingDialog } from "./reporting.save";
 
 type Metric = ReportingEvaluation["metrics"][number];
 
@@ -118,5 +122,39 @@ export function OverviewLinks({
         </Button>
       ))}
     </ActionRow>
+  );
+}
+
+/**
+ * Save view and Report templates, the same pair on both views. Saving keeps
+ * the view's selection, charts included, as a report the editor can revise.
+ */
+export function OverviewSaveActions({
+  selection,
+}: Readonly<{ selection: ReportingSelection | undefined }>) {
+  const t = useT();
+  const canSave = useCanWrite("report_definition", "create");
+  const [saving, setSaving] = useState(false);
+  return (
+    <>
+      {canSave && (
+        <Button onClick={() => setSaving(true)} disabled={!selection}>
+          {t("analytics.overview.saveView")}
+        </Button>
+      )}
+      <Button variant="ghost" onClick={() => openAnalyticsSection("reports")}>
+        {t("analytics.overview.templates")}
+      </Button>
+      {saving && selection && (
+        <SaveReportingDialog
+          selection={selection}
+          onClose={() => setSaving(false)}
+          onSaved={(report) => {
+            setSaving(false);
+            navigate({ screen: "analytics", id: "reports", id2: report.id });
+          }}
+        />
+      )}
+    </>
   );
 }

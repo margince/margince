@@ -203,12 +203,17 @@ export function salesReviewSummary(
  */
 export function prospectingSummary(
   evaluation: ReportingEvaluation,
-  workflow: "handoff" | "qualification",
+  // Undefined while nobody knows which workflow applies: no outcome is named.
+  workflow: "handoff" | "qualification" | undefined,
   handoffsWaiting: number | undefined,
   words: Words,
 ): string[] {
   const outcome =
-    workflow === "handoff" ? "accepted_opportunities" : "leads_promoted";
+    workflow === "handoff"
+      ? "accepted_opportunities"
+      : workflow === "qualification"
+        ? "leads_promoted"
+        : undefined;
   const period = reportingPeriodLabel(
     evaluation.context.interval,
     evaluation.context.timezone,
@@ -217,10 +222,10 @@ export function prospectingSummary(
   return [
     failedSentence(
       evaluation,
-      [outcome, "meetings_held", "leads_awaiting_response"],
+      [outcome ?? "meetings_held", "meetings_held", "leads_awaiting_response"],
       words,
     ),
-    countSentence(evaluation, outcome, period, words),
+    outcome ? countSentence(evaluation, outcome, period, words) : null,
     countSentence(evaluation, "meetings_held", period, words),
     waitingLeadsSentence(evaluation, words),
     handoffsWaiting != null && handoffsWaiting > 0

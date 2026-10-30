@@ -16,7 +16,6 @@ import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { navigate } from "../../lib/router";
 import { replaceDial } from "../../lib/urlstate";
 import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
@@ -24,6 +23,7 @@ import {
   MetricReading,
   metricOf,
   OverviewLinks,
+  OverviewSaveActions,
   readingValue,
 } from "./analytics.overview.readings";
 import { SinceLastReview } from "./analytics.overview.since";
@@ -43,7 +43,6 @@ import {
   validDateRange,
 } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
-import { SaveReportingDialog } from "./reporting.save";
 import { ComparisonState, gapWords } from "./reporting.targetcomparison";
 import { viewRequest } from "./reporting.views";
 import { OpeningSummary, salesReviewSummary } from "./reporting.written";
@@ -99,8 +98,6 @@ function SalesReviewBody({
   const { locale } = useLocale();
   const zone = useRecordZone();
   const filters = useOverviewFilters(pipelines, "this_quarter");
-  const canSave = useCanWrite("report_definition", "create");
-  const [saving, setSaving] = useState(false);
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const { metrics, blocks } = viewRequest("sales", catalog, filters.period);
   const selection: ReportingSelection = {
@@ -133,22 +130,11 @@ function SalesReviewBody({
       <FilterBar
         label={t("analytics.filters")}
         actions={
-          <>
-            {canSave && (
-              <Button
-                onClick={() => setSaving(true)}
-                disabled={!query.isSuccess}
-              >
-                {t("analytics.overview.saveView")}
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              onClick={() => openAnalyticsSection("reports")}
-            >
-              {t("analytics.overview.templates")}
-            </Button>
-          </>
+          <OverviewSaveActions
+            selection={
+              query.data ? { ...query.data.selection, blocks } : undefined
+            }
+          />
         }
         caption={
           validDates
@@ -210,20 +196,6 @@ function SalesReviewBody({
                   evaluation={evaluation}
                   reference={evidence}
                   onClose={() => setEvidence(null)}
-                />
-              )}
-              {saving && (
-                <SaveReportingDialog
-                  selection={{ ...evaluation.selection, blocks }}
-                  onClose={() => setSaving(false)}
-                  onSaved={(report) => {
-                    setSaving(false);
-                    navigate({
-                      screen: "analytics",
-                      id: "reports",
-                      id2: report.id,
-                    });
-                  }}
                 />
               )}
             </>
@@ -319,12 +291,7 @@ function SalesReadings({
           onEvidence={onEvidence}
         />
       ) : (
-        <StatCard
-          narrow="row"
-          label={t("reporting.compare.gap")}
-          value={t("analytics.overview.notCompared")}
-          detail={t("analytics.overview.notComparedDetail")}
-        />
+        <NotCompared />
       )}
       <MetricReading
         evaluation={evaluation}
@@ -344,6 +311,18 @@ function SalesReadings({
         onEvidence={onEvidence}
       />
     </StatStrip>
+  );
+}
+
+function NotCompared({ detail }: Readonly<{ detail?: string }>) {
+  const t = useT();
+  return (
+    <StatCard
+      narrow="row"
+      label={t("reporting.compare.gap")}
+      value={t("analytics.overview.notCompared")}
+      detail={detail ?? t("analytics.overview.notComparedDetail")}
+    />
   );
 }
 
@@ -368,7 +347,10 @@ function GapReading({
       />
     );
   }
-  const gap = comparison.gap ?? 0;
+  const { gap } = comparison;
+  // A comparison without its gap names no gap, rather than a zero one.
+  if (gap == null)
+    return <NotCompared detail={t("analytics.overview.gapMissing")} />;
   return (
     <StatCard
       narrow="row"

@@ -12,10 +12,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import {
+  type AskedRequest,
   bySeat,
   isMovement,
   metric,
   openOverview as open,
+  peakInFlight,
   readings,
   salesEvaluation,
   startingMovement,
@@ -31,10 +33,59 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-describe("the request census of each opening view", () => {
-  const analyticsReads = (asked: { url: URL }[]) =>
-    asked.filter(({ url }) => url.pathname.includes("/analytics/"));
+// Reads the app shell or a shared lookup makes on any screen, by name. Every
+// other request a view makes is either on its critical path or optional.
+const SHELL: readonly string[] = ["/v1/me"];
 
+type View = Readonly<{
+  critical: (url: URL) => boolean;
+  optional: (url: URL) => boolean;
+}>;
+
+const path = (url: URL) => url.pathname;
+
+const SALES: View = {
+  critical: (url) =>
+    [
+      "/v1/analytics/context",
+      "/v1/analytics/framework",
+      "/v1/analytics/metrics",
+      "/v1/pipelines",
+    ].includes(path(url)) ||
+    (path(url) === "/v1/analytics/evaluate" && !isMovement(url)),
+  optional: (url) =>
+    path(url) === "/v1/forecast/assurance/exceptions" ||
+    (path(url) === "/v1/analytics/evaluate" && isMovement(url)),
+};
+
+const PROSPECTING: View = {
+  critical: (url) =>
+    [
+      "/v1/analytics/context",
+      "/v1/analytics/framework",
+      "/v1/analytics/metrics",
+      "/v1/analytics/evaluate",
+      "/v1/analytics/sdr-summary",
+    ].includes(path(url)),
+  optional: (url) =>
+    ["/v1/worklist", "/v1/analytics/sdr-summary/handoffs"].includes(path(url)),
+};
+
+// Every request the page made, sorted into the shell, the critical path and
+// the optional reads. Anything else is named, so a new read fails the census.
+function census(asked: readonly AskedRequest[], view: View) {
+  const critical = asked.filter(({ url }) => view.critical(url));
+  const unplaced = asked.filter(
+    ({ url }) =>
+      !SHELL.includes(path(url)) && !view.critical(url) && !view.optional(url),
+  );
+  return {
+    critical: critical.map(({ url }) => path(url)).sort(),
+    unplaced: unplaced.map(({ url }) => `${path(url)}${url.search}`),
+  };
+}
+
+describe("the request census of each opening view", () => {
   it("asks Sales review for one headline evaluation of this fiscal quarter", async () => {
     const asked = open(
       "#/analytics",
@@ -45,25 +96,23 @@ describe("the request census of each opening view", () => {
     await screen.findByText(
       "Comparison starts after a second compatible capture.",
     );
-    const evaluations = asked.filter(({ url }) =>
-      url.pathname.endsWith("/analytics/evaluate"),
+    const headline = asked.filter(
+      ({ url }) => path(url) === "/v1/analytics/evaluate" && !isMovement(url),
     );
-    const headline = evaluations.filter(({ url }) => !isMovement(url));
-    expect(headline).toHaveLength(1);
     expect(headline[0]?.url.searchParams.get("period")).toBe("this_quarter");
     expect(headline[0]?.url.searchParams.getAll("metrics")).toContain(
       "forecast_landing",
     );
-    // The movement read is the optional one, behind the checks.
-    const critical = analyticsReads(asked).filter(
-      ({ url }) => !isMovement(url),
-    );
-    expect(critical.map(({ url }) => url.pathname).sort()).toEqual([
-      "/v1/analytics/context",
-      "/v1/analytics/evaluate",
-      "/v1/analytics/framework",
-      "/v1/analytics/metrics",
-    ]);
+    expect(census(asked, SALES)).toEqual({
+      critical: [
+        "/v1/analytics/context",
+        "/v1/analytics/evaluate",
+        "/v1/analytics/framework",
+        "/v1/analytics/metrics",
+        "/v1/pipelines",
+      ],
+      unplaced: [],
+    });
   });
 
   it("asks My prospecting for one evaluation of this week and no pipelines", async () => {
@@ -74,44 +123,84 @@ describe("the request census of each opening view", () => {
       createQueryClient(),
     );
     await screen.findByRole("heading", { name: /^Monthly targets, / });
-    const evaluations = asked.filter(({ url }) =>
-      url.pathname.endsWith("/analytics/evaluate"),
-    );
-    expect(evaluations).toHaveLength(1);
-    const sent = evaluations[0]?.url.searchParams;
+    const sent = asked.find(({ url }) => path(url) === "/v1/analytics/evaluate")
+      ?.url.searchParams;
     expect(sent?.get("period")).toBe("this_week");
     // The monthly strip is read in the same evaluation, over its own month.
     expect(sent?.get("target_basis")).toBe("month");
     expect(sent?.get("pipeline_id")).toBeNull();
-    expect(asked.some(({ url }) => url.pathname.endsWith("/pipelines"))).toBe(
-      false,
-    );
-    // The waiting rows are the action list's own, optional read.
-    const critical = analyticsReads(asked).filter(
-      ({ url }) => !url.pathname.endsWith("/handoffs"),
-    );
-    expect(critical.map(({ url }) => url.pathname).sort()).toEqual([
-      "/v1/analytics/context",
-      "/v1/analytics/evaluate",
-      "/v1/analytics/framework",
-      "/v1/analytics/metrics",
-      "/v1/analytics/sdr-summary",
-    ]);
+    expect(census(asked, PROSPECTING)).toEqual({
+      critical: [
+        "/v1/analytics/context",
+        "/v1/analytics/evaluate",
+        "/v1/analytics/framework",
+        "/v1/analytics/metrics",
+        "/v1/analytics/sdr-summary",
+      ],
+      unplaced: [],
+    });
   });
 
-  it("keeps at most two optional reads in flight while the checks wait", async () => {
+  it.each([
+    ["Sales review", "leader", SALES],
+    ["My prospecting", "sdr", PROSPECTING],
+  ] as const)(
+    "keeps at most two optional reads of %s in flight at once",
+    async (_name, seat, view) => {
+      // No optional read is ever answered, so each stays in flight.
+      const asked = open(
+        "#/analytics",
+        bySeat(seat),
+        { seat },
+        createQueryClient(),
+        view.optional,
+      );
+      await readings();
+      await waitFor(() =>
+        expect(
+          asked.filter(({ url }) => view.optional(url)).length,
+        ).toBeGreaterThan(0),
+      );
+      expect(census(asked, view).unplaced).toEqual([]);
+      expect(peakInFlight(asked, view.optional)).toBeLessThanOrEqual(2);
+    },
+  );
+
+  it("starts the capture comparison only after the checks have answered", async () => {
     const asked = open("#/analytics", bySeat("leader"), {
       checks: () => new Promise<Response>(() => {}),
     });
     await readings();
-    // The checks never answer, so the movement read waits behind them.
     expect(asked.some(({ url }) => isMovement(url))).toBe(false);
-    const optional = asked.filter(({ url }) =>
-      ["/forecast", "/analytics/coverage"].some((path) =>
-        url.pathname.includes(path),
-      ),
+  });
+
+  it("aborts the checks of a scope the reader has left", async () => {
+    const user = userEvent.setup({ delay: null });
+    const asked = open(
+      "#/analytics",
+      bySeat("leader"),
+      {},
+      undefined,
+      (url) => path(url) === "/v1/forecast/assurance/exceptions",
     );
-    expect(optional.length).toBeLessThanOrEqual(2);
+    const picker = await screen.findByRole("combobox", {
+      name: "Record scope",
+    });
+    await user.click(picker);
+    await user.click(await screen.findByRole("option", { name: "Riley Rep" }));
+    await waitFor(() =>
+      expect(
+        asked.filter(
+          ({ url }) => path(url) === "/v1/forecast/assurance/exceptions",
+        ),
+      ).toHaveLength(2),
+    );
+    const [team, mine] = asked.filter(
+      ({ url }) => path(url) === "/v1/forecast/assurance/exceptions",
+    );
+    expect(team?.url.searchParams.get("scope_kind")).toBe("team");
+    expect(team?.signal?.aborted).toBe(true);
+    expect(mine?.url.searchParams.get("scope_kind")).toBe("owner");
   });
 
   it("aborts an obsolete period and never draws it under the new one", async () => {
