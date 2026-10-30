@@ -60,7 +60,8 @@ type StageResolver interface {
 // `progress_deal` share the provider and stage seams, so they register here too.
 //
 // Every verb the contract declares with `x-mcp-tool` is registered here or by
-// RegisterIntentTools, RegisterSlippingTools or RegisterLifecycleTools. A declared verb with no tool is not a gap to describe here:
+// RegisterIntentTools, RegisterSlippingTools or RegisterLifecycleTools. A
+// declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})

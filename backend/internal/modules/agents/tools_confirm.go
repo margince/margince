@@ -47,8 +47,8 @@ import (
 //
 // Where a tier floor stages this tool, it archives only on the approved retry.
 // A type admitted at staging and refused at execution then spends a human's
-// approval on a call that could never run, as once happened to `activity`. The
-// list is stated rather than derived, so a new Archive branch is edited in both.
+// approval on a call that could never run. The list is stated rather than
+// derived, so a new Archive branch is edited in both.
 var archivableRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),

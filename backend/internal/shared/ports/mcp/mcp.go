@@ -128,10 +128,10 @@ type ToolSpec struct {
 	// volume budget refuses such a call outright instead of asking the connecting
 	// human for a release, so no inbox question is ever opened on its behalf.
 	ConfirmsInConversation bool
-	// AskUserFirst marks a tool whose effect cannot be undone from the
-	// conversation: it archives, merges, sends or decides. While it runs at
-	// once, its listing tells the client to get the user's yes first. Nothing
-	// enforces that; a human-approved call already has its yes.
+	// AskUserFirst marks a tool whose effect cannot be taken back from the
+	// conversation. While it runs at once, its listing tells the client to get
+	// the user's yes first. Nothing enforces that; a human-approved call already
+	// has its yes.
 	AskUserFirst bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
