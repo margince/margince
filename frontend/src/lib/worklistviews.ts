@@ -25,18 +25,48 @@ export const DEFAULT_VIEW: WorklistView = "today";
 /** The category that holds work due after today, a section of Today. */
 export const UPCOMING = "upcoming" satisfies WorklistCategory;
 
+// One row per contract value, so tsc refuses a value with no view.
+// views_mirror_test.go compares both tables with views.go.
+const FILTER_VIEW: Readonly<Record<WorklistFilter, WorklistView | null>> = {
+  all: null,
+  changed_since_brief: "today",
+  customer_waiting: "today",
+  deals_at_risk: "today",
+  decisions: "decisions",
+  except_decisions: "today",
+  leads: "today",
+  meetings: "today",
+  relationships: "today",
+  system: "system",
+  tasks: "today",
+  upcoming: "today",
+  urgent: "today",
+};
+
+const CATEGORY_VIEW: Readonly<Record<WorklistCategory, WorklistView>> = {
+  customer_waiting: "today",
+  deals_at_risk: "today",
+  decisions: "decisions",
+  leads: "today",
+  meetings: "today",
+  relationships: "today",
+  system: "system",
+  tasks: "today",
+  upcoming: "today",
+};
+
+const categoryViews = new Map<string, WorklistView>(
+  Object.entries(CATEGORY_VIEW),
+);
+
 /** The view a filter value belongs to; `all` belongs to every view. */
 export function viewOfFilter(filter: WorklistFilter): WorklistView | undefined {
-  if (filter === "all") return undefined;
-  if (filter === "decisions" || filter === "system") return filter;
-  return "today";
+  return FILTER_VIEW[filter] ?? undefined;
 }
 
 /** Whether a category's work belongs to a view. A string, because a missing source names its category untyped. */
 export function categoryInView(category: string, view: WorklistView): boolean {
-  if (view === "today")
-    return category !== "decisions" && category !== "system";
-  return category === view;
+  return (categoryViews.get(category) ?? DEFAULT_VIEW) === view;
 }
 
 /** The view an address names, reading an old `filter=decisions` link as its view. */
