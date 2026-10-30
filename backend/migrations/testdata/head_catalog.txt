@@ -6900,7 +6900,7 @@ public.report_definition_revision.question_bindings jsonb NOT NULL gen=- def='{}
 public.report_definition_revision.report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
 public.report_definition_revision.report_definition_revision_framework_revision_js_safe CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_definition_revision_pkey PRIMARY KEY (report_id, revision)
-public.report_definition_revision.report_definition_revision_question_bindings_is_an_object CHECK ((jsonb_typeof(question_bindings) = 'object'::text)) NOT VALID
+public.report_definition_revision.report_definition_revision_question_bindings_is_an_object CHECK ((jsonb_typeof(question_bindings) = 'object'::text))
 public.report_definition_revision.report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES report_definition(id)
 public.report_definition_revision.report_definition_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
 public.report_definition_revision.report_id uuid NOT NULL gen=- def=-

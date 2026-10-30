@@ -71,7 +71,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_definition_revision_framework_revision_js_safe`: `CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))`
-- `report_definition_revision_question_bindings_is_an_object`: `CHECK ((jsonb_typeof(question_bindings) = 'object')) NOT VALID`
+- `report_definition_revision_question_bindings_is_an_object`: `CHECK ((jsonb_typeof(question_bindings) = 'object'))`
 - `report_definition_revision_revision_js_safe`: `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**
