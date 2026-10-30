@@ -1,10 +1,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatHours, formatMoneyCompact } from "../../format/format";
 import { en } from "../../i18n/en";
+import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -235,6 +242,7 @@ describe("which views a seat reads", () => {
     metrics: reportingSectionsCatalog.metrics.filter(
       (metric) => metricView(metric.id) !== "leads",
     ),
+    presets: reportingSectionsCatalog.presets,
   };
 
   // The whole screen, because which views are tabs is the screen's to decide.
@@ -286,12 +294,105 @@ describe("which views a seat reads", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers no Sales view to a reader whose catalog publishes no sales preset", async () => {
+    showScreen("#/analytics/performance", {
+      metrics: [
+        {
+          id: "forecast_landing",
+          version: "1",
+          unit: "money",
+          temporal_basis: "state_at",
+          supports_target: false,
+          definition:
+            "The deal forecast's expected finish for this fiscal quarter.",
+          blocks: ["forecast_support", "metric_reading"],
+        },
+        ...reportingSectionsCatalog.metrics.filter(
+          (metric) => metricView(metric.id) === "leads",
+        ),
+      ],
+      presets: [],
+    });
+
+    expect(
+      await screen.findByRole("button", {
+        name: en["reporting.leads"],
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: en["analytics.sectionPerformance"],
+      }),
+    ).toBeNull();
+  });
+
   it("says why there is no view to choose when it reads none", async () => {
-    showScreen("#/analytics/performance", { metrics: [] });
+    showScreen("#/analytics/performance", { metrics: [], presets: [] });
 
     expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
     expect(
       screen.queryByRole("button", { name: en["reporting.sdr"] }),
     ).toBeNull();
+  });
+});
+
+// The opening request of a preset view is the server's definition from the
+// catalog. The browser adds no metric of its own and drops none.
+describe("the preset views", () => {
+  async function evaluated(asked: URL[]) {
+    let evaluate: URL | undefined;
+    await waitFor(() => {
+      evaluate = asked.find((url) =>
+        url.pathname.endsWith("/analytics/evaluate"),
+      );
+      expect(evaluate).toBeDefined();
+    });
+    return {
+      metrics: evaluate?.searchParams.getAll("metrics"),
+      blocks: evaluate?.searchParams.getAll("blocks"),
+    };
+  }
+
+  it.each(["sales", "sdr"] as const)(
+    "asks the %s preset the catalog publishes",
+    async (view) => {
+      const preset = reportingSectionsCatalog.presets.find(
+        (entry) => entry.id === view,
+      );
+      const asked = showView(view, reportingStoryEvaluation);
+
+      expect(await evaluated(asked)).toEqual({
+        metrics: preset?.metrics,
+        blocks: preset?.blocks,
+      });
+    },
+  );
+
+  it("follows a narrower preset rather than every metric of the view", async () => {
+    const narrow: Catalog = {
+      ...reportingSectionsCatalog,
+      presets: [
+        { id: "sales", metrics: ["bookings_won"], blocks: ["bookings_trend"] },
+      ],
+    };
+    const asked = showView("sales", reportingStoryEvaluation, narrow);
+
+    expect(await evaluated(asked)).toEqual({
+      metrics: ["bookings_won"],
+      blocks: ["bookings_trend"],
+    });
+  });
+
+  it("asks nothing for a view whose preset the reader is not offered", async () => {
+    const asked = showView("sdr", reportingStoryEvaluation, {
+      ...reportingSectionsCatalog,
+      presets: [],
+    });
+
+    expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
+    expect(
+      asked.some((url) => url.pathname.endsWith("/analytics/evaluate")),
+    ).toBe(false);
   });
 });

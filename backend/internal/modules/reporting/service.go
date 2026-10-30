@@ -70,6 +70,9 @@ type Authority interface {
 	PublicationHuman(context.Context, pgx.Tx, ids.UUID) (context.Context, error)
 	Pipeline(context.Context, pgx.Tx, *ids.UUID) error
 	Members(context.Context, pgx.Tx) ([]ids.UUID, error)
+	// MeasurableOwners answers which candidates the reader may measure one by
+	// one, the owner rule of Scope asked of many owners in one statement.
+	MeasurableOwners(context.Context, pgx.Tx, []ids.UUID) ([]ids.UUID, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
 	// AssertedScope resolves the scope a report revision records. A revision is

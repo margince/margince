@@ -50,7 +50,7 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
     framework.data?.definition.template === "sdr" ? "sdr" : "performance",
     params.get("view"),
   );
-  const views = readsViews ? viewTabs(catalog.data?.metrics) : [];
+  const views = readsViews ? viewTabs(catalog.data) : [];
   const available = SECTIONS.filter((candidate) => {
     if (viewOfSection(candidate)) return views.includes(candidate);
     if (candidate === "reports") return can.reports;
@@ -100,9 +100,9 @@ const TAB_SECTIONS: readonly Section[] = [
 // tab stands alone until the catalog answers, and for a seat that reads none.
 // Its page then says which of the two it is.
 function viewTabs(
-  metrics: Parameters<typeof readableViews>[0] | undefined,
+  catalog: Parameters<typeof readableViews>[0] | undefined,
 ): Section[] {
-  const views = metrics ? readableViews(metrics) : [];
+  const views = catalog ? readableViews(catalog) : [];
   return views.length > 0
     ? views.map((view) => VIEW_SHAPE[view].section)
     : ["performance"];

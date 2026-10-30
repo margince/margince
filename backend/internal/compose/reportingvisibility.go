@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,9 +31,11 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
-	if err := markOwnerWithheld(ctx, tx, facts); err != nil {
+	owners, err := readerMeasurableOwners(ctx, tx)
+	if err != nil {
 		return nil, false, err
 	}
+	markOwnerWithheld(owners, facts)
 	groups := map[reportingVisibilityKey][]ids.UUID{}
 	for _, fact := range facts {
 		if fact.SourceType != reportingForecastProjection {
@@ -161,24 +162,40 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	return clause, nil
 }
 
+// measurableOwners is who a reader may measure one by one. It is resolved
+// once per evaluation, so each metric and owner list asks a set.
+type measurableOwners struct {
+	every bool
+	set   map[ids.UUID]bool
+}
+
+func readerMeasurableOwners(ctx context.Context, tx pgx.Tx) (measurableOwners, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return measurableOwners{}, apperrors.ErrPermissionDenied
+	}
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
+		return measurableOwners{every: true}, nil
+	}
+	members, err := (reportingAuthority{}).Members(ctx, tx)
+	if err != nil {
+		return measurableOwners{}, err
+	}
+	out := measurableOwners{set: make(map[ids.UUID]bool, len(members))}
+	for _, id := range members {
+		out.set[id] = true
+	}
+	return out, nil
+}
+
+func (m measurableOwners) admits(id ids.UUID) bool { return m.every || m.set[id] }
+
 // markOwnerWithheld sets OwnerWithheld on every fact whose owner falls
 // outside the owners the reader may measure. Live readings and frozen editions
 // share this rule. A total counts the fact and an owner breakdown skips it. A
 // fact with no owner names no owner, so nothing is withheld on it.
-func markOwnerWithheld(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return nil
-	}
-	members, err := (reportingAuthority{}).Members(ctx, tx)
-	if err != nil {
-		return err
-	}
+func markOwnerWithheld(owners measurableOwners, facts []reporting.Fact) {
 	for i := range facts {
-		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !slices.Contains(members, facts[i].OwnerID)
+		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.admits(facts[i].OwnerID)
 	}
-	return nil
 }

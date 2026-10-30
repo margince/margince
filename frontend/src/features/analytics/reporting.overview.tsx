@@ -30,7 +30,7 @@ import {
 } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
-import { metricView, type ReportingView, VIEW_SHAPE } from "./reporting.views";
+import { type ReportingView, VIEW_SHAPE, viewRequest } from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
@@ -157,16 +157,7 @@ function OverviewBody({
   const [saving, setSaving] = useState(false);
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const shape = VIEW_SHAPE[view];
-  const metrics = catalog.metrics
-    .filter(
-      (metric) =>
-        metricView(metric.id) === view &&
-        // The expected finish is always this fiscal quarter's, so it is
-        // asked only when the page reads this quarter too.
-        (metric.id !== "forecast_landing" || period === "this_quarter"),
-    )
-    .map((metric) => metric.id);
-  const desired = shape.blocks;
+  const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
@@ -177,12 +168,7 @@ function OverviewBody({
     // figures read it, so other views keep the default and never the address's.
     close_window: shape.dealFilters ? closeWindow : "all_open",
     metrics,
-    blocks: desired.filter((block) =>
-      catalog.metrics.some(
-        (metric) =>
-          metrics.includes(metric.id) && metric.blocks.includes(block),
-      ),
-    ),
+    blocks,
   };
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.

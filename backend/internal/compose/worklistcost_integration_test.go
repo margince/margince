@@ -23,14 +23,14 @@ import (
 // task. A stage that loses its timer fails this list, and its statements move
 // to outside_stages, whose count is fixed below.
 var worklistStages = []string{
-	"this_morning", "needs_you", "planned", "relationship_decay", "done_for_you",
-	"subject_labels", "waiting_customers", "plan", "awaiting", "deal_moves",
+	"this_morning", "needs_you", "planned", "relationship_decay", "subject_labels",
+	"waiting_customers", "plan", "awaiting", "deal_moves",
 	"meeting_horizon", "rank", "row_names",
 }
 
 // worklistOutsideStatements are the statements a worklist read sends outside
 // every stage: BEGIN, COMMIT and the reads before the day is assembled.
-const worklistOutsideStatements = 6
+const worklistOutsideStatements = 5
 
 // stageDelta is what one composed read added to the stage collector.
 type stageDelta struct {
@@ -109,6 +109,9 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 		if delta.runs[attention.StageKey{Read: attention.ReadWorklist, Stage: stage}] != 1 {
 			t.Errorf("stage %s was not metered once by the read", stage)
 		}
+	}
+	if delta.runs[attention.StageKey{Read: attention.ReadWorklist, Stage: "done_for_you"}] != 0 {
+		t.Error("the read assembled the receipt lane, which is never a queue row")
 	}
 	outside := delta.byKey[attention.StageKey{Read: attention.ReadWorklist, Stage: attention.OutsideStages}]
 	if outside != worklistOutsideStatements {
