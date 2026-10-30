@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -21,14 +22,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
-// evaluationEnv is a quarter a year before the test clock, frozen twice by
-// the daily pass: once with one deal, then again after a second deal arrived.
-// The first deal is won inside the quarter.
+// evaluationEnv is a quarter a year before the test clock. The daily pass
+// froze it with one deal, then again after a second deal arrived. The first
+// deal is won inside the quarter.
 type evaluationEnv struct {
 	*integration.Env
 	quarter       forecasting.Period
@@ -111,8 +113,8 @@ func wholeWorkspace(dataset forecasting.EvaluationDataset) []forecasting.Evaluat
 	return out
 }
 
-// A deal that arrived after a snapshot was taken is not in that snapshot's
-// features, and every open deal is labelled from the period's real outcome.
+// A deal that arrived after a snapshot was taken is not in its features.
+// Every open deal is labelled from the period's real outcome.
 func TestEachVintageHoldsOnlyTheDealsItFroze(t *testing.T) {
 	e := setupEvaluation(t)
 	vintages := wholeWorkspace(e.dataset(t))
@@ -219,5 +221,19 @@ func TestAWeeksCloseStampsTheBasisAndIsNoPrediction(t *testing.T) {
 	}
 	if kind := forecasting.PredictionKindOf(trigger, localDay, periodEnd); kind != forecasting.PredictionAfterOutcome {
 		t.Fatalf("a week's closing snapshot reads as %s", kind)
+	}
+}
+
+// The dataset read takes every deal id the snapshots froze, under no row
+// scope, so a signed-in seat is refused even with admin rights.
+func TestOnlyASystemPassReadsTheEvaluationDataset(t *testing.T) {
+	e := setupEvaluation(t)
+	store := newForecastStoreFor(e.Pool)
+	err := store.InTx(e.Admin(), func(ctx context.Context, tx pgx.Tx) error {
+		_, err := store.EvaluationVintagesTx(ctx, tx, evaluationBounds.Vintages, evaluationBounds.Deals)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an admin seat read the evaluation dataset: %v", err)
 	}
 }

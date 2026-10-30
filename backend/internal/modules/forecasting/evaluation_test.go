@@ -17,12 +17,11 @@ import (
 // derived from the test clock. The first quarter settles before the training
 // window ends; the second ends inside the validation window.
 type evaluationCorpus struct {
-	day      func(offset int) time.Time
-	plan     EvaluationPlan
-	dataset  EvaluationDataset
-	q1, q2   [2]time.Time
-	q3Start  time.Time
-	asOfDays int
+	day     func(offset int) time.Time
+	plan    EvaluationPlan
+	dataset EvaluationDataset
+	q1, q2  [2]time.Time
+	q3Start time.Time
 }
 
 func newEvaluationCorpus(t *testing.T) evaluationCorpus {
@@ -64,7 +63,7 @@ func (c evaluationCorpus) vintage(id string, period [2]time.Time, takenOn int, w
 	}
 }
 
-func evaluate(t *testing.T, dataset EvaluationDataset, plan EvaluationPlan) EvaluationReport {
+func scoreCorpus(t *testing.T, dataset EvaluationDataset, plan EvaluationPlan) EvaluationReport {
 	t.Helper()
 	report, err := Evaluate(dataset, plan)
 	if err != nil {
@@ -95,7 +94,7 @@ func findRow(t *testing.T, report EvaluationReport, method, window, horizon stri
 
 func TestAnEvaluationOfTheSameDatasetPrintsTheSameReport(t *testing.T) {
 	c := newEvaluationCorpus(t)
-	first := reportJSON(t, evaluate(t, c.dataset, c.plan))
+	first := reportJSON(t, scoreCorpus(t, c.dataset, c.plan))
 
 	body, err := json.Marshal(c.dataset)
 	if err != nil {
@@ -106,7 +105,7 @@ func TestAnEvaluationOfTheSameDatasetPrintsTheSameReport(t *testing.T) {
 		t.Fatal(err)
 	}
 	slices.Reverse(reread.Vintages)
-	if second := reportJSON(t, evaluate(t, reread, c.plan)); !bytes.Equal(first, second) {
+	if second := reportJSON(t, scoreCorpus(t, reread, c.plan)); !bytes.Equal(first, second) {
 		t.Fatalf("a reread, reordered dataset scored differently:\n%s\n%s", first, second)
 	}
 }
@@ -115,12 +114,12 @@ func TestAnEvaluationOfTheSameDatasetPrintsTheSameReport(t *testing.T) {
 // window closed cannot shape the candidate, whatever its period later won.
 func TestAnOutcomeKnownAfterTheTrainingWindowNeverShapesTheCandidate(t *testing.T) {
 	c := newEvaluationCorpus(t)
-	before := evaluate(t, c.dataset, c.plan)
+	before := scoreCorpus(t, c.dataset, c.plan)
 
 	later := c.dataset
 	later.Vintages = slices.Clone(c.dataset.Vintages)
 	later.Vintages[2].Outcome = &VintageOutcome{WonMinor: 9_000_00}
-	after := evaluate(t, later, c.plan)
+	after := scoreCorpus(t, later, c.plan)
 	if !slices.Equal(fits(before), fits(after)) {
 		t.Fatalf("an outcome settled after the training window changed the fit: %v then %v", fits(before), fits(after))
 	}
@@ -128,7 +127,7 @@ func TestAnOutcomeKnownAfterTheTrainingWindowNeverShapesTheCandidate(t *testing.
 	settled := c.dataset
 	settled.Vintages = slices.Clone(c.dataset.Vintages)
 	settled.Vintages[0].Outcome = &VintageOutcome{WonMinor: 9_000_00}
-	if moved := evaluate(t, settled, c.plan); slices.Equal(fits(before), fits(moved)) {
+	if moved := scoreCorpus(t, settled, c.plan); slices.Equal(fits(before), fits(moved)) {
 		t.Fatal("an outcome settled inside the training window did not reach the fit, so the test above proves nothing")
 	}
 }
@@ -143,14 +142,14 @@ func fits(report EvaluationReport) []string {
 
 func TestTheFrozenFiguresAreScoredWithoutTheOutcomeChangingThem(t *testing.T) {
 	c := newEvaluationCorpus(t)
-	row := findRow(t, evaluate(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29")
+	row := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29")
 	if row.Label != LabelObserved || row.Vintages != 1 || row.Money.PredictedMinor != 400_00 || row.Money.ActualMinor != 500_00 {
 		t.Fatalf("b2 is won 200 plus weighted 200 against 500 won, observed; got %+v %+v", row, row.Money)
 	}
 	if row.Money.SignedErrorMinor != -100_00 || row.Money.AbsErrorPerActual != "0.2000" {
 		t.Fatalf("a landing 100 short of 500 won: %+v", row.Money)
 	}
-	commit := findRow(t, evaluate(t, c.dataset, c.plan), MethodCommitEvidence, WindowValidation, "0-29")
+	commit := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodCommitEvidence, WindowValidation, "0-29")
 	if commit.Money.PredictedMinor != 450_00 || commit.Calibration.Bins[1].Bin != "committed" {
 		t.Fatalf("b2 commits won 200 plus evidence 250: %+v %+v", commit.Money, commit.Calibration)
 	}
@@ -162,7 +161,7 @@ func TestACandidateIsABacktestAndAClosedPeriodIsNoPrediction(t *testing.T) {
 	closing.Trigger = TriggerPeriodClose
 	late := c.vintage("q1-late", c.q1, 92, 900_00, 0, 0, 0, 900_00)
 	c.dataset.Vintages = append(c.dataset.Vintages, closing, late)
-	report := evaluate(t, c.dataset, c.plan)
+	report := scoreCorpus(t, c.dataset, c.plan)
 
 	if got := exclusionsOf(report)[ExcludedAfterOutcome]; got != 2 {
 		t.Fatalf("a period-close and an after-the-end snapshot are not predictions, %d excluded", got)
@@ -203,7 +202,7 @@ func TestEveryExcludedVintageIsCountedUnderItsReason(t *testing.T) {
 	missing.Outcome = nil
 	c.dataset.Vintages = append(c.dataset.Vintages, pending, oldRules, erased, unconverted, missing)
 	c.dataset.OtherScopes = 4
-	report := evaluate(t, c.dataset, c.plan)
+	report := scoreCorpus(t, c.dataset, c.plan)
 
 	want := map[string]int{
 		ExcludedOutcomePending: 1, ExcludedDefinitionChanged: 1, ExcludedEvidenceMissing: 1,
@@ -225,7 +224,7 @@ func TestAPeriodThatWonNothingIsScoredWithoutADivision(t *testing.T) {
 	for i := range c.dataset.Vintages {
 		c.dataset.Vintages[i].Outcome = &VintageOutcome{}
 	}
-	row := findRow(t, evaluate(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29")
+	row := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29")
 	if row.Money.AbsErrorPerActual != "" || row.Money.ZeroOutcomeVintages != 1 || row.Money.ZeroOutcomeAbsErrorMinor != 400_00 {
 		t.Fatalf("b2 forecast 400 for a period that won nothing: %+v", row.Money)
 	}
@@ -233,7 +232,7 @@ func TestAPeriodThatWonNothingIsScoredWithoutADivision(t *testing.T) {
 
 func TestStageWeightingIsCalibratedPerDeal(t *testing.T) {
 	c := newEvaluationCorpus(t)
-	cal := findRow(t, evaluate(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29").Calibration
+	cal := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29").Calibration
 	// One 10% deal lost and one 60% deal won: ((10-0)² + (60-100)²) / (100² × 2).
 	if cal.Deals != 2 || cal.BrierScore != "0.0850" || len(cal.Bins) != 2 || cal.Bins[0].MeanPredicted != "0.1000" || cal.Bins[1].WonShare != "1.0000" {
 		t.Fatalf("calibration %+v", cal)

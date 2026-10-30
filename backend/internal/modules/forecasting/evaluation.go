@@ -18,8 +18,8 @@ import (
 )
 
 // EvaluationVersion names the rules Evaluate scores by. Bump it when a metric,
-// an exclusion or a window rule changes, so two reports with one version and
-// one dataset digest are the same report.
+// an exclusion or a window rule changes. Two reports with one version and one
+// dataset digest are then the same report.
 const EvaluationVersion = "forecast_evaluation_v1"
 
 // The labels a report row carries. An observed row scores a figure that was

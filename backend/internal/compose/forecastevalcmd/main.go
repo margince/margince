@@ -157,7 +157,7 @@ func writeDataset(path string, dataset forecasting.EvaluationDataset) error {
 	if err != nil {
 		return fmt.Errorf("encoding the dataset: %w", err)
 	}
-	if err := os.WriteFile(path, append(body, '\n'), 0o600); err != nil {
+	if err := os.WriteFile(path, append(body, '\n'), 0o600); err != nil { // #nosec G703 -- the operator's own -write-dataset path; writing it is this flag's purpose
 		return fmt.Errorf("writing the dataset: %w", err)
 	}
 	return nil

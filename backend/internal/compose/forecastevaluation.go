@@ -100,9 +100,9 @@ type forecastOutcome struct {
 	wonIDs map[string]bool
 }
 
-// attachForecastOutcomes reads each ended period once, through the same deal
-// read and reading rules a snapshot was computed with, and labels every
-// vintage of that period and every open deal it froze.
+// attachForecastOutcomes reads each ended period once, through the deal read
+// and reading rules a snapshot uses. It labels every vintage of that period
+// and every open deal the vintage froze.
 func attachForecastOutcomes(
 	ctx context.Context, tx pgx.Tx, vintages []forecasting.EvaluationVintage, asOf time.Time, zone *time.Location,
 ) error {

@@ -20,8 +20,8 @@ const (
 )
 
 // PredictionKindOf classifies a snapshot from columns frozen when it was taken.
-// The local day is stored in the zone of that day, so a later change of the
-// installation's zone cannot move a snapshot from one kind to the other.
+// The local day was cut in the zone of that day. A later change of zone
+// cannot move a snapshot from one kind to the other.
 func PredictionKindOf(trigger string, localDay, periodEnd time.Time) PredictionKind {
 	if trigger == TriggerPeriodClose || !daysInOrder(localDay, periodEnd) {
 		return PredictionAfterOutcome

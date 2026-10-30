@@ -13,8 +13,8 @@ import (
 )
 
 // CandidateFit is the trivial candidate's one parameter for one bucket: the
-// share of open money that closed, measured on training vintages whose outcome
-// had settled before the training window ended.
+// share of open money that closed. It is measured on training vintages whose
+// outcome had settled before the training window ended.
 type CandidateFit struct {
 	Currency      string `json:"currency"`
 	Horizon       string `json:"horizon"`
@@ -78,9 +78,9 @@ type groupKey struct {
 
 var windowOrder = []string{WindowTrain, WindowValidation, WindowTest}
 
-// scoreRows scores every method on every group. All three methods see the
-// same vintages of a group; a candidate that cannot predict a group says so
-// instead of being scored on a smaller set.
+// scoreRows scores every method on every group, and all three see the same
+// vintages. A candidate that cannot predict a group says so instead of being
+// scored on a smaller set.
 func scoreRows(included []scored, plan EvaluationPlan, fits map[fitKey]closureRatio) ([]EvaluationRow, error) {
 	groups := map[groupKey][]EvaluationVintage{}
 	for _, s := range included {

@@ -45,8 +45,10 @@ func moneyError(vintages []EvaluationVintage, predict prediction) (*MoneyError, 
 			into *int64
 			by   int64
 		}{
-			{&out.ActualMinor, actual}, {&out.PredictedMinor, predicted},
-			{&out.AbsErrorMinor, abs}, {&out.SignedErrorMinor, miss},
+			{&out.ActualMinor, actual},
+			{&out.PredictedMinor, predicted},
+			{&out.AbsErrorMinor, abs},
+			{&out.SignedErrorMinor, miss},
 		} {
 			if *add.into, err = addMinor(*add.into, add.by); err != nil {
 				return nil, err
