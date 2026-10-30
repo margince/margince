@@ -300,7 +300,10 @@ function Probe({ kind, id }: Readonly<{ kind: EntityKind; id: string }>) {
   );
 }
 
-function serveLatest(items: JustIn[]) {
+function serveLatest(
+  items: JustIn[],
+  lastExchange?: components["schemas"]["LastExchange"],
+) {
   const asked: URL[] = [];
   vi.stubGlobal(
     "fetch",
@@ -311,7 +314,8 @@ function serveLatest(items: JustIn[]) {
           "https://test.local",
         ),
       );
-      return new Response(JSON.stringify({ data: items }), {
+      const list = { data: items, last_exchange: lastExchange };
+      return new Response(JSON.stringify(list), {
         headers: { "Content-Type": "application/json" },
       });
     }),
@@ -347,5 +351,39 @@ describe("reading the latest inbound item", () => {
     withProviders(<Probe kind="contact" id="contact-noticed" />);
     await waitFor(() => expect(asked).toHaveLength(2));
     expect(screen.getByText("none")).toBeTruthy();
+  });
+});
+
+describe("the Next bar with nothing next", () => {
+  const sent = activity("sent", {
+    direction: "outbound",
+    subject: "The order form",
+  });
+
+  it("says it waits on them when what we sent is the last exchange", async () => {
+    const user = userEvent.setup();
+    const openSource = vi.fn();
+    serveLatest([], { activity: sent, whose_move: "them" });
+    withProviders(scoped(undefined, <RecordNextBar />), openSource);
+    expect(await screen.findByText("Waiting on them")).toBeTruthy();
+    expect(screen.getByText("The order form")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    expect(openSource).toHaveBeenCalledWith("sent");
+  });
+
+  it("says it is the reader's turn when they spoke last", async () => {
+    const call = activity("call", { kind: "call", direction: "inbound" });
+    serveLatest([], { activity: call, whose_move: "us" });
+    withProviders(scoped(undefined, <RecordNextBar />));
+    expect(await screen.findByText("Your turn to answer")).toBeTruthy();
+    expect(screen.getByText(/^Call ·/)).toBeTruthy();
+  });
+
+  it("keeps a bar that has something next", async () => {
+    const asked = serveLatest([], { activity: sent, whose_move: "them" });
+    withProviders(scoped(undefined, <RecordNextBar {...TASK_BAR} />));
+    expect(screen.getByText("Send the pilot results")).toBeTruthy();
+    expect(screen.queryByText("Waiting on them")).toBeNull();
+    expect(asked).toHaveLength(0);
   });
 });

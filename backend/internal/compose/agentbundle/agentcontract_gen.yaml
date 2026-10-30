@@ -16425,6 +16425,22 @@ components:
           type: array
           maxItems: 10
           items: {$ref: '#/components/schemas/LatestInbound'}
+        last_exchange: {$ref: '#/components/schemas/LastExchange'}
+    LastExchange:
+      type: object
+      description: |-
+        The newest call, meeting, email or message on the record. Absent when there is none.
+      required: [activity, whose_move]
+      properties:
+        activity: {$ref: '#/components/schemas/Activity'}
+        whose_move:
+          type: string
+          enum: [them, us, neither]
+          description: |-
+            Who answers next. A mail follows its History badge's move. Any other exchange,
+            or a mail the reader may not read, follows its direction: what we sent waits on
+            them, and what they sent waits on us. `neither` is an exchange with no direction,
+            such as a meeting.
     LatestInbound:
       type: object
       required: [activity, kind, accepts_request]

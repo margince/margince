@@ -114,3 +114,26 @@ func TestUnansweredInboundKeepsTheNewestTen(t *testing.T) {
 		t.Fatalf("first = %v, want the newest", got[0].Activity.OccurredAt)
 	}
 }
+
+func TestWhoseMoveFollowsTheMailBadgeThenTheDirection(t *testing.T) {
+	badge := func(m crmcontracts.EmailSummaryMove) *crmcontracts.EmailSummaryMove { return &m }
+	out, in := string(crmcontracts.ActivityDirectionOutbound), string(crmcontracts.ActivityDirectionInbound)
+	cases := []struct {
+		name      string
+		move      *crmcontracts.EmailSummaryMove
+		direction string
+		want      crmcontracts.LastExchangeWhoseMove
+	}{
+		{"a mail we wait on", badge(crmcontracts.EmailSummaryMoveWaitingForThem), in, crmcontracts.LastExchangeWhoseMoveThem},
+		{"a mail that needs our reply", badge(crmcontracts.EmailSummaryMoveNeedsReply), out, crmcontracts.LastExchangeWhoseMoveUs},
+		{"a mail that settles the thread", badge(crmcontracts.EmailSummaryMoveNone), in, crmcontracts.LastExchangeWhoseMoveNeither},
+		{"a call we made", nil, out, crmcontracts.LastExchangeWhoseMoveThem},
+		{"a call they made", nil, in, crmcontracts.LastExchangeWhoseMoveUs},
+		{"a meeting", nil, "", crmcontracts.LastExchangeWhoseMoveNeither},
+	}
+	for _, c := range cases {
+		if got := WhoseMove(c.move, c.direction); got != c.want {
+			t.Errorf("%s: whose move = %s, want %s", c.name, got, c.want)
+		}
+	}
+}

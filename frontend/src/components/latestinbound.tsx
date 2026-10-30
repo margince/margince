@@ -24,6 +24,7 @@ import { activityAgo } from "../format/activitywhen";
 import { emailSummaryText } from "../format/emailtext";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys, timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { useSourceOpener } from "../lib/opensource";
@@ -63,15 +64,7 @@ export function useLatestInbound(
 ): JustIn | undefined {
   // The ids set aside since mount; storage alone would not draw the page again.
   const [noticed, setNoticed] = useState<ReadonlySet<string>>(new Set());
-  const query = useQuery({
-    queryKey: latestInboundKey(entityType, entityId),
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/activities/latest-inbound", {
-          params: { query: { entity_type: entityType, entity_id: entityId } },
-        }),
-      ),
-  });
+  const query = useLatestInboundRead(entityType, entityId);
   // Only the newest item shows: once it is noticed, an older one does not take its place.
   const latest = query.data?.data[0];
   if (!latest) {
@@ -86,6 +79,19 @@ export function useLatestInbound(
     setNoticed((ids) => new Set(ids).add(id));
   };
   return { ...latest, notice };
+}
+
+/** The record's latest-inbound read; one request serves the item and the last exchange. */
+export function useLatestInboundRead(entityType: EntityKind, entityId: string) {
+  return useQuery({
+    queryKey: latestInboundKey(entityType, entityId),
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/activities/latest-inbound", {
+          params: { query: { entity_type: entityType, entity_id: entityId } },
+        }),
+      ),
+  });
 }
 
 /** What a record page hands its Next bar about the item. */
@@ -220,8 +226,16 @@ export function RecordNextBar({
   const scope = useContext(JustInContext);
   const latest = scope?.latest;
   const open = useOpenItem(scope);
-  if (!scope || !latest || about.includes(latest.activity.id)) {
+  if (!scope) {
     return <NextBar {...bar} />;
+  }
+  if (!latest || about.includes(latest.activity.id)) {
+    // With nothing next, the bar says where the conversation stands.
+    return bar.title === undefined ? (
+      <LastExchangeNextBar scope={scope} more={bar.more} />
+    ) : (
+      <NextBar {...bar} />
+    );
   }
   if (urgent ?? bar.late?.tone === "danger") {
     return (
@@ -236,13 +250,7 @@ export function RecordNextBar({
     );
   }
   return (
-    <JustInNextBar
-      scope={scope}
-      latest={latest}
-      open={open}
-      more={bar.more}
-      onward={bar.onward}
-    />
+    <JustInNextBar scope={scope} latest={latest} open={open} more={bar.more} />
   );
 }
 
@@ -251,13 +259,11 @@ function JustInNextBar({
   latest,
   open,
   more,
-  onward,
 }: Readonly<{
   scope: JustInScopeValue;
   latest: JustIn;
   open?: () => void;
   more?: NextBarProps["more"];
-  onward?: ReactNode;
 }>) {
   const t = useT();
   const { activity, kind, notice } = latest;
@@ -293,7 +299,65 @@ function JustInNextBar({
         </>
       }
       more={more}
-      onward={onward}
+    />
+  );
+}
+
+type WhoseMove = components["schemas"]["LastExchange"]["whose_move"];
+
+const MOVE_TITLE: Record<WhoseMove, MessageKey> = {
+  them: "standing.exchange.them",
+  us: "standing.exchange.us",
+  neither: "standing.next.none",
+};
+
+const EXCHANGE_KIND: Partial<Record<Activity["kind"], MessageKey>> = {
+  email: "timeline.kind.email",
+  message: "timeline.kind.message",
+  call: "timeline.kind.call",
+  meeting: "timeline.kind.meeting",
+};
+
+/**
+ * The bar with nothing next: whose move the record's last call, meeting, mail
+ * or message leaves, and when it was. The server judges whose move it is.
+ */
+function LastExchangeNextBar({
+  scope,
+  more,
+}: Readonly<{ scope: JustInScopeValue; more?: NextBarProps["more"] }>) {
+  const t = useT();
+  const opener = useSourceOpener(scope.onOpenEmail);
+  const exchange = useLatestInboundRead(scope.entityType, scope.entityId).data
+    ?.last_exchange;
+  if (!exchange) {
+    return <NextBar more={more} />;
+  }
+  const { activity, whose_move } = exchange;
+  const kind = EXCHANGE_KIND[activity.kind];
+  const open = opener({
+    id: activity.id,
+    kind: activity.kind,
+    contentState: activity.content_state,
+  });
+  return (
+    <NextBar
+      title={t(MOVE_TITLE[whose_move])}
+      detail={itemWords(activity).subject}
+      sub={
+        <span className="latest-sub">
+          {kind && `${t(kind)} · `}
+          <When activity={activity} />
+        </span>
+      }
+      insight={
+        open && (
+          <Button variant="link" onClick={open}>
+            {t("standing.exchange.open")}
+          </Button>
+        )
+      }
+      more={more}
     />
   );
 }

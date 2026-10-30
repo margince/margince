@@ -19,11 +19,11 @@ var justInLater = requestInstant.Add(time.Hour)
 
 func latestOn(t *testing.T, e *loadEnv, store *Store, contact ids.UUID) []crmcontracts.LatestInbound {
 	t.Helper()
-	items, err := store.LatestInbound(e.asSeat(e.rep), "contact", contact)
+	list, err := store.LatestInbound(e.asSeat(e.rep), "contact", contact)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return items
+	return list.Data
 }
 
 func TestLatestInboundOffersAcceptingARequestUntilItsTaskStands(t *testing.T) {
@@ -107,5 +107,35 @@ func TestLatestInboundLeavesOutWhatArrivedBeforeTheWindow(t *testing.T) {
 	store := storeKnowing(e).WithClock(func() time.Time { return requestInstant.AddDate(0, 0, JustInDays+1) })
 	if items := latestOn(t, e, store, contact); len(items) != 0 {
 		t.Fatalf("items = %+v, want nothing older than %d days", items, JustInDays)
+	}
+}
+
+func TestLatestInboundSaysWhoseMoveTheLastExchangeLeaves(t *testing.T) {
+	e := setupLoad(t)
+	contact := e.buyer(t)
+	links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
+	store := storeKnowing(e).WithClock(func() time.Time { return requestInstant.AddDate(0, 0, JustInDays+1) })
+	exchange := func() *crmcontracts.LastExchange {
+		t.Helper()
+		list, err := store.LatestInbound(e.asSeat(e.rep), "contact", contact)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return list.LastExchange
+	}
+	if got := exchange(); got != nil {
+		t.Fatalf("last exchange = %+v, want none on a record nobody spoke with", got)
+	}
+	source := seedEmailRequestFiledUnder(t, e, "Send the offer", "commitment", OwedVerdictAsksUs, requestCounterparty, links, mailParticipants{})
+	got := exchange()
+	if got == nil || ids.UUID(got.Activity.Id) != source || got.WhoseMove != crmcontracts.LastExchangeWhoseMoveUs {
+		t.Fatalf("last exchange = %+v, want their ask, older than Just in, owed by us", got)
+	}
+	called, note, out := requestInstant.Add(time.Hour), "Left a voicemail", string(crmcontracts.ActivityDirectionOutbound)
+	if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "call", Source: "manual", Subject: &note, OccurredAt: &called, Direction: &out, Links: links}); err != nil {
+		t.Fatal(err)
+	}
+	if got := exchange(); got == nil || got.WhoseMove != crmcontracts.LastExchangeWhoseMoveThem {
+		t.Fatalf("last exchange = %+v, want our call waiting on them", got)
 	}
 }

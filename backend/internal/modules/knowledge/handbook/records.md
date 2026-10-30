@@ -269,7 +269,7 @@ Also called: open a note, see the full call notes, read a meeting in full.
 To add a task in Margince, open the contact, company, lead, deal or project, choose **More actions** in its header, then **Add task**. Enter a **Subject** (required), a **Due date** and an **Assignee** (or **Unassigned**), then choose **Log**. History labels tasks **Open** or **Completed**; the company's **Tasks** tab lists open tasks only. Choose **Open task** for **Done** and **Snooze 1 day**.
 Also called: create a to-do, follow-up, reminder.
 
-The **Next** bar on a contact's or company's **Overview** shows a task's subject over the first line of its details. A task read out of an email shows that email under its buttons. **View full thread** opens the whole conversation, and closing it goes back to the task.
+The **Next** bar on a contact's or company's **Overview** shows a task's subject over the first line of its details. A task read out of an email shows that email under its buttons. **View full thread** opens the whole conversation, and closing it goes back to the task. With nothing next, the bar says **Waiting on them** if you wrote last, or **Your turn to answer** if they did.
 
 ### What does "New email" in the Next bar mean?
 A mail, chat message or website form nobody has replied to shows in the record's **Next** bar for up to 7 days. **Read email** (or **Read message**, **Read form**) opens it. **Create task** makes it a task, and finishing a task for a request marks the request as done. When a late task or something else urgent is next, it is one line above the bar, and clicking the line opens it. It goes away once you reply or a task stands for it, and **Noticed** hides it in this browser.

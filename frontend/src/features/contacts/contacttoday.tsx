@@ -2,7 +2,6 @@ import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
-import { NextTaskSlot } from "../../components/nexttaskslot";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -177,7 +176,6 @@ function MomentBar({
           : { onSnooze: defer.onDefer, pending: defer.pending }
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
@@ -248,7 +246,6 @@ function TaskBar({
         </>
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
@@ -275,14 +272,11 @@ function AnswerBar({
     return (
       <RecordNextBar
         title={t("today.withheld", { sections: withheld.join(", ") })}
-        onward={<NextTaskSlot />}
       />
     );
   }
   if (!moment) {
-    return (
-      <RecordNextBar title={t("record.notShown")} onward={<NextTaskSlot />} />
-    );
+    return <RecordNextBar title={t("record.notShown")} />;
   }
   if (moment.rule === "thin_relationship") {
     return (
@@ -292,11 +286,10 @@ function AnswerBar({
         action={
           <ActionVerb action={moment.recommended_action} onAction={onAction} />
         }
-        onward={<NextTaskSlot />}
       />
     );
   }
-  return <RecordNextBar onward={<NextTaskSlot />} />;
+  return <RecordNextBar />;
 }
 
 // What the move says is owed, in the order both readers below take it: the

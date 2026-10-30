@@ -12,7 +12,6 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NextTaskProvider } from "../../components/nexttaskslot";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { DealStatusCardPanel } from "./dealstatus";
@@ -424,24 +423,4 @@ it("background reads explicitly refuse model work", async () => {
     .find((url) => url.pathname.endsWith("/status"));
   expect(status?.searchParams.get("facts_only")).toBe("true");
   client.clear();
-});
-
-it("draws the shell's next-task control in the next bar", async () => {
-  serve({});
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <LocaleProvider initial="en">
-        <NextTaskProvider value={<button type="button">Next task</button>}>
-          <DealStatusCardPanel deal={{ id: DEAL, name: "Scheduling" }} />
-        </NextTaskProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-  expect(
-    await screen.findByRole("button", { name: "Next task" }),
-  ).toBeInTheDocument();
 });

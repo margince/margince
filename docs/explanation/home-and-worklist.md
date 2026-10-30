@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx frontend/src/features/worklist/worklist.next.ts frontend/src/features/worklist/worklist.nexttask.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -318,11 +318,6 @@ Home's address is `#/home` in every language. `parseHash` in `router.tsx` sends 
 query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its owner or `unassigned` form
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
-
-**Next task** on a record page's next-step bar reads the Worklist again on each press, so an open page polls
-nothing (`worklist.nexttask.tsx`). `nextTaskHref` in `worklist.next.ts` takes each record once, where its
-first row stands, and leaves out rows that open no record page. It follows the list the record was opened
-from, else the reader's own list, and goes back to the top after the last record.
 
 Quiet relationships use the same scoped read and row renderer in a separate optional
 list. They join the work queue and Focus only when the reader pins them. A pin

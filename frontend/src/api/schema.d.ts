@@ -5585,6 +5585,10 @@ export interface paths {
          *     (`request_activity_id`), so that completing the task settles the request. An agent
          *     cannot accept a request; its task carries `source_activity_id`, as any task does
          *     when `accepts_request` is false, and that does not settle the request.
+         *
+         *     `last_exchange` is the newest call, meeting, email or message on the record of any
+         *     age, with whose move it leaves. It says where the record stands when nothing is
+         *     next, such as waiting on them since the last mail sent.
          */
         get: operations["listLatestInbound"];
         put?: never;
@@ -36737,6 +36741,19 @@ export interface components {
         };
         LatestInboundList: {
             data: components["schemas"]["LatestInbound"][];
+            last_exchange?: components["schemas"]["LastExchange"];
+        };
+        /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
+        LastExchange: {
+            activity: components["schemas"]["Activity"];
+            /**
+             * @description Who answers next. A mail follows its History badge's move. Any other exchange,
+             *     or a mail the reader may not read, follows its direction: what we sent waits on
+             *     them, and what they sent waits on us. `neither` is an exchange with no direction,
+             *     such as a meeting.
+             * @enum {string}
+             */
+            whose_move: "them" | "us" | "neither";
         };
         LatestInbound: {
             activity: components["schemas"]["Activity"];

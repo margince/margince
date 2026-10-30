@@ -5,7 +5,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { MailCoverageNotice } from "../../components/mailcoveragenotice";
-import { NextTaskSlot } from "../../components/nexttaskslot";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
@@ -384,7 +383,7 @@ function DealNextBar({
   const notNow = useDealMoveSetAside(dealId);
   const move = card.next;
   if (!move) {
-    return <RecordNextBar more={more} onward={<NextTaskSlot />} />;
+    return <RecordNextBar more={more} />;
   }
   // Only the message the buyer is owed an answer to opens in the email
   // drawer. A task or a meeting the move cites is not a message.
@@ -426,7 +425,6 @@ function DealNextBar({
             : undefined
         }
         more={more}
-        onward={<NextTaskSlot />}
       />
       {notNow.failure && <ErrorLine error={notNow.failure} />}
     </>

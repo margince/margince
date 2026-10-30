@@ -29,16 +29,16 @@ const (
 )
 
 // LatestInbound reads what they sent on one record in the last JustInDays that
-// nobody has answered, newest first. Mail and messages come from the
-// waiting_reply read, so this never judges a thread on its own.
-func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID ids.UUID) ([]crmcontracts.LatestInbound, error) {
+// nobody has answered, newest first, and the record's last exchange. Mail and
+// messages come from the waiting_reply read, so this never judges a thread on its own.
+func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
 	columns, err := s.ActiveActivityColumns(ctx)
 	if err != nil {
-		return nil, err
+		return crmcontracts.LatestInboundList{}, err
 	}
 	now := s.now()
 	since := now.Add(-JustInDays * 24 * time.Hour)
-	var out []crmcontracts.LatestInbound
+	var out crmcontracts.LatestInboundList
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		read := func(waiting bool, limit int) ([]crmcontracts.Activity, error) {
 			rows, _, err := s.ListActivitiesIn(ctx, tx, ListActivitiesInput{
@@ -55,7 +55,10 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 		if err != nil {
 			return err
 		}
-		out, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, recent), now)
+		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, recent), now); err != nil {
+			return err
+		}
+		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
 		return err
 	})
 	return out, err
