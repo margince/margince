@@ -110,5 +110,20 @@ func sampleValue(s *openapi3.Schema, name string, depth int) any {
 	if name == "" {
 		return "sample"
 	}
+	// A currency field carries an ISO-4217 code, which the contract states in
+	// its description rather than in a pattern this generator could read. The
+	// generic sample below would read "Sample currency", which
+	// values.ValidCurrency refuses, so a consumer copying the sample sends what
+	// the API rejects.
+	//
+	// `_at_<moment>` is this contract's suffix for a value frozen at an event,
+	// so the base name is what says whether the field holds a currency.
+	base := name
+	if at := strings.Index(base, "_at_"); at > 0 {
+		base = base[:at]
+	}
+	if base == "currency" || strings.HasSuffix(base, "_currency") {
+		return "EUR"
+	}
 	return "Sample " + strings.ReplaceAll(name, "_", " ")
 }
