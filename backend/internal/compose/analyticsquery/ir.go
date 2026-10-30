@@ -162,6 +162,16 @@ var valuelessOps = map[FilterOp]bool{OpIsNull: true, OpIsNotNull: true}
 // clarification the caller acts on, and a list of five invites fixing them all
 // at once against a schema they have not re-read.
 func (q Query) Validate(schema Schema) error {
+	if err := q.ValidateVocabulary(schema); err != nil {
+		return err
+	}
+	return validateCurrencyBasis(schema.Entities[q.Entity], q)
+}
+
+// ValidateVocabulary checks only that every name exists and fits its slot.
+// A saved question that passes it but not Validate still lists, so the reader
+// opens it and reads the refusal saying how to re-ask it.
+func (q Query) ValidateVocabulary(schema Schema) error {
 	entity, ok := schema.Entities[q.Entity]
 	if !ok {
 		return &RefusalError{
