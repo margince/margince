@@ -232,6 +232,7 @@ func wiredSeamNames(t *testing.T, files map[string]*ast.File) map[string]bool {
 				return true
 			}
 			found = true
+			locals := localSeams(fn.Body, returns)
 			ast.Inspect(fn.Body, func(inner ast.Node) bool {
 				call, ok := inner.(*ast.CallExpr)
 				if !ok || !bindsALane(call.Fun) {
@@ -240,6 +241,9 @@ func wiredSeamNames(t *testing.T, files map[string]*ast.File) map[string]bool {
 				for _, arg := range call.Args {
 					if name, ok := seamNameOf(arg, returns); ok {
 						wired[name] = true
+					}
+					if ident, ok := arg.(*ast.Ident); ok && locals[ident.Name] != "" {
+						wired[locals[ident.Name]] = true
 					}
 				}
 				return true
@@ -325,4 +329,27 @@ func bindsALane(fun ast.Expr) bool {
 	}
 	pkg, ok := sel.X.(*ast.Ident)
 	return ok && pkg.Name == "attention"
+}
+
+// localSeams maps each local the body assigns a seam to, so a seam built once
+// and passed by name to two bindings is credited like an inline one.
+func localSeams(body *ast.BlockStmt, returns map[string]string) map[string]string {
+	locals := map[string]string{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok || len(assign.Lhs) != len(assign.Rhs) {
+			return true
+		}
+		for i, lhs := range assign.Lhs {
+			ident, ok := lhs.(*ast.Ident)
+			if !ok {
+				continue
+			}
+			if name, ok := seamNameOf(assign.Rhs[i], returns); ok {
+				locals[ident.Name] = name
+			}
+		}
+		return true
+	})
+	return locals
 }
