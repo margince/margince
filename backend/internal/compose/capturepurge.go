@@ -315,6 +315,13 @@ func (p *CapturePurger) carryOut(
 // query, so what a pass does not reach this tick it reaches the next.
 const personalSweepBatch = 500
 
+// personalSweepActor is the principal the personal sweep destroys under. The
+// sweep runs from a fleet job whose context carries a workspace and nothing
+// else, and the purge refuses a context with no actor or no correlation id — so
+// without this every pass that found mail due failed, and the mail it was meant
+// to destroy stayed.
+const personalSweepActor = "system:capture-personal-purge"
+
 // SweepPersonalMail destroys the personal correspondence whose undo window has
 // closed, for every seat in the workspace that has any.
 //
@@ -333,6 +340,9 @@ const personalSweepBatch = 500
 // It reuses carryOut, so a message destroyed here goes through exactly the
 // sequence an owner's own purge uses.
 func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.PersonalPurgeWindows) (int, error) {
+	// Bound here rather than by the caller: the sweep is the system's act by
+	// definition, so its audit rows name the sweep whoever started the pass.
+	ctx = principal.SystemActing(ctx, personalSweepActor)
 	var seats []ids.UUID
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error

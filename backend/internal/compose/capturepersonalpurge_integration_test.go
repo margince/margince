@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestPersonalMailIsDestroyedOnceItsWindowCloses(t *testing.T) {
@@ -335,7 +336,11 @@ func overruleAsBusiness(t *testing.T, e *integration.Env, seat ids.UUID, address
 func sweepPersonal(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	purger := NewCapturePurger(e.Pool, NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.Default()))
-	n, err := purger.SweepPersonalMail(e.Admin(), capture.DefaultPersonalPurgeWindows())
+	// The worker's context: a workspace and no actor. An admin context here
+	// is what let every test pass while the job itself could not destroy
+	// anything.
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	n, err := purger.SweepPersonalMail(ctx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		t.Fatalf("sweeping personal mail: %v", err)
 	}
