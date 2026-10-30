@@ -48,15 +48,6 @@ func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
 
 // idArg asserts an optional wire UUID (body field or query parameter)
 // as entity K's id; nil stays nil.
-// emailArg is a contract address as the store's plain string, nil when absent.
-func emailArg(e *openapi_types.Email) *string {
-	if e == nil {
-		return nil
-	}
-	email := string(*e)
-	return &email
-}
-
 func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 	if u == nil {
 		return nil
