@@ -56,13 +56,14 @@ func seedRiskBacklog(t *testing.T) riskBacklog {
 	// Another team's deal, and a healthy one, are never at risk here.
 	b.closes(t, b.healthy(t, w.r.e.Rep3, "Rep3 overdue"), -3)
 	b.healthy(t, rep1, "Healthy")
-	// A customer waits on one deal the overdue sweep reads and one past it,
-	// older than the plain requests, so the waiting lane's scan never sees them.
-	for name, days := range map[string]int{"Waited on, swept": -200, "Waited on, past the sweep": -3} {
-		id := b.healthy(t, rep1, name)
-		b.closes(t, id, days)
-		w.mailOnDeal(t, id, name)
-	}
+	// A customer waits on a swept deal, inside the waiting lane's scan. Another
+	// waits on a deal past the sweep, older than the scan reaches.
+	swept := b.healthy(t, rep1, "Waited on, swept")
+	b.closes(t, swept, -200)
+	w.mailOnDeal(t, swept, "Waited on, swept", w.r.now.Add(-5*time.Minute))
+	past := b.healthy(t, rep1, "Waited on, past the sweep")
+	b.closes(t, past, -3)
+	w.mailOnDeal(t, past, "Waited on, past the sweep", w.older().AddDate(0, 0, -1))
 	done := b.deal(t, rep1, "Marked done")
 	b.closes(t, done, -2)
 	back := b.deal(t, rep1, "Came back")
@@ -101,9 +102,9 @@ func (b *riskBacklog) closes(t *testing.T, deal ids.UUID, days int) {
 }
 
 // mailOnDeal logs one waiting request to Rep1, filed under the deal.
-func (w *waitingBacklog) mailOnDeal(t *testing.T, deal ids.UUID, subject string) {
+func (w *waitingBacklog) mailOnDeal(t *testing.T, deal ids.UUID, subject string, at time.Time) {
 	t.Helper()
-	inbound, at := "inbound", w.older().AddDate(0, 0, -1)
+	inbound := "inbound"
 	to := w.r.e.WsScalar(t, `SELECT lower(email) FROM app_user WHERE id = $1`, w.r.e.Rep1)
 	row, _, err := w.r.e.Activities.LogActivity(w.r.e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",
@@ -122,7 +123,7 @@ func (w *waitingBacklog) mailOnDeal(t *testing.T, deal ids.UUID, subject string)
 
 // Each scope's at-risk deals are reached once each by walking the list to its
 // end, in the tail's shared order with tasks and waiting cards. A deal a
-// customer waits on is never served as at risk, a Done deal stays off its
+// customer waits on is never served as at risk. A Done deal stays off its
 // reader's list, and one that came back since its Done returns.
 func TestTheAtRiskTailReachesEveryDealOnce(t *testing.T) {
 	b := seedRiskBacklog(t)
@@ -186,7 +187,7 @@ func (b *riskBacklog) markDone(t *testing.T) {
 	r.e.WsExec(t, `UPDATE worklist_done SET done_at = $2 WHERE row_id = $1`, b.back, r.now.AddDate(0, 0, -10))
 }
 
-// assertDealsReached holds that the walk served exactly these at-risk deals,
+// assertDealsReached holds that the walk served these at-risk deals and no others,
 // each once, and nothing it must never serve.
 func (b *riskBacklog) assertDealsReached(t *testing.T, served []servedRow, want map[string]bool) {
 	t.Helper()

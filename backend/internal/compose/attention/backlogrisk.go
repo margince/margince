@@ -9,7 +9,6 @@ package attention
 import (
 	"context"
 	"log/slog"
-	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -83,44 +82,13 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 // anywhere in the waiting source, under this page's narrowing.
 func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, read []Positioned[RiskyDeal]) (map[ids.UUID]bool, error) {
 	if s.backlog.waiting == nil || len(read) == 0 {
-		return nil, nil
+		return map[ids.UUID]bool{}, nil
 	}
 	deals := make([]ids.UUID, len(read))
 	for i, deal := range read {
 		deals[i] = deal.Row.DealID
 	}
 	return s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
-}
-
-// dropDealsWaitingPastTheScan is step B for the cards a cut waiting scan left
-// for the tail: a deal whose customer waits further down is not also at risk.
-// A failed read keeps the rows, as an unread waiting lane does.
-func (s *Service) dropDealsWaitingPastTheScan(ctx context.Context, rows []ranked, asOf time.Time, cut bool) []ranked {
-	if !cut || s.backlog.waiting == nil {
-		return rows
-	}
-	var deals []ids.UUID
-	for _, row := range rows {
-		if row.item.Source == sourceAtRisk && row.item.Subject != nil {
-			deals = append(deals, ids.UUID(row.item.Subject.Id))
-		}
-	}
-	if len(deals) == 0 {
-		return rows
-	}
-	var waiting map[ids.UUID]bool
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
-		var err error
-		waiting, err = s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
-		return err
-	})
-	if err != nil {
-		slog.Log(ctx, laneFailureLevel(ctx), "the deals customers wait on past the scan could not be read", "error", err)
-		return rows
-	}
-	return slices.DeleteFunc(rows, func(row ranked) bool {
-		return row.item.Source == sourceAtRisk && row.item.Subject != nil && waiting[ids.UUID(row.item.Subject.Id)]
-	})
 }
 
 // riskInTail is, for a Done check, the asked deals this scope's tail would

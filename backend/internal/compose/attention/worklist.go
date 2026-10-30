@@ -209,7 +209,6 @@ func (s *Service) worklistFrom(
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	rows = s.dropDealsWaitingPastTheScan(ctx, rows, day.AsOf, waiting.cut)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me

@@ -147,9 +147,6 @@ Three sources are read on in the tail today:
   card is far down the waiting source (`DealsWaiting`). A deal a row above already names, such as a brief row, is left
   out too, so one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
 
-When the waiting lane's scan was cut, the ranked at-risk rows are also checked against every waiting card, not only
-the ranked ones. A deal a customer waits on is never shown as at risk.
-
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
