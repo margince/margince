@@ -102,12 +102,20 @@ func (t attentionTasks) OpenForViewer(
 	if err != nil {
 		return nil, err
 	}
-	open := make([]attention.Task, 0, len(rows))
+	return t.asTasks(ctx, rows, scope, asOf)
+}
+
+// asTasks carries a window's rows across as tasks. Each carries the reminder
+// its scope may show, and a flag where the reader may not change it.
+func (t attentionTasks) asTasks(
+	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
+) ([]attention.Task, error) {
+	tasks := make([]attention.Task, 0, len(rows))
 	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		open = append(open, taskFromActivity(row, reader, asOf))
+		tasks = append(tasks, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, open, asOf)
+	return t.markReadOnly(ctx, tasks, asOf)
 }
 
 // listOpenTasks reads one window of open tasks with each statement's generic
@@ -143,12 +151,7 @@ func (t attentionTasks) UpcomingForViewer(
 	if err != nil {
 		return nil, err
 	}
-	upcoming := make([]attention.Task, 0, len(rows))
-	reader := reminderReaderFor(ctx, scope)
-	for _, row := range rows {
-		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
-	}
-	return t.markReadOnly(ctx, upcoming, asOf)
+	return t.asTasks(ctx, rows, scope, asOf)
 }
 
 // CountTasks counts a later task window whole, under the lane's own
@@ -184,12 +187,7 @@ func (t attentionTasks) TasksAfter(
 	if err != nil {
 		return nil, "", err
 	}
-	reader := reminderReaderFor(ctx, window.Scope)
-	tasks := make([]attention.Task, 0, len(rows))
-	for _, row := range rows {
-		tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
-	}
-	tasks, err = t.markReadOnly(ctx, tasks, window.AsOf)
+	tasks, err := t.asTasks(ctx, rows, window.Scope, window.AsOf)
 	if !page.HasMore {
 		return tasks, "", err
 	}
