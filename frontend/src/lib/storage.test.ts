@@ -118,6 +118,7 @@ describe("a stored value", () => {
       "margince.room.session",
       "margince.setup.reminderHidden",
       "margince.taskReminders.shown",
+      "margince.aiReveal.seen",
     ]);
   });
 });
