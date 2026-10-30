@@ -6,8 +6,9 @@
 // its values carry a name in place of an id. A view has no catalog and no
 // network to look either up.
 
+import { badge } from "./badge";
 import { el } from "./bridge";
-import { panel, panelBody } from "./parts";
+import { avatar, panel, panelBody } from "./parts";
 import { asList, asRecord, asText } from "./types";
 import { ABSENT, day, money } from "./values";
 
@@ -174,7 +175,26 @@ export function summaryPanel(
   title: string,
   ...lines: HTMLElement[]
 ): HTMLElement {
-  const card = panel(title, { level: "h1" });
+  return statusPanel(title, undefined, ...lines);
+}
+
+/** savedPanel is the card for a write that went through, marked as saved. */
+export function savedPanel(
+  title: string,
+  ...lines: HTMLElement[]
+): HTMLElement {
+  return statusPanel(title, badge("Saved", "success"), ...lines);
+}
+
+function statusPanel(
+  title: string,
+  action: HTMLElement | undefined,
+  ...lines: HTMLElement[]
+): HTMLElement {
+  const card = panel(
+    title,
+    action === undefined ? { level: "h1" } : { level: "h1", action },
+  );
   const body = panelBody();
   body.append(...lines);
   card.appendChild(body);
@@ -199,4 +219,22 @@ export function refusalPanel(
       words === "" || UUID.test(words) ? "Ask the assistant why." : words,
     ),
   );
+}
+
+/**
+ * recordLine names the record a write landed on: its chip, its name and its
+ * kind, as a row of colleagues reads in the app.
+ */
+export function recordLine(
+  name: string,
+  id: string,
+  noun: string,
+): HTMLElement {
+  const line = el("div", "record-line");
+  line.append(
+    avatar(name, id),
+    el("p", "name", name),
+    badge(noun.charAt(0).toUpperCase() + noun.slice(1)),
+  );
+  return line;
 }

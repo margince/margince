@@ -28,6 +28,12 @@
 @import "../design-system/readings.css";
 @import "../design-system/callout.css";
 @import "../design-system/strengthmeter.css";
+/* The readings strip over a list, and the staged proposal card. */
+@import "../design-system/atoms.css";
+@import "../design-system/statstrip.css";
+@import "../design-system/readingsfloor.css";
+@import "../design-system/trust.css";
+@import "../design-system/decisioncard.css";
 /* The app's button, which a choice card presses. */
 @import "../design-system/base.css";
 
@@ -207,4 +213,81 @@ ol {
   margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
+}
+
+/* A queue of proposals: one card per row, with air between them. */
+.decision-list {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.decision-list > li {
+  display: grid;
+  gap: var(--space-2);
+}
+
+/* A ranked attention row: its rank or owner, what it is and why, then its
+   figure over the door to ask about it. */
+.attention-row {
+  align-items: center;
+}
+
+.attention-rank {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--warningSurface);
+  border: 1px solid var(--warningBorder);
+  color: var(--warningText);
+}
+
+.attention-reasons {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.attention-end {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+}
+
+.attention-quote {
+  font-style: italic;
+}
+
+/* The figures sit on the panel's ground, with the list's first rule under them. */
+.panel-body > .stat-strip-wrap + .intro,
+.panel-body > .stat-strip-wrap + .decision-list {
+  margin-top: var(--space-4);
+}
+
+/* The record a write landed on: its chip, its name and its kind on one line. */
+.record-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* One reason an item is on the attention card, led by a dot in the warning
+   tone, so the list reads as concerns before a word of it is read. */
+.attention-reason {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.attention-mark {
+  flex: none;
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--warning);
 }
