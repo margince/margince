@@ -381,3 +381,63 @@ func TestOnlyASeatThatMayDecideSeesTheLegacyNotes(t *testing.T) {
 		t.Errorf("a reader of the list decided a mapping: %v", err)
 	}
 }
+
+// The count runs under the operator's deal read gate and row scope, so it says
+// nothing a deal read would not. Every seat reads every deal, so an own-scope
+// seat still counts the deal, but it may not write it, so nothing is mapped.
+// A seat with no deal read is refused the count.
+func TestTheApplyCountsWhatTheOperatorMayReadAndMapsOnlyWhatItMayWrite(t *testing.T) {
+	e := setupConfigEnv(t)
+	p := seedLossPipeline(t, e)
+	ctx := e.asLossAdmin()
+	deal := p.deal(t, e, "Someone else's loss")
+	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Out of scope entirely")}); err != nil {
+		t.Fatal(err)
+	}
+	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, "out of scope entirely").TextHash, "price")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stranger := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`,
+		stranger, "rep-"+stranger.String()+"@config.test"); err != nil {
+		t.Fatal(err)
+	}
+	own := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
+		principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:" + stranger.String(), UserID: stranger,
+			Permissions: principal.Permissions{RowScope: principal.RowScopeOwn, Objects: map[string]principal.ObjectGrant{
+				"deal": {Read: true, Update: true}, "custom_field": {Read: true, Update: true},
+			}},
+		})
+	reviewed := []ids.UUID{ids.UUID(decided.Id)}
+	err = e.store.Tx(own, func(tx pgx.Tx) error {
+		count, err := CountLossMappingCandidates(own, tx, 100, reviewed)
+		if err != nil {
+			return err
+		}
+		if count != 1 {
+			t.Errorf("an own-scope seat counted %d deals, want the 1 it may read", count)
+		}
+		_, changed, err := ApplyLossReasonMappingsTx(own, tx, ids.Nil, 100, map[ids.UUID]int64{ids.UUID(decided.Id): decided.Version})
+		if changed != 0 {
+			t.Errorf("an own-scope seat mapped %d deals it may not write", changed)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code, _ := lossCode(t, e, deal); code != nil {
+		t.Errorf("the out-of-scope deal took code %q", *code)
+	}
+	blind := e.withObjects(map[string]principal.ObjectGrant{"custom_field": {Read: true, Update: true}})
+	err = e.store.Tx(blind, func(tx pgx.Tx) error {
+		_, err := CountLossMappingCandidates(blind, tx, 100, reviewed)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a seat with no deal read was answered a count: %v", err)
+	}
+}

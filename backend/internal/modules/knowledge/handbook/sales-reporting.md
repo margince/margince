@@ -79,7 +79,7 @@ Open **Definitions** to see how each number is worked out, the rules for credit,
 
 Ask a question about won and lost deals, and group it by **Loss reason from the list**. Group by **How the loss reason was set** to see where each answer came from:
 
-- **Picked at close**: the person closing the deal picked the reason.
+- **Picked at close**: the reason was picked when the deal was closed.
 - **Mapped from a note**: an administrator matched the deal's older note to a reason.
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 

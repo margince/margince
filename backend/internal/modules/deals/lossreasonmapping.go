@@ -56,7 +56,8 @@ const unmappedLossSQL = `d.status = 'lost' AND d.lost_reason IS NOT NULL AND d.l
 // That is one with no code, or one an earlier decision on the note set to a
 // code the decision no longer names. A code the closer recorded is never one.
 // A deal holding its mapped code drops out, so a rerun finds nothing it did.
-// $1 limits it to the reviewed mappings, or NULL for all.
+// $1 limits it to the reviewed mappings, or NULL for all. pendingMappingsOf
+// adds the caller's deal row scope.
 var pendingMappingFrom = `FROM deal d
 	JOIN deal_loss_reason_mapping m ON m.text_hash = ` + legacyNoteHashSQL("d.lost_reason") + `
 	WHERE d.archived_at IS NULL AND d.status = 'lost' AND d.lost_reason IS NOT NULL
@@ -298,14 +299,34 @@ func (row lossMappingCandidate) mapsAnew(reviewed map[ids.UUID]int64) bool {
 	return ok && version == row.mappingVersion
 }
 
-func lossMappingCandidates(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, mappings []ids.UUID) ([]lossMappingCandidate, error) {
+// pendingMappingsOf is pendingMappingFrom narrowed to the deals the caller
+// may see, with its arguments: neither a count nor the apply reaches beyond
+// them. It asks the deal read gate first, since a scope clause is no gate.
+func pendingMappingsOf(ctx context.Context, mappings []ids.UUID) (string, []any, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	args := []any{mappings}
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return "", nil, err
+	}
+	if scope == "" {
+		scope = predicateAlways
+	}
+	return pendingMappingFrom + ` AND (` + scope + `)`, args, nil
+}
+
+func lossMappingCandidates(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, mappings []ids.UUID) ([]lossMappingCandidate, error) {
+	from, args, err := pendingMappingsOf(ctx, mappings)
+	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT d.id, d.version, d.lost_reason_code, d.lost_reason_basis, d.lost_reason_mapping_id,
+	args = append(args, after, limit)
+	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT d.id, d.version, d.lost_reason_code, d.lost_reason_basis, d.lost_reason_mapping_id,
 			m.id, m.reason_key, m.version
-		  `+pendingMappingFrom+` AND d.id > $2
-		 ORDER BY d.id LIMIT $3 FOR UPDATE OF d`, mappings, after, limit)
+		  `+from+` AND d.id > $%d
+		 ORDER BY d.id LIMIT $%d FOR UPDATE OF d`, len(args)-1, len(args)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read lost deals to map: %w", err)
 	}
@@ -351,17 +372,19 @@ func writeMappedLossReason(ctx context.Context, tx pgx.Tx, row lossMappingCandid
 	return true, storekit.EmitEvent(ctx, tx, auditID, row.id, crmcontracts.PublicEventDealUpdated{ChangedFields: after})
 }
 
-// CountLossMappingCandidates counts, up to limit+1, the lost deals the given
-// mappings would change; nil mappings counts for every decision.
+// CountLossMappingCandidates counts, up to limit+1, the lost deals the caller
+// may see that the given mappings would change; nil counts every decision.
 func CountLossMappingCandidates(ctx context.Context, q interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }, limit int64, mappings []ids.UUID,
 ) (int64, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+	from, args, err := pendingMappingsOf(ctx, mappings)
+	if err != nil {
 		return 0, err
 	}
+	args = append(args, limit+1)
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 `+pendingMappingFrom+` LIMIT $2) pending`,
-		mappings, limit+1).Scan(&count)
+	err = q.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM (SELECT 1 `+from+` LIMIT $%d) pending`, len(args)),
+		args...).Scan(&count)
 	return count, err
 }
