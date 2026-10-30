@@ -11,6 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
 import {
+  reportingCatalogClient,
   reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
@@ -163,7 +164,7 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
   };
   window.location.hash = "#/analytics/performance";
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
     </StoryProviders>,
   );

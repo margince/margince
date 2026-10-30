@@ -32,12 +32,12 @@ var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	reportingPartnerActivity:          {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
 }
 
-// reportingMetricName names a metric in the reading's language. A frozen
-// edition may hold a metric the catalog no longer has; it keeps its id.
+// reportingMetricName names a metric in the reading's language. An edition
+// keeps no name, so a metric retired since it was captured says so.
 func reportingMetricName(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID) string {
 	name, ok := reportingMetricNames[metric]
 	if !ok {
-		return string(metric)
+		name = reportingLabelWords.MetricRetired
 	}
 	return reporting.ExplanationCopy(frame).Say(name)
 }

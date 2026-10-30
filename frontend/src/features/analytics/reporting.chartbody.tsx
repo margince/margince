@@ -439,7 +439,9 @@ export function chartTitle(
 ): string {
   if (chart.kind === "owner_attainment")
     return t("reporting.ownerMetric", { metric: metricName(chart.metric) });
-  if (chart.kind === "target_progress") return metricName(chart.metric);
+  // A chart named after its metric, as stage age is, reads the catalog's name.
+  if (chart.kind === "target_progress" || chart.kind === chart.metric)
+    return metricName(chart.metric);
   if (chart.kind === "breakdown")
     return t("reporting.breakdownTitle", {
       metric: metricName(chart.metric),

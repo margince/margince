@@ -54,3 +54,17 @@ func TestReportingCSVLabelsAHeadlineWithTheCatalogName(t *testing.T) {
 		t.Fatalf("headline row %v, catalog label %q", rows[1], shown)
 	}
 }
+
+// An edition keeps no metric name, so one retired since its capture is named
+// as gone in the reader's language, never by its bare id.
+func TestReportingCSVNamesARetiredMetricAsGone(t *testing.T) {
+	var evaluation crmcontracts.ReportingEvaluation
+	german := string(textlang.German)
+	evaluation.Context.ProseLanguage = &german
+	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: "retired_metric", Unit: reportingCountUnit}}
+	rows := reportingCSVRows(evaluation)
+	label := slices.Index(rows[0], "label")
+	if rows[1][label] != "Kennzahl nicht mehr verfügbar" {
+		t.Fatalf("retired metric row %v", rows[1])
+	}
+}

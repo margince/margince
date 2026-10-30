@@ -1213,6 +1213,7 @@ export const en = {
   "reporting.team": "Selected team",
   "reporting.workspace": "Company",
   "reporting.blocks": "Charts and order",
+  "reporting.metricUnavailable": "Metric no longer available",
   "reporting.metrics": "Metrics",
   "reporting.cancel": "Cancel",
   "reporting.saved": "Report saved",

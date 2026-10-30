@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import {
   interval,
@@ -13,8 +14,10 @@ import {
   jsonResponse,
   meRoute,
   type RouteMap,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import type { ReportingEvaluation } from "./reporting.model";
+import { reportingCatalogKey } from "./reporting.queries";
 
 export {
   reportingMetricNames,
@@ -252,6 +255,25 @@ export const reportingSectionsCatalog: components["schemas"]["ReportingCatalog"]
     metrics: [...reportingStoryCatalog.metrics, ...reportingSectionMetrics],
     presets: reportingStoryCatalog.presets,
   };
+
+// A client that already holds every metric's name, as the loaded Analytics
+// screen does. A component that names metrics then draws at once.
+export function reportingCatalogClient(): QueryClient {
+  const client = storyQueryClient();
+  client.setQueryDefaults(reportingCatalogKey, {
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  client.setQueryData(reportingCatalogKey, {
+    ...reportingSectionsCatalog,
+    metrics: [
+      ...reportingSectionsCatalog.metrics,
+      sectionDefinition("forecast_landing", "money", "state_at", false, [
+        "forecast_support",
+      ]),
+    ],
+  });
+  return client;
+}
 
 const sectionCoverage = { status: "ok", withheld: false } as const;
 

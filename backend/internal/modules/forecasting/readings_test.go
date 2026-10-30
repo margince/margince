@@ -528,8 +528,8 @@ func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
 }
 
 // The forecast read has no ORDER BY, so Postgres may return the same deals in
-// another order on the next read. A report receipt hashes the contributions in
-// order, and evidence opened later would refuse an unchanged report as stale.
+// another order on the next read. Evidence pages are cut by position, so a
+// second page over a reordered read would repeat or skip a deal.
 func TestTheContributionsDoNotDependOnTheOrderTheDealsArrive(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)

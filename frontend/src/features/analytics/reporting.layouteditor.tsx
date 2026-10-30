@@ -46,6 +46,7 @@ export function cardLabel(
         ("question" in card && card.question?.entity) || "",
       ),
     });
+  if (card.metric && card.kind === card.metric) return metricName(card.metric);
   const chart = blockLabel(card.kind, t);
   return card.metric ? `${chart} · ${metricName(card.metric)}` : chart;
 }

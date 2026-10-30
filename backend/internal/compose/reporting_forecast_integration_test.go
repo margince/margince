@@ -108,10 +108,9 @@ func TestReportingForecastReconcilesEverySupportSegmentWithSourceEvidence(t *tes
 	}
 }
 
-// The forecast reads its deals with no ORDER BY, so a later read may meet the
-// rows in another order. Rewriting every deal row in reverse id order moves
-// them in the heap and changes no figure, so the receipt must still hold. A
-// changed amount is a real change, and the same receipt must then refuse.
+// The forecast reads its deals with no ORDER BY. Rewriting every deal row in
+// reverse id order moves them on disk and changes no figure. The receipt still
+// holds, and a changed amount must refuse it.
 func TestReportingForecastReceiptHoldsWhenTheDealRowsMoveAndRefusesARealChange(t *testing.T) {
 	f := reportingBusiness(t)
 	selection := f.selection()

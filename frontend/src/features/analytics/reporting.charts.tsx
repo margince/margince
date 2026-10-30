@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext } from "./reporting.chartcontext";
@@ -16,7 +17,7 @@ import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
 } from "./reporting.model";
-import { useMetricNames } from "./reporting.queries";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { WrittenSummary } from "./reporting.written";
@@ -44,6 +45,9 @@ export function ReportingCharts({
   rolePreview?: boolean;
 }>) {
   const t = useT();
+  // Every card names its metric from the catalog, so the page waits for it
+  // rather than show an id.
+  const catalog = useReportingCatalog();
   const charts = pageCharts(evaluation);
   // Said once for the page: on every card it would repeat one fact many times.
   const withheld =
@@ -53,25 +57,29 @@ export function ReportingCharts({
     ? laidOut(evaluation.selection.layout, charts)
     : [{ items: charts.map((chart) => ({ chart, full: false })) }];
   return (
-    <div className="reporting-results">
-      <WrittenSummary evaluation={evaluation} />
-      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
-      {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
-      {afterSummary}
-      {sections.map((section) => (
-        <ChartSection
-          // A card is placed once, so a section's first item names it.
-          key={section.items[0] ? itemKey(section.items[0]) : "empty"}
-          section={section}
-          evaluation={evaluation}
-          editionId={editionId}
-          onEvidence={onEvidence}
-          questions={questionMode(editionId, rolePreview)}
-          kept={kept}
-        />
-      ))}
-      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
-    </div>
+    <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
+      {() => (
+        <div className="reporting-results">
+          <WrittenSummary evaluation={evaluation} />
+          <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+          {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
+          {afterSummary}
+          {sections.map((section) => (
+            <ChartSection
+              // A card is placed once, so a section's first item names it.
+              key={section.items[0] ? itemKey(section.items[0]) : "empty"}
+              section={section}
+              evaluation={evaluation}
+              editionId={editionId}
+              onEvidence={onEvidence}
+              questions={questionMode(editionId, rolePreview)}
+              kept={kept}
+            />
+          ))}
+          <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+        </div>
+      )}
+    </QueryGate>
   );
 }
 
