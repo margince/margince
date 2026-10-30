@@ -272,47 +272,17 @@ export const WithMarks: Story = {
   },
 };
 
-/** An expected close years out sits past a break that names its month and
- *  year, so the weeks of recent mail keep their room on the line. */
+/** The same account with its close years out: the close sits past a break
+ *  that names its month and year, so the recent months keep their room. */
 export const FarClose: Story = {
   args: {
-    label: "Routine over time",
-    asOf: "2026-10-30T09:00:00Z",
-    gap: { from: "2026-09-23", title: "37 days", sub: "waiting on them" },
-    events: [
-      {
-        key: "w",
-        at: "2026-09-09",
-        title: "4 exchanges",
-        sub: "7 Sep–9 Sep",
-        kind: "done",
-      },
-      {
-        key: "f",
-        at: "2026-09-21",
-        title: "2 exchanges",
-        sub: "14 Sep–21 Sep",
-        kind: "done",
-      },
-      {
-        key: "l",
-        at: "2026-09-23",
-        title: "Re: Demo for Routine",
-        sub: "23 Sep · Last contact",
-        kind: "last",
-      },
-      {
-        key: "c",
-        at: "2029-08-29",
-        title: "Expected close",
-        sub: "29 Aug · €4,320",
-        kind: "end",
-      },
-    ],
-    marks: [
-      mark("1", "2026-09-07", "7 Sep", "email", "Demo request", "outbound"),
-      mark("2", "2026-09-08", "8 Sep", "email", "Re: demo", "outbound"),
-    ],
+    label: "Brandt Automotive over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: company.map((event) =>
+      event.key === "c"
+        ? { ...event, at: "2029-08-29", sub: "29 Aug · €48,000" }
+        : event,
+    ),
   },
   play: async ({ canvasElement }) => {
     await expect(
