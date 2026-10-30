@@ -909,7 +909,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `agent_drafted` | `boolean`, default `false` | yes | An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. |
 | `anchor_id` | `uuid` | yes |  |
 | `anchor_type` | `text` | yes | One of `activity`, `contact`, `company`, `deal`, `lead`, `project`. |
@@ -1074,7 +1074,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` |  | The timeline activity this produced, once released. |
 | `agent_actor_id` | `text` |  |  |
 | `agent_on_behalf_of` | `uuid` |  | Points at `app_user.id`. |
@@ -1137,7 +1137,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `attempt` | `integer`, default `1` | yes |  |
 | `attempt_at` | `timestamp with time zone`, default `now()` | yes |  |
