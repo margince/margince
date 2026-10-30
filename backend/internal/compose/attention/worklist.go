@@ -83,7 +83,7 @@ func (s *Service) worklistIn(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	// What this reader put at the top, read before the day so a pinned
+	// What this reader put at the top. Read before the day, so a pinned
 	// reconnection keeps its lane, and before the projection, which returns no
 	// error. On a COPY of the service: pins on the shared one would follow one
 	// reader's page onto another's.

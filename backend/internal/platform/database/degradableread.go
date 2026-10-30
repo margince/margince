@@ -56,10 +56,6 @@ func WithDegradableRead(ctx context.Context, budget time.Duration, fn func(conte
 
 // openLane reads the page's statement timeout, opens the savepoint and sets
 // the lane's budget in one round trip, and answers the timeout to restore.
-//
-// A savepoint by statement rather than tx.Begin opens no transaction and takes
-// no pool connection. transactionopeners_test.go holds runTxWith as the one
-// function that does.
 func openLane(ctx context.Context, tx pgx.Tx, budget time.Duration) (string, error) {
 	milliseconds, err := budgetMilliseconds(budget)
 	if err != nil {
@@ -71,6 +67,9 @@ func openLane(ctx context.Context, tx pgx.Tx, budget time.Duration) (string, err
 	opening.Queue(`SELECT current_setting('statement_timeout')`).QueryRow(func(row pgx.Row) error {
 		return row.Scan(&page)
 	})
+	// A savepoint by statement rather than tx.Begin opens no transaction and
+	// takes no pool connection. transactionopeners_test.go holds runTxWith as
+	// the one function that does.
 	opening.Queue(`SAVEPOINT degradable_read`).Exec(func(pgconn.CommandTag) error {
 		opened = true
 		return nil
