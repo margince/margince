@@ -7,6 +7,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -14,6 +15,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ContactLink } from "../../design-system/contactlink";
 import { LocaleProvider } from "../../i18n";
+import {
+  jsonResponse as composerResponse,
+  PROVISIONAL_VOICE_PROFILE,
+  stubRoutes as stubComposer,
+} from "../mail/compose.testkit";
 import { WriteToHost } from "./writetohost";
 
 // An address pressed anywhere under the shell opens the product's composer on
@@ -134,5 +140,34 @@ describe("WriteToHost", () => {
     expect(
       screen.getByRole("button", { name: "dung.ly@newsky.example" }),
     ).toBeTruthy();
+  });
+
+  it("drafts on arrival when an AI verb opened it, steered by the verb's words", async () => {
+    const draft = "POST /contacts/c-1/draft-email";
+    const sent = stubComposer({
+      "GET /connectors": () => composerResponse(CONNECTED_MAILBOX),
+      "GET /voice-profiles": () => composerResponse(PROVISIONAL_VOICE_PROFILE),
+    });
+    render(
+      <ContactLink
+        kind="email"
+        appearance="button"
+        label="Email"
+        draft={{ label: "Draft email", intent: "deliver on a commitment" }}
+        address="alice@example.com"
+        record={{ entityType: "contact", entityId: "c-1" }}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Draft email" }),
+    );
+
+    await waitFor(() =>
+      expect(sent.filter((request) => request.key === draft)).toHaveLength(1),
+    );
+    expect(sent.find((request) => request.key === draft)?.body).toMatchObject({
+      intent: "deliver on a commitment",
+    });
   });
 });

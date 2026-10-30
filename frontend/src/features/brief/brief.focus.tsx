@@ -71,13 +71,15 @@ export function Triage({
   const cardVerbs =
     onContext || task ? (
       <>
+        {/* The drafted mail stands beside Done, ahead of the way to read
+            more: it is the task's next step, the details are about it. */}
+        {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
         )}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
       </>
     ) : undefined;
   // The head's facts come from the helpers the row uses, so the card and the

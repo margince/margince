@@ -1,4 +1,11 @@
-import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
+import {
+  CheckSquare,
+  FileText,
+  Search,
+  Send,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
@@ -21,6 +28,7 @@ import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
+import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
 import { openContactTab } from "../worklist/worklist.return";
 
@@ -382,9 +390,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // The ladder is a rule, not a model, so the lead verb is the plain filled
-  // button; indigo would claim an agent wrote it.
-  const variant = primary ? "primary" : "ghost";
+  // The ladder that picks the verb is a rule, not a model, so only a verb whose
+  // press has the model write the mail wears indigo; the rest keep the accent.
+  const drafts = momentDrafts(action);
+  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -397,7 +406,11 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {actionIcon(action.kind)}
+        {drafts ? (
+          <Sparkles size={15} aria-hidden="true" />
+        ) : (
+          actionIcon(action.kind)
+        )}
         {action.label}
       </Button>
     </span>

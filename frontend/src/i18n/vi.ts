@@ -5983,6 +5983,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "today.quiet": "Hiện chưa có gì cần chú ý.",
   "task.untitled": "Việc cần làm chưa có tiêu đề",
   "task.next.openContact": "Mở liên hệ",
+  "task.next.draftEmail": "Soạn email",
   "task.next.noAddress": "Liên hệ này chưa có địa chỉ email.",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",

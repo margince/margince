@@ -1,4 +1,4 @@
-import { Link } from "lucide-react";
+import { Link, Sparkles } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
@@ -35,6 +35,7 @@ import {
   useMeetingProposals,
   WaitingSection,
 } from "./contactmeetings.waiting";
+import { momentDrafts } from "./contactpage.drawers";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -101,8 +102,10 @@ function MeetingMomentAction({
     return null;
   }
   const blocked = action.state === "blocked";
+  const drafts = momentDrafts(action);
   return (
     <Button
+      variant={drafts ? "ai" : "ghost"}
       onClick={() => onAction(action)}
       reason={
         blocked
@@ -110,6 +113,7 @@ function MeetingMomentAction({
           : undefined
       }
     >
+      {drafts && <Sparkles aria-hidden="true" />}
       {action.label}
     </Button>
   );
