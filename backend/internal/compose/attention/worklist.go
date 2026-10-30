@@ -156,18 +156,8 @@ func (s *Service) worklistIn(
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	out.TeamWeek = new(identity.TeamWeekOf(ctx))
 	defer timeStage(ctx, "row_names")()
-	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
+	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
-	}
-	if out.Focus != nil {
-		if err := withPins.nameWorklistRows(ctx, out.Focus.Items, beside.night.findings); err != nil {
-			return crmcontracts.Worklist{}, err
-		}
-	}
-	if out.OptionalRelationships != nil {
-		if err := withPins.nameWorklistRows(ctx, *out.OptionalRelationships, beside.night.findings); err != nil {
-			return crmcontracts.Worklist{}, err
-		}
 	}
 	return out, nil
 }

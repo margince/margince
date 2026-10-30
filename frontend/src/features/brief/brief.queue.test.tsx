@@ -317,6 +317,38 @@ it("counts the queue the button actually opens", async () => {
   });
 });
 
+it("counts a closed drawer over the reader's own queue from Home's one read", async () => {
+  window.location.hash = "#/home";
+  const views: (string | null)[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      views.push(query.get("view"));
+      return jsonResponse({
+        ...readingsDay({}, [taskRow("t", "Call Weber")]),
+        counts: [
+          { category: "tasks", considered: 7, shown: 1, more_available: false },
+          {
+            category: "system",
+            considered: 5,
+            shown: 0,
+            more_available: false,
+          },
+        ],
+      });
+    },
+  });
+  render(<BriefScreen />);
+
+  // Today's total leaves the System rows out, as the drawer's head does.
+  const toggle = await screen.findByRole("button", {
+    name: en["brief.queue.show"],
+  });
+  await waitFor(() =>
+    expect(toggle.querySelector(".optioncount")?.textContent).toContain("7"),
+  );
+  expect(views, "a closed drawer sent a second Worklist read").toEqual([null]);
+});
+
 it.each(["failed", "bounded", "scope"])(
   "does not claim an exact drawer total for %s coverage",
   async (gap) => {

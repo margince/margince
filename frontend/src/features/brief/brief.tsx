@@ -66,14 +66,19 @@ export function BriefScreen() {
   // the address. It shares the drawer's query key, so the two report one total.
   const owner = params.get("owner") ?? "";
   const drawer = drawerQueue(params);
+  const drawerOpen = params.get("queue") === "1";
+  // The server counts every candidate before it applies a view, so Home's own
+  // read already holds a closed drawer's total over the same queue.
+  const homeQueue = drawer.scope === "mine" && owner === "";
   const queued = useWorklist(
     drawer.scope,
     "all",
     owner === "" ? undefined : owner,
-    true,
+    drawerOpen || !homeQueue,
     drawer.view,
   );
-  const queuedDay = briefDay(queued.data?.pages);
+  const queuedDay =
+    briefDay(queued.data?.pages) ?? (homeQueue ? day : undefined);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -90,7 +95,7 @@ export function BriefScreen() {
   const queueToggle = (
     <PageAsideToggle
       controlled={{
-        open: params.get("queue") === "1",
+        open: drawerOpen,
         count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
         labels: {
           show: t("brief.queue.show"),
