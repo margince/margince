@@ -147,6 +147,7 @@ type bookMeetingTool struct {
 func (t bookMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "book_meeting", Title: "Book a meeting", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   bookMeetingCopy.render(),
 		Instead:       bookMeetingCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true,

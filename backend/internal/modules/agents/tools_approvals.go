@@ -299,6 +299,7 @@ type decideApprovalArgs struct {
 func (t decideApprovalTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval", Title: "Approve or reject one staged action", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   decideApprovalCopy.render(),
 		Instead:       decideApprovalCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
@@ -345,6 +346,7 @@ type decideBundleAnswer struct {
 func (t decideBundleTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "decide_approval_bundle", Title: "Approve or reject one act's proposals together", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   decideBundleCopy.render(),
 		Instead:       decideBundleCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
