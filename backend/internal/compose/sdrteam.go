@@ -132,7 +132,7 @@ type sdrTeamFigures struct {
 
 func readSdrTeamFigures(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow, at time.Time) (sdrTeamFigures, error) {
 	out := sdrTeamFigures{workflow: crmcontracts.SdrTeamReviewWorkflowQualification}
-	if auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead) {
+	if mayReadSdrMeetings(ctx) {
 		meetings, seats, err := readSdrTeamMeetings(ctx, tx, requested, window, at)
 		if err != nil {
 			return out, err
@@ -369,7 +369,7 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
 	// A seat that may not read activities gets no meetings column, as it gets
 	// no team meeting count.
 	met, meetings, joinMet := "", "NULL::bigint", ""
-	if auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead) {
+	if mayReadSdrMeetings(ctx) {
 		held, _, err := heldMeetingSource(ctx, &b, at, window.from, window.to)
 		if err != nil {
 			return nil, false, err
