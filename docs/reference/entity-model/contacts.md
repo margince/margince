@@ -6,7 +6,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-45 columns · primary key `(id)` · referenced by 49 foreign keys
+47 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `assess_against_entity_id` | `uuid` |  | The legal entity whose offering the growth fit judges this company against. |
 | `description` | `text` |  | One human-written line saying what the company does, shown under the title on the company page. |
 | `display_name` | `text` | yes |  |
+| `email` | `text` |  | The company's general address, for example info@example.com. |
 | `geocode_input_hash` | `text` |  |  |
 | `geocode_lat` | `double precision` |  |  |
 | `geocode_lon` | `double precision` |  |  |
@@ -40,6 +41,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `name_source` | `text`, default `'human'::text` | yes | One of `human`, `dossier`, `signature`, `domain`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
+| `phone` | `text` |  | The company's main number, in E.164 form (for example +49301234567). |
 | `quarantined_at` | `timestamp with time zone` |  |  |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
@@ -72,7 +74,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_description_length`: `CHECK (((description IS NULL) OR (length(description) <= 500)))`
 - `company_geocode_resolved_has_a_point`: `CHECK (((geocode_status IS DISTINCT FROM 'ok') OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))`
 - `company_geocode_status_check`: `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
-- `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'customer', 'former_customer', 'disqualified'])))`
+- `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'onboarding', 'live', 'customer', 'former_customer', 'disqualified'])))`
 - `company_linkedin_url_shape`: `CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$')))`
 - `company_logo_icon_names_its_origin`: `CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))`
 - `company_logo_names_its_origin`: `CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))`
@@ -979,6 +981,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_social_contact_id_platform_key`: `unique, btree (contact_id, platform)`
 - `contact_social_pkey`: `unique, btree (id)`
+- `idx_contact_social_linkedin_profile`: `btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)')) WHERE (platform = 'linkedin')`
 
 ## conversation_claim
 

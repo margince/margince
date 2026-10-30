@@ -16703,6 +16703,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{record_type}/{id}/ownership-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open request to be handed this record. */
+        get: operations["getOwnershipRequest"];
+        put?: never;
+        /**
+         * Ask a record's owner to hand it over to the caller.
+         * @description For a contact or company the caller can see but not change, because a colleague owns it. The
+         *     request is an `ownership_transfer` approval in the owner's inbox; only the owner can decide it,
+         *     and it stays open for 7 days. When the owner accepts, the record moves to the caller, and so do
+         *     the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
+         *     its own audit row and updated event. A second press while a request is open answers that request
+         *     with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
+         *     (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
+         *     suspended or has left; ask an administrator).
+         */
+        post: operations["requestOwnershipTransfer"];
+        /**
+         * Withdraw the caller's open request to be handed this record.
+         * @description The card leaves the owner's inbox. `404` when the caller has no open request.
+         */
+        delete: operations["withdrawOwnershipRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/record-grants": {
         parameters: {
             query?: never;
@@ -26679,24 +26715,36 @@ export interface components {
             /** @enum {string} */
             status: "open" | "merged" | "not_a_duplicate";
             /**
-             * @description Whether THIS caller could dispose of the pair — merge it, dismiss it,
-             *     or undo a decision. Deciding needs write authority over BOTH ends:
-             *     dismissing suppresses both records as duplicates for the whole
-             *     workspace, and merging rewrites one into the other.
+             * @description Whether THIS caller could dismiss the pair or undo a decision on it.
+             *     That needs write authority over BOTH ends: dismissing suppresses both
+             *     records as duplicates for the whole workspace. Whether the caller may
+             *     merge the pair is `can_merge`.
              *
-             *     A pair whose ends have different owners is therefore undecidable by
-             *     any bounded seat, and it is a common shape — capture creates the
-             *     near-duplicate owned by the mailbox owner while the incumbent belongs
-             *     to whoever worked it. The pair is still LISTED, because the contact
-             *     who can see a duplicate is the contact best placed to notice it; this
-             *     says whether the buttons will work, which the client should gate on
-             *     rather than discovering through a 403 after the POST.
+             *     The pair is LISTED either way, because the contact who can see a
+             *     duplicate is the contact best placed to notice it; this says whether
+             *     the buttons will work, which the client should gate on rather than
+             *     discovering through a 403 after the POST.
              *
              *     With `contacts.shared_merge_reviews` on, an owner of one end of a
-             *     contact pair may dismiss it and undo that, though not merge it. That
-             *     answer is the pair's `can_dismiss` in its contact case.
+             *     contact pair may dismiss it and undo that. That answer is the pair's
+             *     `can_dismiss` in its contact case.
              */
             can_decide: boolean;
+            /**
+             * @description Whether THIS caller could merge the pair: an open pair whose two
+             *     records they can see, with write authority over both ends or over
+             *     one. With write authority over one end, that end is the one merged
+             *     away, and `keep_id` names the end that survives with its owner. So a
+             *     caller can give their own record away but never archive a
+             *     colleague's. A merge of two records nobody filed as duplicates still
+             *     needs write authority over both.
+             */
+            can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id: string | null;
             /** Format: uuid */
             disposed_by?: string | null;
             /** Format: date-time */
@@ -26759,10 +26807,10 @@ export interface components {
             /** @description Whether this caller may merge at least two members of this case. */
             can_merge: boolean;
             /**
-             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
              * @enum {string}
              */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             /**
              * @description Why `can_merge` is false.
              * @enum {string|null}
@@ -26814,10 +26862,16 @@ export interface components {
             can_dismiss: boolean;
             /**
              * @description Whether this caller may merge this one open pair through the pair's own decision
-             *     route. True only with write access to both ends. `policy_enabled` does not widen it:
-             *     the policy admits a merge of the whole case, never of a single pair.
+             *     route. True with write access to both ends, or to one end: then that end is the one
+             *     merged away and `keep_id` names the end that survives. `policy_enabled` does not
+             *     widen it further.
              */
             can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
         };
         ContactCaseOwner: {
             /** Format: uuid */
@@ -26865,8 +26919,11 @@ export interface components {
             merged_ids: string[];
             /** Format: uuid */
             owner_id: string;
-            /** @enum {string} */
-            mode: "ordinary" | "delegated";
+            /**
+             * @description The authority the merge ran under, as `merge_mode` on the case names it.
+             * @enum {string}
+             */
+            mode: "ordinary" | "delegated" | "pair";
             /** @description The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access. */
             shares: components["schemas"]["ContactCaseShare"][];
             /** @description Owners who get no new grant, and why. */
@@ -29444,6 +29501,13 @@ export interface components {
              */
             readonly is_anchor?: boolean;
             legal_name?: string | null;
+            /** @description The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose). */
             description?: string | null;
             /**
@@ -29485,10 +29549,10 @@ export interface components {
             readonly computed_fields?: components["schemas"]["ComputedField"][];
             domains?: components["schemas"]["CompanyDomain"][];
             /**
-             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
@@ -29547,6 +29611,13 @@ export interface components {
         CreateCompanyRequest: {
             display_name: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
@@ -29579,6 +29650,13 @@ export interface components {
             linkedin_url?: string | null;
             display_name?: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
@@ -29623,10 +29701,10 @@ export interface components {
              */
             visibility?: "workspace" | "owner";
             /**
-             * @description Where the account stands with us (ADR-0079). Absent = untouched.
+             * @description Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
         } & {
@@ -30472,7 +30550,7 @@ export interface components {
         Company360StateStrip: {
             account: {
                 /** @enum {string} */
-                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 relationship_types: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             };
             /** @description Null when the caller has no activity grant — not assessed, as distinct from never contacted. */
@@ -34428,6 +34506,8 @@ export interface components {
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /**
              * @default open
              * @enum {string}
@@ -36583,6 +36663,8 @@ export interface components {
         Activity: {
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
             /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
@@ -36727,6 +36809,14 @@ export interface components {
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
+            /**
+             * @description Who recorded the activity, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System".
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
             readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
             raw?: {
@@ -38720,6 +38810,17 @@ export interface components {
                 note?: string | null;
             };
             deal?: components["schemas"]["QualifyDealRequest"];
+            /**
+             * @description What happens to a company name typed on a lead that links no company and whose email
+             *     names no business domain (a personal address, or none). True links the company of that
+             *     name, or creates it. False leaves the contact with no employer and puts the name on it
+             *     as a proposal to link or create; a company is never created from typed text alone.
+             *     The promote preview's `typed_company` says when this choice applies. A lead with a
+             *     business email resolves its company from the domain either way, and the typed name
+             *     only spells a company that is created for it.
+             * @default false
+             */
+            create_company: boolean;
         };
         /**
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -38784,6 +38885,13 @@ export interface components {
              * @default false
              */
             contact_withheld: boolean;
+            /**
+             * @description The company name typed on the lead when nothing else settles it: the lead links no
+             *     company and its email names no business domain. Promotion then needs the rep's
+             *     choice, sent as `create_company`. Absent when the lead links a company, has a
+             *     business email, or has no typed company name.
+             */
+            typed_company?: string | null;
         };
         DemoteLeadRequest: {
             /** @description Why the promotion is being reversed. Required and recorded in audit — an undo nobody explained is indistinguishable later from a mistake. */
@@ -46168,6 +46276,27 @@ export interface components {
             owner_id: string;
             version: components["schemas"]["RowVersion"];
         };
+        OwnershipRequestInput: {
+            /** @description A line for the owner, shown on the card. */
+            note?: string;
+        };
+        OwnershipRequest: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The owner the request is put to.
+             */
+            owner_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
+        };
         /** @description A manual per-record share (ADR-0039) — widens own/team/all base scope for one record. */
         RecordGrant: {
             /** Format: uuid */
@@ -50509,6 +50638,11 @@ export interface components {
          *     item the reader may not fully see is not offered as a decision at all.
          */
         AttentionPair: {
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
             left: components["schemas"]["AttentionPairSide"];
             right: components["schemas"]["AttentionPairSide"];
             /**
@@ -50670,7 +50804,7 @@ export interface components {
             owners: string[];
             can_merge: boolean;
             /** @enum {string} */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             too_large?: boolean;
         };
         /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */
@@ -50817,6 +50951,7 @@ export interface components {
              * @description Optional reconnections, outside the work queue, counts and Focus. An open
              *     deal or relationship score does not establish an obligation. A reader may
              *     pin a suggestion into their personal queue or create an explicit task.
+             *     Absent when the request sent `relationships=omit`.
              */
             optional_relationships?: components["schemas"]["WorklistItem"][];
             /** @description More optional contacts exist beyond the existing relationship read bound. */
@@ -56419,7 +56554,7 @@ export interface operations {
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
                 /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
-                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /**
@@ -73581,6 +73716,13 @@ export interface operations {
                  *     rep's work would arrive labelled `"scope": "unassigned"`.
                  */
                 owner?: string;
+                /**
+                 * @description Whether to read the optional reconnections. `omit` skips that read, and the
+                 *     page carries neither `optional_relationships` nor
+                 *     `optional_relationships_more_available`. A reconnection the reader pinned
+                 *     is still read and still reaches the queue. Nothing else on the page changes.
+                 */
+                relationships?: "include" | "omit";
             };
             header?: never;
             path?: never;
@@ -78698,6 +78840,130 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getOwnershipRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OwnershipRequestInput"];
+            };
+        };
+        responses: {
+            /** @description The request already open for this record and caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            /** @description The request is in the owner's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawOwnershipRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

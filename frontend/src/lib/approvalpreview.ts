@@ -1,6 +1,6 @@
 import type { components } from "../api/schema";
 import { acquisitionKindLabel } from "../format/acquisitionkind";
-import { COMPANY_LIFECYCLE_LABELS } from "../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../format/companylifecycle";
 import { RELATIONSHIP_TYPE_LABELS } from "../format/companyrelationships";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { DEAL_STATUS_LABEL } from "../format/dealstatus";
@@ -85,6 +85,7 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
   promote_fill_company_industry: "approval.preview.promotionFillIndustry",
+  promote_propose_company: "approval.preview.promotionProposeCompany",
   restore_lead_archive_contact: "approval.preview.demoteArchive",
   restore_lead_preserve_contact: "approval.preview.demotePreserve",
   send_without_human_signature: "approval.preview.unsignedSend",
@@ -264,7 +265,7 @@ function previewLabel(value: Value, field: string, t: Translator): string {
   };
   const labels =
     catalogs[catalogField] ??
-    (value.kind === "lifecycle" ? COMPANY_LIFECYCLE_LABELS : undefined);
+    (value.kind === "lifecycle" ? LIFECYCLE_LABELS : undefined);
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];

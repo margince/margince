@@ -2491,7 +2491,7 @@ public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_
 public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
 public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
 public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
-public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
+public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'onboarding'::text, 'live'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
 public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
 public.company.company_logo_icon_names_its_origin CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))
 public.company.company_logo_names_its_origin CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))
@@ -2514,6 +2514,7 @@ public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspa
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company.description text gen=- def=-
 public.company.display_name text NOT NULL gen=- def=-
+public.company.email text gen=- def=-
 public.company.geocode_input_hash text gen=- def=-
 public.company.geocode_lat double precision gen=- def=-
 public.company.geocode_lon double precision gen=- def=-
@@ -2536,6 +2537,7 @@ public.company.merged_into_id uuid gen=- def=-
 public.company.name_source text NOT NULL gen=- def='human'::text
 public.company.owner_id uuid gen=- def=-
 public.company.parent_company_id uuid gen=- def=-
+public.company.phone text gen=- def=-
 public.company.quarantined_at timestamp with time zone gen=- def=-
 public.company.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))
 public.company.size_band text gen=- def=-
@@ -4904,6 +4906,7 @@ public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON publi
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
+public.idx_contact_social_linkedin_profile CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text)
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_conversation_claim_contact CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id)
 public.idx_conversation_claim_source_activity CREATE INDEX idx_conversation_claim_source_activity ON public.conversation_claim USING btree (source_activity_id)

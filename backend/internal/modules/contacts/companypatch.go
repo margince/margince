@@ -75,7 +75,7 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		p.Set("size_band", current.SizeBand, *in.SizeBand)
 	}
 	if in.Lifecycle != nil {
-		if err := checkLifecycle(*in.Lifecycle); err != nil {
+		if err := checkLifecycleWriter(ctx, *in.Lifecycle); err != nil {
 			return err
 		}
 		p.Set("lifecycle", lifecycleValue(current.Lifecycle), *in.Lifecycle)
@@ -98,6 +98,25 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	}
 	if in.Visibility != nil {
 		p.Set(fieldVisibility, current.Visibility, *in.Visibility)
+	}
+	return setCompanyPhoneAndEmail(p, current, in)
+}
+
+// setCompanyPhoneAndEmail stages the main number and the general address.
+func setCompanyPhoneAndEmail(p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) error {
+	if in.Phone != nil {
+		phone, err := companyPhoneValue(in.Phone)
+		if err != nil {
+			return err
+		}
+		p.Set(columnCompanyPhone, current.Phone, phone)
+	}
+	if in.Email != nil {
+		email, err := companyEmailValue(in.Email)
+		if err != nil {
+			return err
+		}
+		p.Set(columnCompanyEmail, emailArg(current.Email), email)
 	}
 	return nil
 }

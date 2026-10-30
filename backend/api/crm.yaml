@@ -3253,7 +3253,7 @@ paths:
           description: Lookup by normalized domain (the employer-inference index).
         - name: lifecycle
           in: query
-          schema: { type: string, enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified] }
+          schema: { type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified] }
           description: Where the account stands with us (DM-VOCAB-2, ADR-0079).
         - name: relationship_type
           in: query
@@ -18976,6 +18976,14 @@ paths:
             are two answers to one question and nothing defines which wins; letting the
             owner take it silently would echo back the scope that had been ignored, so one
             rep's work would arrive labelled `"scope": "unassigned"`.
+        - name: relationships
+          in: query
+          schema: { type: string, enum: [include, omit], default: include }
+          description: |
+            Whether to read the optional reconnections. `omit` skips that read, and the
+            page carries neither `optional_relationships` nor
+            `optional_relationships_more_available`. A reconnection the reader pinned
+            is still read and still reaches the queue. Nothing else on the page changes.
       responses:
         '200':
           description: The ranked day.
@@ -24689,6 +24697,83 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-request:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestOwnershipTransfer
+      x-agent-access: human-only
+      # Session cookie only: taking on a colleague's record is a colleague's own ask.
+      security: [{ cookieAuth: [] }]
+      summary: Ask a record's owner to hand it over to the caller.
+      description: |
+        For a contact or company the caller can see but not change, because a colleague owns it. The
+        request is an `ownership_transfer` approval in the owner's inbox; only the owner can decide it,
+        and it stays open for 7 days. When the owner accepts, the record moves to the caller, and so do
+        the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
+        its own audit row and updated event. A second press while a request is open answers that request
+        with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
+        (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
+        suspended or has left; ask an administrator).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnershipRequestInput' }
+      responses:
+        '200':
+          description: The request already open for this record and caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '201':
+          description: The request is in the owner's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getOwnershipRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The caller's open request to be handed this record.
+      responses:
+        '200':
+          description: The caller's open request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawOwnershipRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Withdraw the caller's open request to be handed this record.
+      description: The card leaves the owner's inbox. `404` when the caller has no open request.
+      responses:
+        '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /record-grants:
@@ -38582,7 +38667,7 @@ components:
     DedupeCandidate:
       type: object
       description: 'One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).'
-      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
+      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge, keep_id]
       properties:
         id: { type: string, format: uuid }
         entity_type: { type: string, enum: [contact, company, lead], description: 'A pair is always same-type: a lead is proposed as a duplicate of a lead or of nothing.' }
@@ -38597,22 +38682,33 @@ components:
         can_decide:
           type: boolean
           description: |
-            Whether THIS caller could dispose of the pair — merge it, dismiss it,
-            or undo a decision. Deciding needs write authority over BOTH ends:
-            dismissing suppresses both records as duplicates for the whole
-            workspace, and merging rewrites one into the other.
+            Whether THIS caller could dismiss the pair or undo a decision on it.
+            That needs write authority over BOTH ends: dismissing suppresses both
+            records as duplicates for the whole workspace. Whether the caller may
+            merge the pair is `can_merge`.
 
-            A pair whose ends have different owners is therefore undecidable by
-            any bounded seat, and it is a common shape — capture creates the
-            near-duplicate owned by the mailbox owner while the incumbent belongs
-            to whoever worked it. The pair is still LISTED, because the contact
-            who can see a duplicate is the contact best placed to notice it; this
-            says whether the buttons will work, which the client should gate on
-            rather than discovering through a 403 after the POST.
+            The pair is LISTED either way, because the contact who can see a
+            duplicate is the contact best placed to notice it; this says whether
+            the buttons will work, which the client should gate on rather than
+            discovering through a 403 after the POST.
 
             With `contacts.shared_merge_reviews` on, an owner of one end of a
-            contact pair may dismiss it and undo that, though not merge it. That
-            answer is the pair's `can_dismiss` in its contact case.
+            contact pair may dismiss it and undo that. That answer is the pair's
+            `can_dismiss` in its contact case.
+        can_merge:
+          type: boolean
+          description: |
+            Whether THIS caller could merge the pair: an open pair whose two
+            records they can see, with write authority over both ends or over
+            one. With write authority over one end, that end is the one merged
+            away, and `keep_id` names the end that survives with its owner. So a
+            caller can give their own record away but never archive a
+            colleague's. A merge of two records nobody filed as duplicates still
+            needs write authority over both.
+        keep_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
         disposed_by: { type: [string, 'null'], format: uuid }
         disposed_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
@@ -38664,8 +38760,8 @@ components:
         can_merge: { type: boolean, description: 'Whether this caller may merge at least two members of this case.' }
         merge_mode:
           type: string
-          enum: [ordinary, delegated, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.'
+          enum: [ordinary, delegated, pair, none]
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -38709,8 +38805,13 @@ components:
           type: boolean
           description: |
             Whether this caller may merge this one open pair through the pair's own decision
-            route. True only with write access to both ends. `policy_enabled` does not widen it:
-            the policy admits a merge of the whole case, never of a single pair.
+            route. True with write access to both ends, or to one end: then that end is the one
+            merged away and `keep_id` names the end that survives. `policy_enabled` does not
+            widen it further.
+        keep_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
     ContactCaseOwner:
       type: object
       required: [user_id, name, seat, member_ids]
@@ -38756,7 +38857,7 @@ components:
         survivor_id: { type: string, format: uuid }
         merged_ids: { type: array, items: { type: string, format: uuid } }
         owner_id: { type: string, format: uuid }
-        mode: { type: string, enum: [ordinary, delegated] }
+        mode: { type: string, enum: [ordinary, delegated, pair], description: 'The authority the merge ran under, as `merge_mode` on the case names it.' }
         shares:
           type: array
           description: The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
@@ -41794,6 +41895,8 @@ components:
             *which companies are we selling to* exclude it unless `include_anchor` is set, and it
             cannot be archived or merged. A caller that offers company actions should tell it apart.
         legal_name: { type: [string, 'null'] }
+        phone: { type: [string, 'null'], description: "The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number." }
+        email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description:
           type: [string, 'null']
           maxLength: 500
@@ -41868,12 +41971,15 @@ components:
           items: { $ref: '#/components/schemas/CompanyDomain' }
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
             Where the account stands with us. Single-valued: an account is at
             one point in a sales motion at a time. `unknown` is the default and means it — the retired
             `classification` defaulted to `prospect` and, having no writer, rendered that default on
-            every unassessed account as though someone had judged it.
+            every unassessed account as though someone had judged it. `onboarding` means the contract
+            is signed and set-up runs. `live` means the agreed first scope is in use, and only a
+            signed-in user may set it: an agent, automation, approval or import gets 422
+            `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other] }
@@ -41995,6 +42101,8 @@ components:
       properties:
         display_name: { type: string }
         legal_name: { type: [string, 'null'] }
+        phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
+        email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 500, description: One human-written line saying what the company does. }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -42021,6 +42129,8 @@ components:
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         display_name: { type: string }
         legal_name: { type: [string, 'null'] }
+        phone: { type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
+        email: { type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 500, description: 'One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -42063,8 +42173,11 @@ components:
             answers 422 naming `owner_id`.
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
-          description: Where the account stands with us (ADR-0079). Absent = untouched.
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
+          description: >-
+            Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed
+            first scope is in use) is accepted only from a signed-in user; any other caller gets
+            422 `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           description: >-
@@ -43129,7 +43242,7 @@ components:
           properties:
             lifecycle:
               type: string
-              enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+              enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
             relationship_types:
               type: array
               items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other] }
@@ -48204,6 +48317,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant
+            or being the deal's owner with `deal:update`. An owner who named themselves owner
+            (an edit or a claim) needs the delete grant. Server-computed per row, per caller.
+            A UX signal, never the enforcement, exactly like `writable`; absent means NOT
+            archivable.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.' }
         lost_reason_code:
@@ -50497,6 +50619,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
+            grant, or `activity:update` on a hand-logged note or task the caller wrote (under
+            their own stamp or through an agent acting for them). Captured correspondence and a
+            colleague's note need the delete grant. Server-computed per row, per caller. A UX
+            signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
           readOnly: true
@@ -50784,6 +50915,15 @@ components:
             those are different colleagues, and showing only the first is how a migration
             comes to claim one colleague wrote a decade of everybody else's
             correspondence.
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          readOnly: true
+          description: |
+            Who recorded the activity, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         web_form:
           allOf: [{ $ref: '#/components/schemas/WebFormSubmission' }]
           readOnly: true
@@ -53150,6 +53290,17 @@ components:
             note: { type: [string, 'null'] }
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        create_company:
+          type: boolean
+          default: false
+          description: |
+            What happens to a company name typed on a lead that links no company and whose email
+            names no business domain (a personal address, or none). True links the company of that
+            name, or creates it. False leaves the contact with no employer and puts the name on it
+            as a proposal to link or create; a company is never created from typed text alone.
+            The promote preview's `typed_company` says when this choice applies. A lead with a
+            business email resolves its company from the domain either way, and the typed name
+            only spells a company that is created for it.
 
     QualifyDealRequest:
       type: object
@@ -53220,6 +53371,13 @@ components:
             row scope, so `contact` is omitted. **An absent `contact` never means "no match"**
             — a caller that reads the omission as `create` would tell the rep a duplicate is
             about to be created when the opposite is true.
+        typed_company:
+          type: [string, 'null']
+          description: |
+            The company name typed on the lead when nothing else settles it: the lead links no
+            company and its email names no business domain. Promotion then needs the rep's
+            choice, sent as `create_company`. Absent when the lead links a company, has a
+            business email, or has no typed company name.
 
     DemoteLeadRequest:
       type: object
@@ -63361,6 +63519,21 @@ components:
         record_id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid, description: The caller — the record's owner now. }
         version: { $ref: '#/components/schemas/RowVersion' }
+    OwnershipRequestInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: string, maxLength: 500, description: 'A line for the owner, shown on the card.' }
+    OwnershipRequest:
+      type: object
+      required: [approval_id, record_type, record_id, owner_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company] }
+        record_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: The owner the request is put to. }
+        status: { type: string, enum: [pending] }
+        expires_at: { type: string, format: date-time }
     RecordGrant:
       type: object
       description: A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.
@@ -68080,6 +68253,10 @@ components:
         item the reader may not fully see is not offered as a decision at all.
       required: [left, right, evidence]
       properties:
+        keep_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
         left: { $ref: '#/components/schemas/AttentionPairSide' }
         right: { $ref: '#/components/schemas/AttentionPairSide' }
         evidence:
@@ -68246,7 +68423,7 @@ components:
           description: The names of the members' live owners. Each of them sees this row in their own Worklist.
           items: { type: string }
         can_merge: { type: boolean }
-        merge_mode: { type: string, enum: [ordinary, delegated, none] }
+        merge_mode: { type: string, enum: [ordinary, delegated, pair, none] }
         too_large: { type: boolean }
     AttentionPairSide:
       type: object
@@ -68392,6 +68569,7 @@ components:
             Optional reconnections, outside the work queue, counts and Focus. An open
             deal or relationship score does not establish an obligation. A reader may
             pin a suggestion into their personal queue or create an explicit task.
+            Absent when the request sent `relationships=omit`.
         optional_relationships_more_available:
           type: boolean
           description: 'More optional contacts exist beyond the existing relationship read bound.'

@@ -94,9 +94,10 @@ type ShareRequests interface {
 	// request is open. It answers false when the holder declined one before,
 	// and files nothing then.
 	FileTx(ctx context.Context, tx pgx.Tx, req ShareRequest) (bool, error)
-	// FollowOwnerTx withdraws the pending requests on a contact whose owner
-	// is no longer the one they name. to is nil for a contact nobody owns.
-	FollowOwnerTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, to *ids.UUID) error
+	// FollowOwnerTx withdraws the pending requests on a contact or company
+	// that name an owner it no longer has. These are a contact's share requests
+	// and either record's handover requests. to is nil for no owner.
+	FollowOwnerTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, to *ids.UUID) error
 }
 
 // WithShareRequests wires the queue. Unwired, a held address still refuses
@@ -106,17 +107,17 @@ func (s *Store) WithShareRequests(requests ShareRequests) *Store {
 	return s
 }
 
-// followShareOwnerTx keeps the contact's pending share requests with its
-// current owner. Every writer that changes a contact's owner calls it on its
-// own transaction.
-func (s *Store) followShareOwnerTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, from, to *ids.UUID) error {
+// followShareOwnerTx keeps the record's pending requests with its current
+// owner. Every writer that changes a contact's or a company's owner calls it on
+// its own transaction.
+func (s *Store) followShareOwnerTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, from, to *ids.UUID) error {
 	if s.shareRequests == nil || sameOwner(from, to) {
 		return nil
 	}
 	if err := storekit.LockWriteIdentity(ctx, tx, shareRequestLock, id.String()); err != nil {
 		return err
 	}
-	return s.shareRequests.FollowOwnerTx(ctx, tx, id, to)
+	return s.shareRequests.FollowOwnerTx(ctx, tx, recordType, id, to)
 }
 
 func sameOwner(a, b *ids.UUID) bool {

@@ -234,7 +234,7 @@ Also called: natural-language filter, AI filter, describe a segment.
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are:
 - **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields.
-- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**).
+- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**). The **Customers** view shows only the customer stage, so filter on **Lifecycle** to find **Onboarding** or **Live** companies.
 - **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**.
 Custom fields have a **Custom field** mark. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.

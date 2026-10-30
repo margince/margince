@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func promotionContactSpec(lead crmcontracts.Lead, name, by string) ContactSpec {
+func promotionContactSpec(lead crmcontracts.Lead, employer EmployerChoice, name, by string) ContactSpec {
 	leadID := ids.UUID(lead.Id)
 	var leadEmails []ContactEmailInput
 	if lead.Email != nil {
@@ -32,7 +32,7 @@ func promotionContactSpec(lead crmcontracts.Lead, name, by string) ContactSpec {
 	}
 	return ContactSpec{
 		FullName:            name,
-		Employer:            EmployerChoice{CompanyName: lead.CompanyName, CompanyID: idArg[ids.CompanyKind](lead.CompanyId), Role: lead.Title, Source: lead.Source},
+		Employer:            employer,
 		Acquisition:         Acquisition{Kind: AcquiredUnknownLegacy},
 		Title:               lead.Title,
 		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
@@ -108,6 +108,8 @@ type LeadContactChange struct {
 	ReviewContact  *ids.ContactID
 	// CompanyIndustry is the industry the promotion writes to the linked company, or nil.
 	CompanyIndustry *string
+	// TypedCompany is the lead's company name the promotion proposes on the contact instead of resolving.
+	TypedCompany string
 }
 
 // PreviewLeadContactChange holds the writer's row locks while resolving the
@@ -154,7 +156,7 @@ func promotionFieldsVisible(ctx context.Context, object string) error {
 	return nil
 }
 
-func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, candidate ids.ContactID) (LeadContactChange, error) {
+func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, employer EmployerChoice, candidate ids.ContactID) (LeadContactChange, error) {
 	if lead.Version == nil {
 		return LeadContactChange{}, apperrors.ErrPermissionDenied
 	}
@@ -164,7 +166,7 @@ func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.L
 		if err != nil {
 			return LeadContactChange{}, err
 		}
-		out.Create = new(promotionContactSpec(lead, leadIdentityName(lead), by))
+		out.Create = new(promotionContactSpec(lead, employer, leadIdentityName(lead), by))
 		return out, nil
 	}
 	current, err := readContact(ctx, tx, candidate, storekit.LiveOnly, nil)
@@ -232,19 +234,24 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if (matched && match.ContactID != candidate) || (!matched && !candidate.IsZero()) {
 		return LeadContactChange{}, apperrors.ErrConflict
 	}
-	out, err := previewPromotionContact(ctx, tx, lead, candidate)
+	employer, typed, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
 		return LeadContactChange{}, err
 	}
+	out, err := previewPromotionContact(ctx, tx, lead, employer, candidate)
+	if err != nil {
+		return LeadContactChange{}, err
+	}
+	out.TypedCompany = typed
 	if err := previewPromotionReview(ctx, tx, match, &out); err != nil {
 		return LeadContactChange{}, err
 	}
 	if err := s.previewPromotionCarry(ctx, tx, id, candidate, &out.LeadPromotionCarry); err != nil {
 		return LeadContactChange{}, err
 	}
-	spec := promotionContactSpec(lead, leadIdentityName(lead), "")
-	out.Employer = spec.Employer
-	out.EmployerPreview, err = s.previewContactEmployerTx(ctx, tx, spec.Employer, spec.Emails)
+	spec := promotionContactSpec(lead, employer, leadIdentityName(lead), "")
+	out.Employer = employer
+	out.EmployerPreview, err = s.previewContactEmployerTx(ctx, tx, employer, spec.Emails)
 	if err != nil {
 		return LeadContactChange{}, err
 	}

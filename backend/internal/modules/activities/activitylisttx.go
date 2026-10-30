@@ -97,6 +97,9 @@ func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, a
 	if err := AttachLinks(ctx, tx, activities); err != nil {
 		return err
 	}
+	if err := WithCreators(ctx, tx, activities); err != nil {
+		return err
+	}
 	if err := WithOffersEmail(ctx, tx, activities); err != nil {
 		return err
 	}

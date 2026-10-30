@@ -32,6 +32,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.relationships.optional": "Kết nối lại tùy chọn",
   "worklist.relationships.optionalDetail":
     "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
+  "worklist.relationships.show": "Hiển thị",
+  "worklist.relationships.loading": "Đang tìm các liên hệ đã im lặng…",
+  "worklist.relationships.none": "Hiện không có ai im lặng.",
+  "worklist.relationships.failed":
+    "Không đọc được các kết nối lại tùy chọn. Hãy thử lại sau.",
   "worklist.relationships.more":
     "Còn các liên hệ tùy chọn khác ngoài chế độ xem này.",
   "webhooks.event.signal.updated.label": "Đổi thành viên phụ trách cảnh báo",
@@ -769,6 +774,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
   "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
   "approval.preview.promotionCompanyIndustry": "Ngành của công ty",
+  "approval.preview.promotionCompanyProposed": "Công ty cần liên kết hoặc tạo",
   "approval.preview.promotionDuplicateCandidate":
     "Liên hệ có thể trùng cần xem xét",
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
@@ -792,6 +798,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
   "approval.preview.promotionFillIndustry":
     "Ghi ngành đã hiển thị vào công ty được liên kết, vì công ty chưa có ngành.",
+  "approval.preview.promotionProposeCompany":
+    "Không tạo công ty từ tên đã nhập. Liên hệ hiển thị tên này như một công ty cần liên kết hoặc tạo.",
   "approval.preview.promotionReview":
     "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
   "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
@@ -2624,7 +2632,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",
   "record.notYoursToChange":
-    "Bạn không có quyền sửa công ty này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "record.logActivityRefused":
@@ -3147,6 +3155,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Mục tiêu",
   "company.lifecycle.prospect": "Tiềm năng",
   "company.lifecycle.opportunity": "Cơ hội",
+  "company.lifecycle.onboarding": "Đang triển khai",
+  "company.lifecycle.live": "Đang vận hành",
+  "company.lifecycle.live.help":
+    "Đang vận hành nghĩa là phạm vi đầu tiên đã thỏa thuận đang được sử dụng. Chỉ đồng nghiệp mới đặt trạng thái này, không phải trợ lý hay tự động hóa.",
   "company.lifecycle.customer": "Khách hàng",
   "company.lifecycle.former_customer": "Khách hàng cũ",
   "company.lifecycle.disqualified": "Đã loại",
@@ -3886,6 +3898,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
+  "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
@@ -4245,6 +4258,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Hoạt động này",
   "activity.followUps": "Công việc tiếp theo",
   "activity.noFollowUps": "Chưa có công việc tiếp theo",
+  "activity.archive": "Lưu trữ",
+  "activity.archiveConfirm": "Lưu trữ mục này? Mục sẽ rời khỏi Lịch sử.",
+  "activity.archiveDone": "Đã lưu trữ mục",
+  "activity.archiveRefused":
+    "Bạn chỉ có thể lưu trữ ghi chú và công việc do chính bạn viết. Hãy nhờ quản lý lưu trữ mục này.",
   "activity.notYoursToChange":
     "Bạn không có quyền sửa hoạt động này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "activity.files.empty": "Hoạt động này chưa có tệp nào.",
@@ -5017,6 +5035,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.title": "Xác nhận đủ điều kiện cho {name}",
   "lead.qualify.contact": "Liên hệ",
   "lead.qualify.alsoDeal": "Mở thêm một deal",
+  "lead.qualify.company": "Công ty",
+  "lead.qualify.companyUnresolved":
+    "Email của lead này không cho biết {company} là công ty nào, nên không có công ty nào được tự động thêm.",
+  "lead.qualify.createCompany": "Thêm {company} làm nơi làm việc",
+  "lead.qualify.createCompanyHint":
+    "Liên kết công ty có tên này, hoặc tạo mới. Nếu bỏ chọn, liên hệ sẽ hiển thị {company} như một công ty cần liên kết hoặc tạo.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Giai đoạn",
   "lead.qualify.dealName": "Tên deal",
@@ -5376,6 +5400,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
+  "deal.archiveRefused":
+    "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
@@ -6445,6 +6471,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "recordAccess.option.ownerNeeded": "Giao người chịu trách nhiệm trước.",
   "recordAccess.option.workspace": "Mọi thành viên trong công ty",
   "recordAccess.manage": "Quản lý quyền truy cập",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "Đề nghị {owner} chuyển giao",
+  "handover.requested":
+    "Bạn đã đề nghị {owner} chuyển giao. Đề nghị còn hiệu lực đến {date}.",
+  "handover.withdraw": "Rút lại đề nghị",
+  "handover.sent": "Đã gửi đề nghị tới {owner}",
+  "handover.withdrawn": "Đã rút lại đề nghị",
   "whoCanSee.title": "Ai có thể xem hồ sơ này",
   "whoCanSee.group.owner": "Người chịu trách nhiệm",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",
@@ -15208,6 +15241,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.source.vcard_import": "vCard đã nhập",
   "contact.enriched.source.contact_research": "kết quả nghiên cứu đã chấp nhận",
   "contact.enriched.source.human_restore": "giá trị đã khôi phục",
+  "contact.enriched.source.lead_promotion": "lead đã được chuyển đổi",
   "contact.enriched.source.other": "một nguồn đã ghi nhận",
   "contact.enriched.undo": "Hoàn tác",
   "contact.enriched.replaced": "Đã thay giá trị cũ “{was}”.",
@@ -15481,7 +15515,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Liên hệ này đang trong kho lưu trữ nên không thể thay đổi.",
   "contact.notYoursToChange":
-    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chia sẻ, hoặc liên hệ quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
   "contact.rail.employmentTitle": "Công ty",

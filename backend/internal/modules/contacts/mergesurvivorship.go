@@ -14,6 +14,8 @@ func buildCompanySurvivorshipPatch(target, source crmcontracts.Company) *storeki
 	fillString(p, "description", target.Description, source.Description)
 	fillIndustry(p, target, source)
 	fillString(p, "linkedin_url", target.LinkedinUrl, source.LinkedinUrl)
+	fillString(p, columnCompanyPhone, target.Phone, source.Phone)
+	fillString(p, columnCompanyEmail, emailArg(target.Email), emailArg(source.Email))
 	fillMergeAddress(p, target.Address, source.Address)
 	return p
 }

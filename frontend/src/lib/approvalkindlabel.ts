@@ -63,6 +63,8 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   capture_counterparty: "approval.kind.capture_counterparty",
   // A colleague asks the owner to share a contact capture kept private.
   contact_share: "approval.kind.contact_share",
+  // A colleague asks the owner to hand over a contact or company.
+  ownership_transfer: "approval.kind.ownership_transfer",
   company_name_promotion: "approval.kind.company_name_promotion",
   vcard_create: "approval.kind.vcard_create",
   lifecycle_change: "approval.kind.lifecycle_change",

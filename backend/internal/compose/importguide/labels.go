@@ -27,6 +27,7 @@ var labels = map[string]langcopy.Phrase{
 	"company_name":         companyName,
 	"company_ref":          {En: "Company ref", De: "Firmen-Ref", Vi: "Ref công ty"},
 	"company.display_name": companyName,
+	"company.email":        {En: "General email address", De: "Allgemeine E-Mail-Adresse", Vi: "Địa chỉ email chung"},
 	"company.linkedin_url": {En: "LinkedIn page", De: "LinkedIn-Seite", Vi: "Trang LinkedIn"},
 	"contact_ref":          {En: "Contact ref", De: "Kontakt-Ref", Vi: "Ref liên hệ"},
 	"contact.company_name": companyName,

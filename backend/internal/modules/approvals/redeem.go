@@ -318,6 +318,10 @@ var contextTargetKinds = map[string]string{
 // removes. TestEveryUnpinnedKindIsExplained holds each entry to its rationale,
 // and TestNoKindIsBothContextOnlyAndUnpinned holds the two maps apart.
 var unpinnedKinds = map[string]string{
+	approvalsubject.KindOwnershipTransfer: "A transfer is about WHO owns the record, never its fields, " +
+		"and a record waits in the inbox for days while its owner keeps working it, so " +
+		"every edit and every captured message would cancel the request. The accept re-reads " +
+		"the owner under the record's row lock and refuses when the owner it names has moved.",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +

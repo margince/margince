@@ -3,6 +3,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { ChartBody } from "./reporting.chartbody";
 import type { ReportingEvaluation } from "./reporting.model";
 import {
+  reportingCatalogClient,
   reportingLeadsEvaluation,
   reportingPartnersEvaluation,
 } from "./reporting.story-fixtures";
@@ -20,7 +21,7 @@ function breakdownOf(
   );
   if (!chart) throw new Error(`the fixture has no ${metric} breakdown`);
   return (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ChartBody chart={chart} evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>
   );

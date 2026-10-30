@@ -280,6 +280,8 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		LegalName:       req.LegalName,
 		Description:     req.Description,
 		Industry:        req.Industry,
+		Phone:           req.Phone,
+		Email:           emailArg(req.Email),
 		Source:          req.Source,
 		SourceSystem:    req.SourceSystem,
 		SourceID:        req.SourceId,
@@ -316,6 +318,8 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		IfVersion:             ifVersion,
 		CustomFields:          req.AdditionalProperties,
 		LinkedInURL:           req.LinkedinUrl,
+		Phone:                 req.Phone,
+		Email:                 emailArg(req.Email),
 		Visibility:            companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
@@ -416,10 +420,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		CustomFields:        req.AdditionalProperties,
 		RequestedContactID:  idArg[ids.ContactKind](req.ContactId),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		in.Status = string(*req.Status)
@@ -478,10 +479,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)

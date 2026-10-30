@@ -248,6 +248,9 @@ type CompanySpec struct {
 	Domains         []CompanyDomainInput
 	// LinkedInURL is already in its canonical spelling.
 	LinkedInURL *string
+	// Phone and Email are already parsed (parseCompanyReach).
+	Phone *string
+	Email *string
 
 	// NameSource is the ADR-0072/A118 authority ladder entry for the name
 	// being written ("" writes the column default, 'human'). A row named from
@@ -314,17 +317,17 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 		id, spec.DisplayName, spec.LegalName, description, industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
-		spec.SourceSystem, spec.LinkedInURL,
+		spec.SourceSystem, spec.LinkedInURL, spec.Phone, spec.Email,
 	})
 	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
 	if err := storekit.ExecSourceInsert(ctx, tx, companyEntity,
-		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url`+provenanceCols+cfCols+`)
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url, phone, email`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 		         coalesce(NULLIF($17, ''), 'human'),
-		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21`+provenanceHolders+cfHolders+`)`,
+		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21, $22, $23`+provenanceHolders+cfHolders+`)`,
 		args); err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
 			return ids.CompanyID{}, &DuplicateCompanyLinkedInError{URL: deref(spec.LinkedInURL)}

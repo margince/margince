@@ -25,6 +25,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.relationships.optional": "Optionale Kontaktpflege",
   "worklist.relationships.optionalDetail":
     "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
+  "worklist.relationships.show": "Anzeigen",
+  "worklist.relationships.loading":
+    "Suche nach Kontakten, die still geworden sind…",
+  "worklist.relationships.none": "Gerade ist niemand still geworden.",
+  "worklist.relationships.failed":
+    "Optionale Kontaktpflege konnte nicht gelesen werden. Versuche es später erneut.",
   "worklist.relationships.more":
     "Weitere optionale Kontakte liegen außerhalb dieser Ansicht.",
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
@@ -782,6 +788,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
   "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
   "approval.preview.promotionCompanyIndustry": "Branche des Unternehmens",
+  "approval.preview.promotionCompanyProposed":
+    "Unternehmen zum Verknüpfen oder Anlegen",
   "approval.preview.promotionDuplicateCandidate":
     "Mögliche Dublette zur Prüfung",
   "approval.preview.promotionMoveActivity":
@@ -810,6 +818,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionFillIndustry":
     "Trägt die angezeigte Branche beim verknüpften Unternehmen ein, das noch keine hat.",
+  "approval.preview.promotionProposeCompany":
+    "Legt aus dem eingetippten Namen kein Unternehmen an. Der Kontakt zeigt den Namen als Unternehmen zum Verknüpfen oder Anlegen.",
   "approval.preview.promotionReview":
     "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
   "approval.preview.promotionAllMarketing": "Gesamtes Marketing",
@@ -2706,7 +2716,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
-    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "record.logActivityRefused":
@@ -3249,6 +3259,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Zielunternehmen",
   "company.lifecycle.prospect": "Interessent",
   "company.lifecycle.opportunity": "Chance",
+  "company.lifecycle.onboarding": "Onboarding",
+  "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live heißt: Der vereinbarte erste Umfang ist im Einsatz. Das setzt nur ein Mensch, nie ein Assistent oder eine Automatisierung.",
   "company.lifecycle.customer": "Kunde",
   "company.lifecycle.former_customer": "Ehemaliger Kunde",
   "company.lifecycle.disqualified": "Disqualifiziert",
@@ -3989,6 +4003,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
+  "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -4364,6 +4379,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Diese Aktivität",
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.archive": "Archivieren",
+  "activity.archiveConfirm":
+    "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
+  "activity.archiveDone": "Eintrag archiviert",
+  "activity.archiveRefused":
+    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
@@ -5153,6 +5174,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.title": "{name} qualifizieren",
   "lead.qualify.contact": "Kontakt",
   "lead.qualify.alsoDeal": "Auch einen Deal erstellen",
+  "lead.qualify.company": "Unternehmen",
+  "lead.qualify.companyUnresolved":
+    "Die E-Mail dieses Leads zeigt nicht, welches Unternehmen {company} ist. Darum wird kein Unternehmen von selbst hinzugefügt.",
+  "lead.qualify.createCompany": "{company} als Arbeitgeber hinzufügen",
+  "lead.qualify.createCompanyHint":
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an. Ohne Haken zeigt der Kontakt {company} als Unternehmen zum Verknüpfen oder Anlegen.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Phase",
   "lead.qualify.dealName": "Deal-Name",
@@ -5519,6 +5546,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
+  "deal.archiveRefused":
+    "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
@@ -6604,6 +6633,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Lege zuerst ein verantwortliches Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
   "recordAccess.manage": "Zugriff verwalten",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "{owner} um Übergabe bitten",
+  "handover.requested":
+    "Du hast {owner} um die Übergabe gebeten. Die Anfrage bleibt bis {date} offen.",
+  "handover.withdraw": "Anfrage zurückziehen",
+  "handover.sent": "Anfrage an {owner} gesendet",
+  "handover.withdrawn": "Anfrage zurückgezogen",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",
   "whoCanSee.group.owner": "Verantwortlich",
   "whoCanSee.group.shared": "Direkt geteilt",
@@ -15609,6 +15645,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.source.vcard_import": "einer importierten vCard",
   "contact.enriched.source.contact_research": "einer übernommenen Recherche",
   "contact.enriched.source.human_restore": "einem wiederhergestellten Wert",
+  "contact.enriched.source.lead_promotion": "dem qualifizierten Lead",
   "contact.enriched.source.other": "einer erfassten Quelle",
   "contact.enriched.undo": "Rückgängig",
   "contact.enriched.replaced": "Bisheriger Wert „{was}“ ersetzt",
@@ -15907,7 +15944,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert und lässt keine Änderungen zu.",
   "contact.notYoursToChange":
-    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",
