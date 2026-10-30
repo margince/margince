@@ -38,7 +38,11 @@ func newDealCloseTasks(tasks *activities.Store, db *database.DB) dealCloseTasks 
 // openTasksOf lists the deal's open tasks through the activities reader. The
 // caller's row scope and field masks are then the reader's own.
 func (d dealCloseTasks) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crmcontracts.Activity, error) {
-	kind, entity := "task", "deal"
+	// The contract's own vocabulary for both: the kind an activity carries, and
+	// the entity type an activity_link names. A constant from elsewhere that
+	// happens to spell "deal" belongs to a different vocabulary.
+	kind := string(crmcontracts.ActivityKindTask)
+	entity := string(crmcontracts.ActivityLinkEntityTypeDeal)
 	rows, _, err := d.tasks.ListActivities(ctx, activities.ListActivitiesInput{
 		Kind: &kind, EntityType: &entity, EntityID: &dealID, ReadableOnly: true,
 	})
