@@ -14,8 +14,8 @@ import { contrastOf, themes } from "./tokens-testing";
 
 // The ink field is one dark plate in both themes, and the page's inks are
 // tuned for a light page. inkfield.css lists every component that paints the
-// plate and hands it the plate's inks; these gates derive the plate painters
-// from the app's sheets, so a new one cannot land unlisted.
+// plate and hands it the plate's inks. These gates read the painters from the
+// app's sheets, so a new one cannot land unlisted.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = join(here, "..", "..");
