@@ -243,6 +243,12 @@ func countWeekMeetings(
 	hostPos := arg(userID)
 	// The reader Analytics counts a held meeting through. So a meeting redated
 	// after it was held stays in its held week on both surfaces.
+	//
+	// Analytics also refuses a row whose history has a later entry, so an
+	// evaluation reads the same way twice for its receipts. A week is
+	// assembled once and its figure stored, so there is nothing to reproduce.
+	// Refusing such a row here would drop a meeting whose status was recorded
+	// after the assembly's clock.
 	transition := storekit.MeetingHeldAsOfSQL("m", fmt.Sprintf("$%d", arg(now)))
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
@@ -267,7 +273,6 @@ func countWeekMeetings(
 		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
 		      AND (` + status + ` IS NULL OR ` + status + ` = 'held')
-		      AND ` + transition.Recorded + `
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
 		      AND ` + within + `
 		      AND (%[4]s)`
