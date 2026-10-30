@@ -3155,6 +3155,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Mục tiêu",
   "company.lifecycle.prospect": "Tiềm năng",
   "company.lifecycle.opportunity": "Cơ hội",
+  "company.lifecycle.onboarding": "Đang triển khai",
+  "company.lifecycle.live": "Đang vận hành",
+  "company.lifecycle.live.help":
+    "Đang vận hành nghĩa là phạm vi đầu tiên đã thỏa thuận đang được sử dụng. Chỉ đồng nghiệp mới đặt trạng thái này, không phải trợ lý hay tự động hóa.",
   "company.lifecycle.customer": "Khách hàng",
   "company.lifecycle.former_customer": "Khách hàng cũ",
   "company.lifecycle.disqualified": "Đã loại",

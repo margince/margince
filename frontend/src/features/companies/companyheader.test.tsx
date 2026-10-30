@@ -573,6 +573,25 @@ describe("the lifecycle control beside the name", () => {
     await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
   });
 
+  it("says under Live that only a colleague sets it", async () => {
+    stubPatch(200);
+    renderInApp(
+      <CompanyLifecycleControl company={{ ...COMPANY, lifecycle: "live" }} />,
+    );
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    const hint = document.getElementById(
+      control.getAttribute("aria-describedby") ?? "",
+    );
+    expect(hint?.textContent).toBe(en["company.lifecycle.live.help"]);
+  });
+
+  it("draws no help line under any other stage", async () => {
+    stubPatch(200);
+    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
+    await screen.findByRole("combobox", { name: "Lifecycle" });
+    expect(screen.queryByText(en["company.lifecycle.live.help"])).toBeNull();
+  });
+
   it("does not write the stage the account already has", async () => {
     const sent = stubPatch(200);
     const user = userEvent.setup();

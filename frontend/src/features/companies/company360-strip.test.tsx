@@ -149,6 +149,24 @@ describe("the figures under How it stands", () => {
     ).toBeTruthy();
   });
 
+  it.each(["onboarding", "live"] as const)(
+    "bills an account that is %s",
+    async (lifecycle) => {
+      const plate = await renderFigures(
+        view({
+          state_strip: {
+            ...customer,
+            account: { ...customer.account, lifecycle },
+          },
+        }),
+      );
+
+      expect(
+        within(plate).queryByText(en["co.strip.fin.neverInvoiced"]),
+      ).toBeNull();
+    },
+  );
+
   it("draws the open-deals figure compactly, never at full length", async () => {
     const plate = await renderFigures(
       view({

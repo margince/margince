@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // AwaitingReplyLookbackDays is how long past its follow-up window a sent
@@ -91,23 +92,40 @@ func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]Awaiting
 // customerArms renders the "is this a customer" test, one arm per kind of
 // record. An arm over a kind the reader may not read is FALSE. Whether a deal
 // is open is the deal's business, and a reminder must not disclose it.
-func customerArms(ctx context.Context, openDeal, workingLead string) (string, error) {
+func customerArms(ctx context.Context, arg func(any) int, openDeal, workingLead string) (string, error) {
+	// Bound only once an arm uses it: Postgres refuses a parameter the
+	// statement never reads.
+	engaged := ""
+	engagedLifecycle := func() string {
+		if engaged == "" {
+			engaged = fmt.Sprintf("$%d", arg(values.EngagedLifecycles()))
+		}
+		return engaged
+	}
 	arms := []struct {
 		objects []string
-		sql     string
+		sql     func() string
 	}{
-		{[]string{"company"}, `EXISTS (SELECT 1 FROM company co
+		{[]string{"company"}, func() string {
+			return `EXISTS (SELECT 1 FROM company co
 		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"company", "relationship"}, `EXISTS (SELECT 1 FROM relationship job
+		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		}},
+		{[]string{"company", "relationship"}, func() string {
+			return `EXISTS (SELECT 1 FROM relationship job
 		    JOIN company co ON co.id = job.company_id
 		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"lead"}, `EXISTS (SELECT 1 FROM lead ld
+		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		}},
+		{[]string{"lead"}, func() string {
+			return `EXISTS (SELECT 1 FROM lead ld
 		    WHERE (ld.id = sales.lead_id OR ld.from_contact_id = sales.contact_id
-		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + `)`},
-		{[]string{"deal"}, `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + `)`},
+		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + `)`
+		}},
+		{[]string{"deal"}, func() string {
+			return `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + `)`
+		}},
 	}
 	rendered := make([]string, 0, len(arms))
 	for _, arm := range arms {
@@ -116,7 +134,7 @@ func customerArms(ctx context.Context, openDeal, workingLead string) (string, er
 			return "", err
 		}
 		if readable {
-			rendered = append(rendered, arm.sql)
+			rendered = append(rendered, arm.sql())
 		}
 	}
 	if len(rendered) == 0 {
@@ -171,7 +189,7 @@ func followUpGatesFor(ctx context.Context, arg func(any) int, need string) (foll
 	if g.links == "" {
 		g.links = scopeUnbounded
 	}
-	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g.customer, err = customerArms(ctx, arg, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
 	return g, err
 }
 

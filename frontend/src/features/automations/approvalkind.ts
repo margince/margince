@@ -1,6 +1,6 @@
 import {
-  COMPANY_LIFECYCLE_LABELS,
-  COMPANY_LIFECYCLE_STAGES,
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
 } from "../../format/companylifecycle";
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
@@ -84,8 +84,10 @@ export const EDITABLE_FIELDS: Readonly<
       field: "proposed_lifecycle",
       as: "choice",
       label: "company.lifecycle",
-      options: COMPANY_LIFECYCLE_STAGES,
-      optionLabels: COMPANY_LIFECYCLE_LABELS,
+      // Live is not offered: an approval runs as the system, and only a
+      // signed-in person may set an account live.
+      options: LIFECYCLE_OPTIONS.filter((stage) => stage !== "live"),
+      optionLabels: LIFECYCLE_LABELS,
     },
   ],
   // An automation-composed email waiting for a human to read, correct and

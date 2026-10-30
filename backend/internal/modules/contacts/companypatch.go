@@ -75,7 +75,7 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		p.Set("size_band", current.SizeBand, *in.SizeBand)
 	}
 	if in.Lifecycle != nil {
-		if err := checkLifecycle(*in.Lifecycle); err != nil {
+		if err := checkLifecycleWriter(ctx, *in.Lifecycle); err != nil {
 			return err
 		}
 		p.Set("lifecycle", lifecycleValue(current.Lifecycle), *in.Lifecycle)

@@ -172,7 +172,7 @@ Also called: take an unowned account, assign a company to me, claim an account.
 
 Two fields describe a company, and many users mix them up.
 
-**Lifecycle**: where the company stands with you. One value only: **unknown, target, prospect, opportunity, customer, former customer, disqualified.** New companies start at unknown.
+**Lifecycle**: where the company stands with you. One value only: **Unknown**, **Target**, **Prospect**, **Opportunity**, **Onboarding**, **Live**, **Customer**, **Former customer** or **Disqualified**. New companies start at **Unknown**. **Onboarding** means the contract is signed and set-up runs. **Live** means the agreed first scope is in use. Only a colleague sets **Live**: an AI assistant, an automation or an approval that tries is refused.
 
 **Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.**
 

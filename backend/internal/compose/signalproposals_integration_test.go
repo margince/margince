@@ -177,6 +177,30 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 	}
 }
 
+// An account in set-up or live is one we deliver for, so a mail ending its
+// contract asks the same question a customer's would.
+func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
+	for _, stage := range []string{"onboarding", "live"} {
+		t.Run(stage, func(t *testing.T) {
+			e := integration.Setup(t)
+			company := seedAccountAtStage(t, e, stage)
+			seedOpenContractEnded(t, e, company)
+
+			if staged := proposePass(t, e); staged != 1 {
+				t.Fatalf("the pass staged %d offers on a %s account, want 1", staged, stage)
+			}
+			if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+				e.As(e.Rep1, nil, integration.AdminWithSignals),
+				ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
+				t.Fatalf("accepting the offer: %v", err)
+			}
+			if got := accountStage(t, e, company); got != "former_customer" {
+				t.Errorf("the account reads %q after the accept, want former_customer", got)
+			}
+		})
+	}
+}
+
 // Saying no means the reader judged the record right and the reading wrong.
 // The signal that produced the offer stays open forever, so without a durable
 // memory of the refusal the same question comes back every hour.

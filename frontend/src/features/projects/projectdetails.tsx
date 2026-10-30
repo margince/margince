@@ -19,7 +19,7 @@ import {
   RecordDetails,
 } from "../../design-system/recorddetails";
 import { sectionState } from "../../design-system/surfacestate";
-import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatNumber } from "../../format/format";
 import { formatDateAbbrev } from "../../format/format.dates";
 import { industryWords } from "../../format/industry";
@@ -154,7 +154,7 @@ function CompanyCard({
   const summary = useEmployerSummary(companyId).data;
   const lifecycle =
     summary?.lifecycle && summary.lifecycle !== "unknown"
-      ? t(COMPANY_LIFECYCLE_LABELS[summary.lifecycle])
+      ? t(LIFECYCLE_LABELS[summary.lifecycle])
       : undefined;
   const facts = [
     lifecycle,

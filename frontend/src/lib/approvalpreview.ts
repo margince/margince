@@ -1,6 +1,6 @@
 import type { components } from "../api/schema";
 import { acquisitionKindLabel } from "../format/acquisitionkind";
-import { COMPANY_LIFECYCLE_LABELS } from "../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../format/companylifecycle";
 import { RELATIONSHIP_TYPE_LABELS } from "../format/companyrelationships";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { DEAL_STATUS_LABEL } from "../format/dealstatus";
@@ -265,7 +265,7 @@ function previewLabel(value: Value, field: string, t: Translator): string {
   };
   const labels =
     catalogs[catalogField] ??
-    (value.kind === "lifecycle" ? COMPANY_LIFECYCLE_LABELS : undefined);
+    (value.kind === "lifecycle" ? LIFECYCLE_LABELS : undefined);
   const label = Object.entries(labels ?? {}).find(
     ([code]) => code === value.text,
   )?.[1];

@@ -29549,10 +29549,10 @@ export interface components {
             readonly computed_fields?: components["schemas"]["ComputedField"][];
             domains?: components["schemas"]["CompanyDomain"][];
             /**
-             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
@@ -29701,10 +29701,10 @@ export interface components {
              */
             visibility?: "workspace" | "owner";
             /**
-             * @description Where the account stands with us (ADR-0079). Absent = untouched.
+             * @description Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
         } & {
@@ -30550,7 +30550,7 @@ export interface components {
         Company360StateStrip: {
             account: {
                 /** @enum {string} */
-                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 relationship_types: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             };
             /** @description Null when the caller has no activity grant — not assessed, as distinct from never contacted. */
@@ -56554,7 +56554,7 @@ export interface operations {
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
                 /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
-                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /**
