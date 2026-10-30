@@ -281,13 +281,6 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 		lane    voiceLane
 		speaker string
 	}{
-		"a recommended angle that suggests": {
-			lane: voiceLane{
-				whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I suggest you focus on smaller prospects.",
-			},
-			speaker: "I suggest",
-		},
 		"whitespace that reports finding none": {
 			lane: voiceLane{
 				angle: plain.angle, reason: plain.reason,
@@ -319,7 +312,7 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 		"a conditional contraction with a curly apostrophe": {
 			lane: voiceLane{
 				whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I’d lead with SAP.",
+				angle: "If anything, I’d lead with SAP.",
 			},
 			speaker: "I’d lead",
 		},
@@ -349,7 +342,7 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 }
 
 // "We" and "our" name the reader's company, and a capital I inside a word is
-// no speaker either.
+// no speaker either. An angle production drops never reaches the grade.
 func TestAGrowthFitClaimWithoutASingularSpeakerIsAccepted(t *testing.T) {
 	for name, lane := range map[string]voiceLane{
 		"our platform and we": {
@@ -360,6 +353,11 @@ func TestAGrowthFitClaimWithoutASingularSpeakerIsAccepted(t *testing.T) {
 		"I/O inside a word": {
 			whitespace: "Their I/O-heavy plants run no integration layer.",
 			angle:      "Focus on their I/O bottleneck.",
+			reason:     "Their buyers are hard to reach.",
+		},
+		"an angle opening with I, which production drops": {
+			whitespace: "They do not yet buy SAP integration.",
+			angle:      "I suggest you focus on smaller prospects.",
 			reason:     "Their buyers are hard to reach.",
 		},
 	} {
