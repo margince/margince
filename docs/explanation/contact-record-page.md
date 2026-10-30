@@ -43,3 +43,5 @@ On a small screen, `Details & permissions` opens the same sidebar content over t
 Focus chooses and orders entries the normal way, with no pin controls and no stored pins that change it. The separate full work queue keeps its pins as they work today. The backend chooses Focus before it applies personal pins to the queue. So old stored pins cannot pull a note that asks for no action into Focus, or change its order.
 
 The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
+
+A move whose action opens the composer drafts the message on the press and wears the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.
