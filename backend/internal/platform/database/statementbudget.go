@@ -49,22 +49,28 @@ const CallerPredicateBudget = 5 * time.Second
 // workspace binding above follows, and it holds here even though no budget is a
 // caller's value, because the next budget to be threaded through might be.
 func BoundStatement(ctx context.Context, tx pgx.Tx, budget time.Duration) error {
-	// Postgres reads statement_timeout = 0 as "no timeout", so a budget that
-	// rounds to zero milliseconds would silently UNBOUND the statement this call
-	// exists to bound — the one outcome worse than never having called it. A
-	// sub-millisecond budget is therefore honoured as the shortest ceiling
-	// Postgres can express, and a non-positive one is a programming error rather
-	// than a request for no ceiling.
-	if budget <= 0 {
-		return fmt.Errorf("pg: a statement budget of %s bounds nothing; "+
-			"pass the caller's own ceiling, and note that Postgres reads zero as no timeout", budget)
+	milliseconds, err := budgetMilliseconds(budget)
+	if err != nil {
+		return err
 	}
-	milliseconds := strconv.FormatInt(max(budget.Milliseconds(), 1), 10)
-	if _, err := tx.Exec(ctx,
-		`SELECT set_config('statement_timeout', $1, true)`, milliseconds); err != nil {
+	if _, err := tx.Exec(ctx, boundStatementSQL, milliseconds); err != nil {
 		return fmt.Errorf("pg: bounding the statement to %s: %w", budget, err)
 	}
 	return nil
+}
+
+const boundStatementSQL = `SELECT set_config('statement_timeout', $1, true)`
+
+// budgetMilliseconds is the value BoundStatement sets, for a caller that sends
+// it inside a batch.
+func budgetMilliseconds(budget time.Duration) (string, error) {
+	// Postgres reads zero as "no timeout". A budget under a millisecond is
+	// raised to one; a non-positive budget is a programming error.
+	if budget <= 0 {
+		return "", fmt.Errorf("pg: a statement budget of %s bounds nothing; "+
+			"pass the caller's own ceiling, and note that Postgres reads zero as no timeout", budget)
+	}
+	return strconv.FormatInt(max(budget.Milliseconds(), 1), 10), nil
 }
 
 // StatementCeiling is how long ANY one statement may hold a connection when

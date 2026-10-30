@@ -18976,6 +18976,14 @@ paths:
             are two answers to one question and nothing defines which wins; letting the
             owner take it silently would echo back the scope that had been ignored, so one
             rep's work would arrive labelled `"scope": "unassigned"`.
+        - name: relationships
+          in: query
+          schema: { type: string, enum: [include, omit], default: include }
+          description: |
+            Whether to read the optional reconnections. `omit` skips that read, and the
+            page carries neither `optional_relationships` nor
+            `optional_relationships_more_available`. A reconnection the reader pinned
+            is still read and still reaches the queue. Nothing else on the page changes.
       responses:
         '200':
           description: The ranked day.
@@ -68555,6 +68563,7 @@ components:
             Optional reconnections, outside the work queue, counts and Focus. An open
             deal or relationship score does not establish an obligation. A reader may
             pin a suggestion into their personal queue or create an explicit task.
+            Absent when the request sent `relationships=omit`.
         optional_relationships_more_available:
           type: boolean
           description: 'More optional contacts exist beyond the existing relationship read bound.'

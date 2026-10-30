@@ -26722,6 +26722,24 @@ func (e GetWorklistParamsView) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsRelationships.
+const (
+	GetWorklistParamsRelationshipsInclude GetWorklistParamsRelationships = "include"
+	GetWorklistParamsRelationshipsOmit    GetWorklistParamsRelationships = "omit"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsRelationships enum.
+func (e GetWorklistParamsRelationships) Valid() bool {
+	switch e {
+	case GetWorklistParamsRelationshipsInclude:
+		return true
+	case GetWorklistParamsRelationshipsOmit:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetHiddenBacklogRowsParamsRule.
 const (
 	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
@@ -59021,6 +59039,7 @@ type Worklist struct {
 	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
 	// deal or relationship score does not establish an obligation. A reader may
 	// pin a suggestion into their personal queue or create an explicit task.
+	// Absent when the request sent `relationships=omit`.
 	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
 
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
@@ -68247,6 +68266,12 @@ type GetWorklistParams struct {
 	// owner take it silently would echo back the scope that had been ignored, so one
 	// rep's work would arrive labelled `"scope": "unassigned"`.
 	Owner *openapi_types.UUID `form:"owner,omitempty" json:"owner,omitempty"`
+
+	// Relationships Whether to read the optional reconnections. `omit` skips that read, and the
+	// page carries neither `optional_relationships` nor
+	// `optional_relationships_more_available`. A reconnection the reader pinned
+	// is still read and still reaches the queue. Nothing else on the page changes.
+	Relationships *GetWorklistParamsRelationships `form:"relationships,omitempty" json:"relationships,omitempty"`
 }
 
 // GetWorklistParamsScope defines parameters for GetWorklist.
@@ -68257,6 +68282,9 @@ type GetWorklistParamsFilter string
 
 // GetWorklistParamsView defines parameters for GetWorklist.
 type GetWorklistParamsView string
+
+// GetWorklistParamsRelationships defines parameters for GetWorklist.
+type GetWorklistParamsRelationships string
 
 // GetHandledForYouParams defines parameters for GetHandledForYou.
 type GetHandledForYouParams struct {
@@ -129755,6 +129783,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "owner"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "owner", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "relationships" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationships", r.URL.Query(), &params.Relationships, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationships"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationships", Err: err})
 		}
 		return
 	}

@@ -25,12 +25,11 @@ func ReuseGenericPlans(ctx context.Context, fn func(context.Context) error) erro
 	if !ok || tx == nil {
 		return fn(ctx)
 	}
-	var before string
-	if err := tx.QueryRow(ctx, `SELECT current_setting('plan_cache_mode')`).Scan(&before); err != nil {
-		return fmt.Errorf("pg: reading plan_cache_mode: %w", err)
-	}
-	if err := setPlanCacheMode(ctx, tx, "force_generic_plan"); err != nil {
-		return err
+	// The materialized CTE reads the old mode before the outer row sets the new one.
+	var before, forced string
+	if err := tx.QueryRow(ctx, `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
+SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) FROM previous`).Scan(&before, &forced); err != nil {
+		return fmt.Errorf("pg: setting plan_cache_mode force_generic_plan: %w", err)
 	}
 	err := fn(ctx)
 	// A failed statement leaves the transaction aborted, and its rollback
