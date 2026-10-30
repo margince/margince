@@ -64,6 +64,9 @@ type worklistCursor struct {
 	// Refusing it would break every walk in flight at the moment this shipped,
 	// to no reader's benefit.
 	Snapshot ids.UUID `json:"s,omitempty"`
+	// Rest is where each backlog source stands once the ranked rows ran out.
+	// Nil until then.
+	Rest *backlogCursor `json:"r,omitempty"`
 }
 
 // fingerprint renders the request parameters that decide WHICH rows exist.
@@ -128,11 +131,12 @@ func normalizedFilter(filter string) string {
 // the backlog ended early) is worse than the case it guards against.
 //
 // Held by: TestACursorRoundTripsThePositionItWasMintedAt.
-func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID) string {
+func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID, rest *backlogCursor) string {
 	token, err := storekit.EncodeOpaque(worklistCursor{
 		At:       at,
 		Params:   fingerprint(scope, filter, owner),
 		Snapshot: snapshot,
+		Rest:     rest,
 	})
 	if err != nil {
 		// Unreachable for an int and a string. An empty token is refused by
@@ -163,13 +167,13 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	//   - A NEGATIVE offset reaches `rows[n:]` and panics. A crafted token must
 	//     be a 422, never a crash on an authenticated endpoint.
 	//   - ZERO is the top of the list, which this only ever reaches by minting a
-	//     token after a full page — so an offset of zero came from somewhere
-	//     else. It grants nothing (an absent cursor answers the same first page)
-	//     and is refused anyway, because a token the server cannot have written
-	//     should not be read as one it did.
+	//     token after a full page, or with a backlog position when the ranked
+	//     rows were empty. Any other zero came from somewhere else and is
+	//     refused, because a token the server cannot have written should not be
+	//     read as one it did.
 	//   - An EMPTY fingerprint is what `{}` and `null` decode to, and without
 	//     this they would pass as a legitimate first page.
-	if cursor.At <= 0 || cursor.Params == "" {
+	if cursor.At < 0 || (cursor.At == 0 && cursor.Rest == nil) || cursor.Params == "" {
 		return worklistCursor{}, &storekit.MalformedCursorError{}
 	}
 	if cursor.Params != fingerprint(scope, filter, owner) {

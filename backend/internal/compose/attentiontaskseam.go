@@ -151,6 +151,57 @@ func (t attentionTasks) UpcomingForViewer(
 	return t.markReadOnly(ctx, upcoming, asOf)
 }
 
+// CountTasks counts one task window whole, under the lane's own narrowing
+// (openTasksDueBy) and the team view's seats. Today's window counts the
+// reader's due reminders with it; the later window leaves them out.
+func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	if !ok {
+		return 0, nil
+	}
+	in.TeamQueueOf = window.Team
+	mine := window.Scope == attention.TasksMine
+	if window.From.IsZero() {
+		in.OrRemindersDue = mine
+	} else {
+		in.OpenAndDueAfter, in.ExceptRemindersDue = &window.From, mine
+	}
+	return t.store.CountActivities(ctx, in)
+}
+
+// TasksAfter continues one task window past the lane's cap, in the store's
+// due-date order. It reads no reminder arm: the lane holds every due one.
+// next is empty once the window is read to its end.
+func (t attentionTasks) TasksAfter(
+	ctx context.Context, window attention.TaskWindow, after string, limit int,
+) ([]attention.Task, string, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	if !ok {
+		return nil, "", nil
+	}
+	in.TeamQueueOf, in.Limit = window.Team, &limit
+	if !window.From.IsZero() {
+		in.OpenAndDueAfter = &window.From
+	}
+	if after != "" {
+		in.Cursor = &after
+	}
+	rows, page, err := t.listTaskPage(ctx, in)
+	if err != nil {
+		return nil, "", err
+	}
+	reader := reminderReaderFor(ctx, window.Scope)
+	tasks := make([]attention.Task, 0, len(rows))
+	for _, row := range rows {
+		tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
+	}
+	tasks, err = t.markReadOnly(ctx, tasks, window.AsOf)
+	if !page.HasMore {
+		return tasks, "", err
+	}
+	return tasks, page.NextCursor, err
+}
+
 // RemindersForViewer reads every due reminder of the reader's through the
 // store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
 // makes, following its cursor. All of them, because the badge counts all.
@@ -163,7 +214,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	page := reminderPage
 	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
-		rows, next, err := t.listReminders(ctx, in)
+		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
@@ -177,9 +228,9 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	}
 }
 
-// listReminders reads one page of due reminders reusing its generic plan, as
-// listOpenTasks does. The page spells its kind as a literal and binds the reader.
-func (t attentionTasks) listReminders(
+// listTaskPage reads one page of tasks reusing its generic plan, as
+// listOpenTasks does, and answers where the next page starts.
+func (t attentionTasks) listTaskPage(
 	ctx context.Context, in activities.ListActivitiesInput,
 ) ([]crmcontracts.Activity, storekit.Page, error) {
 	var rows []crmcontracts.Activity

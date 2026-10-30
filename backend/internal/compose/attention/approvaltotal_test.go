@@ -126,11 +126,12 @@ func TestTheTeamScopeStatesNoApprovalTotal(t *testing.T) {
 	day.Counts.ApprovalsOpen = new(260)
 
 	team := (&Service{}).exactSources(day, scopeTeam)
-	if _, stated := team[crmcontracts.WorklistItemSourceApproval]; stated {
+	approvals := totalKey{crmcontracts.WorklistItemSourceApproval, "decisions"}
+	if _, stated := team[approvals]; stated {
 		t.Error("the team scope offered the lane's approval count, and its narrowing admits a different population")
 	}
 	for _, scope := range []string{scopeAll, scopeMine, scopeUnassigned} {
-		if got := (&Service{}).exactSources(day, scope); got[crmcontracts.WorklistItemSourceApproval] != 260 {
+		if got := (&Service{}).exactSources(day, scope); got[approvals] != 260 {
 			t.Errorf("scope %s dropped the approval count its narrowing matches: %v", scope, got)
 		}
 	}

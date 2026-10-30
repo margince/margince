@@ -83,6 +83,9 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
+	// TeamQueueOf narrows to the open tasks one of these seats holds, or nobody
+	// holds: the rows a team view keeps. Nil leaves the read unnarrowed.
+	TeamQueueOf []ids.UUID
 	// WorklistAsOf marks the read as the Worklist's, judged at this instant. It
 	// drops automatic response escalations unsupported by an inquiry, and open
 	// tasks aged out of the Worklist (worklistageout.go) the reader did not pin.
@@ -225,6 +228,9 @@ type ListActivitiesInput struct {
 	// content-gated, because a reminder offers the task to act on.
 	RemindersDue   bool
 	OrRemindersDue bool
+	// ExceptRemindersDue drops the caller's due reminders from the window. A
+	// reminded task is today's work, so the upcoming count leaves it out.
+	ExceptRemindersDue bool
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string

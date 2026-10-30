@@ -142,7 +142,7 @@ func TestTheEntryPointRefusesAFilterOutsideItsView(t *testing.T) {
 }
 
 func TestACursorFromOneViewIsRefusedInAnother(t *testing.T) {
-	minted := encodeCursor(1, scopeMine, askedFor(viewToday, ""), ids.Nil, ids.Nil)
+	minted := encodeCursor(1, scopeMine, askedFor(viewToday, ""), ids.Nil, ids.Nil, nil)
 	_, err := decodeCursor(minted, scopeMine, askedFor(viewDecisions, ""), ids.Nil)
 	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); !ok {
 		t.Errorf("a Today cursor continued into Decisions (err=%v)", err)
@@ -157,7 +157,7 @@ func TestAnAliasSharesItsViewsCursor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	minted := encodeCursor(1, scopeMine, askedFor(view, "decisions"), ids.Nil, ids.Nil)
+	minted := encodeCursor(1, scopeMine, askedFor(view, "decisions"), ids.Nil, ids.Nil, nil)
 	if _, err := decodeCursor(minted, scopeMine, askedFor(viewDecisions, ""), ids.Nil); err != nil {
 		t.Errorf("the filter alias and the view it opens are one walk, but the cursor was refused: %v", err)
 	}

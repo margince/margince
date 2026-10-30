@@ -47,5 +47,8 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		clauses = append(clauses,
 			sprintf(openTask+" AND "+storekit.TaskDueSQL("a")+" >= $%d", arg(*in.OpenAndDueAfter)))
 	}
+	if in.ExceptRemindersDue && reminders != "" {
+		clauses = append(clauses, "NOT COALESCE("+reminders+", FALSE)")
+	}
 	return clauses
 }
