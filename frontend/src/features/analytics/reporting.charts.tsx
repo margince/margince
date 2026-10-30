@@ -67,7 +67,10 @@ export function ReportingCharts({
         <div className="reporting-results">
           <WrittenSummary evaluation={evaluation} />
           <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
-          <TargetComparison evaluation={evaluation} onApply={onApplySelection} />
+          <TargetComparison
+            evaluation={evaluation}
+            onApply={onApplySelection}
+          />
           {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
           {afterSummary}
           {sections.map((section) => (
