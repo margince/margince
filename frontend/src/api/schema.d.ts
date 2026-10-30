@@ -50847,6 +50847,7 @@ export interface components {
              * @description Optional reconnections, outside the work queue, counts and Focus. An open
              *     deal or relationship score does not establish an obligation. A reader may
              *     pin a suggestion into their personal queue or create an explicit task.
+             *     Absent when the request sent `relationships=omit`.
              */
             optional_relationships?: components["schemas"]["WorklistItem"][];
             /** @description More optional contacts exist beyond the existing relationship read bound. */
@@ -73611,6 +73612,13 @@ export interface operations {
                  *     rep's work would arrive labelled `"scope": "unassigned"`.
                  */
                 owner?: string;
+                /**
+                 * @description Whether to read the optional reconnections. `omit` skips that read, and the
+                 *     page carries neither `optional_relationships` nor
+                 *     `optional_relationships_more_available`. A reconnection the reader pinned
+                 *     is still read and still reaches the queue. Nothing else on the page changes.
+                 */
+                relationships?: "include" | "omit";
             };
             header?: never;
             path?: never;

@@ -250,6 +250,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/worklist": {
 		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
+		{Name: "relationships", Values: []string{"include", "omit"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
 		{Name: "view", Values: []string{"today", "decisions", "system"}, Array: false, Explode: true},
 	},

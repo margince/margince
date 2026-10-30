@@ -21,6 +21,11 @@ export const en = {
   "worklist.relationships.optional": "Optional reconnections",
   "worklist.relationships.optionalDetail":
     "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
+  "worklist.relationships.show": "Show",
+  "worklist.relationships.loading": "Looking for contacts who went quiet…",
+  "worklist.relationships.none": "Nobody has gone quiet right now.",
+  "worklist.relationships.failed":
+    "Optional reconnections could not be read. Try again later.",
   "worklist.relationships.more":
     "More optional contacts are outside this view.",
   "webhooks.event.signal.updated.label": "Alert owner changed",

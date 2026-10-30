@@ -62,7 +62,10 @@ export async function readWorklistPage(
   // Decisions and System also send their own filter, so a server that knows
   // no `view` still answers with that view's rows.
   const wire = view && view !== "today" && filter === "all" ? view : filter;
-  const whose = owner ? { owner, filter: wire } : { scope, filter: wire };
+  // Reconnections are read only when their panel opens; see readRelationships.
+  const whose = owner
+    ? { owner, filter: wire, relationships: "omit" as const }
+    : { scope, filter: wire, relationships: "omit" as const };
   const dials = view ? { ...whose, view } : whose;
   const page = unwrap(
     await api.GET("/worklist", {
@@ -73,6 +76,31 @@ export async function readWorklistPage(
   return view === undefined || page.view !== undefined
     ? page
     : withinView(page, view);
+}
+
+/** The day's optional reconnections, the one part a day read omits. */
+export async function readRelationships(
+  scope: WorklistScope,
+  owner: string | undefined,
+  signal?: AbortSignal,
+): Promise<
+  Pick<
+    Worklist,
+    "optional_relationships" | "optional_relationships_more_available"
+  >
+> {
+  const whose = owner ? { owner } : { scope };
+  const page = unwrap(
+    await api.GET("/worklist", {
+      params: { query: { ...whose, relationships: "include", limit: 1 } },
+      signal,
+    }),
+  );
+  return {
+    optional_relationships: page.optional_relationships ?? [],
+    optional_relationships_more_available:
+      page.optional_relationships_more_available,
+  };
 }
 
 // A server that echoes no view ignored it, so the rows outside the view are
