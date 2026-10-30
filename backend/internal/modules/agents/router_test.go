@@ -553,3 +553,23 @@ func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testi
 		t.Fatalf("the router offers %d actions, want 2", len(mixed.Actions))
 	}
 }
+
+// A router names only its actions that run at once and cannot be undone. A
+// client asks the user before those, and not before the others.
+func TestARouterAsksTheUserFirstOnlyForItsUndoableActions(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	archive := targetSpec("fake_archive", principal.ScopeWrite, mcp.TierAutoExecute)
+	archive.AskUserFirst = true
+	r.Register(&argsTool{spec: archive})
+	r.Register(&argsTool{spec: targetSpec("fake_rename", principal.ScopeWrite, mcp.TierAutoExecute)})
+	r.Register(fakeRouter{name: "change", targets: map[string]string{"archive": "fake_archive", "rename": "fake_rename"}})
+
+	spec, _ := r.Spec("change")
+	described := DescribeForClient(spec)
+	if !strings.Contains(described, "the action archive cannot be undone") {
+		t.Errorf("the router does not ask first for archive: %s", described)
+	}
+	if strings.Contains(described, "rename") {
+		t.Errorf("the router asks first for rename, which can be undone: %s", described)
+	}
+}

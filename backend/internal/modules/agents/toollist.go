@@ -106,7 +106,7 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 		if spec.RequiredScope == principal.ScopeRead {
 			return spec.Description
 		}
-		return fmt.Sprintf("%s (Runs immediately; %s.)", spec.Description, scope)
+		return fmt.Sprintf("%s (Runs immediately%s; %s.)", spec.Description, askUserFirst(spec), scope)
 	case mcp.TierConfirmationRequired:
 		tier = "a human approves every call before it runs"
 	case mcp.TierDynamic:
@@ -115,7 +115,35 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 			tier = byAction
 		}
 	}
-	return fmt.Sprintf("%s (Governance: %s; %s.)", spec.Description, tier, scope)
+	return fmt.Sprintf("%s (Governance: %s%s; %s.)", spec.Description, tier, askUserFirst(spec), scope)
+}
+
+// askUserFirst tells the client to get the user's yes before a call that runs
+// with no human approval and cannot be undone. A call a human approves already
+// gets that yes, so it is never named here.
+func askUserFirst(spec mcp.ToolSpec) string {
+	const ask = "; %s cannot be undone, so tell the user exactly what the call will change and " +
+		"get their yes before calling, unless they already asked for exactly this"
+	if len(spec.Actions) == 0 {
+		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
+			return ""
+		}
+		return fmt.Sprintf(ask, "it")
+	}
+	var names []string
+	for _, a := range spec.Actions {
+		if a.AskUserFirst && a.Tier != mcp.TierConfirmationRequired {
+			names = append(names, a.Action)
+		}
+	}
+	switch len(names) {
+	case 0:
+		return ""
+	case 1:
+		return fmt.Sprintf(ask, "the action "+names[0])
+	}
+	slices.Sort(names)
+	return fmt.Sprintf(ask, "the actions "+strings.Join(names, ", "))
 }
 
 // actionGovernance says which of a router's actions run at once, which wait for

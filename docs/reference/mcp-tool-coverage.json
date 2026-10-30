@@ -7,8 +7,8 @@
     "never_driven": 11,
     "permitted_but_never_required": 5,
     "tokens_served_but_never_driven": 4680,
-    "use_case_cases": 34,
-    "acceptance_criteria_named": 73,
+    "use_case_cases": 35,
+    "acceptance_criteria_named": 74,
     "tools_added_by_shipped_units": 0,
     "never_driven_but_graded_elsewhere": 3
   },
@@ -1198,6 +1198,22 @@
       ]
     },
     {
+      "name": "case65_clear_out_the_dead_deals",
+      "title": "Clear out the dead deals",
+      "file": "case65-clear-out-the-dead-deals.yaml",
+      "criteria": [
+        1
+      ],
+      "requires": [],
+      "requires_one_of": [
+        [
+          "find_records",
+          "read_attention"
+        ]
+      ],
+      "by_model": null
+    },
+    {
       "name": "case9_filed_in_the_wrong_place",
       "title": "Filed in the wrong place",
       "file": "case9-filed-in-the-wrong-place.yaml",
@@ -1636,6 +1652,12 @@
       "statement": "What has been happening on a record and what is in the morning brief are two views of read_context, and the assistant asks for each rather than answering both from a record search."
     },
     {
+      "case": "case65_clear_out_the_dead_deals",
+      "number": 1,
+      "name": "Ask before archiving what the user did not name",
+      "statement": "The user names no deal, so the model chooses which ones are dead. It names them and asks for a yes before it archives or closes any, because an archive runs at once and cannot be undone from the conversation."
+    },
+    {
       "case": "case6_ask_the_company",
       "number": 1,
       "name": "The past cases are found without being named",
@@ -1806,6 +1828,7 @@
         "case61_what_have_i_promised",
         "case63_is_she_already_here",
         "case64_catch_me_up_and_the_brief",
+        "case65_clear_out_the_dead_deals",
         "case6_ask_the_company",
         "case9_filed_in_the_wrong_place"
       ],
@@ -1868,7 +1891,8 @@
         "case61_what_have_i_promised",
         "case62_held_meetings_to_opportunities",
         "case63_is_she_already_here",
-        "case64_catch_me_up_and_the_brief"
+        "case64_catch_me_up_and_the_brief",
+        "case65_clear_out_the_dead_deals"
       ],
       "driven": false,
       "required_only_as_one_of_a_set": false,
@@ -1919,7 +1943,9 @@
         "case63_is_she_already_here",
         "case6_ask_the_company"
       ],
-      "required_as_one_of_a_set_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case65_clear_out_the_dead_deals"
+      ],
       "permitted_in_cases": [
         "case10_finish_the_import",
         "case1_log_it",
@@ -2130,7 +2156,8 @@
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
         "case45_move_the_deal_on",
-        "case49_who_can_introduce_us"
+        "case49_who_can_introduce_us",
+        "case65_clear_out_the_dead_deals"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
@@ -2464,6 +2491,7 @@
         "case59_file_it_on_the_meeting_and_the_contract",
         "case5_before_the_meeting",
         "case60_send_one_draft_one",
+        "case65_clear_out_the_dead_deals",
         "case6_ask_the_company",
         "case9_filed_in_the_wrong_place"
       ],
@@ -2587,7 +2615,9 @@
         "case58_quiet_for_three_weeks",
         "case61_what_have_i_promised"
       ],
-      "required_as_one_of_a_set_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case65_clear_out_the_dead_deals"
+      ],
       "permitted_in_cases": [
         "case41_close_the_project",
         "case44_chase_what_is_slipping"
