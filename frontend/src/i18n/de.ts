@@ -2795,7 +2795,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tab.rollup": "Gesamtsumme",
   "tab.history": "Verlauf",
 
-  "rollup.weightedPipeline": "Gewichteter Deal-Wert",
+  "rollup.weightedPipeline": "Gewichteter Deal-Wert heute",
   "rollup.closedWon": "In diesem Quartal gewonnen",
   "rollup.activity30d": "Aktivität, 30 Tage",
   "rollup.accounts": "Einbezogene Unternehmen",
@@ -2804,6 +2804,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rollup.fxUnavailable":
     "Die Summe kann nicht berechnet werden, da ein Wechselkurs fehlt.",
   "rollup.computedAt": "Berechnet am {when}",
+  "rollup.wonIn": "Gewonnen in {period}",
+  "rollup.periodNote":
+    "Gewonnene Deals zählen in {period} nach dem Tag, an dem sie gewonnen wurden. Der gewichtete Deal-Wert zeigt die offenen Deals von heute.",
+  "rollup.period.label": "Zeitraum für gewonnene Deals",
+  "rollup.period.quarterUnderWay": "Dieses Quartal",
+  "rollup.period.year": "Jahr",
+  "rollup.period.quarter": "Quartal",
+  "rollup.period.month": "Monat",
+  "rollup.period.show": "{period} anzeigen",
+  "rollup.period.nextNotBegun": "Der nächste Zeitraum hat noch nicht begonnen",
 
   "nav.partners": "Partner",
   "deal.partnerAttribution": "Partner-Attribution",
@@ -7283,6 +7293,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.filters": "Filter",
   "analytics.q.groupBy": "Gruppieren nach",
   "analytics.q.companyField": "{label} (Unternehmen)",
+  "analytics.q.groupOptionCoverage_one": "{label} · {held} von {count} Deal",
+  "analytics.q.groupOptionCoverage_other": "{label} · {held} von {count} Deals",
   "analytics.q.fieldCoverage_one":
     "{label} hat einen Wert bei {held} von {count} lesbaren Deal.",
   "analytics.q.fieldCoverage_other":
