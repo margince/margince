@@ -68,8 +68,8 @@ type PendingOnTarget struct {
 }
 
 // PendingForTargetCounted lists what PendingForTarget lists and counts every
-// row past its cap in the same walk. So the two cannot disagree, and a record
-// with one page of proposals costs one page read.
+// row past its cap in the same walk. A record with one page of proposals costs
+// one page read.
 func (s *Service) PendingForTargetCounted(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (PendingOnTarget, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return PendingOnTarget{}, err
