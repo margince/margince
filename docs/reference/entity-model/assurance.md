@@ -71,7 +71,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `affected_minor` | `bigint` |  |  |
 | `claim` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `currency` | `text` |  |  |
+| `currency` | `currency_code` |  |  |
 | `episode` | `integer`, default `1` | yes |  |
 | `evidence_refs` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `first_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
