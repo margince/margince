@@ -1207,6 +1207,58 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_other": "Offene Deals: {count} · Stand {at}",
   "reporting.forecastLandingBasis":
     "Dieses Geschäftsquartal, berechnet aus der Deal-Prognose",
+  "reporting.compare.title": "Dieses Quartal im Vergleich zum Ziel",
+  "reporting.compare.gap": "Abstand zum Ziel",
+  "reporting.compare.short": "Unter dem Ziel von {target}",
+  "reporting.compare.ahead": "Über dem Ziel von {target}",
+  "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
+  "reporting.compare.basis.commit_evidence": "belegten Commit-Deals",
+  "reporting.compare.basis.weighted": "der gewichteten Pipeline",
+  "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
+  "reporting.compare.remaining": "Noch zu gewinnen",
+  "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
+  "reporting.compare.reached": "Ziel erreicht",
+  "reporting.compare.coverageAll": "Deckung, alle offenen Deals",
+  "reporting.compare.coverageQualified": "Deckung, qualifizierte Deals",
+  "reporting.compare.coverageBasis":
+    "{open} offen in diesem Quartal, im Verhältnis zum Rest",
+  "reporting.compare.qualifiedBasis":
+    "{open} in qualifizierten Deals, im Verhältnis zum Rest",
+  "reporting.compare.ratio": "{ratio}×",
+  "reporting.compare.qualifiedOff": "Nicht eingeschaltet",
+  "reporting.compare.qualifiedOffBasis":
+    "Schalte die qualifizierte Prognose ein, um nur Deals zu zählen, die der Kunde noch trägt.",
+  "reporting.compare.no_target": "Kein Umsatzziel für dieses Quartal",
+  "reporting.compare.no_targetBody":
+    "Leg unter Ziele ein Ziel für gewonnenen Umsatz für diesen Bereich und dieses Quartal fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
+  "reporting.compare.fx_missing":
+    "Für einige Deal-Beträge fehlt ein Wechselkurs",
+  "reporting.compare.fx_missingBody":
+    "Die Summen wären zu niedrig, darum werden Abstand und Deckung nicht gezeigt. Ergänze den fehlenden Wechselkurs, um sie zu sehen.",
+  "reporting.compare.partial_visibility":
+    "Du siehst nicht alle Deals in diesem Bereich",
+  "reporting.compare.partial_visibilityBody":
+    "Deine Zahlen umfassen nur die Deals, die du siehst. Darum werden sie nicht mit dem Ziel des ganzen Bereichs verglichen.",
+  "reporting.compare.incompatible.period":
+    "Wähle dieses Geschäftsquartal, um mit einem Ziel zu vergleichen",
+  "reporting.compare.incompatible.periodBody":
+    "Der Vergleich gilt nur für das laufende Geschäftsquartal.",
+  "reporting.compare.incompatible.scope":
+    "Wähle ein Team, um mit einem Ziel zu vergleichen",
+  "reporting.compare.incompatible.scopeBody":
+    "Die Prognose liest ein Team oder das ganze Unternehmen, nicht mehrere Teams zusammen.",
+  "reporting.compare.incompatible.pipeline":
+    "Für diese Pipeline ist kein Ziel festgelegt",
+  "reporting.compare.incompatible.pipelineBody":
+    "Das Ziel gilt für alle Pipelines und ist nicht auf sie aufgeteilt. Wähle Alle Pipelines, um zu vergleichen.",
+  "reporting.compare.incompatible.manager_call_pipeline":
+    "Wähle Alle Pipelines, um die Einschätzung zu vergleichen",
+  "reporting.compare.incompatible.manager_call_pipelineBody":
+    "Das erwartete Ergebnis ist die Einschätzung der Führungskraft, und sie gilt für alle Pipelines.",
+  "reporting.compare.incompatible.currency":
+    "Das Ziel ist in einer anderen Währung",
+  "reporting.compare.incompatible.currencyBody":
+    "Es wurde in einer Währung festgelegt, die nicht mehr die Basiswährung ist. Leg das Ziel neu fest, um zu vergleichen.",
   "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",

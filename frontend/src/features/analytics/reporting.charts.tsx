@@ -20,6 +20,7 @@ import type {
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
+import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
@@ -62,6 +63,7 @@ export function ReportingCharts({
         <div className="reporting-results">
           <WrittenSummary evaluation={evaluation} />
           <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+          <TargetComparison evaluation={evaluation} />
           {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
           {afterSummary}
           {sections.map((section) => (
