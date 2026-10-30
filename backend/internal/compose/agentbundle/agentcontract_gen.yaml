@@ -13965,6 +13965,10 @@ components:
           type: string
           format: uuid
           description: The approval a human gave this exact call, on its retry.
+        settle:
+          type: string
+          enum: [complete, keep]
+          description: What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
         idempotency_key: {type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.'}
     ProgressDealResult:
       type: object
@@ -13976,6 +13980,25 @@ components:
           type: string
           format: uuid
           description: The note logged on the deal, absent when the call carried none.
+        open_tasks:
+          type: array
+          items: {$ref: '#/components/schemas/DealOpenTask'}
+          description: The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them.
+        settled_task_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: The tasks this call completed, present only when it asked to settle them.
+    DealOpenTask:
+      type: object
+      description: One task still open on a deal that just closed.
+      required: [id, subject]
+      properties:
+        id: {type: string, format: uuid}
+        subject: {type: string, description: What the task says to do.}
+        due_at:
+          type: string
+          format: date-time
+          description: When it is due, absent on a task nobody dated.
     QualifyLeadRequest:
       type: object
       description: What `qualify_lead` takes besides the lead, which the path names.

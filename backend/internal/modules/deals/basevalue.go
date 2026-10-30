@@ -71,6 +71,15 @@ func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
 	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
 }
 
+// StrictBaseTotalSQL answers null for a group holding an amount no rate
+// reaches, rather than an aggregate over the rest of it.
+//
+// FinalizeBaseTotalSQL reads an empty group as zero. That is true of a sum and
+// false of an average, a minimum or a maximum, which have no zero.
+func StrictBaseTotalSQL(aggregateSQL, unpricedSQL string) string {
+	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE (" + aggregateSQL + ") END"
+}
+
 // UnpricedValueCountSQL keeps coverage under the same visibility as its amount.
 func UnpricedValueCountSQL(valueSQL, amountSQL, filterSQL string) string {
 	return "count(*) FILTER (WHERE " + filterSQL + " AND (" + amountSQL + ") IS NOT NULL AND (" + valueSQL + ") IS NULL)::integer"
