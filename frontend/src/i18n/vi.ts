@@ -537,6 +537,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
 
+  "approval.preview.createEmployer":
+    "Tạo công ty còn thiếu và liên kết liên hệ này làm nhân viên.",
+  "approval.preview.reuseEmployer": "Liên kết liên hệ này với công ty hiện có.",
+  "approval.preview.resolveEmployer":
+    "Xác định nơi làm việc từ công ty hoặc địa chỉ công việc, dùng lại hoặc tạo công ty rồi liên kết việc làm. Tên miền chưa rõ sẽ chờ xem xét; việc bổ sung thông tin tuân theo cài đặt của công ty.",
   "approval.preview.createContact":
     "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
   "approval.preview.recordAcquisition":
@@ -2781,6 +2786,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "list.search": "Tìm kiếm",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
   "list.loadMore": "Tải thêm",
+  "scrollSentinel.loading": "Đang tải thêm…",
+  "scrollSentinel.failed": "Không tải thêm được.",
+  "scrollSentinel.stalled": "Danh sách không tiến thêm được. Hãy thử lại.",
+  "scrollSentinel.more": "Còn thêm mục.",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Lead nóng",
   "table.range": "{first} đến {last} trong {count} {unit}",
@@ -5340,8 +5349,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.reason.no_change_done": "Đã ở trạng thái đó",
   "worklist.bulk.selectAll_one": "Chọn {count} việc đang hiển thị",
   "worklist.bulk.selectAll_other": "Chọn {count} việc đang hiển thị",
-  "worklist.bulk.clear": "Bỏ chọn",
-  "worklist.bulk.markDone": "Đánh dấu xong",
+  "worklist.bulk.select": "Chọn",
+  "worklist.bulk.cancel": "Hủy",
+  "worklist.bulk.complete_one": "Hoàn thành {count} việc",
+  "worklist.bulk.complete_other": "Hoàn thành {count} việc",
+  "worklist.bulk.putDown_one": "Gỡ {count} mục khỏi danh sách của tôi",
+  "worklist.bulk.putDown_other": "Gỡ {count} mục khỏi danh sách của tôi",
   "worklist.bulk.doneCount_one": "Đã đánh dấu xong {count} việc cho bạn.",
   "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
@@ -8040,6 +8053,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này.",
   "import.reason.employer_not_found_dropped":
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_refused":
+    "Không thể xác định công ty. Hãy chọn một công ty rõ ràng mà bạn được phép liên kết.",
+  "import.reason.employer_will_create":
+    "Công ty {name} sẽ được tạo nếu chưa có khi nhập hàng này.",
   "import.reason.empty_payload": "Hàng không có trường nào.",
   "import.reason.field_inactive":
     "Không thể ghi “{value}”: trường này không còn hoạt động.",
@@ -16208,20 +16225,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Đang tải Danh sách công việc…",
   "worklist.queue": "Hôm nay",
-  "worklist.review": "Cần xem lại",
-  "worklist.more": "Tải thêm",
-  "worklist.more.where":
-    "Thêm việc trong ngày: việc mới có thể xuất hiện ở “{today}” hoặc “{review}”.",
-  "worklist.more.failed": "Không thể tải thêm việc. Thử lại.",
-  "worklist.summary":
-    "{urgent} khẩn · {due} đến hạn · {inPlay} đang xử lý · {lower} thường lệ · tổng {total}",
-  "worklist.summary.noMiddle":
-    "{urgent} khẩn · {due} đến hạn · {lower} thường lệ · tổng {total}",
-  "worklist.summary.wholeDay": "Cả ngày: {sentence}",
-  "worklist.summary.split": "{today} hôm nay · {review} cần xem lại",
-  "worklist.completeness": "Hiển thị {shown} trên {considered} việc",
-  "worklist.completeness.floor_one": "Hiển thị {shown} việc",
-  "worklist.completeness.floor_other": "Hiển thị {shown} việc",
+  "worklist.completeness": "Đã tải {shown} trên {considered} việc",
+  "worklist.completeness.floor_one": "Đã tải {shown} việc",
+  "worklist.completeness.floor_other": "Đã tải {shown} việc",
   "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
   "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
   "worklist.completeness.bounded":
@@ -16230,20 +16236,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một số danh mục có thể có nhiều mục hơn danh sách này hiển thị.",
   "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
   "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
-  "worklist.review.partial":
-    "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
-  "worklist.emptyPage": "Trang này chưa có mục nào. Tải thêm để tiếp tục.",
-  "worklist.review.more":
-    "Các trang tiếp theo có thể chứa mục cần xét duyệt. Tải thêm bên dưới để tiếp tục.",
-  "worklist.review.snapshotChanged":
-    "Hiển thị {loaded} trên {total} mục của lần xem ban đầu. Công việc đã thay đổi; hãy làm mới để cập nhật tổng số.",
-  "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
-  "worklist.review.floor":
-    "Đã hiển thị {loaded}+. Có thể có nhiều mục hơn danh sách này hiển thị.",
+  "worklist.emptyPage": "Phần này chưa có mục nào. Cuộn để tải thêm.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":
-    "Không có việc cần làm đến hạn hôm nay hoặc quá hạn. Các việc cần làm về sau nằm ở tab Việc cần làm của từng hồ sơ.",
+    "Không có việc đến hạn hôm nay hoặc quá hạn. Việc sau đó nằm trong Sắp tới và tồn đọng.",
   "worklist.clearOfWhatWasRead": "Các nguồn đã tải không có việc nào.",
   "worklist.partialTitle": "Danh sách công việc chưa đầy đủ",
   "worklist.partial": "{sources}.",
@@ -16461,8 +16458,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{gone} việc trong số này đã được xử lý từ khi mở danh sách.",
   "worklist.walk.both":
     "Từ khi mở danh sách: {arrived} việc mới, {gone} việc đã xử lý.",
-  "worklist.walk.title": "Danh sách đã thay đổi",
-  "worklist.walk.refresh": "Làm mới",
+  "worklist.walk.title": "Có ưu tiên mới",
+  "worklist.walk.refresh": "Làm mới danh sách",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý thay bạn.",
   "worklist.handled.loading": "Đang tải thao tác…",
   "worklist.handled.count": "Thay đổi gần đây: {count}",
@@ -16580,6 +16577,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.decisions": "Phê duyệt",
   "worklist.filter.relationships": "Liên hệ đã im lặng",
   "worklist.filter.system": "Hệ thống",
+  "worklist.filter.upcoming": "Sắp tới và tồn đọng",
+  "worklist.upcoming.failed": "Không tải được việc sắp tới.",
+  "worklist.upcoming.end": "Đã tải hết việc sắp tới.",
+  "worklist.upcoming.empty": "Không có việc nào được lên kế hoạch sau hôm nay.",
+  "worklist.end.system": "Đã tải hết sự cố.",
+  "worklist.end.decisions": "Đã tải hết quyết định.",
+  "worklist.end.today": "Đã tải hết việc hôm nay.",
+  "worklist.clear.system": "Không có sự cố nào chưa xử lý.",
+  "worklist.clear.decisions": "Không có quyết định nào đang chờ bạn.",
+  "worklist.view.label": "Chế độ xem công việc",
+  "worklist.view.today": "Hôm nay",
+  "worklist.view.decisions": "Quyết định",
+  "worklist.view.system": "Hệ thống",
+  "worklist.view.total.today_one": "{count} việc cần làm",
+  "worklist.view.total.today_other": "{count} việc cần làm",
+  "worklist.view.total.decisions_one": "{count} quyết định đang chờ",
+  "worklist.view.total.decisions_other": "{count} quyết định đang chờ",
+  "worklist.view.total.system_one": "{count} sự cố chưa xử lý",
+  "worklist.view.total.system_other": "{count} sự cố chưa xử lý",
   "worklist.filter.linked.urgent":
     "Chỉ hiển thị việc khẩn cấp: có ai đó đang chờ, hoặc một cam kết sắp bị lỡ.",
   "worklist.filter.linked.except_decisions":

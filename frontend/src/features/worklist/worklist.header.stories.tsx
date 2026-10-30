@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import type { WorklistView } from "../../lib/worklistviews";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
 import { WorklistHeader } from "./worklist.header";
 import type { Worklist, WorklistScope } from "./worklist.queries";
@@ -78,6 +79,7 @@ function frame(
   buckets?: WorklistBuckets,
   shape: (page: Worklist) => Worklist = (page) => page,
   scope: WorklistScope = "mine",
+  view: WorklistView = "today",
 ) {
   globalThis.fetch = (async (): Promise<Response> =>
     jsonResponse(roster)) as typeof fetch;
@@ -88,6 +90,8 @@ function frame(
         day={page}
         loaded={page.queue}
         scope={scope}
+        view={view}
+        onView={() => {}}
         filter="all"
         owner={owner}
         onScope={() => {}}
@@ -149,12 +153,15 @@ export const BothDialsDark: Story = {
   render: () => frame(["mine", "unassigned", "team", "all"]),
 };
 
-/** A server that sends the partition: the sentence names the two panels by
- *  their headings, Today and To review. A half with nothing in it still prints
- *  its zero, so the line keeps its shape from day to day. */
-export const TheSplit: Story = {
+/** The Decisions view: its own headline and count, and no category buttons,
+ *  because the view holds one category. */
+export const TheDecisionsView: Story = {
   render: () =>
-    frame(["mine"], "", { urgent: 0, due_today: 3, planned: 9, review: 0 }),
+    frame(["mine"], "", undefined, (page) => page, "mine", "decisions"),
+};
+export const TheDecisionsViewDark: Story = {
+  ...TheDecisionsView,
+  globals: { theme: "dark" },
 };
 
 // Eight duplicate pairs on one card beside two of thirty tasks: ten items on

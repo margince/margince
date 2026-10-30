@@ -92,7 +92,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
 	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
-		contacts.NewStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
+		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
 	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
@@ -112,7 +112,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
 	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,

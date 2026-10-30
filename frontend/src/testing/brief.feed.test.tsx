@@ -125,7 +125,7 @@ it("neither grows focus nor links the whole queue when more pages exist", () => 
     />,
   );
   expect(
-    screen.queryByRole("button", { name: en["worklist.more"] }),
+    screen.queryByRole("button", { name: en["list.loadMore"] }),
   ).toBeNull();
   // The page header's "Show Worklist" button is Home's one way into the queue.
   expect(container.querySelector('a[href*="filter=all"]')).toBeNull();

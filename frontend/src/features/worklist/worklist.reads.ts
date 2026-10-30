@@ -6,6 +6,7 @@ import {
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
 import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
+import { categoryInView, type WorklistView } from "../../lib/worklistviews";
 import type {
   TeamBoard,
   TeamExceptions,
@@ -34,9 +35,10 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
   enabled = true,
+  view?: WorklistView,
 ) {
   return useInfiniteQuery({
-    ...worklistDayOptions(scope, filter, owner),
+    ...worklistDayOptions(scope, filter, owner, view),
     enabled,
   });
 }
@@ -46,8 +48,16 @@ export function worklistDayOptions(
   scope: WorklistScope,
   filter: WorklistFilter,
   owner?: string,
+  view?: WorklistView,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
+  // A view joins the key only when named, so Home's read keeps its own key.
+  const queryKey = [
+    ...worklistKey,
+    scope,
+    filter,
+    owner ?? "",
+    ...(view ? [view] : []),
+  ];
   return infiniteQueryOptions({
     queryKey,
     ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
@@ -55,7 +65,7 @@ export function worklistDayOptions(
     // React Query aborts the signal once no screen still observes this key, and
     // the server then stops assembling the day instead of answering nobody.
     queryFn: ({ pageParam, signal }) =>
-      readWorklistPage(scope, filter, owner, pageParam, signal),
+      readWorklistPage(scope, filter, owner, pageParam, signal, view),
     // A page can empty as rows leave the snapshot; only its cursor ends the walk.
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
@@ -68,14 +78,31 @@ export async function readWorklistPage(
   owner: string | undefined,
   cursor: string | undefined,
   signal?: AbortSignal,
+  view?: WorklistView,
 ): Promise<Worklist> {
-  const dials = owner ? { owner, filter } : { scope, filter };
-  return unwrap(
+  // Decisions and System also send their own filter, so a server that knows
+  // no `view` still answers with that view's rows.
+  const wire = view && view !== "today" && filter === "all" ? view : filter;
+  const whose = owner ? { owner, filter: wire } : { scope, filter: wire };
+  const dials = view ? { ...whose, view } : whose;
+  const page = unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },
       signal,
     }),
   );
+  return view === undefined || page.view !== undefined
+    ? page
+    : withinView(page, view);
+}
+
+// A server that echoes no view ignored it, so the rows outside the view are
+// dropped here rather than drawn under the view's heading.
+function withinView(page: Worklist, view: WorklistView): Worklist {
+  return {
+    ...page,
+    queue: page.queue.filter((item) => categoryInView(item.category, view)),
+  };
 }
 
 /**

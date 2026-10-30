@@ -76,20 +76,18 @@ var mutatingStatement = regexp.MustCompile(
 // function takes first. That is a claim about privacy/erasure.go, so write down
 // which rows and why the eraser never holds them.
 var locksBeforeTheSubject = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:Store.createFromCard":          cardCreateMintsItsSubject,
-	"internal/modules/contacts:Store.completeCardCreate":      cardCreateMintsItsSubject,
-	"internal/modules/contacts:Store.CreateFromVCardReviewTx": cardCreateMintsItsSubject,
-	"internal/modules/contacts:runLinkedInMatch":              "the two writes this walk reads as one body are in SEPARATE transactions. runLinkedInMatch resolves ghost employers (matchGhostCompanies, which writes linkedin_connection.matched_company_id) in its own s.db.Tx that COMMITS, and only then opens the match transaction that holds contacts. The eraser does hold linkedin_connection — it deletes the subject's ghosts after locking the subject — but the company-resolution locks are released at the first commit, before any contact is held, so the two never sit on opposite sides of a cycle. Splitting is deliberate: matched_company_id must be resolved before the name tier reads it, and holding those connection locks into the contact-holding transaction is the one ordering the eraser deadlocks against.",
+	"internal/modules/contacts:Store.EnsureCounterpartyTx":        "SeatAddressesFor takes the seat-address advisory mutex before resolution, not an erasure-owned child row. Resolution either inserts a private new contact or holds the incumbent before filling it; the later employer hold repeats that subject lock.",
+	"internal/modules/contacts:Store.SetProjectStakeholder":       "UpdateRelationship and CreateRelationship each open and finish their own transaction. The earlier update branch and the later create branch never hold locks in one transaction.",
+	"internal/modules/contacts:Store.applyEmploymentEpisode":      "ApplyEmploymentImport holds this contact with HoldWritableLive before calling applyEmploymentEvidence and this private helper. Its earlier outcome or company writes run under that same held subject.",
+	"internal/modules/contacts:Store.applyEmploymentEvidence":     "Private iteration called only after ApplyEmploymentImport holds the contact with HoldWritableLive. Every copied outcome and episode refers to that same held contact.",
+	"internal/modules/contacts:Store.attachEmployerTx":            "resolveNamedEmployer writes only a newly inserted company, which the eraser cannot yet see. lockEmploymentClocks then holds the contact among its clock targets before the relationship writer repeats the subject hold.",
+	"internal/modules/contacts:Store.createContactInTx":           "The subject does not exist before createContact inserts it in this transaction. Earlier owner and identity admission cannot race an eraser holding that unpublished contact.",
+	"internal/modules/contacts:Store.deferCompanyToTriage":        "readDispositionTx holds the domain disposition, which the contact eraser neither deletes nor locks. The settled-company branch holds the contact before locking its employer.",
+	"internal/modules/contacts:Store.ensureChannelCounterpartyTx": "resolveChannelContact either creates an unpublished contact or locks an existing contact before adopting its address or channel identity. The later employer hold repeats that held subject.",
+	"internal/modules/contacts:Store.promoteLeadTx":               "lockLeadForContact holds the existing candidate before the lead; a new target is unpublished. Consent carry and employer resolution therefore operate under an already-held contact.",
+	"internal/modules/contacts:Store.updateContactInTx":           "Replace-set edits lock the contact in lockEditedContactLanes before child writes; a scalar patch locks the contact itself before converting held leads. The later employer hold repeats the contact lock.",
+	"internal/modules/contacts:runLinkedInMatch":                  "the two writes this walk reads as one body are in SEPARATE transactions. runLinkedInMatch resolves ghost employers (matchGhostCompanies, which writes linkedin_connection.matched_company_id) in its own s.db.Tx that COMMITS, and only then opens the match transaction that holds contacts. The eraser does hold linkedin_connection — it deletes the subject's ghosts after locking the subject — but the company-resolution locks are released at the first commit, before any contact is held, so the two never sit on opposite sides of a cycle. Splitting is deliberate: matched_company_id must be resolved before the name tier reads it, and holding those connection locks into the contact-holding transaction is the one ordering the eraser deadlocks against.",
 })
-
-// cardCreateMintsItsSubject is why a card's create may write before it holds
-// its subject: the subject is the contact this transaction just inserted. No
-// other transaction sees that row before the commit, so the eraser cannot hold
-// it. The later hold, for the card's website evidence, never waits.
-const cardCreateMintsItsSubject = "the subject is the contact this same transaction inserted: the contact, " +
-	"email, phone, company and relationship rows come first, and the hold taken afterwards by the website " +
-	"evidence write is on a row no other transaction can see until the commit, so the eraser never holds it " +
-	"and the hold cannot wait on anything."
 
 func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 	t.Parallel()

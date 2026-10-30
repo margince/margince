@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
@@ -128,22 +127,21 @@ func TestCreateAndLinkFromConsumerMailGivesNoDomain(t *testing.T) {
 	assertEmployedAt(ctx, t, e, contactID, linked.CompanyID)
 }
 
-func TestCreateAndLinkOnAHeldDomainNamesTheHolderAndWritesNothing(t *testing.T) {
+func TestCreateAndLinkOnAHeldDomainReusesTheHolder(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Heldco", "heldco.test")
 	contactID := e.contactWithEmail(ctx, t, "Sam Held", "sam@heldco.test")
 
-	_, err := e.store.LinkContactEmployer(ctx, contactID, LinkEmployerInput{CompanyName: new("Heldco Two")})
-	dup, ok := errors.AsType[*DuplicateDomainError](err)
-	if !ok || dup.ExistingID != holder {
-		t.Fatalf("err = %v, want a duplicate-domain refusal naming %s", err, holder)
+	linked, err := e.store.LinkContactEmployer(ctx, contactID, LinkEmployerInput{CompanyName: new("Heldco Two")})
+	if err != nil || linked.CompanyID != holder || linked.CompanyCreated {
+		t.Fatalf("result = %+v, %v", linked, err)
 	}
-	if got := countCompaniesNamed(ctx, t, e, "Heldco Two"); got != 0 {
-		t.Errorf("%d near-duplicate company(s) written, want 0", got)
+	if countCompaniesNamed(ctx, t, e, "Heldco Two") != 0 {
+		t.Fatal("created duplicate company")
 	}
-	if got := e.employmentsOf(ctx, t, contactID); got != 0 {
-		t.Errorf("%d employment edge(s) written, want 0", got)
+	if got := e.employmentsOf(ctx, t, contactID); got != 1 {
+		t.Fatalf("employment count %d", got)
 	}
 }
 
@@ -207,7 +205,7 @@ func TestCreateAndLinkOnASuppressedDomainGivesNoDomain(t *testing.T) {
 	}
 }
 
-func TestAnAgentContactCreateWithACompanyWritesNothing(t *testing.T) {
+func TestAnAgentContactCreateResolvesItsEmployer(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -221,14 +219,17 @@ func TestAnAgentContactCreateWithACompanyWritesNothing(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	_, err := e.store.CreateContact(ctx, CreateContactInput{
+	created, err := e.store.CreateContact(ctx, CreateContactInput{
 		FullName: "Agent Made", Source: "agent", Employer: EmployerChoice{CompanyName: new("Agent Side Effect GmbH"), Source: "agent"},
 	})
-	if refused, ok := errors.AsType[*values.ParseError](err); !ok || refused.Code != "employer_needs_a_human" {
-		t.Fatalf("err = %v, want employer_needs_a_human", err)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if contacts, companies := countContactsNamed(e.as(), t, e, "Agent Made"), countCompaniesNamed(e.as(), t, e, "Agent Side Effect GmbH"); contacts+companies != 0 {
-		t.Errorf("%d contact(s) and %d company(s) written, want none", contacts, companies)
+	if created.Employer == nil || created.Employer.CompanyName != "Agent Side Effect GmbH" {
+		t.Fatalf("employer = %+v", created.Employer)
+	}
+	if countCompaniesNamed(e.as(), t, e, "Agent Side Effect GmbH") != 1 {
+		t.Fatal("employer was not created once")
 	}
 }
 

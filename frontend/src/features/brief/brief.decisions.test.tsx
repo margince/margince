@@ -140,7 +140,9 @@ describe("waiting on you", () => {
     const link = screen.getByRole("link", {
       name: en["brief.deck.rest_other"].replace("{count}", "6"),
     });
-    expect(link.getAttribute("href")).toBe("/#/home?filter=decisions&queue=1");
+    expect(link.getAttribute("href")).toBe(
+      "/#/home?queue=1&queue_view=decisions",
+    );
   });
 
   it("says nothing about a remainder when it is showing everything", () => {
