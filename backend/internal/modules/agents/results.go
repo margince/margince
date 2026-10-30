@@ -380,8 +380,8 @@ type QualifyLeadResult struct {
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
 	// OpenTasks are the deal's tasks still open after the move. Closing a deal
-	// never settles them silently, so a caller that closed one is told what it
-	// left behind, and can settle it with the settle argument.
+	// never settles them silently. So a caller is told what it left behind, and
+	// can settle it with the settle argument.
 	OpenTasks []crmcontracts.DealOpenTask `json:"open_tasks,omitempty"`
 	// SettledTaskIDs are the tasks this call completed, present only when the
 	// caller asked for that. Empty and absent are the same claim here, which is
