@@ -1,5 +1,5 @@
 import { ArrowDown, Check, Lock, Plus } from "lucide-react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
 import { Voiceprint } from "../../components/voiceprint";
 import { Button } from "../../design-system/atoms";
@@ -37,7 +37,8 @@ const BANDS = ["thin", "good", "rich", "sharp"] as const;
 
 // The head of the page: who the writer is, beside the voiceprint whose ring is
 // the corpus toward its target. Before the first build the portrait is the
-// promise of one, and the verb is to add writing.
+// promise of one, and the verb is to add writing. A first version awaiting
+// review is the last step, so its decision takes the place of the verbs.
 export function VoiceHero({
   profile,
   insights,
@@ -47,6 +48,7 @@ export function VoiceHero({
   canEdit,
   intakeBusy,
   onBuilt,
+  review,
 }: Readonly<{
   profile: VoiceProfile;
   insights: VoiceInsightsData | null;
@@ -56,6 +58,7 @@ export function VoiceHero({
   canEdit: boolean;
   intakeBusy: boolean;
   onBuilt: () => void;
+  review?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -87,7 +90,12 @@ export function VoiceHero({
             </p>
           </div>
         )}
-        {(profile.profile_version ?? 0) > 0 ? (
+        {review ? (
+          <div className="vdna-firstbuild">
+            <VoiceSteps done={2} />
+            {review}
+          </div>
+        ) : (profile.profile_version ?? 0) > 0 ? (
           <LearnedActs hasDrafts={hasDrafts} />
         ) : (
           <FirstBuild

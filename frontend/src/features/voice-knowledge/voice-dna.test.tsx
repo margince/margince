@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { candidateVersion } from "../../testing/voice-candidate";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
@@ -685,5 +686,83 @@ describe("what the build button is called", () => {
     expect(
       within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
     ).toBeNull();
+  });
+});
+
+// A build lands as a candidate a human accepts. The hero stays the head of the
+// page through that review rather than giving way to a plain card above it.
+describe("a version awaiting review", () => {
+  type Version = components["schemas"]["VoiceProfileVersion"];
+
+  function stubWith(versions: Version[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({
+            data: [{ ...PROFILE, maturity: "provisional" }],
+            page: emptyPage.page,
+          });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (path === "/voice-profiles/vp-1/versions") {
+          return jsonResponse({ data: versions, page: emptyPage.page });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+  }
+
+  it("asks about a first version from the hero, with its portrait drawn", async () => {
+    stubWith([candidateVersion([])]);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(
+      await within(hero).findByText("Direct, concrete, few adjectives."),
+    ).toBeTruthy();
+    expect(within(hero).getByText("Voice v1 ready for review")).toBeTruthy();
+    expect(
+      within(hero).getByRole("button", { name: "Use this version" }),
+    ).toBeTruthy();
+    expect(
+      within(hero).getByRole("button", { name: "Discard this version" }),
+    ).toBeTruthy();
+    expect(
+      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+    ).toBeNull();
+  });
+
+  it("keeps the active voice on top and reviews a newer one under it", async () => {
+    const active: Version = {
+      ...candidateVersion([]),
+      id: "v-1",
+      status: "active",
+      profile_json: {
+        inference: { identity_summary: "The active voice." },
+      },
+    };
+    const next: Version = {
+      ...candidateVersion([]),
+      id: "v-2",
+      profile_version: 2,
+    };
+    stubWith([next, active]);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(await within(hero).findByText("The active voice.")).toBeTruthy();
+    const title = await screen.findByText("Voice v2 ready for review");
+    expect(hero.contains(title)).toBe(false);
+    expect(
+      hero.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Keep current voice" }),
+    ).toBeTruthy();
   });
 });

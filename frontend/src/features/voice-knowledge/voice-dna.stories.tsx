@@ -301,6 +301,54 @@ export const ReadyToBuild: Story = {
   }),
 };
 
+// A first build waiting on the owner: the page draws what it learned, and the
+// hero's last step asks whether to use it.
+export const FirstReview: Story = {
+  render: voiceStory(
+    {
+      "GET /voice-profiles": () =>
+        jsonResponse({
+          data: [{ ...COLLECTING_PROFILE, maturity: "provisional" }],
+          page: emptyPage.page,
+        }),
+      "GET /voice-profiles/vp-1/sources": () =>
+        jsonResponse({ data: [SOURCE, SPOKEN_SOURCE], summary: SUMMARY }),
+    },
+    "full",
+    [
+      {
+        ...ACTIVE_VERSION,
+        id: "vv-1",
+        profile_version: 1,
+        status: "candidate",
+      },
+    ],
+  ),
+};
+
+// A rebuild waiting on the owner: the active voice keeps the hero, and the
+// newer version is reviewed right under it.
+export const NewerReview: Story = {
+  render: voiceStory(
+    {
+      "GET /voice-profiles": () =>
+        jsonResponse({ data: [PROFILE], page: emptyPage.page }),
+      "GET /voice-profiles/vp-1/sources": () =>
+        jsonResponse({ data: [SOURCE, SPOKEN_SOURCE], summary: SUMMARY }),
+    },
+    "full",
+    [
+      {
+        ...ACTIVE_VERSION,
+        id: "vv-4",
+        profile_version: 4,
+        status: "candidate",
+      },
+      ACTIVE_VERSION,
+    ],
+  ),
+};
+
 // Dark below the 800-word floor. The corpus meter and the floor meter stand
 // together here, both drawn from tokens, beside the thin band.
 export const CollectingDark: Story = {

@@ -501,6 +501,20 @@
   margin-top: var(--space-2);
 }
 
+.vdna-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vdna-review > p {
+  margin: 0;
+}
+
+.vdna-review > b {
+  font-weight: var(--fontWeightMedium);
+}
+
 .vdna-candidate-acts {
   display: flex;
   gap: var(--gapActions);

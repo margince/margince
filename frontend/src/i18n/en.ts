@@ -12354,6 +12354,8 @@ export const en = {
   "voice.candidate.concernsLabel": "Why this version needs review",
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
+  "voice.candidate.firstHint":
+    "If it reads like you, use it. If not, discard it and add more writing samples; the next build learns from them.",
   "voice.candidate.reason.uncomparable":
     "The previous voice profile could not be compared. Review this version before replacing it.",
   "voice.candidate.reason.identity":
@@ -12378,6 +12380,7 @@ export const en = {
     "Rules about wording and register dropped since your previous version: {n}.",
   "voice.candidate.apply": "Use this version",
   "voice.candidate.reject": "Keep current voice",
+  "voice.candidate.discard": "Discard this version",
   "voice.history.label": "Versions and learning",
   "voice.history.empty": "No versions yet. Build your voice first.",
   "voice.history.deltasLabel": "What changed",

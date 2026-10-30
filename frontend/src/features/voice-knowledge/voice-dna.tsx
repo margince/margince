@@ -39,6 +39,7 @@ import {
 import { useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
   CandidateBanner,
+  CandidateReview,
   loadedVersions,
   useVoiceLearning,
   useVoiceVersions,
@@ -188,7 +189,10 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
-  const insights = active ? parseVoiceInsights(active) : null;
+  // A first version awaiting review is the only voice there is. The page draws
+  // it in full while the hero asks whether to use it.
+  const shown = active ?? candidate;
+  const insights = shown ? parseVoiceInsights(shown) : null;
   const summary = useVoiceSources(profile.id).data?.summary;
   const learning = useVoiceLearning(profile.id).data;
   const next = useNextBestLine(insights);
@@ -209,9 +213,31 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       {!canEdit && (
         <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
       )}
-      {/* First when it is there: a review waiting on a human is the most
-          actionable thing on the page, in every profile state. */}
-      {candidate && (
+      <VoiceHero
+        profile={profile}
+        insights={insights}
+        profileVersion={shown?.profile_version ?? 0}
+        summary={summary}
+        hasDrafts={hasDrafts}
+        canEdit={canEdit}
+        intakeBusy={intakeBusy}
+        onBuilt={invalidate}
+        review={
+          candidate &&
+          !active && (
+            <CandidateReview
+              profileId={profile.id}
+              candidate={candidate}
+              canEdit={canEdit}
+              onChanged={invalidate}
+              replacing={false}
+            />
+          )
+        }
+      />
+      {/* Straight under the voice it would replace: a review waiting on a
+          human is the most actionable thing below the hero. */}
+      {candidate && active && (
         <CandidateBanner
           profileId={profile.id}
           candidate={candidate}
@@ -219,16 +245,6 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           onChanged={invalidate}
         />
       )}
-      <VoiceHero
-        profile={profile}
-        insights={insights}
-        profileVersion={active?.profile_version ?? 0}
-        summary={summary}
-        hasDrafts={hasDrafts}
-        canEdit={canEdit}
-        intakeBusy={intakeBusy}
-        onBuilt={invalidate}
-      />
       {/* Before the first build the hero itself guides the writer, so the
           strip would only say the same thing twice. */}
       {summary && insights && (
