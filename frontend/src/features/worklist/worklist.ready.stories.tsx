@@ -10,8 +10,8 @@ import { row } from "./worklist.fixtures";
 import type { WorklistItem } from "./worklist.queries";
 import { MeetingReadyVerb, PreparationNote } from "./worklist.ready";
 
-// The reader's own readiness for a meeting: the I'm ready button while it is
-// still to confirm, the Ready mark once said, and the facts that changed since.
+// The reader's own readiness for a meeting. It shows the I'm ready button while
+// it is still to confirm, then the Ready mark, then the facts that changed since.
 
 function meeting(
   preparation: NonNullable<WorklistItem["preparation"]>,

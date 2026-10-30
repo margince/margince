@@ -8,8 +8,8 @@ import { StoryProviders } from "../../testing/story-utils";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
 import { row } from "./worklist.fixtures";
 
-// Selection mode over the loaded queue: Select opens it, Select all ticks every
-// row that takes a box, and Cancel leaves it with focus back on Select.
+// Selection mode over the loaded queue. Select opens it, and Select all ticks
+// every row that takes a box. Cancel leaves it with focus back on Select.
 
 const queue = [
   row({ id: "t1", title: "Send the revised offer", actions: ["complete"] }),
