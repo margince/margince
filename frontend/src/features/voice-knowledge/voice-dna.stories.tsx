@@ -228,9 +228,9 @@ export default meta;
 
 type Story = StoryObj;
 
-// No profile yet: listVoiceProfiles answers an empty page and the card offers
-// the empty state together with the add control that mints the profile — the
-// state an owner who skipped the onboarding voice step lands on.
+// No profile yet: the page promises a voice, walks through the three steps and
+// takes the first sample, which mints the profile. An owner who skipped the
+// onboarding voice step lands here.
 export const Empty: Story = {
   render: voiceStory({
     "GET /voice-profiles": () => jsonResponse(emptyPage),
@@ -275,6 +275,28 @@ export const Collecting: Story = {
       jsonResponse({
         data: [COLLECTING_SOURCE],
         summary: COLLECTING_SUMMARY,
+      }),
+  }),
+};
+
+// Past the floor with nothing built yet: the hero ticks the first step and
+// offers the first build where the writer is already looking.
+export const ReadyToBuild: Story = {
+  render: voiceStory({
+    "GET /voice-profiles": () =>
+      jsonResponse({
+        data: [{ ...COLLECTING_PROFILE, maturity: "provisional" }],
+        page: emptyPage.page,
+      }),
+    "GET /voice-profiles/vp-1/sources": () =>
+      jsonResponse({
+        data: [COLLECTING_SOURCE],
+        summary: {
+          ...COLLECTING_SUMMARY,
+          total_words: 2400,
+          maturity: "provisional",
+          register_words: { general: 2400 },
+        },
       }),
   }),
 };
