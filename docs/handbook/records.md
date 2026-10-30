@@ -72,7 +72,7 @@ To edit a contact in Margince, open it and click the value to change in the **De
 1. If the panel is hidden, choose **Show details and permissions**.
 2. Click the value (an empty one says **Not set**), type and press Enter, or pick from the list. `Esc` stops.
 3. **Email**, **Phone** and **Address** open a small form with **Type**, **Primary** and **Remove**; press **Save**.
-**Title**, **LinkedIn**, **Owner** and custom fields change the same way. To rename the contact, click its name at the top of the page, type the new **Full name** and press Enter; a blank name is refused. First and last name are set only when the contact is created.
+**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created.
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
