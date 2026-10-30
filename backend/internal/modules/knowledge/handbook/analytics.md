@@ -115,8 +115,7 @@ covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
-the owners you may measure, and the answer says so.
-With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
+the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
 
 ## Under every report
 
