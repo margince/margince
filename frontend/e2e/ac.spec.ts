@@ -1008,14 +1008,14 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
-// The decision queue lives on Today now, one decision at a time: the focus lane
-// draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a contact presses is unchanged and this asserts it
-// where a contact now finds it.
-test("AC-inbox: the staged decision is on the day's queue", async ({
+// A staged proposal is a judgement somebody owes, so it is on the Worklist's
+// Decisions view, drawn through the same ApprovalRow the record page uses; the
+// verb a contact presses is asserted where a contact finds it.
+test("AC-inbox: the staged decision is on the Decisions view", async ({
   page,
 }) => {
   await page.goto("/#/worklist");
+  await page.getByRole("button", { name: /^Entscheidungen/ }).click();
   // The queue shows the decision by the sentence the SERVER composed for it,
   // not by its kind: the old lane drew "E-Mail senden" from the kind label,
   // and a queue that has to rank things across producers names each one by
@@ -1536,6 +1536,7 @@ test.describe("§3.8: 390px mobile", () => {
     page,
   }) => {
     await page.goto("/#/worklist");
+    await page.getByRole("button", { name: /^Entscheidungen/ }).click();
     await page.waitForLoadState("networkidle");
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
@@ -1647,7 +1648,7 @@ test.describe("§3.8: 390px mobile", () => {
       await page.waitForLoadState("networkidle");
       await settleAnimations(page);
       await expect(
-        page.getByText(/Send the follow-up to Anna Weber/).first(),
+        page.getByText(/Send the retrofit quote to Turbinenbau/).first(),
       ).toBeVisible();
 
       // Nothing runs off the side. The row wraps instead of pushing the page
