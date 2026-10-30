@@ -328,3 +328,63 @@ func TestSdrTeamReviewJudgesUnassignedAndBlockedApart(t *testing.T) {
 		})
 	}
 }
+
+// No history of team membership is kept. A member who left the team takes
+// their past handoffs with them, and the answer says it follows today's team.
+func TestSdrTeamReviewFollowsTodaysTeamForAMemberWhoLeft(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	f.submitAs(t, e.Rep1, "Handed on before leaving")
+	f.at = f.at.Add(time.Hour)
+	f.submitAs(t, f.second, "Handed on by who stayed")
+	if _, err := e.owner.Exec(context.Background(), `DELETE FROM team_membership WHERE team_id=$1 AND user_id=$2`, e.Team1, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
+	if got.MembershipBasis != crmcontracts.SdrTeamReviewMembershipBasisCurrent {
+		t.Fatalf("the answer must say whose membership it follows: %q", got.MembershipBasis)
+	}
+	if got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 1 {
+		t.Fatalf("the team counts only today's members' work: %+v", got.Handoffs)
+	}
+	for _, row := range got.Members {
+		if ids.UUID(row.Id) == e.Rep1 {
+			t.Fatalf("a member who left has no row: %+v", got.Members)
+		}
+	}
+}
+
+// The member rows are read for a page of members in name order, however many
+// the team has, and the answer says when more exist.
+func TestSdrTeamReviewReadsOnlyAPageOfMembers(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	f.submitAs(t, f.second, "Second SDR's")
+	previous := sdrTeamMemberRows
+	sdrTeamMemberRows = 1
+	t.Cleanup(func() { sdrTeamMemberRows = previous })
+	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
+	if len(got.Members) != 1 || !got.MembersTruncated || got.Members[0].Label != "Rep" {
+		t.Fatalf("one row, the first by name, and a sign that more exist: %+v", got.Members)
+	}
+	if got.Handoffs == nil || got.Handoffs.Outcomes.Submitted != 1 {
+		t.Fatalf("the team's figures still count every member: %+v", got.Handoffs)
+	}
+}
+
+// My teams is the seat's own default, as reportingRequested reads it for the
+// evaluator. The review resolves it as it resolves no scope at all.
+func TestSdrTeamReviewReadsMyTeamsAsTheDefault(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	mine := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindManagedTeams, nil)
+	var fallback crmcontracts.SdrTeamReview
+	body := sdrServe(f.as(f.manager), t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+		h.GetSdrTeamReview(w, r, crmcontracts.GetSdrTeamReviewParams{})
+	}, f.now)
+	if err := json.Unmarshal(body, &fallback); err != nil {
+		t.Fatal(err)
+	}
+	if mine.Scope.Kind != fallback.Scope.Kind || mine.Scope.Label != fallback.Scope.Label {
+		t.Fatalf("My teams is the default: %+v, want %+v", mine.Scope, fallback.Scope)
+	}
+}

@@ -40324,6 +40324,11 @@ export interface components {
         };
         SdrTeamReview: {
             /**
+             * @description Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+             * @enum {string}
+             */
+            membership_basis: "current";
+            /**
              * Format: date-time
              * @description The instant every figure was read at.
              */
@@ -83566,8 +83571,8 @@ export interface operations {
     getSdrTeamReview: {
         parameters: {
             query?: {
-                /** @description Which team to review. Omitted means the seat's own default population. */
-                scope_kind?: "team" | "workspace";
+                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. */
+                scope_kind?: "team" | "workspace" | "managed_teams";
                 /** @description The team named by `scope_kind`. */
                 scope_id?: string;
                 /** @description The period, in the installation's reporting zone. */

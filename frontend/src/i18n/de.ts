@@ -7013,6 +7013,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.workflowTitle": "SDR-Übergaben",
   "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.overview.team": "Team-Akquise",
+  "analytics.team.chooseTeam": "Wähle ein Team",
+  "analytics.team.chooseTeamBody":
+    "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
+  "analytics.team.todaysMembers":
+    "Diese Zahlen folgen dem heutigen Team. Ein Mitglied, das gegangen ist, nimmt seine früheren Übergaben mit.",
   "analytics.team.countedOnce":
     "Jede Zahl zählt die Arbeit des Teams einmal. Ein Termin mit mehreren Mitgliedern ist hier ein Termin.",
   "analytics.team.feedback": "Rückmeldung zu Übergaben",

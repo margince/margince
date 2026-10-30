@@ -7,14 +7,13 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { SegmentedControl, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { DataTable } from "../../design-system/datatable";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDuration, formatHours, formatNumber } from "../../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
@@ -24,6 +23,7 @@ import {
   OverviewLinks,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
+import { MemberTable, ReasonList } from "./analytics.overview.team.members";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
   type ReportingEvidenceRef,
@@ -38,7 +38,6 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 type Framework = components["schemas"]["ReportingFramework"];
 type Review = components["schemas"]["SdrTeamReview"];
 type Handoffs = components["schemas"]["SdrTeamHandoffs"];
-type Member = components["schemas"]["SdrTeamMember"];
 
 // The periods the team review reads. A team is coached week by week, and a
 // month is the longest span its handoff rounds stay comparable over.
@@ -54,22 +53,32 @@ function teamPeriod(value: string | null | undefined): TeamPeriod {
   return TEAM_PERIODS.find((period) => period === value) ?? "this_week";
 }
 
+type TeamScope = Readonly<{
+  kind: "team" | "workspace" | "managed_teams";
+  id?: string;
+}>;
+
+// The scope a team review may read. A colleague's own records are not a team,
+// so an owner scope has none and the page reads nothing for it.
+function teamScope(scope: AnalyticsScope): TeamScope | undefined {
+  return scope.kind === "owner"
+    ? undefined
+    : { kind: scope.kind, id: scope.id ?? undefined };
+}
+
 /** The team review of handoffs and members for one team and period. */
-export function useSdrTeamReview(scope: AnalyticsScope, period: TeamPeriod) {
-  const named = scope.kind === "team" || scope.kind === "workspace";
+export function useSdrTeamReview(
+  scope: TeamScope | undefined,
+  period: TeamPeriod,
+) {
   return useQuery({
-    queryKey: ["sdr-team", scope.kind, scope.id ?? "", period],
+    queryKey: ["sdr-team", scope?.kind, scope?.id ?? "", period],
+    enabled: scope !== undefined,
     queryFn: async ({ signal }): Promise<Review> =>
       unwrap(
         await api.GET("/analytics/sdr-team", {
           params: {
-            query: named
-              ? {
-                  scope_kind: scope.kind as "team" | "workspace",
-                  scope_id: scope.id ?? undefined,
-                  period,
-                }
-              : { period },
+            query: { scope_kind: scope?.kind, scope_id: scope?.id, period },
           },
           signal,
         }),
@@ -102,6 +111,9 @@ export function TeamProspecting({
   const period = teamPeriod(params.get("period"));
   const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const { metrics, blocks } = presetRequest("team", catalog);
+  // Both reads take this one scope, so the figures and the feedback below
+  // them always describe the same members.
+  const team = teamScope(scope);
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     period,
@@ -110,8 +122,11 @@ export function TeamProspecting({
     metrics,
     blocks: [],
   };
-  const query = useReportingEvaluation(selection, metrics.length > 0);
-  const review = useSdrTeamReview(scope, period);
+  const query = useReportingEvaluation(
+    selection,
+    team !== undefined && metrics.length > 0,
+  );
+  const review = useSdrTeamReview(team, period);
   const handoffWorkflow =
     (workflow.data?.definition.template ??
       (review.data?.workflow === "handoff" ? "sdr" : undefined)) === "sdr";
@@ -146,6 +161,51 @@ export function TeamProspecting({
           }}
         />
       </FilterBar>
+      {team ? (
+        <TeamBody
+          query={query}
+          review={review}
+          handoffWorkflow={handoffWorkflow}
+          evidence={evidence}
+          onEvidence={setEvidence}
+        />
+      ) : (
+        <Callout
+          tone="info"
+          kind="standing"
+          title={t("analytics.team.chooseTeam")}
+        >
+          <p>{t("analytics.team.chooseTeamBody")}</p>
+        </Callout>
+      )}
+      <OverviewLinks
+        sections={[
+          { section: "sdr", label: t("reporting.sdr") },
+          { section: "leads", label: t("reporting.leads") },
+        ]}
+      />
+    </>
+  );
+}
+
+// The team's readings, then its handoff feedback and members.
+function TeamBody({
+  query,
+  review,
+  handoffWorkflow,
+  evidence,
+  onEvidence: setEvidence,
+}: Readonly<{
+  query: ReturnType<typeof useReportingEvaluation>;
+  review: ReturnType<typeof useSdrTeamReview>;
+  handoffWorkflow: boolean;
+  evidence: ReportingEvidenceRef | null;
+  onEvidence: (reference: ReportingEvidenceRef | null) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
       <QueryGate query={query} pendingLabel={t("analytics.overview.team")}>
         {(evaluation) => {
           const span = reportingPeriodLabel(
@@ -216,12 +276,6 @@ export function TeamProspecting({
           )
         }
       </QueryGate>
-      <OverviewLinks
-        sections={[
-          { section: "sdr", label: t("reporting.sdr") },
-          { section: "leads", label: t("reporting.leads") },
-        ]}
-      />
     </>
   );
 }
@@ -319,131 +373,6 @@ function HandoffFeedback({
               count: count(handoffs.unattributed),
             })}
           </p>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function ReasonList({
-  reasons,
-  locale,
-}: Readonly<{ reasons: Handoffs["reasons"]; locale: Locale }>) {
-  const t = useT();
-  return (
-    <DataTable
-      label={t("analytics.team.reasons")}
-      rows={[...reasons]}
-      rowKey={(reason) => `${reason.outcome}:${reason.label}`}
-      columns={[
-        {
-          key: "reason",
-          header: t("analytics.team.reason"),
-          grow: true,
-          render: (reason) => reason.label,
-        },
-        {
-          key: "outcome",
-          header: t("analytics.team.outcome"),
-          render: (reason) =>
-            t(
-              reason.outcome === "rejected"
-                ? "analytics.team.rejected"
-                : "analytics.team.returned",
-            ),
-        },
-        {
-          key: "count",
-          header: t("analytics.team.count"),
-          align: "end",
-          render: (reason) => formatNumber(reason.count, locale),
-        },
-      ]}
-    />
-  );
-}
-
-// One row per member, in name order: what each one's work came to, beside the
-// work still waiting on others. The rows are not a ranking.
-function MemberTable({ review }: Readonly<{ review: Review }>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  if (review.members_withheld) {
-    return <p className="t-caption">{t("analytics.team.membersWithheld")}</p>;
-  }
-  if (review.members.length === 0) return null;
-  const asOf = Date.parse(review.as_of);
-  const count = (value: number) => formatNumber(value, locale);
-  const handoffColumns = review.handoffs
-    ? [
-        {
-          key: "submitted",
-          header: t("analytics.team.submitted"),
-          align: "end" as const,
-          render: (row: Member) => count(row.submitted),
-        },
-        {
-          key: "accepted",
-          header: t("analytics.team.accepted"),
-          align: "end" as const,
-          render: (row: Member) => count(row.accepted),
-        },
-        {
-          key: "returned",
-          header: t("analytics.team.returned"),
-          align: "end" as const,
-          render: (row: Member) => count(row.recycled),
-        },
-        {
-          key: "rejected",
-          header: t("analytics.team.rejected"),
-          align: "end" as const,
-          render: (row: Member) => count(row.rejected),
-        },
-        {
-          key: "waiting",
-          header: t("analytics.team.waiting"),
-          align: "end" as const,
-          render: (row: Member) =>
-            row.oldest_waiting_since
-              ? plural("analytics.team.waitingFor", row.waiting, {
-                  count: count(row.waiting),
-                  age: formatDuration(
-                    asOf - Date.parse(row.oldest_waiting_since),
-                    locale,
-                  ),
-                })
-              : count(row.waiting),
-        },
-      ]
-    : [];
-  return (
-    <Panel title={t("analytics.team.members")}>
-      <PanelBody>
-        <DataTable
-          label={t("analytics.team.members")}
-          rows={[...review.members]}
-          rowKey={(row) => row.id}
-          columns={[
-            {
-              key: "member",
-              header: t("analytics.team.member"),
-              grow: true,
-              render: (row) => row.label,
-            },
-            {
-              key: "meetings",
-              header: t("analytics.team.meetings"),
-              align: "end",
-              render: (row) => count(row.meetings_held),
-            },
-            ...handoffColumns,
-          ]}
-        />
-        <p className="t-caption">{t("analytics.team.rowsOverlap")}</p>
-        {review.members_truncated && (
-          <p className="t-caption">{t("analytics.team.truncated")}</p>
         )}
       </PanelBody>
     </Panel>

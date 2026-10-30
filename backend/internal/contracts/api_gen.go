@@ -18175,6 +18175,21 @@ func (e SdrSummaryWorkflow) Valid() bool {
 	}
 }
 
+// Defines values for SdrTeamReviewMembershipBasis.
+const (
+	SdrTeamReviewMembershipBasisCurrent SdrTeamReviewMembershipBasis = "current"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewMembershipBasis enum.
+func (e SdrTeamReviewMembershipBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrTeamReviewWorkflow.
 const (
 	SdrTeamReviewWorkflowHandoff       SdrTeamReviewWorkflow = "handoff"
@@ -24012,13 +24027,16 @@ func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
 
 // Defines values for GetSdrTeamReviewParamsScopeKind.
 const (
-	GetSdrTeamReviewParamsScopeKindTeam      GetSdrTeamReviewParamsScopeKind = "team"
-	GetSdrTeamReviewParamsScopeKindWorkspace GetSdrTeamReviewParamsScopeKind = "workspace"
+	GetSdrTeamReviewParamsScopeKindManagedTeams GetSdrTeamReviewParamsScopeKind = "managed_teams"
+	GetSdrTeamReviewParamsScopeKindTeam         GetSdrTeamReviewParamsScopeKind = "team"
+	GetSdrTeamReviewParamsScopeKindWorkspace    GetSdrTeamReviewParamsScopeKind = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsScopeKind enum.
 func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 	switch e {
+	case GetSdrTeamReviewParamsScopeKindManagedTeams:
+		return true
 	case GetSdrTeamReviewParamsScopeKindTeam:
 		return true
 	case GetSdrTeamReviewParamsScopeKindWorkspace:
@@ -53025,6 +53043,9 @@ type SdrTeamReview struct {
 	// MembersWithheld The installation shows no individual performance, so `members` is empty.
 	MembersWithheld bool `json:"members_withheld"`
 
+	// MembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+	MembershipBasis SdrTeamReviewMembershipBasis `json:"membership_basis"`
+
 	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
 	ObservedThrough time.Time `json:"observed_through"`
 
@@ -53040,6 +53061,9 @@ type SdrTeamReview struct {
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 	Workflow SdrTeamReviewWorkflow `json:"workflow"`
 }
+
+// SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+type SdrTeamReviewMembershipBasis string
 
 // SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 type SdrTeamReviewWorkflow string
@@ -60992,7 +61016,7 @@ type ListSdrWaitingHandoffsParamsScopeKind string
 
 // GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
 type GetSdrTeamReviewParams struct {
-	// ScopeKind Which team to review. Omitted means the seat's own default population.
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
 	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
 	// ScopeId The team named by `scope_kind`.

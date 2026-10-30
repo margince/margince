@@ -7039,6 +7039,11 @@ export const en = {
   "analytics.overview.workflowTitle": "SDR handoffs",
   "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.overview.team": "Team prospecting",
+  "analytics.team.chooseTeam": "Choose a team",
+  "analytics.team.chooseTeamBody":
+    "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
+  "analytics.team.todaysMembers":
+    "These figures follow today’s team. A member who left takes their past handoffs with them.",
   "analytics.team.countedOnce":
     "Each figure counts the team’s work once. A meeting several members attended is one meeting here.",
   "analytics.team.feedback": "Handoff feedback",

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -51,25 +52,32 @@ func TestEveryPresetIsPublishedWholeToAReaderOfEveryMetric(t *testing.T) {
 
 func TestAPresetKeepsOnlyTheMetricsAndChartsTheReaderMayRead(t *testing.T) {
 	catalog := catalogFor(t, "activity")
-	meetings := []crmcontracts.ReportingMetricID{reportingMeetingsHeld}
-	blocks := []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}
-	want := []crmcontracts.ReportingPreset{
-		{Id: crmcontracts.ReportingPresetIdSdr, Metrics: meetings, Blocks: blocks},
-		{Id: crmcontracts.ReportingPresetIdTeam, Metrics: meetings, Blocks: blocks},
-	}
+	want := []crmcontracts.ReportingPreset{{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}}}
 	if !reflect.DeepEqual(catalog.Presets, want) {
 		t.Fatalf("an activity reader's presets = %+v, want %+v", catalog.Presets, want)
 	}
 	catalog = catalogFor(t, reportingCreditObject)
-	for _, preset := range catalog.Presets {
-		if !slices.Equal(preset.Metrics, []crmcontracts.ReportingMetricID{reportingAcceptedOpportunities}) {
-			t.Fatalf("a credit reader's presets = %+v", catalog.Presets)
-		}
-	}
-	if len(catalog.Presets) != 2 {
-		t.Fatalf("a credit reader is offered %d presets, want sdr and team", len(catalog.Presets))
+	sdr := catalog.Presets[0]
+	if len(catalog.Presets) != 1 || !slices.Equal(sdr.Metrics, []crmcontracts.ReportingMetricID{reportingAcceptedOpportunities}) {
+		t.Fatalf("a credit reader's presets = %+v", catalog.Presets)
 	}
 	if none := catalogFor(t); len(none.Presets) != 0 || none.Presets == nil {
 		t.Fatalf("a reader of no metric gets presets %+v, want an empty list", none.Presets)
+	}
+}
+
+// Team prospecting reads handoffs beside its figures. A seat that may not read
+// them would be offered a view whose second read is refused.
+func TestTheTeamPresetIsOfferedOnlyToAHandoffReader(t *testing.T) {
+	offered := func(catalog crmcontracts.ReportingCatalog) bool {
+		return slices.ContainsFunc(catalog.Presets, func(preset crmcontracts.ReportingPreset) bool {
+			return preset.Id == crmcontracts.ReportingPresetIdTeam
+		})
+	}
+	if offered(catalogFor(t, "activity")) {
+		t.Error("a seat that reads meetings but not handoffs is offered Team prospecting")
+	}
+	if !offered(catalogFor(t, "activity", contacts.HandoffObject)) {
+		t.Error("a seat that reads meetings and handoffs is not offered Team prospecting")
 	}
 }

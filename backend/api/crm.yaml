@@ -29410,8 +29410,8 @@ paths:
       parameters:
         - name: scope_kind
           in: query
-          schema: { type: string, enum: [team, workspace] }
-          description: Which team to review. Omitted means the seat's own default population.
+          schema: { type: string, enum: [team, workspace, managed_teams] }
+          description: Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
         - name: scope_id
           in: query
           schema: { type: string, format: uuid }
@@ -54885,8 +54885,12 @@ components:
     SdrTeamReview:
       type: object
       additionalProperties: false
-      required: [as_of, scope, interval, observed_through, workflow, withheld, small_sample_below, members_withheld, members, members_truncated]
+      required: [as_of, scope, interval, observed_through, workflow, withheld, small_sample_below, membership_basis, members_withheld, members, members_truncated]
       properties:
+        membership_basis:
+          type: string
+          enum: [current]
+          description: 'Whose work a team''s figures hold. `current`: the team''s members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.'
         as_of: { type: string, format: date-time, description: The instant every figure was read at. }
         scope: { $ref: '#/components/schemas/AnalyticsScope' }
         interval: { $ref: '#/components/schemas/ReportingWindow' }

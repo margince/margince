@@ -237,6 +237,7 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
     workflow: "handoff",
     withheld: false,
     small_sample_below: 5,
+    membership_basis: "current",
     meetings: { held: 7, limited_history: false },
     handoffs: {
       outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },

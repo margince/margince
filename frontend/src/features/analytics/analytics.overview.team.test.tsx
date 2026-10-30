@@ -10,6 +10,8 @@ import { jsonResponse } from "../../testing/story-utils";
 import {
   openOverview as open,
   readings,
+  SELF,
+  TEAM,
   teamEvaluation,
   teamReview,
 } from "./analytics.overview.testkit";
@@ -75,6 +77,43 @@ describe("Team prospecting", () => {
       "leads_promoted",
       "leads_awaiting_response",
     ]);
+  });
+
+  it("asks both reads for the one team the scope names", async () => {
+    const asked = open(TEAM_ADDRESS, teamEvaluation, { template: "sdr" });
+    await screen.findByRole("table", { name: "Members" });
+    const scopes = asked
+      .filter(({ url }) =>
+        ["/v1/analytics/sdr-team", "/v1/analytics/evaluate"].includes(
+          url.pathname,
+        ),
+      )
+      .map(({ url }) => [
+        url.searchParams.get("scope_kind"),
+        url.searchParams.get("scope_id"),
+      ]);
+    expect(scopes).toHaveLength(2);
+    expect(scopes).toEqual([
+      ["team", TEAM.id],
+      ["team", TEAM.id],
+    ]);
+    expect(
+      screen.getByText(/These figures follow today’s team\./),
+    ).toBeVisible();
+  });
+
+  it("reads nothing for one colleague's records and says to choose a team", async () => {
+    const asked = open(`${TEAM_ADDRESS}&scope=owner:${SELF}`, teamEvaluation, {
+      template: "sdr",
+    });
+    expect(await screen.findByText("Choose a team")).toBeVisible();
+    expect(
+      asked.some(({ url }) =>
+        ["/v1/analytics/sdr-team", "/v1/analytics/evaluate"].includes(
+          url.pathname,
+        ),
+      ),
+    ).toBe(false);
   });
 
   it("names no member while individual performance is off", async () => {

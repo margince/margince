@@ -6832,6 +6832,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.workflowTitle": "Bàn giao SDR",
   "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
   "analytics.overview.team": "Tìm kiếm khách hàng của nhóm",
+  "analytics.team.chooseTeam": "Chọn một nhóm",
+  "analytics.team.chooseTeamBody":
+    "Tìm kiếm khách hàng của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm kiếm khách hàng của tôi.",
+  "analytics.team.todaysMembers":
+    "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo các bàn giao trước đây của họ.",
   "analytics.team.countedOnce":
     "Mỗi số liệu tính công việc của nhóm một lần. Một cuộc họp có nhiều thành viên tham dự được tính là một cuộc họp.",
   "analytics.team.feedback": "Phản hồi về bàn giao",
