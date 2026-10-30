@@ -15,11 +15,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ContactLink } from "../../design-system/contactlink";
 import { LocaleProvider } from "../../i18n";
-import {
-  jsonResponse as composerResponse,
-  PROVISIONAL_VOICE_PROFILE,
-  stubRoutes as stubComposer,
-} from "../mail/compose.testkit";
 import { WriteToHost } from "./writetohost";
 
 // An address pressed anywhere under the shell opens the product's composer on
@@ -143,11 +138,28 @@ describe("WriteToHost", () => {
   });
 
   it("drafts on arrival when an AI verb opened it, steered by the verb's words", async () => {
-    const draft = "POST /contacts/c-1/draft-email";
-    const sent = stubComposer({
-      "GET /connectors": () => composerResponse(CONNECTED_MAILBOX),
-      "GET /voice-profiles": () => composerResponse(PROVISIONAL_VOICE_PROFILE),
-    });
+    // A writer's voice to draft in; without one the composer waits for a press.
+    const voice = {
+      data: [{ id: "vp-1", status: "ready", maturity: "provisional" }],
+      page: { next_cursor: null, has_more: false },
+    };
+    const drafts: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/connectors"))
+          return jsonResponse(CONNECTED_MAILBOX);
+        if (path.endsWith("/voice-profiles")) return jsonResponse(voice);
+        if (
+          request.method === "POST" &&
+          path.endsWith("/contacts/c-1/draft-email")
+        ) {
+          drafts.push(await request.clone().json());
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
     render(
       <ContactLink
         kind="email"
@@ -163,11 +175,7 @@ describe("WriteToHost", () => {
       await screen.findByRole("button", { name: "Draft email" }),
     );
 
-    await waitFor(() =>
-      expect(sent.filter((request) => request.key === draft)).toHaveLength(1),
-    );
-    expect(sent.find((request) => request.key === draft)?.body).toMatchObject({
-      intent: "deliver on a commitment",
-    });
+    await waitFor(() => expect(drafts).toHaveLength(1));
+    expect(drafts[0]).toMatchObject({ intent: "deliver on a commitment" });
   });
 });

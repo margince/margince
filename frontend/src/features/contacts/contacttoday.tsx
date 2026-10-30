@@ -406,11 +406,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {drafts ? (
-          <Sparkles size={15} aria-hidden="true" />
-        ) : (
-          actionIcon(action.kind)
-        )}
+        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>
