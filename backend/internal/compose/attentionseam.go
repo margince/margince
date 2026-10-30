@@ -175,11 +175,11 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	cards := newDealStatusService(pool, now)
 	return attention.NewService(
 		attentionApprovals{svc: svc},
-		attentionDuplicates{store: contacts.NewStore(db)},
-		attentionTasks{store: activities.NewStore(db), claims: contacts.NewStore(db), db: db},
+		attentionDuplicates{store: newContactsStore(db)},
+		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), db: db},
 		attentionReceipts{svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine: briefs.NewBriefEngine(pool, contacts.NewStore(db)),
+			engine: briefs.NewBriefEngine(pool, newContactsStore(db)),
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
@@ -187,7 +187,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
 		attentionAtRisk{lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now), pool: pool, now: now},
-		attentionDecay{pool: pool, store: contacts.NewStore(db), now: now},
+		attentionDecay{pool: pool, store: newContactsStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
 		// The compliance clock: the open DSR cases, due-soonest first, served
@@ -231,12 +231,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// looks like one.
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
 		// Contact pairs reach the queue as cases, one per group of contacts.
-		attention.WithContactCases(attentionContactCases{store: contacts.NewStore(db)}),
+		attention.WithContactCases(attentionContactCases{store: newContactsStore(db)}),
 	).WithWaiting(attentionWaiting{
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		deals:    deals.NewStore(db, DealsInstallation()),
-		contacts: contacts.NewStore(db),
+		contacts: newContactsStore(db),
 		now:      now,
 	}).
 		// The mirror: the reader's own sends nobody has answered, once the
@@ -286,7 +286,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// answered against the same disposition ledger the admin list shows, so
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
-		WithDomainQuestions(attentionDomainQuestions{store: contacts.NewStore(db)}).
+		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
@@ -300,7 +300,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
-		WithContactEmployers(contacts.NewStore(db)).
+		WithContactEmployers(newContactsStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page

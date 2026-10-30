@@ -165,7 +165,6 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/companynamepromotion.go:CompanyNameCandidates":       "the candidate page the nightly name promoter walks, under the promoter's system actor",
 	"internal/modules/contacts/companynamepromotion.go:loadSignatureCompanyNames":   "the signature-derived names that pass corroborates against, on the same schedule and the same actor",
 	"internal/modules/contacts/contact_children.go:readContact":                     "the shared single-row contact read behind the merge-state resolution. Its callers ask the contact object gate at their entry points",
-	"internal/modules/contacts/contactattachlock.go:lockContactForAttach":           "takes the contact's row lock before an employment edge is attached, so two importers cannot plant conflicting edges. Inside each attaching write",
 	"internal/modules/contacts/contactprivate.go:CaptureOnlyHoldersOfAddressTx":     "which capture-only contacts hold an address, so a privacy retraction knows what to withdraw. Reached from the confidentiality retraction pass under its own principal",
 	"internal/modules/contacts/contactprivate.go:RetractCaptureOnlyContactTx":       "the retraction itself, in that same pass",
 	"internal/modules/contacts/creatededupe.go:record":                              "the near-match scan a contact write owes its review queue. Its callers are writes, and what it produces is a review row inside the caller's transaction",

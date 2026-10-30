@@ -47,7 +47,7 @@ A problem never stops the whole import. It either skips that one row, or the row
 
 These skip the row:
 - a value its field does not take, such as an amount that is not a number or a date not in `YYYY-MM-DD`;
-- a company link that finds no company, or finds more than one (**Broken link**);
+- a company reference that finds no company, or an employer name that finds more than one or conflicts with its work email (**Broken link**);
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
@@ -59,7 +59,7 @@ A contact row with **First name** and **Last name** filled takes its full name f
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
 - a tag that does not exist yet (**New tag**): the import creates it;
-- a company name that is already in Margince: the import creates a second company and files the pair for review (**Duplicate**).
+- a company row whose name is already in Margince: the import creates a second company and files the pair for review (**Duplicate**).
 Also called: rows skipped, import errors, why was my row not imported.
 
 ### What does **Import anyway** do?
@@ -171,6 +171,12 @@ Also called: import notes, import calls, import meetings, import emails, import 
 On the contact, choose **More actions**, then **Import activities**, and upload one CSV. It opens as **Importing into** the contact's name.
 Every row goes on that contact's timeline, so the file needs no `links` column. A ZIP is not taken here. Only an admin or ops user sees the item.
 Also called: import a contact's history, add past calls to a contact.
+
+### How does a contact get its employer?
+A contact's `company_name` finds a company with that name or creates one if none matches. The test run says when it will create a company. A work email also checks for an employer; an unknown business domain waits for review. Consumer email gives no company.
+
+An employer name that conflicts with the work domain skips that row with a reason. An existing main employer stays as it is. Undo includes a company the import created for a contact, under the same rules as other created companies.
+Also called: import employers, create a missing company, company name on a contact.
 
 ### What if a link is broken?
 A contact's or deal's `company_ref` names its company. It is the company's `ref` in this upload or an earlier one, its domain, its exact name, or its Margince ID. A row whose link finds no company is skipped and listed as **Broken link**. See **Import anyway** above.

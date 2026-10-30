@@ -356,7 +356,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if spec.Acquisition, err = promotionAcquisition(ctx, tx, lead); err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	id, err := createContact(ctx, tx, match, spec)
+	id, err := createContact(ctx, tx, s, match, spec)
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}

@@ -89,6 +89,8 @@ var relationshipGate = objectGate{
 // Acme" one page at a time, which is a STRONGER disclosure than the count on
 // the account. It carries the gate, and is not in this set.
 var predicateEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerrepair.go:hasEmploymentHistory":                     "prevents inferred or repaired employment from overwriting employment history; only an internal existence predicate is returned, with no edge columns or endpoints",
+	"internal/modules/contacts/employerrepair.go:missingContactEmployer":                   "excludes contacts with any employment history from a system-only repair and a gated bounded estimate; no edge column or endpoint pair leaves the query",
 	"internal/modules/contacts/mergerelationshippreview.go:authorizeMergePrimaryWitnesses": "the edges a merge's primary flags rest on: ids only, read after its one caller asks auth.Require(ctx, \"relationship\", read). Each id is re-read through visibleRelationship under RelationshipEndpointScope, and one the caller may not see refuses the preview. No edge column leaves it",
 	"internal/modules/contacts/linkedinmatchfields.go:liveEmploymentAt":                    "an accepted LinkedIn match's employer write: finds the contact's own employment at the company the card offered, to promote it rather than create a second. Only a decider who can see that company reaches it. The id, role and author it reads go to the write, never to a reader, and a promote takes relationship:update before it writes",
 	"internal/compose/dealscoutbuyer.go:scoutBuyerSignal":                                  "employment existence verifies attribution and rejects ambiguous employers; returns a boolean admission fact, never the employment edges",
@@ -214,7 +216,6 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/vcardarms.go:holdsLiveEmployment":                     "whether a contact already holds a live employment at a company, as one boolean that only ever skips a write. Its one caller is ensureEmployment, which goes on to CreateRelationshipTx and its relationship create gate. No edge column leaves it",
 	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":        "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
 	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin": "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
 })

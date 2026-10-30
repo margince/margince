@@ -11984,6 +11984,8 @@ const (
 	ImportReasonCodeEmployerColumnEmptyDropped   ImportReasonCode = "employer_column_empty_dropped"
 	ImportReasonCodeEmployerNotFound             ImportReasonCode = "employer_not_found"
 	ImportReasonCodeEmployerNotFoundDropped      ImportReasonCode = "employer_not_found_dropped"
+	ImportReasonCodeEmployerRefused              ImportReasonCode = "employer_refused"
+	ImportReasonCodeEmployerWillCreate           ImportReasonCode = "employer_will_create"
 	ImportReasonCodeEmptyPayload                 ImportReasonCode = "empty_payload"
 	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
 	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
@@ -12157,6 +12159,10 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeEmployerNotFound:
 		return true
 	case ImportReasonCodeEmployerNotFoundDropped:
+		return true
+	case ImportReasonCodeEmployerRefused:
+		return true
+	case ImportReasonCodeEmployerWillCreate:
 		return true
 	case ImportReasonCodeEmptyPayload:
 		return true
@@ -38214,15 +38220,15 @@ type CreateContactEnrichmentRunRequest struct {
 	Provider Provider `json:"provider"`
 }
 
-// CreateContactRequest defines model for CreateContactRequest.
+// CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// CompanyId An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+	// CompanyId An existing company this contact works at now. Not with `company_name`.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
-	// CompanyName A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent.
+	// CompanyName The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
 	CompanyName *string `json:"company_name,omitempty"`
 
 	// ConvertLeadIds The live leads to convert into this contact, sent after a 409 `lead_holds_email`

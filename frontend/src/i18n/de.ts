@@ -542,6 +542,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "approval.preview.createEmployer":
+    "Das fehlende Unternehmen erstellen und als Arbeitgeber dieses Kontakts verknüpfen.",
+  "approval.preview.reuseEmployer":
+    "Diesen Kontakt mit dem bestehenden Unternehmen verknüpfen.",
+  "approval.preview.resolveEmployer":
+    "Ermittelt den Arbeitgeber aus dem Unternehmen oder der geschäftlichen Adresse, verwendet ein vorhandenes Unternehmen oder legt es an und verknüpft die Beschäftigung. Unklare Domains warten auf Prüfung; die Anreicherung folgt den Einstellungen des Unternehmens.",
   "approval.preview.createContact":
     "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
   "approval.preview.recordAcquisition":
@@ -8272,6 +8278,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte.",
   "import.reason.employer_not_found_dropped":
     "Im CRM gibt es kein Unternehmen namens „{name}“, daher gab es nichts, womit dieser Kontakt verknüpft werden konnte. Die Zeile wurde ohne Verknüpfung importiert.",
+  "import.reason.employer_refused":
+    "Der Arbeitgeber konnte nicht zugeordnet werden. Wähle ein eindeutiges Unternehmen, das du verknüpfen darfst.",
+  "import.reason.employer_will_create":
+    "Der Arbeitgeber {name} wird erstellt, falls er beim Import dieser Zeile noch fehlt.",
   "import.reason.empty_payload": "Die Zeile enthält keine Felder.",
   "import.reason.field_inactive":
     "„{value}“ kann nicht geschrieben werden: Dieses Feld ist nicht mehr aktiv.",
