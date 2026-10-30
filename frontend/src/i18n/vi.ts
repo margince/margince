@@ -1145,6 +1145,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Tất cả pipeline",
   "reporting.resultsThrough": "Kết quả tính đến {at}",
+  "reporting.periodNotStarted":
+    "Khoảng thời gian bắt đầu lúc {at}; chưa có gì diễn ra trong đó",
   "reporting.writtenNoneWon": "Chưa chốt doanh số nào trong {period}.",
   "reporting.writtenWon": "Đã chốt trong {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1185,6 +1187,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",
   "reporting.openPipelineBasis_other": "Deal đang mở: {count} · tính đến {at}",
   "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo deal",
+  "reporting.this_week": "Tuần này",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",

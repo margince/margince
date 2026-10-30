@@ -4625,6 +4625,7 @@ paths:
           schema:
             type: string
             enum:
+              - this_week
               - this_month
               - last_month
               - last_week
@@ -4742,6 +4743,7 @@ paths:
           schema:
             type: string
             enum:
+              - this_week
               - this_month
               - last_month
               - last_week
@@ -4858,6 +4860,7 @@ paths:
           schema:
             type: string
             enum:
+              - this_week
               - this_month
               - last_month
               - last_week
@@ -18467,11 +18470,17 @@ components:
         period:
           type: string
           enum:
+            - this_week
             - this_month
             - last_month
             - last_week
             - this_quarter
             - custom
+          description: |-
+            `this_week` runs from Monday 00:00 in the installation zone to the
+            evaluation time. Read at that exact moment, the week holds no time
+            yet and the context's interval starts where it ends. A month target
+            beside it still counts the whole month up to the evaluation time.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:

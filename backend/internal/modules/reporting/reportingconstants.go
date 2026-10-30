@@ -5,6 +5,7 @@ package reporting
 
 const (
 	reportingThisMonth       = "this_month"
+	reportingThisWeek        = "this_week"
 	reportingWorkspace       = "workspace"
 	reportingFiscalQuarter   = "fiscal_quarter"
 	reportingWeekly          = "weekly"
