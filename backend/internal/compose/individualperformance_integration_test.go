@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -286,7 +287,7 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 	_, token := e.issue(e.writerCtx(t), t, NewShare{
 		Kind: shareKindSnapshot, Target: "someone@example.test",
 		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace}, SnapshotID: &id,
-		ExpiresAt: time.Now().UTC().Add(24 * time.Hour),
+		ExpiresAt: clocktest.Now(t).UTC().Add(24 * time.Hour),
 	})
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
@@ -359,9 +360,8 @@ func listsTarget(reader context.Context, t *testing.T, service *reporting.Servic
 	return slices.ContainsFunc(list.Data, func(listed crmcontracts.ReportingTarget) bool { return listed.Id == target.Id })
 }
 
-// The target floor checks archived teams as it checks live ones, and lists
-// only teams it found with enough colleagues, so a small archived team's
-// target stays withheld while the switch is off.
+// The target floor checks archived teams as it checks live ones. It lists only
+// teams with enough colleagues, so a small archived team's target stays withheld.
 func TestIndividualPerformanceOffFloorChecksArchivedTeams(t *testing.T) {
 	e := setupForecast(t)
 	reportingTeammate(t, e)
