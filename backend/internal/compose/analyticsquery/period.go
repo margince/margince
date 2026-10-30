@@ -38,8 +38,8 @@ type PeriodField struct {
 }
 
 // PeriodSpan answers the half-open interval a bucket label names under one
-// basis. The label is read by the one reader the report engine's own filter
-// check uses, so the two cannot accept different spellings.
+// basis. It reads the label with reportperiod.ParseLabel, as the report
+// engine's filter check does, so the two accept the same spellings.
 func PeriodSpan(grain PeriodGrain, label string, basis CalendarBasis) (from, to time.Time, err error) {
 	zone, zoneErr := time.LoadLocation(basis.Timezone)
 	if zoneErr != nil {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -204,5 +206,52 @@ func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
 	}
 	if kept.Binding == nil || !kept.Binding.Filtered {
 		t.Errorf("the edition's card does not say its question filters: %+v", kept.Binding)
+	}
+}
+
+// A kept question whose filter names a subject goes to that subject's access
+// request, and their erasure removes it, so the card answers no reader.
+func TestABoundFilterNamingASubjectIsHandedOverAndErased(t *testing.T) {
+	q := newQuestionEditions(t)
+	subject := q.e.seedID(t, `INSERT INTO contact(id,full_name,source,captured_by) VALUES($1,'Erika Mustermann','manual','human:x')`)
+	if _, err := q.e.owner.Exec(t.Context(), `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'erika@example.com', 'manual', 'human:x')`, subject); err != nil {
+		t.Fatal(err)
+	}
+	run := saveForecastRun(q.human, t, q.e, analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
+		Filters:  []analyticsquery.Filter{{Field: fieldCurrency, Op: analyticsquery.OpEq, Value: "erika@example.com"}},
+	})
+	input := crmcontracts.ReportingReportInput{Name: q.report.Name, Audience: "workspace", Selection: q.report.Selection}
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{boundCard(run)}}}
+	input.Selection.Layout = &layout
+	report, err := q.service.UpdateReport(q.human, ids.UUID(q.report.Id), q.report.Version, input)
+	if err != nil {
+		t.Fatalf("binding the card: %v", err)
+	}
+	controller := privacyController(q.e)
+
+	pkg, err := privacy.AssembleSAR(controller, InstallationDB(q.e.Pool), ids.From[ids.ContactKind](subject))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pkg.ReportingQuestionBindings) != 1 || !strings.Contains(fmt.Sprint(pkg.ReportingQuestionBindings[0]["filters"]), "erika@example.com") {
+		t.Fatalf("subject access handed over %+v, want the one kept filter that names the subject", pkg.ReportingQuestionBindings)
+	}
+
+	if err := privacy.NewEraser(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
+		t.Fatal(err)
+	}
+	var kept int
+	if err := q.e.owner.QueryRow(t.Context(), `SELECT count(*) FROM report_definition_revision WHERE report_id = $1 AND question_bindings::text LIKE '%erika@example.com%'`, report.Id).Scan(&kept); err != nil || kept != 0 {
+		t.Fatalf("erasure left %d revisions keeping the subject's address (%v)", kept, err)
+	}
+	var card reporting.QuestionCard
+	if err := database.WithWorkspaceTx(q.human, q.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		card, _, err = q.service.QuestionCardIn(q.human, tx, ids.UUID(report.Id), nil, "bound")
+		return err
+	}); err != nil || card.Bound != nil {
+		t.Fatalf("after erasure the card asks %s (%v), want nothing", card.Bound, err)
 	}
 }

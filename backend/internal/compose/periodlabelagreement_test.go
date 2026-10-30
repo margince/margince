@@ -10,8 +10,8 @@ import (
 )
 
 // The report engine's filter check and a kept period's span read one label
-// the same way: a label the check refuses never names dates, and one it admits
-// names dates under the calendar that spells it.
+// the same way. A label the check refuses names no dates. One it admits names
+// dates under the calendar that spells it.
 func TestTheFilterCheckAndAKeptPeriodAgreeOnEveryLabel(t *testing.T) {
 	t.Parallel()
 	labels := map[string][]string{

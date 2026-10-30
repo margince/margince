@@ -141,13 +141,13 @@ func keepSavedPeriodsOnCalendarChange(ctx context.Context, tx pgx.Tx, before ide
 		}
 		// The images name the calendar and never a filter value, which can name
 		// a record the audit's readers may not open.
-		audit, err := storekit.Audit(ctx, tx, "update", tableReportRun, question.id,
+		audit, err := storekit.Audit(ctx, tx, auditActionUpdate, tableReportRun, question.id,
 			map[string]any{"period_basis": nil}, map[string]any{"period_basis": basis})
 		if err != nil {
 			return err
 		}
 		if err := storekit.Emit(ctx, tx, audit, "reporting.changed", tableReportRun, question.id,
-			crmcontracts.InternalEventReportingChanged{Object: tableReportRun, Action: "update"}); err != nil {
+			crmcontracts.InternalEventReportingChanged{Object: tableReportRun, Action: auditActionUpdate}); err != nil {
 			return err
 		}
 	}
