@@ -343,7 +343,7 @@ func (s *Service) worklistFrom(
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
-	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded}, shown, more, limit, cursor.Rest, rows)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == ""}, shown, more, limit, cursor.Rest, rows)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -415,7 +415,7 @@ func (s *Service) worklistFrom(
 	// cut landed, not a running total of rows handed out. The two differ the
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
-	if (more && len(shown) > 0) || rest != nil {
+	if (more && len(shown) > 0) || (!more && rest != nil) {
 		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id, rest)
 		out.NextCursor = &token
 	}

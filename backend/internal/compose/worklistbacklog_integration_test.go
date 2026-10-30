@@ -129,3 +129,48 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 		})
 	}
 }
+
+// Work dealt with above the cap never ends the tail. The reader completes what
+// they have seen until the lane read is no longer cut, and scrolling on still
+// reaches every open task.
+func TestCompletingSeenTasksDoesNotEndTheTail(t *testing.T) {
+	r := setupReminders(t)
+	open := map[string]bool{}
+	for i := range plannedCapForTest + 8 {
+		id := r.task(t, fmt.Sprintf("Rep1 due %d", i), r.now.Add(-time.Duration(i+1)*time.Hour), nil, &r.e.Rep1)
+		open[id.String()] = true
+	}
+	reader := r.e.As(r.e.Rep1, []ids.UUID{r.e.Team1}, integration.AdminPerms)
+	svc := newAttentionService(r.e.Pool, approvals.NewService(r.e.DB()), func() time.Time { return r.now })
+	first, err := svc.Worklist(reader, "mine", "all", ids.Nil, 9, "")
+	if err != nil || first.NextCursor == nil {
+		t.Fatalf("first page: %v, cursor %v", err, first.NextCursor)
+	}
+	for _, row := range first.Queue {
+		done, err := r.e.Activities.CompleteTask(r.e.Admin(), ids.From[ids.ActivityKind](ids.MustParse(row.Id)), time.Now())
+		if err != nil || !done {
+			t.Fatalf("completing %s: done %v, %v", row.Id, done, err)
+		}
+		delete(open, row.Id)
+	}
+	cursor := *first.NextCursor
+	for page := 0; cursor != ""; page++ {
+		if page > 10 {
+			t.Fatal("the walk did not end")
+		}
+		day, err := svc.Worklist(reader, "mine", "all", ids.Nil, 7, cursor)
+		if err != nil {
+			t.Fatalf("page %d: %v", page, err)
+		}
+		for _, row := range day.Queue {
+			delete(open, row.Id)
+		}
+		cursor = ""
+		if day.NextCursor != nil {
+			cursor = *day.NextCursor
+		}
+	}
+	if len(open) != 0 {
+		t.Errorf("%d open tasks were never reached after the seen ones were completed", len(open))
+	}
+}

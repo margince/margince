@@ -83,7 +83,7 @@ func (s *Service) readingBacklog(
 		return &reading
 	}
 	todayCut, laterCut := plannedWindowsAtCap(day.Planned, true)
-	for key, window := range s.taskWindows(day, until) {
+	for key, window := range s.taskWindows(day.AsOf, until) {
 		cut := laterCut
 		if window.From.IsZero() {
 			cut = todayCut
@@ -95,12 +95,12 @@ func (s *Service) readingBacklog(
 
 // taskWindows are the two task windows a page draws, by the category each
 // window's rows carry: today's under tasks, the later ones under upcoming.
-func (s *Service) taskWindows(day crmcontracts.Attention, until time.Time) map[totalKey]TaskWindow {
+func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
 	var team []ids.UUID
 	if s.teamRoster != nil {
 		team = s.teamRoster.seats()
 	}
-	today := TaskWindow{AsOf: day.AsOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: team}
+	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: team}
 	later := today
 	later.From, later.Until = until, until.AddDate(0, 0, upcomingHorizonDays)
 	return map[totalKey]TaskWindow{

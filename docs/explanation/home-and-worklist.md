@@ -115,6 +115,11 @@ the same admission, scope, Done, view and filter steps as the top. The cursor ca
 binds the same scope, owner, view and filter as before. The list ends when every source in the tail is read to its
 end. A source that fails while the tail loads is named in `sources_unavailable`, and the list stops short of it.
 
+The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
+when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
+instant, day end and time zone, and every later page reads that same window, even after midnight. Its fingerprint
+names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
+
 Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
 Its today window and its later window each have a count, taken on the first page only. A team page counts no task
 window, because that count ran past the lane budget at 10,000 tasks a seat. Its task categories stay a floor.

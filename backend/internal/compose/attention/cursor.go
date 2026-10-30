@@ -97,9 +97,14 @@ type worklistCursor struct {
 // otherwise be refused for agreeing with the server.
 func fingerprint(scope, filter string, owner ids.UUID) string {
 	sum := sha256.Sum256([]byte(
-		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String()))
+		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + tailProtocol))
 	return hex.EncodeToString(sum[:8])
 }
+
+// tailProtocol names the cursor's tail shape inside its fingerprint. A binary
+// that predates the tail would ignore the tail and end the walk early, so it
+// computes another fingerprint and refuses the token instead.
+const tailProtocol = "tail1"
 
 // normalizedFilter collapses the two spellings of "everything" onto one.
 //
@@ -176,7 +181,9 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	if cursor.At < 0 || (cursor.At == 0 && cursor.Rest == nil) || cursor.Params == "" {
 		return worklistCursor{}, &storekit.MalformedCursorError{}
 	}
-	if cursor.Params != fingerprint(scope, filter, owner) {
+	// A tail this binary could not have minted is refused like a token for
+	// another question: the caller starts the walk again.
+	if cursor.Params != fingerprint(scope, filter, owner) || (cursor.Rest != nil && !cursor.Rest.valid()) {
 		return worklistCursor{}, &storekit.CursorSortMismatchError{}
 	}
 	return cursor, nil
