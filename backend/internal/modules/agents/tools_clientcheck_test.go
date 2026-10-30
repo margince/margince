@@ -18,7 +18,7 @@ import (
 )
 
 func checkClientDispatcher(offered bool) *Dispatcher {
-	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithToolGate(func(context.Context, string) bool { return offered }))
+	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithToolGate(func(context.Context) bool { return offered }))
 	registry.Register(checkClient{log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))})
 	return NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
 }
@@ -76,6 +76,7 @@ func TestTheCheckAsksOnlyAClientThatDeclaredAForm(t *testing.T) {
 		{"form and url", `{"elicitation":{"form":{},"url":{}}}`, true, ""},
 		{"url only", `{"elicitation":{"url":{}}}`, false, "only url mode"},
 		{"none declared", `{}`, false, "no elicitation"},
+		{"only a mode this server does not know", `{"elicitation":{"sampling":{}}}`, false, "no elicitation"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := callCheck(t, checkClientDispatcher(true), clientMeta(tc.capabilities), "")
@@ -189,6 +190,25 @@ func TestAWithheldToolIsNotListedAndAnOfferedOneIs(t *testing.T) {
 	}
 }
 
+func TestARunNeverHoldsAGatedToolEvenWhenTheGateOffersIt(t *testing.T) {
+	for _, spec := range checkClientDispatcher(true).registry.Runnable(scopedAgentCtx(principal.ScopeRead)) {
+		if spec.Name == clientCheckTool {
+			t.Fatal("Runnable offers a Gated tool to a scheduled run")
+		}
+	}
+}
+
+func TestAGatedToolThatIsListedIsRefused(t *testing.T) {
+	spec := checkClient{}.Spec()
+	spec.Unlisted, spec.ProtocolOnly = false, false
+	defer func() {
+		if recover() == nil {
+			t.Error("a Gated tool that every caller would see was registered")
+		}
+	}()
+	assertGatedShape(spec)
+}
+
 // ProtocolOnly skips both REST parity gates, so Register refuses it on a tool
 // that is listed to everyone or that names a REST route.
 func TestProtocolOnlyIsRefusedOnAToolThatIsListedOrHasARoute(t *testing.T) {
@@ -232,11 +252,17 @@ func TestOnlyAProtocolOnlyToolIsHandedTheRequestFacts(t *testing.T) {
 	registry.Register(factsProbe{})
 	d := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
 	params := json.RawMessage(`{"name":"probe_facts","arguments":{},"_meta":` + clientMeta(`{}`) + `}`)
-	fr, _ := modernPrecheck(params, "")
+	fr, refused := modernPrecheck(params, "")
+	if refused != nil {
+		t.Fatalf("a modern call was refused before dispatch: %v", refused)
+	}
 	resp := d.handle(scopedAgentCtx(principal.ScopeRead), rpcRequest{
 		JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: methodToolsCall, Params: params,
 	}, fr)
-	raw, _ := json.Marshal(resp.Result)
+	raw, err := json.Marshal(resp.Result)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(string(raw), `modern\":false`) {
 		t.Errorf("an ordinary tool was handed the request facts: %s", raw)
 	}

@@ -7805,7 +7805,9 @@ export const en = {
     "Test features that may change or go away. Off for everyone until an admin turns them on here.",
   "agentClients.experiments.clientCheck": "Check what an AI tool supports",
   "agentClients.experiments.clientCheckHint":
-    "Adds a check_client tool for admins only. When an admin asks their AI tool to run it, Margince shows a small form and reports whether the tool can answer it. Changes no data. Spec: MCP elicitation",
+    "Adds a check_client tool for admins only. When an admin asks their AI tool to run it, Margince shows a small form and reports whether the tool can answer it. Changes no data.",
+  "agentClients.experiments.loadFailed":
+    "The switch could not be read. Reload the page to try again.",
   "agentClients.experiments.about": "About this experiment",
   "agentClients.experiments.whyTitle": "Why",
   "agentClients.experiments.why":

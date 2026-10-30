@@ -7725,7 +7725,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Funktionen zum Ausprobieren, die sich ändern oder wegfallen können. Für alle aus, bis ein Admin sie hier einschaltet.",
   "agentClients.experiments.clientCheck": "Prüfen, was ein KI-Tool unterstützt",
   "agentClients.experiments.clientCheckHint":
-    "Fügt ein Tool check_client hinzu, nur für Admins. Wenn ein Admin sein KI-Tool bittet, es auszuführen, zeigt Margince ein kleines Formular und meldet, ob das Tool es beantworten kann. Ändert keine Daten. Spezifikation: MCP-Elicitation",
+    "Fügt ein Tool check_client hinzu, nur für Admins. Wenn ein Admin sein KI-Tool bittet, es auszuführen, zeigt Margince ein kleines Formular und meldet, ob das Tool es beantworten kann. Ändert keine Daten.",
+  "agentClients.experiments.loadFailed":
+    "Der Schalter konnte nicht gelesen werden. Lade die Seite neu, um es noch einmal zu versuchen.",
   "agentClients.experiments.about": "Über dieses Experiment",
   "agentClients.experiments.whyTitle": "Warum",
   "agentClients.experiments.why":

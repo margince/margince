@@ -13,7 +13,7 @@ import (
 // ToolGate answers whether a Gated tool exists for the caller in ctx. A tool it
 // refuses is neither listed nor callable, and a call by name gets the same
 // answer as a name that was never registered.
-type ToolGate func(ctx context.Context, tool string) bool
+type ToolGate func(ctx context.Context) bool
 
 // WithToolGate injects the predicate that decides who a Gated tool exists for.
 // The tool list and the call path read the same predicate.
@@ -22,7 +22,7 @@ func WithToolGate(gate ToolGate) RegistryOption {
 }
 
 func (r *Registry) offersGated(ctx context.Context, spec mcp.ToolSpec) bool {
-	return r.toolGate != nil && r.toolGate(ctx, spec.Name)
+	return spec.Gated && r.toolGate != nil && r.toolGate(ctx)
 }
 
 // gatedFor lists the Gated tools the gate offers this caller. Runnable skips
@@ -30,11 +30,20 @@ func (r *Registry) offersGated(ctx context.Context, spec mcp.ToolSpec) bool {
 func (r *Registry) gatedFor(ctx context.Context, all []mcp.ToolSpec) []mcp.ToolSpec {
 	var out []mcp.ToolSpec
 	for _, spec := range all {
-		if spec.Gated && invocableByCaller(ctx, spec) && r.offersGated(ctx, spec) {
+		if invocableByCaller(ctx, spec) && r.offersGated(ctx, spec) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}
 	return out
+}
+
+// assertGatedShape refuses a Gated tool that is listed: the tool list and the
+// operator console skip only Unlisted tools, so the gate would hide nothing.
+func assertGatedShape(spec mcp.ToolSpec) {
+	if spec.Gated && !spec.Unlisted {
+		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
+		panic(fmt.Sprintf("crmagents: %s is Gated but listed; a Gated tool must be Unlisted, or every caller sees it", spec.Name))
+	}
 }
 
 // assertProtocolOnlyShape holds ProtocolOnly to what it is for. The flag skips

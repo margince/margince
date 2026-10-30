@@ -284,7 +284,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err := s.readCallMessengers(ctx, &out); err != nil {
 		return InstallationSettings{}, err
 	}
-	if out.McpClientCheck, err = readClientCheck(ctx, s.config); err != nil {
+	if out.McpClientCheck, err = ReadClientCheck(ctx, s.config); err != nil {
 		return InstallationSettings{}, err
 	}
 	return out, nil

@@ -26,7 +26,8 @@ const (
 
 // declaredElicitation reads the `elicitation` capability. The specification
 // reads an empty object as form mode, so `{}` and a `form` member both offer a
-// form, and an object with only `url` does not.
+// form. An object with `url` and no `form` offers url only, and one naming
+// neither offers nothing this server can ask in.
 func declaredElicitation(capabilities json.RawMessage) elicitationMode {
 	var declared map[string]json.RawMessage
 	if json.Unmarshal(capabilities, &declared) != nil {
@@ -39,10 +40,14 @@ func declaredElicitation(capabilities json.RawMessage) elicitationMode {
 	if json.Unmarshal(declared["elicitation"], &modes) != nil {
 		return elicitationNone
 	}
-	if _, hasURL := modes["url"]; hasURL && len(modes) == 1 {
+	_, hasForm := modes["form"]
+	if hasForm || len(modes) == 0 {
+		return elicitationForm
+	}
+	if _, hasURL := modes["url"]; hasURL {
 		return elicitationURLOnly
 	}
-	return elicitationForm
+	return elicitationNone
 }
 
 // requestFacts is what one tools/call said about its client and the answers it

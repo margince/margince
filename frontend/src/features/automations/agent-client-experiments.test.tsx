@@ -57,6 +57,22 @@ describe("Experiments", () => {
     ).toEqual({ mcp_client_check: true });
   });
 
+  it("says the switch could not be read when the settings answer fails", async () => {
+    serve(
+      {
+        "GET /installation/settings": () =>
+          json({ title: "Unavailable", status: 503 }, 503),
+      },
+      ADMIN_GRANTS,
+    );
+    renderWithClient(<AgentClientExperimentsCard />);
+    expect(
+      await screen.findByText(
+        "The switch could not be read. Reload the page to try again.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("opens the explanation with the question to ask, and Escape closes it", async () => {
     const user = userEvent.setup();
     serve(

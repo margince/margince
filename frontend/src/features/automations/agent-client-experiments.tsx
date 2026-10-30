@@ -74,6 +74,15 @@ export function AgentClientExperimentsCard() {
     <Panel title={t("agentClients.experiments.title")}>
       <PanelBody>
         <PanelIntro>{t("agentClients.experiments.sub")}</PanelIntro>
+        {settings.error && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("agentClients.experiments.loadFailed")}
+          >
+            {problemMessageOf(settings.error, t)}
+          </Callout>
+        )}
         {save.error && (
           <Callout
             tone="danger"

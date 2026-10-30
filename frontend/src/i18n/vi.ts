@@ -7520,7 +7520,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các tính năng dùng thử, có thể thay đổi hoặc bị bỏ. Tắt cho tất cả cho đến khi quản trị viên bật ở đây.",
   "agentClients.experiments.clientCheck": "Kiểm tra công cụ AI hỗ trợ gì",
   "agentClients.experiments.clientCheckHint":
-    "Thêm công cụ check_client chỉ dành cho quản trị viên. Khi quản trị viên nhờ công cụ AI chạy nó, Margince hiện một biểu mẫu nhỏ và báo công cụ có trả lời được hay không. Không thay đổi dữ liệu. Đặc tả: MCP elicitation",
+    "Thêm công cụ check_client chỉ dành cho quản trị viên. Khi quản trị viên nhờ công cụ AI chạy nó, Margince hiện một biểu mẫu nhỏ và báo công cụ có trả lời được hay không. Không thay đổi dữ liệu.",
+  "agentClients.experiments.loadFailed":
+    "Không đọc được công tắc. Tải lại trang để thử lại.",
   "agentClients.experiments.about": "Về thử nghiệm này",
   "agentClients.experiments.whyTitle": "Vì sao",
   "agentClients.experiments.why":

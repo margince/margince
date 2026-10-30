@@ -47,15 +47,15 @@ var McpClientCheck = config.DefineStored(config.Spec[bool]{
 	Doc:     "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
 }, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
-// ClientRegistrationReadActor names a switch read in the audit trail: no human
-// asked for it, a sign-in or a tool list did.
-const ClientRegistrationReadActor = "system:client_registration_read"
+// clientCheckReadActor names a read of the switch in the audit trail: no human
+// asked for it, a settings answer or a tool list did.
+const clientCheckReadActor = "system:client_check_read"
 
-// readClientCheck reads the switch as the system. Every role reads the settings
-// answer, and only an admin may read agent_client, so a seat's own read would
-// refuse the whole answer.
-func readClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
-	return config.StoredVal(principal.SystemActing(ctx, ClientRegistrationReadActor), cfg, McpClientCheck)
+// ReadClientCheck reads the switch as the system. Every role reads the settings
+// answer and every passport a tool list. Only an admin may read agent_client, so
+// a seat's own read would refuse both.
+func ReadClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
+	return config.StoredVal(principal.SystemActing(ctx, clientCheckReadActor), cfg, McpClientCheck)
 }
 
 func (p InstallationPatch) clientCheckWrites() ([]pendingWrite, error) {
