@@ -394,6 +394,9 @@ func enumerateBacklog(ctx context.Context, activityStore *activities.Store, deal
 	if scope == "mine" {
 		own := ids.From[ids.UserKind](owners[0])
 		in.OwnQueueOf = &own
+	} else {
+		// The team view keeps the roster's tasks and nobody's, as the walk does.
+		in.TeamQueueOf = owners
 	}
 	for {
 		rows, next, err := activityStore.ListActivities(ctx, in)
