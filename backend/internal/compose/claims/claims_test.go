@@ -191,7 +191,7 @@ func TestTerminateSentence(t *testing.T) {
 
 func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		if len(writerSubjects[lang]) == 0 {
+		if len(writerSubjects[lang].all()) == 0 {
 			t.Errorf("%q ships with no writer subjects, so a recommendation written as a promise in it is shown", lang)
 		}
 	}
@@ -199,10 +199,45 @@ func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
 
 func TestEveryListedWriterSubjectIsRefused(t *testing.T) {
 	for lang, subjects := range writerSubjects {
-		for _, subject := range subjects {
+		for _, subject := range subjects.all() {
 			if !OpensWithWriterSubject(subject + " send the agreement.") {
 				t.Errorf("%s subject %q is listed and still not refused", lang, subject)
 			}
+		}
+	}
+}
+
+func TestEveryShippedLanguageNamesTheWriterAlone(t *testing.T) {
+	for _, lang := range textlang.Shipped {
+		if len(writerSubjects[lang].singular) == 0 {
+			t.Errorf("%q ships with no singular writer subject, so an advice line written as the writer's own in it is shown", lang)
+		}
+	}
+}
+
+func TestTheWriterAloneIsRefusedAndTheWriterWithOthersIsNot(t *testing.T) {
+	for _, text := range []string{
+		"I think we should lead with their plant managers.",
+		"I'd lead with their plant managers.",
+		"I'll send the agreement.",
+		"Ich würde mit den Werksleitern beginnen.",
+		"Tôi sẽ gửi hợp đồng.",
+		"To\u0302i se\u0303 gu\u031B\u0309i",
+		"- I'd lead with their plant managers.",
+	} {
+		if !OpensWithSingularWriterSubject(text) {
+			t.Errorf("OpensWithSingularWriterSubject(%q) = false, want the writer alone refused", text)
+		}
+	}
+	for _, text := range []string{
+		"We should lead with their plant managers.",
+		"Wir sollten mit den Werksleitern beginnen.",
+		"Chúng tôi sẽ gửi hợp đồng.",
+		"Let's send the agreement.",
+		"Send the agreement.",
+	} {
+		if OpensWithSingularWriterSubject(text) {
+			t.Errorf("OpensWithSingularWriterSubject(%q) = true, want it kept", text)
 		}
 	}
 }

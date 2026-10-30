@@ -286,3 +286,36 @@ func TestAnUnlabelledSentenceIsNotPromotedIntoTheRecommendedAngle(t *testing.T) 
 		t.Error("an unlabelled sentence became the recommended angle; unlabelled means fact")
 	}
 }
+
+func TestAnAngleWrittenAsTheWritersOwnIsDroppedAndTheRestOfTheReplyKept(t *testing.T) {
+	in := sevenOfSeven()
+	id := in.ProfileFields[0].Id.String()
+	cite := `"evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]`
+	for _, c := range []struct {
+		angle string
+		kept  bool
+	}{
+		{"I'd lead with their plant managers.", false},
+		{"Ich würde mit ihren Werksleitern beginnen.", false},
+		{"Lead with their plant managers.", true},
+		{"We should lead with their plant managers.", true},
+	} {
+		t.Run(c.angle, func(t *testing.T) {
+			reply := `{"band":"strong",
+				"positive_factors":[{"text":"They sell load-shifting software.","nature":"fact",` + cite + `}],
+				"recommended_angle":{"text":"` + c.angle + `","nature":"recommendation",` + cite + `}}`
+
+			_, kept, err := ParseGrowthFit(reply, in)
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+
+			if len(kept.PositiveFactors) != 1 {
+				t.Errorf("positive factors = %d, want the grounded factor kept beside the angle", len(kept.PositiveFactors))
+			}
+			if got := kept.RecommendedAngle != nil; got != c.kept {
+				t.Errorf("angle kept = %v, want %v", got, c.kept)
+			}
+		})
+	}
+}

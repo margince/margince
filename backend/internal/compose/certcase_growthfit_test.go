@@ -284,7 +284,7 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 		"a recommended angle that suggests": {
 			lane: voiceLane{
 				whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I suggest you focus on smaller prospects.",
+				angle: "Next, I suggest you focus on smaller prospects.",
 			},
 			speaker: "I suggest",
 		},
@@ -319,7 +319,7 @@ func TestAGrowthFitClaimThatSpeaksAsIIsAWrongAnswer(t *testing.T) {
 		"a conditional contraction with a curly apostrophe": {
 			lane: voiceLane{
 				whitespace: plain.whitespace, reason: plain.reason,
-				angle: "I’d lead with SAP.",
+				angle: "If anything, I’d lead with SAP.",
 			},
 			speaker: "I’d lead",
 		},

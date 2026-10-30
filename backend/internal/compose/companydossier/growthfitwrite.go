@@ -305,7 +305,8 @@ func ParseGrowthFit(reply string, in Input) (crmcontracts.GrowthFitBand, GrowthF
 	}
 	if parsed.RecommendedAngle != nil {
 		angle := keepNatures([]claims.Sentence{*parsed.RecommendedAngle}, known, suggestions)
-		if len(angle) == 1 {
+		// Not "we": this prompt makes "we" the reader's own company.
+		if len(angle) == 1 && !claims.OpensWithSingularWriterSubject(angle[0].Text) {
 			kept.RecommendedAngle = &angle[0]
 		}
 	}
