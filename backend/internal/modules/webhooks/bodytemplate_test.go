@@ -21,6 +21,10 @@ const testEnvelope = `{
   "data": {
     "name": "Acme \"renewal\" <2027>",
     "amount_minor": 1234567890123456,
+    "deal_amount_minor": 5683020,
+    "currency": "USD",
+    "yen": "JPY",
+    "lowercase_currency": "usd",
     "won": false,
     "tags": ["a", "b"],
     "nested": {"k": "v"},
@@ -127,6 +131,10 @@ func TestATemplateTheEngineCannotRenderSafelyIsRefusedAtSave(t *testing.T) {
 		{"empty placeholder", `{"x": "{{ }}"}`, contentTypeJSON, "names no field"},
 		{"empty segment", `{"x": "{{ data..name }}"}`, contentTypeJSON, "names no field"},
 		{"unknown filter", `{"x": {{ data.name | upper }}}`, contentTypeJSON, `"upper" is not a filter`},
+		{"no filter after the bar", `{"x": "{{ data.name | }}"}`, contentTypeJSON, "names no filter"},
+		{"money without a currency field", `{"x": "{{ data.amount_minor | money }}"}`, contentTypeJSON, "money needs the field that holds the currency"},
+		{"money with a currency outside the event", `{"x": "{{ data.amount_minor | money deal.currency }}"}`, contentTypeJSON, `"deal" is not a field of the event`},
+		{"money outside a JSON string", `{"x": {{ data.amount_minor | money data.currency }}}`, contentTypeJSON, "needs | json, or put it inside quotes"},
 		{"unclosed placeholder", `{"x": "{{ data.name"}`, contentTypeJSON, "is never closed"},
 		{"invalid JSON around the placeholders", `{"x": "{{ data.name }}",}`, contentTypeJSON, "is not valid JSON"},
 		{"escape running into a placeholder", `{"x": "\{{ data.name }}"}`, contentTypeJSON, "backslash"},
@@ -137,6 +145,39 @@ func TestATemplateTheEngineCannotRenderSafelyIsRefusedAtSave(t *testing.T) {
 		{"too many placeholders", strings.Repeat("{{ type }}", maxPlaceholders+1), contentTypeText, "the limit is 500"},
 	} {
 		t.Run(tc.name, func(t *testing.T) { parseFails(t, tc.src, tc.contentType, tc.reason) })
+	}
+}
+
+func TestMoneyRendersMinorUnitsInTheCurrencysOwnDigits(t *testing.T) {
+	for _, tc := range []struct{ name, src, want string }{
+		{"two-digit currency", `{{ data.deal_amount_minor | money data.currency }}`, "56,830.20 USD"},
+		{"zero-digit currency", `{{ data.deal_amount_minor | money data.yen }}`, "5,683,020 JPY"},
+		{"a figure too large for a float", `{{ data.amount_minor | money data.currency }}`, "12,345,678,901,234.56 USD"},
+		{"no amount", `{{ data.missing | money data.currency }}`, ""},
+		{"no currency", `{{ data.deal_amount_minor | money data.missing }}`, ""},
+		{"not an ISO code", `{{ data.deal_amount_minor | money data.lowercase_currency }}`, ""},
+		{"not a whole number", `{{ data.name | money data.currency }}`, ""},
+	} {
+		if got := render(t, tc.src, contentTypeText); got != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestMoneyIsEscapedLikeAnyTextInJSONAndForms(t *testing.T) {
+	if got := render(t, `{"a": "{{ data.deal_amount_minor | money data.currency }}"}`, contentTypeJSON); got != `{"a": "56,830.20 USD"}` {
+		t.Errorf("json: %s", got)
+	}
+	if got := render(t, `a={{ data.deal_amount_minor | money data.currency }}`, contentTypeForm); got != "a=56%2C830.20+USD" {
+		t.Errorf("form: %s", got)
+	}
+}
+
+func TestGroupThousandsKeepsTheSignInFront(t *testing.T) {
+	for in, want := range map[string]string{"0": "0", "999": "999", "1000": "1,000", "-1234567": "-1,234,567", "-100": "-100"} {
+		if got := groupThousands(in); got != want {
+			t.Errorf("groupThousands(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 

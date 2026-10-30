@@ -59,8 +59,8 @@ func sampleEnvelope(eventType string) ([]byte, error) {
 	entity := crmcontracts.PublicEventEntityRef{Type: entityType, Id: openapi_types.UUID(sampleIDs.entity)}
 	entity.Url = recordURL(sampleOrigin, entityType, sampleIDs.entity)
 	if _, named := namedRecords[entityType]; named {
-		name := "Sample " + entityType + " name"
-		entity.Name = &name
+		name, owner := "Sample "+entityType+" name", "Sample owner name"
+		entity.Name, entity.OwnerName = &name, &owner
 	}
 	return json.Marshal(crmcontracts.PublicEventEnvelope{
 		EventId:       openapi_types.UUID(sampleIDs.event),
