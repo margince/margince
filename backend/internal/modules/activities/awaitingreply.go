@@ -182,12 +182,11 @@ func followUpReadableSQL(alias string) string {
 
 // followUpStatement puts the candidates and the one gated set before body.
 func followUpStatement(candidates string, g followUpGates, body string, sets ...string) string {
-	with := "WITH " + followUpCandidates + " AS MATERIALIZED (" + candidates + "),\n" +
-		followUpReadable + " AS MATERIALIZED (" + g.readable + ")"
-	for _, set := range sets {
-		with += ",\n" + set
-	}
-	return with + "\n" + body
+	with := append([]string{
+		followUpCandidates + " AS MATERIALIZED (" + candidates + ")",
+		followUpReadable + " AS MATERIALIZED (" + g.readable + ")",
+	}, sets...)
+	return "WITH " + strings.Join(with, ",\n") + "\n" + body
 }
 
 // scanFollowUps reads the rows both follow-up statements select.

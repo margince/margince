@@ -60,8 +60,8 @@ func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, keep 
 // `young OR held` half of withinWaitingHorizonSQL; the raw instant bound is the
 // first conjunct of occurredday.FromSQL, so no young mail falls outside it.
 func waitingMailKeptSQL(asOf, days string) string {
-	return "(mail.occurred_at >= " + asOf + " - make_interval(days => " + days + ") OR " +
-		strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
+	young := fmt.Sprintf("mail.occurred_at >= %s - make_interval(days => %s) -- occurred_at raw: a superset bound, FromSQL's own first conjunct\n", asOf, days)
+	return "(" + young + " OR " + strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`
