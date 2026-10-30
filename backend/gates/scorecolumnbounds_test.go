@@ -47,62 +47,76 @@ var unboundedOnPurpose = gatekit.Waive(map[string]string{
 		"fitLowIntentSourcePenalty is -5, so a lower bound of zero would refuse a penalty.",
 })
 
-// rangedColumns reports, per "table.column", whether a CHECK compares it with
-// both a floor and a ceiling.
-func rangedColumns(t *testing.T, catalog string) map[string]bool {
-	t.Helper()
-	ranged := map[string]bool{}
+// checksByTable groups every CHECK definition in the catalog by its table.
+func checksByTable(catalog string) map[string][]string {
+	checks := map[string][]string{}
 	for line := range strings.SplitSeq(catalog, "\n") {
-		m := catalogCheck.FindStringSubmatch(strings.TrimSpace(line))
-		if m == nil {
-			continue
+		if m := catalogCheck.FindStringSubmatch(strings.TrimSpace(line)); m != nil {
+			checks[m[1]] = append(checks[m[1]], m[3])
 		}
-		for _, column := range columnsStatingARange(m[3]) {
-			ranged[m[1]+"."+column] = true
+	}
+	return checks
+}
+
+// rangedColumns reports, per "table.column", whether one CHECK on that table
+// bounds that column above and below.
+//
+// Asked per column rather than read off each definition, because whether a
+// definition bounds a column depends on which column is being asked about.
+func rangedColumns(t *testing.T, catalog string, columns []string) map[string]bool {
+	t.Helper()
+	checks := checksByTable(catalog)
+	ranged := map[string]bool{}
+	for _, qualified := range columns {
+		table, column, found := strings.Cut(qualified, ".")
+		if !found {
+			t.Fatalf("%q is not a table.column name", qualified)
+		}
+		for _, definition := range checks[table] {
+			if statesARange(definition, column) {
+				ranged[qualified] = true
+				break
+			}
 		}
 	}
 	return ranged
 }
 
 // nullGuard matches the opening a nullable column's range CHECK carries:
-// `(col IS NULL) OR (the range)`. The guard is part of stating the range, not a
-// weakening of it, so it is removed before the comparisons are read.
+// `(col IS NULL) OR (the range)`, capturing the column the guard names.
 var nullGuard = regexp.MustCompile(`^\(+\s*(\w+) IS NULL\)?\s*OR\s*`)
 
-// columnsStatingARange names every column a `CHECK` definition bounds on both
-// sides.
+// statesARange reports whether this `CHECK` bounds this column above and below,
+// for every row the table holds.
 //
 // It differs from boundsBothSides, which refuses any definition carrying `OR`.
 // That is right for a JSON ceiling. Here it is wrong, because a nullable column
 // states its range as `(col IS NULL) OR (col >= 0 AND col <= 100)`.
 //
-// A mention is not a range. The pairing constraint on
+// The guard has to name the column being asked about. A guard on a DIFFERENT
+// column makes the range conditional on that other value, so
+// `(reason IS NULL) OR (score >= 0 AND score <= 100)` leaves score unbounded
+// on every row that carries a reason.
+//
+// A mention is not a range either. The pairing constraint on
 // `lead_score_history.score` names the column and bounds nothing, and it made
 // the census behind this gate read four bounded columns as unbounded.
-func columnsStatingARange(definition string) []string {
+func statesARange(definition, column string) bool {
 	body := definition
 	if m := nullGuard.FindStringSubmatch(body); m != nil {
+		if m[1] != column {
+			return false
+		}
 		body = body[len(m[0]):]
 	}
 	if strings.Contains(strings.ToUpper(body), " OR ") {
 		// Comparisons joined by `OR` bound nothing, since `col >= 0 OR col <= 100`
 		// is true of every value. Reporting it unbounded is the direction that fails.
-		return nil
+		return false
 	}
-	var ranged []string
-	seen := map[string]bool{}
-	for _, column := range regexp.MustCompile(`\b[a-z][a-z0-9_]*\b`).FindAllString(body, -1) {
-		if seen[column] {
-			continue
-		}
-		_, floor := comparisonBound(body, column, ">")
-		_, ceiling := comparisonBound(body, column, "<")
-		if floor && ceiling {
-			seen[column] = true
-			ranged = append(ranged, column)
-		}
-	}
-	return ranged
+	_, floor := comparisonBound(body, column, ">")
+	_, ceiling := comparisonBound(body, column, "<")
+	return floor && ceiling
 }
 
 // boundedQuantityColumns derives the corpus from the head catalog.
@@ -136,7 +150,7 @@ func TestEveryBoundedQuantityColumnStatesItsRange(t *testing.T) {
 		t.Fatalf("the catalog yields %d bounded-quantity columns; this gate would judge almost "+
 			"nothing, so the reader has stopped matching the catalog's line shape", len(columns))
 	}
-	ranged := rangedColumns(t, catalog)
+	ranged := rangedColumns(t, catalog, columns)
 	for _, column := range columns {
 		if ranged[column] || unboundedOnPurpose.Waived(t, column) {
 			continue
@@ -150,9 +164,10 @@ func TestEveryBoundedQuantityColumnStatesItsRange(t *testing.T) {
 func TestAWaivedColumnThatGainedABoundFails(t *testing.T) {
 	t.Parallel()
 	catalog := headCatalog(t)
-	ranged := rangedColumns(t, catalog)
+	columns := boundedQuantityColumns(t, catalog)
+	ranged := rangedColumns(t, catalog, append(columns, unboundedOnPurpose.Subjects()...))
 	inCorpus := map[string]bool{}
-	for _, column := range boundedQuantityColumns(t, catalog) {
+	for _, column := range columns {
 		inCorpus[column] = true
 	}
 	for _, column := range unboundedOnPurpose.Subjects() {
@@ -195,17 +210,19 @@ func TestAMentionIsNotARange(t *testing.T) {
 	for _, c := range []struct {
 		name       string
 		definition string
-		want       []string
+		column     string
+		ranged     bool
 	}{
-		{"a mention bounds nothing", "((override_reason IS NOT NULL) OR (score = score_computed))", nil},
-		{"a range states itself", "(((score >= 0) AND (score <= 100)))", []string{"score"}},
-		{"a nullable range keeps its guard", "((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100)))", []string{"relevance"}},
-		{"comparisons joined by OR bound nothing", "((score >= 0) OR (score <= 100))", nil},
-		{"one side only is not a range", "((points >= 0))", nil},
+		{"a mention bounds nothing", "((override_reason IS NOT NULL) OR (score = score_computed))", "score", false},
+		{"a range states itself", "(((score >= 0) AND (score <= 100)))", "score", true},
+		{"a nullable range keeps its guard", "((relevance IS NULL) OR ((relevance >= 0) AND (relevance <= 100)))", "relevance", true},
+		{"comparisons joined by OR bound nothing", "((score >= 0) OR (score <= 100))", "score", false},
+		{"one side only is not a range", "((points >= 0))", "points", false},
+		{"a guard on another column leaves it conditional", "((reason IS NULL) OR ((score >= 0) AND (score <= 100)))", "score", false},
+		{"a range on a sibling is not a range on this one", "(((score >= 0) AND (score <= 100)))", "score_computed", false},
 	} {
-		got := columnsStatingARange(c.definition)
-		if len(got) != len(c.want) || (len(c.want) == 1 && got[0] != c.want[0]) {
-			t.Errorf("%s: %q read as %v, want %v", c.name, c.definition, got, c.want)
+		if got := statesARange(c.definition, c.column); got != c.ranged {
+			t.Errorf("%s: %q on %s read as %v, want %v", c.name, c.definition, c.column, got, c.ranged)
 		}
 	}
 }
