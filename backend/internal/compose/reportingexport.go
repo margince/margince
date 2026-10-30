@@ -25,7 +25,7 @@ type reportingHandlers = reporting.Handlers
 type reportingExportHandlers struct{ service *reporting.Service }
 
 func (s reportingExportHandlers) ExportReportingEvaluation(w http.ResponseWriter, r *http.Request, params crmcontracts.ExportReportingEvaluationParams) {
-	selection, err := reporting.SelectionFromQuery(r.URL.Query())
+	selection, err := reporting.SelectionFromQuery(r.URL.Query(), openingSelection())
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

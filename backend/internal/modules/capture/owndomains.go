@@ -102,8 +102,22 @@ func TrustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error
 	return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
 }
 
+// queryDomains reads one own-domain set, less the consumer-mail domains.
+//
+// Only the registry vets a domain as it is written. The own company's claims
+// reach these sets too. So webmail recorded as its domain would read a message
+// between two of that domain's users as ours.
+//
+// Filtered on the way out because the baseline moves. A `never` entry keeps a
+// domain the matcher would otherwise drop.
 func queryDomains(ctx context.Context, tx pgx.Tx, query string) (InternalDomains, error) {
-	own, err := owndomain.Read(ctx, tx, query)
+	consumer, err := MatcherTx(ctx, tx)
+	if err != nil {
+		return InternalDomains{}, err
+	}
+	own, err := owndomain.ReadKeeping(ctx, tx, query, func(domain string) bool {
+		return !consumer.IsConsumer(domain)
+	})
 	return InternalDomains{own}, err
 }
 

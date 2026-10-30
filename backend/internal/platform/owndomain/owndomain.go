@@ -91,6 +91,13 @@ func New(raw []string) Set {
 
 // Read folds the domains a query selects into a Set.
 func Read(ctx context.Context, tx pgx.Tx, query string) (Set, error) {
+	return ReadKeeping(ctx, tx, query, func(string) bool { return true })
+}
+
+// ReadKeeping folds the domains a query selects into a Set, keeping those keep
+// admits. The test runs on the folded spelling, so a caller judging a domain
+// judges the same text the Set compares.
+func ReadKeeping(ctx context.Context, tx pgx.Tx, query string, keep func(string) bool) (Set, error) {
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		return Set{}, fmt.Errorf("owndomain: reading the own-domain set: %w", err)
@@ -99,7 +106,14 @@ func Read(ctx context.Context, tx pgx.Tx, query string) (Set, error) {
 	if err != nil {
 		return Set{}, fmt.Errorf("owndomain: reading the own-domain set: %w", err)
 	}
-	return New(raw), nil
+	folded := New(raw)
+	kept := make([]string, 0, len(folded.domains))
+	for _, domain := range folded.domains {
+		if keep(domain) {
+			kept = append(kept, domain)
+		}
+	}
+	return Set{domains: kept}, nil
 }
 
 // Empty reports whether the set holds no domain, so it covers nobody.

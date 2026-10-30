@@ -266,8 +266,8 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(string(source), "auth.ActivityContentClause") {
 		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
-	if !strings.Contains(string(source), "auth.LinkTargetVisibleClause") {
-		t.Fatal("the waiting read returns links without checking the reader may see what they point at")
+	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
+		t.Fatal("the waiting read returns links without checking the reader may read what they point at")
 	}
 }
 

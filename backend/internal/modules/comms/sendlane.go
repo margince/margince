@@ -121,9 +121,9 @@ func (s laneSend) cardTitle() string {
 // rather than through a port for the same reason consent's verdict read and
 // deals' health read do — the link row is shared metadata every module's
 // row-level reads resolve in their own statement. The join carries
-// auth.LinkTargetVisibleClause, the clause the activities module's own link
-// projections ask: owning the send says nothing about the visibility of the
-// contacts its activity touches, and a contact this caller may not read must not
+// auth.LinkTargetReadableClause, as the activities module's link projections
+// do. Owning the send says nothing about its contacts' visibility. A contact
+// this caller may not read must not
 // reach the wire even as a bare id. LATERAL with LIMIT 1 rather than a plain
 // join: an activity filed under several contacts must not put the same send on
 // the lane twice.
@@ -132,7 +132,7 @@ func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Tim
 	// appends its own, and a hand-numbered $N beside a derived one drifts the
 	// day the filter gains an argument.
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return "", err
 	}

@@ -347,7 +347,7 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	}
 	args := []any{activityIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}
