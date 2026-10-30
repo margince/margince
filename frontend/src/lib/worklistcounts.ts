@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { categoryInView, UPCOMING, type WorklistView } from "./worklistviews";
 
 type Worklist = components["schemas"]["Worklist"];
 type WorklistFilter = NonNullable<Worklist["filter"]>;
@@ -14,11 +15,13 @@ type WorklistCount = Worklist["counts"][number];
 export function pillCount(
   day: Worklist,
   filter: WorklistFilter,
+  view?: WorklistView,
 ): number | undefined {
-  if (day.scope_truncated || unreadSources(day, filter) > 0) return undefined;
+  if (day.scope_truncated || unreadSources(day, filter, view) > 0)
+    return undefined;
   if (filter === "all") {
     let sum = 0;
-    for (const count of day.counts) {
+    for (const count of outstandingCounts(day, view)) {
       const exact = exactCount(count);
       if (exact === undefined) return undefined;
       sum += exact;
@@ -35,17 +38,35 @@ export function exactCount(count: WorklistCount): number | undefined {
   return count.more_available ? undefined : count.considered;
 }
 
+// The categories `all` adds up inside a view. Upcoming work is never due now,
+// so it never joins the outstanding total.
+export function outstandingCounts(
+  day: Worklist,
+  view?: WorklistView,
+): Worklist["counts"] {
+  return day.counts.filter(
+    (count) =>
+      count.category !== UPCOMING &&
+      (view === undefined || categoryInView(count.category, view)),
+  );
+}
+
 // A source that never answered may hold rows of this cut, so the line must not
 // fall silent over it. A side read that puts no row on the queue cannot.
-export function unreadSources(day: Worklist, filter: WorklistFilter): number {
+export function unreadSources(
+  day: Worklist,
+  filter: WorklistFilter,
+  view?: WorklistView,
+): number {
   const sources = new Set(
     day.sources_unavailable
       .filter((entry) => entry.contributes_rows !== false)
       .filter(
         (entry) =>
-          filter === "all" ||
           entry.category === undefined ||
-          entry.category === filter,
+          (filter === "all"
+            ? view === undefined || categoryInView(entry.category, view)
+            : entry.category === filter),
       )
       .map((entry) => entry.source),
   );

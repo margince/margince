@@ -112,22 +112,18 @@ func (s *Store) quickCaptureInTx(
 	in QuickCaptureInput,
 ) (QuickCaptureResult, error) {
 	var out QuickCaptureResult
-	contact, err := s.CreateContactTx(ctx, tx, contactFromQuickCapture(in), CustomColumns{})
+	var attached EmployerAttached
+	contactInput := contactFromQuickCapture(in)
+	contactInput.Employer = EmployerChoice{CompanyID: in.CompanyID, CompanyName: in.CompanyName, Role: in.Role, Source: quickCaptureSource}
+	contactInput.EmployerResult = &attached
+	contact, err := s.CreateContactTx(ctx, tx, contactInput, CustomColumns{})
 	if err != nil {
 		return out, nameProfileURLField(err)
 	}
 	out.Contact = contact
-
-	choice := EmployerChoice{CompanyID: in.CompanyID, CompanyName: in.CompanyName, Role: in.Role, Source: quickCaptureSource}
-	if !choice.named() {
-		return out, nil
+	if !attached.CompanyID.IsZero() {
+		out.CompanyID = &attached.CompanyID
 	}
-	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	attached, err := s.attachEmployerTx(ctx, tx, contactID, choice)
-	if err != nil {
-		return out, err
-	}
-	out.CompanyID = &attached.CompanyID
 	out.CompanyCreated = attached.CompanyCreated
 	return out, nil
 }

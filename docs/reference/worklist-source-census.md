@@ -128,6 +128,11 @@ while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `dec
 | `urgent` | Rows whose own level is at most `levelPromise` (`worklistsummary.go`); a pin does not change it | Today, across categories |
 | `except_decisions` | Every row whose source is not `approval` | Today without the Decisions view |
 | `changed_since_brief` | Rows that are not approvals and arrived after the brief's data cutoff | Today; empty when no brief ran |
+| `upcoming` | Tasks due after today, which carry the `upcoming` category. No other value keeps them | Today, its Upcoming and backlog section |
+
+The `view` parameter (`today`, `decisions`, `system`) is applied by `keepInView` in `views.go`, beside
+step H. `resolveView` reads `filter=decisions` or `filter=system` without a view as that view, and
+answers 422 for a filter from another view. The cursor binds the view through `askedFor`.
 
 ## Future-dated and undated planned work
 

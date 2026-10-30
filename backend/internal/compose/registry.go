@@ -104,7 +104,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
 	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
-	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: contacts.NewStore(db)})
+	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
 	agents.RegisterBulkTool(registry, bulkChangeSeam{engine: newBulkEngine(db, gate).withListsIf(features.lists)})
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
@@ -160,9 +160,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterCommitmentTool(registry, commitmentLister(pool))
 	agents.RegisterHandoffTool(registry, handoffReader(pool))
 	agents.RegisterProject360Tool(registry, project360Reader(pool))
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, contacts.NewStore(InstallationDB(pool))), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool, newContactsStore(InstallationDB(pool))), coverageReader(pool, newContactsStore(InstallationDB(pool))),
 		introPathLister(pool),
-		atRiskLister(pool, contacts.NewStore(InstallationDB(pool))))
+		atRiskLister(pool, newContactsStore(InstallationDB(pool))))
 	comms := newCommsAdapter(pool, drafter, send)
 	comms.firstDrafts = features.firstDrafts
 	agents.RegisterCommsTools(registry, comms, provider)

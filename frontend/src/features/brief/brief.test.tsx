@@ -35,6 +35,8 @@ it("shows one daily agenda, without duplicate tasks, risks or an empty approvals
 });
 
 it("continues the full queue in a Brief drawer without losing the first page or repeating a boundary row", async () => {
+  // Without an observer the drawer's scroll sentinel offers its button.
+  vi.stubGlobal("IntersectionObserver", undefined);
   const first = taskRow("t1", "Call Weber");
   const second = taskRow("t2", "Review Nordwind");
   stubApi({
@@ -51,7 +53,7 @@ it("continues the full queue in a Brief drawer without losing the first page or 
     screen.getByRole("button", { name: new RegExp(en["brief.queue.show"]) }),
   );
   await userEvent.click(
-    await screen.findByRole("button", { name: en["worklist.more"] }),
+    await screen.findByRole("button", { name: en["list.loadMore"] }),
   );
   await screen.findByText("Review Nordwind");
   expect(
@@ -60,7 +62,7 @@ it("continues the full queue in a Brief drawer without losing the first page or 
       ?.querySelectorAll(".worklist-row-title"),
   ).toHaveLength(2);
   expect(
-    screen.queryByRole("button", { name: en["worklist.more"] }),
+    screen.queryByRole("button", { name: en["list.loadMore"] }),
   ).toBeNull();
 });
 

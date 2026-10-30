@@ -23,14 +23,14 @@ func TestANewCompanyOffersItsDomainContactsAndLinksOnlyTheTickedOnes(t *testing.
 	// The company carries a consumer domain too: an address there must never match.
 	company := e.createNamedCompany(ctx, t, "Candco", "candco.test", "gmail.com")
 
-	alice := e.contactWithEmail(ctx, t, "Alice Able", "alice@candco.test")
-	bob := e.contactWithEmail(ctx, t, "Bob Baker", "bob@candco.test")
-	gmail := e.contactWithEmail(ctx, t, "Carol Consumer", "carol.candco@gmail.com")
-	dave := e.contactWithEmail(ctx, t, "Dave Already", "dave@candco.test")
+	alice := e.legacyUnlinkedDomainContact(ctx, t, "Alice Able", "alice@candco.test")
+	bob := e.legacyUnlinkedDomainContact(ctx, t, "Bob Baker", "bob@candco.test")
+	gmail := e.legacyUnlinkedDomainContact(ctx, t, "Carol Consumer", "carol.candco@gmail.com")
+	dave := e.legacyUnlinkedDomainContact(ctx, t, "Dave Already", "dave@candco.test")
 	if _, err := e.store.LinkContactEmployer(ctx, dave, LinkEmployerInput{CompanyID: &company}); err != nil {
 		t.Fatalf("linking dave ahead of time: %v", err)
 	}
-	erin := e.contactWithEmail(e.asOther(), t, "Erin Hidden", "erin@candco.test")
+	erin := e.legacyUnlinkedDomainContact(e.asOther(), t, "Erin Hidden", "erin@candco.test")
 	if _, err := e.store.UpdateContact(e.asOther(), erin, UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making erin private: %v", err)
 	}
@@ -77,9 +77,9 @@ func TestLinkingANonCandidateWritesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Batchco", "batchco.test")
-	ready := e.contactWithEmail(ctx, t, "Rita Ready", "rita@batchco.test")
-	elsewhere := e.contactWithEmail(ctx, t, "Olaf Elsewhere", "olaf@otherplace.test")
-	hidden := e.contactWithEmail(e.asOther(), t, "Hana Hidden", "hana@batchco.test")
+	ready := e.legacyUnlinkedDomainContact(ctx, t, "Rita Ready", "rita@batchco.test")
+	elsewhere := e.legacyUnlinkedDomainContact(ctx, t, "Olaf Elsewhere", "olaf@otherplace.test")
+	hidden := e.legacyUnlinkedDomainContact(e.asOther(), t, "Hana Hidden", "hana@batchco.test")
 	if _, err := e.store.UpdateContact(e.asOther(), hidden, UpdateContactInput{Visibility: new("owner")}); err != nil {
 		t.Fatalf("making hana private: %v", err)
 	}
@@ -104,8 +104,8 @@ func TestASubdomainAddressIsALinkCandidateOfTheParentDomain(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Acme", "acme.example")
-	regional := e.contactWithEmail(ctx, t, "Eva Europe", "eva@eu.acme.example")
-	e.contactWithEmail(ctx, t, "Lou Lookalike", "lou@notacme.example")
+	regional := e.legacyUnlinkedDomainContact(ctx, t, "Eva Europe", "eva@eu.acme.example")
+	e.legacyUnlinkedDomainContact(ctx, t, "Lou Lookalike", "lou@notacme.example")
 
 	candidates, _, err := e.store.ListLinkCandidates(ctx, company)
 	if err != nil {
@@ -126,9 +126,9 @@ func TestAWorkspaceSeatIsNoLinkCandidate(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Seatco", "seatco.test")
-	seat := e.contactWithEmail(ctx, t, "Sam Seat", "sam@seatco.test")
+	seat := e.legacyUnlinkedDomainContact(ctx, t, "Sam Seat", "sam@seatco.test")
 	e.declareSeatAddress(ctx, t, e.otherRep, "sam@seatco.test", "provider")
-	client := e.contactWithEmail(ctx, t, "Cleo Client", "cleo@seatco.test")
+	client := e.legacyUnlinkedDomainContact(ctx, t, "Cleo Client", "cleo@seatco.test")
 
 	candidates, _, err := e.store.ListLinkCandidates(ctx, company)
 	if err != nil {
@@ -148,9 +148,9 @@ func TestASeatAtAUnicodeDomainIsNoLinkCandidate(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.createNamedCompany(ctx, t, "Bücher", "xn--bcher-kva.example")
-	seat := e.contactWithEmail(ctx, t, "Anna Seat", "anna@bücher.example")
+	seat := e.legacyUnlinkedDomainContact(ctx, t, "Anna Seat", "anna@bücher.example")
 	e.declareSeatAddress(ctx, t, e.otherRep, "anna@xn--bcher-kva.example", "provider")
-	client := e.contactWithEmail(ctx, t, "Ben Client", "ben@bücher.example")
+	client := e.legacyUnlinkedDomainContact(ctx, t, "Ben Client", "ben@bücher.example")
 
 	candidates, _, err := e.store.ListLinkCandidates(ctx, company)
 	if err != nil {
@@ -171,10 +171,10 @@ func TestAReadOnlyShareIsNoLinkCandidate(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.asRepOwnRows()
 	company := e.createNamedCompany(ctx, t, "Shareco", "shareco.test")
-	mine := e.contactWithEmail(ctx, t, "Mia Mine", "mia@shareco.test")
-	readOnly := e.contactWithEmail(e.asOther(), t, "Rob Readonly", "rob@shareco.test")
-	writable := e.contactWithEmail(e.asOther(), t, "Wes Writable", "wes@shareco.test")
-	e.contactWithEmail(e.asOther(), t, "Una Unshared", "una@shareco.test")
+	mine := e.legacyUnlinkedDomainContact(ctx, t, "Mia Mine", "mia@shareco.test")
+	readOnly := e.legacyUnlinkedDomainContact(e.asOther(), t, "Rob Readonly", "rob@shareco.test")
+	writable := e.legacyUnlinkedDomainContact(e.asOther(), t, "Wes Writable", "wes@shareco.test")
+	e.legacyUnlinkedDomainContact(e.asOther(), t, "Una Unshared", "una@shareco.test")
 	e.grantContact(ctx, t, readOnly, "read")
 	e.grantContact(ctx, t, writable, "write")
 
@@ -199,7 +199,7 @@ func TestAReadOnlyShareIsNoLinkCandidate(t *testing.T) {
 func TestACallerWhoMayNotLinkIsOfferedNoCandidates(t *testing.T) {
 	e := setupDedupe(t)
 	company := e.createNamedCompany(e.as(), t, "Viewco", "viewco.test")
-	e.contactWithEmail(e.as(), t, "Vic Viewed", "vic@viewco.test")
+	e.legacyUnlinkedDomainContact(e.as(), t, "Vic Viewed", "vic@viewco.test")
 	refusals := map[string]func(*principal.Principal){
 		"without relationship:create": func(p *principal.Principal) {
 			p.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true}
@@ -248,4 +248,17 @@ func candidateIDs(candidates []LinkCandidate) []ids.ContactID {
 		out = append(out, c.ContactID)
 	}
 	return out
+}
+
+// This fixture represents contacts stored before employer resolution ran on creation.
+func (e *dedupeEnv) legacyUnlinkedDomainContact(ctx context.Context, t *testing.T, name, email string) ids.ContactID {
+	t.Helper()
+	id := e.contactWithEmail(ctx, t, name, email)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `DELETE FROM relationship WHERE contact_id = $1 AND kind = 'employment'`, id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return id
 }

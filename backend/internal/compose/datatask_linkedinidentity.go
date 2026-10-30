@@ -62,7 +62,7 @@ func normalizeLinkedInStep(
 func leadContactPairsDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
 	consents := consent.NewStore(db)
-	store := contacts.NewStore(db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
+	store := newContactsStore(db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
 	return datatask.Task{
 		ID: "core/1793062664_lead_contact_pairs_merged", Version: 1,
 		Title: "Merge existing lead and contact pairs", Requires: []string{"core/0001"},

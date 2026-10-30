@@ -3,7 +3,7 @@ import { isValidElement } from "react";
 import { expect, it } from "vitest";
 import { row } from "../../testing/worklist.testkit";
 import { KNOWN_SOURCES, rowHref } from "./worklist.copy";
-import { reviewFilter } from "./worklist.destinations";
+import { reviewView } from "./worklist.destinations";
 import { rowActivityId, rowSourceUnavailable } from "./worklist.noticesource";
 import type { WorklistItem } from "./worklist.queries";
 import { rowAnswer } from "./worklist.row.answer";
@@ -149,7 +149,7 @@ it.each(Object.entries(CONTEXT))(
     } else if (via === "activity") {
       expect(rowActivityId(item)).toBeTruthy();
     } else if (via === "group") {
-      expect(reviewFilter(item)).toBe("decisions");
+      expect(reviewView(item)).toBe("decisions");
     } else {
       const answer = rowAnswer(item, {
         working: false,

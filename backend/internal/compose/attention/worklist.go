@@ -19,7 +19,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,35 +29,6 @@ const worklistPage = 25
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
 const worklistMaxPage = 100
-
-// Worklist answers the ranked day.
-//
-// The filter narrows what is CARRIED, never what is read: a source is read,
-// classified and then dropped, so the summary's figures describe the same day
-// whichever filter is applied.
-func (s *Service) Worklist(
-	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
-) (crmcontracts.Worklist, error) {
-	// ONE snapshot around the whole page, for the two reasons assemble.go
-	// gives: the lanes cost one transaction between them, and they answer from
-	// one instant so the page cannot disagree with itself.
-	// Admission BEFORE the snapshot, not inside it: a refused caller must not
-	// cost a pooled connection, which is the posture WithWorkspaceTx's own doc
-	// states — refuse before any SQL runs.
-	if err := auth.RequireMember(ctx); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	var out crmcontracts.Worklist
-	err := s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
-		var err error
-		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
-		return err
-	})
-	if err == nil {
-		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
-	}
-	return out, err
-}
 
 // worklistIn is Worklist's body, reading inside the snapshot Worklist opened.
 func (s *Service) worklistIn(
@@ -87,7 +57,7 @@ func (s *Service) worklistIn(
 	// Refused BEFORE the day is read: a token minted for another question is the
 	// caller's mistake, and assembling a page to then discard it spends a dozen
 	// lane reads on an answer nobody receives.
-	cursor, err := decodeCursor(token, resolved, filter, namedOwner)
+	cursor, err := decodeCursor(token, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -99,7 +69,7 @@ func (s *Service) worklistIn(
 	//
 	// The caller re-issues without the cursor, which is the remedy a token
 	// minted under a different question already carries.
-	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, filter, namedOwner)
+	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -325,9 +295,10 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
-	if !opensTheDeck(filter) {
+	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
 		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	}
+	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
@@ -370,7 +341,7 @@ func (s *Service) worklistFrom(
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -402,7 +373,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -428,10 +399,7 @@ func (s *Service) worklistFrom(
 		// count. A lane whose rows DID feed one would have to be named.
 		Readings: readingsOf(considered, bounded, missing),
 	}
-	if filter != "" {
-		narrowed := crmcontracts.WorklistFilter(filter)
-		out.Filter = &narrowed
-	}
+	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more
 	// behind it. A cursor on a final page invites one more request that can only
 	// answer empty, and a client walking until the cursor disappears would never
@@ -446,7 +414,7 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, filter, s.taskOwner, walk.id)
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id)
 		out.NextCursor = &token
 	}
 	// What has happened to this walk since it started, where there is a walk to
