@@ -160,13 +160,14 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
-// worklistCalls sends the scope the screen opens on: a rep's own queue, a manager's team.
+// worklistCalls sends the scope the screen opens on, which is the reader's own
+// queue for every seat. A manager also times the team scope they pick.
 func worklistCalls(in dailyInput) []dailyCall {
-	scope := "mine"
+	calls := []dailyCall{{Path: "/v1/worklist?scope=mine&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
-		scope = "team"
+		calls = append(calls, dailyCall{Name: "team", Path: "/v1/worklist?scope=team&filter=all"})
 	}
-	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
+	return calls
 }
 
 // homeCalls are what a browser on Today sends once the shell's gates clear.
