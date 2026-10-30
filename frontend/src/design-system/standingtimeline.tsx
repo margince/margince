@@ -268,8 +268,8 @@ export function StandingTimeline({
 }
 
 // The activities a drawn label names, so their marks are left out. An event
-// folded into a neighbour's "+N more", or left without room, names nothing,
-// so its activities stay in the mark lane rather than vanish from the line.
+// folded into a neighbour's "+N more", or left without room, names nothing.
+// Its activities stay in the mark lane rather than vanish from the line.
 function namedActivities(
   labels: readonly Readonly<{ event?: TimelineEvent; alone: boolean }>[],
   places: readonly LabelPlace[],

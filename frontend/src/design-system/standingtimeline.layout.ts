@@ -88,8 +88,8 @@ export type TimelineAxis = Readonly<{ range: TimelineRange; far?: number }>;
 
 /**
  * The axis for a record read at `today`. It looks as far ahead of today as it
- * looks back (at least `MIN_LOOKAHEAD_MS`), with room after today (a week,
- * or a sixth of the time before it) so the Today pill never stands on the
+ * looks back, at least `MIN_LOOKAHEAD_MS`. It leaves room after today (a week,
+ * or a sixth of the time before it), so the Today pill never stands on the
  * axis's end. A date further ahead is not stretched to: it sits past a break.
  */
 export function axisOf(
