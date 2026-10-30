@@ -276,12 +276,12 @@ learns only from samples you add.
 ### How do I set up my writing voice?
 <!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
-1. Under **Writing samples**, choose **Add writing samples** and drop or pick files, several at once.
+1. Under **Make it sharper**, choose **Add writing samples** and drop or pick files, several at once. **Add writing** at the top of the page jumps there.
 2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
-4. Choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
+4. Under **Builds**, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-After the first build, the button reads **Rebuild Voice DNA**. Notes on how you want to sound go in **Preferences**, then **Save preferences**.
+After the first build, the button reads **Rebuild Voice DNA**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page jumps to each section.
 Also called: tone, writing style, Voice DNA, sound like me.
 
 The best samples are emails you sent, then proposals and posts, then the written
