@@ -1848,6 +1848,7 @@ export const en = {
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
+  "systemJob.assurance_freshness": "Forecast check freshness",
   "systemJob.ai_activity": "AI activity record",
   "systemJob.ai_activity_reconcile": "AI activity catch-up",
   "systemJob.ai_activity_retention": "AI activity cleanup",
@@ -6907,6 +6908,7 @@ export const en = {
     "These numbers cover every project you can read.",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
+  "analytics.attentionOutOfDate": "out of date, changed since the check",
   "analytics.attentionAtStake": "{amount} at stake",
   "analytics.attentionReview": "Review",
   "analytics.attentionChecks_one": "1 forecast check to answer",
@@ -7174,6 +7176,18 @@ export const en = {
   "review.readyWithExceptions": "Ready, with notes",
   "review.needsReview": "Needs review",
   "review.checksIncomplete": "Checks incomplete",
+  "review.outOfDate": "Out of date",
+  "review.outOfDateDeals_one": "1 deal changed since this check.",
+  "review.outOfDateDeals_other": "{count} deals changed since this check.",
+  "review.outOfDateWorkspace":
+    "A stage or forecast call changed since this check.",
+  "review.outOfDateSignals_one": "1 buying signal changed since this check.",
+  "review.outOfDateSignals_other":
+    "{count} buying signals changed since this check.",
+  "review.outOfDateRefresh":
+    "Choose Check again to read the changes now, or wait for the next nightly run.",
+  "review.freshnessUnknown":
+    "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
   "review.allSourcesRead": "All sources checked.",
   // The sources a run reads, named for the reader rather than by the server's
   // own vocabulary. The unread line printed the wire keys verbatim, so a German

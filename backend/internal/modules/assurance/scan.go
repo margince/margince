@@ -150,6 +150,12 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.RunID = runID
+		// Before the deals are read, so every change at or below it was
+		// committed before this pass looked (freshness.go).
+		generation, err := s.store.inputGeneration(ctx, tx)
+		if err != nil {
+			return err
+		}
 
 		coverage := s.coverage(ctx, tx, now)
 		for _, c := range coverage {
@@ -224,18 +230,31 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.Departed = departed
-		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
-		out.Status = StatusComplete
-		if out.Readiness == ReadinessChecksIncomplete {
-			out.Status = StatusIncomplete
-		}
-		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
-			out.Status, out.Readiness)
+		return s.conclude(ctx, tx, runID, generation, coverage, pass, &out)
 	})
 	if err != nil {
 		return Result{}, err
 	}
 	return out, nil
+}
+
+// conclude grades a pass that read the deals and closes its run. Only a
+// complete run records what it read: a missed source's changes went unread.
+func (s *Scanner) conclude(
+	ctx context.Context, tx pgx.Tx, runID ids.UUID, generation int64, coverage []SourceCoverage, pass walked, out *Result,
+) error {
+	out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
+	out.Status = StatusComplete
+	if out.Readiness == ReadinessChecksIncomplete {
+		out.Status = StatusIncomplete
+	}
+	if out.Status == StatusComplete {
+		if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
+			return err
+		}
+	}
+	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
+		out.Status, out.Readiness)
 }
 
 // clearableTypes names the rule types whose findings tonight's pass may close

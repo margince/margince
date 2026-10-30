@@ -17,6 +17,12 @@ import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { EnforcementSwitch } from "./analytics.forecast.enforcement";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
+import {
+  FreshnessLine,
+  OutOfDateBadge,
+  outOfDate,
+  verdictStands,
+} from "./analytics.forecast.freshness";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
 import { checkLabel, SubjectCell } from "./inputcheck.facts";
 
@@ -111,8 +117,17 @@ function ReviewPanel({
   const checks = useInputChecks();
 
   return (
-    <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
+    <Panel
+      title={title}
+      titleAction={
+        <>
+          {outOfDate(run) && <OutOfDateBadge />}
+          <ReadinessBadge run={run} />
+        </>
+      }
+    >
       <PanelBody>
+        <FreshnessLine freshness={run.freshness} />
         {run.sources?.some((source) => source.state !== "checked") ? (
           <CoverageLine sources={run.sources} />
         ) : (
@@ -143,14 +158,17 @@ function ReviewPanel({
 
 // The verdict, as a word rather than a count.
 //
-// `checks_incomplete` is not a worse `needs_review`: one says the pipeline has
-// problems, the other says we could not look, and they take different tones
-// because they ask for different things.
+// `checks_incomplete` is not a worse `needs_review`. One says the pipeline has
+// problems, the other says we could not look, and they ask for different
+// things. A verdict on records that changed since, or may have, keeps its
+// word and loses its tone. "Ready" in green over a moved pipeline would be a
+// false healthy reading.
 function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
   const t = useT();
   if (!run.readiness) {
     return null;
   }
+
   const tone = {
     ready: "success",
     ready_with_exceptions: "accent",
@@ -163,7 +181,11 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
     needs_review: "review.needsReview",
     checks_incomplete: "review.checksIncomplete",
   } as const;
-  return <Badge tone={tone[run.readiness]}>{t(label[run.readiness])}</Badge>;
+  return (
+    <Badge tone={verdictStands(run) ? tone[run.readiness] : "default"}>
+      {t(label[run.readiness])}
+    </Badge>
+  );
 }
 
 // How much of the pipeline the run could read.
@@ -317,7 +339,12 @@ function checkColumns(
     {
       key: "finding",
       header: t("review.colFinding"),
-      render: (check) => t(checkLabel(check.type)),
+      render: (check) => (
+        <>
+          {t(checkLabel(check.type))}{" "}
+          {check.inputs_changed && <OutOfDateBadge />}
+        </>
+      ),
     },
     {
       key: "deal",
