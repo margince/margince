@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 140375,
+    "tool_catalog_bytes": 140544,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36181,
+    "approx_wire_tokens_total": 36223,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 34366,
-      "input_schema_bytes": 65893,
+      "input_schema_bytes": 66062,
       "output_schema_bytes": 30862,
-      "description_plus_input_schema_bytes": 100259
+      "description_plus_input_schema_bytes": 100428
     }
   },
   "tools": {
@@ -1826,6 +1826,14 @@
                 "active_referring",
                 "dormant",
                 "no_fit"
+              ],
+              "type": "string"
+            },
+            "settle": {
+              "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+              "enum": [
+                "complete",
+                "keep"
               ],
               "type": "string"
             },
