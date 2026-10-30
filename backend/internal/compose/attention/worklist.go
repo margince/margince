@@ -296,7 +296,7 @@ func (s *Service) worklistFrom(
 	}
 	// A Done being checked asks which rows this day draws, not for a page.
 	if s.marked.probe != nil {
-		s.marked.probe(rows)
+		s.marked.probe(slices.Concat(rows, s.riskInTail(ctx, day.AsOf, bounded, rows), s.waitingInTail(ctx, day.AsOf, bounded)))
 		return crmcontracts.Worklist{}
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
@@ -333,7 +333,7 @@ func (s *Service) worklistFrom(
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
-	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == ""}, shown, more, limit, cursor.Rest, rows)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk

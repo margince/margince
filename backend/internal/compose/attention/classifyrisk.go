@@ -12,6 +12,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
+// riskClassifier classifies at-risk rows against one bar and one pricing, as
+// the ranked lane and the tail both do.
+func riskClassifier(bar materialBar, money dayMoney) func(crmcontracts.AttentionItem, time.Time) ranked {
+	return func(item crmcontracts.AttentionItem, at time.Time) ranked { return classifyRisk(item, at, bar, money) }
+}
+
 // classifyRisk weighs both value and the time available for deal recovery.
 func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialBar, money dayMoney) ranked {
 	consequence := crmcontracts.WorklistItemConsequence("deal_drifts")

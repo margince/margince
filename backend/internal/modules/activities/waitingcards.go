@@ -84,23 +84,15 @@ func (s *Store) WaitingCardsAfter(
 	seats := narrow.mailSeats()
 	var tail WaitingTail
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		judged, more, err := s.waitingCandidates(ctx, tx, asOf, seats, after, judge)
+		judged, more, err := s.waitingCandidates(ctx, tx, asOf, seats, func(arg func(any) int) string {
+			return newerThan(after, arg)
+		}, judge)
 		if err != nil || len(judged) == 0 {
 			return err
 		}
 		tail.Through, tail.More = judged[len(judged)-1], more
-		messages := make([]ids.UUID, len(judged))
-		for i, message := range judged {
-			messages[i] = message.ID
-		}
-		return s.queryWaitingQueue(ctx, tx, asOf, seats, waitingShape{drawsRows: true},
-			func(slots waitingSlots, arg func(any) int) string {
-				return waitingCardsStatement(slots, arg, messages)
-			},
-			func(rows pgx.Rows) (err error) {
-				tail.Cards, err = collectWaiting(rows, seats.owner)
-				return err
-			})
+		tail.Cards, err = s.cardsAmong(ctx, tx, asOf, seats, judged)
+		return err
 	})
 	if err != nil {
 		return WaitingTail{}, fmt.Errorf("activities: reading who is waiting past the page: %w", err)
@@ -108,11 +100,80 @@ func (s *Store) WaitingCardsAfter(
 	return tail, nil
 }
 
-// waitingCandidates reads the next judge messages after a position that the
-// reader may read and the narrowing and horizon could admit, oldest first. The
-// queue's own rules judge them next.
+// WaitingCardsOnDeals answers the cards whose messages are filed under any of
+// these deals, judged as WaitingCardsAfter judges them. A card names the deal
+// its own row carries, which may be none of these.
+func (s *Store) WaitingCardsOnDeals(
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, deals []ids.UUID,
+) ([]WaitingReply, error) {
+	return s.waitingCardsWhere(ctx, asOf, narrow, deals, func(arg func(any) int) string {
+		return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
+			" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
+	})
+}
+
+// WaitingCardsAmong answers which of these messages are cards, judged as
+// WaitingCardsAfter judges them, so a Done check finds a card the tail serves.
+func (s *Store) WaitingCardsAmong(
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, messages []ids.UUID,
+) ([]WaitingReply, error) {
+	return s.waitingCardsWhere(ctx, asOf, narrow, messages, func(arg func(any) int) string {
+		return fmt.Sprintf(" AND a.id = ANY ($%d::uuid[])", arg(messages))
+	})
+}
+
+// waitingCardsWhere judges every candidate message the among clause keeps and
+// draws the cards among them. An empty set of ids reads nothing.
+func (s *Store) waitingCardsWhere(
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, among []ids.UUID, clause func(func(any) int) string,
+) ([]WaitingReply, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if len(among) == 0 {
+		return nil, nil
+	}
+	seats := narrow.mailSeats()
+	var cards []WaitingReply
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		judged, _, err := s.waitingCandidates(ctx, tx, asOf, seats, clause, 0)
+		if err != nil || len(judged) == 0 {
+			return err
+		}
+		cards, err = s.cardsAmong(ctx, tx, asOf, seats, judged)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("activities: judging waiting cards: %w", err)
+	}
+	return cards, nil
+}
+
+// cardsAmong draws the cards among judged messages: those no newer message of
+// their fold outranks.
+func (s *Store) cardsAmong(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, judged []WaitingPosition,
+) (cards []WaitingReply, err error) {
+	messages := make([]ids.UUID, len(judged))
+	for i, message := range judged {
+		messages[i] = message.ID
+	}
+	err = s.queryWaitingQueue(ctx, tx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			return waitingCardsStatement(slots, arg, messages)
+		},
+		func(rows pgx.Rows) (err error) {
+			cards, err = collectWaiting(rows, seats.owner)
+			return err
+		})
+	return cards, err
+}
+
+// waitingCandidates reads up to judge messages that the reader may read and
+// the narrowing, horizon and among clause could admit, oldest first. A judge
+// of zero reads them all. The queue's own rules judge them next.
 func (s *Store) waitingCandidates(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, after WaitingPosition, judge int,
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, among func(func(any) int) string, judge int,
 ) ([]WaitingPosition, bool, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -139,8 +200,10 @@ func (s *Store) waitingCandidates(
 		   AND ` + content + `
 		   AND ` + occurredday.BegunSQL("a", instant) + `
 		   AND (` + waitingYoungSQL(instant, fmt.Sprint(horizon)) + ` OR ` + heldRequestSQL() + `)
-		   AND (` + seats.responsibilitySQL(identities, arg) + `)` + newerThan(after, arg) +
-		fmt.Sprintf(" ORDER BY a.occurred_at, a.id LIMIT %d", judge+1)
+		   AND (` + seats.responsibilitySQL(identities, arg) + `)` + among(arg) + " ORDER BY a.occurred_at, a.id"
+	if judge > 0 {
+		query += fmt.Sprintf(" LIMIT %d", judge+1)
+	}
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, err
@@ -149,7 +212,7 @@ func (s *Store) waitingCandidates(
 		var at WaitingPosition
 		return at, row.Scan(&at.ID, &at.At)
 	})
-	if err != nil || len(judged) <= judge {
+	if err != nil || judge <= 0 || len(judged) <= judge {
 		return judged, false, err
 	}
 	return judged[:judge], true, nil

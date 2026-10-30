@@ -401,3 +401,37 @@ func (w attentionWaiting) WaitingAfter(
 	}
 	return tail, nil
 }
+
+// DealsWaiting names which of these deals a waiting card names, judged as the
+// tail judges its cards, machine senders included.
+func (w attentionWaiting) DealsWaiting(
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor, deals []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	cards, err := w.store.WaitingCardsOnDeals(ctx, asOf, waitingNarrow(narrow), deals)
+	if err != nil {
+		return nil, err
+	}
+	named := map[ids.UUID]bool{}
+	for _, card := range slices.DeleteFunc(cards, sentBySendingSystem) {
+		if !card.DealID.IsZero() {
+			named[card.DealID] = true
+		}
+	}
+	return named, nil
+}
+
+// CardsAmong names which of these messages are waiting cards the tail serves
+// under the narrowing, machine senders left out as the tail leaves them.
+func (w attentionWaiting) CardsAmong(
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor, messages []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	cards, err := w.store.WaitingCardsAmong(ctx, asOf, waitingNarrow(narrow), messages)
+	if err != nil {
+		return nil, err
+	}
+	served := map[ids.UUID]bool{}
+	for _, card := range slices.DeleteFunc(cards, sentBySendingSystem) {
+		served[card.ActivityID] = true
+	}
+	return served, nil
+}
