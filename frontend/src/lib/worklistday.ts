@@ -121,7 +121,7 @@ const DUE_SLACK_MS = 1_000;
 export function untilNextDue(pages: Worklist[], now: number): number | false {
   let next = Number.POSITIVE_INFINITY;
   for (const page of pages) {
-    for (const item of [...page.queue, ...(page.focus?.items ?? [])]) {
+    for (const item of [...(page.queue ?? []), ...(page.focus?.items ?? [])]) {
       const due = item.due_at ? Date.parse(item.due_at) : Number.NaN;
       if (due > now && due < next) next = due;
     }
