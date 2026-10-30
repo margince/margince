@@ -13,8 +13,8 @@ import (
 )
 
 // The browser draws views and category buttons from its own copy of the view
-// split. These tests hold that copy to views.go in both directions: a change on
-// either side alone fails here, and tsc refuses a contract value the copy lacks.
+// split. These tests hold that copy to views.go, so a change on either side
+// alone fails here. tsc refuses a contract value the copy lacks.
 
 const frontendViews = "../../../../frontend/src/lib/worklistviews.ts"
 
