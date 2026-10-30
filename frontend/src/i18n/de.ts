@@ -4220,6 +4220,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.colleagues": "Teammitglieder",
   "activity.detail.filedUnder": "Abgelegt unter",
   "activity.webForm.title": "Von der Website gesendet",
+  "activity.webForm.message": "Nachricht",
   "activity.webForm.name": "Name",
   "activity.webForm.email": "E-Mail",
   "activity.webForm.phone": "Telefon",

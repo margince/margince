@@ -30,6 +30,18 @@ export function WebFormSubmission({
   const text = (key: string, term: string, value: string | undefined) =>
     value ? [{ key, term, value }] : [];
   const facts: Fact[] = [
+    ...(sent.message
+      ? [
+          {
+            key: "message",
+            term: t("activity.webForm.message"),
+            value: (
+              <span style={{ whiteSpace: "pre-wrap" }}>{sent.message}</span>
+            ),
+            block: true,
+          },
+        ]
+      : []),
     ...text("name", t("activity.webForm.name"), sent.full_name),
     {
       key: "email",
@@ -66,11 +78,6 @@ export function WebFormSubmission({
   }
   return (
     <>
-      {sent.message && (
-        <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
-          {sent.message}
-        </p>
-      )}
       <Panel title={t("activity.webForm.title")}>
         <PanelBody>
           <FactList facts={facts} flat />

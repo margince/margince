@@ -4107,6 +4107,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.colleagues": "Đồng nghiệp",
   "activity.detail.filedUnder": "Xếp vào",
   "activity.webForm.title": "Gửi từ trang web",
+  "activity.webForm.message": "Lời nhắn",
   "activity.webForm.name": "Tên",
   "activity.webForm.email": "Email",
   "activity.webForm.phone": "Điện thoại",

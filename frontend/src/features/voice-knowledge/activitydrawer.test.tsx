@@ -272,9 +272,10 @@ it("shows a website form's fields under their labels instead of the note's text"
       onClose={() => {}}
     />,
   );
-  expect(await screen.findByText("Please call me")).toBeTruthy();
+  await screen.findByText("Please call me");
   const term = (name: string) =>
     screen.getByText(name, { selector: "dt" }).nextElementSibling?.textContent;
+  expect(term("Message")).toBe("Please call me");
   expect(term("Email")).toBe("ada@visitor.example");
   expect(term("budget")).toBe("10k");
   expect(term("Campaign source")).toBe("newsletter");

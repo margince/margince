@@ -4209,6 +4209,7 @@ export const en = {
   "activity.detail.colleagues": "Colleagues",
   "activity.detail.filedUnder": "Filed under",
   "activity.webForm.title": "Sent from the website",
+  "activity.webForm.message": "Message",
   "activity.webForm.name": "Name",
   "activity.webForm.email": "Email",
   "activity.webForm.phone": "Phone",
