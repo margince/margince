@@ -163,6 +163,8 @@ export function QualifyDialog({
   const [dealName, setDealName] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [createCompany, setCreateCompany] = useState(false);
+  const typedCompany = preview.data?.typed_company;
 
   const defaultPipeline =
     pipelines.data?.find((p) => p.is_default) ?? pipelines.data?.[0];
@@ -211,6 +213,7 @@ export function QualifyDialog({
         activity_id: lead.qualification_evidence?.activity_id ?? null,
         note: trimmedNote || null,
       },
+      create_company: createCompany,
       deal: withDeal
         ? dealBlock({
             pipelineId: chosenPipeline?.id,
@@ -249,6 +252,14 @@ export function QualifyDialog({
         </Heading>
         <PreviewSentence preview={preview} t={t} />
       </section>
+
+      {typedCompany && (
+        <TypedCompanyChoice
+          company={typedCompany}
+          checked={createCompany}
+          onChange={setCreateCompany}
+        />
+      )}
 
       <Checkbox
         label={t("lead.qualify.alsoDeal")}
@@ -337,6 +348,37 @@ export function QualifyDialog({
         )}
       </Field>
     </ConfirmModal>
+  );
+}
+
+// The rep adds a typed company the lead's email cannot place. Unticked, it
+// lands on the contact as a company to link or create.
+function TypedCompanyChoice({
+  company,
+  checked,
+  onChange,
+}: Readonly<{
+  company: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <section className="lead-qualify-block">
+      <Heading size="xsmall" as="h3">
+        {t("lead.qualify.company")}
+      </Heading>
+      <p>{t("lead.qualify.companyUnresolved", { company })}</p>
+      <Checkbox
+        label={t("lead.qualify.createCompany", { company })}
+        checked={checked}
+        data-testid="lead-qualify-create-company"
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <p className="t-caption">
+        {t("lead.qualify.createCompanyHint", { company })}
+      </p>
+    </section>
   );
 }
 

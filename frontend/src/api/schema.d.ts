@@ -38720,6 +38720,17 @@ export interface components {
                 note?: string | null;
             };
             deal?: components["schemas"]["QualifyDealRequest"];
+            /**
+             * @description What happens to a company name typed on a lead that links no company and whose email
+             *     names no business domain (a personal address, or none). True links the company of that
+             *     name, or creates it. False leaves the contact with no employer and puts the name on it
+             *     as a proposal to link or create; a company is never created from typed text alone.
+             *     The promote preview's `typed_company` says when this choice applies. A lead with a
+             *     business email resolves its company from the domain either way, and the typed name
+             *     only spells a company that is created for it.
+             * @default false
+             */
+            create_company: boolean;
         };
         /**
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -38784,6 +38795,13 @@ export interface components {
              * @default false
              */
             contact_withheld: boolean;
+            /**
+             * @description The company name typed on the lead when nothing else settles it: the lead links no
+             *     company and its email names no business domain. Promotion then needs the rep's
+             *     choice, sent as `create_company`. Absent when the lead links a company, has a
+             *     business email, or has no typed company name.
+             */
+            typed_company?: string | null;
         };
         DemoteLeadRequest: {
             /** @description Why the promotion is being reversed. Required and recorded in audit — an undo nobody explained is indistinguishable later from a mistake. */

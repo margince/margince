@@ -50,8 +50,15 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, lanes, in.intoCandidate, &out.Merged)
+	employer, typed, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, employer, by, candidate, lanes, in.intoCandidate, &out.Merged)
+	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	if err := proposeTypedCompany(ctx, tx, contactID, id, typed, by); err != nil {
 		return PromoteOutcome{}, err
 	}
 	if err := carryLeadConsent(ctx, tx, id, contactID, by); err != nil {
@@ -72,7 +79,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, fmt.Errorf("carry the lead's consent links: %w", err)
 	}
 	if out.Merged {
-		if err := s.resolveCreatedEmployer(ctx, tx, contactID, promotionContactSpec(lead, leadIdentityName(lead), by)); err != nil {
+		if err := s.resolveCreatedEmployer(ctx, tx, contactID, promotionContactSpec(lead, employer, leadIdentityName(lead), by)); err != nil {
 			return PromoteOutcome{}, err
 		}
 	}
