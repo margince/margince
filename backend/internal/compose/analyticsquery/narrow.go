@@ -38,8 +38,8 @@ func Narrow(entity Entity, report Scope, q Query) (Query, error) {
 }
 
 // intersectScope keeps the narrower of two populations when one holds the
-// other. A report naming none asks over the reader's own default, which holds
-// whatever they may measure, so the question's population stands and the
+// other. A report naming none asks over the reader's own default. That holds
+// whatever they may measure, so the question's population stands, and the
 // engine judges it for them.
 func intersectScope(report, question Scope) (Scope, error) {
 	switch {

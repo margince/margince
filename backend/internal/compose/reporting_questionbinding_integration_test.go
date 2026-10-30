@@ -88,8 +88,10 @@ func seedBoundBook(t *testing.T) *boundBook {
 // seat is a full seat that may write reports.
 func (b *boundBook) seat(user ids.UUID, teams []ids.UUID) context.Context {
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), b.e.WS), ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(),
-		UserID: user, SeatType: principal.SeatFull, TeamIDs: teams, Permissions: boundReportPerms})
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(),
+		UserID: user, SeatType: principal.SeatFull, TeamIDs: teams, Permissions: boundReportPerms,
+	})
 }
 
 func (b *boundBook) rep3() context.Context { return b.seat(b.e.Rep3, []ids.UUID{b.e.Team2}) }
@@ -133,18 +135,23 @@ func (b *boundBook) report(ctx context.Context, t *testing.T, run ids.UUID, scop
 
 func boundCard(run ids.UUID) crmcontracts.ReportingCard {
 	saved := openapi_types.UUID(run)
-	return crmcontracts.ReportingCard{Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
+	return crmcontracts.ReportingCard{
+		Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
 		Question: &crmcontracts.ReportingCardQuestion{
 			Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}, SavedQuestionId: &saved,
-		}}
+		},
+	}
 }
 
 func reportInput(card crmcontracts.ReportingCard, scope crmcontracts.ReportingScope) crmcontracts.ReportingReportInput {
 	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{card}}}
-	return crmcontracts.ReportingReportInput{Name: "Bound", Audience: "workspace", Selection: crmcontracts.ReportingSelection{
-		Scope: scope, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open",
-		Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Layout: &layout,
-	}}
+	return crmcontracts.ReportingReportInput{
+		Name: "Bound", Audience: "workspace",
+		Selection: crmcontracts.ReportingSelection{
+			Scope: scope, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open",
+			Metrics: []crmcontracts.ReportingMetricID{"bookings_won"}, Layout: &layout,
+		},
+	}
 }
 
 var workspaceScope = crmcontracts.ReportingScope{Kind: "workspace"}
@@ -169,7 +176,7 @@ func decodeAnswer(t *testing.T, body string) crmcontracts.ReportingQuestionAnswe
 	return out
 }
 
-// A saved question's filter survives into the report: the card counts the
+// A saved question's filter survives into the report. The card counts the
 // deals at the one company it names, not every deal the reader may see.
 func TestABoundQuestionAsksItsFilteredPopulationForAnAuthorizedReader(t *testing.T) {
 	b := seedBoundBook(t)
@@ -193,7 +200,7 @@ func TestABoundQuestionAsksItsFilteredPopulationForAnAuthorizedReader(t *testing
 }
 
 // Every way a reader can reach a bound card's definition carries no filter
-// value, and a reader who may not open the filtered company is answered
+// value. A reader who may not open the filtered company is answered
 // restricted: no rows, no labels, no total, no id in an error.
 func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
 	b := seedBoundBook(t)
@@ -239,9 +246,8 @@ func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
 	}
 }
 
-// A question for one person inside a report for a team cannot hold, and the
-// floor and its complementary withholding apply to a bound card as they do to
-// any question.
+// A question for one person inside a report for a team cannot hold. The floor
+// and its complementary withholding apply to a bound card as to any question.
 func TestABoundQuestionThatCannotHoldIsRefusedWithItsReason(t *testing.T) {
 	b := seedBoundBook(t)
 	mine := dealsAt(b.open)
@@ -282,8 +288,11 @@ func TestACardKeepsItsBindingByReferenceAndRefusesAForeignOne(t *testing.T) {
 	}
 
 	foreign := ids.NewV7().String()
-	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{{Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
-		Question: &crmcontracts.ReportingCardQuestion{Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}, Binding: &foreign}}}}}
+	stranger := crmcontracts.ReportingCard{
+		Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
+		Question: &crmcontracts.ReportingCardQuestion{Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}, Binding: &foreign},
+	}
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{stranger}}}
 	selection.Layout = &layout
 	if _, err := b.service.SaveReportDraft(b.rep3(), ids.UUID(report.Id), draft.Version, crmcontracts.ReportingReportDraftInput{Selection: selection}); err == nil {
 		t.Fatal("a reference this report never held was kept")
@@ -294,8 +303,10 @@ func TestACardKeepsItsBindingByReferenceAndRefusesAForeignOne(t *testing.T) {
 // as it did when it was published.
 func TestAnUnboundCardKeepsAskingItsShape(t *testing.T) {
 	b := seedBoundBook(t)
-	card := crmcontracts.ReportingCard{Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
-		Question: &crmcontracts.ReportingCardQuestion{Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}}}
+	card := crmcontracts.ReportingCard{
+		Id: "bound", Kind: "question", Width: crmcontracts.ReportingCardWidthFull,
+		Question: &crmcontracts.ReportingCardQuestion{Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}},
+	}
 	report, err := b.service.CreateReport(b.rep3(), reportInput(card, workspaceScope))
 	if err != nil {
 		t.Fatal(err)

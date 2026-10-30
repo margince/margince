@@ -368,7 +368,7 @@ function AddCard({
  * Adds a saved custom question: one of the reader's own from a list, or any
  * other from its link. The card is bound to the question when the report is
  * saved, filters included. The server keeps the filters, so no reader of the
- * report receives them, and a later save of another question does not move a
+ * report receives them. A later save of another question does not move a
  * published report.
  */
 function AddQuestion({

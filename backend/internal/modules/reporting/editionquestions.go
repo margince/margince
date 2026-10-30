@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Questions binds a card to a saved question, answers a report's question
-// cards for a sent edition, and later judges what of a kept answer one reader
-// may see. A seam because the analytics engine lives in compose.
+// Questions binds a card to a saved question and answers question cards for a
+// sent edition. Later it judges what of a kept answer one reader may see. It
+// is a seam because the analytics engine lives in compose.
 type Questions interface {
 	// BindSavedQuestion reads a saved question whole as the caller may ask it now.
 	BindSavedQuestion(ctx context.Context, tx pgx.Tx, savedQuestion ids.UUID) (Binding, error)
@@ -84,7 +84,7 @@ func (s *Service) captureQuestions(ctx context.Context, tx pgx.Tx, report ids.UU
 	if err != nil {
 		return nil, err
 	}
-	cards := questionCards(selection, kept)
+	cards := boundQuestionCards(selection, kept)
 	out := make(map[string]CapturedQuestion, len(cards))
 	ready, err := scheduleReady(ctx, tx)
 	if err != nil {
@@ -181,7 +181,7 @@ func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmc
 		return err
 	}
 	cards := map[string]QuestionCard{}
-	for _, card := range questionCards(edition.Evaluation.Selection, kept) {
+	for _, card := range boundQuestionCards(edition.Evaluation.Selection, kept) {
 		cards[card.ID] = card
 	}
 	out := []crmcontracts.ReportingEditionQuestion{}

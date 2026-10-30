@@ -4,10 +4,10 @@
 package compose
 
 // What a move of the reporting calendar does to saved work. A saved period
-// such as `2026` keeps the dates it named when it was saved; a relative one,
+// such as `2026` keeps the dates it named when it was saved. A relative one,
 // such as this quarter, follows the setting. The admin is told how many of
-// each before the move, and the move itself gives every saved question that
-// names a period without a calendar the one in force until then.
+// each before the move. The move writes the calendar in force until then on
+// every saved question that names a period without one.
 
 import (
 	"context"
@@ -103,9 +103,9 @@ func fiscalYearImpact(ctx context.Context, tx pgx.Tx) (crmcontracts.Installation
 }
 
 // keepSavedPeriodsOnCalendarChange is the hook a move of the reporting zone or
-// the fiscal start runs. Every saved question that filters on a period and
-// keeps no calendar takes the one in force before the move, so `2026` saved
-// under a January start still means January to December 2026 afterwards.
+// the fiscal start runs. A saved question that filters on a period and keeps
+// no calendar takes the one in force before the move. So `2026` saved under a
+// January start still means January to December 2026 afterwards.
 func keepSavedPeriodsOnCalendarChange(ctx context.Context, tx pgx.Tx, before identity.ReportingCalendar) error {
 	entities, fields := periodVocabulary()
 	rows, err := tx.Query(ctx, `SELECT id, query FROM report_run WHERE `+periodFilterOn("query", true)+` ORDER BY id FOR UPDATE`, entities, fields)

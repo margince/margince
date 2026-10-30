@@ -68,12 +68,9 @@ func unanswerable(err error) bool {
 // bound card filters on keeps no answer, as for a question they cannot ask.
 func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
 	out := reporting.CapturedQuestion{Entity: card.Question.Entity}
-	query, restricted, err := resolveCard(ctx, tx, card, scope)
-	if restricted || unanswerable(err) {
+	query, askable, err := senderQuery(ctx, tx, card, scope)
+	if err != nil || !askable {
 		out.Reason = crmcontracts.ReportingEditionQuestionReasonUnanswered
-		return out, nil
-	}
-	if err != nil {
 		return out, err
 	}
 	other, err := countsOtherRecords(ctx, tx, query)
@@ -124,6 +121,16 @@ func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, card reporti
 		SchemaVersion: answer.SchemaVersion, PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
 	}
 	return out, nil
+}
+
+// senderQuery is the card's question as the sender asks it. askable is false
+// when they may not, which keeps no answer rather than failing the edition.
+func senderQuery(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope) (query analyticsquery.Query, askable bool, err error) {
+	query, restricted, err := resolveCard(ctx, tx, card, scope)
+	if restricted || unanswerable(err) {
+		return query, false, nil
+	}
+	return query, err == nil, err
 }
 
 // maxFilteredGroups bounds the groups a capture filters its records to. Each

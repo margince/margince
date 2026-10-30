@@ -79,8 +79,8 @@ func moveFiscalStart(ctx context.Context, t *testing.T, e *forecastEnv, month in
 }
 
 // A period saved as a calendar year keeps naming that year after the fiscal
-// start moves: the move writes down the calendar each saved question was
-// asked in, and the admin is told how many there are first.
+// start moves. The move writes down the calendar each saved question was asked
+// in. The admin is told how many there are first.
 func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
 	e := setupForecast(t)
 	ctx := reportingActor(e)
@@ -130,8 +130,8 @@ func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
 	}
 }
 
-// A sent edition keeps the calendar it was captured under, while a live read
-// of the same report follows the setting and says which start it read.
+// A sent edition keeps the calendar it was captured under. A live read of the
+// same report follows the setting and says which start it read.
 func TestAFrozenEditionKeepsItsCalendarWhenTheFiscalStartMoves(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)
@@ -152,8 +152,8 @@ func TestAFrozenEditionKeepsItsCalendarWhenTheFiscalStartMoves(t *testing.T) {
 }
 
 // A scheduled edition asks a bound card through the same resolver as the
-// page: the filter its saved question carries holds in the kept answer, and
-// a native money sum stays answerable because the currency filter is kept.
+// page. The filter its saved question carries holds in the kept answer. A
+// native money sum stays answerable, because the currency filter is kept.
 func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
 	q := newQuestionEditions(t)
 	q.keepForAYear(t)

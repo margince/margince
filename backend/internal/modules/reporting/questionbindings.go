@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +20,7 @@ import (
 
 // A bound question card asks a saved question the report keeps whole, filters
 // included. The selection every reader receives carries only the card's shape
-// and an opaque reference; the question lives in the revision's
+// and an opaque reference. The question lives in the revision's
 // question_bindings, which only the Questions seam reads.
 
 // QuestionCard is one question card as the Questions seam asks it.
@@ -27,8 +28,8 @@ type QuestionCard struct {
 	ID       string
 	Question crmcontracts.ReportingCardQuestion
 	// Bound is the kept question of a bound card. It is nil for a card that
-	// asks its shape alone, and for a bound card whose question the revision
-	// does not hold, which no reader may then be answered.
+	// asks its shape alone. It is also nil for a bound card whose question the
+	// revision does not hold, and no reader is then answered.
 	Bound json.RawMessage
 	// Binding is what every reader may know of the kept question.
 	Binding *crmcontracts.ReportingQuestionBinding
@@ -65,9 +66,9 @@ func (k keptQuestion) card(ref string) crmcontracts.ReportingCardQuestion {
 }
 
 // bindQuestions resolves every question card of a selection about to be
-// stored: a card naming a saved question is bound to it now, and a card
-// carrying a reference keeps the question this report already holds under it.
-// It answers the bindings the revision must keep.
+// stored. A card naming a saved question is bound to it now. A card carrying a
+// reference keeps the question this report already holds under it. It answers
+// the bindings the revision must keep.
 func (s *Service) bindQuestions(ctx context.Context, tx pgx.Tx, report ids.UUID, selection *crmcontracts.ReportingSelection) (map[string]keptQuestion, error) {
 	out := map[string]keptQuestion{}
 	if selection.Layout == nil {
@@ -138,9 +139,7 @@ func reportBindings(ctx context.Context, tx pgx.Tx, report ids.UUID) (map[string
 	out := map[string]keptQuestion{}
 	var revision map[string]keptQuestion
 	_, err = pgx.ForEachRow(rows, []any{&revision}, func() error {
-		for ref, kept := range revision {
-			out[ref] = kept
-		}
+		maps.Copy(out, revision)
 		revision = nil
 		return nil
 	})
@@ -156,8 +155,8 @@ func revisionBindings(ctx context.Context, tx pgx.Tx, report ids.UUID, revision 
 	return out, storedError(err)
 }
 
-// questionCards lists the selection's question cards with what each asks.
-func questionCards(selection crmcontracts.ReportingSelection, kept map[string]keptQuestion) []QuestionCard {
+// boundQuestionCards lists the selection's question cards with what each asks.
+func boundQuestionCards(selection crmcontracts.ReportingSelection, kept map[string]keptQuestion) []QuestionCard {
 	cards := QuestionCards(selection)
 	out := make([]QuestionCard, 0, len(cards))
 	for _, card := range cards {
@@ -175,8 +174,8 @@ func questionCards(selection crmcontracts.ReportingSelection, kept map[string]ke
 }
 
 // QuestionCardIn is one question card of a revision the caller may read, with
-// the population it is asked over: the published revision, or the draft for an
-// editor, as an evaluation reads them.
+// the population it is asked over. The revision is the published one, or the
+// draft for an editor, as an evaluation reads them.
 func (s *Service) QuestionCardIn(ctx context.Context, tx pgx.Tx, id ids.UUID, revision *int64, cardID string) (QuestionCard, crmcontracts.ReportingScope, error) {
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return QuestionCard{}, crmcontracts.ReportingScope{}, err
@@ -197,7 +196,7 @@ func (s *Service) QuestionCardIn(ctx context.Context, tx pgx.Tx, id ids.UUID, re
 	if err != nil {
 		return QuestionCard{}, crmcontracts.ReportingScope{}, err
 	}
-	for _, card := range questionCards(selection, kept) {
+	for _, card := range boundQuestionCards(selection, kept) {
 		if card.ID == cardID {
 			return card, selection.Scope, nil
 		}

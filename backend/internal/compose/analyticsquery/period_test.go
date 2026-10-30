@@ -13,10 +13,14 @@ import (
 func periodSchema() Schema {
 	schema := testSchema()
 	deals := schema.Entities["deals"]
-	deals.Fields["period_year"] = Field{Name: "period_year", Expr: "to_char(t.closed_at, 'YYYY')", Kind: KindDimension,
-		Period: &PeriodField{Anchor: "t.closed_at", Grain: GrainYear}}
-	deals.Fields["period_quarter"] = Field{Name: "period_quarter", Expr: "to_char(t.closed_at, 'YYYY-Q')", Kind: KindDimension,
-		Period: &PeriodField{Anchor: "t.closed_at", Grain: GrainQuarter}}
+	deals.Fields["period_year"] = Field{
+		Name: "period_year", Expr: "to_char(t.closed_at, 'YYYY')", Kind: KindDimension,
+		Period: &PeriodField{Anchor: "t.closed_at", Grain: GrainYear},
+	}
+	deals.Fields["period_quarter"] = Field{
+		Name: "period_quarter", Expr: "to_char(t.closed_at, 'YYYY-Q')", Kind: KindDimension,
+		Period: &PeriodField{Anchor: "t.closed_at", Grain: GrainQuarter},
+	}
 	schema.Entities["deals"] = deals
 	return schema
 }
@@ -73,8 +77,8 @@ func TestALabelSpelledForTheOtherCalendarIsRefused(t *testing.T) {
 	}
 }
 
-// A kept period renders as a range over its anchor, its dates bound, and the
-// bucket expression that would follow the current calendar is not used.
+// A kept period renders as a range over its anchor, with its dates bound. The
+// bucket expression, which follows the current calendar, is not used.
 func TestAKeptPeriodFiltersByItsDatesAndNotByItsLabel(t *testing.T) {
 	t.Parallel()
 	plan, err := Compile(Query{

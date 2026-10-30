@@ -23,20 +23,9 @@ import (
 )
 
 // FiscalYearStartMonth is the month the installation's business year begins,
-// 1..12. January is the default, which is what every installation reported by
-// before this existed — so an installation that never touches it sees no
-// change, and no saved report view moves under it.
-//
-// It buckets reports on READ and stores nothing, so changing it re-labels every
-// period report immediately and re-means no stored row. That is the opposite of
-// BaseCurrency, which freezes: a fiscal year is a way of cutting time, not a
-// value anything has already converted against.
-//
-// A saved period filter keeps the calendar it was saved under, so `2026` saved
-// under a January start still names January to December 2026 after the start
-// moves. A relative period, such as this quarter, follows the setting. The
-// hook a move runs (CalendarChange) gives every older saved question the
-// calendar in force before it.
+// 1..12, January by default. It buckets reports on read, so a move relabels
+// every period report. A saved period filter keeps the calendar it was saved
+// under, which the CalendarChange hook writes down before the move.
 var FiscalYearStartMonth = config.DefineStored(config.Spec[int]{
 	Key:     "installation.fiscal_year_start_month",
 	Env:     "MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH",

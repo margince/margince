@@ -363,8 +363,8 @@ export function InstallationProfileDialog({
 
 /**
  * What a new fiscal start does to saved work, counted before the admin saves
- * it: saved periods keep their dates, and reports that read this quarter
- * follow the new start.
+ * it. Saved periods keep their dates. Reports that read this quarter follow
+ * the new start.
  */
 function FiscalYearImpact({ enabled }: Readonly<{ enabled: boolean }>) {
   const t = useT();

@@ -5,7 +5,7 @@ package compose
 
 // The one resolver a question card is asked through. A live card, a sent
 // edition's capture and a reader's look at what an edition kept all ask the
-// question this file resolves, so a bound card cannot mean one thing on the
+// question this file resolves. So a bound card cannot mean one thing on the
 // page and another in the email.
 
 import (
@@ -141,9 +141,9 @@ func resolveCard(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, sc
 }
 
 // mayInspectFilters says whether the caller may see every value a question
-// names: its population and scope, each field it filters on, each owner and
-// each record a filter value names. One answer for every reason, so a reader
-// told no cannot tell which value stopped them.
+// names. That is its population and scope, each field it filters on, and each
+// owner and record a filter value names. One answer covers every reason, so a
+// reader told no cannot tell which value stopped them.
 func mayInspectFilters(ctx context.Context, tx pgx.Tx, schema analyticsquery.Schema, specs map[string]reportSpec, q analyticsquery.Query) (bool, error) {
 	entity, known := schema.Entities[q.Entity]
 	spec, specified := specs[q.Entity]

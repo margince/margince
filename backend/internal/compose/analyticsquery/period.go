@@ -14,8 +14,8 @@ import (
 
 // CalendarBasis is the calendar a period bucket was named under: the reporting
 // zone and the month the fiscal year began. A filter that carries one keeps
-// the dates its bucket covered then, whatever the installation's calendar is
-// now; one that carries none follows the current calendar.
+// the dates its bucket covered then. One that carries none follows the
+// current calendar.
 type CalendarBasis struct {
 	Timezone         string
 	FiscalStartMonth int
@@ -31,8 +31,8 @@ const (
 	GrainMonth   PeriodGrain = "month"
 )
 
-// PeriodField marks a field whose value is the label of a period bucket cut
-// from Anchor, the SQL of the instant the bucket places a row by.
+// PeriodField marks a field whose value is a period bucket's label. Anchor is
+// the SQL of the instant that places a row in its bucket.
 type PeriodField struct {
 	Anchor string
 	Grain  PeriodGrain
@@ -47,9 +47,9 @@ var (
 )
 
 // PeriodSpan answers the half-open interval a bucket label names under one
-// basis. A January year is spelled `2026` and any other `FY2026/27`, as the
-// report engine spells them, so a label in the other spelling names no period
-// under that basis and is refused.
+// basis. The report engine spells a January year `2026` and any other
+// `FY2026/27`. A label in the other spelling names no period under that basis,
+// so it is refused.
 func PeriodSpan(grain PeriodGrain, label string, basis CalendarBasis) (from, to time.Time, err error) {
 	zone, zoneErr := time.LoadLocation(basis.Timezone)
 	if zoneErr != nil || basis.FiscalStartMonth < 1 || basis.FiscalStartMonth > 12 {
@@ -117,9 +117,9 @@ func unresolvedPeriod(label string) error {
 }
 
 // periodClause renders a filter on a period field that keeps its basis as a
-// range over the anchor. Each comparison keeps its meaning over the labels,
-// which sort in time order: before a bucket is before its start, and after it
-// is from its end on.
+// range over the anchor. The labels sort in time order, so each comparison
+// keeps its meaning. Before a bucket is before its start. After it is from its
+// end on.
 //
 //craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
 func periodClause(period PeriodField, f Filter, arg func(any) string) (string, error) {
