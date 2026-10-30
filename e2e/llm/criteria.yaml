@@ -313,10 +313,11 @@ cases:
         The meeting with Greta is on record and the answer says recording it
         notified nobody.
     2:
-      name: The held invitation is reported as waiting
+      name: The unsent invitation is reported as not sent
       statement: >-
-        Omar's calendar invitation needs a human's approval and has not gone;
-        the answer does not call him invited or the meeting booked.
+        Omar's calendar invitation has not gone, whether it waits for approval,
+        was refused or could not be sent; the answer does not call him invited
+        or the meeting booked.
     3:
       name: The two are kept apart
       statement: >-
