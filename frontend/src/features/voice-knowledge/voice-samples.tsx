@@ -14,7 +14,7 @@ import { PanelBody } from "../../design-system/panel";
 import { useLastSubject } from "../../design-system/presence";
 import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import {
   type Locale,
   type PluralTranslator,
@@ -140,6 +140,7 @@ function ExclusionReason({ reason }: Readonly<{ reason: string | null }>) {
 // Where the corpus words come from; spoken samples are the gap worth naming.
 function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
   const t = useT();
+  const { locale } = useLocale();
   const entries = Object.entries(summary.register_words).filter(
     ([, words]) => words > 0,
   );
@@ -150,7 +151,7 @@ function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
     <div className="vdna-chips vdna-regmix">
       {entries.map(([register, words]) => (
         <Badge key={register}>
-          {`${registerLabel(t, register)} ${Math.round((words / summary.total_words) * 100)}%`}
+          {`${registerLabel(t, register)} ${formatPercent(words / summary.total_words, locale)}`}
         </Badge>
       ))}
     </div>
