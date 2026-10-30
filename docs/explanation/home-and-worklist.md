@@ -152,7 +152,8 @@ Three sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
-  scope keeps them, so its task totals are exact too.
+  scope keeps them. Its task totals are exact only when the roster was read whole. A roster cut at its cap, or one that
+  failed, leaves every category of the page without a total (`withTotals` in `attention/totals.go`).
 - Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
   messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
   is one card, and other mail is one card per sender and subject. The category has no count: judging every message
@@ -169,7 +170,8 @@ the activity writer stamp it on `sender_is_machine` with the one Go rule, and th
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
 Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
-still states their exact total. Deal and tag suggestions stay a floor until they join the tail.
+still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
+because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).

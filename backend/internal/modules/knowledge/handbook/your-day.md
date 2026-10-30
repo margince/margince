@@ -326,7 +326,9 @@ something while you work. Then a notice headed **New priorities available** says
 new since you opened the list. Refresh to add them." **Refresh list** updates the rows and totals.
 
 ### How complete is this?
-The Worklist counts items, not cards: 8 possible duplicates are one card. There is no **Load more** button. More rows load as you move down the list, until it says "All of today’s work is loaded." ("All decisions loaded." and "All issues loaded." in the other views). If the next rows fail to load, the list says "Could not load more." with **Retry**.
+The Worklist counts items, not cards: 8 possible duplicates are one card. There is no **Load more** button. More rows load as you move down the list, until it says "All of today’s work is loaded." ("All decisions loaded." and "All issues loaded." in the other views). If the next rows fail to load as a whole, the list says "Could not load more." with **Retry**.
+
+If one kind of work fails while the rest loads, the list goes on without it and stops short of its rows. **Worklist incomplete** then names it.
 
 As you move down, the list loads every task, every waiting customer and every deal at risk. Below the ranked rows they come in one order, longest waiting first. A task goes by its due date, a customer by when their message came in, a deal by its expected close.
 

@@ -63,10 +63,12 @@ export const EveryCountExact: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    const picker = within(canvasElement).getByRole("group", {
-      name: "Work view",
-    });
-    await expect(picker).toHaveTextContent("12");
+    const picker = within(
+      within(canvasElement).getByRole("group", { name: "Work view" }),
+    );
+    for (const name of ["Today, 12", "Decisions, 4", "System, 2"]) {
+      await expect(picker.getByRole("button", { name })).toBeVisible();
+    }
   },
 };
 
@@ -89,9 +91,14 @@ export const DecisionsAFloor: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
-    const picker = within(canvasElement).getByRole("group", {
-      name: "Work view",
-    });
-    await expect(picker).not.toHaveTextContent("200");
+    const picker = within(
+      within(canvasElement).getByRole("group", { name: "Work view" }),
+    );
+    await expect(
+      picker.getByRole("button", { name: "Decisions" }),
+    ).toBeVisible();
+    await expect(
+      picker.getByRole("button", { name: "Today, 12" }),
+    ).toBeVisible();
   },
 };

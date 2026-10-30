@@ -58703,18 +58703,23 @@ type WorkingHours struct {
 // | `bands[].shown` | cards | the rows of this page under one heading | exact |
 // | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
 // | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
-// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen ranked items that left; never tail rows | exact |
 //
 // A client that has loaded several pages sums items over its loaded cards (one per
 // card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
 // a count of loaded cards with `considered` mixes the two units.
 //
-// **Totals.** Every total arrives on this response; no later read or background job
-// finishes a count. A category states `total` when each source behind it was read whole
-// or counted in SQL under the same admission rules as the list. Any other category
-// whose sources were cut has no `total`, and its `considered` is a floor: a client
-// draws it as "N+" or draws no number. A source in `sources_unavailable` leaves its
-// category without an exact figure, even after `next_cursor` is gone.
+// **Totals.** No later read or background job finishes a count. A category states
+// `total` when each source behind it was read whole, or was cut and counted in SQL under
+// the same admission rules as the list. The task counts run on the first page of a walk
+// only, so a client keeps the totals that page gave and does not expect them on later
+// pages. Any other category whose sources were cut has no `total`, and its `considered`
+// is a floor: a client draws it as "N+" or draws no number.
+//
+// A source named in `sources_unavailable` because it failed on the first page leaves its
+// category without a `total`. A tail source that fails while a later page loads is named
+// there too, but the totals the first page stated stay as they were: they still count
+// the rows that source holds, and the list stops short of them.
 //
 // **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
 // and deals at risk that the ranked rows left out continue as a tail, merged in one
@@ -58771,10 +58776,15 @@ type Worklist struct {
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
 	// parameter for what a walk does and does not guarantee.
 	//
-	// ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
-	// deliberately not minted on a final page: a cursor there invites one more request
-	// that can only answer empty, and a client walking until the cursor disappears
+	// ABSENT MEANS THE WALK IS OVER — no ranked row and no tail source is left to resume.
+	// It is deliberately not minted on a final page: a cursor there invites one more
+	// request that can only answer empty, and a client walking until the cursor disappears
 	// would never stop.
+	//
+	// Absent does not mean every row was read. A tail source that fails while a page loads
+	// is dropped from the cursor and named in `sources_unavailable`, and the rows past its
+	// position stay unread; a source cut on the first page and not continued in the tail
+	// stops at its read limit.
 	//
 	// Absent is therefore a claim, not a silence, and it is the one this field must
 	// never make wrongly. It is a claim about THIS READ of the day: work that arrives
@@ -58782,9 +58792,9 @@ type Worklist struct {
 	// rather than extending a finished walk.
 	//
 	// `reach` and `counts` answer a different question — how deep each SOURCE was read
-	// on the first page. A walk that has ended has read the tail sources (tasks, waiting
-	// customers, deals at risk) to their end, but can still sit above other sources that
-	// were cut short, and both statements are true at once.
+	// on the first page. A walk that has ended has read every tail source (tasks, waiting
+	// customers, deals at risk) that did not fail to its end, but can still sit above other
+	// sources that were cut short, and both statements are true at once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
@@ -59204,8 +59214,10 @@ type WorklistCount struct {
 	// MAY exist past what was considered. A category inherits its sources' honesty:
 	// reporting "12 decisions" over a pile the read never finished counting is the
 	// failure this flag exists to prevent. When `total` is present it is the exact
-	// figure even while this is true: the rest of a tail source is reached through
-	// `next_cursor`.
+	// figure even while this is true. Only the tail categories (tasks, customers waiting,
+	// deals at risk) reach their rest through `next_cursor`; an exact category outside the
+	// tail, such as approvals in `decisions`, is counted in full but listed only to its
+	// read limit.
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the page carries, counting a folded group as its members.
@@ -67945,11 +67957,17 @@ type GetWorklistParams struct {
 	// client paging to exhaustion loop. Past the ranked rows, each tail source resumes
 	// from its own position in its own order, which also only moves forward.
 	//
-	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
-	// are fixed, so paging does not race the day. `walk` on the response says what has
-	// happened since — how many of those rows have gone, and how much has arrived that is
-	// deliberately not in this walk. Membership moves one way: new work waits for a fresh
-	// read, work that was resolved or is no longer visible leaves at once.
+	// The RANKED rows of a walk are FROZEN at its first page: the rows they cover and the
+	// order they sit in are fixed, so paging does not race the day. `walk` on the response
+	// says what has happened to those ranked rows since — how many have gone, and how much
+	// has arrived that is deliberately not in this walk. Membership moves one way: new work
+	// waits for a fresh read, work that was resolved or is no longer visible leaves at once.
+	//
+	// The tail below the ranked rows is not frozen. Each page reads every tail source live,
+	// after the position the cursor holds for it, inside the time window the first page
+	// fixed (its instant, day end and time zone). A tail row handled between pages is not
+	// served; a new row that sorts after a source's position can still be. `walk` does not
+	// count tail rows.
 	//
 	// An installation that does not hold walks pages the older way instead, and there the
 	// cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
