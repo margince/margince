@@ -231,5 +231,11 @@ func (a ActivityFields) validate() error {
 	if a.Direction != "" && a.Direction != DirectionInbound && a.Direction != DirectionOutbound {
 		return fmt.Errorf("extension: %q is not a direction (%q, %q, or empty)", a.Direction, DirectionInbound, DirectionOutbound)
 	}
+	if a.Kind != ActivityKindTask && (a.AssigneeID != "" || !a.DueAt.IsZero()) {
+		return fmt.Errorf("extension: only a %q carries an assignee or a due date, and this activity is a %q", ActivityKindTask, a.Kind)
+	}
+	if a.AssigneeID != "" && !uuidGrammar.MatchString(string(a.AssigneeID)) {
+		return errors.New("extension: the assignee is not a canonical user id")
+	}
 	return nil
 }

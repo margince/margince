@@ -378,8 +378,8 @@ func (l crmLanding) customToWrite(ctx context.Context, id ids.UUID, current crmc
 	if len(offered) == 0 {
 		return nil, nil, nil
 	}
-	// The stored value reads back as decoded JSON, so the offer is put through
-	// JSON too or a []string would never equal the []any it was saved as.
+	// The stored value reads back as decoded JSON. The offer is put through JSON
+	// too, or a []string would never equal the []any it was saved as.
 	raw, err := json.Marshal(offered)
 	if err != nil {
 		return nil, nil, fmt.Errorf("compose: encoding the offered custom fields: %w", err)

@@ -233,6 +233,8 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 			DateOnly:        rec.Activity.DateOnly,
 			DurationSeconds: rec.Activity.DurationSeconds,
 			Direction:       rec.Activity.Direction,
+			AssigneeID:      namedAssignee(rec.Activity.AssigneeID),
+			DueAt:           rec.Activity.DueAt,
 		},
 		Source:       r.sourceSystem(rec.System),
 		CapturedBy:   ingressPrincipalPrefix + r.unit,
@@ -242,6 +244,16 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 		Counterparty: counterpartyOf(rec.Counterparty, declared),
 		Participants: participantsOf(rec.Participants),
 	}
+}
+
+// namedAssignee reads the colleague a unit named for a task. An id that is not a
+// canonical UUID cannot reach here: Record.Validate refuses it.
+func namedAssignee(id extension.UserID) ids.UUID {
+	parsed, err := ids.Parse(string(id))
+	if err != nil {
+		return ids.UUID{}
+	}
+	return parsed
 }
 
 // participantsOf maps the published roster onto the core's.

@@ -21,7 +21,7 @@ import (
 )
 
 // A unit offers the installation's custom deal fields with the deal. A value
-// that differs is written, a repeat changes nothing, and a field a user last
+// that differs is written and a repeat changes nothing. A field a user last
 // edited stays as the user left it and is named in Withheld.
 func TestALandedDealSetsCustomFieldsAndKeepsOneAUserEdited(t *testing.T) {
 	e := setupCRMIngress(t)

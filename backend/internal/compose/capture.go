@@ -273,6 +273,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// never sees the api's options.
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
+		WithTaskAssigneeCheck(activities.CheckNewTaskAssignee).
 		WithContactArrivals(contactArrivalTeller{
 			store: contacts.NewStore(InstallationDB(pool)).
 				WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), cfg.logger())),
