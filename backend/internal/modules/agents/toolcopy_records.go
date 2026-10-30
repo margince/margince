@@ -34,11 +34,10 @@ var listRecordsCopy = toolCopy{
 
 var readViewCopy = toolCopy{
 	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
-		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
-		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
-		"Each view answers what its REST route answers.",
-	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
-		"it does not take and names the ones it does.",
+		"company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each " +
+		"view answers what its REST route answers.",
+	Limits: "Name the view, its id and any of its filters. A view refuses an argument it does not " +
+		"take and names the ones it does.",
 }
 
 var changeRecordPartsCopy = toolCopy{

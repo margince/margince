@@ -23,8 +23,8 @@ import (
 // summed over the readable tree only. The pipeline stays the open deals at the
 // read, the same figure under every period.
 //
-// The won deals are seeded with SQL because the close path stamps closed_at
-// with the database clock, and a past period needs a deal won in it.
+// The won deals are seeded with SQL. The close path stamps closed_at with the
+// database clock, and a past period needs a deal won in it.
 func TestTheRollupSumsTheNamedPeriodOverTheReadableTree(t *testing.T) {
 	e := Setup(t)
 	st := seedRollupStages(t, e)

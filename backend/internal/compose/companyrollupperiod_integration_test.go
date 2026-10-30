@@ -119,8 +119,9 @@ func TestARolledUpPeriodIsReadInTheInstallationsSpelling(t *testing.T) {
 	}
 }
 
-// A label the installation's reports never render, and a period that has not
-// begun, are refused naming the parameter rather than read as zero won sales.
+// A label the installation's reports never render is refused, and so is a
+// period that has not begun. Each names the parameter, rather than reading as
+// zero won sales.
 func TestARollupPeriodNoReportRendersIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC)

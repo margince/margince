@@ -3,12 +3,10 @@
 
 package compose
 
-// Pure mechanics behind GET /companies/{id}/hierarchy-rollup
-// (RD-T04): the RBAC-aware BFS prune over the parent→children company
-// graph and the two rounding rules (win-weighted value, FX base conversion) the
-// rollup's totals are built from. No DB and no HTTP live here — the
-// gated tree walk and measures are in companyrollupread.go, the HTTP
-// handler arrives with the transport slice.
+// Pure mechanics behind GET /companies/{id}/hierarchy-rollup (RD-T04): the
+// RBAC-aware BFS prune over the company tree and the missing-rate error. No DB
+// and no HTTP live here. The gated tree walk and measures are in
+// companyrollupread.go.
 
 import (
 	"fmt"

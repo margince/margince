@@ -142,11 +142,10 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 }
 
 // rollupInstallationMeta reads the installation's base currency, reporting
-// timezone and the month its business year begins — the basis every figure in
+// timezone and the month its business year begins: the basis every figure in
 // this rollup is expressed in. A stored zone the host cannot resolve degrades
-// the period window to UTC rather than failing the read — the zone was
-// validated at write time, so this only fires when the host lost its tzdata,
-// and an aggregate read is the wrong place to surface that deployment fault.
+// the period window to UTC rather than failing the read. The zone was
+// validated at write time, so this fires only when the host lost its tzdata.
 //
 // All three read here rather than where each is used, so one rollup takes one
 // settings read per value. The fiscal month in particular is used by a leaf
@@ -387,11 +386,9 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, period RollupWonPeriod, asOf time.Time, baseCurrency string) (*int64, error) {
 	args := []any{included, period.Start, period.End}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// SUM over the MASKED expression rather than a filtered row set. The two
-	// agree here because SUM skips a NULL, and nulling is the cheaper spelling
-	// — it needs no second clause threaded into a WHERE that already binds
-	// three positions. A withheld amount contributes nothing to the period,
-	// which is the same answer the row itself gives the caller.
+	// SUM over the MASKED expression rather than a filtered row set: SUM skips
+	// a NULL, so a withheld amount contributes nothing to the period. That is
+	// the answer the row itself gives the caller.
 	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
 		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
 	if err != nil {
