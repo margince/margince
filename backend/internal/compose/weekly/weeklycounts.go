@@ -226,12 +226,20 @@ func meetingIsTheirsSQL(seat string) string {
 	return storekit.MeetingCreditSQL("m", seat)
 }
 
-// NextStepTaskSQL is "task is a next step recorded from meeting": a live task
-// made from it once the meeting began (occurredday.StartSQL). Each caller adds
-// its own upper bound and scope.
+// NextStepTaskSQL is NextStepTaskAtSQL for the meeting as it reads today.
 func NextStepTaskSQL(task, meeting string) string {
+	return NextStepTaskAtSQL(task, meeting, occurredday.StartSQL(meeting))
+}
+
+// NextStepTaskAtSQL is "task is a next step recorded from meeting": a live task
+// made from it once the meeting began at start. Each caller adds its own upper
+// bound and scope.
+//
+// A caller counting a meeting in its held week passes the start that week was
+// read from. The meeting's current time would strand the follow-up.
+func NextStepTaskAtSQL(task, meeting, start string) string {
 	return task + ".source_activity_id = " + meeting + ".id AND " + task + ".kind = 'task' AND " +
-		task + ".archived_at IS NULL AND " + task + ".created_at >= " + occurredday.StartSQL(meeting)
+		task + ".archived_at IS NULL AND " + task + ".created_at >= " + start
 }
 
 func countWeekMeetings(
@@ -284,7 +292,7 @@ func countWeekMeetings(
 		        SELECT 1 FROM activity task
 		         WHERE %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
-		startPos, endPos, hostPos, scope, taskScope, NextStepTaskSQL("task", "m")), args...).
+		startPos, endPos, hostPos, scope, taskScope, NextStepTaskAtSQL("task", "m", occurredday.StartAtSQL(transition.Start, transition.Precision))), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)
