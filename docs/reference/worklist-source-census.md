@@ -16,7 +16,7 @@ that can remove or merge a source's rows.
 |---|---|---|
 | A | `admitBySource` (`admission.go`) | Drops a row whose owner kind its source does not allow |
 | B | `dropDealsAlreadyWaiting` (`classify.go`) | Drops a `deal_at_risk` row when a `customer_waiting` row names the same deal |
-| C | `narrowToScope` (`scope.go`) | Owner admission: keeps the reader's, a named owner's, the unowned or the roster's rows. `team` filters by roster here, after the lane caps |
+| C | `narrowToScope` (`scope.go`) | Owner admission: keeps the reader's, a named owner's, the unowned or the roster's rows. `team` filters by roster here, after the lane caps; the task, waiting and at-risk reads already narrowed to it in SQL |
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
 | F | `dropDone` (`done.go`) | Drops rows the reader marked done that have not come back |
@@ -41,7 +41,7 @@ seam or lane cuts after reading.
 
 | Source | Owning store | Bound | Scope narrowing |
 |---|---|---|---|
-| `task` | `modules/activities` `Store.ListActivities`, through `compose/attentiontaskseam.go` | Due by end of today: `plannedCap` = 12 (SQL). Due in the next `upcomingHorizonDays` = 14: `upcomingCap` = 6 (SQL). Due reminders: every page of `reminderPage` = 200. Overdue tasks age out after `worklistAgeOutDays` = 30 (`modules/activities/worklistageout.go`), unless a human reopened the task, the reader pinned it, or its reminder is due | `mine` and a named owner: `assignee_id` in SQL. `unassigned`: `assignee_id IS NULL`. `team` and `all`: row scope only |
+| `task` | `modules/activities` `Store.ListActivities`, through `compose/attentiontaskseam.go` | Due by end of today: `plannedCap` = 12 (SQL). Due in the next `upcomingHorizonDays` = 14: `upcomingCap` = 6 (SQL). Due reminders: every page of `reminderPage` = 200. Overdue tasks age out after `worklistAgeOutDays` = 30 (`modules/activities/worklistageout.go`), unless a human reopened the task, the reader pinned it, or its reminder is due | `mine` and a named owner: `assignee_id` in SQL. `unassigned`: `assignee_id IS NULL`. `team`: the roster's seats and nobody (`TeamQueueOf`) in SQL. `all`: row scope only |
 | `meeting` | `activities` `ListActivities` through `attentionMeetings.Today` (`compose/attentionmeetingseam.go`) Two reads, timed and all-day, each of `plannedCap` + 1 = 13 rows (SQL) and cut to 12 in Go, so at most 24, from now to end of today. Meetings still to confirm are kept past the cut | `mine`: meeting responsibility. Named owner: host. `unassigned`: no host. `team` and `all`: row scope only |
 | `meeting_outcome` | `activities` `ListActivities` through `attentionMeetingsAwaitingOutcome` | `plannedCap` (SQL), oldest first, back `unansweredLookbackDays` = 14 | As `meeting` |
 | `brief_item` | `compose/briefs` latest run, through `compose/attentionbriefingseam.go` | `briefQueueTarget` = 7 when the run is built (Go) | The reader's own run only; dropped on a named owner's page |
@@ -76,28 +76,30 @@ a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows; none on a team page (see below) |
+| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
-| `brief_item` | A, C, E, H | Rank in Go | No | No |
+| `brief_item` | A, C, E, H | Rank in Go | No | No; the run ranks its items in Go, and step E merges them onto other rows |
 | `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
-| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No |
-| `weekly_commitment` | A, C, H | Go | No | No |
-| `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending` |
-| `dedupe_candidate` | A, C, G, H | Yes | Yes | Yes |
-| `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | Yes |
-| `deal_suggestion` | A, C, H | Yes | Yes | Yes |
-| `tag_suggestion` | A, C, H | Yes | No | Yes |
-| `relationship_decay` | A, C, D, H | Candidates only | No | No |
-| `introduction_request` | A, C, F, H | Yes | No | No |
-| `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No |
-| System sources | A, C, F, G (incidents), H | Yes | No | No |
+| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
+| `weekly_commitment` | A, C, H | Go | No | Not needed: the lane has no bound, so its rows are its total |
+| `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
+| `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
+| `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
+| `deal_suggestion` | A, C, H | Yes | Yes | `CountOpenSuggestions` exists; no total until the source joins the tail (see below) |
+| `tag_suggestion` | A, C, H | Yes | No | `CountOpenTagSuggestions` exists; no total until the source joins the tail (see below) |
+| `relationship_decay` | A, C, D, H | Candidates only | No | No; step D and the lane's cut rank candidates in Go |
+| `introduction_request` | A, C, F, H | Yes | No | No; step F |
+| `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No; step F |
+| System sources | A, C, F, G (incidents), H | Yes | No | No; see [System sources](#system-sources) |
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
-window is the planned lane's own count; the later window is `CountTasks`. A team page counts neither: the roster arm
-(`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
-`laneBudget`. The tail still reads the team's tasks through that arm.
+window is the planned lane's own count; the later window is `CountTasks`. A team page reads, counts and continues
+its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
+C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's
+window took 38 ms, against 69 ms for the count of every readable task it replaces. The later window's count took
+26 ms. The team page's first page grew about 3% at p50, from 1,278 ms to 1,321 ms.
 
 The `customer_waiting` source is read on below the ranked rows to its end, in every scope, by
 `WaitingCardsAfter` (`modules/activities/waitingcards.go`). Each read judges a fixed number of messages after
@@ -148,11 +150,26 @@ deal; real mail on deals makes it cost more, up to the waiting count's own 850 m
 5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
 every deal.
 
-The other sources still run steps in Go that their count would need:
+The deal and tag suggestion sources stay a floor until they join the tail. Their stores count them under the list's
+own predicate (`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. Their rows
+name no owner, offer no Done and are never folded (`batchKeyOf` groups neither), so the count matches every row a
+scope keeps. But the decision lane stops at `batchScanDepth` rows, and scrolling ends there. A total past that would
+name suggestions the list cannot reach.
 
-- `customer_waiting`: the count does not fit the first page, as above.
-- `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
-- Every other source: no count query that applies its steps exists yet.
+The other sources run steps in Go that a count would need:
+
+- `customer_waiting` and `deal_at_risk`: the count does not fit the first page, as above.
+- `brief_item`: the night's run ranks its items in Go (`briefQueueTarget`), and step E merges an item onto the row
+  about the same deal.
+- `relationship_decay`: step D moves rows out of the queue, and the lane picks `decayLaneCap` of its candidates in Go.
+- `weekly_commitment`: the lane has no bound, so it is always read whole and needs no count.
+- `contact_case`, `domain_question`, `introduction_request`, `awaiting_reply`, `meeting_follow_up` and `meeting`:
+  step F reads the reader's Done marks and the came-back rule in Go. A store's count cannot leave out a Done row.
+- `dedupe_candidate`: the lane carries one open count for pairs and contact cases together (`DuplicatesOpen`), and
+  both sources are judged cut against it. A pair count alone would never be used, because `contact_case` is cut
+  whenever the pairs are, and it stays a floor for step F.
+- `approval` on a team page: the requested-decider rule there judges by the roster, which the count does not share.
+- `meeting_outcome`: `CountActivities` could count it under the lane's narrowing, but no count is wired yet.
 
 Their categories stay a floor when their lane is cut, and scrolling ends at the ranked rows for them.
 
@@ -174,6 +191,16 @@ to their assignee (`classifylegal.go`).
 | `automation_run` | `modules/automation` `TroubledRuns`: `automation` read, every run in the workspace | Every `automation` reader, on `unassigned`, `team` and `all` | An `automation` editor |
 | `bounce`, `undelivered` | `modules/comms` send lanes: the reader sent it | The sender | The sender |
 | `notice` | `modules/notices` `UnreadWorkFor`: the reader is the recipient | The recipient | The recipient |
+
+No system source states an exact total. Each one's reason:
+
+- `automation_run`, `ai_work_health`, `capture_health`, `bounce`, `undelivered`, `dsr` and `notice_case`: step F
+  drops the reader's Done marks in Go.
+- `notice`: the lane drops a notice whose approval the reader can still decide (`noticesWithoutDecisions` in
+  `noticefold.go`). The approval engine judges that per batch in Go, so no SQL count can apply it.
+- `failed_approval`: the store's predicate is the whole rule (`scanOwnDecisions` in `modules/approvals`), but no
+  count of it exists yet. The `system` category would state a total only when every other system source was read
+  whole too.
 
 `categoryOfSource` also files `domain_question`, `awaiting_reply`, `meeting_follow_up` and `batch` under `system`,
 while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `decisions` or `system`. `counts` and

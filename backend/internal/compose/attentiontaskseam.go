@@ -52,9 +52,11 @@ type attentionTasks struct {
 // The false answer means "no reader to answer for", which is a page of nothing
 // rather than a refusal.
 func openTasksDueBy(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true}
+	in := activities.ListActivitiesInput{
+		OpenAndDueBy: &until, IncludeEmailRequests: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+	}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -86,14 +88,14 @@ func openTasksDueBy(
 }
 
 func (t attentionTasks) OpenForViewer(
-	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) ([]attention.Task, error) {
 	// The store answers "open and due by then" itself, so the limit bounds the
 	// rows that QUALIFY. This used to read ten times the lane and narrow
 	// afterwards, which put the bound on the wrong set: a pile of completed
 	// tasks filled the scan, the overdue promise underneath never reached the
 	// reader, and the day rendered clear while the work was still there.
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
 	if !ok {
 		return nil, nil
 	}
@@ -139,9 +141,9 @@ func (t attentionTasks) listOpenTasks(ctx context.Context, in activities.ListAct
 // and the window is closed at both ends in the QUERY, so the limit bounds rows
 // that qualify rather than a wider set narrowed afterwards.
 func (t attentionTasks) UpcomingForViewer(
-	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, from, until time.Time, limit int, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) ([]attention.Task, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
 	if !ok {
 		return nil, nil
 	}
@@ -157,7 +159,7 @@ func (t attentionTasks) UpcomingForViewer(
 // CountTasks counts a later task window whole, under the lane's own
 // narrowing (openTasksDueBy), without the reader's due reminders.
 func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
 	if !ok {
 		return 0, nil
 	}
@@ -172,11 +174,11 @@ func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWin
 func (t attentionTasks) TasksAfter(
 	ctx context.Context, window attention.TaskWindow, after string, limit int,
 ) ([]attention.Positioned[attention.Task], bool, error) {
-	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
 	if !ok {
 		return nil, false, nil
 	}
-	in.TeamQueueOf, in.Limit = window.Team, &limit
+	in.Limit = &limit
 	if !window.From.IsZero() {
 		in.OpenAndDueAfter = &window.From
 	}

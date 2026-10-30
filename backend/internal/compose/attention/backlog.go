@@ -138,11 +138,7 @@ func (s *Service) readingBacklog(
 // taskWindows are the two task windows a page draws, by the category each
 // window's rows carry: today's under tasks, the later ones under upcoming.
 func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
-	var team []ids.UUID
-	if s.teamRoster != nil {
-		team = s.teamRoster.seats()
-	}
-	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: team}
+	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
 	later := today
 	later.From, later.Until = until, until.AddDate(0, 0, upcomingHorizonDays)
 	return map[totalKey]TaskWindow{
@@ -152,15 +148,12 @@ func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
 }
 
 // countInto states one task window's total. A window read short of its cap
-// is whole on the page. Today's cut window is the planned lane's own count.
-// A team page counts nothing: the roster arm defeats the open-task index, and
-// at ten thousand tasks a seat its count outran the lane budget.
+// is whole on the page. Today's cut window is the planned lane's own count,
+// which a team page narrows to its roster as the lane does.
 func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention, cut bool) {
 	switch {
 	case !cut:
 		s.backlog.whole[key] = true
-		return
-	case window.Team != nil:
 		return
 	case window.From.IsZero():
 		s.backlog.exact[key] = day.Counts.Planned

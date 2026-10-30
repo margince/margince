@@ -134,8 +134,8 @@ names the tail's version, so a binary without the tail refuses the cursor instea
 Three sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
-  count, taken on the first page only. A team page counts no task window, because that count ran past the lane
-  budget at 10,000 tasks a seat. Its task categories stay a floor.
+  count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
+  scope keeps them, so its task totals are exact too.
 - Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
   messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
   is one card, and other mail is one card per sender and subject. The category has no count: judging every message
@@ -150,6 +150,9 @@ Three sources are read on in the tail today:
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
+
+Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
+still states their exact total. Deal and tag suggestions stay a floor until they join the tail.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
