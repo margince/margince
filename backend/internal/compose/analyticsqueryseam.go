@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -187,6 +188,9 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 			sum.Write([]byte(entity.Fields[field].Expr))
 			sum.Write([]byte(entity.Fields[field].Kind))
 			writeCustomMeaning(sum, entity.Fields[field])
+			if money := entity.Fields[field].Currency; money != nil {
+				sum.Write([]byte("currency:" + money.By + ":" + money.Base))
+			}
 		}
 	}
 	return hex.EncodeToString(sum.Sum(nil))[:16]
@@ -206,9 +210,26 @@ func DescribeAnalyticsSchema(schema analyticsquery.Schema) string {
 		out.WriteString("\n  measure:  ")
 		out.WriteString(strings.Join(entity.FieldNames(analyticsquery.KindMeasure), ", "))
 		out.WriteString("\n")
+		describeCurrencyBasis(&out, entity)
 		describeCustomFields(&out, entity)
 	}
 	return out.String()
+}
+
+// describeCurrencyBasis names the measures kept in each row's own currency, so a
+// model groups them by currency instead of learning the rule from a refusal.
+func describeCurrencyBasis(out *strings.Builder, entity analyticsquery.Entity) {
+	for _, name := range entity.FieldNames(analyticsquery.KindMeasure) {
+		money := entity.Fields[name].Currency
+		if money == nil {
+			continue
+		}
+		fmt.Fprintf(out, "  %s is in each row's own currency: group by %s", name, money.By)
+		if money.Base != "" {
+			fmt.Fprintf(out, ", or measure %s, converted to the base currency", money.Base)
+		}
+		out.WriteString("\n")
+	}
 }
 
 func requireAnalyticsRead(ctx context.Context, entity datasource.EntityType) error {
