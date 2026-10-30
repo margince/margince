@@ -32,11 +32,11 @@ import (
 //   - the sixth, created after the first snapshot, is won inside it.
 type evaluationEnv struct {
 	*integration.Env
-	quarter                  forecasting.Period
-	open, won                ids.StageID
-	deals                    []ids.UUID
-	first, second            time.Time
-	trainEnd, asOf           time.Time
+	quarter        forecasting.Period
+	open, won      ids.StageID
+	deals          []ids.UUID
+	first, second  time.Time
+	trainEnd, asOf time.Time
 }
 
 var evaluationBounds = ForecastEvaluationBounds{Vintages: 100, Deals: 1000, Statement: 10 * time.Second, Runtime: time.Minute}
@@ -139,9 +139,9 @@ func wholeWorkspace(dataset forecasting.EvaluationDataset) []forecasting.Evaluat
 }
 
 // The outcome is the vintage's own open deals as their history stood at the
-// read: a reopen after the training end is visible to scoring and not to
-// training, a reopen after the outcomes are read reaches neither, and a deal
-// created after the snapshot counts toward no earlier vintage.
+// read. A reopen after the training end reaches scoring and not training. A
+// reopen after the outcomes are read reaches neither. A deal created after
+// the snapshot counts toward no earlier vintage.
 func TestAnOutcomeIsTheVintagesOwnDealsAsTheirHistoryStood(t *testing.T) {
 	e := setupEvaluation(t)
 	vintages := wholeWorkspace(e.dataset(t))

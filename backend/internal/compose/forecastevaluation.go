@@ -39,8 +39,8 @@ type ForecastEvaluationBounds struct {
 }
 
 // ForecastEvaluationDataset reads the frozen workspace snapshots and the
-// outcome of each one's open deals, from their stage history as it stood at
-// asOf and at the start of trainEnd, in one snapshot of the data.
+// outcome of each one's open deals, in one snapshot of the data. The outcome
+// is their stage history as it stood at asOf and at the start of trainEnd.
 func ForecastEvaluationDataset(
 	ctx context.Context, pool *pgxpool.Pool, asOf, trainEnd time.Time, bounds ForecastEvaluationBounds,
 ) (forecasting.EvaluationDataset, error) {

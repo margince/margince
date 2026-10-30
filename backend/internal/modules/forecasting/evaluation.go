@@ -107,8 +107,8 @@ type EvaluationReport struct {
 	Census            PopulationCensus `json:"census"`
 	Candidate         []CandidateFit   `json:"candidate"`
 	// CandidateNotScored says why the candidate has no fit and no rows.
-	CandidateNotScored string `json:"candidate_not_scored,omitempty"`
-	Rows              []EvaluationRow  `json:"rows"`
+	CandidateNotScored string          `json:"candidate_not_scored,omitempty"`
+	Rows               []EvaluationRow `json:"rows"`
 }
 
 // PopulationCensus says which vintages were scored and why the rest were not.

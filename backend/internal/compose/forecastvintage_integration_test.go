@@ -102,7 +102,7 @@ func TestOnlyTheEvaluationPassReadsTheDataset(t *testing.T) {
 }
 
 // With individual performance off, a vintage whose deals belong to one seat
-// is left out; a vintage below the deal floor is left out either way.
+// is left out. A vintage below the deal floor is left out either way.
 func TestAVintageOfOneSeatOrFewDealsIsLeftOut(t *testing.T) {
 	e := setupEvaluation(t)
 	e.WsExec(t, `UPDATE deal SET owner_id = $1`, e.Rep1)

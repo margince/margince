@@ -281,7 +281,7 @@ func TestWithoutAPreregistrationOnlyTheConfiguredReadingsAreScored(t *testing.T)
 }
 
 // A bin of fewer deals than the floor says how many it holds and nothing
-// about them; a vintage below the floor is not scored at all.
+// about them. A vintage below the floor is not scored at all.
 func TestAFigureBelowTheCohortFloorIsWithheld(t *testing.T) {
 	c := newEvaluationCorpus(t)
 	c.plan.CohortFloor = 2
