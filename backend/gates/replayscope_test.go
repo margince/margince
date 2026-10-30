@@ -109,6 +109,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// so the bulk engine owns the probe.
 	"BulkChangeResult": {moduleProbe: "bulk_batch", idPath: "batch_id"},
 	"RecordGrant":      {tableField: "record_type", idPath: "record_id"},
+	"OwnershipRequest": {tableField: "record_type", idPath: "record_id"},
 	// A health assessment has no owner column: its visibility IS the project it
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something

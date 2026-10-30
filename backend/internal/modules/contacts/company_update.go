@@ -189,7 +189,7 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
 	}
-	return out, nil
+	return out, s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the

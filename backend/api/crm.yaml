@@ -24691,6 +24691,83 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{record_type}/{id}/ownership-request:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestOwnershipTransfer
+      x-agent-access: human-only
+      # Session cookie only: taking on a colleague's record is a colleague's own ask.
+      security: [{ cookieAuth: [] }]
+      summary: Ask a record's owner to hand it over to the caller.
+      description: |
+        For a contact or company the caller can see but not change, because a colleague owns it. The
+        request is an `ownership_transfer` approval in the owner's inbox; only the owner can decide it,
+        and it stays open for 7 days. When the owner accepts, the record moves to the caller, and so do
+        the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
+        its own audit row and updated event. A second press while a request is open answers that request
+        with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
+        (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
+        suspended or has left; ask an administrator).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnershipRequestInput' }
+      responses:
+        '200':
+          description: The request already open for this record and caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '201':
+          description: The request is in the owner's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getOwnershipRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The caller's open request to be handed this record.
+      responses:
+        '200':
+          description: The caller's open request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawOwnershipRequest
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Withdraw the caller's open request to be handed this record.
+      description: The card leaves the owner's inbox. `404` when the caller has no open request.
+      responses:
+        '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /record-grants:
     get:
       tags: [Access]
@@ -63428,6 +63505,21 @@ components:
         record_id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid, description: The caller — the record's owner now. }
         version: { $ref: '#/components/schemas/RowVersion' }
+    OwnershipRequestInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note: { type: string, maxLength: 500, description: 'A line for the owner, shown on the card.' }
+    OwnershipRequest:
+      type: object
+      required: [approval_id, record_type, record_id, owner_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company] }
+        record_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: The owner the request is put to. }
+        status: { type: string, enum: [pending] }
+        expires_at: { type: string, format: date-time }
     RecordGrant:
       type: object
       description: A manual per-record share (ADR-0039) — widens own/team/all base scope for one record.

@@ -100,6 +100,10 @@ export const EDITABLE_FIELDS: Readonly<
   // A LinkedIn match is answered with its two boxes, never by retyping the
   // export's strings: the server refuses an edit to anything else.
   linkedin_match: [],
+  // A handover is answered yes or no. The note is the asker's words, and the
+  // rest names who gives and who receives, which the server will not let an
+  // edit change.
+  ownership_transfer: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },

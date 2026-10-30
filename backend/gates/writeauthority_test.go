@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:TransferRequestableTx":       "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
 	"internal/modules/deals:pendingMappingsOf":              "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
 	"internal/modules/deals:ListLegacyLossReasons":          "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
 	"internal/modules/contacts:attachToSettledVerdict":      "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",

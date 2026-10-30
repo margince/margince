@@ -138,6 +138,8 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"merge_records": true,
 		// Accepting a share request writes one record grant.
 		"contact_share": true,
+		// Moves a record and its open work to a colleague.
+		"ownership_transfer": true,
 	}
 	kinds := decidingApprovalsService(nil, SendPath{}, nil).EffectKinds()
 	if len(kinds) == 0 {

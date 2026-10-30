@@ -2634,7 +2634,7 @@ export const en = {
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
-    "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+    "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
@@ -3974,6 +3974,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
+  "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
@@ -6663,6 +6664,13 @@ export const en = {
   "recordAccess.option.ownerNeeded": "Assign an owner first.",
   "recordAccess.option.workspace": "All users in the company",
   "recordAccess.manage": "Manage access",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "Ask {owner} to hand it over",
+  "handover.requested":
+    "You asked {owner} to hand this over. The request stays open until {date}.",
+  "handover.withdraw": "Withdraw request",
+  "handover.sent": "Request sent to {owner}",
+  "handover.withdrawn": "Request withdrawn",
   // The full answer on the share screen: every colleague who can open the
   // record, grouped by why, and the reader's own access on one line.
   "whoCanSee.title": "Who can see this record",
@@ -15820,7 +15828,7 @@ export const en = {
   "contact.rail.archivedReadOnly":
     "This contact is archived and takes no changes.",
   "contact.notYoursToChange":
-    "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.",
+    "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
