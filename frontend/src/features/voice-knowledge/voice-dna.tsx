@@ -4,6 +4,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { VoiceKinds } from "../../components/voicekinds";
 import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
@@ -21,7 +22,12 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
-import { SharpenStrip, VOICE_SECTIONS, VoiceHero } from "./voice-hero";
+import {
+  SharpenStrip,
+  VOICE_SECTIONS,
+  VoiceHero,
+  VoiceStart,
+} from "./voice-hero";
 import {
   DraftShowcase,
   parseVoiceInsights,
@@ -33,6 +39,7 @@ import {
 import { useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
   CandidateBanner,
+  CandidateReview,
   loadedVersions,
   useVoiceLearning,
   useVoiceVersions,
@@ -62,29 +69,30 @@ export function VoiceDnaCard() {
           // A profile is minted by the first add rather than by a step of
           // its own, so the add control renders here too. Without it an owner
           // who skipped the onboarding voice step could never start a Voice
-          // DNA at all, and everything the profile unlocks (corpus, builds,
-          // sample drafts) stayed unreachable. There is no empty-state box
-          // above it: the card's one job here is to take the first sample,
-          // and a box saying there is nothing yet only pushes that job down.
-          <Panel tone="ai" title={t("settings.voice.title")}>
-            <PanelBody>
-              <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-              {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
-            </PanelBody>
-            {/* The first sample mints the profile, so adding it takes the
-                create grant rather than the update one. */}
-            {canCreate && (
-              <SettingList bleed="settings">
-                <VoiceCorpusIntake
-                  first
-                  profileId={null}
-                  onChanged={() =>
-                    qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                  }
-                />
-              </SettingList>
-            )}
-          </Panel>
+          // DNA at all, and everything the profile unlocks stayed unreachable.
+          <div className="vdna-page">
+            <VoiceStart />
+            <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+              <PanelBody>
+                <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
+                <VoiceKinds />
+                {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
+              </PanelBody>
+              {/* The first sample mints the profile, so adding it takes the
+                  create grant rather than the update one. */}
+              {canCreate && (
+                <SettingList bleed="settings">
+                  <VoiceCorpusIntake
+                    first
+                    profileId={null}
+                    onChanged={() =>
+                      qc.invalidateQueries({ queryKey: ["voice-profile"] })
+                    }
+                  />
+                </SettingList>
+              )}
+            </Panel>
+          </div>
         )
       }
     </QueryGate>
@@ -181,7 +189,10 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
-  const insights = active ? parseVoiceInsights(active) : null;
+  // A first version awaiting review is the only voice there is. The page draws
+  // it in full while the hero asks whether to use it.
+  const shown = active ?? candidate;
+  const insights = shown ? parseVoiceInsights(shown) : null;
   const summary = useVoiceSources(profile.id).data?.summary;
   const learning = useVoiceLearning(profile.id).data;
   const next = useNextBestLine(insights);
@@ -202,9 +213,31 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       {!canEdit && (
         <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
       )}
-      {/* First when it is there: a review waiting on a human is the most
-          actionable thing on the page, in every profile state. */}
-      {candidate && (
+      <VoiceHero
+        profile={profile}
+        insights={insights}
+        profileVersion={shown?.profile_version ?? 0}
+        summary={summary}
+        hasDrafts={hasDrafts}
+        canEdit={canEdit}
+        intakeBusy={intakeBusy}
+        onBuilt={invalidate}
+        review={
+          candidate &&
+          !active && (
+            <CandidateReview
+              profileId={profile.id}
+              candidate={candidate}
+              canEdit={canEdit}
+              onChanged={invalidate}
+              replacing={false}
+            />
+          )
+        }
+      />
+      {/* Straight under the voice it would replace: a review waiting on a
+          human is the most actionable thing below the hero. */}
+      {candidate && active && (
         <CandidateBanner
           profileId={profile.id}
           candidate={candidate}
@@ -212,14 +245,9 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           onChanged={invalidate}
         />
       )}
-      <VoiceHero
-        profile={profile}
-        insights={insights}
-        profileVersion={active?.profile_version ?? 0}
-        summary={summary}
-        hasDrafts={hasDrafts}
-      />
-      {summary && (
+      {/* Before the first build the hero itself guides the writer, so the
+          strip would only say the same thing twice. */}
+      {summary && insights && (
         <SharpenStrip summary={summary} next={next} canEdit={canEdit} />
       )}
       {insights && <VoiceFigures data={insights} learning={learning} />}
@@ -285,15 +313,17 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
         <VoiceSection id={VOICE_SECTIONS.builds}>
           <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
             <SettingList bleed="settings">
-              {/* A build started while a sample is still arriving would
-                  describe a corpus that no longer exists by the time it
-                  finishes. */}
-              <BuildControls
-                profile={profile}
-                canEdit={canEdit}
-                onBuilt={invalidate}
-                intakeBusy={intakeBusy}
-              />
+              {/* The first build starts in the hero, where the writer is
+                  guided to it; from then on rebuilds live with the history.
+                  intakeBusy holds a build back while a sample is arriving. */}
+              {(profile.profile_version ?? 0) > 0 && (
+                <BuildControls
+                  profile={profile}
+                  canEdit={canEdit}
+                  onBuilt={invalidate}
+                  intakeBusy={intakeBusy}
+                />
+              )}
             </SettingList>
             <VoiceHistory
               profileId={profile.id}

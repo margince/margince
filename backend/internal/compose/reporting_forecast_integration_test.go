@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -14,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -106,13 +108,48 @@ func TestReportingForecastReconcilesEverySupportSegmentWithSourceEvidence(t *tes
 	}
 }
 
+// The forecast reads its deals with no ORDER BY. Rewriting every deal row in
+// reverse id order moves them on disk and changes no figure. The receipt still
+// holds, and a changed amount must refuse it.
+func TestReportingForecastReceiptHoldsWhenTheDealRowsMoveAndRefusesARealChange(t *testing.T) {
+	f := reportingBusiness(t)
+	selection := f.selection()
+	selection.Metrics = []crmcontracts.ReportingMetricID{"forecast_landing"}
+	selection.Blocks = []crmcontracts.ReportingBlockKind{"forecast_support"}
+	evaluation, err := f.service.Evaluate(f.human, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
+	won := func() error {
+		_, err := f.service.Evidence(f.human, selection, "forecast_landing", "forecast_won", "", nil, nil, 100, receipt)
+		return err
+	}
+	ctx := context.Background()
+	if _, err := f.env.Pool.Exec(ctx, `DO $$ DECLARE d uuid; BEGIN FOR d IN SELECT id FROM deal ORDER BY id DESC LOOP UPDATE deal SET name = name WHERE id = d; END LOOP; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if err := won(); err != nil {
+		t.Fatalf("the same deals stored in another order refused the receipt: %v", err)
+	}
+	if _, err := f.env.Pool.Exec(ctx, `UPDATE deal SET amount_minor = amount_minor + 100 WHERE id = (SELECT id FROM deal WHERE status = 'won' ORDER BY id LIMIT 1)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := won(); !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("a changed forecast amount kept the old receipt: %v", err)
+	}
+}
+
 func TestReportingHTTPLiveEvidenceReceiptAndExport(t *testing.T) {
 	f := reportingBusiness(t)
 	handler := reportingHTTPRouter(f)
 	query := url.Values{"scope_kind": {"workspace"}, "pipeline_id": {f.env.pipeline.String()}, "period": {"this_month"}}
 	evaluation := reportingResponse[crmcontracts.ReportingEvaluation](t, reportingRequest(f.human, t, handler, http.MethodGet, "evaluate?"+query.Encode(), nil, -1, http.StatusOK))
-	if len(evaluation.Metrics) != 3 {
-		t.Fatalf("default metrics: %+v", evaluation.Metrics)
+	// Counted from the catalog's opening selection, which is what an unselected
+	// request now opens on. A literal here would be a second copy of it.
+	if want := len(openingSelection().Metrics); len(evaluation.Metrics) != want {
+		t.Fatalf("an unselected request answered %d metrics, want %d: %+v",
+			len(evaluation.Metrics), want, evaluation.Metrics)
 	}
 	query.Set("evaluation_key", evaluation.EvaluationKey)
 	query.Set("evaluated_at", evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano))

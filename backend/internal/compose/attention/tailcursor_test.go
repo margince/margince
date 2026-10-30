@@ -22,9 +22,9 @@ type windowRecorder struct{ asked []TaskWindow }
 
 func (w *windowRecorder) CountTasks(context.Context, TaskWindow) (int, error) { return 0, nil }
 
-func (w *windowRecorder) TasksAfter(_ context.Context, window TaskWindow, _ string, _ int) ([]Task, string, error) {
+func (w *windowRecorder) TasksAfter(_ context.Context, window TaskWindow, _ string, _ int) ([]Positioned[Task], bool, error) {
 	w.asked = append(w.asked, window)
-	return nil, "", nil
+	return nil, false, nil
 }
 
 func tailToken(t *testing.T, rest *backlogCursor) string {
@@ -43,7 +43,7 @@ func TestATailThisBinaryCouldNotHaveMintedIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	refused := map[string]*backlogCursor{
-		"an unknown source":      {At: map[string]string{"deal_at_risk": ""}, Window: window},
+		"an unknown source":      {At: map[string]string{"meeting": ""}, Window: window},
 		"a position that is not": {At: map[string]string{"task": "not a token"}, Window: window},
 		"no source at all":       {At: map[string]string{}, Window: window},
 		"no window":              {At: map[string]string{"task": ""}},

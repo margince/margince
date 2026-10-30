@@ -37,7 +37,11 @@ export const SETTINGS_SECTIONS = {
     "scheduling.acceptBookings",
     "workingHours.timezone",
   ],
-  voice: ["settings.voice.title", "settings.voice.addFirstLabel"],
+  voice: [
+    "settings.voice.start.addTitle",
+    "settings.voice.addFirstLabel",
+    "settings.voice.pasteLabel",
+  ],
   agents: [
     "aiAccess.connect.title",
     "agents.connected",
@@ -108,6 +112,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.callWhatsApp",
     "installationSettings.callTelegram",
     "installationSettings.callZalo",
+    "installationSettings.individualPerformance",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],

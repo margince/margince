@@ -143,8 +143,9 @@ it("asks nothing under a role preview, which this session cannot ask as", async 
   expect(ask).not.toHaveBeenCalled();
 });
 
-it("refuses a saved question with filters, whose values every reader would get", async () => {
+it("binds a filtered saved question from its link, and sends none of its filters", async () => {
   const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
   const runId = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
   installFetchStub({
     ...reportingStoryRoutes(),
@@ -159,6 +160,7 @@ it("refuses a saved question with filters, whose values every reader would get",
         asked_by: "u-1",
         stored_floor: 5,
       }),
+    "PATCH /analytics/reports/report": write,
   });
   render(
     <StoryProviders>
@@ -180,8 +182,25 @@ it("refuses a saved question with filters, whose values every reader would get",
     runId,
   );
   await user.click(screen.getByRole("button", { name: "Add question" }));
-  expect(await screen.findByText(/has filters/)).toBeInTheDocument();
-  expect(screen.queryByText(/^Question:/)).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Save report" }));
+  await waitFor(() => expect(write).toHaveBeenCalled());
+  expect(JSON.stringify(write.mock.calls)).not.toContain("c-1");
+  expect(write).toHaveBeenCalledWith(
+    expect.objectContaining({
+      selection: expect.objectContaining({
+        layout: [
+          expect.objectContaining({
+            cards: expect.arrayContaining([
+              expect.objectContaining({
+                kind: "question",
+                question: { ...question, saved_question_id: runId },
+              }),
+            ]),
+          }),
+        ],
+      }),
+    }),
+  );
 });
 
 it("adds a saved question from its link, without its own scope", async () => {
@@ -228,7 +247,10 @@ it("adds a saved question from its link, without its own scope", async () => {
         layout: [
           expect.objectContaining({
             cards: expect.arrayContaining([
-              expect.objectContaining({ kind: "question", question }),
+              expect.objectContaining({
+                kind: "question",
+                question: { ...question, saved_question_id: runId },
+              }),
             ]),
           }),
         ],
@@ -237,12 +259,13 @@ it("adds a saved question from its link, without its own scope", async () => {
   );
 });
 
-it("adds one of the reader's own saved questions from the list, as from its link", async () => {
+it("reads the reader's saved questions only once asked, and binds the one picked", async () => {
   const user = userEvent.setup({ delay: null });
   const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  const list = vi.fn(() => jsonResponse(SAVED_RUNS));
   installFetchStub({
     ...reportingStoryRoutes(),
-    "GET /analytics/runs": () => jsonResponse(SAVED_RUNS),
+    "GET /analytics/runs": list,
     "PATCH /analytics/reports/report": write,
   });
   render(
@@ -259,6 +282,13 @@ it("adds one of the reader's own saved questions from the list, as from its link
     screen.getByText("Charts and order", { selector: ".disclosure-label" }),
   );
   const saved = SAVED_RUNS.data[1];
+  await screen.findByRole("button", {
+    name: "Choose from your saved questions",
+  });
+  expect(list).not.toHaveBeenCalled();
+  await user.click(
+    screen.getByRole("button", { name: "Choose from your saved questions" }),
+  );
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Your saved questions" }),
@@ -277,6 +307,7 @@ it("adds one of the reader's own saved questions from the list, as from its link
                 question: {
                   entity: saved?.entity,
                   measures: saved?.measures,
+                  saved_question_id: saved?.id,
                 },
               }),
             ]),
@@ -287,7 +318,7 @@ it("adds one of the reader's own saved questions from the list, as from its link
   );
 });
 
-it("offers no filtered saved question, and none the report already holds", async () => {
+it("offers a filtered saved question, and no unfiltered one the report already holds", async () => {
   const user = userEvent.setup({ delay: null });
   installFetchStub({
     ...reportingStoryRoutes(),
@@ -306,15 +337,129 @@ it("offers no filtered saved question, and none the report already holds", async
   await user.click(
     screen.getByText("Charts and order", { selector: ".disclosure-label" }),
   );
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Choose from your saved questions",
+    }),
+  );
   const picker = await screen.findByRole("combobox", {
     name: "Your saved questions",
   });
   await user.click(picker);
-  expect(screen.getAllByRole("option")).toHaveLength(2);
+  expect(screen.getAllByRole("option")).toHaveLength(3);
   await user.keyboard("{Escape}");
   await pickOption(user, picker, /· Count · /);
   await user.click(
     screen.getByRole("combobox", { name: "Your saved questions" }),
   );
-  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(screen.getAllByRole("option")).toHaveLength(2);
+  expect(screen.getByRole("option", { name: /filtered/ })).toBeInTheDocument();
+});
+
+const withBoundCard = {
+  ...reportingStoryEvaluation,
+  selection: {
+    ...reportingStoryEvaluation.selection,
+    layout: [
+      {
+        cards: [
+          {
+            id: "bound",
+            kind: "question" as const,
+            width: "full" as const,
+            question: { ...question, binding: "ref-1" },
+          },
+        ],
+      },
+    ],
+  },
+};
+
+function drawBound() {
+  render(
+    <StoryProviders>
+      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+        <ReportingCharts
+          evaluation={withBoundCard}
+          report={{ id: "report", revision: 3 }}
+          onEvidence={() => {}}
+        />
+      </RecordZoneProvider>
+    </StoryProviders>,
+  );
+}
+
+it("asks a bound card on the server and says which calendar its periods keep", async () => {
+  const card = vi.fn(() =>
+    jsonResponse({
+      status: "answered",
+      answer: ANSWER,
+      binding: {
+        filtered: true,
+        period_basis: { timezone: "Europe/Berlin", fiscal_year_start_month: 4 },
+      },
+    }),
+  );
+  const ask = vi.fn(() => jsonResponse(ANSWER));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report/questions/bound/answer": card,
+    "POST /analytics/query": ask,
+  });
+  drawBound();
+  expect(
+    await screen.findByText(/fiscal year starting in April, in Europe\/Berlin/),
+  ).toBeInTheDocument();
+  expect(card).toHaveBeenCalled();
+  expect(ask).not.toHaveBeenCalled();
+});
+
+it("shows a restricted bound card with nothing of its answer", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/reports/report/questions/bound/answer": () =>
+      jsonResponse({ status: "restricted", binding: { filtered: true } }),
+  });
+  drawBound();
+  expect(
+    await screen.findByText(/cannot see everything this question filters on/),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/This question has filters/)).toBeNull();
+});
+
+it("shows the calendar a sent edition's bound card kept its periods in", async () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+        <ReportingCharts
+          evaluation={withBoundCard}
+          editionId="edition"
+          kept={{
+            questions: [
+              {
+                card_id: "bound",
+                status: "kept",
+                answer: ANSWER,
+                binding: {
+                  filtered: true,
+                  period_basis: {
+                    timezone: "Europe/Berlin",
+                    fiscal_year_start_month: 1,
+                  },
+                },
+              },
+            ],
+            redacted: false,
+          }}
+          onEvidence={() => {}}
+        />
+      </RecordZoneProvider>
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByText(
+      /fiscal year starting in January, in Europe\/Berlin/,
+    ),
+  ).toBeInTheDocument();
 });

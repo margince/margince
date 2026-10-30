@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 141900,
+    "tool_catalog_bytes": 142146,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36562,
+    "approx_wire_tokens_total": 36624,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 35891,
-      "input_schema_bytes": 65893,
+      "input_schema_bytes": 66139,
       "output_schema_bytes": 30862,
-      "description_plus_input_schema_bytes": 101784
+      "description_plus_input_schema_bytes": 102030
     }
   },
   "tools": {
@@ -1592,6 +1592,9 @@
                             },
                             "question": {
                               "properties": {
+                                "binding": {
+                                  "type": "string"
+                                },
                                 "entity": {
                                   "type": "string"
                                 },
@@ -1623,6 +1626,10 @@
                                     "type": "object"
                                   },
                                   "type": "array"
+                                },
+                                "saved_question_id": {
+                                  "format": "uuid",
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -4504,6 +4511,9 @@
                                             },
                                             "question": {
                                               "properties": {
+                                                "binding": {
+                                                  "type": "string"
+                                                },
                                                 "entity": {
                                                   "type": "string"
                                                 },
@@ -4535,6 +4545,10 @@
                                                     "type": "object"
                                                   },
                                                   "type": "array"
+                                                },
+                                                "saved_question_id": {
+                                                  "format": "uuid",
+                                                  "type": "string"
                                                 }
                                               },
                                               "required": [
@@ -6319,6 +6333,9 @@
                             },
                             "question": {
                               "properties": {
+                                "binding": {
+                                  "type": "string"
+                                },
                                 "entity": {
                                   "type": "string"
                                 },
@@ -6350,6 +6367,10 @@
                                     "type": "object"
                                   },
                                   "type": "array"
+                                },
+                                "saved_question_id": {
+                                  "format": "uuid",
+                                  "type": "string"
                                 }
                               },
                               "required": [

@@ -6,6 +6,7 @@ package forecasting
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -61,6 +62,9 @@ type Deal struct {
 // found unsupported; an unknown one could not be judged. Counting it as
 // excluded would report a gap in the mailbox as a gap in the pipeline.
 type QualifiedReadings struct {
+	// OpenMinor is the open money of the deals the qualified readings keep, the
+	// qualified counterpart of Readings.OpenMinor.
+	OpenMinor     int64
 	EvidenceMinor int64
 	BestCaseMinor int64
 	WeightedMinor int64
@@ -185,8 +189,11 @@ const (
 // and arithmetic — the two things worth testing exhaustively and the two that
 // are impossible to test exhaustively through a store.
 func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
+	// The rows come in no stated order. Evidence pages are cut by position, so
+	// the contributions follow the deal id and a next page repeats no row.
+	byID := slices.SortedFunc(slices.Values(in), func(a, b Deal) int { return strings.Compare(a.ID, b.ID) })
 	out := Readings{Contributions: make([]Contribution, 0, len(in))}
-	for _, deal := range in {
+	for _, deal := range byID {
 		contribution, err := contribute(period, asOfDay, deal)
 		if err != nil {
 			return Readings{}, err
@@ -261,6 +268,7 @@ func qualify(out *Readings, c Contribution, base int64) error {
 		by   int64
 		when bool
 	}{
+		{&q.OpenMinor, base, c.Qualification == viability.QualificationEligible},
 		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
 		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
 		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},

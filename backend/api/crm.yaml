@@ -13986,6 +13986,91 @@ paths:
           type: integer
           format: int64
           minimum: 1
+  /analytics/reports/{id}/questions/{card_id}/answer:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    - name: card_id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z0-9-]{1,32}$' }
+    get:
+      tags: [Reports]
+      operationId: answerReportingQuestionCard
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: A question card's answer, asked on the server for this reader.
+      description: |
+        Asks the question a card holds, as the reader may ask it now. A bound card asks the
+        saved question the report keeps, filters included, and the reader never receives the
+        filters. Before anything is asked, every value the question filters on is checked
+        against what the reader may see: a record they may not open, an owner they may not
+        measure or a field outside their vocabulary answers `restricted`.
+
+        The report's population and the question's own must both hold, and so must every
+        filter. A question that cannot hold inside the report is refused with the reason;
+        nothing is dropped to make it run. The floor and its complementary withholding apply
+        as they do to `/analytics/query`.
+      parameters:
+      - name: revision
+        in: query
+        required: false
+        schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '200':
+          description: The answer, or that it is restricted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportingQuestionAnswer' }
+        '400':
+          description: The question cannot be asked inside this report, or for this reader.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/reports/{id}/questions/{card_id}/explain:
+    parameters:
+    - $ref: '#/components/parameters/Id'
+    - name: card_id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z0-9-]{1,32}$' }
+    post:
+      tags: [Reports]
+      operationId: explainReportingQuestionCard
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: The records behind one cell of a question card.
+      description: |
+        The evidence for one cell of a card's answer, the question taken from the report as
+        the answer is. A reader for whom the answer is `restricted` is answered 404.
+      parameters:
+      - name: revision
+        in: query
+        required: false
+        schema: { type: integer, format: int64, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportRunCell' }
+      responses:
+        '200':
+          description: The records behind the cell, as this reader may read them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnalyticsExplanation' }
+        '400':
+          description: The question cannot be asked inside this report, or the cell does not fit it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/AnalyticsRefusal' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/targets:
     get:
       tags:
@@ -19302,6 +19387,25 @@ paths:
         '409': { $ref: '#/components/responses/SettingLocked' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /installation/settings/fiscal-year-impact:
+    get:
+      tags: [Identity]
+      operationId: getFiscalYearImpact
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      summary: How much saved work reads a period, before the fiscal start moves (admin/ops).
+      description: |
+        Counts the saved questions and reports a move of `fiscal_year_start_month` concerns, so
+        the admin reads the number before saving. Governed by the `installation_settings`
+        RBAC object's update grant.
+      responses:
+        '200':
+          description: The counts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InstallationFiscalYearImpact' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
   /installation/configuration:
     get:
       tags: [Identity]
@@ -29190,6 +29294,88 @@ paths:
               schema: { $ref: '#/components/schemas/AnalyticsContext' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /analytics/sdr-summary:
+    get:
+      tags: [Reports]
+      operationId: getSdrSummary
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+      description: |
+        `workflow` says whether this workspace hands prospects on. A reporting framework set up
+        for SDR teams (`template: sdr`) does, and `handoffs` is then present. Any other setup
+        answers `qualification` and leaves `handoffs` out. A zero is never read as the setup:
+        a team that hands on nothing this week still has a handoff workflow.
+
+        A handoff waits from the start of its current submission. One returned and resubmitted
+        starts a new wait. Each handoff is credited to whoever submitted that round. No handoff
+        target time is configured anywhere, so only the age is given.
+
+        `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
+        that have not happened by `as_of`, credited by the
+        meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
+        read activities.
+
+        Both counts are one statement each over the scope, never a read per row. The scope is
+        checked as every analytics read checks it: an owner or team the seat may not measure
+        is 404, so the answer does not say that they exist.
+      x-agent-access: human-only
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace] }
+          description: Whose work to count. Omitted means the seat's own default population.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: The owner or team named by `scope_kind`.
+      responses:
+        '200':
+          description: The summary.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SdrSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sdr-summary/handoffs:
+    get:
+      tags: [Reports]
+      operationId: listSdrWaitingHandoffs
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The handoffs waiting on somebody else, oldest wait first, one page at a time.
+      description: |
+        The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
+        current wait began and then by id. A prospect the seat may not read is listed as
+        `restricted` with no name and no id. A handoff carries no deal while it waits, so no
+        deal field is ever part of a row.
+      x-agent-access: human-only
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace] }
+          description: Whose handoffs to list. Omitted means the seat's own default population.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: The owner or team named by `scope_kind`.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: Opaque position from a previous page's `next_cursor`.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        '200':
+          description: One page of waiting handoffs.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SdrWaitingHandoffPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /analytics/schema:
     get:
       tags: [Reports]
@@ -29293,6 +29479,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: entity
+          in: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 64 }
+          description: Only the questions about this population.
       responses:
         '200':
           description: One page of the caller's saved questions.
@@ -33519,7 +33710,7 @@ components:
             rbac:
               value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
     PermissionDenied:
-      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate).'
+      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -34239,7 +34430,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo, individual_performance]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
@@ -34290,6 +34481,17 @@ components:
           description: |
             Show a Zalo link next to a contact's phone number that starts with a country
             code. On by default. The link opens the chat in Zalo and sends the number to its website.
+        individual_performance:
+          type: boolean
+          description: |
+            Show individual performance. On by default. Off, reports, analytics questions,
+            forecasts and forecast shares, targets, evidence, editions and their exports, and
+            team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+            by owner or meeting host are refused, a colleague's scope is refused, and a figure
+            that any colleague contributes to is refused unless at least two live colleagues
+            besides the reader do. Each reader keeps their own figures. The Team board, coaching
+            moves, a lead's view of a named member's queue, the morning mail's team section and
+            team weekly plans are not covered yet.
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -34306,12 +34508,12 @@ components:
             a reader can tell which twelve months a bucket covers without knowing the
             convention. A January year is not a span and keeps the plain `2026`.
 
-            One thing it does NOT carry, and a client storing report filters should know it:
-            a SAVED report view holds the bucket's text, so a view saved under one fiscal
-            start names a different span after the start moves — or no span at all, since a
-            calendar year maps onto parts of two fiscal years. The report still runs and
-            still looks right. Whether such a view is re-pointed, invalidated or merely
-            warned about is undecided: margince/margince#2569.
+            A saved question, or a report card bound to one, that filters on a period keeps
+            the zone and fiscal start it was saved under, so `2026` saved under a January start
+            still means January to December 2026 after the start moves: the move writes down the
+            calendar in force before it. A relative period, such as this quarter, follows the
+            current setting.
+            `/installation/settings/fiscal-year-impact` counts both before a move.
         sign_in_providers:
           type: array
           description: |
@@ -34444,6 +34646,9 @@ components:
         call_zalo:
           type: boolean
           description: Show the Zalo link next to a contact's phone number. Omit to leave it unchanged.
+        individual_performance:
+          type: boolean
+          description: Show individual performance. Omit to leave it unchanged. Each change is audited.
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -34453,10 +34658,8 @@ components:
             reports on read and stores nothing, so moving it re-labels every period report at
             once and re-means no stored row.
 
-            It does not re-point a SAVED report view, which holds the bucket's TEXT and so
-            names a different span afterwards. Sending this field is enough to leave those
-            views filtering on a span nobody asked for; nothing here reports how many.
-            margince/margince#2569.
+            A saved period filter keeps the dates it was saved with, and a relative period
+            follows the new start. `/installation/settings/fiscal-year-impact` counts both.
         enabled_oidc_providers:
           type: array
           maxItems: 32
@@ -36724,6 +36927,49 @@ components:
             you have not overruled — every other kind is withheld rather than destroyed, and
             deciding this sender is business cancels the deletion. Later mail from the same sender
             runs its own window, so this date names the next message to go rather than all of them.
+
+    WebFormSubmission:
+      type: object
+      description: |
+        One website form submission as the visitor sent it. Every value is the visitor's own
+        text and nothing Margince checked, except `consent`, which is the form's own record of
+        its consent box.
+      required: [email, extra, campaign]
+      properties:
+        message: { type: string, description: 'The free text the visitor wrote.' }
+        full_name: { type: string }
+        email: { type: string, description: 'The address the lead was matched or created by.' }
+        phone: { type: string, description: 'As typed; it may lack the country prefix a lead''s phone needs.' }
+        company: { type: string }
+        title: { type: string }
+        extra:
+          type: array
+          description: The form's other fields, in the order they were sent, under the names the form gave them.
+          items: { $ref: '#/components/schemas/WebFormValue' }
+        page_url: { type: string, description: 'The page the form was sent from.' }
+        referrer: { type: string }
+        campaign:
+          type: array
+          description: The `utm_` parameters the page carried.
+          items: { $ref: '#/components/schemas/WebFormValue' }
+        consent: { $ref: '#/components/schemas/WebFormConsent' }
+
+    WebFormValue:
+      type: object
+      required: [name, value]
+      properties:
+        name: { type: string }
+        value: { type: string }
+
+    WebFormConsent:
+      type: object
+      description: |
+        The consent box the form showed. Absent when the form shows none.
+      required: [ticked, wording]
+      properties:
+        ticked: { type: boolean }
+        wording: { type: string, description: 'The words the box showed, as the admin wrote them when the form was sent.' }
+        policy_version: { type: string, description: 'The privacy policy version the form named, when it named one.' }
 
     SourceAuthor:
       type: object
@@ -50214,6 +50460,16 @@ components:
             those are different colleagues, and showing only the first is how a migration
             comes to claim one colleague wrote a decade of everybody else's
             correspondence.
+        web_form:
+          allOf: [{ $ref: '#/components/schemas/WebFormSubmission' }]
+          readOnly: true
+          nullable: true
+          description: >-
+            What a website form sent, field by field, on the note it wrote (`source_system`
+            `web_form`). `body` carries the same facts as text for search and for readers that
+            draw text only; a surface that draws fields reads them here. Null on every other
+            row, and on a form note written before the fields were kept. Withheld with the
+            content, like `body`.
         raw: { type: [object, 'null'], additionalProperties: true }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -54467,6 +54723,7 @@ components:
       - lead_status_moves
       - leads_promoted
       - lead_first_response
+      - leads_awaiting_response
       - partner_pipeline
       - partner_won
       - partner_commission
@@ -54503,6 +54760,74 @@ components:
       - unsupported
       - unavailable
       - failed
+    SdrSummary:
+      type: object
+      additionalProperties: false
+      required: [as_of, scope, workflow]
+      properties:
+        as_of: { type: string, format: date-time, description: The instant both counts were read at. }
+        scope: { $ref: '#/components/schemas/AnalyticsScope' }
+        workflow:
+          type: string
+          enum: [handoff, qualification]
+          description: '`handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.'
+        handoffs: { $ref: '#/components/schemas/SdrHandoffTotals' }
+        upcoming_meetings:
+          type: integer
+          minimum: 0
+          description: Booked meetings that start after `as_of`, credited to the scope.
+    SdrHandoffTotals:
+      type: object
+      additionalProperties: false
+      required: [waiting, unassigned, blocked, returned]
+      properties:
+        waiting: { type: integer, minimum: 0, description: Handoffs submitted and not yet decided. }
+        unassigned: { type: integer, minimum: 0, description: Waiting handoffs offered to nobody in particular. }
+        blocked:
+          type: integer
+          minimum: 0
+          description: Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them.
+        returned: { type: integer, minimum: 0, description: Handoffs sent back to the submitter to try again. These wait on the submitter. }
+        oldest_waiting_since: { type: string, format: date-time, description: When the longest current wait began. Absent with nothing waiting. }
+    SdrWaitingHandoff:
+      type: object
+      additionalProperties: false
+      required: [id, waiting_since, resubmitted, restricted]
+      properties:
+        id: { type: string, format: uuid }
+        waiting_since: { type: string, format: date-time, description: The start of the current submission. }
+        resubmitted: { type: boolean, description: Whether this handoff was returned and submitted again. }
+        restricted: { type: boolean, description: 'The seat may not read the prospect, so `subject` is absent.' }
+        subject: { $ref: '#/components/schemas/SdrHandoffSubject' }
+        submitter_id: { type: string, format: uuid, description: Who submitted the current round. }
+        recipient: { $ref: '#/components/schemas/SdrHandoffRecipient' }
+    SdrHandoffSubject:
+      type: object
+      additionalProperties: false
+      required: [type, id, label]
+      properties:
+        type: { type: string, enum: [lead, contact] }
+        id: { type: string, format: uuid }
+        label: { type: string }
+    SdrHandoffRecipient:
+      type: object
+      additionalProperties: false
+      required: [id, label, active]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        active: { type: boolean, description: 'False when the recipient was suspended, deactivated or removed. The handoff is then blocked.' }
+    SdrWaitingHandoffPage:
+      type: object
+      additionalProperties: false
+      required: [as_of, rows]
+      properties:
+        as_of: { type: string, format: date-time }
+        rows:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/SdrWaitingHandoff' }
+        next_cursor: { type: string, description: Absent on the last page. }
     ReportingScope:
       type: object
       additionalProperties: false
@@ -54631,11 +54956,10 @@ components:
       required: [entity, measures]
       description: |
         A custom analytics question a card asks. Present exactly when the card's `kind` is
-        `question`. The page asks it through `/analytics/query` for each reader, under their
-        own grants and over the report's scope. Every reader of the report receives it, so it
-        carries no filters (a filter value can name a record a reader may not open), no scope
-        and no save. A sent edition keeps the answer its sender was given, as
-        `ReportingEditionQuestion` describes.
+        `question`. Every reader of the report receives it, so it carries no filters (a filter
+        value can name a record a reader may not open), no scope and no save. A sent edition
+        keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+        with `binding` asks a saved question the server keeps, filters and all.
       properties:
         entity: { type: string, minLength: 1, maxLength: 64, description: "The population, by name." }
         group_by:
@@ -54649,6 +54973,72 @@ components:
           items:
             $ref: '#/components/schemas/AnalyticsMeasure'
         limit: { type: integer, minimum: 1, maximum: 1000, description: "The rows the card shows; 100 when absent." }
+        saved_question_id:
+          type: string
+          format: uuid
+          description: Sent on a save to bind the card to this saved question. Never served back.
+        binding:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: The opaque reference to the saved question a bound card asks. Send it back unchanged to keep it.
+    ReportingQuestionBinding:
+      type: object
+      additionalProperties: false
+      required: [filtered]
+      description: What every reader of a report may know of the saved question a card is bound to.
+      properties:
+        filtered:
+          type: boolean
+          description: Whether the question narrows its population with filters.
+        period_basis:
+          $ref: '#/components/schemas/ReportingPeriodBasis'
+    ReportingPeriodBasis:
+      type: object
+      additionalProperties: false
+      required: [timezone, fiscal_year_start_month]
+      description: The calendar a kept question's period filters keep their dates in.
+      properties:
+        timezone: { type: string }
+        fiscal_year_start_month: { type: integer, minimum: 1, maximum: 12 }
+    ReportingQuestionAnswer:
+      type: object
+      additionalProperties: false
+      required: [status]
+      description: |
+        A bound question card's answer for this reader. `restricted`: the reader may not see a
+        value the question filters on, so nothing of the answer is shown: no rows, no labels
+        and no total.
+      properties:
+        status:
+          type: string
+          enum: [answered, restricted]
+        binding:
+          $ref: '#/components/schemas/ReportingQuestionBinding'
+        answer:
+          $ref: '#/components/schemas/AnalyticsAnswer'
+    InstallationFiscalYearImpact:
+      type: object
+      additionalProperties: false
+      required: [saved_questions, reports_with_kept_periods, reports_with_relative_periods]
+      description: |
+        What a move of the fiscal year start does to saved work, counted before the move is
+        saved. A saved question or a report card that filters on a period such as `2026` keeps
+        the dates it was saved with. A report that reads a relative period, such as this
+        quarter, follows the new start.
+      properties:
+        saved_questions:
+          type: integer
+          minimum: 0
+          description: Saved questions, of every member, that filter on a period.
+        reports_with_kept_periods:
+          type: integer
+          minimum: 0
+          description: Live reports with a card whose saved question filters on a period.
+        reports_with_relative_periods:
+          type: integer
+          minimum: 0
+          description: Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
     ReportingCard:
       type: object
       additionalProperties: false
@@ -54714,6 +55104,11 @@ components:
         member_ids:
           type: array
           items: *id002
+        fiscal_year_start_month:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: The fiscal start month in force. Absent on older editions.
         scope_holds_deals:
           type: boolean
           description: >-
@@ -54877,6 +55272,117 @@ components:
           $ref: '#/components/schemas/ReportingCoverage'
         evidence:
           $ref: '#/components/schemas/ReportingEvidenceRef'
+        target_comparison:
+          $ref: '#/components/schemas/ReportingTargetComparison'
+    ReportingTargetComparison:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the current fiscal quarter's expected landing stands against a
+        compatible `bookings_won` target, and how far the open pipeline covers
+        what is left to win. Present only on the `forecast_landing` metric.
+        Every amount is in minor units of the context currency.
+
+        - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+        - `remaining` is `target` minus `won`, never below zero.
+        - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+          expected to close in the quarter, over what is left to win.
+
+        `won` and `open_pipeline` come from the same forecast reading as
+        `landing`, so a won deal is never counted twice. A manager call is a
+        whole-quarter figure and is never added to `won`.
+      required: [status, target_metric]
+      properties:
+        status:
+          type: string
+          enum: [compared, target_reached, no_target, fx_missing, partial_visibility, colleague_withheld, call_below_won, incompatible]
+          description: |
+            `compared` carries every figure. `target_reached` means `remaining`
+            is zero; it carries no `coverage`, never an infinite one.
+            `no_target` means no target is set for this metric, scope,
+            pipeline and quarter, or the reader may not read targets; a missing
+            target is never zero. `fx_missing` means a deal amount has no
+            exchange rate to the base currency, so the totals are incomplete
+            and no gap or coverage is given. `partial_visibility` means the
+            reader cannot see every deal of the population asked for, or a
+            deal's amount, so its figures cannot stand against the scope's
+            whole target.
+            `colleague_withheld` means individual performance is off and the
+            figure would be one colleague's own. `call_below_won` means the
+            manager call is below what is already won, so the landing and the
+            sales won disagree and no gap or coverage is given. `incompatible`
+            names why in `incompatibility` and offers `supported_selection`
+            when a selection can fix it.
+        incompatibility:
+          type: string
+          enum: [period, scope, pipeline, manager_call_pipeline, currency]
+          description: |
+            Present only with status `incompatible`. `period`: the selection
+            is not `this_quarter`, or its target interval is not the current
+            fiscal quarter. `scope`: the forecast
+            does not read this scope as one population. `pipeline`: only a
+            target for the whole scope exists, and it is not split across
+            pipelines. `manager_call_pipeline`: the landing is a manager call,
+            which covers every pipeline. `currency`: the target that would
+            apply, for this pipeline or else for every pipeline, was set in
+            another currency than the base currency.
+        supported_selection:
+          allOf: [{ $ref: '#/components/schemas/ReportingSelection' }]
+          description: Present only with status `incompatible`. The same selection, changed so the comparison is supported.
+        target_metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+        target_id:
+          type: string
+          format: uuid
+        target_revision:
+          type: integer
+          format: int64
+        target: *id003
+        basis:
+          type: string
+          enum: [commit_evidence, weighted, manager_call]
+          description: The forward measure the landing was projected with.
+        landing: *id003
+        won: *id003
+        gap: *id003
+        remaining: *id003
+        open_pipeline: *id003
+        coverage: *id003
+        qualified:
+          $ref: '#/components/schemas/ReportingQualifiedCoverage'
+        operands:
+          $ref: '#/components/schemas/ReportingComparisonOperands'
+    ReportingQualifiedCoverage:
+      type: object
+      additionalProperties: false
+      description: |
+        Coverage over the deals the qualified forecast keeps, beside the
+        coverage over all open deals. Present when the comparison carries
+        figures.
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [compared, target_reached, not_enforced]
+          description: |
+            `not_enforced` means the qualified forecast is switched off, so no
+            open deal is judged and no qualified figure exists.
+        open_pipeline: *id003
+        coverage: *id003
+    ReportingComparisonOperands:
+      type: object
+      additionalProperties: false
+      description: The evidence each figure of a target comparison was read from.
+      required: [won, landing, open_pipeline]
+      properties:
+        won:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        landing:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        open_pipeline:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
+        qualified_open_pipeline:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
     ReportingEvaluation:
       type: object
       additionalProperties: false
@@ -54911,9 +55417,15 @@ components:
       - unit
       - supports_target
       - blocks
+      - label
       properties:
         allowed_filters: {type: array, items: {type: string}}
         attribution: {type: string}
+        label:
+          type: string
+          description: The metric's name in the reader's language, as the
+            screen and the CSV export show it. Presentation only; `id` stays the
+            machine identifier, and no receipt depends on it.
         required_fields: {type: array, items: {type: string}}
         read_object: {type: string}
         minimum_cohort: {type: integer}
@@ -55370,6 +55882,8 @@ components:
             `unanswered`: the sender could not ask the question when the edition was captured.
             `counts_other_records`: the question measures or groups through records of other kinds
             than its population, which an edition does not keep.
+        binding:
+          $ref: '#/components/schemas/ReportingQuestionBinding'
         answer:
           $ref: '#/components/schemas/AnalyticsAnswer'
     ReportingEvidenceRow:
@@ -56505,7 +57019,7 @@ components:
     InputCheck:
       type: object
       description: One finding from the nightly input check.
-      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at]
+      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at, inputs_changed]
       properties:
         id: { type: string, format: uuid }
         type:
@@ -56553,6 +57067,15 @@ components:
           description: >-
             The most recent run that still found it. A finding seen for weeks is a
             different thing from one that appeared last night.
+        inputs_changed:
+          type: boolean
+          nullable: true
+          description: >-
+            True when the record this finding is about, or a stage or forecast call
+            every finding is judged against, changed after the check read it. The
+            finding is out of date until the next run reads the change; a run that
+            could not read all it needs leaves it out of date. Null when no check
+            has run since changes were first tracked, so nothing is known either way.
       additionalProperties: false
     ResolveInputCheck:
       type: object
@@ -56699,7 +57222,7 @@ components:
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it
         was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness]
       properties:
         run_id: { type: string, format: uuid }
         as_of: { type: string, format: date-time }
@@ -56734,6 +57257,45 @@ components:
           type: array
           description: Every source the run tried, and how far it reached into each.
           items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
+        freshness: { $ref: '#/components/schemas/AssuranceFreshness' }
+      additionalProperties: false
+    AssuranceFreshness:
+      type: object
+      description: >-
+        Whether the records changed after this check read them. Changes are marked as
+        they happen; only the next run reads them, and a run that could not read all
+        it needs clears none.
+      required: [state, changed_deals, changed_signals, workspace_changed]
+      properties:
+        state:
+          type: string
+          enum: [current, out_of_date, unknown]
+          description: >-
+            `out_of_date` when any input changed after the check read it. Its verdict
+            and findings stay as the check left them until the next run. `unknown`
+            when no check has run since changes were first tracked: run the check
+            again to learn whether anything changed.
+        changed_deals:
+          type: integer
+          minimum: 0
+          description: >-
+            Deals whose record, offers, contracts or activities changed after the
+            check.
+        changed_signals:
+          type: integer
+          minimum: 0
+          description: >-
+            Buying signals whose signal, company or deal suggestion changed after the
+            check.
+        workspace_changed:
+          type: boolean
+          description: >-
+            A change that reaches every deal: a stage the deals are judged against, or a
+            forecast call made after the check.
+        changed_since:
+          type: string
+          format: date-time
+          description: The oldest change the check has not read. Absent when there is none.
       additionalProperties: false
     ForecastAssuranceSource:
       type: object

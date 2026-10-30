@@ -350,6 +350,10 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 			LIMIT 1`).
 			Scan(&out.ID, &out.AsOf, &out.EligibleDeals, &out.EligibleSignals,
 				&out.Status, &out.Readiness)
+		if err != nil {
+			return err
+		}
+		out.Freshness, err = readFreshness(ctx, tx)
 		return err
 	})
 	if err != nil {
@@ -369,6 +373,9 @@ type Run struct {
 	EligibleSignals int
 	Status          string
 	Readiness       *string
+	// Freshness is what changed after this reading. A reading the records
+	// moved past is never shown as current.
+	Freshness Freshness
 }
 
 // InTx runs fn inside one workspace transaction.
@@ -468,4 +475,7 @@ type Exception struct {
 	// because it decides what to group and never draws a row — and the wire
 	// then names the subject by id alone, which is what it did before.
 	SubjectLabel string
+	// InputsChanged says whether the subject, or the workspace, changed after
+	// the last run read it (MarkOutOfDate). Nil when that is not known.
+	InputsChanged *bool
 }

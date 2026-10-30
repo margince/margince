@@ -18,7 +18,7 @@ import { withDealCount } from "./reporting.dealcount";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
   blockLabel,
-  metricLabel,
+  type MetricNames,
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -27,6 +27,7 @@ import {
   reportingMoneyUnit,
 } from "./reporting.model";
 import { movementLabel } from "./reporting.movement";
+import { useMetricNames } from "./reporting.queries";
 import { SdrOutcomes } from "./reporting.sdroutcomes";
 import { TargetProgress } from "./reporting.summary";
 import "./reporting.css";
@@ -43,6 +44,7 @@ export function ChartBody({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
@@ -53,10 +55,6 @@ export function ChartBody({
       : format(value);
   const readings = chart.points.map((point) => ({
     ...point,
-    label:
-      chart.kind === "target_progress"
-        ? metricLabel(chart.metric, t)
-        : point.label,
     amount: reportingCompactAmount(
       point.value,
       chart.unit,
@@ -83,7 +81,7 @@ export function ChartBody({
   };
   const shared = {
     readings,
-    label: chartTitle(chart, evaluation, t),
+    label: chartTitle(chart, evaluation, t, metricName),
     dataLabel: t("reporting.data"),
     valueLabel: t("reporting.actual"),
     onSelect,
@@ -437,13 +435,16 @@ export function chartTitle(
   chart: ReportingChart,
   evaluation: ReportingEvaluation,
   t: Translator,
+  metricName: MetricNames,
 ): string {
   if (chart.kind === "owner_attainment")
-    return t("reporting.ownerMetric", { metric: metricLabel(chart.metric, t) });
-  if (chart.kind === "target_progress") return metricLabel(chart.metric, t);
+    return t("reporting.ownerMetric", { metric: metricName(chart.metric) });
+  // A chart named after its metric, as stage age is, reads the catalog's name.
+  if (chart.kind === "target_progress" || chart.kind === chart.metric)
+    return metricName(chart.metric);
   if (chart.kind === "breakdown")
     return t("reporting.breakdownTitle", {
-      metric: metricLabel(chart.metric, t),
+      metric: metricName(chart.metric),
     });
   if (
     chart.kind === "sdr_outcomes" &&
@@ -451,6 +452,6 @@ export function chartTitle(
       (other) => other.kind === "sdr_outcomes" && other.metric !== chart.metric,
     )
   )
-    return metricLabel(chart.metric, t);
+    return metricName(chart.metric);
   return blockLabel(chart.kind, t);
 }

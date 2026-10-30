@@ -140,13 +140,7 @@ func newProbeRunner(t *testing.T, workers *river.Workers) (*jobs.Runner, func())
 	if err := runner.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	cleanup := func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}
+	cleanup := integration.StartedJobRunner(t, runner)
 	return runner, cleanup
 }
 

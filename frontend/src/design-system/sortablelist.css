@@ -40,11 +40,13 @@
 }
 
 /* The carried row lifts off the page: the pop shadow every raised surface
-   wears, and the accent edge saying it is the one in hand. */
+   wears, and the accent edge saying it is the one in hand. Its ground is
+   solid, since level 1 is see-through in dark and it passes over rows. */
 .sortable-item.is-lifted {
   position: relative;
   z-index: 1;
   border-color: var(--accent);
+  background-color: var(--ground);
   box-shadow: var(--shadow-pop);
 }
 

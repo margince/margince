@@ -20,7 +20,7 @@ var errUnreadable = errors.New("the body is not form fields; send it urlencoded,
 
 // parseFields reads a urlencoded, multipart or flat JSON body. A file part of a
 // multipart body is skipped: a form's attachments are not a lead's data.
-func parseFields(contentType string, body []byte) ([]field, error) {
+func parseFields(contentType string, body []byte) ([]Field, error) {
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
 		return nil, errUnreadable
@@ -36,8 +36,8 @@ func parseFields(contentType string, body []byte) ([]field, error) {
 	return nil, errUnreadable
 }
 
-func urlencodedFields(body []byte) ([]field, error) {
-	var out []field
+func urlencodedFields(body []byte) ([]Field, error) {
+	var out []Field
 	for len(body) > 0 && len(out) < maxFields {
 		var pair []byte
 		pair, body, _ = bytes.Cut(body, []byte("&"))
@@ -51,19 +51,19 @@ func urlencodedFields(body []byte) ([]field, error) {
 			return nil, errUnreadable
 		}
 		if n != "" {
-			out = append(out, field{Name: n, Value: v})
+			out = append(out, Field{Name: n, Value: v})
 		}
 	}
 	return out, nil
 }
 
-func multipartFields(body []byte, boundary string) ([]field, error) {
+func multipartFields(body []byte, boundary string) ([]Field, error) {
 	if boundary == "" {
 		return nil, errUnreadable
 	}
 	// upload:route /v1/public/forms/{form_key}
 	reader := multipart.NewReader(bytes.NewReader(body), boundary)
-	var out []field
+	var out []Field
 	for len(out) < maxFields {
 		part, err := reader.NextPart()
 		if errors.Is(err, io.EOF) {
@@ -79,14 +79,14 @@ func multipartFields(body []byte, boundary string) ([]field, error) {
 		if err != nil {
 			return nil, errUnreadable
 		}
-		out = append(out, field{Name: part.FormName(), Value: string(value)})
+		out = append(out, Field{Name: part.FormName(), Value: string(value)})
 	}
 	return out, nil
 }
 
 // jsonFields reads one flat JSON object. A nested value is kept as its JSON
 // text, so a sender's structure still reaches the timeline.
-func jsonFields(body []byte) ([]field, error) {
+func jsonFields(body []byte) ([]Field, error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(body, &object); err != nil {
 		return nil, errUnreadable
@@ -118,7 +118,7 @@ func scalarText(raw json.RawMessage) string {
 // builderPayload is what a builder's webhook body reads into: its fields and
 // the id the builder gives this submission.
 type builderPayload struct {
-	Fields []field
+	Fields []Field
 	ID     string
 }
 

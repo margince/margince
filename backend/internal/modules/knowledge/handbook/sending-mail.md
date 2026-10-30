@@ -116,7 +116,7 @@ To have AI draft an email in Margince, open the composer. Say what the email is 
 1. Open the composer from a contact, company or deal. **Draft reply**, **Draft follow-up** or **Create draft** on a suggestion opens it already drafting, unless it holds your words.
 2. On a company, put the contact you write to in **To**. The draft is written for the first contact of that company in **To**. Until there is one, the composer says "To draft with AI, add a contact from this company to To."
 3. If it is not drafting yet, type the purpose, such as "follow up on last week's quote".
-4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes.
+4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes, and an empty message field shows moving dots where the text will appear.
 5. Read and edit the draft, then send it as you always do.
 
 With no AI model set up, AI drafting is not available, and you write the email yourself.

@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef } from "react";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   Button,
@@ -16,16 +18,18 @@ import {
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { identifierNumber, monthName } from "../../format/format";
+import { formatNumber, identifierNumber, monthName } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import {
   LOCALES,
   type Locale,
   localeNameKey,
   useLocale,
+  usePlural,
   useT,
 } from "../../i18n";
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
+import { unwrap } from "../../lib/problem";
 import { fiscalYearLabel } from "./fiscalyear";
 import type { EditedFact, InstallationSettings } from "./installation-settings";
 import { RegionalSettingsFields } from "./installation-settings.regional";
@@ -288,6 +292,11 @@ export function InstallationProfileDialog({
             </Field>
           </div>
 
+          {draft.fiscal_year_start_month !==
+            settings.fiscal_year_start_month && (
+            <FiscalYearImpact enabled={canManage} />
+          )}
+
           <div data-fact="forecast_forward_measure">
             <Field
               label={t("installationSettings.forwardMeasure")}
@@ -349,5 +358,66 @@ export function InstallationProfileDialog({
         </Button>
       </DrawerFoot>
     </Modal>
+  );
+}
+
+/**
+ * What a new fiscal start does to saved work, counted before the admin saves
+ * it. Saved periods keep their dates. Reports that read this quarter follow
+ * the new start.
+ */
+function FiscalYearImpact({ enabled }: Readonly<{ enabled: boolean }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const impact = useQuery({
+    queryKey: ["installation-fiscal-year-impact"],
+    enabled,
+    queryFn: async ({ signal }) =>
+      unwrap(
+        await api.GET("/installation/settings/fiscal-year-impact", { signal }),
+      ),
+  });
+  if (!enabled || impact.isError) return null;
+  return (
+    <Callout tone="info" title={t("installationSettings.fiscalImpactTitle")}>
+      {impact.isPending ? (
+        t("installationSettings.fiscalImpactLoading")
+      ) : (
+        <>
+          <p>
+            {plural(
+              "installationSettings.fiscalImpactQuestions",
+              impact.data.saved_questions,
+              { count: formatNumber(impact.data.saved_questions, locale) },
+            )}
+          </p>
+          <p>
+            {plural(
+              "installationSettings.fiscalImpactKept",
+              impact.data.reports_with_kept_periods,
+              {
+                count: formatNumber(
+                  impact.data.reports_with_kept_periods,
+                  locale,
+                ),
+              },
+            )}
+          </p>
+          <p>
+            {plural(
+              "installationSettings.fiscalImpactRelative",
+              impact.data.reports_with_relative_periods,
+              {
+                count: formatNumber(
+                  impact.data.reports_with_relative_periods,
+                  locale,
+                ),
+              },
+            )}
+          </p>
+        </>
+      )}
+    </Callout>
   );
 }

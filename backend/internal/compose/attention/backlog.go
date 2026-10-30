@@ -36,8 +36,48 @@ type TaskBacklog interface {
 	// reminders, which are today's work.
 	CountTasks(ctx context.Context, window TaskWindow) (int, error)
 	// TasksAfter reads up to limit tasks of the window after a position, in
-	// the store's own order. next is empty at the window's end.
-	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Task, next string, err error)
+	// the store's due order, each with the position after it. more says the
+	// window holds tasks past the batch.
+	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Positioned[Task], more bool, err error)
+}
+
+// Positioned is one row a backlog read returned, with the position that
+// resumes its source after it. A merge can then stop between any two rows.
+type Positioned[T any] struct {
+	Row   T
+	After string
+}
+
+// WaitingBacklog continues who is waiting past the lane's scan, one card per
+// conversation as the lane folds them. OPTIONAL: unbound, scrolling ends at
+// the ranked rows for the waiting source.
+type WaitingBacklog interface {
+	// WaitingAfter judges up to judge messages after a position, oldest
+	// first, and answers the cards among them.
+	WaitingAfter(ctx context.Context, asOf time.Time, narrow WaitingFor, after string, judge int) (WaitingTail, error)
+	// DealsWaiting names which of these deals a waiting card names, by the
+	// lane's own rules under its narrowing.
+	DealsWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor, deals []ids.UUID) (map[ids.UUID]bool, error)
+	// CardsAmong names which of these messages are cards the tail serves under
+	// the narrowing.
+	CardsAmong(ctx context.Context, asOf time.Time, narrow WaitingFor, messages []ids.UUID) (map[ids.UUID]bool, error)
+}
+
+// WaitingTail is one read of the waiting backlog. Through is the position
+// after the last message judged, and ThroughAt is when it came in. A read can
+// judge messages that make no card, and the tail must not judge them again.
+type WaitingTail struct {
+	Cards     []Positioned[WaitingCustomer]
+	Through   string
+	ThroughAt time.Time
+	More      bool
+}
+
+// WithWaitingBacklog binds the waiting continuation, an option for the
+// reason WithWaiting is one.
+func (s *Service) WithWaitingBacklog(b WaitingBacklog) *Service {
+	s.backlog.waiting = b
+	return s
 }
 
 // WithTaskBacklog binds the task counter, an option for the reason WithWaiting
@@ -50,7 +90,9 @@ func (s *Service) WithTaskBacklog(b TaskBacklog) *Service {
 // backlogState is the backlog readers, and on one request's copy what they
 // counted.
 type backlogState struct {
-	tasks TaskBacklog
+	tasks   TaskBacklog
+	waiting WaitingBacklog
+	risk    RiskBacklog
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page

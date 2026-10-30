@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 11,
     "permitted_but_never_required": 5,
-    "tokens_served_but_never_driven": 4680,
+    "tokens_served_but_never_driven": 4701,
     "use_case_cases": 35,
     "acceptance_criteria_named": 74,
     "tools_added_by_shipped_units": 0,
@@ -1728,7 +1728,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 643,
+      "tokens": 664,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1920,7 +1920,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1891,
+      "tokens": 1912,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us",
@@ -2080,7 +2080,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1045,
+      "tokens": 1066,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"

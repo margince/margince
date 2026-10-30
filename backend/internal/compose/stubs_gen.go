@@ -479,6 +479,14 @@ func (stubs) ListReportingExecutions(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListReportingExecutions")
 }
 
+func (stubs) AnswerReportingQuestionCard(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, cardId string, params crmcontracts.AnswerReportingQuestionCardParams) {
+	httperr.NotImplemented(w, r, "AnswerReportingQuestionCard")
+}
+
+func (stubs) ExplainReportingQuestionCard(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, cardId string, params crmcontracts.ExplainReportingQuestionCardParams) {
+	httperr.NotImplemented(w, r, "ExplainReportingQuestionCard")
+}
+
 func (stubs) PreviewReportingReportAsRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewReportingReportAsRoleParams) {
 	httperr.NotImplemented(w, r, "PreviewReportingReportAsRole")
 }
@@ -521,6 +529,14 @@ func (stubs) UpdateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
+}
+
+func (stubs) GetSdrSummary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrSummaryParams) {
+	httperr.NotImplemented(w, r, "GetSdrSummary")
+}
+
+func (stubs) ListSdrWaitingHandoffs(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSdrWaitingHandoffsParams) {
+	httperr.NotImplemented(w, r, "ListSdrWaitingHandoffs")
 }
 
 func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
@@ -2225,6 +2241,10 @@ func (stubs) GetInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) UpdateInstallationSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UpdateInstallationSettings")
+}
+
+func (stubs) GetFiscalYearImpact(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetFiscalYearImpact")
 }
 
 func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) {

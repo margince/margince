@@ -2140,6 +2140,27 @@ func (e AssuranceFindingCountSeverity) Valid() bool {
 	}
 }
 
+// Defines values for AssuranceFreshnessState.
+const (
+	AssuranceFreshnessStateCurrent   AssuranceFreshnessState = "current"
+	AssuranceFreshnessStateOutOfDate AssuranceFreshnessState = "out_of_date"
+	AssuranceFreshnessStateUnknown   AssuranceFreshnessState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the AssuranceFreshnessState enum.
+func (e AssuranceFreshnessState) Valid() bool {
+	switch e {
+	case AssuranceFreshnessStateCurrent:
+		return true
+	case AssuranceFreshnessStateOutOfDate:
+		return true
+	case AssuranceFreshnessStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssuranceRunAcceptedStatus.
 const (
 	AssuranceRunAcceptedStatusAssuranceRunEnqueued AssuranceRunAcceptedStatus = "enqueued"
@@ -17187,6 +17208,7 @@ const (
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
 	ReportingMetricIDLeadFirstResponse        ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves          ReportingMetricID = "lead_status_moves"
+	ReportingMetricIDLeadsAwaitingResponse    ReportingMetricID = "leads_awaiting_response"
 	ReportingMetricIDLeadsCreated             ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted            ReportingMetricID = "leads_promoted"
 	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
@@ -17213,6 +17235,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadFirstResponse:
 		return true
 	case ReportingMetricIDLeadStatusMoves:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponse:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -17251,6 +17275,45 @@ func (e ReportingPresetId) Valid() bool {
 	case ReportingPresetIdSales:
 		return true
 	case ReportingPresetIdSdr:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingQualifiedCoverageStatus.
+const (
+	ReportingQualifiedCoverageStatusCompared      ReportingQualifiedCoverageStatus = "compared"
+	ReportingQualifiedCoverageStatusNotEnforced   ReportingQualifiedCoverageStatus = "not_enforced"
+	ReportingQualifiedCoverageStatusTargetReached ReportingQualifiedCoverageStatus = "target_reached"
+)
+
+// Valid indicates whether the value is a known member of the ReportingQualifiedCoverageStatus enum.
+func (e ReportingQualifiedCoverageStatus) Valid() bool {
+	switch e {
+	case ReportingQualifiedCoverageStatusCompared:
+		return true
+	case ReportingQualifiedCoverageStatusNotEnforced:
+		return true
+	case ReportingQualifiedCoverageStatusTargetReached:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingQuestionAnswerStatus.
+const (
+	ReportingQuestionAnswerStatusAnswered   ReportingQuestionAnswerStatus = "answered"
+	ReportingQuestionAnswerStatusRestricted ReportingQuestionAnswerStatus = "restricted"
+)
+
+// Valid indicates whether the value is a known member of the ReportingQuestionAnswerStatus enum.
+func (e ReportingQuestionAnswerStatus) Valid() bool {
+	switch e {
+	case ReportingQuestionAnswerStatusAnswered:
+		return true
+	case ReportingQuestionAnswerStatusRestricted:
 		return true
 	default:
 		return false
@@ -17458,6 +17521,90 @@ func (e ReportingStatus) Valid() bool {
 	case ReportingStatusUnavailable:
 		return true
 	case ReportingStatusUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonBasis.
+const (
+	ReportingTargetComparisonBasisCommitEvidence ReportingTargetComparisonBasis = "commit_evidence"
+	ReportingTargetComparisonBasisManagerCall    ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisWeighted       ReportingTargetComparisonBasis = "weighted"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
+func (e ReportingTargetComparisonBasis) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonBasisCommitEvidence:
+		return true
+	case ReportingTargetComparisonBasisManagerCall:
+		return true
+	case ReportingTargetComparisonBasisWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonIncompatibility.
+const (
+	ReportingTargetComparisonIncompatibilityCurrency            ReportingTargetComparisonIncompatibility = "currency"
+	ReportingTargetComparisonIncompatibilityManagerCallPipeline ReportingTargetComparisonIncompatibility = "manager_call_pipeline"
+	ReportingTargetComparisonIncompatibilityPeriod              ReportingTargetComparisonIncompatibility = "period"
+	ReportingTargetComparisonIncompatibilityPipeline            ReportingTargetComparisonIncompatibility = "pipeline"
+	ReportingTargetComparisonIncompatibilityScope               ReportingTargetComparisonIncompatibility = "scope"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonIncompatibility enum.
+func (e ReportingTargetComparisonIncompatibility) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonIncompatibilityCurrency:
+		return true
+	case ReportingTargetComparisonIncompatibilityManagerCallPipeline:
+		return true
+	case ReportingTargetComparisonIncompatibilityPeriod:
+		return true
+	case ReportingTargetComparisonIncompatibilityPipeline:
+		return true
+	case ReportingTargetComparisonIncompatibilityScope:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingTargetComparisonStatus.
+const (
+	ReportingTargetComparisonStatusCallBelowWon      ReportingTargetComparisonStatus = "call_below_won"
+	ReportingTargetComparisonStatusColleagueWithheld ReportingTargetComparisonStatus = "colleague_withheld"
+	ReportingTargetComparisonStatusCompared          ReportingTargetComparisonStatus = "compared"
+	ReportingTargetComparisonStatusFxMissing         ReportingTargetComparisonStatus = "fx_missing"
+	ReportingTargetComparisonStatusIncompatible      ReportingTargetComparisonStatus = "incompatible"
+	ReportingTargetComparisonStatusNoTarget          ReportingTargetComparisonStatus = "no_target"
+	ReportingTargetComparisonStatusPartialVisibility ReportingTargetComparisonStatus = "partial_visibility"
+	ReportingTargetComparisonStatusTargetReached     ReportingTargetComparisonStatus = "target_reached"
+)
+
+// Valid indicates whether the value is a known member of the ReportingTargetComparisonStatus enum.
+func (e ReportingTargetComparisonStatus) Valid() bool {
+	switch e {
+	case ReportingTargetComparisonStatusCallBelowWon:
+		return true
+	case ReportingTargetComparisonStatusColleagueWithheld:
+		return true
+	case ReportingTargetComparisonStatusCompared:
+		return true
+	case ReportingTargetComparisonStatusFxMissing:
+		return true
+	case ReportingTargetComparisonStatusIncompatible:
+		return true
+	case ReportingTargetComparisonStatusNoTarget:
+		return true
+	case ReportingTargetComparisonStatusPartialVisibility:
+		return true
+	case ReportingTargetComparisonStatusTargetReached:
 		return true
 	default:
 		return false
@@ -17965,6 +18112,42 @@ func (e SchedulingProfileProvider) Valid() bool {
 	case SchedulingProfileProviderGcal:
 		return true
 	case SchedulingProfileProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrHandoffSubjectType.
+const (
+	SdrHandoffSubjectTypeContact SdrHandoffSubjectType = "contact"
+	SdrHandoffSubjectTypeLead    SdrHandoffSubjectType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SdrHandoffSubjectType enum.
+func (e SdrHandoffSubjectType) Valid() bool {
+	switch e {
+	case SdrHandoffSubjectTypeContact:
+		return true
+	case SdrHandoffSubjectTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrSummaryWorkflow.
+const (
+	SdrSummaryWorkflowHandoff       SdrSummaryWorkflow = "handoff"
+	SdrSummaryWorkflowQualification SdrSummaryWorkflow = "qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrSummaryWorkflow enum.
+func (e SdrSummaryWorkflow) Valid() bool {
+	switch e {
+	case SdrSummaryWorkflowHandoff:
+		return true
+	case SdrSummaryWorkflowQualification:
 		return true
 	default:
 		return false
@@ -23746,6 +23929,48 @@ func (e GetReportingEvidenceParamsCloseWindow) Valid() bool {
 	}
 }
 
+// Defines values for GetSdrSummaryParamsScopeKind.
+const (
+	GetSdrSummaryParamsScopeKindOwner     GetSdrSummaryParamsScopeKind = "owner"
+	GetSdrSummaryParamsScopeKindTeam      GetSdrSummaryParamsScopeKind = "team"
+	GetSdrSummaryParamsScopeKindWorkspace GetSdrSummaryParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrSummaryParamsScopeKind enum.
+func (e GetSdrSummaryParamsScopeKind) Valid() bool {
+	switch e {
+	case GetSdrSummaryParamsScopeKindOwner:
+		return true
+	case GetSdrSummaryParamsScopeKindTeam:
+		return true
+	case GetSdrSummaryParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSdrWaitingHandoffsParamsScopeKind.
+const (
+	ListSdrWaitingHandoffsParamsScopeKindOwner     ListSdrWaitingHandoffsParamsScopeKind = "owner"
+	ListSdrWaitingHandoffsParamsScopeKindTeam      ListSdrWaitingHandoffsParamsScopeKind = "team"
+	ListSdrWaitingHandoffsParamsScopeKindWorkspace ListSdrWaitingHandoffsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrWaitingHandoffsParamsScopeKind enum.
+func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSdrWaitingHandoffsParamsScopeKindOwner:
+		return true
+	case ListSdrWaitingHandoffsParamsScopeKindTeam:
+		return true
+	case ListSdrWaitingHandoffsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -26585,6 +26810,9 @@ type Activity struct {
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
 
+	// WebForm What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`.
+	WebForm *WebFormSubmission `json:"web_form,omitempty"`
+
 	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -29423,6 +29651,27 @@ type AssuranceFindingCount struct {
 
 // AssuranceFindingCountSeverity defines model for AssuranceFindingCount.Severity.
 type AssuranceFindingCountSeverity string
+
+// AssuranceFreshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
+type AssuranceFreshness struct {
+	// ChangedDeals Deals whose record, offers, contracts or activities changed after the check.
+	ChangedDeals int `json:"changed_deals"`
+
+	// ChangedSignals Buying signals whose signal, company or deal suggestion changed after the check.
+	ChangedSignals int `json:"changed_signals"`
+
+	// ChangedSince The oldest change the check has not read. Absent when there is none.
+	ChangedSince *time.Time `json:"changed_since,omitempty"`
+
+	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+	State AssuranceFreshnessState `json:"state"`
+
+	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
+	WorkspaceChanged bool `json:"workspace_changed"`
+}
+
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+type AssuranceFreshnessState string
 
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
@@ -41856,6 +42105,9 @@ type ForecastAssurance struct {
 	EligibleDeals   int  `json:"eligible_deals"`
 	EligibleSignals *int `json:"eligible_signals,omitempty"`
 
+	// Freshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
+	Freshness AssuranceFreshness `json:"freshness"`
+
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
 	RunId     openapi_types.UUID          `json:"run_id"`
@@ -43681,6 +43933,9 @@ type InputCheck struct {
 	FirstSeenAt time.Time               `json:"first_seen_at"`
 	Id          openapi_types.UUID      `json:"id"`
 
+	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
+	InputsChanged *bool `json:"inputs_changed"`
+
 	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
 	LastSeenAt time.Time `json:"last_seen_at"`
 
@@ -43719,6 +43974,21 @@ type InstallationBrand struct {
 
 	// LogoUrl The wide mark — the same `getCompanyLogo` path `CompanyProfile.logo_url` carries. Absent when the company wears none, or when this caller holds no read on companies and so could not load it; a client draws the company's monogram instead.
 	LogoUrl *string `json:"logo_url,omitempty"`
+}
+
+// InstallationFiscalYearImpact What a move of the fiscal year start does to saved work, counted before the move is
+// saved. A saved question or a report card that filters on a period such as `2026` keeps
+// the dates it was saved with. A report that reads a relative period, such as this
+// quarter, follows the new start.
+type InstallationFiscalYearImpact struct {
+	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
+	ReportsWithKeptPeriods int `json:"reports_with_kept_periods"`
+
+	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	ReportsWithRelativePeriods int `json:"reports_with_relative_periods"`
+
+	// SavedQuestions Saved questions, of every member, that filter on a period.
+	SavedQuestions int `json:"saved_questions"`
 }
 
 // InstallationJurisdiction Which jurisdiction this installation runs under and what that selection puts in force.
@@ -43822,12 +44092,12 @@ type InstallationSettings struct {
 	// a reader can tell which twelve months a bucket covers without knowing the
 	// convention. A January year is not a span and keeps the plain `2026`.
 	//
-	// One thing it does NOT carry, and a client storing report filters should know it:
-	// a SAVED report view holds the bucket's text, so a view saved under one fiscal
-	// start names a different span after the start moves — or no span at all, since a
-	// calendar year maps onto parts of two fiscal years. The report still runs and
-	// still looks right. Whether such a view is re-pointed, invalidated or merely
-	// warned about is undecided: margince/margince#2569.
+	// A saved question, or a report card bound to one, that filters on a period keeps
+	// the zone and fiscal start it was saved under, so `2026` saved under a January start
+	// still means January to December 2026 after the start moves: the move writes down the
+	// calendar in force before it. A relative period, such as this quarter, follows the
+	// current setting.
+	// `/installation/settings/fiscal-year-impact` counts both before a move.
 	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
 
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
@@ -43842,6 +44112,16 @@ type InstallationSettings struct {
 	// added to what is already won; with no current call the read falls back to
 	// `commit_evidence` and says so in the landing's `caveat`.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
+
+	// IndividualPerformance Show individual performance. On by default. Off, reports, analytics questions,
+	// forecasts and forecast shares, targets, evidence, editions and their exports, and
+	// team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+	// by owner or meeting host are refused, a colleague's scope is refused, and a figure
+	// that any colleague contributes to is refused unless at least two live colleagues
+	// besides the reader do. Each reader keeps their own figures. The Team board, coaching
+	// moves, a lead's view of a named member's queue, the morning mail's team section and
+	// team weekly plans are not covered yet.
+	IndividualPerformance bool `json:"individual_performance"`
 
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
@@ -51095,11 +51375,10 @@ type ReportingCard struct {
 	Metric *ReportingMetricID `json:"metric,omitempty"`
 
 	// Question A custom analytics question a card asks. Present exactly when the card's `kind` is
-	// `question`. The page asks it through `/analytics/query` for each reader, under their
-	// own grants and over the report's scope. Every reader of the report receives it, so it
-	// carries no filters (a filter value can name a record a reader may not open), no scope
-	// and no save. A sent edition keeps the answer its sender was given, as
-	// `ReportingEditionQuestion` describes.
+	// `question`. Every reader of the report receives it, so it carries no filters (a filter
+	// value can name a record a reader may not open), no scope and no save. A sent edition
+	// keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+	// with `binding` asks a saved question the server keeps, filters and all.
 	Question *ReportingCardQuestion `json:"question,omitempty"`
 
 	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
@@ -51113,12 +51392,14 @@ type ReportingCardWidth string
 type ReportingCardKind string
 
 // ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is
-// `question`. The page asks it through `/analytics/query` for each reader, under their
-// own grants and over the report's scope. Every reader of the report receives it, so it
-// carries no filters (a filter value can name a record a reader may not open), no scope
-// and no save. A sent edition keeps the answer its sender was given, as
-// `ReportingEditionQuestion` describes.
+// `question`. Every reader of the report receives it, so it carries no filters (a filter
+// value can name a record a reader may not open), no scope and no save. A sent edition
+// keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+// with `binding` asks a saved question the server keeps, filters and all.
 type ReportingCardQuestion struct {
+	// Binding The opaque reference to the saved question a bound card asks. Send it back unchanged to keep it.
+	Binding *string `json:"binding,omitempty"`
+
 	// Entity The population, by name.
 	Entity  string    `json:"entity"`
 	GroupBy *[]string `json:"group_by,omitempty"`
@@ -51126,6 +51407,9 @@ type ReportingCardQuestion struct {
 	// Limit The rows the card shows; 100 when absent.
 	Limit    *int               `json:"limit,omitempty"`
 	Measures []AnalyticsMeasure `json:"measures"`
+
+	// SavedQuestionId Sent on a save to bind the card to this saved question. Never served back.
+	SavedQuestionId *openapi_types.UUID `json:"saved_question_id,omitempty"`
 }
 
 // ReportingCatalog defines model for ReportingCatalog.
@@ -51175,12 +51459,23 @@ type ReportingComparison struct {
 	Right      ReportingEdition `json:"right"`
 }
 
+// ReportingComparisonOperands The evidence each figure of a target comparison was read from.
+type ReportingComparisonOperands struct {
+	Landing               ReportingEvidenceRef  `json:"landing"`
+	OpenPipeline          ReportingEvidenceRef  `json:"open_pipeline"`
+	QualifiedOpenPipeline *ReportingEvidenceRef `json:"qualified_open_pipeline,omitempty"`
+	Won                   ReportingEvidenceRef  `json:"won"`
+}
+
 // ReportingContext defines model for ReportingContext.
 type ReportingContext struct {
-	CloseInterval         *ReportingWindow     `json:"close_interval,omitempty"`
-	Currency              string               `json:"currency"`
-	DefinitionVersion     string               `json:"definition_version"`
-	EvaluatedAt           time.Time            `json:"evaluated_at"`
+	CloseInterval     *ReportingWindow `json:"close_interval,omitempty"`
+	Currency          string           `json:"currency"`
+	DefinitionVersion string           `json:"definition_version"`
+	EvaluatedAt       time.Time        `json:"evaluated_at"`
+
+	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
+	FiscalYearStartMonth  *int                 `json:"fiscal_year_start_month,omitempty"`
 	FrameworkRevision     int64                `json:"framework_revision"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
@@ -51249,7 +51544,10 @@ type ReportingEditionList struct {
 // record behind it; any other row arrives withheld, as the analytics floor withholds one.
 type ReportingEditionQuestion struct {
 	Answer *AnalyticsAnswer `json:"answer,omitempty"`
-	CardId string           `json:"card_id"`
+
+	// Binding What every reader of a report may know of the saved question a card is bound to.
+	Binding *ReportingQuestionBinding `json:"binding,omitempty"`
+	CardId  string                    `json:"card_id"`
 
 	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
 	Reason *ReportingEditionQuestionReason `json:"reason,omitempty"`
@@ -51347,29 +51645,47 @@ type ReportingFrameworkInputTemplate string
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment     *float64             `json:"attainment,omitempty"`
-	Coverage       ReportingCoverage    `json:"coverage"`
-	Denominator    *float64             `json:"denominator,omitempty"`
-	Evidence       ReportingEvidenceRef `json:"evidence"`
-	Id             ReportingMetricID    `json:"id"`
-	Numerator      *float64             `json:"numerator,omitempty"`
-	Target         *float64             `json:"target,omitempty"`
-	TargetActual   *float64             `json:"target_actual,omitempty"`
-	TargetRevision *int64               `json:"target_revision,omitempty"`
-	Unit           string               `json:"unit"`
-	Value          *float64             `json:"value"`
-	Version        string               `json:"version"`
+	Attainment   *float64             `json:"attainment,omitempty"`
+	Coverage     ReportingCoverage    `json:"coverage"`
+	Denominator  *float64             `json:"denominator,omitempty"`
+	Evidence     ReportingEvidenceRef `json:"evidence"`
+	Id           ReportingMetricID    `json:"id"`
+	Numerator    *float64             `json:"numerator,omitempty"`
+	Target       *float64             `json:"target,omitempty"`
+	TargetActual *float64             `json:"target_actual,omitempty"`
+
+	// TargetComparison Where the current fiscal quarter's expected landing stands against a
+	// compatible `bookings_won` target, and how far the open pipeline covers
+	// what is left to win. Present only on the `forecast_landing` metric.
+	// Every amount is in minor units of the context currency.
+	//
+	// - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+	// - `remaining` is `target` minus `won`, never below zero.
+	// - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+	//   expected to close in the quarter, over what is left to win.
+	//
+	// `won` and `open_pipeline` come from the same forecast reading as
+	// `landing`, so a won deal is never counted twice. A manager call is a
+	// whole-quarter figure and is never added to `won`.
+	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
+	TargetRevision   *int64                     `json:"target_revision,omitempty"`
+	Unit             string                     `json:"unit"`
+	Value            *float64                   `json:"value"`
+	Version          string                     `json:"version"`
 }
 
 // ReportingMetricDefinition defines model for ReportingMetricDefinition.
 type ReportingMetricDefinition struct {
-	AllowedFilters   *[]string                              `json:"allowed_filters,omitempty"`
-	Attribution      *string                                `json:"attribution,omitempty"`
-	Blocks           []ReportingBlockKind                   `json:"blocks"`
-	Definition       string                                 `json:"definition"`
-	FrozenSupport    *bool                                  `json:"frozen_support,omitempty"`
-	Id               ReportingMetricID                      `json:"id"`
-	IncompletePolicy *string                                `json:"incomplete_policy,omitempty"`
+	AllowedFilters   *[]string            `json:"allowed_filters,omitempty"`
+	Attribution      *string              `json:"attribution,omitempty"`
+	Blocks           []ReportingBlockKind `json:"blocks"`
+	Definition       string               `json:"definition"`
+	FrozenSupport    *bool                `json:"frozen_support,omitempty"`
+	Id               ReportingMetricID    `json:"id"`
+	IncompletePolicy *string              `json:"incomplete_policy,omitempty"`
+
+	// Label The metric's name in the reader's language, as the screen and the CSV export show it. Presentation only; `id` stays the machine identifier, and no receipt depends on it.
+	Label            string                                 `json:"label"`
 	MaxContributions *int                                   `json:"max_contributions,omitempty"`
 	MinimumCohort    *int                                   `json:"minimum_cohort,omitempty"`
 	ReadObject       *string                                `json:"read_object,omitempty"`
@@ -51385,6 +51701,12 @@ type ReportingMetricDefinitionTemporalBasis string
 
 // ReportingMetricID defines model for ReportingMetricID.
 type ReportingMetricID string
+
+// ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
+type ReportingPeriodBasis struct {
+	FiscalYearStartMonth int    `json:"fiscal_year_start_month"`
+	Timezone             string `json:"timezone"`
+}
 
 // ReportingPoint defines model for ReportingPoint.
 type ReportingPoint struct {
@@ -51418,6 +51740,45 @@ type ReportingPresetId string
 type ReportingQualification struct {
 	PipelineId openapi_types.UUID   `json:"pipeline_id"`
 	StageIds   []openapi_types.UUID `json:"stage_ids"`
+}
+
+// ReportingQualifiedCoverage Coverage over the deals the qualified forecast keeps, beside the
+// coverage over all open deals. Present when the comparison carries
+// figures.
+type ReportingQualifiedCoverage struct {
+	Coverage     *float64 `json:"coverage,omitempty"`
+	OpenPipeline *float64 `json:"open_pipeline,omitempty"`
+
+	// Status `not_enforced` means the qualified forecast is switched off, so no
+	// open deal is judged and no qualified figure exists.
+	Status ReportingQualifiedCoverageStatus `json:"status"`
+}
+
+// ReportingQualifiedCoverageStatus `not_enforced` means the qualified forecast is switched off, so no
+// open deal is judged and no qualified figure exists.
+type ReportingQualifiedCoverageStatus string
+
+// ReportingQuestionAnswer A bound question card's answer for this reader. `restricted`: the reader may not see a
+// value the question filters on, so nothing of the answer is shown: no rows, no labels
+// and no total.
+type ReportingQuestionAnswer struct {
+	Answer *AnalyticsAnswer `json:"answer,omitempty"`
+
+	// Binding What every reader of a report may know of the saved question a card is bound to.
+	Binding *ReportingQuestionBinding     `json:"binding,omitempty"`
+	Status  ReportingQuestionAnswerStatus `json:"status"`
+}
+
+// ReportingQuestionAnswerStatus defines model for ReportingQuestionAnswer.Status.
+type ReportingQuestionAnswerStatus string
+
+// ReportingQuestionBinding What every reader of a report may know of the saved question a card is bound to.
+type ReportingQuestionBinding struct {
+	// Filtered Whether the question narrows its population with filters.
+	Filtered bool `json:"filtered"`
+
+	// PeriodBasis The calendar a kept question's period filters keep their dates in.
+	PeriodBasis *ReportingPeriodBasis `json:"period_basis,omitempty"`
 }
 
 // ReportingReport defines model for ReportingReport.
@@ -51604,6 +51965,106 @@ type ReportingTarget struct {
 	Unit     string                  `json:"unit"`
 	Version  int64                   `json:"version"`
 }
+
+// ReportingTargetComparison Where the current fiscal quarter's expected landing stands against a
+// compatible `bookings_won` target, and how far the open pipeline covers
+// what is left to win. Present only on the `forecast_landing` metric.
+// Every amount is in minor units of the context currency.
+//
+//   - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+//   - `remaining` is `target` minus `won`, never below zero.
+//   - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+//     expected to close in the quarter, over what is left to win.
+//
+// `won` and `open_pipeline` come from the same forecast reading as
+// `landing`, so a won deal is never counted twice. A manager call is a
+// whole-quarter figure and is never added to `won`.
+type ReportingTargetComparison struct {
+	// Basis The forward measure the landing was projected with.
+	Basis    *ReportingTargetComparisonBasis `json:"basis,omitempty"`
+	Coverage *float64                        `json:"coverage,omitempty"`
+	Gap      *float64                        `json:"gap,omitempty"`
+
+	// Incompatibility Present only with status `incompatible`. `period`: the selection
+	// is not `this_quarter`, or its target interval is not the current
+	// fiscal quarter. `scope`: the forecast
+	// does not read this scope as one population. `pipeline`: only a
+	// target for the whole scope exists, and it is not split across
+	// pipelines. `manager_call_pipeline`: the landing is a manager call,
+	// which covers every pipeline. `currency`: the target that would
+	// apply, for this pipeline or else for every pipeline, was set in
+	// another currency than the base currency.
+	Incompatibility *ReportingTargetComparisonIncompatibility `json:"incompatibility,omitempty"`
+	Landing         *float64                                  `json:"landing,omitempty"`
+	OpenPipeline    *float64                                  `json:"open_pipeline,omitempty"`
+
+	// Operands The evidence each figure of a target comparison was read from.
+	Operands *ReportingComparisonOperands `json:"operands,omitempty"`
+
+	// Qualified Coverage over the deals the qualified forecast keeps, beside the
+	// coverage over all open deals. Present when the comparison carries
+	// figures.
+	Qualified *ReportingQualifiedCoverage `json:"qualified,omitempty"`
+	Remaining *float64                    `json:"remaining,omitempty"`
+
+	// Status `compared` carries every figure. `target_reached` means `remaining`
+	// is zero; it carries no `coverage`, never an infinite one.
+	// `no_target` means no target is set for this metric, scope,
+	// pipeline and quarter, or the reader may not read targets; a missing
+	// target is never zero. `fx_missing` means a deal amount has no
+	// exchange rate to the base currency, so the totals are incomplete
+	// and no gap or coverage is given. `partial_visibility` means the
+	// reader cannot see every deal of the population asked for, or a
+	// deal's amount, so its figures cannot stand against the scope's
+	// whole target.
+	// `colleague_withheld` means individual performance is off and the
+	// figure would be one colleague's own. `call_below_won` means the
+	// manager call is below what is already won, so the landing and the
+	// sales won disagree and no gap or coverage is given. `incompatible`
+	// names why in `incompatibility` and offers `supported_selection`
+	// when a selection can fix it.
+	Status ReportingTargetComparisonStatus `json:"status"`
+
+	// SupportedSelection Present only with status `incompatible`. The same selection, changed so the comparison is supported.
+	SupportedSelection *ReportingSelection `json:"supported_selection,omitempty"`
+	Target             *float64            `json:"target,omitempty"`
+	TargetId           *openapi_types.UUID `json:"target_id,omitempty"`
+	TargetMetric       ReportingMetricID   `json:"target_metric"`
+	TargetRevision     *int64              `json:"target_revision,omitempty"`
+	Won                *float64            `json:"won,omitempty"`
+}
+
+// ReportingTargetComparisonBasis The forward measure the landing was projected with.
+type ReportingTargetComparisonBasis string
+
+// ReportingTargetComparisonIncompatibility Present only with status `incompatible`. `period`: the selection
+// is not `this_quarter`, or its target interval is not the current
+// fiscal quarter. `scope`: the forecast
+// does not read this scope as one population. `pipeline`: only a
+// target for the whole scope exists, and it is not split across
+// pipelines. `manager_call_pipeline`: the landing is a manager call,
+// which covers every pipeline. `currency`: the target that would
+// apply, for this pipeline or else for every pipeline, was set in
+// another currency than the base currency.
+type ReportingTargetComparisonIncompatibility string
+
+// ReportingTargetComparisonStatus `compared` carries every figure. `target_reached` means `remaining`
+// is zero; it carries no `coverage`, never an infinite one.
+// `no_target` means no target is set for this metric, scope,
+// pipeline and quarter, or the reader may not read targets; a missing
+// target is never zero. `fx_missing` means a deal amount has no
+// exchange rate to the base currency, so the totals are incomplete
+// and no gap or coverage is given. `partial_visibility` means the
+// reader cannot see every deal of the population asked for, or a
+// deal's amount, so its figures cannot stand against the scope's
+// whole target.
+// `colleague_withheld` means individual performance is off and the
+// figure would be one colleague's own. `call_below_won` means the
+// manager call is below what is already won, so the landing and the
+// sales won disagree and no gap or coverage is given. `incompatible`
+// names why in `incompatibility` and offers `supported_selection`
+// when a selection can fix it.
+type ReportingTargetComparisonStatus string
 
 // ReportingTargetInput defines model for ReportingTargetInput.
 type ReportingTargetInput struct {
@@ -52330,6 +52791,89 @@ type SchedulingProfile struct {
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
+
+// SdrHandoffRecipient defines model for SdrHandoffRecipient.
+type SdrHandoffRecipient struct {
+	// Active False when the recipient was suspended, deactivated or removed. The handoff is then blocked.
+	Active bool               `json:"active"`
+	Id     openapi_types.UUID `json:"id"`
+	Label  string             `json:"label"`
+}
+
+// SdrHandoffSubject defines model for SdrHandoffSubject.
+type SdrHandoffSubject struct {
+	Id    openapi_types.UUID    `json:"id"`
+	Label string                `json:"label"`
+	Type  SdrHandoffSubjectType `json:"type"`
+}
+
+// SdrHandoffSubjectType defines model for SdrHandoffSubject.Type.
+type SdrHandoffSubjectType string
+
+// SdrHandoffTotals defines model for SdrHandoffTotals.
+type SdrHandoffTotals struct {
+	// Blocked Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them.
+	Blocked int `json:"blocked"`
+
+	// OldestWaitingSince When the longest current wait began. Absent with nothing waiting.
+	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
+
+	// Returned Handoffs sent back to the submitter to try again. These wait on the submitter.
+	Returned int `json:"returned"`
+
+	// Unassigned Waiting handoffs offered to nobody in particular.
+	Unassigned int `json:"unassigned"`
+
+	// Waiting Handoffs submitted and not yet decided.
+	Waiting int `json:"waiting"`
+}
+
+// SdrSummary defines model for SdrSummary.
+type SdrSummary struct {
+	// AsOf The instant both counts were read at.
+	AsOf     time.Time         `json:"as_of"`
+	Handoffs *SdrHandoffTotals `json:"handoffs,omitempty"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// UpcomingMeetings Booked meetings that start after `as_of`, credited to the scope.
+	UpcomingMeetings *int `json:"upcoming_meetings,omitempty"`
+
+	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+	Workflow SdrSummaryWorkflow `json:"workflow"`
+}
+
+// SdrSummaryWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+type SdrSummaryWorkflow string
+
+// SdrWaitingHandoff defines model for SdrWaitingHandoff.
+type SdrWaitingHandoff struct {
+	Id        openapi_types.UUID   `json:"id"`
+	Recipient *SdrHandoffRecipient `json:"recipient,omitempty"`
+
+	// Restricted The seat may not read the prospect, so `subject` is absent.
+	Restricted bool `json:"restricted"`
+
+	// Resubmitted Whether this handoff was returned and submitted again.
+	Resubmitted bool               `json:"resubmitted"`
+	Subject     *SdrHandoffSubject `json:"subject,omitempty"`
+
+	// SubmitterId Who submitted the current round.
+	SubmitterId *openapi_types.UUID `json:"submitter_id,omitempty"`
+
+	// WaitingSince The start of the current submission.
+	WaitingSince time.Time `json:"waiting_since"`
+}
+
+// SdrWaitingHandoffPage defines model for SdrWaitingHandoffPage.
+type SdrWaitingHandoffPage struct {
+	AsOf time.Time `json:"as_of"`
+
+	// NextCursor Absent on the last page.
+	NextCursor *string             `json:"next_cursor,omitempty"`
+	Rows       []SdrWaitingHandoff `json:"rows"`
+}
 
 // SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
 type SearchHitEmployer struct {
@@ -55529,10 +56073,8 @@ type UpdateInstallationSettingsRequest struct {
 	// reports on read and stores nothing, so moving it re-labels every period report at
 	// once and re-means no stored row.
 	//
-	// It does not re-point a SAVED report view, which holds the bucket's TEXT and so
-	// names a different span afterwards. Sending this field is enough to leave those
-	// views filtering on a span nobody asked for; nothing here reports how many.
-	// margince/margince#2569.
+	// A saved period filter keeps the dates it was saved with, and a relative period
+	// follows the new start. `/installation/settings/fiscal-year-impact` counts both.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
 	// FollowUpReconcileIntervalSeconds Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.
@@ -55557,6 +56099,9 @@ type UpdateInstallationSettingsRequest struct {
 
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
 	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
+
+	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
+	IndividualPerformance *bool `json:"individual_performance,omitempty"`
 
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.
@@ -56661,6 +57206,16 @@ type WebForm struct {
 // WebFormState defines model for WebForm.State.
 type WebFormState string
 
+// WebFormConsent The consent box the form showed. Absent when the form shows none.
+type WebFormConsent struct {
+	// PolicyVersion The privacy policy version the form named, when it named one.
+	PolicyVersion *string `json:"policy_version,omitempty"`
+	Ticked        bool    `json:"ticked"`
+
+	// Wording The words the box showed, as the admin wrote them when the form was sent.
+	Wording string `json:"wording"`
+}
+
 // WebFormCreated defines model for WebFormCreated.
 type WebFormCreated struct {
 	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
@@ -56745,6 +57300,42 @@ type WebFormReceiptStatus string
 // builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
 // and `tally` one this installation minted when none was.
 type WebFormSender string
+
+// WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
+// text and nothing Margince checked, except `consent`, which is the form's own record of
+// its consent box.
+type WebFormSubmission struct {
+	// Campaign The `utm_` parameters the page carried.
+	Campaign []WebFormValue `json:"campaign"`
+	Company  *string        `json:"company,omitempty"`
+
+	// Consent The consent box the form showed. Absent when the form shows none.
+	Consent *WebFormConsent `json:"consent,omitempty"`
+
+	// Email The address the lead was matched or created by.
+	Email string `json:"email"`
+
+	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
+	Extra    []WebFormValue `json:"extra"`
+	FullName *string        `json:"full_name,omitempty"`
+
+	// Message The free text the visitor wrote.
+	Message *string `json:"message,omitempty"`
+
+	// PageUrl The page the form was sent from.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// Phone As typed; it may lack the country prefix a lead's phone needs.
+	Phone    *string `json:"phone,omitempty"`
+	Referrer *string `json:"referrer,omitempty"`
+	Title    *string `json:"title,omitempty"`
+}
+
+// WebFormValue defines model for WebFormValue.
+type WebFormValue struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -60129,6 +60720,16 @@ type ListReportingExecutionsParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AnswerReportingQuestionCardParams defines parameters for AnswerReportingQuestionCard.
+type AnswerReportingQuestionCardParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
+// ExplainReportingQuestionCardParams defines parameters for ExplainReportingQuestionCard.
+type ExplainReportingQuestionCardParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
 // PreviewReportingReportAsRoleParams defines parameters for PreviewReportingReportAsRole.
 type PreviewReportingReportAsRoleParams struct {
 	Role     string `form:"role" json:"role"`
@@ -60154,12 +60755,43 @@ type ListReportRunsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Entity Only the questions about this population.
+	Entity *string `form:"entity,omitempty" json:"entity,omitempty"`
 }
 
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
 type UpdateReportingScheduleParams struct {
 	IfMatch string `json:"If-Match"`
 }
+
+// GetSdrSummaryParams defines parameters for GetSdrSummary.
+type GetSdrSummaryParams struct {
+	// ScopeKind Whose work to count. Omitted means the seat's own default population.
+	ScopeKind *GetSdrSummaryParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// GetSdrSummaryParamsScopeKind defines parameters for GetSdrSummary.
+type GetSdrSummaryParamsScopeKind string
+
+// ListSdrWaitingHandoffsParams defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParams struct {
+	// ScopeKind Whose handoffs to list. Omitted means the seat's own default population.
+	ScopeKind *ListSdrWaitingHandoffsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParamsScopeKind string
 
 // ListReportingTargetsParams defines parameters for ListReportingTargets.
 type ListReportingTargetsParams struct {
@@ -66886,6 +67518,9 @@ type UpdateReportingReportJSONRequestBody = ReportingReportInput
 // SaveReportingReportDraftJSONRequestBody defines body for SaveReportingReportDraft for application/json ContentType.
 type SaveReportingReportDraftJSONRequestBody = ReportingReportDraftInput
 
+// ExplainReportingQuestionCardJSONRequestBody defines body for ExplainReportingQuestionCard for application/json ContentType.
+type ExplainReportingQuestionCardJSONRequestBody = ReportRunCell
+
 // CreateReportingScheduleJSONRequestBody defines body for CreateReportingSchedule for application/json ContentType.
 type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
 
@@ -68333,6 +68968,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "voice")
 	}
 
+	if raw, found := object["web_form"]; found {
+		err = json.Unmarshal(raw, &a.WebForm)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form': %w", err)
+		}
+		delete(object, "web_form")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -68696,6 +69339,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["voice"], err = json.Marshal(a.Voice)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.WebForm != nil {
+		object["web_form"], err = json.Marshal(a.WebForm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form': %w", err)
 		}
 	}
 
@@ -79381,6 +80031,12 @@ type ServerInterface interface {
 	// List reporting executions
 	// (GET /analytics/reports/{id}/executions)
 	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// A question card's answer, asked on the server for this reader.
+	// (GET /analytics/reports/{id}/questions/{card_id}/answer)
+	AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params AnswerReportingQuestionCardParams)
+	// The records behind one cell of a question card.
+	// (POST /analytics/reports/{id}/questions/{card_id}/explain)
+	ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams)
 	// Evaluate a saved report as a seat holding one role would read it. Human-only.
 	// (GET /analytics/reports/{id}/reader-preview)
 	PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams)
@@ -79414,6 +80070,12 @@ type ServerInterface interface {
 	// What questions this caller may ask, and in what words.
 	// (GET /analytics/schema)
 	GetAnalyticsSchema(w http.ResponseWriter, r *http.Request)
+	// An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+	// (GET /analytics/sdr-summary)
+	GetSdrSummary(w http.ResponseWriter, r *http.Request, params GetSdrSummaryParams)
+	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
+	// (GET /analytics/sdr-summary/handoffs)
+	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -80692,6 +81354,9 @@ type ServerInterface interface {
 	// Update the installation's settings (admin/ops).
 	// (PATCH /installation/settings)
 	UpdateInstallationSettings(w http.ResponseWriter, r *http.Request)
+	// How much saved work reads a period, before the fiscal start moves (admin/ops).
+	// (GET /installation/settings/fiscal-year-impact)
+	GetFiscalYearImpact(w http.ResponseWriter, r *http.Request)
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
@@ -82570,6 +83235,18 @@ func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// A question card's answer, asked on the server for this reader.
+// (GET /analytics/reports/{id}/questions/{card_id}/answer)
+func (_ Unimplemented) AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params AnswerReportingQuestionCardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records behind one cell of a question card.
+// (POST /analytics/reports/{id}/questions/{card_id}/explain)
+func (_ Unimplemented) ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Evaluate a saved report as a seat holding one role would read it. Human-only.
 // (GET /analytics/reports/{id}/reader-preview)
 func (_ Unimplemented) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams) {
@@ -82633,6 +83310,18 @@ func (_ Unimplemented) UpdateReportingSchedule(w http.ResponseWriter, r *http.Re
 // What questions this caller may ask, and in what words.
 // (GET /analytics/schema)
 func (_ Unimplemented) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+// (GET /analytics/sdr-summary)
+func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, params GetSdrSummaryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The handoffs waiting on somebody else, oldest wait first, one page at a time.
+// (GET /analytics/sdr-summary/handoffs)
+func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -85189,6 +85878,12 @@ func (_ Unimplemented) GetInstallationSettings(w http.ResponseWriter, r *http.Re
 // Update the installation's settings (admin/ops).
 // (PATCH /installation/settings)
 func (_ Unimplemented) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How much saved work reads a period, before the fiscal start moves (admin/ops).
+// (GET /installation/settings/fiscal-year-impact)
+func (_ Unimplemented) GetFiscalYearImpact(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92575,6 +93270,120 @@ func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// AnswerReportingQuestionCard operation middleware
+func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "card_id" -------------
+	var cardId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "card_id", chi.URLParam(r, "card_id"), &cardId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "card_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AnswerReportingQuestionCardParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerReportingQuestionCard(w, r, id, cardId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainReportingQuestionCard operation middleware
+func (siw *ServerInterfaceWrapper) ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "card_id" -------------
+	var cardId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "card_id", chi.URLParam(r, "card_id"), &cardId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "card_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExplainReportingQuestionCardParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainReportingQuestionCard(w, r, id, cardId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewReportingReportAsRole operation middleware
 func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request) {
 
@@ -92844,6 +93653,19 @@ func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http
 		return
 	}
 
+	// ------------- Optional query parameter "entity" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity", r.URL.Query(), &params.Entity, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListReportRuns(w, r, params)
 	}))
@@ -93024,6 +93846,136 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAnalyticsSchema(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSdrSummary operation middleware
+func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSdrSummaryParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSdrSummary(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSdrWaitingHandoffs operation middleware
+func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSdrWaitingHandoffsParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -110802,6 +111754,26 @@ func (siw *ServerInterfaceWrapper) UpdateInstallationSettings(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// GetFiscalYearImpact operation middleware
+func (siw *ServerInterfaceWrapper) GetFiscalYearImpact(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFiscalYearImpact(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationSetup operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
 
@@ -128028,6 +129000,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/questions/{card_id}/answer", wrapper.AnswerReportingQuestionCard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/questions/{card_id}/explain", wrapper.ExplainReportingQuestionCard)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/reader-preview", wrapper.PreviewReportingReportAsRole)
 	})
 	r.Group(func(r chi.Router) {
@@ -128059,6 +129037,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/schema", wrapper.GetAnalyticsSchema)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary", wrapper.GetSdrSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
@@ -129337,6 +130321,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/installation/settings", wrapper.UpdateInstallationSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/settings/fiscal-year-impact", wrapper.GetFiscalYearImpact)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)

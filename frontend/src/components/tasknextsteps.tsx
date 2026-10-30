@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Mail } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
@@ -9,6 +9,7 @@ import { CallAction, linkVerb } from "../design-system/callaction";
 import { ContactLink } from "../design-system/contactlink";
 import { mailbox, primaryPhone } from "../format/contacturi";
 import { type Translator, useT } from "../i18n";
+import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
@@ -30,7 +31,8 @@ export function TaskCallAction({
 }
 
 /**
- * Call, Email and Open contact. `className` wraps them in a row of their own,
+ * Call, Draft email and Open contact. A task owed to a contact is work for that
+ * contact, so mail to them is drafted from the task rather than offered blank. `className` wraps them in a row of their own,
  * which is left out when there is no contact to act on.
  */
 export function TaskNextSteps({
@@ -50,6 +52,7 @@ export function TaskNextSteps({
       <CallVerb contact={contact} fromCall={fromCall} />
       <EmailVerb
         contact={contact}
+        intent={intentAbout(t("task.next.draftIntent"), task.subject)}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
       {offerOpen &&
@@ -97,14 +100,19 @@ function CallVerb({
 
 function EmailVerb({
   contact,
+  intent,
   reasonId,
-}: Readonly<{ contact: Contact; reasonId: string | undefined }>) {
+}: Readonly<{
+  contact: Contact;
+  intent: string;
+  reasonId: string | undefined;
+}>) {
   const t = useT();
   if (reasonId !== undefined) {
     return (
-      <Button variant="ghost" reasonId={reasonId}>
-        <Mail aria-hidden="true" />
-        {t("record.verb.email")}
+      <Button variant="ai" reasonId={reasonId}>
+        <Sparkles aria-hidden="true" />
+        {t("task.next.draftEmail")}
       </Button>
     );
   }
@@ -113,6 +121,7 @@ function EmailVerb({
       kind="email"
       appearance="button"
       label={t("record.verb.email")}
+      draft={{ label: t("task.next.draftEmail"), intent }}
       address={contact.primary_email ?? undefined}
       record={{ entityType: "contact", entityId: contact.id }}
     />

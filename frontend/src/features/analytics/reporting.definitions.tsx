@@ -23,7 +23,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { metricLabel, unitLabel } from "./reporting.model";
+import { unitLabel } from "./reporting.model";
 import {
   useReportingCatalog,
   useReportingFramework,
@@ -61,10 +61,7 @@ export function ReportingDefinitions() {
               {(catalog) => (
                 <>
                   {catalog.metrics.map((metric) => (
-                    <Disclosure
-                      key={metric.id}
-                      summary={metricLabel(metric.id, t)}
-                    >
+                    <Disclosure key={metric.id} summary={metric.label}>
                       <p>{metric.definition}</p>
                       <p className="t-caption">{metric.attribution}</p>
                       <p className="t-caption">{metric.incomplete_policy}</p>

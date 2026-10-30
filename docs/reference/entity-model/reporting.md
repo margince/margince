@@ -49,12 +49,13 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_definition_revision
 
-6 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
+7 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `framework_revision` | `bigint` | yes |  |
+| `question_bindings` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `report_id` | `uuid` | yes | Points at `report_definition.id`. |
 | `revision` | `bigint` | yes |  |
 | `selection` | `jsonb` | yes |  |
@@ -70,6 +71,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 **Rules**
 
 - `report_definition_revision_framework_revision_js_safe`: `CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint)))`
+- `report_definition_revision_question_bindings_is_an_object`: `CHECK ((jsonb_typeof(question_bindings) = 'object'))`
 - `report_definition_revision_revision_js_safe`: `CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))`
 
 **Indexes**

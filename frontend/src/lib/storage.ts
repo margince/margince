@@ -88,6 +88,12 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // When this tab last reloaded onto a newer build, so it reloads once per deploy.
+  staleBuildReloadedAt: {
+    name: "margince.staleBuildReloadedAt",
+    area: "session",
+    lifetime: "device",
+  },
   // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
   // the session brings the reminder back.
   setupReminderHidden: {
@@ -106,6 +112,12 @@ export const STORAGE_KEYS = {
   // arrives with the reveal once. Seat: the next seat to sign in starts afresh.
   aiRevealSeen: {
     name: "margince.aiReveal.seen",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Analytics Overview view a reader chose last. Seat: it is about their work.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
     area: "local",
     lifetime: "seat",
   },

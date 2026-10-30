@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { candidateVersion } from "../../testing/voice-candidate";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card is the ONLY surface outside onboarding where a
@@ -190,8 +191,8 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(screen.getByText("Best samples")).toBeTruthy();
     expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     expect(screen.getByText(/which only you can see/)).toBeTruthy();
-    // No paste box: files are the one way in here.
-    expect(screen.queryByRole("textbox")).toBeNull();
+    // A paste box beside the files, for text whose file will not open.
+    expect(screen.getByRole("textbox", { name: "Paste text" })).toBeTruthy();
   });
 
   it("mints exactly one profile on the first add and then shows the build control", async () => {
@@ -229,15 +230,20 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
-  // An owner with no voice yet has one thing to do. Splitting the surface into
-  // a card per subject would hand them headings over empty bodies — a
-  // description of a profile that does not exist.
-  it("stays one card, naming no subject the owner has nothing in yet", async () => {
+  // An owner with no voice yet has one thing to do: add writing. The page says
+  // what that buys and takes it, and names no card over an empty body.
+  it("names only the promise and the first add, no subject the owner has nothing in yet", async () => {
     stubApi();
     render(<VoiceDnaCard />);
     expect(
-      await screen.findByRole("heading", { name: "Voice DNA" }),
+      await screen.findByRole("heading", {
+        name: "Your writing voice",
+      }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Add your writing" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("list", { name: "What works best" })).toBeTruthy();
     for (const absent of ["Writing samples", "Builds"]) {
       expect(screen.queryByRole("heading", { name: absent })).toBeNull();
     }
@@ -585,6 +591,45 @@ describe("what the build button is called", () => {
     ).toBeTruthy();
   });
 
+  // The hero walks the writer to the first build, so it is drawn there only.
+  // The Builds card takes over once a version exists.
+  it("offers the first build in the hero, not at the foot of the page", async () => {
+    stubWith({ ...PROFILE, maturity: "provisional" });
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const build = await within(hero).findByRole("button", {
+      name: /Build Voice DNA/,
+    });
+    expect(build.hasAttribute("disabled")).toBe(false);
+    expect(screen.getAllByRole("button", { name: /Build Voice DNA/ })).toEqual([
+      build,
+    ]);
+    expect(screen.queryByText("Build from samples")).toBeNull();
+  });
+
+  // Below the floor the next step is more writing: the hero leads with adding
+  // and says how far the build still is.
+  it("leads with adding writing while the corpus is too thin to build", async () => {
+    stubWith(PROFILE);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(
+      await within(hero).findByText(/A first build needs about 380 more words/),
+    ).toBeTruthy();
+    const steps = within(hero).getByRole("list", {
+      name: "How Margince learns your voice",
+    });
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
+    expect(
+      within(hero)
+        .getByRole("button", { name: /Build Voice DNA/ })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(
+      within(hero).getByRole("button", { name: /Add writing/ }),
+    ).toBeTruthy();
+  });
+
   it("offers a rebuild once a version exists", async () => {
     stubWith({
       ...PROFILE,
@@ -595,6 +640,129 @@ describe("what the build button is called", () => {
     render(<VoiceDnaCard />);
     expect(
       await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+    ).toBeTruthy();
+  });
+
+  // A finished first build refetches the profile, so the hero stops offering
+  // the first build and the Builds card takes over the rebuild.
+  it("hands the build to the Builds card once the first build succeeds", async () => {
+    let profile: VoiceProfile = { ...PROFILE, maturity: "provisional" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [profile], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (
+          path === "/voice-profiles/vp-1/builds" &&
+          request.method === "POST"
+        ) {
+          return jsonResponse({ id: "vb-1", status: "queued" }, 201);
+        }
+        if (path === "/voice-profiles/vp-1/builds/vb-1") {
+          profile = { ...profile, status: "ready", profile_version: 1 };
+          return jsonResponse({ id: "vb-1", status: "succeeded" });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+
+    await userEvent.click(
+      await within(hero).findByRole("button", { name: /Build Voice DNA/ }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+    ).toBeTruthy();
+    expect(
+      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+    ).toBeNull();
+  });
+});
+
+// A build lands as a candidate a human accepts. The hero stays the head of the
+// page through that review rather than giving way to a plain card above it.
+describe("a version awaiting review", () => {
+  type Version = components["schemas"]["VoiceProfileVersion"];
+
+  function stubWith(versions: Version[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({
+            data: [{ ...PROFILE, maturity: "provisional" }],
+            page: emptyPage.page,
+          });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (path === "/voice-profiles/vp-1/versions") {
+          return jsonResponse({ data: versions, page: emptyPage.page });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+  }
+
+  it("asks about a first version from the hero, with its portrait drawn", async () => {
+    stubWith([candidateVersion([])]);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(
+      await within(hero).findByText("Direct, concrete, few adjectives."),
+    ).toBeTruthy();
+    expect(within(hero).getByText("Voice v1 ready for review")).toBeTruthy();
+    expect(
+      within(hero).getByRole("button", { name: "Use this version" }),
+    ).toBeTruthy();
+    expect(
+      within(hero).getByRole("button", { name: "Discard this version" }),
+    ).toBeTruthy();
+    expect(
+      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+    ).toBeNull();
+  });
+
+  it("keeps the active voice on top and reviews a newer one under it", async () => {
+    const active: Version = {
+      ...candidateVersion([]),
+      id: "v-1",
+      status: "active",
+      profile_json: {
+        inference: { identity_summary: "The active voice." },
+      },
+    };
+    const next: Version = {
+      ...candidateVersion([]),
+      id: "v-2",
+      profile_version: 2,
+    };
+    stubWith([next, active]);
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    expect(await within(hero).findByText("The active voice.")).toBeTruthy();
+    const title = await screen.findByText("Voice v2 ready for review");
+    expect(hero.contains(title)).toBe(false);
+    expect(
+      hero.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Keep current voice" }),
     ).toBeTruthy();
   });
 });

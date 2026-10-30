@@ -24,6 +24,9 @@ type targetKey struct {
 	metric  crmcontracts.ReportingMetricID
 	kind    crmcontracts.ReportingScopeKind
 	subject string
+	// whole asks for the scope's target over every pipeline while the
+	// evaluation reads one, so a comparison can say that no split exists.
+	whole bool
 }
 
 func keyFor(scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetricID) targetKey {
@@ -31,6 +34,12 @@ func keyFor(scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetr
 	if scope.Id != nil {
 		key.subject = scope.Id.String()
 	}
+	return key
+}
+
+func wholePipelineKey(scope crmcontracts.ReportingScope) targetKey {
+	key := keyFor(scope, comparedMetric)
+	key.whole = true
 	return key
 }
 
@@ -65,7 +74,9 @@ func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetRe
 	// A target's metric and scope never change after creation, so its
 	// definition names the figure it holds.
 	for _, target := range targets {
-		held[keyFor(target.Definition.Scope, target.Definition.Metric)] = target
+		key := keyFor(target.Definition.Scope, target.Definition.Metric)
+		key.whole = frame.PipelineId != nil && target.Definition.PipelineId == nil
+		held[key] = target
 	}
 	return held, nil
 }
@@ -73,40 +84,48 @@ func (s *Service) matchingTargets(ctx context.Context, tx pgx.Tx, reach targetRe
 // targetsQuery matches keys on the raw natural-key columns, so
 // sales_target_identity narrows on metric, scope and pipeline. A key with no
 // subject matches only a target with no scope id, and an owner key only its
-// own owner. The two arms are a `UNION ALL` because an `OR` of them is not
-// planned as an index scan.
+// own owner. A whole key matches only a target over every pipeline. The arms
+// are a `UNION ALL` because an `OR` of them is not planned as an index scan.
 //
 //craft:ignore naked-any pgx binds heterogeneous scalar types at the SQL boundary.
 func targetsQuery(reach targetReach, frame crmcontracts.ReportingContext, keys []targetKey) (string, []any) {
-	var whole, subject struct{ metrics, kinds, ids []string }
+	type arm struct{ metrics, kinds, ids []string }
+	var groups [2][2]arm
 	seen := map[targetKey]bool{}
 	for _, key := range keys {
 		if seen[key] {
 			continue
 		}
 		seen[key] = true
-		arm := &whole
+		group := &groups[boolIndex(key.whole)][boolIndex(key.subject != "")]
 		if key.subject != "" {
-			arm = &subject
-			arm.ids = append(arm.ids, key.subject)
+			group.ids = append(group.ids, key.subject)
 		}
-		arm.metrics, arm.kinds = append(arm.metrics, string(key.metric)), append(arm.kinds, string(key.kind))
+		group.metrics, group.kinds = append(group.metrics, string(key.metric)), append(group.kinds, string(key.kind))
 	}
 	var b bindings
 	common := reach.clause(&b) + " AND " + activeTarget + " AND t.period_start=" + b.add(frame.TargetInterval.StartAt) + " AND t.period_end=" + b.add(frame.TargetInterval.EndAt)
-	if frame.PipelineId == nil {
-		common += " AND t.pipeline_id IS NULL"
-	} else {
-		common += " AND t.pipeline_id=" + b.add(*frame.PipelineId) + "::uuid"
+	pipelines := [2]string{" AND t.pipeline_id IS NULL", " AND t.pipeline_id IS NULL"}
+	if frame.PipelineId != nil {
+		pipelines[0] = " AND t.pipeline_id=" + b.add(*frame.PipelineId) + "::uuid"
 	}
 	var arms []string
-	if len(whole.metrics) > 0 {
-		arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+" AND t.scope_id IS NULL AND (t.metric,t.scope_kind) IN (SELECT * FROM unnest("+b.add(whole.metrics)+"::text[],"+b.add(whole.kinds)+"::text[]))")
-	}
-	if len(subject.metrics) > 0 {
-		arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+" AND (t.metric,t.scope_kind,t.scope_id) IN (SELECT * FROM unnest("+b.add(subject.metrics)+"::text[],"+b.add(subject.kinds)+"::text[],"+b.add(subject.ids)+"::uuid[]))")
+	for whole, pipeline := range pipelines {
+		if scoped := groups[whole][0]; len(scoped.metrics) > 0 {
+			arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+pipeline+" AND t.scope_id IS NULL AND (t.metric,t.scope_kind) IN (SELECT * FROM unnest("+b.add(scoped.metrics)+"::text[],"+b.add(scoped.kinds)+"::text[]))")
+		}
+		if subject := groups[whole][1]; len(subject.metrics) > 0 {
+			arms = append(arms, "SELECT "+targetColumns+targetFrom+" WHERE "+common+pipeline+" AND (t.metric,t.scope_kind,t.scope_id) IN (SELECT * FROM unnest("+b.add(subject.metrics)+"::text[],"+b.add(subject.kinds)+"::text[],"+b.add(subject.ids)+"::uuid[]))")
+		}
 	}
 	return strings.Join(arms, " UNION ALL "), b.values
+}
+
+func boolIndex(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 // authorizeTargetScopes refuses the evaluation when the reader may not
@@ -136,18 +155,17 @@ func (s *Service) authorizeTargetScopes(ctx context.Context, tx pgx.Tx, scope cr
 	return nil
 }
 
-func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.ReportingEvaluation) error {
+func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, evaluation *Evaluation) error {
+	out := &evaluation.Result
 	var reach targetReach
-	if out.Context.TargetInterval != nil && auth.Allows(ctx, "sales_target", principal.ActionRead) {
+	reached := out.Context.TargetInterval != nil && auth.Allows(ctx, "sales_target", principal.ActionRead)
+	if reached {
 		var err error
 		if reach, err = s.targetReach(ctx, tx); err != nil {
 			return err
 		}
 	}
-	keys := make([]targetKey, 0, len(out.Metrics))
-	for _, metric := range out.Metrics {
-		keys = append(keys, keyFor(out.Context.Scope, metric.Id))
-	}
+	keys := metricTargetKeys(out.Context, out.Metrics)
 	pointOwners := map[int]map[int]openapi_types.UUID{}
 	var owners []openapi_types.UUID
 	for index := range out.Charts {
@@ -173,8 +191,39 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 	if err != nil {
 		return err
 	}
+	applyMetricTargets(ctx, out, evaluation.Forecast, held)
+	if len(pointOwners) > 0 && !reached {
+		if reach.owners, err = s.authority.MeasurableOwnerSet(ctx, tx); err != nil {
+			return err
+		}
+	}
+	return s.applyChartTargets(ctx, tx, out, reach.owners, pointOwners, held)
+}
+
+// applyChartTargets holds each chart against its targets, and each owner
+// attainment chart against its owners' targets and their allocation.
+func (s *Service) applyChartTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.ReportingEvaluation, owners MeasurableOwners, pointOwners map[int]map[int]openapi_types.UUID, held heldTargets) error {
+	for index := range out.Charts {
+		chart := &out.Charts[index]
+		if points, ok := pointOwners[index]; ok {
+			applyOwnerTargets(chart, points, held)
+			if err := s.ownerTargetAllocation(ctx, tx, owners, out.Context, chart, held); err != nil {
+				return err
+			}
+		}
+		applyChartTarget(out.Context, out.Metrics, chart)
+	}
+	return nil
+}
+
+// applyMetricTargets holds each headline figure against its own target, and
+// the forecast landing against sales won.
+func applyMetricTargets(ctx context.Context, out *crmcontracts.ReportingEvaluation, forecast *ForecastOperands, held heldTargets) {
 	for index := range out.Metrics {
 		metric := &out.Metrics[index]
+		if metric.Id == forecastLanding {
+			metric.TargetComparison = compareForecast(ctx, *out, forecast, held)
+		}
 		target, ok := held[keyFor(out.Context.Scope, metric.Id)]
 		if !ok || metric.Coverage.Withheld {
 			continue
@@ -187,17 +236,24 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts
 			metric.Attainment = &attainment
 		}
 	}
-	for index := range out.Charts {
-		chart := &out.Charts[index]
-		if points, ok := pointOwners[index]; ok {
-			applyOwnerTargets(chart, points, held)
-			if err := s.ownerTargetAllocation(ctx, tx, out.Context, chart, held); err != nil {
-				return err
-			}
+}
+
+// metricTargetKeys are the targets the headline figures stand against. A
+// forecast landing stands against sales won in its scope. Over one pipeline it
+// also asks for the scope's whole target, to say that none is split.
+func metricTargetKeys(frame crmcontracts.ReportingContext, metrics []crmcontracts.ReportingMetric) []targetKey {
+	keys := make([]targetKey, 0, len(metrics))
+	for _, metric := range metrics {
+		keys = append(keys, keyFor(frame.Scope, metric.Id))
+		if metric.Id != forecastLanding {
+			continue
 		}
-		applyChartTarget(out.Context, out.Metrics, chart)
+		keys = append(keys, keyFor(frame.Scope, comparedMetric))
+		if frame.PipelineId != nil {
+			keys = append(keys, wholePipelineKey(frame.Scope))
+		}
 	}
-	return nil
+	return keys
 }
 
 // ownerTargetPoints fills in the owners an attainment chart stands against
@@ -282,8 +338,10 @@ func applyChartTarget(frame crmcontracts.ReportingContext, metrics []crmcontract
 	}
 }
 
-func (s *Service) ownerTargetAllocation(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart, held heldTargets) error {
-	visible, err := s.allocationVisible(ctx, tx, frame.Scope)
+func (s *Service) ownerTargetAllocation(
+	ctx context.Context, tx pgx.Tx, owners MeasurableOwners, frame crmcontracts.ReportingContext, chart *crmcontracts.ReportingChart, held heldTargets,
+) error {
+	visible, err := s.allocationVisible(ctx, tx, owners, frame.Scope)
 	if err != nil || !visible {
 		return err
 	}
@@ -321,7 +379,7 @@ func targetAppliesToInterval(frame crmcontracts.ReportingContext, interval *crmc
 	switch frame.PeriodKind {
 	case reportingThisMonth:
 		months = 1
-	case "this_quarter":
+	case reportingThisQuarter:
 		months = 3
 	default:
 		return false

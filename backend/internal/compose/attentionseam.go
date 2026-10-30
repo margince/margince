@@ -173,6 +173,19 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	// are two reads of the same cached card, and a second service value would
 	// be a second set of stores over the same pool for no reason.
 	cards := newDealStatusService(pool, now)
+	waiting := attentionWaiting{
+		store: activities.NewStore(db).WithOwnDomains(
+			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+		deals:    deals.NewStore(db, DealsInstallation()),
+		contacts: newContactsStore(db),
+		now:      now,
+	}
+	// The lane's sweeps and the scroll tail read one candidate set.
+	atRisk := attentionAtRisk{
+		lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now),
+		tail:   quietDealTail(pool, deals.QuietThresholdDays),
+		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
+	}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
@@ -186,7 +199,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			now:     now,
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
-		attentionAtRisk{lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now), pool: pool, now: now},
+		atRisk,
 		attentionDecay{pool: pool, store: newContactsStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
@@ -232,13 +245,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
 		// Contact pairs reach the queue as cases, one per group of contacts.
 		attention.WithContactCases(attentionContactCases{store: newContactsStore(db)}),
-	).WithWaiting(attentionWaiting{
-		store: activities.NewStore(db).WithOwnDomains(
-			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
-		deals:    deals.NewStore(db, DealsInstallation()),
-		contacts: newContactsStore(db),
-		now:      now,
-	}).
+	).WithWaiting(waiting).
+		// The same seam counts the waiting cards whole and reads on past the scan.
+		WithWaitingBacklog(waiting).
+		WithRiskBacklog(atRisk).
 		// The mirror: the reader's own sends nobody has answered, once the
 		// workspace's follow-up window has passed.
 		WithAwaiting(attentionAwaiting{

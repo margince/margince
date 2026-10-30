@@ -36,11 +36,17 @@ type mailSeats struct {
 	owner      *ids.UUID
 	answeredBy []ids.UUID
 	bySeats    bool
+	// unowned keeps what no seat answers for: a message that is not mail.
+	// Every waiting mail has one sole seat, so none of it is unowned.
+	unowned bool
 }
 
 // responsibilitySQL keeps a set's share of the unnarrowed read. Mail that no
 // seat or several seats answer for is nobody's, so no set reaches it.
 func (m mailSeats) responsibilitySQL(identities string, arg func(any) int) string {
+	if m.unowned {
+		return "(a.kind <> 'email')"
+	}
 	if m.owner != nil || !m.bySeats {
 		return personalMailResponsibilitySQL(m.owner, identities, arg)
 	}

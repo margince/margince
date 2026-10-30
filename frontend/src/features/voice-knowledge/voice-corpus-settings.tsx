@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Radio } from "../../design-system/atoms";
+import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
@@ -16,12 +16,8 @@ import { useVoiceIntake } from "./use-voice-intake";
 // beside it can be disabled while a source is still arriving — a build started
 // mid-ingest describes a corpus that no longer exists by the time it finishes.
 //
-// Files are the only way in. Onboarding also takes pasted text because it is a
-// conversation and a paste is a turn in it; here a reader arrives with their
-// sent mail already exported, and one control for one act is what a settings
-// row can carry. What the card explains beside that control is the part
-// onboarding narrates: what the voice is for, which writing teaches it, and
-// why only the reader's own words count.
+// Files and pasted text both come in here, as in onboarding. A paste is the
+// way past a file the browser cannot open, such as a locked PDF.
 //
 // Everything the intake has to say back — the unanswered speaker questions and
 // the per-source notices — lives in this component's hook and renders on the
@@ -81,6 +77,15 @@ export function VoiceCorpusIntake({
               accept={ACCEPTED_CORPUS_ATTR}
               onPick={(file) => intake.addFiles([file])}
             />
+            <PasteSample
+              onAdd={(text, onSettled) =>
+                intake.addPaste(
+                  text,
+                  t("settings.voice.pasteSource"),
+                  onSettled,
+                )
+              }
+            />
             {intake.pendingAsk && (
               // Keyed by the source: when the queue advances to the next file
               // the panel is a NEW panel, so the previous file's chosen
@@ -115,6 +120,49 @@ export function VoiceCorpusIntake({
           </div>
         )}
       />
+    </div>
+  );
+}
+
+// The box empties once the text is taken, and keeps it for a retry when the
+// add fails. The notice under the zone says what became of it.
+function PasteSample({
+  onAdd,
+}: Readonly<{
+  onAdd: (text: string, onSettled: (taken: boolean) => void) => void;
+}>) {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const blank = text.trim() === "";
+  return (
+    <div>
+      <Field label={t("settings.voice.pasteLabel")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            rows={4}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        )}
+      </Field>
+      <div className="vdna-composer-actions">
+        <Button
+          disabled={blank || sending}
+          onClick={() => {
+            setSending(true);
+            onAdd(text, (taken) => {
+              setSending(false);
+              if (taken) {
+                setText("");
+              }
+            });
+          }}
+        >
+          {t("settings.voice.pasteAdd")}
+        </Button>
+      </div>
     </div>
   );
 }

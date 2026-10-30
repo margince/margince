@@ -20,7 +20,6 @@ import { isEntityKind } from "../../lib/entity";
 import { isVersionSkewOf, throwProblem } from "../../lib/problem";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
@@ -32,6 +31,7 @@ import { movementLabel } from "./reporting.movement";
 import { useReportingPages } from "./reporting.pagination";
 import {
   reloadReportingFigures,
+  useMetricNames,
   useReportingCatalog,
 } from "./reporting.queries";
 
@@ -45,6 +45,7 @@ const metricDateHeading: Partial<
   leads_promoted: "reporting.createdOn",
   lead_status_moves: "reporting.movedOn",
   lead_first_response: "reporting.arrivedOn",
+  leads_awaiting_response: "reporting.arrivedOn",
   partner_pipeline: "reporting.createdOn",
   partner_won: "reporting.closedOn",
   partner_commission: "reporting.accruedOn",
@@ -76,6 +77,7 @@ export function ReportingEvidenceDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const plural = usePlural();
   const { locale } = useLocale();
   const client = useQueryClient();
@@ -140,7 +142,7 @@ export function ReportingEvidenceDrawer({
           size="medium"
           className="modal-title"
         >
-          {metricLabel(reference.metric, t)}
+          {metricName(reference.metric)}
         </Heading>
         <p className="t-caption">
           {evaluation.context.scope.label}

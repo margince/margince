@@ -523,7 +523,7 @@ const describedBy = (control: HTMLElement) =>
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
 
-test("a task from a call offers Call, Email and Open contact", async () => {
+test("a task from a call offers Call, Draft email and Open contact", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
@@ -535,12 +535,14 @@ test("a task from a call offers Call, Email and Open contact", async () => {
   expect(dial.getAttribute("href")).toBe("tel:+49301234567");
   expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
   await user.click(
-    screen.getByRole("button", { name: en["record.verb.email"] }),
+    screen.getByRole("button", { name: en["task.next.draftEmail"] }),
   );
+  // The task steers the draft, so the mail is about what was owed.
   expect(writeTo).toHaveBeenCalledWith({
     entityType: "contact",
     entityId: "c-1",
     address: "alice@example.com",
+    draftIntent: `${en["task.next.draftIntent"]}: Call back Alice about the renewal`,
   });
 });
 
@@ -604,26 +606,26 @@ test("a contact with no phone gets no Call", async () => {
   expect(call()).toBeNull();
 });
 
-test("a contact with no address gets Email refused with the reason", async () => {
+test("a contact with no address gets Draft email refused with the reason", async () => {
   stubNextSteps({ contact: { ...ALICE, primary_email: null } });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["task.next.noAddress"]);
   expect(call()).not.toBeNull();
 });
 
-test("an archived contact gets no Call and a refused Email, and can still be opened", async () => {
+test("an archived contact gets no Call and a refused Draft email, and can still be opened", async () => {
   stubNextSteps({
     contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
   });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
@@ -631,12 +633,12 @@ test("an archived contact gets no Call and a refused Email, and can still be ope
   expect(call()).toBeNull();
 });
 
-test("a refused Email is said once, after every verb in the row", async () => {
+test("a refused Draft email is said once, after every verb in the row", async () => {
   stubNextSteps({ contact: { ...ALICE, primary_email: null } });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
@@ -663,6 +665,7 @@ test.each([
   await screen.findByRole("button", { name: "Open original" });
   expect(openContact()).toBeNull();
   expect(screen.queryByText(en["record.verb.email"])).toBeNull();
+  expect(screen.queryByText(en["task.next.draftEmail"])).toBeNull();
   expect(call()).toBeNull();
 });
 

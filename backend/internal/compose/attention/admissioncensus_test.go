@@ -37,6 +37,8 @@ var rowProducers = map[string][]crmcontracts.WorklistItemSource{
 	"classifyDomainQuestion":    {crmcontracts.WorklistItemSourceDomainQuestion},
 	"classifyLegalDeadline":     {crmcontracts.WorklistItemSourceDsr, crmcontracts.WorklistItemSourceNoticeCase},
 	"classifyRisk":              {crmcontracts.WorklistItemSourceDealAtRisk},
+	"riskInTail":                {crmcontracts.WorklistItemSourceDealAtRisk},
+	"waitingInTail":             {crmcontracts.WorklistItemSourceCustomerWaiting},
 	"classifyWaiting":           {crmcontracts.WorklistItemSourceCustomerWaiting},
 	"classifyMeeting":           {crmcontracts.WorklistItemSourceMeeting},
 	"classifyUnansweredMeeting": {crmcontracts.WorklistItemSourceMeetingOutcome},

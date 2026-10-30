@@ -216,7 +216,7 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // other half.
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
-	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
@@ -234,6 +234,8 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 		InstallationDB(pool), analyticsquery.DefaultFloor, newAttentionNames(InstallationDB(pool)))
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),

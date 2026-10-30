@@ -4,9 +4,13 @@
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import {
+  type SectionState,
+  SurfaceState,
+} from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   openAnalyticsSection,
   type Section,
@@ -40,19 +44,49 @@ const NAMED_FINDINGS = 5;
 export function AnalyticsAttention({
   scope,
 }: Readonly<{ scope: AnalyticsScope }>) {
-  const items = useAttentionItems(scope);
+  const { items } = useAttentionList(scope);
   return <AttentionPanel items={items} />;
 }
 
+// Whether the list is the whole answer. `failed` means a source did not
+// answer, so a short or empty list says nothing about what is clear.
+export type AttentionState = "pending" | "failed" | "ready";
+
+/**
+ * The findings as one panel. Given `state`, the panel always draws. It then
+ * says whether the list is loading, could not be read, or holds nothing.
+ */
 export function AttentionPanel({
   items,
-}: Readonly<{ items: readonly AttentionItem[] }>) {
+  state,
+  emptyLabel,
+}: Readonly<{
+  items: readonly AttentionItem[];
+  state?: AttentionState;
+  emptyLabel?: string;
+}>) {
   const t = useT();
-  if (items.length === 0) {
+  if (items.length === 0 && state === undefined) {
     return null;
   }
   return (
     <Panel title={t("analytics.attention")}>
+      {state !== undefined && items.length === 0 && (
+        <PanelBody>
+          <SurfaceState
+            state={surfaceOf(state)}
+            emptyLabel={emptyLabel ?? t("common.empty")}
+            loadingLabel={t("analytics.attention")}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      )}
+      {state === "failed" && items.length > 0 && (
+        <PanelBody>
+          <p className="t-caption">{t("analytics.attentionIncomplete")}</p>
+        </PanelBody>
+      )}
       {items.map((item) => (
         <PanelRow key={item.key} className="analytics-attention-row">
           <div className="analytics-attention-text">
@@ -75,11 +109,45 @@ export function AttentionPanel({
   );
 }
 
+function surfaceOf(state: AttentionState): SectionState {
+  if (state === "pending") return "loading";
+  return state === "failed" ? "unavailable" : "empty";
+}
+
+// Who answers for a finding, what is at stake, and whether the records moved
+// since the check found it. An absent part is left out, never drawn empty.
+function findingDetail(
+  check: InputCheck,
+  owner: string | undefined,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  const amount =
+    check.affected_minor == null
+      ? undefined
+      : t("analytics.attentionAtStake", {
+          amount: formatMoneyOrAbsent(
+            check.affected_minor,
+            check.currency,
+            locale,
+          ),
+        });
+  const outOfDate = check.inputs_changed
+    ? t("analytics.attentionOutOfDate")
+    : undefined;
+  return [owner, amount, outOfDate].filter(Boolean).join(" · ");
+}
+
 // Each source is read under the key its own section reads it by, so opening
 // that section shows the same answer this list summarised. A source that fails
-// to load drops its line instead of the panel: the section it links to states
-// the failure, and a summary is no place to restate it.
-function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
+// to load drops its line instead of the panel. The section it links to states
+// the failure, and `state` says the list may be short.
+// `withReadings` false leaves out the unpriced-deals line and its read. A page
+// whose headline says how much of the pipeline is priced needs neither.
+export function useAttentionList(
+  scope: AnalyticsScope,
+  withReadings = true,
+): Readonly<{ items: AttentionItem[]; state: AttentionState }> {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -88,7 +156,7 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
   // An undefined scope holds the read, which is what a reader without the
   // forecast grant needs: no request, rather than a refused one.
   const readings = useForecastReadings(
-    canReadForecast ? scope : undefined,
+    canReadForecast && withReadings ? scope : undefined,
     "quarter",
   );
   const coverage = useDataCoverage();
@@ -106,21 +174,11 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
     const owner = check.owner_id
       ? owners.get(check.owner_id)
       : t("analytics.attentionNoOwner");
-    const amount =
-      check.affected_minor == null
-        ? undefined
-        : t("analytics.attentionAtStake", {
-            amount: formatMoneyOrAbsent(
-              check.affected_minor,
-              check.currency,
-              locale,
-            ),
-          });
     items.push({
       key: `check:${check.id}`,
       title: t(checkLabel(check.type)),
       subject: check.subject,
-      detail: [owner, amount].filter(Boolean).join(" · "),
+      detail: findingDetail(check, owner, t, locale),
       action: t("analytics.attentionReview"),
       section: "forecast",
     });
@@ -136,7 +194,7 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
       section: "forecast",
     });
   }
-  const forecast = canReadForecast ? readings.data : undefined;
+  const forecast = canReadForecast && withReadings ? readings.data : undefined;
   if (forecast && forecast.priced_count < forecast.eligible_count) {
     items.push({
       key: "unpriced",
@@ -164,5 +222,14 @@ function useAttentionItems(scope: AnalyticsScope): AttentionItem[] {
       section: "coverage",
     });
   }
-  return items;
+  return { items, state: attentionState(canReadForecast, checks) };
+}
+
+function attentionState(
+  reads: boolean,
+  checks: Readonly<{ isPending: boolean; isError: boolean }>,
+): AttentionState {
+  if (!reads) return "ready";
+  if (checks.isError) return "failed";
+  return checks.isPending ? "pending" : "ready";
 }

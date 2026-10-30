@@ -298,12 +298,13 @@ test("AC-voice-4: a candidate can be read before it is chosen", async ({
   // fixture key produces.
   await expect(page.getByText(/NaN/)).toHaveCount(0);
 
-  // Both answers are offered, and neither is taken for the reader.
+  // Both answers are offered, and neither is taken for the reader. With no
+  // active voice there is nothing to keep, so the second sets this one aside.
   await expect(
     page.getByRole("button", { name: "Diese Version verwenden" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Aktuellen Schreibstil behalten" }),
+    page.getByRole("button", { name: "Version verwerfen" }),
   ).toBeVisible();
 });
 

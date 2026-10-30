@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -109,20 +109,47 @@ A category states an exact `total` only when every source behind it was read who
 matches what the list holds. `attention/backlog.go` holds the counts and runs them only for a source its lane cut.
 A count that fails leaves the category a floor and does not fail the page.
 
-Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on in
-its store's own order from its own keyset, skipping the rows the ranked top already holds. The tail rows go through
-the same admission, scope, Done, view and filter steps as the top. The cursor carries where each source stopped, and
-binds the same scope, owner, view and filter as before. The list ends when every source in the tail is read to its
-end. A source that fails while the tail loads is named in `sources_unavailable`, and the list stops short of it.
+Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on
+from its own keyset, skipping the rows the ranked top already holds. The tail rows go through the same admission,
+scope, Done, view and filter steps as the top. The reader's Done marks are read for the tail rows too.
+
+The cursor carries where each source stopped, and binds the same scope, owner, view and filter as before. The list ends when
+every source in the tail is read to its end. A source that fails while the tail loads is named in
+`sources_unavailable`, and the list stops short of it.
+
+The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
+a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
+from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
+longest-standing work comes first, whichever source holds it.
+
+Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
+hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
+next page.
 
 The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
 when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
-Its today window and its later window each have a count, taken on the first page only. A team page counts no task
-window, because that count ran past the lane budget at 10,000 tasks a seat. Its task categories stay a floor.
+Three sources are read on in the tail today:
+
+- Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
+  count, taken on the first page only. A team page counts no task window, because that count ran past the lane
+  budget at 10,000 tasks a seat. Its task categories stay a floor.
+- Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
+  messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
+  is one card, and other mail is one card per sender and subject. The category has no count: judging every message
+  costs more than the first page may spend.
+
+- Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
+  deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
+  by expected close, and draws each deal as the lane does. A deal a waiting card names is left out, even when that
+  card is far down the waiting source (`DealsWaiting`). A deal a brief row above already names is left out too, so
+  one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
+
+Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
+the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
+The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
@@ -306,7 +333,11 @@ The sentence is asked for in the member's saved language, else the installation'
 
 `snapshotTeams` in `weeklyteamjobs.go` skips a team while any of its members failed on this run, so a team
 total never stands on a missing member. It reads the team as a member who has the rights to open it, trying each in turn. Not every member may read a team's week. A team with no live members gets no
-snapshot, because an empty week would claim the team did nothing.
+snapshot, because an empty week would claim the team did nothing. While the installation setting
+`installation.individual_performance` is off, `measureWorkspace` freezes no team week at all, and
+`readTeamReview` refuses every stored one with `individual_performance_off`. Both read the setting
+in their own transaction, and `teamWeekWithdrawn` reads it again before a weekly mail that names a
+team's members goes out.
 
 `team_weekly_review` is written once per team and week (`teamreviewstore.go`). The one exception is a
 snapshot that counted zero members: its first real measure replaces it, keeps its id, and writes an audit

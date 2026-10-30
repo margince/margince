@@ -18,6 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// assuranceExceptionsOwnedBy is the one read every surface that shows findings
+// goes through: the list endpoint, list_input_checks and the weekly digest. It
+// is also where each finding learns whether its inputs moved since the check,
+// so no surface can show a finding without that answer.
 func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
 	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
 	if err != nil {
@@ -39,6 +43,9 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 	})
 	if limit > 0 && len(found) > limit {
 		found = found[:limit]
+	}
+	if err := assurance.MarkOutOfDate(ctx, tx, found); err != nil {
+		return nil, err
 	}
 	return found, nil
 }

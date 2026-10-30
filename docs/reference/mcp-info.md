@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 138.6 KB |
+| Tool catalog | 138.8 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36562 |
+| Approx. wire tokens | 36624 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 25% | Yes, every step |
-| Input schemas | 64.3 KB | 46% | Yes, every step |
+| Input schemas | 64.6 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
-| **Description + input schema** | **99.4 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **99.6 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,7 +67,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1247 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
@@ -80,7 +80,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1066 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -90,7 +90,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1022 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
@@ -1960,6 +1960,9 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
                     },
                     "question": {
                       "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
                         "entity": {
                           "type": "string"
                         },
@@ -1991,6 +1994,10 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -5053,6 +5060,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                                     },
                                     "question": {
                                       "properties": {
+                                        "binding": {
+                                          "type": "string"
+                                        },
                                         "entity": {
                                           "type": "string"
                                         },
@@ -5084,6 +5094,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                                             "type": "object"
                                           },
                                           "type": "array"
+                                        },
+                                        "saved_question_id": {
+                                          "format": "uuid",
+                                          "type": "string"
                                         }
                                       },
                                       "required": [
@@ -6957,6 +6971,9 @@ search its evidence, and quote coverage with each number.
                     },
                     "question": {
                       "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
                         "entity": {
                           "type": "string"
                         },
@@ -6988,6 +7005,10 @@ search its evidence, and quote coverage with each number.
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
                         }
                       },
                       "required": [

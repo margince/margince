@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -12,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -66,13 +68,51 @@ func reportingScopeUnder(
 	return crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(resolved.Kind), Id: (*openapi_types.UUID)(resolved.ID), Label: &resolved.Label}, nil
 }
 
-func (a reportingAuthority) Members(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
-	return reportingMembers(ctx, tx, crmcontracts.ReportingScope{})
+func (a reportingAuthority) MeasurableOwnerSet(ctx context.Context, tx pgx.Tx) (reporting.MeasurableOwners, error) {
+	return readerMeasurableOwners(ctx, tx)
+}
+
+func (a reportingAuthority) TargetFloor(ctx context.Context, tx pgx.Tx) (reporting.TargetFloor, error) {
+	return targetFloor(ctx, tx)
+}
+
+// readerMeasurableOwners answers whose figures the reader may see one by one.
+// A seat reading every row sees every owner, and any other its population's
+// members. While the installation shows no individual performance, only the
+// reader. One evaluation resolves it once and passes it down.
+func readerMeasurableOwners(ctx context.Context, tx pgx.Tx) (reporting.MeasurableOwners, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return reporting.MeasurableOwners{}, apperrors.ErrPermissionDenied
+	}
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil {
+		return reporting.MeasurableOwners{}, err
+	}
+	if !allowed {
+		return reporting.MeasurableOwners{Members: []ids.UUID{actor.UserID}, IndividualOff: true}, nil
+	}
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
+		return reporting.MeasurableOwners{Every: true}, nil
+	}
+	members, err := reportingMembers(ctx, tx, crmcontracts.ReportingScope{})
+	return reporting.MeasurableOwners{Members: members}, err
 }
 
 // MeasurableOwners narrows candidates to the reader's own population. That
-// population holds the live members an owner scope admits and no one else.
+// population holds the live members an owner scope admits and no one else,
+// and only the reader while the installation shows no individual performance.
 func (a reportingAuthority) MeasurableOwners(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) ([]ids.UUID, error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		candidates = slices.DeleteFunc(slices.Clone(candidates), func(id ids.UUID) bool { return !auth.MayMeasureSeat(ctx, false, id) })
+		if len(candidates) == 0 {
+			return nil, nil
+		}
+	}
 	return reportingMembersAmong(ctx, tx, crmcontracts.ReportingScope{}, candidates)
 }
 
@@ -168,7 +208,12 @@ func (a reportingAuthority) PublicationHuman(ctx context.Context, tx pgx.Tx, use
 	if err != nil {
 		return nil, err
 	}
-	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions})
+	// A scheduled capture answers to the switch as a request does, read once.
+	allowed, err := identity.IndividualPerformanceTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	human := principal.WithActor(auth.WithIndividualPerformance(ctx, allowed), principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: seat, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions})
 	return principal.WithCorrelationID(human, ids.NewV7()), nil
 }
 
@@ -193,7 +238,7 @@ func reportingWriteReach(ctx context.Context, tx pgx.Tx, scope ResolvedScope) er
 	if scope.Kind == ScopeKindOwner && scope.ID != nil && *scope.ID == user {
 		return nil
 	}
-	reach := auth.TeamWeekReachOf(ctx)
+	reach := auth.TeamLeadReachOf(ctx)
 	if scope.Kind == ScopeKindManagedTeams || reach == auth.ReachesNoTeam {
 		return apperrors.ErrPermissionDenied
 	}

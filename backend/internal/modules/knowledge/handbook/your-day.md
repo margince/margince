@@ -117,7 +117,9 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### What can I do from a task?
-A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app.
+
+It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -338,8 +340,9 @@ The Worklist counts items, not cards: 8 possible duplicates are one card. More r
 - **"{shown} of {considered} items loaded"**: a share, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no share, because nobody
   knows the total. Each load checks a fixed number per category, and the list stops there. Approvals are counted in
-  full in every view but Team, so Decisions can show the total. Tasks are counted in full, and the list loads all of
-  them as you move down. **Team** shows no task total, nor does **All**, which leaves weekly plans out. A filter with no counts
+  full in every view but Team, so Decisions can show the total. Tasks are counted in full, and the list loads all tasks
+  and waiting customers as you move down, oldest first. **Team** shows no task total, nor does **All**, which
+  leaves weekly plans out. A filter with no counts
   says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 

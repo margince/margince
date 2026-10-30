@@ -51,6 +51,7 @@ import {
   ContactMailDrawer,
   ContactWriteTo,
   type Drawer,
+  type PressedComposer,
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
@@ -120,12 +121,15 @@ export function ContactPageV2({
   // it fired and says so in its prefill; before this the client dropped that
   // on the floor and opened the same empty composer as the generic button, so
   // "Draft a follow-up" and "Write an email" did exactly the same thing.
-  const [composerIntent, setComposerIntent] = useState("");
+  const [composerAsk, setComposerAsk] = useState<PressedComposer>({
+    intent: "",
+    drafts: false,
+  });
   // BOTH doors to the composer, answered in one place: the address opens it on
   // arrival, pressing "Write an email" opens it after. The page is at its
   // complexity ceiling — the lint says so — so the question is settled in the
   // hook rather than in two conditionals in the markup.
-  const composer = useComposer(t, drawer === "composer", composerIntent, () =>
+  const composer = useComposer(t, drawer === "composer", composerAsk, () =>
     setDrawer(null),
   );
 
@@ -135,9 +139,9 @@ export function ContactPageV2({
   // left behind, or it inherits a subject nobody asked for; and a composer
   // already on screen keeps what it holds, because a reader mid-sentence is not
   // asking to have their words replaced.
-  const openComposer = (intent: string) => {
+  const openComposer = (intent: string, drafts = false) => {
     if (drawer !== "composer") {
-      setComposerIntent(intent);
+      setComposerAsk({ intent, drafts });
     }
     setDrawer("composer");
   };
@@ -230,7 +234,12 @@ export function ContactPageV2({
       {/* Inside the gutter, not around it: the page's root is what insets it,
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
-      <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
+      <ContactWriteTo
+        contactId={id}
+        onWrite={(draftIntent) =>
+          openComposer(draftIntent ?? "", draftIntent !== undefined)
+        }
+      >
         <ContactCallStart
           contactId={id}
           canLog={!activity.pending && activity.refusedId === undefined}

@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/awaitingreply.go -->
+<!-- describes: backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/waitingcards.go backend/internal/modules/activities/awaitingreply.go -->
 # Worklist source census
 
 Every source `GET /v1/worklist` admits, with the store that reads it, the bound that cuts it, how it narrows to
@@ -28,11 +28,11 @@ The page counts two populations. `considered` is the rows left after step F, bef
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, and the task source's two
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
 windows (`backlog.go`).
 
-Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset. Today that is the
-task source only.
+Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
+(`backlogmerge.go`). Today those are the task, `customer_waiting` and `deal_at_risk` sources.
 
 ## Sources: store, bound and scope
 
@@ -46,7 +46,7 @@ seam or lane cuts after reading.
 | `meeting_outcome` | `activities` `ListActivities` through `attentionMeetingsAwaitingOutcome` | `plannedCap` (SQL), oldest first, back `unansweredLookbackDays` = 14 | As `meeting` |
 | `brief_item` | `compose/briefs` latest run, through `compose/attentionbriefingseam.go` | `briefQueueTarget` = 7 when the run is built (Go) | The reader's own run only; dropped on a named owner's page |
 | `deal_at_risk` | `modules/deals` `Store.ListDeals`, two sweeps in `compose/slipping.go` | `slippingScanLimit` = 50 per sweep (SQL) | `storekit.OwnerSetClause` in SQL: reader, named owner, no owner, or roster plus former teammates |
-| `customer_waiting` | `activities` `WaitingReplies*Before` (`modules/activities/waiting.go`) | `WaitingScanCap` = 200 per page (SQL), up to `waitingRefillRounds` = 3 pages (`compose/attentionwaitingseam.go`) | Mail responsibility in SQL: the reader's or named owner's seat, the roster's seats, or any seat |
+| `customer_waiting` | `activities` `WaitingRepliesNarrowedBefore` (`modules/activities/waitingcards.go`) | `WaitingScanCap` = 200 per page (SQL), up to `waitingRefillRounds` = 3 pages (`compose/attentionwaitingseam.go`) | Mail responsibility in SQL: the reader's or named owner's seat, the roster's seats, mail no seat answers for (`unassigned`), or any seat |
 | `awaiting_reply` | `activities` `Store.AwaitingReplies` (`modules/activities/awaitingreply.go`) | `AwaitingReplyScanCap` = 200 (SQL), sent at least the follow-up setting's days ago and within `AwaitingReplyLookbackDays` = 14 after that | Sent by the reader; not read for a named owner or `unassigned` |
 | `meeting_follow_up` | `activities` `MeetingsAwaitingFollowUp` | The same cap and window, from the meeting's end | Held meetings the reader answers for; not read for a named owner or `unassigned` |
 | `weekly_commitment` | `modules/weeklyplan` store, through `compose/attentionplanseam.go` | None; Go keeps open commitments due by end of today | Reader's plan; named owner's plan; each roster member's plan for `team`; withheld for `all` |
@@ -80,8 +80,8 @@ a verb of their own: a task is completed, a decision is decided.
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
-| `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes | Cursor exists, unused | No |
-| `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H | Yes, newest first | Yes, `WaitingPosition` | Clipped at the scan cap |
+| `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
+| `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
 | `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No |
 | `weekly_commitment` | A, C, H | Go | No | No |
 | `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending` |
@@ -97,12 +97,60 @@ a verb of their own: a task is completed, a decision is decided.
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
 window is the planned lane's own count; the later window is `CountTasks`. A team page counts neither: the roster arm
 (`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
-`laneBudget`. The tail still reads the team's tasks through that arm. The other sources still run steps in Go that
-their count would need:
+`laneBudget`. The tail still reads the team's tasks through that arm.
 
-- `customer_waiting`: the machine-sender test reads a registrable domain against a baseline in Go, and the thread
-  fold and the addressing rule run on the scanned rows.
-- `deal_at_risk`: step B needs the whole waiting population, and step F's came-back rule reads the row's own dates.
+The `customer_waiting` source is read on below the ranked rows to its end, in every scope, by
+`WaitingCardsAfter` (`modules/activities/waitingcards.go`). Each read judges a fixed number of messages after
+its position, oldest first, so its cost does not grow with the queue. The lane's Go steps hold in the tail:
+
+- The fold keeps the newest mail of each conversation of requests, and of each sender and subject for other mail
+  (`waitingFoldSQL`). A message is a card when no newer message of its fold is waiting. The page's scan reads
+  newest first, so its cards are the same cards.
+- The machine-sender rule stays one Go capability, `mailidentity.InboundFromSendingSystem`. Capture and the
+  activity writer stamp its verdict on `sender_is_machine`, and a data task stamps older mail. The tail drops
+  stamped mail before its fold. The lane and the tail also ask the rule itself of every row, so mail from before
+  the stamp, and chat, are judged as before.
+- "Addressed to more than one seat" needs no rule of its own: every scope's responsibility clause keeps only mail
+  with one sole seat.
+- `MarkRowsDone` finds a tail card through `waitingInTail`, which asks the tail's own card statement
+  (`WaitingCardsAmong`).
+- Steps A, C and F keep every row the SQL returns. Its narrowing is the scope's, and a waiting row's Done is the
+  reader's own state on the message, which the SQL reads.
+
+A card read in the tail carries no count of the requests folded into it.
+
+The category states no exact total. The queue's rules cost about 0.2 to 0.8 ms for each message they judge.
+With 2,476 cards a seat in `make bench-worklist-backlog`, a count took 850 ms on its own. A count capped at
+500 messages still took 420 ms, against a first page that must stay within 750 ms. The page reads run in one
+snapshot transaction, so the count cannot run beside them. The category stays a floor when the lane's scan is
+cut, and scrolling reaches every card.
+
+The `deal_at_risk` source is read on below the ranked rows to its end, in every scope, by `quietDealTail`
+(`compose/slipping.go`). It reads the lane's two sweeps as one predicate, `AtRiskWindow` in
+`modules/deals/atrisklist.go`, ordered by expected close with undated deals last. The lane's steps hold in the tail:
+
+- Step B: `DealsWaiting` (`compose/attentionwaitingseam.go`) asks which deals a waiting card names. It runs the
+  waiting tail's own card statement over the messages filed under the batch's deals
+  (`WaitingCardsOnDeals` in `modules/activities/waitingcards.go`), under the page's waiting narrowing. The ranked
+  rows keep step B over the waiting lane's own scan. When that scan was cut, a ranked deal whose customer's card
+  lies past it is still shown as at risk, and the card comes later in the tail. Asking `DealsWaiting` for the ranked
+  deals closes that gap, but made the first page 10% slower at p50 on a team page and 3% on a seat's own page.
+- Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
+  out of the tail (`dealsReported` in `attention/backlogrisk.go`). A task about the deal does not leave it out.
+- Step F: the tail reads the reader's Done marks for its rows, and `dropDone` applies the came-back rule to each
+  row's own dates. `MarkRowsDone` finds a tail deal through `riskInTail`.
+
+The category states no exact total. A count must apply step B to every at-risk deal, so it judges every waiting
+message filed under them by the queue's rules, and it needs the reader's Done marks on all of them. On the
+`make bench-worklist-backlog` data, the busiest seat has 1,535 at-risk deals. Reading their ids took 49 to 65 ms
+warm and 221 ms cold. Step B over them took 44 to 52 ms warm and 259 ms cold, with no waiting message filed under a
+deal; real mail on deals makes it cost more, up to the waiting count's own 850 ms. The first page may grow by at most
+5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
+every deal.
+
+The other sources still run steps in Go that their count would need:
+
+- `customer_waiting`: the count does not fit the first page, as above.
 - `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
 - Every other source: no count query that applies its steps exists yet.
 
@@ -169,4 +217,4 @@ answers 422 for a filter from another view. The cursor binds the view through `a
 | Waiting horizon | `DefaultWaitingHorizonDays` = 30 and `WaitingHorizonStaleAfter` = 24 hours in `backend/internal/platform/database/storekit/waitinghorizon.go`; the learned value in `backend/internal/modules/activities/waitinghorizon.go` | A request older than the horizon leaves the waiting source, unless it is an open request a human took |
 | Per-statement time | `laneBudget` = 4 seconds in `snapshot.go` | Each optional lane's statement times out and the lane is named as failed; it does not bound the whole lane |
 | Page size | `worklistPage` = 25 and `worklistMaxPage` = 100 in `worklist.go` | Rows per page |
-| Tail reads per page | `backlogRounds` = 4 in `backlogtail.go` | Store reads one page spends on one continued source; the cursor carries on after them |
+| Tail reads per page | `backlogRounds` = 4 in `backlogtail.go` | Rounds one page spends; each round reads every continued source once. The cursor carries on after them |

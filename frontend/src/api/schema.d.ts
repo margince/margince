@@ -9060,6 +9060,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/reports/{id}/questions/{card_id}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A question card's answer, asked on the server for this reader.
+         * @description Asks the question a card holds, as the reader may ask it now. A bound card asks the
+         *     saved question the report keeps, filters included, and the reader never receives the
+         *     filters. Before anything is asked, every value the question filters on is checked
+         *     against what the reader may see: a record they may not open, an owner they may not
+         *     measure or a field outside their vocabulary answers `restricted`.
+         *
+         *     The report's population and the question's own must both hold, and so must every
+         *     filter. A question that cannot hold inside the report is refused with the reason;
+         *     nothing is dropped to make it run. The floor and its complementary withholding apply
+         *     as they do to `/analytics/query`.
+         */
+        get: operations["answerReportingQuestionCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/reports/{id}/questions/{card_id}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The records behind one cell of a question card.
+         * @description The evidence for one cell of a card's answer, the question taken from the report as
+         *     the answer is. A reader for whom the answer is `restricted` is answered 404.
+         */
+        post: operations["explainReportingQuestionCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/targets": {
         parameters: {
             query?: never;
@@ -12797,6 +12855,28 @@ export interface paths {
          *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
+        trace?: never;
+    };
+    "/installation/settings/fiscal-year-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much saved work reads a period, before the fiscal start moves (admin/ops).
+         * @description Counts the saved questions and reports a move of `fiscal_year_start_month` concerns, so
+         *     the admin reads the number before saving. Governed by the `installation_settings`
+         *     RBAC object's update grant.
+         */
+        get: operations["getFiscalYearImpact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/installation/configuration": {
@@ -19737,6 +19817,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/sdr-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+         * @description `workflow` says whether this workspace hands prospects on. A reporting framework set up
+         *     for SDR teams (`template: sdr`) does, and `handoffs` is then present. Any other setup
+         *     answers `qualification` and leaves `handoffs` out. A zero is never read as the setup:
+         *     a team that hands on nothing this week still has a handoff workflow.
+         *
+         *     A handoff waits from the start of its current submission. One returned and resubmitted
+         *     starts a new wait. Each handoff is credited to whoever submitted that round. No handoff
+         *     target time is configured anywhere, so only the age is given.
+         *
+         *     `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
+         *     that have not happened by `as_of`, credited by the
+         *     meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
+         *     read activities.
+         *
+         *     Both counts are one statement each over the scope, never a read per row. The scope is
+         *     checked as every analytics read checks it: an owner or team the seat may not measure
+         *     is 404, so the answer does not say that they exist.
+         */
+        get: operations["getSdrSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sdr-summary/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The handoffs waiting on somebody else, oldest wait first, one page at a time.
+         * @description The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
+         *     current wait began and then by id. A prospect the seat may not read is listed as
+         *     `restricted` with no name and no id. A handoff carries no deal while it waits, so no
+         *     deal field is ever part of a row.
+         */
+        get: operations["listSdrWaitingHandoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/schema": {
         parameters: {
             query?: never;
@@ -23136,6 +23275,17 @@ export interface components {
              */
             call_zalo: boolean;
             /**
+             * @description Show individual performance. On by default. Off, reports, analytics questions,
+             *     forecasts and forecast shares, targets, evidence, editions and their exports, and
+             *     team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+             *     by owner or meeting host are refused, a colleague's scope is refused, and a figure
+             *     that any colleague contributes to is refused unless at least two live colleagues
+             *     besides the reader do. Each reader keeps their own figures. The Team board, coaching
+             *     moves, a lead's view of a named member's queue, the morning mail's team section and
+             *     team weekly plans are not covered yet.
+             */
+            individual_performance: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -23147,12 +23297,12 @@ export interface components {
              *     a reader can tell which twelve months a bucket covers without knowing the
              *     convention. A January year is not a span and keeps the plain `2026`.
              *
-             *     One thing it does NOT carry, and a client storing report filters should know it:
-             *     a SAVED report view holds the bucket's text, so a view saved under one fiscal
-             *     start names a different span after the start moves — or no span at all, since a
-             *     calendar year maps onto parts of two fiscal years. The report still runs and
-             *     still looks right. Whether such a view is re-pointed, invalidated or merely
-             *     warned about is undecided: margince/margince#2569.
+             *     A saved question, or a report card bound to one, that filters on a period keeps
+             *     the zone and fiscal start it was saved under, so `2026` saved under a January start
+             *     still means January to December 2026 after the start moves: the move writes down the
+             *     calendar in force before it. A relative period, such as this quarter, follows the
+             *     current setting.
+             *     `/installation/settings/fiscal-year-impact` counts both before a move.
              */
             fiscal_year_start_month: number;
             /**
@@ -23274,15 +23424,15 @@ export interface components {
             call_telegram?: boolean;
             /** @description Show the Zalo link next to a contact's phone number. Omit to leave it unchanged. */
             call_zalo?: boolean;
+            /** @description Show individual performance. Omit to leave it unchanged. Each change is audited. */
+            individual_performance?: boolean;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
              *     once and re-means no stored row.
              *
-             *     It does not re-point a SAVED report view, which holds the bucket's TEXT and so
-             *     names a different span afterwards. Sending this field is enough to leave those
-             *     views filtering on a span nobody asked for; nothing here reports how many.
-             *     margince/margince#2569.
+             *     A saved period filter keeps the dates it was saved with, and a relative period
+             *     follows the new start. `/installation/settings/fiscal-year-impact` counts both.
              */
             fiscal_year_start_month?: number;
             /**
@@ -25039,6 +25189,42 @@ export interface components {
              *     runs its own window, so this date names the next message to go rather than all of them.
              */
             deletes_at?: string;
+        };
+        /**
+         * @description One website form submission as the visitor sent it. Every value is the visitor's own
+         *     text and nothing Margince checked, except `consent`, which is the form's own record of
+         *     its consent box.
+         */
+        WebFormSubmission: {
+            /** @description The free text the visitor wrote. */
+            message?: string;
+            full_name?: string;
+            /** @description The address the lead was matched or created by. */
+            email: string;
+            /** @description As typed; it may lack the country prefix a lead's phone needs. */
+            phone?: string;
+            company?: string;
+            title?: string;
+            /** @description The form's other fields, in the order they were sent, under the names the form gave them. */
+            extra: components["schemas"]["WebFormValue"][];
+            /** @description The page the form was sent from. */
+            page_url?: string;
+            referrer?: string;
+            /** @description The `utm_` parameters the page carried. */
+            campaign: components["schemas"]["WebFormValue"][];
+            consent?: components["schemas"]["WebFormConsent"];
+        };
+        WebFormValue: {
+            name: string;
+            value: string;
+        };
+        /** @description The consent box the form showed. Absent when the form shows none. */
+        WebFormConsent: {
+            ticked: boolean;
+            /** @description The words the box showed, as the admin wrote them when the form was sent. */
+            wording: string;
+            /** @description The privacy policy version the form named, when it named one. */
+            policy_version?: string;
         };
         /**
          * @description Who wrote a record in the system it was imported from, when that is not
@@ -36295,6 +36481,8 @@ export interface components {
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
+            /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
+            readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -40005,7 +40193,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -40020,6 +40208,78 @@ export interface components {
          * @enum {string}
          */
         ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
+        SdrSummary: {
+            /**
+             * Format: date-time
+             * @description The instant both counts were read at.
+             */
+            as_of: string;
+            scope: components["schemas"]["AnalyticsScope"];
+            /**
+             * @description `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+             * @enum {string}
+             */
+            workflow: "handoff" | "qualification";
+            handoffs?: components["schemas"]["SdrHandoffTotals"];
+            /** @description Booked meetings that start after `as_of`, credited to the scope. */
+            upcoming_meetings?: number;
+        };
+        SdrHandoffTotals: {
+            /** @description Handoffs submitted and not yet decided. */
+            waiting: number;
+            /** @description Waiting handoffs offered to nobody in particular. */
+            unassigned: number;
+            /** @description Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them. */
+            blocked: number;
+            /** @description Handoffs sent back to the submitter to try again. These wait on the submitter. */
+            returned: number;
+            /**
+             * Format: date-time
+             * @description When the longest current wait began. Absent with nothing waiting.
+             */
+            oldest_waiting_since?: string;
+        };
+        SdrWaitingHandoff: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description The start of the current submission.
+             */
+            waiting_since: string;
+            /** @description Whether this handoff was returned and submitted again. */
+            resubmitted: boolean;
+            /** @description The seat may not read the prospect, so `subject` is absent. */
+            restricted: boolean;
+            subject?: components["schemas"]["SdrHandoffSubject"];
+            /**
+             * Format: uuid
+             * @description Who submitted the current round.
+             */
+            submitter_id?: string;
+            recipient?: components["schemas"]["SdrHandoffRecipient"];
+        };
+        SdrHandoffSubject: {
+            /** @enum {string} */
+            type: "lead" | "contact";
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SdrHandoffRecipient: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /** @description False when the recipient was suspended, deactivated or removed. The handoff is then blocked. */
+            active: boolean;
+        };
+        SdrWaitingHandoffPage: {
+            /** Format: date-time */
+            as_of: string;
+            rows: components["schemas"]["SdrWaitingHandoff"][];
+            /** @description Absent on the last page. */
+            next_cursor?: string;
+        };
         ReportingScope: {
             /** @enum {string} */
             kind: "owner" | "team" | "workspace" | "managed_teams";
@@ -40076,11 +40336,10 @@ export interface components {
         ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "question";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
-         *     `question`. The page asks it through `/analytics/query` for each reader, under their
-         *     own grants and over the report's scope. Every reader of the report receives it, so it
-         *     carries no filters (a filter value can name a record a reader may not open), no scope
-         *     and no save. A sent edition keeps the answer its sender was given, as
-         *     `ReportingEditionQuestion` describes.
+         *     `question`. Every reader of the report receives it, so it carries no filters (a filter
+         *     value can name a record a reader may not open), no scope and no save. A sent edition
+         *     keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+         *     with `binding` asks a saved question the server keeps, filters and all.
          */
         ReportingCardQuestion: {
             /** @description The population, by name. */
@@ -40089,6 +40348,49 @@ export interface components {
             measures: components["schemas"]["AnalyticsMeasure"][];
             /** @description The rows the card shows; 100 when absent. */
             limit?: number;
+            /**
+             * Format: uuid
+             * @description Sent on a save to bind the card to this saved question. Never served back.
+             */
+            saved_question_id?: string;
+            /** @description The opaque reference to the saved question a bound card asks. Send it back unchanged to keep it. */
+            binding?: string;
+        };
+        /** @description What every reader of a report may know of the saved question a card is bound to. */
+        ReportingQuestionBinding: {
+            /** @description Whether the question narrows its population with filters. */
+            filtered: boolean;
+            period_basis?: components["schemas"]["ReportingPeriodBasis"];
+        };
+        /** @description The calendar a kept question's period filters keep their dates in. */
+        ReportingPeriodBasis: {
+            timezone: string;
+            fiscal_year_start_month: number;
+        };
+        /**
+         * @description A bound question card's answer for this reader. `restricted`: the reader may not see a
+         *     value the question filters on, so nothing of the answer is shown: no rows, no labels
+         *     and no total.
+         */
+        ReportingQuestionAnswer: {
+            /** @enum {string} */
+            status: "answered" | "restricted";
+            binding?: components["schemas"]["ReportingQuestionBinding"];
+            answer?: components["schemas"]["AnalyticsAnswer"];
+        };
+        /**
+         * @description What a move of the fiscal year start does to saved work, counted before the move is
+         *     saved. A saved question or a report card that filters on a period such as `2026` keeps
+         *     the dates it was saved with. A report that reads a relative period, such as this
+         *     quarter, follows the new start.
+         */
+        InstallationFiscalYearImpact: {
+            /** @description Saved questions, of every member, that filter on a period. */
+            saved_questions: number;
+            /** @description Live reports with a card whose saved question filters on a period. */
+            reports_with_kept_periods: number;
+            /** @description Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window. */
+            reports_with_relative_periods: number;
         };
         ReportingCard: {
             /** @description A short id the client mints. Unique within the report, so one chart kind can be placed twice. */
@@ -40124,6 +40426,8 @@ export interface components {
             framework_revision: number;
             definition_version: string;
             member_ids: string[];
+            /** @description The fiscal start month in force. Absent on older editions. */
+            fiscal_year_start_month?: number;
             /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
             scope_holds_deals?: boolean;
         };
@@ -40217,6 +40521,109 @@ export interface components {
             attainment?: number;
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
+            target_comparison?: components["schemas"]["ReportingTargetComparison"];
+        };
+        /**
+         * @description Where the current fiscal quarter's expected landing stands against a
+         *     compatible `bookings_won` target, and how far the open pipeline covers
+         *     what is left to win. Present only on the `forecast_landing` metric.
+         *     Every amount is in minor units of the context currency.
+         *
+         *     - `gap` is `target` minus `landing`: positive is short, negative is ahead.
+         *     - `remaining` is `target` minus `won`, never below zero.
+         *     - `coverage` is `open_pipeline` divided by `remaining`: the open deals
+         *       expected to close in the quarter, over what is left to win.
+         *
+         *     `won` and `open_pipeline` come from the same forecast reading as
+         *     `landing`, so a won deal is never counted twice. A manager call is a
+         *     whole-quarter figure and is never added to `won`.
+         */
+        ReportingTargetComparison: {
+            /**
+             * @description `compared` carries every figure. `target_reached` means `remaining`
+             *     is zero; it carries no `coverage`, never an infinite one.
+             *     `no_target` means no target is set for this metric, scope,
+             *     pipeline and quarter, or the reader may not read targets; a missing
+             *     target is never zero. `fx_missing` means a deal amount has no
+             *     exchange rate to the base currency, so the totals are incomplete
+             *     and no gap or coverage is given. `partial_visibility` means the
+             *     reader cannot see every deal of the population asked for, or a
+             *     deal's amount, so its figures cannot stand against the scope's
+             *     whole target.
+             *     `colleague_withheld` means individual performance is off and the
+             *     figure would be one colleague's own. `call_below_won` means the
+             *     manager call is below what is already won, so the landing and the
+             *     sales won disagree and no gap or coverage is given. `incompatible`
+             *     names why in `incompatibility` and offers `supported_selection`
+             *     when a selection can fix it.
+             * @enum {string}
+             */
+            status: "compared" | "target_reached" | "no_target" | "fx_missing" | "partial_visibility" | "colleague_withheld" | "call_below_won" | "incompatible";
+            /**
+             * @description Present only with status `incompatible`. `period`: the selection
+             *     is not `this_quarter`, or its target interval is not the current
+             *     fiscal quarter. `scope`: the forecast
+             *     does not read this scope as one population. `pipeline`: only a
+             *     target for the whole scope exists, and it is not split across
+             *     pipelines. `manager_call_pipeline`: the landing is a manager call,
+             *     which covers every pipeline. `currency`: the target that would
+             *     apply, for this pipeline or else for every pipeline, was set in
+             *     another currency than the base currency.
+             * @enum {string}
+             */
+            incompatibility?: "period" | "scope" | "pipeline" | "manager_call_pipeline" | "currency";
+            /** @description Present only with status `incompatible`. The same selection, changed so the comparison is supported. */
+            supported_selection?: components["schemas"]["ReportingSelection"];
+            target_metric: components["schemas"]["ReportingMetricID"];
+            /** Format: uuid */
+            target_id?: string;
+            /** Format: int64 */
+            target_revision?: number;
+            /** Format: double */
+            target?: number;
+            /**
+             * @description The forward measure the landing was projected with.
+             * @enum {string}
+             */
+            basis?: "commit_evidence" | "weighted" | "manager_call";
+            /** Format: double */
+            landing?: number;
+            /** Format: double */
+            won?: number;
+            /** Format: double */
+            gap?: number;
+            /** Format: double */
+            remaining?: number;
+            /** Format: double */
+            open_pipeline?: number;
+            /** Format: double */
+            coverage?: number;
+            qualified?: components["schemas"]["ReportingQualifiedCoverage"];
+            operands?: components["schemas"]["ReportingComparisonOperands"];
+        };
+        /**
+         * @description Coverage over the deals the qualified forecast keeps, beside the
+         *     coverage over all open deals. Present when the comparison carries
+         *     figures.
+         */
+        ReportingQualifiedCoverage: {
+            /**
+             * @description `not_enforced` means the qualified forecast is switched off, so no
+             *     open deal is judged and no qualified figure exists.
+             * @enum {string}
+             */
+            status: "compared" | "target_reached" | "not_enforced";
+            /** Format: double */
+            open_pipeline?: number;
+            /** Format: double */
+            coverage?: number;
+        };
+        /** @description The evidence each figure of a target comparison was read from. */
+        ReportingComparisonOperands: {
+            won: components["schemas"]["ReportingEvidenceRef"];
+            landing: components["schemas"]["ReportingEvidenceRef"];
+            open_pipeline: components["schemas"]["ReportingEvidenceRef"];
+            qualified_open_pipeline?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingEvaluation: {
             evaluation_key: string;
@@ -40228,6 +40635,8 @@ export interface components {
         ReportingMetricDefinition: {
             allowed_filters?: string[];
             attribution?: string;
+            /** @description The metric's name in the reader's language, as the screen and the CSV export show it. Presentation only; `id` stays the machine identifier, and no receipt depends on it. */
+            label: string;
             required_fields?: string[];
             read_object?: string;
             minimum_cohort?: number;
@@ -40465,6 +40874,7 @@ export interface components {
              * @enum {string}
              */
             reason?: "retention_unconfigured" | "too_many_records" | "unanswered" | "counts_other_records";
+            binding?: components["schemas"]["ReportingQuestionBinding"];
             answer?: components["schemas"]["AnalyticsAnswer"];
         };
         ReportingEvidenceRow: {
@@ -41176,6 +41586,8 @@ export interface components {
              * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
              */
             last_seen_at: string;
+            /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way. */
+            inputs_changed: boolean | null;
         };
         ResolveInputCheck: {
             /**
@@ -41277,6 +41689,26 @@ export interface components {
             eligible_signals?: number;
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
+            freshness: components["schemas"]["AssuranceFreshness"];
+        };
+        /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
+        AssuranceFreshness: {
+            /**
+             * @description `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
+             * @enum {string}
+             */
+            state: "current" | "out_of_date" | "unknown";
+            /** @description Deals whose record, offers, contracts or activities changed after the check. */
+            changed_deals: number;
+            /** @description Buying signals whose signal, company or deal suggestion changed after the check. */
+            changed_signals: number;
+            /** @description A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check. */
+            workspace_changed: boolean;
+            /**
+             * Format: date-time
+             * @description The oldest change the check has not read. Absent when there is none.
+             */
+            changed_since?: string;
         };
         ForecastAssuranceSource: {
             /** @enum {string} */
@@ -52061,7 +52493,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
-        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). */
+        /** @description RBAC object/action denial — the authenticated principal's role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. */
         PermissionDenied: {
             headers: {
                 [name: string]: unknown;
@@ -67553,6 +67985,88 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    answerReportingQuestionCard: {
+        parameters: {
+            query?: {
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The answer, or that it is restricted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingQuestionAnswer"];
+                };
+            };
+            /** @description The question cannot be asked inside this report, or for this reader. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    explainReportingQuestionCard: {
+        parameters: {
+            query?: {
+                revision?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                card_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportRunCell"];
+            };
+        };
+        responses: {
+            /** @description The records behind the cell, as this reader may read them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyticsExplanation"];
+                };
+            };
+            /** @description The question cannot be asked inside this report, or the cell does not fit it. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["AnalyticsRefusal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listReportingTargets: {
         parameters: {
             query?: {
@@ -72774,6 +73288,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             409: components["responses"]["SettingLocked"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getFiscalYearImpact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallationFiscalYearImpact"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
         };
     };
     getInstallationConfiguration: {
@@ -82834,6 +83370,67 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getSdrSummary: {
+        parameters: {
+            query?: {
+                /** @description Whose work to count. Omitted means the seat's own default population. */
+                scope_kind?: "owner" | "team" | "workspace";
+                /** @description The owner or team named by `scope_kind`. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSdrWaitingHandoffs: {
+        parameters: {
+            query?: {
+                /** @description Whose handoffs to list. Omitted means the seat's own default population. */
+                scope_kind?: "owner" | "team" | "workspace";
+                /** @description The owner or team named by `scope_kind`. */
+                scope_id?: string;
+                /** @description Opaque position from a previous page's `next_cursor`. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of waiting handoffs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrWaitingHandoffPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getAnalyticsSchema: {
         parameters: {
             query?: never;
@@ -82908,6 +83505,8 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Only the questions about this population. */
+                entity?: string;
             };
             header?: never;
             path?: never;

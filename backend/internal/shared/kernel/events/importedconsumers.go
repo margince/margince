@@ -59,6 +59,9 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:commitment-settle":  {SkipImported, "an old task update must not settle a commitment kept today"},
 	"cg:capture-enrich":     {SkipImported, "queues a model-backed pass that spends credits on mail nobody just received"},
 	"cg:vcard-ingest":       {SkipImported, "parses a card attached to mail that arrives now"},
+	"cg:assurance-freshness": {
+		KeepImported, "an imported deal or activity is a record the last input check has not read",
+	},
 }
 
 // ImportedDecisionOf answers a group's decision. A group with no entry has none,
