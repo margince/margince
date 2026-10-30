@@ -256,6 +256,32 @@ describe("handing a file to the Settings voice card", () => {
     expect(box).toHaveProperty("value", "");
   });
 
+  it("keeps pasted text in the box when the server refuses it", async () => {
+    stubApi({
+      status: 422,
+      body: {
+        code: "validation_error",
+        title: "Unprocessable",
+        detail: "That source is not eligible.",
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+      },
+    });
+    render(<VoiceCorpusIntake profileId="vp-1" onChanged={() => {}} />);
+    const box = screen.getByLabelText("Paste text");
+
+    await userEvent.type(box, "some words");
+    await userEvent.click(screen.getByRole("button", { name: "Add text" }));
+
+    expect(
+      await screen.findByText(/Pasted text could not be added/),
+    ).toBeTruthy();
+    expect(box).toHaveProperty("value", "some words");
+    expect(screen.getByRole("button", { name: "Add text" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
   // This is the defect the card shipped with: a meeting transcript was posted
   // straight through as kind:"other", counting every speaker's words as the
   // owner's own. Nothing may reach the corpus before the question is answered.

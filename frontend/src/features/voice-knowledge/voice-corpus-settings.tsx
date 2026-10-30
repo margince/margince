@@ -78,8 +78,12 @@ export function VoiceCorpusIntake({
               onPick={(file) => intake.addFiles([file])}
             />
             <PasteSample
-              onAdd={(text) =>
-                intake.addPaste(text, t("settings.voice.pasteSource"))
+              onAdd={(text, onSettled) =>
+                intake.addPaste(
+                  text,
+                  t("settings.voice.pasteSource"),
+                  onSettled,
+                )
               }
             />
             {intake.pendingAsk && (
@@ -120,11 +124,16 @@ export function VoiceCorpusIntake({
   );
 }
 
-// The box empties once its text is handed over, so the next paste starts
-// clean; the notice under the zone says what became of it.
-function PasteSample({ onAdd }: Readonly<{ onAdd: (text: string) => void }>) {
+// The box empties once the text is taken, and keeps it for a retry when the
+// add fails. The notice under the zone says what became of it.
+function PasteSample({
+  onAdd,
+}: Readonly<{
+  onAdd: (text: string, onSettled: (taken: boolean) => void) => void;
+}>) {
   const t = useT();
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
   const blank = text.trim() === "";
   return (
     <div>
@@ -140,10 +149,15 @@ function PasteSample({ onAdd }: Readonly<{ onAdd: (text: string) => void }>) {
       </Field>
       <div className="vdna-composer-actions">
         <Button
-          disabled={blank}
+          disabled={blank || sending}
           onClick={() => {
-            onAdd(text);
-            setText("");
+            setSending(true);
+            onAdd(text, (taken) => {
+              setSending(false);
+              if (taken) {
+                setText("");
+              }
+            });
           }}
         >
           {t("settings.voice.pasteAdd")}

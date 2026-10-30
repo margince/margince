@@ -298,11 +298,25 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
     [knownRefs, note, runIntake],
   );
 
-  // Keyed by content: the same words pasted twice update one row.
+  // Keyed by content: the same words pasted twice update one row. `onSettled`
+  // says whether the text was taken, so the box keeps it for a retry if not.
   const addPaste = useCallback(
-    (text: string, label: string) => {
+    (text: string, label: string, onSettled: (taken: boolean) => void) => {
       const ref = sourceRef("paste", label, text, knownRefs());
-      runIntake(label, () => intakePaste(ref, label, text));
+      runIntake(label, () =>
+        intakePaste(ref, label, text).then(
+          (outcome) => {
+            onSettled(
+              outcome.kind === "ingested" || outcome.kind === "speaker-needed",
+            );
+            return outcome;
+          },
+          (err: unknown) => {
+            onSettled(false);
+            throw err;
+          },
+        ),
+      );
     },
     [knownRefs, runIntake],
   );
