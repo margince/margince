@@ -71,7 +71,7 @@ A stored signal or finding cannot create current work alone. Suggestions without
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
 
-Current deal actions use the deal page's rules over one batch of owning reads, for the deal rows on the page only.
+Current deal actions use the deal page's rules over one batch of owning reads, for the page's deal rows that the brief or the at-risk lane raised.
 They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
 
 Saved model words are an earlier view, with their written date. They never admit work or change its rank.
