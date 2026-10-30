@@ -182,6 +182,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [forecast-model-evaluation.md](reference/forecast-model-evaluation.md): the command that scores past
+  forecasts, and the values to set before a new model is tested.
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.
