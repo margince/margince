@@ -112,10 +112,10 @@ describe("the query client defaults", () => {
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
-  // both answers of each are load-bearing: a record read repeats and refetches
-  // on the way back to the tab, and nothing else does either. Asked of both
-  // kinds of key, because what a change could get wrong is one kind while the
-  // other stays right.
+  // both answers of each are load-bearing. A record read repeats, and it
+  // refetches on the way back to the tab along with the installation read.
+  // Asked of both kinds of key, because what a change could get wrong is one
+  // kind while the other stays right.
   //
   // The predicates, not the defaults they are installed as. What they are
   // wired to is proved end to end in features/records/liverecord.test.tsx,
@@ -130,11 +130,16 @@ describe("the query client defaults", () => {
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
-  it("refetches a record on the way back to the tab, and nothing else", () => {
+  it("refetches a record and the installation on the way back to the tab", () => {
     // "always" and not `true`: `true` refetches only a read already stale, so
     // inside the staleness window above the return would be served the cache.
     expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
+    // The installation read carries the policy that decides whether figures
+    // already on screen may stay there, so it comes back with the reader.
+    expect(liveOnReturn({ queryKey: ["installation-settings"] })).toBe(
+      "always",
+    );
   });
 
   it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
