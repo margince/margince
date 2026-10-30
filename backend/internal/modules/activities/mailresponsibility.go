@@ -19,9 +19,8 @@ import (
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
-// A named seat's read starts from the mail its To line names, which holds
-// every mail the seat answers for. The scan then judges that share only, and
-// keep (see DirectMailActivitiesSQL) drops what the scan would refuse anyway.
+// A named seat's read starts from the mail its To line names, and keep drops
+// what the scan would refuse anyway (DirectMailActivitiesSQL).
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, keep string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"

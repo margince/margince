@@ -304,18 +304,10 @@ func awaitingNeedSQL() string {
 `
 }
 
-// awaitingRepliesSQL: every rule sits before the cap.
-//
-//  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the reader's
-//     addresses, 5. the follow-up window in days, 6. the lookback in days past
-//     it, 7. content gate on later, 8. what counts as contact for later, 9. the
-//     reader, 10. a snooze lifted, 11. the customer arms the reader may read,
-//  12. the cap.
-//
-// awaitingHeardSinceSQL is every candidate somebody it went to has been in
-// contact with since, on any channel: a call or a meeting with them is a
-// follow-up already made. One set over every candidate, because asked per
-// candidate it walked each recipient's whole history once per mail.
+// awaitingHeardSinceSQL lists the candidates whose recipients were in contact
+// since, on any channel: a call or a meeting with them is a follow-up already
+// made. It is one set over every candidate. Asked per candidate, it walked each
+// recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
 var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
 	  JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
@@ -328,6 +320,13 @@ var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	   AND later.occurred_at > c.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
 	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
 
+// awaitingRepliesSQL: every rule sits before the cap.
+//
+//  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the reader's
+//     addresses, 5. the follow-up window in days, 6. the lookback in days past
+//     it, 7. content gate on later, 8. what counts as contact for later, 9. the
+//     reader, 10. a snooze lifted, 11. the customer arms the reader may read,
+//  12. the cap.
 var awaitingRepliesSQL = `
 	SELECT a.id, COALESCE(a.subject, ''), a.occurred_at,
 	       COALESCE((array_agg(wl.contact_id ORDER BY wl.contact_id::text)
