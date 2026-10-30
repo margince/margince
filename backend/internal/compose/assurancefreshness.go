@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -44,6 +46,16 @@ type AssuranceFreshness struct {
 	db       *database.DB
 	store    *assurance.Store
 	identity *identity.Service
+	// rescans queues a one-deal pass for each changed deal. Nil marks only.
+	rescans assuranceRescanEnqueuer
+}
+
+// WithRescans queues a one-deal input check for every deal the marker marks,
+// in the transaction that marks it.
+func (f *AssuranceFreshness) WithRescans(rescans assuranceRescanEnqueuer) *AssuranceFreshness {
+	wired := *f
+	wired.rescans = rescans
+	return &wired
 }
 
 // NewAssuranceFreshness builds the consumer over the installation's handle.
@@ -75,8 +87,49 @@ func (f *AssuranceFreshness) HandleBatch(ctx context.Context, envs []events.Enve
 		if err != nil {
 			return err
 		}
-		return f.store.MarkInputsChanged(ctx, tx, subjects)
+		if err := f.store.MarkInputsChanged(ctx, tx, subjects); err != nil {
+			return err
+		}
+		return f.queueRescans(ctx, tx, ws.UUID, subjects)
 	})
+}
+
+// queueRescans queues one pass per changed deal, at most
+// assuranceRescanBatchLimit of them and never past the workspace's backlog
+// limit (assuranceRescanRoom). A workspace nobody started is not
+// checked, so nothing is queued there. A change that reaches every deal queues
+// nothing: that is the nightly pass's work.
+func (f *AssuranceFreshness) queueRescans(
+	ctx context.Context, tx pgx.Tx, workspace ids.UUID, subjects []assurance.ChangedSubject,
+) error {
+	if f.rescans == nil {
+		return nil
+	}
+	var changed []ids.UUID
+	for _, subject := range subjects {
+		if subject.Scope == assurance.ScopeDeal && !slices.Contains(changed, subject.ID) {
+			changed = append(changed, subject.ID)
+		}
+	}
+	if len(changed) == 0 {
+		return nil
+	}
+	enrolled, err := f.store.EverRunTx(ctx, tx)
+	if err != nil || !enrolled {
+		return err
+	}
+	room, err := assuranceRescanRoom(ctx, tx, workspace)
+	if err != nil {
+		return err
+	}
+	slices.SortFunc(changed, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
+	for _, deal := range changed[:min(len(changed), room)] {
+		args := AssuranceDealRescanArgs{Workspace: workspace, Deal: deal}
+		if err := f.rescans.EnqueueTx(ctx, tx, args, assuranceRescanInsertOpts()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // inputChanges is what a batch changed: the subjects it names outright, and

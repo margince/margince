@@ -214,6 +214,16 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // sits behind the grant that reads the thing being shared. Splitting them
 // across the literal and here would put half of that seam out of sight of the
 // other half.
+// newForecastHandlers is the forecast surface over its seams, every call
+// recorded through it keeping its baseline.
+func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
+	return forecasting.NewHandlers(
+		newForecastStoreFor(pool),
+		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
+	).WithCallBaseline(ForecastCallBaseline)
+}
+
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
 	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
@@ -221,12 +231,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
 	}
-	s.forecastHandlers = forecasting.NewHandlers(
-		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
-		func() time.Time { return time.Now().UTC() },
-	)
+	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.

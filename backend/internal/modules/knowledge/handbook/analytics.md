@@ -46,6 +46,10 @@ The list names up to five open forecast checks for the records you picked. Each 
 
 A check is **Out of date** when a record it read changed after it ran. It reads deals with their offers, contracts and activities, buying signals with their company, stages and forecast calls. The verdict and findings stay as the check left them, with the mark beside them, and the verdict loses its colour. **Check again** reads the changes now, and the next nightly check reads them too. A check that could not read every source, the mailbox included, clears no mark. Until a check reads every source, the review says it cannot tell whether anything changed.
 
+A change to one deal also starts a check of that deal alone. When it lands, it clears that deal's mark, and the screen does not wait for it. A manager forecast is checked against the pipeline it was recorded over. **Forecast call needs review** names the call and the deals that moved.
+
+A deal moved if its amount changed, it entered or left the period, or it left or came back to the qualified forecast. Age alone never flags a call. If the team, base currency or financial year changed since, the finding says the call cannot be compared. A call recorded before Margince kept what it was made against says that what moved since cannot be said.
+
 The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
@@ -289,13 +293,9 @@ quarter in its place.
 **"A call is the amount you expect to close. It records your number and changes
 no deal."**
 
-To record a call, press **Update forecast**. Fill **Expected total for this
-period** (in the base currency) and a **Supporting note**, then press **Save
-forecast**. The call is filed against the period *and* the records you are
-looking at.
+To record a call, press **Update forecast**. Fill **Expected total for this period** (in the base currency) and a **Supporting note**, then press **Save forecast**. The call is filed against the period *and* the records you are looking at.
 
-Each new call is kept beside the ones before it. None is written over, and the
-first call of a period is recorded the same way.
+Each new call is kept beside the ones before it. None is written over, and the first call of a period is recorded the same way.
 
 Who may record one: not a rep. The manager forecast is a claim about a team or
 the whole company. So a seat that sees only its own records does not get the

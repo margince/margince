@@ -1282,7 +1282,7 @@ public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
 public.assurance_exception.assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text])))
-public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text])))
+public.assurance_exception.assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text, 'forecast_call'::text])))
 public.assurance_exception.assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.assurance_exception.assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
@@ -1361,6 +1361,7 @@ public.assurance_run.readiness text gen=- def=-
 public.assurance_run.requested_by text gen=- def=-
 public.assurance_run.rule_versions jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_run.status text NOT NULL gen=- def='running'::text
+public.assurance_run.subject_deal_id uuid gen=- def=-
 public.assurance_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_run.version bigint NOT NULL gen=- def=1
 public.assurance_run_finding acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4586,6 +4587,7 @@ public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK 
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
+public.forecast_contribution.forecast_contribution_qualification_check CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible'::text, 'excluded'::text, 'unsupported'::text, 'unknown'::text]))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
@@ -4601,6 +4603,7 @@ public.forecast_contribution.in_lost boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
+public.forecast_contribution.qualification text gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
@@ -4646,6 +4649,7 @@ public.forecast_snapshot.forecast_snapshot_won_minor_js_safe CHECK (((won_minor 
 public.forecast_snapshot.forward_measure text gen=- def=-
 public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
+public.forecast_snapshot.input_fingerprint text gen=- def=-
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
 public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.period_end date NOT NULL gen=- def=-
@@ -4965,6 +4969,7 @@ public.idx_field_provenance_object CREATE INDEX idx_field_provenance_object ON p
 public.idx_forecast_call_period CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id)
 public.idx_forecast_contribution_audit CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL)
 public.idx_forecast_contribution_deal CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC)
+public.idx_forecast_snapshot_call CREATE INDEX idx_forecast_snapshot_call ON public.forecast_snapshot USING btree (call_id) WHERE (call_id IS NOT NULL)
 public.idx_forecast_snapshot_context CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC)
 public.idx_forecast_snapshot_period CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)
 public.idx_graph_contact_edge_b CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (contact_b)

@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-27 columns · primary key `(id)` · referenced by 0 foreign keys
+28 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -93,6 +93,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `in_open` | `boolean`, default `false` | yes |  |
 | `in_won` | `boolean`, default `false` | yes |  |
 | `owner_id` | `uuid` |  |  |
+| `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
 | `snapshot_id` | `uuid` | yes | Points at `forecast_snapshot.id`. |
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
@@ -114,6 +115,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_exclusion_reason_check`: `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
 - `forecast_contribution_probability_is_a_percent`: `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
+- `forecast_contribution_qualification_check`: `CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible', 'excluded', 'unsupported', 'unknown']))))`
 - `forecast_contribution_rate_dated`: `CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))`
 - `forecast_contribution_rate_positive`: `CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -134,7 +136,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-28 columns · primary key `(id)` · referenced by 2 foreign keys
+29 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -148,6 +150,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `evidence_minor` | `bigint` | yes |  |
 | `forward_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
 | `fx_missing_count` | `integer` | yes |  |
+| `input_fingerprint` | `text` |  |  |
 | `local_day` | `date` | yes |  |
 | `open_minor` | `bigint` | yes |  |
 | `period_end` | `date` | yes |  |
@@ -194,6 +197,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `forecast_snapshot_pkey`: `unique, btree (id)`
+- `idx_forecast_snapshot_call`: `btree (call_id) WHERE (call_id IS NOT NULL)`
 - `idx_forecast_snapshot_context`: `btree (scope_kind, scope_id, pipeline_id, taken_at DESC)`
 - `idx_forecast_snapshot_period`: `btree (period_start, period_end, scope_kind, scope_id, taken_at DESC)`
 - `uq_forecast_snapshot_daily`: `unique, btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE ((trigger = 'daily') AND (pipeline_id IS NULL) AND (population_fingerprint = ''))`
