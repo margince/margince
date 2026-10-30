@@ -186,10 +186,14 @@ func TestAnEarlierDeadlineAndAPinKeepTheirPlaceAroundImminentPreparation(t *test
 	meeting := classifyMeeting(meetingItem(Meeting{
 		ID: ids.NewV7(), Subject: "Pricing review", StartsAt: rankInstant.Add(time.Hour), Preparation: ownPreparation(false),
 	}), rankInstant)
-	earlier := candidate("duty due first", levelWaiting, due(rankInstant.Add(20*time.Minute)))
-	later := candidate("duty due later", levelWaiting, due(rankInstant.Add(3*time.Hour)))
-	routine := candidate("routine", levelRoutine)
-	pinned := applyPins([]ranked{candidate("pinned", levelRoutine)}, map[RowRef]bool{{RowID: "pinned"}: true})[0]
+	duty := func(id string, due time.Time) ranked {
+		return classifyLegalDeadline(item(id, "notice_case", withDue(due)), rankInstant)
+	}
+	earlier := duty("duty due first", rankInstant.Add(20*time.Minute))
+	later := duty("duty due later", rankInstant.Add(3*time.Hour))
+	routine := classifyTask(item("routine", "task"), rankInstant)
+	pinned := applyPins([]ranked{classifyTask(item("pinned", "task"), rankInstant)},
+		map[RowRef]bool{{Source: "task", RowID: "pinned"}: true})[0]
 
 	got := rankAll([]ranked{routine, later, meeting, pinned, earlier})
 

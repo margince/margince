@@ -8,7 +8,7 @@
 // answer and when.
 
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import {
@@ -98,12 +98,15 @@ describe("a list shorter than the screen", () => {
 describe("a continuation that fails", () => {
   it("keeps the loaded rows in place, and Retry adds the next batch once", async () => {
     vi.stubGlobal("IntersectionObserver", undefined);
+    const user = userEvent.setup();
+    const asked: string[] = [];
     let failures = 1;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
         const params = worklistParams(input);
         if (!params) return jsonResponse({ data: [] });
+        asked.push(params.get("cursor") ?? "");
         if (!params.get("cursor")) {
           return jsonResponse(
             day({
@@ -129,19 +132,16 @@ describe("a continuation that fails", () => {
     renderWorklist();
     const first = await screen.findByText("Call the buyer");
 
-    await userEvent.click(
-      screen.getByRole("button", { name: en["list.loadMore"] }),
-    );
+    await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
     await screen.findByText(en["scrollSentinel.failed"]);
     expect(screen.getByText("Call the buyer")).toBe(first);
     // Without an IntersectionObserver the sentinel's retry is Load more again.
-    await userEvent.click(
-      screen.getByRole("button", { name: en["list.loadMore"] }),
-    );
+    await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
 
     await screen.findByText("Book the demo");
     expect(screen.getByText("Call the buyer")).toBe(first);
     expect(screen.getAllByText("Send the quote")).toHaveLength(1);
+    expect(asked).toEqual(["", "c1", "c1"]);
     const titles = ["Call the buyer", "Send the quote", "Book the demo"].map(
       (title) => screen.getByText(title),
     );
@@ -174,6 +174,14 @@ const QUIET_TEAM = {
   truncated: false,
 };
 
+const MINH = "01a05500-0000-7000-8000-0000000000c2";
+
+// The colleagues the owner picker offers.
+const ROSTER = {
+  data: [{ id: MINH, display_name: "Minh Tran" }],
+  page: { next_cursor: null },
+};
+
 /** Holds every `/worklist` read until the test answers it. */
 function holdReads(): Held[] {
   const held: Held[] = [];
@@ -184,6 +192,9 @@ function holdReads(): Held[] {
       const params = worklistParams(request.url);
       if (request.url.split("?")[0]?.endsWith("/worklist/team")) {
         return Promise.resolve(jsonResponse(QUIET_TEAM));
+      }
+      if (request.url.split("?")[0]?.endsWith("/users")) {
+        return Promise.resolve(jsonResponse(ROSTER));
       }
       if (!params) return Promise.resolve(jsonResponse({ data: [] }));
       return new Promise<Response>((resolve) => {
@@ -203,22 +214,33 @@ function holdReads(): Held[] {
 const moves = [
   {
     name: "another view",
-    press: () => screen.getByRole("button", { name: /^Decisions/ }),
+    press: (user: UserEvent) =>
+      user.click(screen.getByRole("button", { name: /^Decisions/ })),
     asked: (params: URLSearchParams) => params.get("view") === "decisions",
     category: "decisions",
   },
   {
     name: "another filter",
-    press: () =>
-      screen.getByRole("button", { name: en["worklist.filter.tasks"] }),
+    press: (user: UserEvent) =>
+      user.click(
+        screen.getByRole("button", { name: en["worklist.filter.tasks"] }),
+      ),
     asked: (params: URLSearchParams) => params.get("filter") === "tasks",
     category: "tasks",
   },
   {
-    name: "another owner scope",
-    press: () =>
-      screen.getByRole("button", { name: en["worklist.scope.team"] }),
-    asked: (params: URLSearchParams) => params.get("scope") === "team",
+    name: "a named owner",
+    press: async (user: UserEvent) => {
+      await user.click(
+        await screen.findByRole("combobox", {
+          name: en["worklist.owner.visibleLabel"],
+        }),
+      );
+      await user.click(
+        await screen.findByRole("option", { name: "Minh Tran" }),
+      );
+    },
+    asked: (params: URLSearchParams) => params.get("owner") === MINH,
     category: "tasks",
   },
 ] as const;
@@ -228,6 +250,7 @@ describe("a late answer for the list the reader left", () => {
     "never reaches the list now on screen after moving to $name",
     async ({ press, asked, category }) => {
       vi.stubGlobal("IntersectionObserver", undefined);
+      const user = userEvent.setup();
       const held = holdReads();
       renderWorklist();
       await waitFor(() => expect(held).toHaveLength(1));
@@ -238,14 +261,14 @@ describe("a late answer for the list the reader left", () => {
           next_cursor: "c1",
         }),
       );
-      await userEvent.click(
+      await user.click(
         await screen.findByRole("button", { name: en["list.loadMore"] }),
       );
       await waitFor(() => expect(held).toHaveLength(2));
       const continuation = held[1];
       expect(continuation.params.get("cursor")).toBe("c1");
 
-      await userEvent.click(press());
+      await press(user);
       await waitFor(() =>
         expect(held.some((read) => asked(read.params))).toBe(true),
       );

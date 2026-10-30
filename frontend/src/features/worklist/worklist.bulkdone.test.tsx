@@ -178,6 +178,7 @@ describe("ticking Worklist rows in selection mode", () => {
       source: "task",
       title: "Arrived with the next batch",
       actions: ["complete"],
+      version: 1,
     });
     const { result, rerender } = renderHook(
       ({ queue }) => useWorklistPicks(queue, "mine/all/"),
@@ -187,6 +188,7 @@ describe("ticking Worklist rows in selection mode", () => {
     expect(result.current.rows).toEqual([aTask, aPromise]);
 
     rerender({ queue: [aTask, aWaitingMessage, aPromise, later] });
+    expect(result.current.eligible).toContain(later);
     expect(result.current.rows).toEqual([aTask, aPromise]);
   });
 

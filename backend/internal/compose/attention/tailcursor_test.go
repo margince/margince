@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -121,31 +122,46 @@ type laterCount struct {
 
 func (c *laterCount) CountTasks(context.Context, TaskWindow) (int, error) { return 9, c.err }
 
-// A count that fails states no exact total for its category, which stays a
-// floor. It never states the number the failed count returned.
+// A count that fails publishes no total for its category, which stays a floor
+// the page still says has more. It never publishes the failed count's number.
 func TestAFailedCountLeavesItsCategoryAFloorAndNoPartialTotal(t *testing.T) {
-	later := crmcontracts.AttentionItemDueGroupTomorrow
-	var planned []crmcontracts.AttentionItem
+	due := readInstant.AddDate(0, 0, 3)
+	var later []Task
 	for range upcomingCap {
-		planned = append(planned, crmcontracts.AttentionItem{Source: "task", DueGroup: &later})
+		later = append(later, Task{ID: ids.NewV7(), Subject: "Later", DueAt: &due})
 	}
-	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned}
-	key := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryUpcoming)}
-	until := rankInstant.Truncate(24 * time.Hour).Add(24 * time.Hour)
 	for _, tc := range []struct {
-		name   string
-		err    error
-		stated bool
+		name string
+		err  error
+		want *int
 	}{
-		{"a count that answers", nil, true},
-		{"a count that fails", context.DeadlineExceeded, false},
+		{"a count that answers", nil, new(9)},
+		{"a count that fails", context.DeadlineExceeded, nil},
 	} {
-		svc := (&Service{}).WithTaskBacklog(&laterCount{err: tc.err})
-		reading := svc.readingBacklog(t.Context(), day, until, time.UTC, true)
-		total, stated := reading.backlog.exact[key]
-		if stated != tc.stated || reading.backlog.whole[key] {
-			t.Errorf("%s: the upcoming total is %d (stated %v, whole %v), want stated %v and never whole",
-				tc.name, total, stated, reading.backlog.whole[key], tc.stated)
+		svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{upcoming: later}, stubReceipts{}, stubBriefing{},
+			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithTaskBacklog(&laterCount{err: tc.err})
+		day, err := svc.Worklist(pageReader(), "", "", ids.UUID{}, 25, "")
+		if err != nil {
+			t.Fatalf("%s: the page failed: %v", tc.name, err)
+		}
+		var upcoming *crmcontracts.WorklistCount
+		for i := range day.Counts {
+			if day.Counts[i].Category == crmcontracts.WorklistCountCategory(categoryUpcoming) {
+				upcoming = &day.Counts[i]
+			}
+		}
+		total := "none"
+		if upcoming != nil && upcoming.Total != nil {
+			total = fmt.Sprint(*upcoming.Total)
+		}
+		switch {
+		case upcoming == nil:
+			t.Errorf("%s: the page publishes no upcoming count", tc.name)
+		case tc.want == nil && (upcoming.Total != nil || !upcoming.MoreAvailable):
+			t.Errorf("%s: upcoming publishes total %s, more %v; want no total and more available",
+				tc.name, total, upcoming.MoreAvailable)
+		case tc.want != nil && (upcoming.Total == nil || *upcoming.Total != *tc.want):
+			t.Errorf("%s: upcoming publishes total %s, want %d", tc.name, total, *tc.want)
 		}
 	}
 }

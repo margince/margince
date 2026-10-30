@@ -10,13 +10,18 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func captureRows(ctx context.Context, t *testing.T, e *integration.Env, scope, view string) []crmcontracts.WorklistItem {
@@ -35,9 +40,40 @@ func captureRows(ctx context.Context, t *testing.T, e *integration.Env, scope, v
 	return rows
 }
 
+// unreachableMailbox is a gmail connector whose provider never answers.
+type unreachableMailbox struct{ plainSyncConnector }
+
+func (unreachableMailbox) Sync(context.Context, connector.Auth, connector.Cursor, connector.Sink) (connector.Cursor, error) {
+	return nil, connector.ErrUnreachable
+}
+
+// failMailboxSync connects Rep1's mailbox and runs one sync that fails, through
+// the capture registry the sync worker uses.
+func failMailboxSync(t *testing.T, e *integration.Env) {
+	t.Helper()
+	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
+	registry.Register(unreachableMailbox{plainSyncConnector{name: "gmail"}})
+	human := principal.WithWorkspaceID(context.Background(), e.WS)
+	human = principal.WithCorrelationID(human, ids.NewV7())
+	human = principal.WithActor(human, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		TeamIDs: []ids.UUID{e.Team1}, SeatType: principal.SeatFull, Scopes: principal.NewScopeSet(principal.ScopeRead),
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{"activity": {Create: true, Read: true}}, RowScope: principal.RowScopeTeam,
+		},
+	})
+	connection, err := registry.Connect(human, "gmail", connector.Auth("refresh"))
+	if err != nil {
+		t.Fatalf("connecting the mailbox: %v", err)
+	}
+	if err := registry.SyncOnce(human, connection); !errors.Is(err, connector.ErrUnreachable) {
+		t.Fatalf("the failing sync answered %v, want unreachable", err)
+	}
+}
+
 func TestAFailedMailboxSyncReachesItsOwnersSystemViewAndNoOtherSellers(t *testing.T) {
 	e := integration.Setup(t)
-	seedCalendar(t, e, "gmail", "connected", true)
+	failMailboxSync(t, e)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 
