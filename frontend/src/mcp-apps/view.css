@@ -495,7 +495,7 @@ ol {
   block-size: 104px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--ring-fill);
+  background: var(--ring-fill, var(--borderStrong));
 }
 
 .view-ring-middle {
