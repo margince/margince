@@ -95,14 +95,15 @@ func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, read []Posit
 // serve: at risk under its owners, and named by no waiting card. A failed read
 // answers none, so the Done is refused rather than granted blind.
 func (s *Service) riskInTail(ctx context.Context, asOf time.Time, bounded map[crmcontracts.WorklistItemSource]bool) []ranked {
-	if len(s.marked.asked) == 0 || s.backlog.risk == nil || !bounded[sourceAtRisk] {
+	asked := s.marked.asked[sourceAtRisk]
+	if len(asked) == 0 || s.backlog.risk == nil || !bounded[sourceAtRisk] {
 		return nil
 	}
 	owners, err := s.recordOwners(ctx)
 	if err != nil {
 		return nil
 	}
-	held, err := s.backlog.risk.RiskAmong(ctx, asOf, owners, s.marked.asked)
+	held, err := s.backlog.risk.RiskAmong(ctx, asOf, owners, asked)
 	if err != nil {
 		slog.Log(ctx, laneFailureLevel(ctx), "a Done check could not read the at-risk tail", "error", err)
 		return nil

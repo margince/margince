@@ -112,6 +112,8 @@ its position, oldest first, so its cost does not grow with the queue. The lane's
   the stamp, and chat, are judged as before.
 - "Addressed to more than one seat" needs no rule of its own: every scope's responsibility clause keeps only mail
   with one sole seat.
+- `MarkRowsDone` finds a tail card through `waitingInTail`, which asks the tail's own card statement
+  (`WaitingCardsAmong`).
 - Steps A, C and F keep every row the SQL returns. Its narrowing is the scope's, and a waiting row's Done is the
   reader's own state on the message, which the SQL reads.
 

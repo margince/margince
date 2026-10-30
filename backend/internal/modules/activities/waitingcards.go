@@ -106,19 +106,37 @@ func (s *Store) WaitingCardsAfter(
 func (s *Store) WaitingCardsOnDeals(
 	ctx context.Context, asOf time.Time, narrow WaitingNarrow, deals []ids.UUID,
 ) ([]WaitingReply, error) {
+	return s.waitingCardsWhere(ctx, asOf, narrow, deals, func(arg func(any) int) string {
+		return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
+			" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
+	})
+}
+
+// WaitingCardsAmong answers which of these messages are cards, judged as
+// WaitingCardsAfter judges them, so a Done check finds a card the tail serves.
+func (s *Store) WaitingCardsAmong(
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, messages []ids.UUID,
+) ([]WaitingReply, error) {
+	return s.waitingCardsWhere(ctx, asOf, narrow, messages, func(arg func(any) int) string {
+		return fmt.Sprintf(" AND a.id = ANY ($%d::uuid[])", arg(messages))
+	})
+}
+
+// waitingCardsWhere judges every candidate message the among clause keeps and
+// draws the cards among them. An empty set of ids reads nothing.
+func (s *Store) waitingCardsWhere(
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, among []ids.UUID, clause func(func(any) int) string,
+) ([]WaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	if len(deals) == 0 {
+	if len(among) == 0 {
 		return nil, nil
 	}
 	seats := narrow.mailSeats()
 	var cards []WaitingReply
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		judged, _, err := s.waitingCandidates(ctx, tx, asOf, seats, func(arg func(any) int) string {
-			return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
-				" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
-		}, 0)
+		judged, _, err := s.waitingCandidates(ctx, tx, asOf, seats, clause, 0)
 		if err != nil || len(judged) == 0 {
 			return err
 		}
@@ -126,7 +144,7 @@ func (s *Store) WaitingCardsOnDeals(
 		return err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading who is waiting on these deals: %w", err)
+		return nil, fmt.Errorf("activities: judging waiting cards: %w", err)
 	}
 	return cards, nil
 }

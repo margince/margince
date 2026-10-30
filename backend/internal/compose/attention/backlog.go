@@ -58,6 +58,9 @@ type WaitingBacklog interface {
 	// DealsWaiting names which of these deals a waiting card names, by the
 	// lane's own rules under its narrowing.
 	DealsWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor, deals []ids.UUID) (map[ids.UUID]bool, error)
+	// CardsAmong names which of these messages are cards the tail serves under
+	// the narrowing.
+	CardsAmong(ctx context.Context, asOf time.Time, narrow WaitingFor, messages []ids.UUID) (map[ids.UUID]bool, error)
 }
 
 // WaitingTail is one read of the waiting backlog. Through is the position

@@ -266,6 +266,25 @@ func (s *Service) moreWaiting(ctx context.Context, _ tailPage, walk tailWindow, 
 	return batch, nil
 }
 
+// waitingInTail is, for a Done check, the asked waiting cards this scope's
+// tail would serve. A failed read answers none, so the Done is refused.
+func (s *Service) waitingInTail(ctx context.Context, asOf time.Time, bounded map[crmcontracts.WorklistItemSource]bool) []ranked {
+	asked := s.marked.asked[sourceWaiting]
+	if len(asked) == 0 || s.backlog.waiting == nil || !bounded[sourceWaiting] {
+		return nil
+	}
+	served, err := s.backlog.waiting.CardsAmong(ctx, asOf, s.waitingFor(ctx), asked)
+	if err != nil {
+		slog.Log(ctx, laneFailureLevel(ctx), "a Done check could not read the waiting tail", "error", err)
+		return nil
+	}
+	var rows []ranked
+	for card := range served {
+		rows = append(rows, ranked{item: crmcontracts.WorklistItem{Source: sourceWaiting, Id: card.String()}})
+	}
+	return rows
+}
+
 // waitingJudged is how many messages one waiting read judges for a batch of
 // limit rows. Some judged messages fold or fall to the queue's rules, so it
 // judges more than it shows; the cost per read stays fixed.
