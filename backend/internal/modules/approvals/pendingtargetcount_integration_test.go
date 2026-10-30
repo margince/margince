@@ -21,7 +21,7 @@ import (
 func (e *stagingEnv) targetCount(as context.Context, t *testing.T, target ids.UUID) (count, listed int) {
 	t.Helper()
 	if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-		pending, err := e.svc.PendingForTargetCounted(as, tx, tableCompany, target)
+		pending, err := e.svc.PendingForTarget(as, tx, tableCompany, target)
 		count, listed = pending.Total, len(pending.Approvals)
 		return err
 	}); err != nil {

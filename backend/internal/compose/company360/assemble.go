@@ -277,7 +277,7 @@ func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, int, bool, error
 	if a.stagedRead {
 		return a.staged, a.stagedTotal, !a.stagedRefused, nil
 	}
-	pending, err := a.svc.approvals.PendingForTargetCounted(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
+	pending, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
 	a.stagedRead = true
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		a.stagedRefused = true
