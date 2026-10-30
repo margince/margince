@@ -19123,6 +19123,7 @@ components:
           enum:
             - sales
             - sdr
+            - team
         metrics:
           type: array
           minItems: 1

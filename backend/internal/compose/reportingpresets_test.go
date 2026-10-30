@@ -51,14 +51,23 @@ func TestEveryPresetIsPublishedWholeToAReaderOfEveryMetric(t *testing.T) {
 
 func TestAPresetKeepsOnlyTheMetricsAndChartsTheReaderMayRead(t *testing.T) {
 	catalog := catalogFor(t, "activity")
-	want := []crmcontracts.ReportingPreset{{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}}}
+	meetings := []crmcontracts.ReportingMetricID{reportingMeetingsHeld}
+	blocks := []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}
+	want := []crmcontracts.ReportingPreset{
+		{Id: crmcontracts.ReportingPresetIdSdr, Metrics: meetings, Blocks: blocks},
+		{Id: crmcontracts.ReportingPresetIdTeam, Metrics: meetings, Blocks: blocks},
+	}
 	if !reflect.DeepEqual(catalog.Presets, want) {
 		t.Fatalf("an activity reader's presets = %+v, want %+v", catalog.Presets, want)
 	}
 	catalog = catalogFor(t, reportingCreditObject)
-	sdr := catalog.Presets[0]
-	if len(catalog.Presets) != 1 || !slices.Equal(sdr.Metrics, []crmcontracts.ReportingMetricID{reportingAcceptedOpportunities}) {
-		t.Fatalf("a credit reader's presets = %+v", catalog.Presets)
+	for _, preset := range catalog.Presets {
+		if !slices.Equal(preset.Metrics, []crmcontracts.ReportingMetricID{reportingAcceptedOpportunities}) {
+			t.Fatalf("a credit reader's presets = %+v", catalog.Presets)
+		}
+	}
+	if len(catalog.Presets) != 2 {
+		t.Fatalf("a credit reader is offered %d presets, want sdr and team", len(catalog.Presets))
 	}
 	if none := catalogFor(t); len(none.Presets) != 0 || none.Presets == nil {
 		t.Fatalf("a reader of no metric gets presets %+v, want an empty list", none.Presets)

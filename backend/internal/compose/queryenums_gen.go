@@ -62,6 +62,10 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/analytics/sdr-summary/handoffs": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 	},
+	"GET /v1/analytics/sdr-team": {
+		{Name: "period", Values: []string{"this_week", "last_week", "this_month", "last_month"}, Array: false, Explode: true},
+		{Name: "scope_kind", Values: []string{"team", "workspace"}, Array: false, Explode: true},
+	},
 	"GET /v1/approvals": {
 		{Name: "status", Values: []string{"pending", "approved", "rejected"}, Array: false, Explode: true},
 	},
