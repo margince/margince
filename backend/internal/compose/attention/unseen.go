@@ -95,9 +95,11 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// itself complete while the twelfth pushed a thirteenth off the page — the
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
-	// The forward lane reads at the same bound, soonest first in SQL, so a
-	// full page means a later meeting today was not read.
-	atCap(sourceMeeting, day.Meetings, plannedCap)
+	// The forward lane keeps more than its bound when the reader still has
+	// meetings to prepare, so its length cannot say whether it cut one.
+	if day.Meetings != nil {
+		bounded[sourceMeeting] = day.MeetingsMoreAvailable == nil || *day.MeetingsMoreAvailable
+	}
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
 	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
 		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
@@ -107,13 +109,12 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		bounded[sourceDecay] = bounded[sourceDecay] || *day.RelationshipDecayMoreAvailable
 	}
 	atCap("conversation_claim", day.Commitments, doneCap)
-	// The decision lane is read deeper than the rest, because a batch row
-	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Filling that bound says the LANE was truncated, so
-	// the staged proposals sharing it cannot claim to be complete — the
-	// conservative reading, since the alternative is telling a rep there are no
-	// more of a kind when there are.
-	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
+	// Approvals know their exact total too, counted under the same query the
+	// lane listed. The lane's length cannot answer this: pairs and suggestions
+	// share its depth, so a full lane says nothing about the approvals in it.
+	if day.Counts.ApprovalsOpen != nil {
+		bounded[crmcontracts.WorklistItemSourceApproval] = shownFrom(day.NeedsYou, string(crmcontracts.WorklistItemSourceApproval)) < *day.Counts.ApprovalsOpen
+	}
 	// The duplicate pairs know their own TOTAL, so they do not guess from the
 	// page, and the difference is not academic. Their read is bounded twice:
 	// once by the census depth above, and again by the page the dedupe queue

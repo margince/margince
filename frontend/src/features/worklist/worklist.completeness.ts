@@ -8,7 +8,7 @@
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
-import { unreadSources } from "../../lib/worklistcounts";
+import { exactCount, unreadSources } from "../../lib/worklistcounts";
 import type { T } from "./worklist.copy";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -49,11 +49,12 @@ export function completenessText(
         items: counted.reduce((total, count) => total + count.shown, 0),
         floor: false,
       };
+  // A category with a server total is whole, even when its page was cut.
   const considered = counted.reduce(
-    (total, count) => total + count.considered,
+    (total, count) => total + (exactCount(count) ?? count.considered),
     0,
   );
-  const limited = counted.filter((count) => count.more_available);
+  const limited = counted.filter((count) => exactCount(count) === undefined);
   const unread = unreadSources(day, filter);
   const floor = limited.length > 0 || onScreen.floor;
   if (onScreen.items >= considered && !floor && unread === 0) {

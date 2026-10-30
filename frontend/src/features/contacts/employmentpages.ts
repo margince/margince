@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ENTITY_NAME_KEY, fetchEntityName } from "../../components/entityref";
+import { entityNameQuery } from "../../components/entityref";
 import { unwrap } from "../../lib/problem";
 
 type View = components["schemas"]["Contact360"];
@@ -39,10 +39,7 @@ export function useEmploymentPages(view: View) {
             async (company) =>
               [
                 company,
-                await client.fetchQuery({
-                  queryKey: ["company", ENTITY_NAME_KEY, company],
-                  queryFn: () => fetchEntityName("company", company),
-                }),
+                await client.fetchQuery(entityNameQuery("company", company)),
               ] as const,
           ),
         ),

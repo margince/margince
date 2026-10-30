@@ -297,7 +297,7 @@ it("links the underlying deal in a new tab and keeps the evidence open", async (
   const link = await screen.findByRole("link", { name: /Northstar rollout/ });
   expect(link).toHaveAttribute(
     "href",
-    "#/deals/00000000-0000-4000-8000-000000000012",
+    "/r/deals/00000000-0000-4000-8000-000000000012#/deals/00000000-0000-4000-8000-000000000012",
   );
   expect(link).toHaveAttribute("target", "_blank");
   expect(close).not.toHaveBeenCalled();

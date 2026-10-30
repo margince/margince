@@ -55,21 +55,18 @@ const (
 const domainQuestionsBatchKey = "domain_questions"
 
 func foldRoutineDecisions(rows []ranked) []ranked {
-	return foldRoutineDecisionsBounded(rows, false)
+	return foldRoutineDecisionsBounded(rows, nil)
 }
 
-// foldRoutineDecisionsBounded is the same fold, told whether the read that
-// produced these rows stopped at its own bound.
-//
-// A group whose members were cut short says so: "200+" rather than "200",
-// because a bound printed as a total is a wrong number rather than a bounded
-// one, and the reader has no way to tell the two apart.
+// foldRoutineDecisionsBounded is the same fold, told which sources stopped
+// short of their exact total. A group drawn from such a source states its count
+// as a floor. A group whose sources were read whole states it as a total.
 // keySystemIncident groups repeated failures of ONE broken thing. It is the one
 // batch key whose members are system trouble rather than routine tidying, and
 // several rules read it to tell the two apart.
 const keySystemIncident = crmcontracts.WorklistBatchKey("system_incident")
 
-func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
+func foldRoutineDecisionsBounded(rows []ranked, bounds map[crmcontracts.WorklistItemSource]bool) []ranked {
 	// Keyed by the group AND its cause: every contact question shares one cause
 	// (there is none to name), while two failing rules are two incidents that
 	// must not read as one.
@@ -111,13 +108,23 @@ func foldRoutineDecisionsBounded(rows []ranked, bounded bool) []ranked {
 			kept = append(kept, members...)
 			continue
 		}
-		// The bound belongs to the lane the members CAME from. It is the
-		// decision lane's own scan depth, and a system incident read from a
-		// different lane never hit it — marking one "8+" because an unrelated
-		// lane filled up reports a number the reader cannot check.
-		kept = append(kept, batchRow(at.key, at.cause, members, bounded && at.key != keySystemIncident))
+		// The bound belongs to the sources the members CAME from: one lane
+		// filling up says nothing about a group read from another. An incident
+		// counts failures already in hand, so it never states a floor.
+		kept = append(kept, batchRow(at.key, at.cause, members, at.key != keySystemIncident && anyBounded(members, bounds)))
 	}
 	return kept
+}
+
+// anyBounded reports whether any member came from a source read short of its
+// total.
+func anyBounded(members []ranked, bounds map[crmcontracts.WorklistItemSource]bool) bool {
+	for _, member := range members {
+		if bounds[member.item.Source] {
+			return true
+		}
+	}
+	return false
 }
 
 // systemCause is the CONDITION a broken-system row reports: the rule that

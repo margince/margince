@@ -151,12 +151,23 @@ const ALTERNATION = /^(?:is|where|matches|-webkit-any)\(/;
 const ATTRIBUTE = /\[(?:[^\]"']|"[^"]*"|'[^']*')*\]/g;
 const CLASS = /\.((?:[\w-]|\\.)+)/g;
 
+const classesRead = new Map<string, ReadonlySet<string>>();
+
 // A functional pseudo-class names something OTHER than the element it is
 // written on, so its argument is not part of that element's classes:
 // `:not(.btn)` would otherwise make `btn` a class the chip carries, and the
 // subtree search would then find nothing at all. An `:is()` adds the classes
 // every alternative shares, which is what the element MUST carry.
 export function classesOf(compound: string): Set<string> {
+  let read = classesRead.get(compound);
+  if (read === undefined) {
+    read = classesWritten(compound);
+    classesRead.set(compound, read);
+  }
+  return new Set(read);
+}
+
+function classesWritten(compound: string): Set<string> {
   const names = new Set<string>();
   for (const part of splitTopLevel(compound, ":")) {
     const functional = /^[\w-]+\(/.test(part);
@@ -189,7 +200,18 @@ const COMBINATORS = " \t\n\r\f>+~";
 
 type Chain = { compounds: string[]; combinators: string[] };
 
+const chainsRead = new Map<string, Chain>();
+
 function chain(selector: string): Chain {
+  let read = chainsRead.get(selector);
+  if (read === undefined) {
+    read = chainWritten(selector);
+    chainsRead.set(selector, read);
+  }
+  return { compounds: [...read.compounds], combinators: [...read.combinators] };
+}
+
+function chainWritten(selector: string): Chain {
   const links: Chain = { compounds: [], combinators: [] };
   let combinator = " ";
   for (const piece of pieces(selector, COMBINATORS)) {
@@ -217,62 +239,126 @@ export function compounds(selector: string): string[] {
 
 const MAX_ALTERNATIVES = 256;
 
+type Alternatives = { selectors: readonly string[]; everyCombination: boolean };
+
+// Kept per selector: gates ask for the same rule once per element they check.
+const alternativesRead = new Map<string, Alternatives>();
+
+function alternativesRecord(selector: string): Alternatives {
+  let read = alternativesRead.get(selector);
+  if (read === undefined) {
+    const combinations = everyCombination(selector);
+    read = {
+      selectors: combinations ?? eachAlternativeOnce(selector),
+      everyCombination: combinations !== undefined,
+    };
+    alternativesRead.set(selector, read);
+  }
+  return read;
+}
+
 // A census of what a rule MIGHT paint reads each alternative, not their overlap.
 export function alternativesOf(selector: string): string[] {
+  return [...alternativesRecord(selector).selectors];
+}
+
+// False past MAX_ALTERNATIVES, where alternativesOf reads each alternative once
+// and a gate that needs two alternatives side by side cannot trust it.
+export function readsEveryCombination(selector: string): boolean {
+  return alternativesRecord(selector).everyCombination;
+}
+
+// Every combination of every alternation, or undefined once there are more
+// than MAX_ALTERNATIVES of them.
+function everyCombination(selector: string): string[] | undefined {
   const links = chain(selector);
   const at = links.compounds.findIndex((one) => alternation(one) !== undefined);
   const split = alternation(links.compounds[at] ?? "");
   if (split === undefined) return [selector];
-  const out = selectorList(split.list).flatMap((alternative) => {
-    const inner = chain(alternative);
-    const subject = mergedCompound(
-      split.before,
-      inner.compounds.at(-1) ?? "",
-      split.after,
-    );
-    if (subject === undefined) return [];
-    return alternativesOf(
-      joined({
-        compounds: [
-          ...links.compounds.slice(0, at),
-          ...inner.compounds.slice(0, -1),
-          subject,
-          ...links.compounds.slice(at + 1),
-        ],
-        combinators: [
-          ...links.combinators.slice(0, at),
-          ...inner.combinators,
-          ...links.combinators.slice(at),
-        ],
-      }),
-    );
-  });
-  if (out.length > MAX_ALTERNATIVES) {
-    throw new Error(
-      `${selector} distributes past ${MAX_ALTERNATIVES} selectors`,
-    );
+  const out: string[] = [];
+  for (const alternative of selectorList(split.list)) {
+    const written = substituted(links, at, split, alternative);
+    if (written === undefined) continue;
+    const combinations = everyCombination(written);
+    if (combinations === undefined) return undefined;
+    out.push(...combinations);
+    if (out.length > MAX_ALTERNATIVES) return undefined;
   }
   return out;
+}
+
+// Past the cap, each alternation is read on its own and the others stay as
+// written. Every alternative is seen once, though not every combination.
+function eachAlternativeOnce(selector: string): string[] {
+  const links = chain(selector);
+  const read = links.compounds.flatMap((compound, at) =>
+    alternationsOf(compound).flatMap((split) =>
+      selectorList(split.list).flatMap((alternative) => {
+        const written = substituted(links, at, split, alternative);
+        if (written === undefined) return [];
+        const nested = compounds(alternative).some(
+          (inner) => alternationsOf(inner).length > 0,
+        );
+        return nested ? eachAlternativeOnce(written) : [written];
+      }),
+    ),
+  );
+  return [...new Set(read)];
+}
+
+// The selector with one alternative in place of the alternation it belongs to,
+// a complex alternative's ancestors hung in front of the compound.
+function substituted(
+  links: Chain,
+  at: number,
+  split: Alternation,
+  alternative: string,
+): string | undefined {
+  const inner = chain(alternative);
+  const subject = mergedCompound(
+    split.before,
+    inner.compounds.at(-1) ?? "",
+    split.after,
+  );
+  if (subject === undefined) return undefined;
+  return joined({
+    compounds: [
+      ...links.compounds.slice(0, at),
+      ...inner.compounds.slice(0, -1),
+      subject,
+      ...links.compounds.slice(at + 1),
+    ],
+    combinators: [
+      ...links.combinators.slice(0, at),
+      ...inner.combinators,
+      ...links.combinators.slice(at),
+    ],
+  });
 }
 
 type Alternation = { before: string; list: string; after: string };
 
 function alternation(compound: string): Alternation | undefined {
+  return alternationsOf(compound)[0];
+}
+
+function alternationsOf(compound: string): Alternation[] {
   const [base, ...pseudos] = pieces(compound, ":").map((piece) => piece.text);
+  const found: Alternation[] = [];
   let before = base ?? "";
   for (const [index, pseudo] of pseudos.entries()) {
     if (ALTERNATION.test(pseudo)) {
       const close = pseudo.lastIndexOf(")");
       const rest = pseudos.slice(index + 1).map((one) => `:${one}`);
-      return {
+      found.push({
         before,
         list: pseudo.slice(pseudo.indexOf("(") + 1, close),
         after: pseudo.slice(close + 1) + rest.join(""),
-      };
+      });
     }
     before += `:${pseudo}`;
   }
-  return undefined;
+  return found;
 }
 
 const TYPE = /^(?:[a-zA-Z][\w-]*|\*)/;
@@ -330,4 +416,81 @@ export function declaredValues(body: string, property: string): string[] {
 
 export function colorValues(body: string): string[] {
   return declaredValues(body, "color");
+}
+
+type Call = { name: string; args: string[]; end: number };
+
+export function functionCall(text: string): Call | undefined {
+  const open = /^([\w-]+)\(/.exec(text);
+  if (open === null) return undefined;
+  let depth = 0;
+  for (let at = open[0].length - 1; at < text.length; at++) {
+    depth += text[at] === "(" ? 1 : text[at] === ")" ? -1 : 0;
+    if (depth === 0) {
+      const args = splitTopLevel(text.slice(open[0].length, at), ",");
+      return { name: open[1] ?? "", args, end: at + 1 };
+    }
+  }
+  return undefined;
+}
+
+type Kind = "id" | "class" | "pseudo-element" | "type" | "other";
+
+const KINDS: readonly (readonly [RegExp, Kind])[] = [
+  [/^#[\w-]+/, "id"],
+  [/^\.(?:[\w-]|\\.)+/, "class"],
+  [/^\[(?:[^\]"']|"[^"]*"|'[^']*')*\]/, "class"],
+  [/^::[\w-]+|^:(?:before|after)\b/, "pseudo-element"],
+  [/^:[\w-]+/, "class"],
+  [/^[a-zA-Z][\w-]*/, "type"],
+];
+
+type Token = { text: string; kind: Kind; pseudo?: Call };
+
+function tokensOf(selector: string): Token[] {
+  const tokens: Token[] = [];
+  for (let at = 0; at < selector.length; ) {
+    const rest = selector.slice(at);
+    const pseudo = rest.startsWith(":")
+      ? functionCall(rest.slice(1))
+      : undefined;
+    const kind = KINDS.find(([pattern]) => pattern.test(rest));
+    const text =
+      pseudo !== undefined
+        ? rest.slice(0, 1 + pseudo.end)
+        : (kind?.[0].exec(rest)?.[0] ?? rest.slice(0, 1));
+    tokens.push({
+      text,
+      kind: pseudo ? "class" : (kind?.[1] ?? "other"),
+      pseudo,
+    });
+    at += text.length;
+  }
+  return tokens;
+}
+
+export const simpleSelectorsOf = (compound: string) =>
+  new Set(
+    tokensOf(compound)
+      .filter(({ kind }) => kind === "class" || kind === "id")
+      .map(({ text }) => text.replace(/\s+/g, "")),
+  );
+
+const WEIGHT: Record<Kind, number> = {
+  id: 10000,
+  class: 100,
+  "pseudo-element": 1,
+  type: 1,
+  other: 0,
+};
+
+function weightOf({ kind, pseudo }: Token): number {
+  if (pseudo === undefined) return WEIGHT[kind];
+  if (pseudo.name === "where") return 0;
+  if (!/^(?:is|not|has|matches)$/.test(pseudo.name)) return 100;
+  return Math.max(0, ...pseudo.args.map(specificity));
+}
+
+export function specificity(selector: string): number {
+  return tokensOf(selector).reduce((sum, token) => sum + weightOf(token), 0);
 }

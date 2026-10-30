@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
@@ -53,10 +54,13 @@ const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
 // withinWaitingHorizonSQL is whether message a is young enough for the queue.
 // Age retires every wait unless a human kept the request; old mail stays on the
 // timeline. requestOpenSQL, as owedSQL is the one relaxable not-sales gate.
-// Cheap tests come first, so most rows never reach the settlement subqueries.
+// Written as `(young OR held) AND (young OR open)`, which equals
+// `young OR (held AND open)`. The first half has no per-message subquery, so
+// Postgres tests it first and old mail never reaches the settlement subqueries.
 func withinWaitingHorizonSQL(asOf, days string) string {
-	return `(` + occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`) + `
-	     OR (` + heldRequestSQL() + ` AND ` + requestOpenSQL + `))`
+	young := occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`)
+	return `((` + young + ` OR ` + heldRequestSQL() + `)
+	   AND (` + young + ` OR (` + requestOpenSQL + `)))`
 }
 
 // waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
@@ -411,12 +415,9 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 		-- the sender has nothing to do with.
 		WHEN 'reply' THEN EXISTS (
 			SELECT 1 FROM activity back
-			WHERE back.archived_at IS NULL
+			WHERE %[6]s
 			  AND %[3]s
 			  AND back.direction = 'inbound'
-			  AND back.thread_key = a.thread_key
-			  AND back.kind = a.kind
-			  AND back.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			  AND back.occurred_at > mine.set_at -- occurred_at raw: since the item was set down, a window's lower edge
 			  AND %[5]s)
 		-- The rule the brief's queue applies (storekit.MeetingIsOverSQL), and
@@ -427,7 +428,8 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
 			  AND %[4]s)
 		ELSE false
-	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf))
+	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf),
+		correspondence.ThreadSQL("back", "a"))
 }
 
 // bookedMeetingSQL is when the soonest booked meeting with this message's

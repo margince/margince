@@ -18,6 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -53,6 +54,9 @@ func (s *Service) Worklist(
 		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
 		return err
 	})
+	if err == nil {
+		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
+	}
 	return out, err
 }
 
@@ -179,8 +183,7 @@ func (s *Service) worklistIn(
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	teamWeek := teamWeekFor(ctx)
-	out.TeamWeek = &teamWeek
+	out.TeamWeek = new(identity.TeamWeekOf(ctx))
 	defer timeStage(ctx, "row_names")()
 	if err := withPins.nameWorklistRows(ctx, out.Queue, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
@@ -302,7 +305,7 @@ func (s *Service) worklistFrom(
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
 	// Queue filters do not hide Focus candidates. Explicitly chosen reconnections
 	// are admitted beside ordinary current work.
-	focusRows := dropDone(foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth),
+	focusRows := dropDone(foldRoutineDecisionsBounded(rows, bounded),
 		s.marked, day.AsOf)
 	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	// Ordinary pins order the queue without changing Focus eligibility.
@@ -323,7 +326,7 @@ func (s *Service) worklistFrom(
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
 	if !opensTheDeck(filter) {
-		rows = dropDone(s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth), s.marked, day.AsOf)
+		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
@@ -412,7 +415,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: countsOf(considered, shown, bounded),
+		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope), missing, scoped),
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.

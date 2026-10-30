@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../../api/client";
 import { ActionRow } from "../../design-system/actionrow";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   Disclosure,
@@ -129,13 +130,13 @@ export function ApprovalDetailModal({
                 {/* A pending request is answered on its decision card; the
                     detail only reads it. */}
                 {approval.status === "pending" && (
-                  <a
+                  <AppLink
                     href={approvalHref(approval.id)}
                     className="link-button"
                     onClick={onClose}
                   >
                     {t("decision.openToDecide")}
-                  </a>
+                  </AppLink>
                 )}
               </>
             )}

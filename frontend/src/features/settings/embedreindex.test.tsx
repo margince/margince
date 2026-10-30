@@ -388,7 +388,7 @@ it("says no embeddings model is bound, links to AI settings, and asks for no sta
   ).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Open AI settings" }),
-  ).toHaveAttribute("href", "#/settings/models");
+  ).toHaveAttribute("href", "/#/settings/models");
   expect(screen.getByText("Search index")).toBeInTheDocument();
   expect(screen.queryByText("Index status")).toBeNull();
   expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();

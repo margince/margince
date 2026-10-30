@@ -3,11 +3,11 @@
 
 import type { components } from "../../api/schema";
 import { describedByIds } from "../../design-system/describedby";
+import { QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
-import { useWorklist } from "../worklist/worklist.queries";
 import { useTeams } from "./teams.queries";
 
 type Delivery = components["schemas"]["BriefDelivery"];
@@ -41,8 +41,9 @@ export function RoutineDeliveryRows({
   const t = useT();
   const me = useMe();
   const teams = useTeams();
-  const day = useWorklist("mine", "all");
-  const reach = day.data?.pages[0]?.team_week ?? "none";
+  // From /me, not the worklist: assembling the whole day to learn one answer
+  // made this screen wait on the slowest read in the app.
+  const reach = me.data?.team_week ?? "none";
   const selectedScope = settings.routine_mail_scope ?? "personal";
   const teamOptions = (teams.data ?? [])
     .filter(
@@ -201,23 +202,35 @@ export function RoutineDeliveryRows({
             label={t("teamweekly.pickTeam")}
             testId="delivery-team"
             description={t("delivery.teamHelp")}
-            control={(control) => (
-              <Select
-                {...control}
-                disabled={disabled}
-                aria-describedby={describedByIds(
-                  control["aria-describedby"],
-                  refusalFor?.("routine_mail_team_id"),
-                )}
-                value={settings.routine_mail_team_id ?? ""}
-                placeholder={t("teamweekly.pickTeam")}
-                options={teamOptions}
-                onChange={(value) => {
-                  if (teamOptions.some((team) => team.value === value))
-                    save({ routine_mail_team_id: value });
-                }}
-              />
-            )}
+            control={(control) =>
+              // A team list still loading, or one that failed, is not "no teams":
+              // an empty picker would tell a lead they lead nobody.
+              teams.isSuccess ? (
+                <Select
+                  {...control}
+                  disabled={disabled}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    refusalFor?.("routine_mail_team_id"),
+                  )}
+                  value={settings.routine_mail_team_id ?? ""}
+                  placeholder={t("teamweekly.pickTeam")}
+                  options={teamOptions}
+                  onChange={(value) => {
+                    if (teamOptions.some((team) => team.value === value))
+                      save({ routine_mail_team_id: value });
+                  }}
+                />
+              ) : (
+                <QueryStates
+                  query={teams}
+                  pendingLabel={t("teamweekly.pickTeam")}
+                  pendingLines={1}
+                >
+                  {null}
+                </QueryStates>
+              )
+            }
           />
         </>
       )}

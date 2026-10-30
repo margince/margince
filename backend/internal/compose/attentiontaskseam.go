@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -162,7 +163,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	page := reminderPage
 	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
-		rows, next, err := t.store.ListActivities(ctx, in)
+		rows, next, err := t.listReminders(ctx, in)
 		if err != nil {
 			return nil, err
 		}
@@ -174,6 +175,21 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 		}
 		in.Cursor = &next.NextCursor
 	}
+}
+
+// listReminders reads one page of due reminders reusing its generic plan, as
+// listOpenTasks does. The page spells its kind as a literal and binds the reader.
+func (t attentionTasks) listReminders(
+	ctx context.Context, in activities.ListActivitiesInput,
+) ([]crmcontracts.Activity, storekit.Page, error) {
+	var rows []crmcontracts.Activity
+	var next storekit.Page
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, next, err = t.store.ListActivities(ctx, in)
+		return err
+	})
+	return rows, next, err
 }
 
 // reminderPage is the store's largest page, so a reader's reminders are

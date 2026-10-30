@@ -7,6 +7,7 @@
 
 import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
 import { opensRow } from "./datatable";
 import type { ListColumn, ListSelection } from "./listcolumn";
@@ -84,13 +85,13 @@ function IdentityCell<Row>({
         // default click is stopped from reaching the row's own handler.
         // Preventing the anchor instead would navigate the current page while
         // the new tab opens too.
-        <a
+        <AppLink
           className="lt-cellink"
           href={rowHref(row)}
           onClick={(event) => event.stopPropagation()}
         >
           {cell(row)}
-        </a>
+        </AppLink>
       ) : (
         cell(row)
       )}

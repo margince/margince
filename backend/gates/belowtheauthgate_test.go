@@ -88,7 +88,7 @@ var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
 var dynamicRegistrations = gatekit.Waive(map[string]string{
 	"extinbound.go:MountInboundEndpoints": "one signed POST edge for each endpoint a unit declares, at " +
 		"/webhooks/ext/<unit>/<slug>. The core admits the request (workspace, body cap, freshness, rate) and " +
-		"the unit proves the sender by its signature; TestEveryUnitThatDeclaresAnInboundEndpointChecksItsSignature " +
+		"the unit proves the sender by its signature; TestEveryInboundEndpointChecksItsSignature " +
 		"holds every unit to that call",
 	"extroutes.go:MountExtensionRoutes": "not below the gate: it registers onto an inner mux that " +
 		"extensionEdge wraps around the generated router INSIDE the session chain (routes.go), so an " +

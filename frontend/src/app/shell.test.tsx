@@ -388,12 +388,12 @@ describe("Section switcher (the page title at phone width)", () => {
       within(dialog)
         .getAllByRole("link")
         .map((link) => link.getAttribute("href")),
-    ).toEqual(["#/settings/account", "#/settings/deep"]);
+    ).toEqual(["/#/settings/account", "/#/settings/deep"]);
     // The current entry is claimed inside the LIST — the switcher that opened it
     // still claims nothing, so the document offers exactly one current page.
     const current = document.querySelectorAll('[aria-current="page"]');
     expect(current).toHaveLength(1);
-    expect(current[0].getAttribute("href")).toBe("#/settings/deep");
+    expect(current[0].getAttribute("href")).toBe("/#/settings/deep");
   });
 
   // The sidebar names its level with the heading over the level's first group,
@@ -724,7 +724,7 @@ describe("Shell", () => {
       within(trail)
         .getByRole("link", { name: "Contacts" })
         .getAttribute("href"),
-    ).toBe("#/contacts");
+    ).toBe("/#/contacts");
   });
 
   // The three pieces in the order the page is read: the bar is the first row of

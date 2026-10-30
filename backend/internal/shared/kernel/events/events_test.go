@@ -146,6 +146,9 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// as the message being settled for everybody; "marked" says it is one
 		// reader's mark.
 		"marked_handled": true,
+		// One attendee's readiness for a meeting; "recorded" alone would not say
+		// what was recorded on a stream that also carries edits.
+		"readiness_recorded": true,
 		// Same shape and the same reason: "requested" alone would not say what
 		// was asked for, and a weekly plan's stream also carries its ordinary
 		// updates — the distinction is the point of the type, because this is

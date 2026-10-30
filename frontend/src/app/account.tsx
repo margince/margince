@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
@@ -105,7 +106,7 @@ function SettingsRow({
 }: Readonly<{ seat?: RowSeat; onActivate?: () => void }>) {
   const t = useT();
   return (
-    <a
+    <AppLink
       className="acctrow"
       href={SETTINGS_HREF}
       role={seat ? "menuitem" : undefined}
@@ -115,7 +116,7 @@ function SettingsRow({
       onClick={onActivate}
     >
       {t("nav.settings")}
-    </a>
+    </AppLink>
   );
 }
 
@@ -320,7 +321,7 @@ function AccountPanel({
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
       <hr />
-      <a
+      <AppLink
         className="acctrow"
         href={routeHash({ screen: "settings", id: "meetings" })}
         role="menuitem"
@@ -328,7 +329,7 @@ function AccountPanel({
         onClick={onDismiss}
       >
         {t("scheduling.myLink")}
-      </a>
+      </AppLink>
       <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
       <AccountRelease />
     </div>

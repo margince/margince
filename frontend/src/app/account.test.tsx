@@ -146,13 +146,13 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
 
-    expect(row("Settings").getAttribute("href")).toBe("#/settings");
+    expect(row("Settings").getAttribute("href")).toBe("/#/settings");
     // Exactly one: a second row a click apart landing on the same level is the
     // shape this menu replaced.
     expect(
       screen
         .getAllByRole("menuitem")
-        .filter((item) => item.getAttribute("href") === "#/settings"),
+        .filter((item) => item.getAttribute("href") === "/#/settings"),
     ).toHaveLength(1);
   });
 

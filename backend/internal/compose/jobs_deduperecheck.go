@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -40,6 +41,9 @@ func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace id
 	store := contacts.NewStore(database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))).
 		WithConsumerMail(capture.MatcherTx)
 	actor := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "dedupe_recheck")
+	if err := w.retractUnsupportedPhones(actor); err != nil {
+		return err
+	}
 	if _, err := store.RecheckOpenDedupeCandidates(actor); err != nil {
 		return err
 	}
@@ -50,4 +54,25 @@ func (w *dedupeRecheckWorker) recheckWorkspace(ctx context.Context, workspace id
 func addDedupeRecheckJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {
 	addDeclaredWorker[DedupeRecheckArgs](reg, &dedupeRecheckWorker{pool: pool})
 	return periodicFor(cfg, DedupeRecheckArgs{})
+}
+
+// Reuse the repair's bounded transactions so later evidence loss is repaired
+// before duplicate pairs are reconsidered, even after the data task completed.
+func (w *dedupeRecheckWorker) retractUnsupportedPhones(ctx context.Context) error {
+	const limit = 200
+	after := ids.Nil
+	for {
+		var page contacts.SignaturePhoneRepairPage
+		if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+			var err error
+			page, err = contacts.RetractUnsupportedSignaturePhonesTx(ctx, tx, after, limit)
+			return err
+		}); err != nil {
+			return err
+		}
+		if len(page.Scanned) < limit {
+			return nil
+		}
+		after = page.Scanned[len(page.Scanned)-1]
+	}
 }

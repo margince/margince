@@ -96,7 +96,7 @@ describe("Back to Worklist on the record", () => {
 
     const back = screen.getByRole("link", { name: en["brief.queue.back"] });
     expect(back.getAttribute("href")).toBe(
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+      "/#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
     );
   });
 

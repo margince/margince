@@ -9561,6 +9561,33 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /public/record-previews/{record_type}/{id}:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { type: string, enum: [deals, companies, contacts] } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Public]
+      operationId: getPublicRecordPreview
+      security: []
+      summary: Read the limited public link card for a record.
+      description: |
+        Anyone with the record URL may read its name, type, company and brief context.
+        This HTML contains Open Graph metadata and opens the signed-in app. It exposes no
+        notes, activity, files, addresses, amounts or access grant. Full record reads still
+        require the recipient's own session and permissions. Archived records answer 404.
+      responses:
+        '200':
+          description: Public record card and link to the protected app.
+          content:
+            text/html:
+              schema: { type: string }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        default:
+          description: The preview is unavailable; the HTML still opens the protected app.
+          content:
+            text/html:
+              schema: { type: string }
+
   /public/booking/company-logo:
     get:
       tags: [Public]
@@ -18763,6 +18790,76 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /worklist/ready:
+    put:
+      tags: [Brief]
+      operationId: confirmMeetingReady
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Say you are ready for a meeting you attend.
+      description: |
+        The answer the `confirm_meeting_ready` agent tool gives, run by the same tool on both
+        doors. It records that the caller, or the user an agent acts for, is ready for the
+        meeting at `preparation_revision`. Reading the brief does not do this; only this call
+        does.
+
+        PER ATTENDEE. It changes nobody else's preparation. Only an attendee may call it:
+        anyone else answers 422 `not_an_attendee`.
+
+        A revision the meeting has moved past answers 409. Read the meeting's `preparation`
+        again and confirm its new revision. Confirming the current revision again is the same
+        success. `PUT /worklist/ready` is undone by `POST /worklist/ready/undo`.
+      x-mcp-tool: { verb: confirm_meeting_ready, tier: auto_execute, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingReadyRequest' }
+      responses:
+        '200':
+          description: The caller's preparation after the confirmation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingPreparation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /worklist/ready/undo:
+    post:
+      tags: [Brief]
+      operationId: undoMeetingReady
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Take back your "I'm ready" for a meeting — the undo behind it.
+      description: |
+        The answer the `undo_meeting_ready` agent tool gives, run by the same tool on both
+        doors. It removes the caller's confirmation only while it is still the one given at
+        `preparation_revision`. A newer confirmation stays. A meeting with no such
+        confirmation is the same success.
+      x-mcp-tool: { verb: undo_meeting_ready, tier: auto_execute, scope: write, served_by: registry }
+      parameters:
+        - $ref: '#/components/parameters/ToolIdempotencyKey'
+        - $ref: '#/components/parameters/ApprovalToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MeetingReadyRequest' }
+      responses:
+        '200':
+          description: The caller's preparation after the undo.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeetingPreparation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /worklist/team:
@@ -28439,14 +28536,15 @@ paths:
       x-agent-access: human-only
       summary: Switch the qualified forecast's enforcement on or off.
       description: |
-        Admin only. Switching on changes the qualified forecast figures for every reader,
-        so it is refused with `409 input_check_not_started` until a check has judged a
-        deal: before that the qualified forecast would count nothing. A setting fixed by
-        the environment is refused with `409 setting_locked`.
+        Admin only. A setting fixed by the environment is refused with
+        `409 setting_locked_by_boot_source`.
 
-        Switching on also sends `preview_digest`, the `digest` of the preview the admin
-        saw. It is refused with `409 preview_stale` when the deals' treatment changed since,
-        so nobody switches on a picture that is no longer true.
+        Switching on changes the qualified forecast figures for every reader. It sends
+        `preview_digest`, the `digest` of the preview the admin saw, and is refused with
+        `409 preview_stale` when the deals' treatment changed since, so nobody switches
+        on a picture that is no longer true. It is then refused with
+        `409 input_check_not_started` until a check has judged a deal: before that the
+        qualified forecast would count nothing.
 
         Switching off takes effect at once. The reviews, their tasks and their history
         stay; only the qualified readings disappear, and the baseline readings never
@@ -43059,9 +43157,9 @@ components:
           type: [integer, 'null']
           description: |
             Null when the caller cannot triage approvals (an agent principal) — not
-            counted, as opposed to counted as zero. Saturates at 200: deciding who may
-            see a staged change is a per-row check, and a badge is not worth making one
-            record page pay for an unbounded backlog.
+            counted, as opposed to counted as zero. Exact: every pending proposal on this
+            company the caller could decide, including ones past the approvals section's
+            scan cap.
 
     BillingContact:
       type: object
@@ -46044,6 +46142,7 @@ components:
       properties:
         brief: { $ref: '#/components/schemas/AgentMeetingBrief' }
         briefing: { $ref: '#/components/schemas/AgentAssembledContext' }
+        preparation: { $ref: '#/components/schemas/MeetingPreparation' }
         meeting_focus:
           type: array
           items:
@@ -50473,6 +50572,53 @@ components:
           maxItems: 200
           description: The rows, each named by its lane and its id, as a pin names one.
           items: { $ref: '#/components/schemas/WorklistPinRequest' }
+
+    MeetingReadyRequest:
+      type: object
+      additionalProperties: false
+      required: [activity_id, preparation_revision]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+          description: The meeting, as the Worklist row or `prep_for_meeting` names it.
+        preparation_revision:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: |
+            The `revision` of the meeting's `preparation`, as last read. A confirmation sends
+            the revision it was shown, and a meeting that has moved past it answers 409. An
+            undo sends the revision it confirmed, and takes back only that confirmation.
+        idempotency_key: { type: string, maxLength: 255, description: 'Same key, same result. A key reused with other arguments is refused.' }
+
+    MeetingPreparation:
+      type: object
+      additionalProperties: false
+      required: [activity_id, state, revision, changed]
+      description: |
+        The caller's own preparation for one meeting. `ready` holds only for the attendee who
+        confirmed it, and only at `revision`. A new start time, agenda or guest list makes a
+        new revision, so a confirmed meeting needs review again. A brief written about the
+        meeting is not a preparation fact: generating it again changes nothing here. For an
+        agent, the caller is the user it acts for.
+      properties:
+        activity_id: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [needs_review, ready]
+          description: '`ready` when the caller confirmed this revision; `needs_review` otherwise.'
+        revision:
+          type: string
+          description: The current preparation revision, which a confirmation sends back.
+        changed:
+          type: array
+          items:
+            type: string
+            enum: [start_time, agenda, participants]
+          description: |
+            What changed since the caller confirmed an older revision. Empty when the caller
+            never confirmed, or confirmed this revision.
 
     RelationshipNudgeState:
       type: object
@@ -55905,6 +56051,7 @@ components:
         teams:
           type: array
           items: { type: string, format: uuid }
+        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
         authorization:
           $ref: '#/components/schemas/Authorization'
         settings_availability:
@@ -62089,6 +62236,19 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/User' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+    TeamWeekReach:
+      type: string
+      enum: [none, teams_led, every_team]
+      description: |
+        Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
+        answered by the rule that endpoint is served on. `every_team` for a seat holding
+        `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
+        `none` for everyone else, a read-only seat included. Separate from a worklist's
+        `scope_options`, because the `team` worklist is the team's live work and the
+        week is a lead's verdict on named colleagues. `GET /me` and `GET /worklist` both
+        carry it, from one rule. Absent from an older server, which a client reads as
+        `none`.
+
     TeamListResponse:
       type: object
       required: [data, page]
@@ -66132,6 +66292,12 @@ components:
         relationship_decay_more_available:
           type: boolean
           description: The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read.
+        meetings_more_available:
+          type: boolean
+          description: |
+            The meetings lane read or kept fewer meetings than today holds.
+            True means `meetings` is a lower bound. Absent when meetings could
+            not be read.
         notices_more_available:
           type: boolean
           description: |
@@ -66207,6 +66373,13 @@ components:
             soonest-due dozen; the number says how many there are, which is the reading
             `needs_you` has always had.
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        approvals_open:
+          type: integer
+          minimum: 0
+          description: >-
+            Every pending approval this read's scope holds that the caller may decide, counted
+            by the approvals engine behind `GET /v1/approvals/pending-count` rather than from
+            the bounded lane. Absent when the lane was not read.
         deal_suggestions_open: { type: integer, minimum: 0, description: "Open Deal Scout suggestions this caller can see — every piece of whose evidence they may read. Absent when the reader may not read suggestions at all, or when the suggestion read failed; the Worklist names a failed read as a `deal_suggestion` source in `sources_unavailable`." }
         tag_suggestions_open: { type: integer, minimum: 0, description: "Open tag suggestions this caller can see — every activity of whose evidence they may read. Absent when the reader may not read them at all, or when the read failed; the Worklist names a failed read as a `tag_suggestion` source in `sources_unavailable`." }
         meetings:
@@ -66400,6 +66573,9 @@ components:
           enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
+        preparation:
+          allOf: [{ $ref: '#/components/schemas/MeetingPreparation' }]
+          description: On a meeting the reader attends, their own preparation for it. Absent otherwise.
         title:
           type: string
           description: |
@@ -66898,17 +67074,7 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week:
-          type: string
-          enum: [none, teams_led, every_team]
-          description: |
-            Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,
-            answered by the rule that endpoint is served on. `every_team` for a seat holding
-            `team_oversight.read`; `teams_led` for a lead, who opens the teams they are on;
-            `none` for everyone else, a read-only seat included. Separate from
-            `scope_options`, because the `team` worklist is the team's live work and the
-            week is a lead's verdict on named colleagues. Absent from an older server, which
-            a client reads as `none`.
+        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
@@ -67466,6 +67632,13 @@ components:
             MAY exist past what was considered. A category inherits its sources' honesty:
             reporting "12 decisions" over a pile the read never finished counting is the
             failure this flag exists to prevent.
+        total:
+          type: integer
+          minimum: 0
+          description: |
+            The exact number of admitted items in this category for this read's scope and
+            owner. Absent when that population has not been counted exactly; a client then
+            reads `considered` with `more_available` as today. Absent never means zero.
 
     WorklistSummary:
       type: object
@@ -68207,6 +68380,12 @@ components:
           allOf: [{ $ref: '#/components/schemas/AttentionContactCase' }]
           description: The contacts a `contact_case` row groups, forwarded from the lane feed. Sent only for that source.
         move: { $ref: '#/components/schemas/WorklistMove' }
+        preparation:
+          allOf: [{ $ref: '#/components/schemas/MeetingPreparation' }]
+          description: |
+            On a `meeting` row the reader attends, their own preparation for it. Absent when the
+            reader does not attend the meeting or may not read its content; absent is never
+            ready.
         with_contact:
           type: string
           format: uuid

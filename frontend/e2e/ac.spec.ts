@@ -440,10 +440,10 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
-  ).toHaveAttribute("href", "#/settings");
+  ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
-  ).toHaveAttribute("href", "#/settings/meetings");
+  ).toHaveAttribute("href", "/#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -1483,10 +1483,10 @@ test.describe("§3.8: 390px mobile", () => {
       // below the fold — a measurement of the wrong control is a green that
       // means nothing.
       //
-      // `btn-primary` is how the queue marks the one emerald verb. Where a row
-      // draws none — an inline decision offers several equal answers — the
-      // LOWEST control is measured instead, because a row is only workable
-      // when the reader can reach all of it.
+      // `btn-primary` is how the queue marks the one accent verb. An inline
+      // decision offers several equal answers and draws none. There the
+      // lowest control is measured, because a row works only when the reader
+      // can reach all of it.
       //
       // Read off the ROW, never from a list of the containers it groups its
       // verbs into. A selector naming those is a claim about which groups
@@ -3545,7 +3545,7 @@ test.describe("calling a contact", () => {
       await expect(email).toBeVisible();
       await expect(open).toHaveAttribute(
         "href",
-        `#/contacts/${CALLED_CONTACT}`,
+        `/#/contacts/${CALLED_CONTACT}`,
       );
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task from a call open)");

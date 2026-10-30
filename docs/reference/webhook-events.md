@@ -45,6 +45,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
+| [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
 | [`approval.decided`](#approvaldecided) | approval | 1 |
 | [`approval.failure_acknowledged`](#approvalfailure_acknowledged) | approval | 1 |
@@ -229,6 +230,18 @@ Payload for activity.marked_handled. One reader marked an activity on their Work
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
+
+### `activity.readiness_recorded`
+
+Record: `activity` · version 1
+
+Payload for activity.readiness_recorded. One attendee said they are ready for a meeting, or took that back (activities/meetingreadiness.go). It holds for that attendee alone, at the preparation revision they confirmed, and the attendee is not on the wire. A moved start, a new agenda or a changed guest list makes the revision stale without a new event.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.preparation_revision` | string | yes | The preparation revision the confirmation was given at. |
+| `data.state` | string: `ready`, `withdrawn` | yes | `ready` when the attendee confirmed, `withdrawn` when they undid it. |
 
 ### `activity.updated`
 

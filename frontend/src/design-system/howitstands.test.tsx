@@ -48,6 +48,9 @@ describe("How it stands", () => {
     expect(sheet()?.style.getPropertyValue("--standing-wash")).toBe(
       "var(--dangerBg)",
     );
+    expect(sheet()?.style.getPropertyValue("--standing-edge")).toBe(
+      "var(--dangerText)",
+    );
     rerender(
       <HowItStands
         date="13 Aug"
@@ -57,6 +60,7 @@ describe("How it stands", () => {
     expect(sheet()?.style.getPropertyValue("--standing-wash")).toBe(
       "transparent",
     );
+    expect(sheet()?.style.getPropertyValue("--standing-edge")).toBe("");
   });
 
   it("puts a ladder hero under the readings and a ring beside them", () => {

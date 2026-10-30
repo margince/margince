@@ -263,11 +263,13 @@
     "POST /v1/tags/{id}/merge": "merge_tags",
     "POST /v1/tasks": "create_task",
     "POST /v1/users/{id}/merge": "merge_members",
+    "POST /v1/worklist/ready/undo": "undo_meeting_ready",
     "POST /v1/workspace-queries": "query_workspace",
     "PUT /v1/analytics/reports/{id}/draft": "draft_report",
     "PUT /v1/brief/annotations": "annotate_brief",
     "PUT /v1/offer-templates/{id}": "update_record",
     "PUT /v1/projects/{id}/companies": "change_record_parts",
-    "PUT /v1/projects/{id}/stakeholders": "change_record_parts"
+    "PUT /v1/projects/{id}/stakeholders": "change_record_parts",
+    "PUT /v1/worklist/ready": "confirm_meeting_ready"
   }
 }

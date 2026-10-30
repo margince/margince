@@ -43,7 +43,7 @@
   block-size: 24px;
   border-radius: 50%;
   corner-shape: round;
-  background: var(--pane);
+  background: var(--ground);
   color: var(--accentText);
 }
 .latest-line-mark svg {

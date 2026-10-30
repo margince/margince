@@ -3027,6 +3027,10 @@ func (stubs) GetPublicProposalAvailability(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "GetPublicProposalAvailability")
 }
 
+func (stubs) GetPublicRecordPreview(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetPublicRecordPreview")
+}
+
 func (stubs) ListBuyerRoomDocuments(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListBuyerRoomDocuments")
 }
@@ -3785,6 +3789,14 @@ func (stubs) UnpinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) PinWorklistRow(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PinWorklistRow")
+}
+
+func (stubs) ConfirmMeetingReady(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ConfirmMeetingReadyParams) {
+	httperr.NotImplemented(w, r, "ConfirmMeetingReady")
+}
+
+func (stubs) UndoMeetingReady(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.UndoMeetingReadyParams) {
+	httperr.NotImplemented(w, r, "UndoMeetingReady")
 }
 
 func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetResponseMetricsParams) {

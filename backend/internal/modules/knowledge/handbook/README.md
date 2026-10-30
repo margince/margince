@@ -39,6 +39,7 @@ Settings in Margince, by page:
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
+- How do record links appear in a message? → [Sharing record links](sharing-record-links.md)
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I edit a contact or company, or change its owner? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I create a lead, deal or project, or qualify a lead? → [Leads, deals and projects](leads-deals-and-projects.md)

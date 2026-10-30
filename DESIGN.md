@@ -38,11 +38,11 @@ screen against it. The sources are listed at the end of the section.
 
 1. **Depth comes from a ladder of surfaces**. Linear and Raycast draw no drop shadow at all.
 
-   A card is one step lighter than the page, and a row under the pointer is one step lighter again.
-   That order is the whole system of height.
+   A pane sits one step off the page, and a pane inside it one step off that pane. Its ground
+   comes from how deep it sits, not from what it is, so one card reads the same on every screen.
 
    Vercel puts the border first. A 1px hairline marks
-   every element that does not move, and a real shadow is kept for something above the page. Rule: paper → surface → raised is the ladder, and it keeps the parts apart.
+   every element that does not move, and a real shadow is kept for something above the page. Rule: the page, then one level for each pane inside a pane, is the ladder, and it keeps the parts apart.
 
    A surface at
    rest adds one tight layer on top (`--shadow-rest`, 1px down and 2px of blur at 5%). That gives it
@@ -75,13 +75,14 @@ screen against it. The sources are listed at the end of the section.
    almost white ground, never plain black.
 
    The Refactoring UI rule is that a grey far from middle lightness needs colour, or it looks
-   flat. Rule: `--ink #101a15` and the whole ladder of ink and ground sit on the emerald hue
-   at low chroma. So the page does not read as a grey page with a green accent.
+   flat. Rule: `--textPrimary #182c28` and the whole ladder of ink and ground sit on the teal hue
+   at low chroma. So the page does not read as a grey page with a teal accent.
 6. **One accent colour, spent almost nowhere**. In Linear, lavender is the brand, the primary
    button and the focus ring, and nothing else.
 
    The primary action in Raycast is plain white. The accent colour in Vercel is a status colour and a focus
-   ring. Rule: emerald is the chrome, the one primary verb in view, a link and the focus ring. The
+   ring. Rule: the teal accent is the brand mark, the one primary verb in view and a link. It
+   also marks the current row of the sidebar and draws the focus ring. The
    cards on the board, the readings and the rows have no colour.
 7. **Type: tight letter space, tabular figures everywhere**. In Linear, the weights run 600 → 400,
    with `-0.6px` on a 28px title.
@@ -130,11 +131,11 @@ Sources for this section:
 
 ## 2. The language in five sentences
 
-1. **A lit ground, and one pane per zone**. The page is light green paper, lit from two corners.
+1. **A flat ground, and panes by depth**. The page is light teal paper, one flat colour with no
+   light painted into it.
 
-   An emerald glow sits behind the sidebar, and an indigo one at the top of the far edge. Each zone
-   of a record is one white pane on it, with a hairline edge and a 20px corner. Inside a pane there
-   is only a title, a rule and rows. Dark is the same room with the lights down.
+   Each zone of a record is one white pane on it, with a hairline edge and a 20px corner. A pane
+   inside it sits one level down. Dark is the same room with the lights down.
 2. **Everything is a list**. The fields of a record are a list of label and value, in a panel on the
    left that folds.
 
@@ -146,23 +147,23 @@ Sources for this section:
    Everything else, figures included, is one quiet sans with tabular figures.
 4. **Buttons are flat, and one is filled**. No gradient, no light line on the edge, no glow.
 
-   A filled emerald verb is for the move the page names, and white outlines are for the rest.
+   A filled teal verb is for the move the page names, and white outlines are for the rest.
    Every button carries the resting layer, `--shadow-rest`.
-5. **Colour means something**. The emerald accent is the one filled verb, a link and the light behind the
-   sidebar.
+5. **Colour means something**. The teal accent is the one filled verb, a link and the current row of
+   the sidebar.
 
-   The indigo tint is a row that says an agent wrote it, and the light at the top of the far edge.
+   The indigo tint is a row that says an agent wrote it.
    Green, amber and red are a soft tint behind a word. Nothing has colour just to look good.
 
 Gates already hold rules 1 and 5; this file adds 2, 3 and 4.
 
 ## 3. Colour
 
-The meaning of each colour stays as it is. `--accent` (emerald) is the brand and the primary
+The meaning of each colour stays as it is. `--accent` (deep teal) is the brand and the primary
 action. `--ai*` (indigo) says an agent made something. The five state hues report how something
 turned out. These names are the ones `tokens.test.ts` pins, together with `--ai`, `--aiLight`, `--aiMed`
-and `--aiText`. What changes is the ground, which is lit, and the surface, which is one see-through
-pane per zone.
+and `--aiText`. What changes is the ground, which is one flat light teal, and the surfaces, which
+step one level down for each pane inside a pane.
 
 **Five states, and never one more**. A screen may not make up a new one.
 
@@ -191,10 +192,10 @@ ink reads on all five bases. `tokens.test.ts` reads the five states off the shee
 in both themes, and fails when a state is missing from one of them.
 
 **The neutral ink is two tokens**. `--textPrimary` is the ink that carries (names, headings, body),
-at `#15201b` in light and `#fff` in dark. `--textSecondary` is the one that supports, at
-`lch(40% 1 282)` in light and `lch(63.304% 1.425 272)` in dark, and a placeholder is the first thing
-that uses it. They take the place of the `--ink` / `--ink2` / `--ink3` / `--ink4` row in the table below,
-which answers "how quiet is this?" four ways. `tokens.test.ts` measures every pair the product draws
+at `#182c28` in light and `#edf6f4` in dark. `--textSecondary` is the one that supports, at
+`#55645f` in light and `#9aa8a3` in dark, and a placeholder is the first thing
+that uses it. They take the place of the four steps `--ink` / `--ink2` / `--ink3` / `--ink4`,
+which answer "how quiet is this?" four ways. `tokens.test.ts` measures every pair the product draws
 against every ground it lands on.
 
 The tables below are the design target, and they name some steps the tree does not carry yet:
@@ -206,35 +207,39 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 
 | Token | Value | Role |
 |---|---|---|
-| `--bg` | `#f1f5f2` | The paper the page is read on. |
-| `--glowA` / `--glowB` | `rgba(24,190,120,.06)` / `rgba(91,97,214,.10)` | The emerald light at the top-left corner behind the sidebar; the indigo light at the top right. Round fills of 900×620, and the only thing on the page that is there for looks. |
-| `--pane` / `--paneEdge` | `rgba(255,255,255,.72)` + `blur(12px)` / `rgba(16,26,21,.08)` | A zone, the details panel, a board card, a control at rest. |
-| `--bg2` / `--bg3` | `rgba(255,255,255,.55)` / `rgba(16,26,21,.05)` | The sidebar (glass over the glow, `blur(20px)`); a pill, a keycap, the open sidebar row. |
-| `--bgChip` | `rgba(16,26,21,.07)` | The shipped name of the `--bg3` pill and keycap fill: the fill under a badge, a keycap, a segmented strip, the floor of a meter. It is see-through, so a chip reads one step deeper than any ground it lands on; a solid value would be lost on a plate of the same grey. `.07` and no deeper: `--accentText` on this fill reads 4.57:1 over `--bgInset`, the ground with the lowest contrast of the four a chip lands on, and `.08` would drop that to 4.49:1, under the floor. |
+| `--bgPage` | `#eff6f3` | The paper the page is read on: one flat colour, with no light painted into it. |
+| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. The sidebar is the same pane, painted solid. The top bar is the same pane, with `blur(20px)` behind it. |
+| `--ladder1` … `--ladder4` | [`tokens.css`](frontend/src/design-system/tokens.css) | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
+| `--ladder1Edge` … `--ladder4Edge` | [`tokens.css`](frontend/src/design-system/tokens.css) | The hairline of a pane and of its head, by the same depth. A pane reads its own as `--groundEdge`. |
+| `--bgHover` / `--bgStrip` | `#d7ede5` / `#e3f1ec` | A pointer resting on a row; a toolbar or footer band on the ground. |
+| `--bgChip` | `rgba(16,23,20,.03)` | The shipped name of the `--bg3` pill and keycap fill: the fill under a badge, a keycap, a segmented strip, the floor of a meter. It is see-through, so a chip reads one step deeper than any ground it lands on, an inset plate included. |
 | `--line` / `--line2` | `rgba(16,26,21,.08)` / `.16` | The hairline between rows; the outline of a control, the axis of the spine. |
-| `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
-| `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
+| `--textPrimary` / `--textSecondary` | `#182c28` / `#55645f` | Names, values and body / labels, meta, dates and placeholders. |
+| `--accent` / `--accentText` / `--accentLight` | `#045647` / `#045647` / `#d7ede5` | The one filled verb; a link; the accent's tint, behind the current `Checklist` step and in the focus glow. |
+| `--accentBrand` | `#045647` | The brand mark: the workspace chip, the app icon and the browser's title bar. One value in both themes. |
 | `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
 | `--info` / `--success` / `--warning` / `--danger` / `--discovery` | `#0485f7` / `#17c964` / `#f5a524` / `#ff383c` / `#964ac0` | The five states, as a soft badge (the `Surface` of the tone behind a word, in its `Text` ink, with an edge in its `Border`), or as a solid one for a count and the one state that must not be missed. |
 
 ### Dark
 
-The same room with the lights down. The ground is `--bg #0c1311`, a small step above the `#0a100e` of the
-mock. So the hover step of the sidebar still has room under the page. The glows are stronger (`.10` /
-`.20`) because they are the only light. Each pane is `rgba(255,255,255,.045)` with a `.09` edge, and ink
-runs from `#eef3ef` down to `#5c6862`.
+The ground is `--bgPage #0c1311`, the darkest rung. Every other ground lifts above it, and only
+`--ladder4` lifts past the hover step. A pane on the page (level 1) is
+`rgba(239,247,244,.045)` with a `.09` edge. The ink is `#edf6f4`, and `#9aa8a3` for text that supports.
 
- The accent goes up to `#2bb673` with dark ink on it, and the
-indigo text to `#b3b7f5`. The chip turns around instead of copying the light theme: `--bgChip` becomes
-`rgba(255,255,255,.09)`, because a chip on a dark ground can step only one way. The theme switch in three states moves between
+A pane in a pane lifts one step toward the light per level, up to `--ladder4` at level 4. That is
+as light as a state chip's ground can go and still clear AA.
+
+The accent goes up to `#3aae94` with dark ink (`#07221d`) on it, its text to `#66d5ba`, and the
+indigo text to `#9ba0f0`. The chip turns around instead of copying the light theme: `--bgChip` becomes
+`rgba(239,247,244,.09)`, because a chip on a dark ground can step only one way. The theme switch in three states moves between
 them: `:root`, then `prefers-color-scheme` inside `:not([data-theme="light"])`,
 then `[data-theme="dark"]`.
 
 ### How colour is spent
 
-- **The two glows are the chrome**. The sidebar is glass over the emerald light. That light is a
-  soft tint, never a green column, and there is no coloured bar on any screen.
-- **At most one filled control in view**, in emerald: the move the page names. Every other button is
+- **The ground is the chrome**. The sidebar and the top bar are panes over the flat ground. The
+  sidebar is never a green column, and there is no coloured bar on any screen.
+- **At most one filled control in view**, in the teal accent: the move the page names. Every other button is
   a pane with an outline.
 - **The indigo tint marks the agent's work**. The agent's read is a row on `--aiBg`. A staged change is a row
   with a dashed `--aiLine` edge until a human accepts it. Nothing else is indigo.
@@ -309,8 +314,8 @@ target for that new build. The shipped sheet may not match it.
   - 12px (`--r-control`) for a control;
   - 8px for a chip, and 4px for a keycap;
   - full for a pill and a monogram.
-- **Depth is light first, shadow second**. A pane is see-through over the lit ground, with a
-  hairline edge; that is its height. On top of it, the shadow turns on what the thing is:
+- **Depth is light first, shadow second**. A pane stands on the flat ground with a hairline edge;
+  that is its height. On top of it, the shadow turns on what the thing is:
   - A surface (a pane, a card, a reading, a board card) and a control with a fill have a top side.
     They take `--shadow-rest`, one tight 1px/2px 5% layer. A ghost button casts one, because the
     pane is its fill. An icon button with nothing around it has no fill and casts nothing, and a text control casts
@@ -326,8 +331,10 @@ target for that new build. The shipped sheet may not match it.
 
   Nothing at rest glows, the monogram mesh is the only gradient, and nothing stacks a shadow under a
   shadow.
-- **No pane inside a pane**. A zone is one pane; the things in it are a title, a rule and rows. The
-  only closed shapes inside a pane are the agent's tinted row and a staged row's dashed edge.
+- A pane in a pane is one level down. A zone is a pane on the page, and a card in it sits on the
+  next level's ground. Level 4 holds for anything deeper. `surfaces.css` gives each level its ground,
+  so no component picks one. A dialog, popover, menu or side sheet keeps its own surface, and a card
+  in it starts again at level 2.
 
 ### More, and less
 
@@ -365,10 +372,10 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 ```
 ┌────────┬───────────────────────────────────────────────────────────────┐
 │ sidebar│ crumb        [ Search or run a command  ⌘K ]                me │
-│ (glass ├───────────────────────────────────────────────────────────────┤
+│ (pane  ├───────────────────────────────────────────────────────────────┤
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
-│  glow) │ tabs ──────────────────────────────────────────── [Details] │
+│ ground)│ tabs ──────────────────────────────────────────── [Details] │
 │ Home   │ ┌ THE 360 ─────────────────────────────┐ ┌ details (300) ────┐│
 │ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
@@ -380,18 +387,18 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar is light, never green**. It is glass: the white `--pane` with `blur(20px)` over the
-  lit page, one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour
-  open and folded, and in dark it is the same pane with the lights down. No screen or mock
-  paints it dark green or in the accent. The dark green `--bgInkField` is only for what passes over
-  the page, such as a tooltip. The only green in the column is the
-  workspace mark of a company that has no logo of its own.
+- **The sidebar is light, never green**. It is the `--pane`, painted solid over the flat ground,
+  one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour open and
+  folded, and in dark it is the same pane with the lights down. No screen or mock paints its ground
+  dark green or in the accent. The dark green `--bgInkField` is only for what passes over the page,
+  such as a tooltip. The only accent in the column is the current row and the workspace mark of a
+  company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
   At the top is the workspace head: the company's mark in a 40px square and its name. While open,
   it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
-- **Its states**: the group labels are quiet sentence case. The current row is a neutral `--bgInset`
-  pill in medium weight, never an accent fill. The agent's orb is pinned to the foot.
+- **Its states**: the group labels are quiet sentence case. The current row is filled with the
+  accent, in medium weight. The agent's orb is pinned to the foot.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
@@ -421,9 +428,6 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   value a machine read has the evidence underline, and an empty one has a lighter "Add …". It also
   holds the short lists that tell what the record is (contacts, seats, tags, the Deal Room, documents).
   The current product keeps its context column there, so a rep's hand does not move.
-- **The glows**: the emerald light at the top left is low (`.06` in light, `.10` in dark). The
-  indigo one at the top right is a step stronger. They set the feel of the page, and the eye should not find
-  them.
 
 ## 7. How the tool feels, and how a page is built
 
@@ -776,7 +780,7 @@ One drawing primitive, the product's `RelationshipMap`, on three pages, with its
 - 8px between nodes, 20px between lanes, and a lane heading in 10.5px upper case.
 
 Each node is a box with round corners on `--pane`, with the name at 13px 600 and a second label. A colleague
-sits on `--bg`, a company has a 2px `--ink3` edge, and a deal an accent edge.
+sits on `--bgPage`, a company has a 2px `--ink3` edge, and a deal an accent edge.
 
 **A gap is a dashed amber box** naming the missing role, with `Assign` under it. It is the only
 place the map draws something missing in a way a reader can count.
@@ -822,8 +826,8 @@ may do, or revokes.
 **The buyer's side is a public page** outside the Margince shell, reached from a one-time
 link. It has no rail, no top bar, no seat, no inner price data, and nothing the link did not already
 name. It is the one
-page a client sees. So it reads like a small site that looks good, not like a form, on the lit
-ground with both glows, in a 1040px frame:
+page a client sees. So it reads like a small site that looks good, not like a form, on the flat
+page ground, in a 1040px frame:
 
 - **A hero**. The contact's mark and "Prepared for {company} by {steward}" sit on the left, and the
   live pill with the end date on the right. Then the eyebrow "Deal Room", the room's title at 40px in
@@ -879,15 +883,15 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, white text, `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#07221d` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (12px) radius; focus is a 2px emerald ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
+| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (12px) radius; focus is a 2px accent ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never in upper case. `soft` by default: the tint of the tone behind the word, in the ink of the tone, with a hairline of the same tone as its edge (the record's standing badges beside its name, a status in a row). `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the `Sparkles` glyph. |
 | `Chip` | A fact a reader can use: a pill on the raised ground with a neutral hairline and a glyph, a link when the fact has a place to go, and a hover that says so. A badge is a tinted status, with an edge in its tone, that nobody presses. |
-| `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
+| `Panel` | Becomes a **zone pane**: the ground and edge of its level (`--pane` and `--paneEdge` on the page) and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` is a row one level down from the pane. |
+| `StatCard` | The **reading card**: the ground of its level with its hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The field row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, and the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures aligned right; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`. |
@@ -926,14 +930,13 @@ where motion is *spent*:
 
 ## 10. Restraint: what a screen in this language does not do
 
-- Does not put a pane inside a pane. A zone is one pane; inside it a title, a hairline and rows.
+- Does not pick a pane's ground by hand. How deep the pane sits picks it (section 5).
 - Does not cast a shadow of its own, a glow or a gradient (the mesh of a monogram, section 3, is the
   one gradient). The resting layer is `--shadow-rest`, from the token, and never from a rule that spells
-  its own. The two corner glows on the ground are the only other light, and the only tinted thing
-  inside a pane is the agent's row.
+  its own. The only tinted thing inside a pane is the agent's row.
 - Does not say a fact twice. One home per fact; the rest are links to it.
-- Does not fill a button, a row or a surface with emerald. The one primary verb and the wash of a
-  selected row are the only cases.
+- Does not fill a button, a row or a surface with the accent. The one primary verb and the current
+  row of the sidebar are the only cases.
 - Does not tint anything indigo that a human wrote.
 - Does not set a number in the proportional face.
 - Does not centre a title, a section or a table.
@@ -964,7 +967,7 @@ the features a new look must not drop. The order:
 - [ ] Every figure is tabular (`t-num`), aligned right in a column; mono only on code.
 - [ ] Every zone is one pane with a title, a hairline and rows. The only shadow at rest is
       `--shadow-rest`, and no rule spells one by hand.
-- [ ] One control in view with an emerald fill.
+- [ ] One control in view with the accent fill.
 - [ ] Anything an agent wrote is a row on `--aiLight` carrying the indigo mark. A row that asks for
       something says "Margince suggests", but never over the answer that nothing needs doing. A
       staged change carries a `--aiMed` dashed edge until a human accepts it.

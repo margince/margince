@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { IMPORT_ID } from "../../app/nav";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
 import { Badge, Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -153,13 +154,13 @@ function useImportVCards() {
 export function VCardImportAction() {
   const t = useT();
   return (
-    <a
+    <AppLink
       className="btn btn-ghost"
       data-testid="vcard-import"
       href={routeHash({ screen: "contacts", id: IMPORT_ID })}
     >
       {t("vcardImport.action")}
-    </a>
+    </AppLink>
   );
 }
 

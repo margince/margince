@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 9 |
-| Tool catalog | 134.1 KB |
+| Tool catalog | 134.4 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 35205 |
+| Approx. wire tokens | 35292 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 27.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 33.5 KB | 24% | Yes, every step |
-| Input schemas | 64.1 KB | 47% | Yes, every step |
+| Descriptions (incl. governance clause) | 33.6 KB | 24% | Yes, every step |
+| Input schemas | 64.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 8.9 KB | 6% | Partly |
-| **Description + input schema** | **97.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **97.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -62,7 +62,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1460 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
@@ -1060,13 +1060,14 @@ passport scope "write".)
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message that already
 happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
-moves one activity to another record; relink_many moves a named set. relink and relink_many wait for
-a human when they file under a project, and run at once anywhere else. attach checks the record
-first; read list_documents before attaching the same file again. Use schedule_meeting to book a
-meeting still to come, and change_state with move_deal when the same event moves a deal, so move and
-note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what
-the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its
-arguments for relink, relink_many; requires passport scope "write".)
+moves one activity to another record; relink_many moves a named set. ready says the user is ready
+for a meeting they attend; unready takes it back. relink and relink_many wait for a human when they
+file under a project, and run at once anywhere else. attach checks the record first; read
+list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to
+come, and change_state with move_deal when the same event moves a deal, so move and note are one
+change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry
+carries. (Governance: runs immediately for attach, log, ready, task, unready; decided per call from
+its arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1075,18 +1076,20 @@ arguments for relink, relink_many; requires passport scope "write".)
 {
   "properties": {
     "action": {
-      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set",
+      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back",
       "enum": [
         "attach",
         "log",
+        "ready",
         "relink",
         "relink_many",
-        "task"
+        "task",
+        "unready"
       ],
       "type": "string"
     },
     "activity_id": {
-      "description": "relink only: The captured activity to re-associate",
+      "description": "ready, relink, unready only: The meeting",
       "format": "uuid",
       "type": "string"
     },
@@ -1254,6 +1257,12 @@ arguments for relink, relink_many; requires passport scope "write".)
         "instant",
         "day"
       ]
+    },
+    "preparation_revision": {
+      "description": "ready, unready only: The preparation revision read_context with about=meeting answered",
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
     },
     "replace_existing_of_type": {
       "default": false,

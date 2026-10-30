@@ -153,6 +153,24 @@ func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityReadinessRecordedState.
+const (
+	Ready     PublicEventActivityReadinessRecordedState = "ready"
+	Withdrawn PublicEventActivityReadinessRecordedState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityReadinessRecordedState enum.
+func (e PublicEventActivityReadinessRecordedState) Valid() bool {
+	switch e {
+	case Ready:
+		return true
+	case Withdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventApprovalDecidedVerdict.
 const (
 	Approved PublicEventApprovalDecidedVerdict = "approved"
@@ -525,6 +543,7 @@ const (
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
+	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
 	ApprovalDecided                       SubscribableEventType = "approval.decided"
 	ApprovalFailureAcknowledged           SubscribableEventType = "approval.failure_acknowledged"
@@ -675,6 +694,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityDispositionRecorded:
 		return true
 	case ActivityMarkedHandled:
+		return true
+	case ActivityReadinessRecorded:
 		return true
 	case ActivityUpdated:
 		return true
@@ -1004,6 +1025,9 @@ type PublicEventActivityCaptured struct {
 
 // PublicEventActivityChangedFields The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
+	// AgendaChanged The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.
+	AgendaChanged *bool `json:"agenda_changed,omitempty"`
+
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
@@ -1089,6 +1113,20 @@ type PublicEventActivityDispositionRecordedDisposition string
 type PublicEventActivityMarkedHandled struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 }
+
+// PublicEventActivityReadinessRecorded Payload for activity.readiness_recorded. One attendee said they are ready for a meeting, or took that back (activities/meetingreadiness.go). It holds for that attendee alone, at the preparation revision they confirmed, and the attendee is not on the wire. A moved start, a new agenda or a changed guest list makes the revision stale without a new event.
+type PublicEventActivityReadinessRecorded struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// PreparationRevision The preparation revision the confirmation was given at.
+	PreparationRevision string `json:"preparation_revision"`
+
+	// State `ready` when the attendee confirmed, `withdrawn` when they undid it.
+	State PublicEventActivityReadinessRecordedState `json:"state"`
+}
+
+// PublicEventActivityReadinessRecordedState `ready` when the attendee confirmed, `withdrawn` when they undid it.
+type PublicEventActivityReadinessRecordedState string
 
 // PublicEventActivityRelinkedRef The entity an activity was relinked onto (activities/lifecycle.go's RelinkActivity) — an association change, not a re-capture, so it travels as one changed_fields key rather than its own event verb.
 type PublicEventActivityRelinkedRef struct {
@@ -2812,6 +2850,10 @@ func (PublicEventActivityMarkedHandled) EventType() string { return "activity.ma
 
 func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
 
+func (PublicEventActivityReadinessRecorded) EventType() string { return "activity.readiness_recorded" }
+
+func (PublicEventActivityReadinessRecorded) EntityType() string { return "activity" }
+
 func (PublicEventActivityUpdated) EventType() string { return "activity.updated" }
 
 func (PublicEventActivityUpdated) EntityType() string { return "activity" }
@@ -3386,6 +3428,7 @@ var PublicEventVersions = map[string]int{
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
 	"activity.marked_handled":                   1,
+	"activity.readiness_recorded":               1,
 	"activity.updated":                          1,
 	"approval.decided":                          1,
 	"approval.failure_acknowledged":             1,
@@ -3533,7 +3576,8 @@ var PublicEventSamples = map[string]string{
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"activity.updated":                          "{\"changed_fields\":{\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
+	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
+	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"is_done\":true,\"meeting_status\":\"booked\",\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"restored\":true,\"subject\":\"Sample subject\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"approval.decided":                          "{\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by_system\":true,\"diff_hash\":\"Sample diff hash\",\"edited\":true,\"edited_change\":{},\"kind\":\"Sample kind\",\"verdict\":\"approved\"}",
 	"approval.failure_acknowledged":             "{\"failed_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\"}",
 	"approval.preference_changed":               "{\"kind\":\"Sample kind\"}",

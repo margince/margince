@@ -21,7 +21,6 @@
   margin: 0;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--r-xs) var(--r-lg) var(--r-lg) var(--r-lg);
-  background: var(--bgInset);
 }
 
 .ob-conv-speaker {
@@ -78,9 +77,8 @@
   gap: var(--space-3);
   max-width: 44rem;
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-conv-confirm header {
@@ -221,9 +219,8 @@
 .ob-team-form {
   max-width: 34rem;
   padding: var(--space-5);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 .ob-team-invited {
   margin: 0;
@@ -275,9 +272,8 @@
   min-block-size: 11rem;
   margin: 0;
   padding: var(--space-8) var(--space-6);
-  border: 1px dashed var(--borderSubtle);
+  border: 1px dashed var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
   text-align: center;
 }
 
@@ -331,9 +327,8 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   transition:
     border-color var(--dur-state) ease,
     background var(--dur-state) ease;
@@ -345,7 +340,7 @@
 
 .ob-decision-card.is-picked {
   border-color: var(--accent);
-  background: var(--accentLight);
+  background-image: linear-gradient(var(--accentLight), var(--accentLight));
 }
 
 /* The choice row: disc + the read's lines on the left, the evidence
@@ -443,8 +438,8 @@
   gap: var(--space-1);
   margin-left: calc(20px + var(--space-3));
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 
 .ob-decision-proof-head {
@@ -552,9 +547,8 @@
   gap: var(--space-3);
   min-height: 16rem;
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
   overflow: hidden;
 }
 
@@ -813,9 +807,8 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-source-body {
@@ -872,9 +865,8 @@
 
 .ob-voice-speaker {
   padding: var(--space-4);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-speaker.is-picked {
@@ -941,9 +933,8 @@
 
 .ob-voice-result-card {
   padding: var(--padPanel);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 .ob-voice-result-label {
@@ -1112,8 +1103,8 @@
 .ob-voice-result-next {
   margin: 0;
   padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-voice-result-next b {
@@ -1325,9 +1316,8 @@
   align-items: flex-start;
   gap: var(--space-4);
   padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 /* `min-width: 0`: the avatar beside this is `flex: none`, so without this
@@ -1360,9 +1350,8 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgInset);
 }
 
 .ob-company-card-facts dt {
@@ -1617,7 +1606,7 @@
 }
 
 .ob-triage-nav-link:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -1737,7 +1726,7 @@
 }
 
 .ob-triage-nav-item:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -1808,9 +1797,8 @@
    its silhouette, only its height. */
 .ob-triage-rows > li {
   width: 100%;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   transition: background var(--dur-state) ease;
 }
 
@@ -1861,7 +1849,7 @@
 }
 
 .ob-triage-rows > li:has(.ob-triage-row-summary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The disclosure caret: purely the "there's more" affordance, since the
@@ -1942,7 +1930,6 @@
   padding: var(--space-3);
   border: 1px dashed var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 
 .ob-triage-omitted svg {
@@ -2058,9 +2045,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
 }
 
 .ob-triage-contact-name {
@@ -2104,7 +2090,7 @@
 }
 
 .ob-triage-fact-type > .disclosure-summary:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -2161,9 +2147,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
 }
 
 /* The one control that decides whether a found fact is kept: the product's tick,
@@ -2390,9 +2375,8 @@
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-5);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--bgElevated);
 }
 
 .ob-basis-section h3 {

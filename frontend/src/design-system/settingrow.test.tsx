@@ -178,7 +178,7 @@ describe("SettingList", () => {
     // And only against a slab: the rule between two ordinary rows is the whole
     // point of the list.
     expect(css).toMatch(
-      /\.settinglist > \* \+ \*\s*\{\s*border-top:\s*1px solid var\(--borderSubtle\)/,
+      /\.settinglist > \* \+ \*\s*\{\s*border-top:\s*1px solid var\(--groundSeam\)/,
     );
   });
 });
@@ -222,6 +222,6 @@ describe("SettingList bleed", () => {
     expect(hovers.map(([, selector]) => selector.trim())).toEqual([
       ".panel > .settinglist-records > .settingrow:hover",
     ]);
-    expect(hovers[0][2]).toMatch(/background:\s*var\(--bgHover\)/);
+    expect(hovers[0][2]).toMatch(/background:\s*var\(--groundHover\)/);
   });
 });

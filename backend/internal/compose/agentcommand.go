@@ -152,9 +152,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// setUpPartner, served by the registry. addListMember was another, retired
 	// with the list routes themselves.
 	//
-	// Four of the five share their operationId constant with agentsplit.go's
-	// own (opApplyTag's own comment says why); createOffer has no such twin
-	// at all, since create_record never reaches the split.
 	opApplyTag: applyTagCommand,
 	// removeTag binds to the same subject applyTag does — the tag — so it
 	// resolves the same command rather than a near-copy of it.

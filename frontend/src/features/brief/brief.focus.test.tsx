@@ -77,7 +77,7 @@ it("a task lead from a call offers Call and Email, and links the contact once", 
   ).toBeTruthy();
   const toContact = card
     .getAllByRole("link")
-    .filter((link) => link.getAttribute("href") === "#/contacts/c-1");
+    .filter((link) => link.getAttribute("href") === "/#/contacts/c-1");
   expect(toContact).toHaveLength(1);
 });
 

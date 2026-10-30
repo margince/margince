@@ -63,11 +63,11 @@ describe("a row", () => {
     const view = await rowOf(BERLIN.name);
     expect(
       within(view).getByRole("link", { name: BERLIN.name }),
-    ).toHaveAttribute("href", "#/filters/contacts/v1");
+    ).toHaveAttribute("href", "/#/filters/contacts/v1");
     const list = await rowOf(liveList.name);
     expect(
       within(list).getByRole("link", { name: liveList.name }),
-    ).toHaveAttribute("href", `#/lists/${LIVE_ID}`);
+    ).toHaveAttribute("href", `/#/lists/${LIVE_ID}`);
   });
 
   it("says a view's kind in a neutral badge, marks a Live List alone as live, and counts only a list's records", async () => {
@@ -87,8 +87,8 @@ describe("a row", () => {
       en["lists.type.contact"],
     );
     const list = await rowOf(liveList.name);
-    // Info rather than emerald or indigo: those say the one primary action and
-    // an agent's proposal, and a list that keeps itself current is neither.
+    // Info, not the accent or indigo: those say the one primary action and an
+    // agent's proposal. A list that keeps itself current is neither.
     const live = within(list)
       .getByText(en["lists.kind.live"])
       .closest(".badge");

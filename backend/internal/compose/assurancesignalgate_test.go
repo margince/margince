@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -53,7 +54,7 @@ func TestSignalFindingsGateTheirCitedActivitiesOnce(t *testing.T) {
 	if !strings.Contains(tx.sql, "deal_suggestion s") {
 		t.Fatal("the read names no suggestion, so this test reads the wrong statement")
 	}
-	if got := strings.Count(tx.sql, "FROM activity request_source"); got != 1 {
+	if got := auth.ContentGateCopies(tx.sql); got != 1 {
 		t.Fatalf("the signal findings read carries %d content gates, want 1", got)
 	}
 }

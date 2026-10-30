@@ -3,6 +3,7 @@
 
 import { Search } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { useT } from "../../i18n";
 import { useCompanyContextShown } from "../../lib/companycontextreach";
 import { isImeCommit } from "../../lib/imecommit";
@@ -240,7 +241,7 @@ export function SettingsSearchBox({
                  problem it was solving is solved by `onMouseDown`'s
                  preventDefault below, which keeps focus in the input WITHOUT
                  acting. */
-                <a
+                <AppLink
                   key={hit.page.id}
                   id={optionDomId(index)}
                   role="option"
@@ -275,7 +276,7 @@ export function SettingsSearchBox({
                   <span className="t-caption">
                     {`${hit.section ?? hit.group} · ${t(`settings.scope.${hit.page.scope}`)}`}
                   </span>
-                </a>
+                </AppLink>
               );
             })
           )}
