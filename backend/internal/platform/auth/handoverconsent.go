@@ -5,6 +5,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,6 +33,11 @@ func handOverConsented(ctx context.Context, dest ids.UUID) bool {
 // to take: a live human seat that can write, inside the caller's scope or not.
 // It is EnsureAssignee under WithHandOverConsent, so the seat SQL is shared.
 func EnsureHandOverRecipient(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	// Held to commit: EnsureAssignee's FOR KEY SHARE lets a suspension land
+	// first. Ordinary assignments keep the lighter lock.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR NO KEY UPDATE`, dest); err != nil {
+		return fmt.Errorf("auth: holding the receiver of a handover: %w", err)
+	}
 	return EnsureAssignee(WithHandOverConsent(ctx, dest), tx, dest)
 }
 

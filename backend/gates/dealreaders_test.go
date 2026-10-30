@@ -153,6 +153,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/deals/recordhandover.go:recordDealsTx":               "the open deals one owner holds on a contact or company a handover moves. Its two callers ask auth.Require(ctx, \"deal\", read) or update first, and only ids, versions and counts leave",
 	"internal/modules/deals/lossreasonmapping.go:dropOrphanedLossMapping":  "whether any deal still carries a note, to drop the mapping decided for it; no deal column leaves the statement. Reached only from the stage advance, which asked auth.Require for deal update and locked the row through lockThenEnsureWritable",
 	"internal/compose/magic/undoversion.go":                                "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/compose/briefs/briefcontinuity.go:previousRanking":           "the previous run's ranking, so a brief can say what moved. The briefs package asks the deal object gate at its own entry points",

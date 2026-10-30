@@ -20,7 +20,7 @@ import (
 // A task whose linked records the caller cannot read is not theirs to count or
 // move, as for every other activity read.
 func (s *Store) OpenTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) (int, error) {
-	candidates, err := openTasksAssignedTo(ctx, tx, from, nil)
+	candidates, err := openTasksAssignedTo(ctx, tx, from)
 	return len(candidates), err
 }
 
@@ -36,7 +36,7 @@ func (s *Store) HandOverOpenTasksTx(ctx context.Context, tx pgx.Tx, from, to ids
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return 0, nilIfDenied(err)
 	}
-	candidates, err := openTasksAssignedTo(ctx, tx, from, nil)
+	candidates, err := openTasksAssignedTo(ctx, tx, from)
 	if err != nil {
 		return 0, err
 	}
@@ -50,42 +50,89 @@ type RecordLink struct {
 	ID         ids.UUID
 }
 
-// HandOverRecordTasksTx is HandOverOpenTasksTx for the open tasks from holds
-// on one record. It also answers how many stayed, because their own write
-// refused the move. A task from does not hold, or one already done, is not
-// touched.
-func (s *Store) HandOverRecordTasksTx(ctx context.Context, tx pgx.Tx, record RecordLink, from, to ids.UserID) (moved, kept int, err error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return 0, 0, nilIfDenied(err)
-	}
-	candidates, err := openTasksAssignedTo(ctx, tx, from, &record)
-	if err != nil {
-		return 0, 0, err
-	}
-	return s.handOverTasks(ctx, tx, candidates, to)
+// RecordTasks is what handing on a record's open tasks did, or would do.
+type RecordTasks struct {
+	Moved, Kept int
 }
 
-// CountRecordTasksHeldByTx counts the open tasks holder holds on one record:
-// the tasks HandOverRecordTasksTx would try to move. It is asked for a card
-// only that holder reads, so it counts every such task rather than those the
-// caller may open.
-func (s *Store) CountRecordTasksHeldByTx(ctx context.Context, tx pgx.Tx, record RecordLink, holder ids.UserID) (int, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return 0, err
+// HandOverRecordTasksTx is HandOverOpenTasksTx for the open tasks from holds
+// on one record, by the rule recordTasksTx states. A task the rule keeps, or
+// whose own write refuses the move, stays with from and is counted in Kept.
+func (s *Store) HandOverRecordTasksTx(ctx context.Context, tx pgx.Tx, record RecordLink, from, to ids.UserID) (RecordTasks, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return RecordTasks{}, nilIfDenied(err)
 	}
-	args := []any{holder}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	filedUnder, err := filedUnderClause(&record, arg)
+	held, err := recordTasksTx(ctx, tx, record, from)
 	if err != nil {
-		return 0, err
+		return RecordTasks{}, err
 	}
-	var held int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM activity a
-		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $1`+filedUnder,
-		args...).Scan(&held); err != nil {
-		return 0, fmt.Errorf("activities: counting a record's open tasks: %w", err)
+	var moving []ids.UUID
+	out := RecordTasks{}
+	for _, task := range held {
+		if task.Moves {
+			moving = append(moving, task.ID)
+		} else {
+			out.Kept++
+		}
 	}
-	return held, nil
+	moved, refused, err := s.handOverTasks(ctx, tx, moving, to)
+	out.Moved, out.Kept = moved, out.Kept+refused
+	return out, err
+}
+
+// CountRecordTasksHeldByTx answers what HandOverRecordTasksTx would do with
+// the open tasks holder holds on one record.
+func (s *Store) CountRecordTasksHeldByTx(ctx context.Context, tx pgx.Tx, record RecordLink, holder ids.UserID) (RecordTasks, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return RecordTasks{}, err
+	}
+	held, err := recordTasksTx(ctx, tx, record, holder)
+	if err != nil {
+		return RecordTasks{}, err
+	}
+	var out RecordTasks
+	for _, task := range held {
+		if task.Moves {
+			out.Moved++
+		} else {
+			out.Kept++
+		}
+	}
+	return out, nil
+}
+
+// recordTask is one open task the holder holds on the record.
+type recordTask struct {
+	ID    ids.UUID
+	Moves bool
+}
+
+// recordTasksTx reads the open tasks holder holds on one record, and whether
+// each goes with it. Only a task whose every link names this record goes. A
+// task also filed under another record is that record's business too.
+// The count and the move both read through it. It reads every such task, not
+// only those the caller may open. The count goes onto a card only the holder
+// reads, and each move passes the task's own write gate.
+func recordTasksTx(ctx context.Context, tx pgx.Tx, record RecordLink, holder ids.UserID) ([]recordTask, error) {
+	column, ok := recordLinkColumns[record.EntityType]
+	if !ok {
+		return nil, fmt.Errorf("activities: tasks are not filed under a %q", record.EntityType)
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT a.id, NOT EXISTS (SELECT 1 FROM activity_link o WHERE o.activity_id = a.id		         AND (o.entity_type <> $2 OR o.%[1]s IS DISTINCT FROM $3))
+		  FROM activity a
+		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $1
+		   AND EXISTS (SELECT 1 FROM activity_link l
+		                WHERE l.activity_id = a.id AND l.entity_type = $2 AND l.%[1]s = $3)
+		 ORDER BY a.id`, column), holder, record.EntityType, record.ID)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading a record's open tasks: %w", err)
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[recordTask])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading a record's open tasks: %w", err)
+	}
+	return found, nil
 }
 
 // handOverTasks moves each task through the ordinary update write. A task its
@@ -117,8 +164,8 @@ func nilIfDenied(err error) error {
 }
 
 // openTasksAssignedTo selects the live, undone tasks assigned to from that the
-// caller may read, filed under record when one is named.
-func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID, record *RecordLink) ([]ids.UUID, error) {
+// caller may read.
+func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids.UUID, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, nilIfDenied(err)
 	}
@@ -128,15 +175,11 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID, record
 	if err != nil {
 		return nil, err
 	}
-	filedUnder, err := filedUnderClause(record, arg)
-	if err != nil {
-		return nil, err
-	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.assignee_id = $1 AND (%s)%s
-		 ORDER BY a.id`, content, filedUnder), args...)
+		   AND a.assignee_id = $1 AND (%s)
+		 ORDER BY a.id`, content), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the open tasks to hand over: %w", err)
 	}
@@ -150,17 +193,3 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID, record
 // recordLinkColumns are the activity_link columns that name a contact or a
 // company, keyed by the link's entity type.
 var recordLinkColumns = map[string]string{"contact": "contact_id", "company": "company_id"}
-
-// filedUnderClause narrows the tasks to those linked to record; empty for none.
-func filedUnderClause(record *RecordLink, arg func(any) int) (string, error) {
-	if record == nil {
-		return "", nil
-	}
-	column, ok := recordLinkColumns[record.EntityType]
-	if !ok {
-		return "", fmt.Errorf("activities: tasks are not filed under a %q", record.EntityType)
-	}
-	return fmt.Sprintf(` AND EXISTS (SELECT 1 FROM activity_link l
-		 WHERE l.activity_id = a.id AND l.entity_type = $%d AND l.%s = $%d)`,
-		arg(record.EntityType), column, arg(record.ID)), nil
-}

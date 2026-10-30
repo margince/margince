@@ -16,64 +16,106 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// RecordDealsHandOver is what handing on a record's open deals did: how many
-// moved, and the names of those that stayed with their owner.
+// RecordDealsHandOver is what handing on a record's open deals did, or would
+// do: how many moved, and how many stayed with their owner.
 type RecordDealsHandOver struct {
 	Moved int
-	Kept  []string
+	Kept  int
 }
 
-// heldOnRecordSQL selects the open deals owner holds on one contact or company
-// and appends their arguments. A contact's deals are those it is a live
-// stakeholder of, read under the edge grant; a caller without it finds none.
-func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, owner ids.UserID, args *[]any) (string, error) {
+// heldOnRecordSQL selects the open deals owner holds on one contact or company,
+// with whether each goes with the record. A company takes all its deals. A
+// contact takes a deal only as its sole live stakeholder on a deal with no
+// company. Any other deal is somebody else's business too and stays. Only the
+// contact's own stakeholder rows are read under the edge grant; the check for
+// others decides and returns nothing.
+func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, owner ids.UserID, args *[]any) (where, moves string, err error) {
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
 	held := fmt.Sprintf(`%s AND d.owner_id = $%d`, openDealSQL, arg(owner))
 	switch recordType {
 	case "company":
-		return fmt.Sprintf(`d.company_id = $%d AND %s`, arg(recordID), held), nil
+		return fmt.Sprintf(`d.company_id = $%d AND %s`, arg(recordID), held), predicateAlways, nil
 	case "contact":
 		edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return "false", nil
+			return "false", "false", nil
 		}
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		if edgeScope == "" {
 			edgeScope = predicateAlways
 		}
-		return fmt.Sprintf(`EXISTS (SELECT 1 FROM relationship r
+		contact := arg(recordID)
+		where = fmt.Sprintf(`EXISTS (SELECT 1 FROM relationship r
 			 WHERE r.deal_id = d.id AND r.kind = 'deal_stakeholder' AND r.contact_id = $%d
-			   AND r.archived_at IS NULL AND (%s)) AND %s`, arg(recordID), edgeScope, held), nil
+			   AND r.archived_at IS NULL AND (%s)) AND %s`, contact, edgeScope, held)
+		moves = fmt.Sprintf(`d.company_id IS NULL AND NOT EXISTS (SELECT 1 FROM relationship o
+			 WHERE o.deal_id = d.id AND o.kind = 'deal_stakeholder' AND o.archived_at IS NULL
+			   AND o.contact_id IS DISTINCT FROM $%d)`, contact)
+		return where, moves, nil
 	}
-	return "", fmt.Errorf("deals: no deals hang off a %q", recordType)
+	return "", "", fmt.Errorf("deals: no deals hang off a %q", recordType)
 }
 
-// CountRecordDealsHeldByTx counts the open deals owner holds on one contact or
-// company: the deals HandOverRecordDealsTx would try to move.
-func (s *Store) CountRecordDealsHeldByTx(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID, owner ids.UserID) (int, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return 0, err
-	}
+// recordDeal is one open deal the owner holds on the record.
+type recordDeal struct {
+	ID      ids.DealID
+	Version int64
+	Moves   bool
+}
+
+// recordDealsTx reads the open deals owner holds on the record, locked when
+// lock is set. The count and the move both read through it, so the card says
+// what the move does.
+func recordDealsTx(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID, owner ids.UserID, lock bool) ([]recordDeal, error) {
 	var args []any
-	where, err := heldOnRecordSQL(ctx, recordType, recordID, owner, &args)
+	where, moves, err := heldOnRecordSQL(ctx, recordType, recordID, owner, &args)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	var held int
-	if err := tx.QueryRow(ctx, `SELECT count(*) FROM deal d WHERE `+where, args...).Scan(&held); err != nil {
-		return 0, fmt.Errorf("deals: counting a record's open deals: %w", err)
+	statement := `SELECT d.id, d.version, (` + moves + `) FROM deal d WHERE ` + where + ` ORDER BY d.id`
+	if lock {
+		statement += ` FOR UPDATE OF d`
 	}
-	return held, nil
+	rows, err := tx.Query(ctx, statement, args...)
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading a record's open deals: %w", err)
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[recordDeal])
+	if err != nil {
+		return nil, fmt.Errorf("deals: reading a record's open deals: %w", err)
+	}
+	return found, nil
+}
+
+// CountRecordDealsHeldByTx answers what HandOverRecordDealsTx would do with
+// the open deals owner holds on one contact or company.
+func (s *Store) CountRecordDealsHeldByTx(ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID, owner ids.UserID) (RecordDealsHandOver, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return RecordDealsHandOver{}, err
+	}
+	held, err := recordDealsTx(ctx, tx, recordType, recordID, owner, false)
+	if err != nil {
+		return RecordDealsHandOver{}, err
+	}
+	var out RecordDealsHandOver
+	for _, deal := range held {
+		if deal.Moves {
+			out.Moved++
+		} else {
+			out.Kept++
+		}
+	}
+	return out, nil
 }
 
 // HandOverRecordDealsTx gives the open deals from owns on one contact or
-// company to to. Each goes through ReassignDealTx, so each gets its own audit
-// row, event and hand-on of its pending proposals. A deal whose own write refuses
-// the move stays with from and is named in Kept. A caller without the update
-// grant moves none, so the record itself still moves. A closed deal, an
-// archived one and one somebody else owns are not touched.
+// company to to, by the rule heldOnRecordSQL states. Each goes through
+// ReassignDealTx, so each gets its own audit row, event and hand-on of its
+// pending proposals. A deal the rule keeps, or whose own write refuses the
+// move, stays with from and is counted in Kept. A caller without the update
+// grant moves none, so the record itself still moves.
 func (s *Store) HandOverRecordDealsTx(
 	ctx context.Context, tx pgx.Tx, recordType string, recordID ids.UUID, from, to ids.UserID,
 ) (RecordDealsHandOver, error) {
@@ -83,35 +125,22 @@ func (s *Store) HandOverRecordDealsTx(
 		}
 		return RecordDealsHandOver{}, err
 	}
-	var args []any
-	where, err := heldOnRecordSQL(ctx, recordType, recordID, from, &args)
+	held, err := recordDealsTx(ctx, tx, recordType, recordID, from, true)
 	if err != nil {
 		return RecordDealsHandOver{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT d.id, d.name, d.version FROM deal d WHERE `+where+`
-		 ORDER BY d.id FOR UPDATE OF d`, args...)
-	if err != nil {
-		return RecordDealsHandOver{}, fmt.Errorf("deals: reading a record's open deals to hand on: %w", err)
-	}
-	type candidate struct {
-		ID      ids.DealID
-		Name    string
-		Version int64
-	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[candidate])
-	if err != nil {
-		return RecordDealsHandOver{}, fmt.Errorf("deals: reading a record's open deals to hand on: %w", err)
-	}
 	var out RecordDealsHandOver
-	for _, c := range candidates {
-		moved, err := s.handOverDealInSavepoint(ctx, tx, c.ID, to, c.Version)
-		if err != nil {
-			return RecordDealsHandOver{}, err
+	for _, deal := range held {
+		moved := false
+		if deal.Moves {
+			if moved, err = s.handOverDealInSavepoint(ctx, tx, deal.ID, to, deal.Version); err != nil {
+				return RecordDealsHandOver{}, err
+			}
 		}
 		if moved {
 			out.Moved++
 		} else {
-			out.Kept = append(out.Kept, c.Name)
+			out.Kept++
 		}
 	}
 	return out, nil

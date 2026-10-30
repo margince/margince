@@ -64,12 +64,12 @@ func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tra
 		return err
 	}
 	words := ownershipTransferWords
-	lines := []string{fmt.Sprintf(words.AcceptedMoved.In(lang), moved.dealsMoved, moved.tasksMoved)}
-	if len(moved.dealsKept) > 0 {
-		lines = append(lines, fmt.Sprintf(words.KeptDeals.In(lang), giver, strings.Join(moved.dealsKept, ", ")))
+	lines := []string{fmt.Sprintf(words.AcceptedMoved.In(lang), moved.deals.Moved, moved.tasks.Moved)}
+	if moved.deals.Kept > 0 {
+		lines = append(lines, fmt.Sprintf(words.KeptDeals.In(lang), giver, moved.deals.Kept))
 	}
-	if moved.tasksKept > 0 {
-		lines = append(lines, fmt.Sprintf(words.KeptTasks.In(lang), giver, moved.tasksKept))
+	if moved.tasks.Kept > 0 {
+		lines = append(lines, fmt.Sprintf(words.KeptTasks.In(lang), giver, moved.tasks.Kept))
 	}
 	return recordTransferNotice(ctx, tx, approvalID, transfer, notices.NewNotice{
 		Kind:    transferAcceptedKind,

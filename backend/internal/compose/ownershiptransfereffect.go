@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -37,11 +38,9 @@ func (t ownershipTransfers) transferTargets() map[string]bulkTarget {
 
 // transferHandOver is what an accepted transfer moved and what it left.
 type transferHandOver struct {
-	record     string
-	dealsMoved int
-	dealsKept  []string
-	tasksMoved int
-	tasksKept  int
+	record string
+	deals  deals.RecordDealsHandOver
+	tasks  activities.RecordTasks
 }
 
 // ownershipTransferAcceptEffect moves the record, and with it the giver's open
@@ -97,13 +96,11 @@ func (t ownershipTransfers) handOverTx(ctx context.Context, tx pgx.Tx, transfer 
 		return transferHandOver{}, err
 	}
 	out := transferHandOver{record: row.label}
-	dealsMoved, err := t.deals.HandOverRecordDealsTx(consented, tx, transfer.RecordType, transfer.RecordID, from, to)
-	if err != nil {
+	if out.deals, err = t.deals.HandOverRecordDealsTx(consented, tx, transfer.RecordType, transfer.RecordID, from, to); err != nil {
 		return transferHandOver{}, err
 	}
-	out.dealsMoved, out.dealsKept = dealsMoved.Moved, dealsMoved.Kept
 	link := activities.RecordLink{EntityType: transfer.RecordType, ID: transfer.RecordID}
-	out.tasksMoved, out.tasksKept, err = t.tasks.HandOverRecordTasksTx(consented, tx, link, from, to)
+	out.tasks, err = t.tasks.HandOverRecordTasksTx(consented, tx, link, from, to)
 	return out, err
 }
 

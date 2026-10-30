@@ -15,11 +15,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,17 +81,20 @@ func noticesOf(t *testing.T, e *integration.Env, recipient ids.UUID, kind string
 	return e.WsCount(t, `SELECT count(*) FROM notice WHERE recipient_user_id = $1 AND kind = $2`, recipient, kind)
 }
 
-func taskOn(t *testing.T, e *integration.Env, subject string, assignee ids.UUID, recordType string, record ids.UUID) ids.UUID {
+func taskOn(t *testing.T, e *integration.Env, subject string, assignee ids.UUID, links ...activities.ActivityLinkInput) ids.UUID {
 	t.Helper()
 	to := ids.From[ids.UserKind](assignee)
 	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: &subject, Source: "manual", AssigneeID: &to,
-		Links: []activities.ActivityLinkInput{{EntityType: recordType, EntityID: record}},
+		Kind: "task", Subject: &subject, Source: "manual", AssigneeID: &to, Links: links,
 	})
 	if err != nil {
 		t.Fatalf("logging task %q: %v", subject, err)
 	}
 	return ids.UUID(row.Id)
+}
+
+func linkTo(recordType string, id ids.UUID) activities.ActivityLinkInput {
+	return activities.ActivityLinkInput{EntityType: recordType, EntityID: id}
 }
 
 // handoverPipeline is the one pipeline a test's deals sit in.
@@ -103,11 +111,14 @@ func newHandoverPipeline(t *testing.T, e *integration.Env) handoverPipeline {
 
 func dealOn(t *testing.T, e *integration.Env, stages handoverPipeline, name string, owner, company ids.UUID) ids.UUID {
 	t.Helper()
-	companyID := ids.From[ids.CompanyKind](company)
-	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+	in := deals.CreateDealInput{
 		Name: name, PipelineID: stages.pipeline, StageID: stages.open,
-		OwnerID: new(ids.From[ids.UserKind](owner)), CompanyID: &companyID,
-	})
+		OwnerID: new(ids.From[ids.UserKind](owner)),
+	}
+	if !company.IsZero() {
+		in.CompanyID = new(ids.From[ids.CompanyKind](company))
+	}
+	d, err := e.Deals.CreateDeal(e.Admin(), in)
 	if err != nil {
 		t.Fatalf("seeding deal %q: %v", name, err)
 	}
@@ -134,8 +145,10 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 		t.Fatalf("winning the pilot: %v", err)
 	}
 	colleaguesDeal := dealOn(t, e, stages, "BAER upsell", e.Rep2, company)
-	openTask := taskOn(t, e, "Call BAER back", e.Rep1, "company", company)
-	colleaguesTask := taskOn(t, e, "Send BAER the deck", e.Rep2, "company", company)
+	openTask := taskOn(t, e, "Call BAER back", e.Rep1, linkTo("company", company))
+	colleaguesTask := taskOn(t, e, "Send BAER the deck", e.Rep2, linkTo("company", company))
+	buyer := e.SeedContact(t, "BAER buyer", &e.Rep1)
+	sharedTask := taskOn(t, e, "Ask the buyer at BAER", e.Rep1, linkTo("company", company), linkTo("contact", buyer))
 
 	request, created := requestHandover(t, e, asker(e), "company", company)
 	if !created || request.Transfer.FromID != e.Rep1 || request.Transfer.DeciderID != e.Rep1 {
@@ -159,9 +172,10 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 		t.Errorf("the open task is held by %s, want it moved with the company", got)
 	}
 	for name, stayed := range map[string]bool{
-		"the won deal":       ownerOf(t, e, "deal", wonDeal) == e.Rep1,
-		"a colleague's deal": ownerOf(t, e, "deal", colleaguesDeal) == e.Rep2,
-		"a colleague's task": assigneeOf(t, e, colleaguesTask) == e.Rep2,
+		"the won deal":             ownerOf(t, e, "deal", wonDeal) == e.Rep1,
+		"a colleague's deal":       ownerOf(t, e, "deal", colleaguesDeal) == e.Rep2,
+		"a colleague's task":       assigneeOf(t, e, colleaguesTask) == e.Rep2,
+		"a task also on a contact": assigneeOf(t, e, sharedTask) == e.Rep1,
 	} {
 		if !stayed {
 			t.Errorf("%s moved, want it left with its holder", name)
@@ -183,36 +197,83 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 	}
 }
 
-// A contact moves with the open deals it is a stakeholder of and the open
-// tasks on it that its owner holds.
-func TestAnAcceptedHandoverMovesTheContactWithTheDealsItSitsOn(t *testing.T) {
+// A contact takes a deal only when it is the deal's sole stakeholder and the
+// deal names no company. It takes a task only when the task is filed under it
+// alone. Everything else is somebody else's business too and stays.
+func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Pat Example", &e.Rep1)
-	company := e.SeedCompany(t, "Example AG", &e.Rep2)
-	deal := dealOn(t, e, newHandoverPipeline(t, e), "Example rollout", e.Rep1, company)
-	contactID, dealID := ids.From[ids.ContactKind](contact), ids.From[ids.DealKind](deal)
-	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: "deal_stakeholder", ContactID: &contactID, DealID: &dealID, Source: "manual",
-	}); err != nil {
-		t.Fatalf("seating the contact on the deal: %v", err)
+	colleague := e.SeedContact(t, "Sam Example", &e.Rep1)
+	kept := e.SeedCompany(t, "Example AG", &e.Rep1)
+	stages := newHandoverPipeline(t, e)
+	alone := dealOn(t, e, stages, "Pat's own deal", e.Rep1, ids.Nil)
+	shared := dealOn(t, e, stages, "Pat and Sam's deal", e.Rep1, ids.Nil)
+	onCompany := dealOn(t, e, stages, "Example rollout", e.Rep1, kept)
+	seat := func(who, deal ids.UUID) {
+		contactID, dealID := ids.From[ids.ContactKind](who), ids.From[ids.DealKind](deal)
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+			Kind: "deal_stakeholder", ContactID: &contactID, DealID: &dealID, Source: "manual",
+		}); err != nil {
+			t.Fatalf("seating a contact on a deal: %v", err)
+		}
 	}
-	task := taskOn(t, e, "Ask Pat for the PO", e.Rep1, "contact", contact)
+	seat(contact, alone)
+	seat(contact, shared)
+	seat(colleague, shared)
+	seat(contact, onCompany)
+	ownTask := taskOn(t, e, "Ask Pat for the PO", e.Rep1, linkTo("contact", contact))
+	sharedTask := taskOn(t, e, "Ask Pat about Example AG", e.Rep1, linkTo("contact", contact), linkTo("company", kept))
 
 	request, _ := requestHandover(t, e, asker(e), "contact", contact)
+	summary := e.WsScalar(t, `SELECT summary FROM approval WHERE id = $1`, request.ApprovalID)
+	if !strings.Contains(summary, "Open deals that move with it: 1. Open tasks: 1.") {
+		t.Errorf("the card reads %q, want the one deal and the one task that move", summary)
+	}
 	if err := decideHandover(t, e, giver(e), request.ApprovalID, true); err != nil {
 		t.Fatalf("the owner accepting: %v", err)
 	}
-	if got := ownerOf(t, e, "contact", contact); got != e.Rep3 {
-		t.Errorf("the contact is owned by %s, want the colleague who asked", got)
+	for name, c := range map[string]struct {
+		got, want ids.UUID
+	}{
+		"the contact":                       {ownerOf(t, e, "contact", contact), e.Rep3},
+		"the deal only Pat sits on":         {ownerOf(t, e, "deal", alone), e.Rep3},
+		"the task only on Pat":              {assigneeOf(t, e, ownTask), e.Rep3},
+		"the deal Sam sits on too":          {ownerOf(t, e, "deal", shared), e.Rep1},
+		"the deal on a company kept":        {ownerOf(t, e, "deal", onCompany), e.Rep1},
+		"the task also on the company kept": {assigneeOf(t, e, sharedTask), e.Rep1},
+	} {
+		if c.got != c.want {
+			t.Errorf("%s is held by %s, want %s", name, c.got, c.want)
+		}
 	}
-	if got := ownerOf(t, e, "deal", deal); got != e.Rep3 {
-		t.Errorf("the stakeholder deal is owned by %s, want it moved with the contact", got)
+	body := e.WsScalar(t, `SELECT body FROM notice WHERE recipient_user_id = $1 AND kind = $2`, e.Rep3, transferAcceptedKind)
+	for _, want := range []string{"Open deals that moved with it: 1. Open tasks: 1.", "could not be moved: 2.", "could not be moved: 1."} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the acceptance notice reads %q, want it to say %q", body, want)
+		}
 	}
-	if got := assigneeOf(t, e, task); got != e.Rep3 {
-		t.Errorf("the task on the contact is held by %s, want it moved", got)
+	if strings.Contains(body, "Example rollout") {
+		t.Errorf("the acceptance notice names a kept deal: %q", body)
 	}
-	if got := ownerOf(t, e, "company", company); got != e.Rep2 {
-		t.Errorf("the deal's company moved to %s; only the contact was handed over", got)
+}
+
+// The receiver's seat is held until the handover commits, so a suspension
+// cannot land between the check and the move.
+func TestTheReceiverIsHeldUntilTheHandoverCommits(t *testing.T) {
+	e := integration.Setup(t)
+	err := database.WithWorkspaceTx(giver(e), e.Pool, func(tx pgx.Tx) error {
+		if err := auth.EnsureHandOverRecipient(giver(e), tx, e.Rep3); err != nil {
+			return err
+		}
+		blocked := e.WsExecErr(t, `SELECT 1 FROM app_user WHERE id = $1 FOR NO KEY UPDATE NOWAIT`, e.Rep3)
+		var pgErr *pgconn.PgError
+		if !errors.As(blocked, &pgErr) || pgErr.Code != "55P03" {
+			t.Errorf("a concurrent write to the receiver's seat → %v, want it to wait for the handover", blocked)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("checking the receiver: %v", err)
 	}
 }
 

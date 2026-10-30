@@ -164,7 +164,8 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, recordType s
 }
 
 // askedSummary is the card's sentence: who asks, and what moves with the
-// record. The counts are the giver's, read when the request is filed.
+// record. The counts are the giver's, read when the request is filed through
+// the selectors the move itself uses.
 func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (string, error) {
 	asker, err := colleagueName(ctx, tx, transfer.RequestedBy)
 	if err != nil {
@@ -184,13 +185,14 @@ func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfe
 	if transfer.RecordType == string(recordTypeCompany) {
 		phrase = ownershipTransferWords.AskedCompany
 	}
-	return fmt.Sprintf(phrase.In(identity.BaseLanguageForRecord(ctx, tx)), asker, dealCount, taskCount), nil
+	return fmt.Sprintf(phrase.In(identity.BaseLanguageForRecord(ctx, tx)), asker, dealCount.Moved, taskCount.Moved), nil
 }
 
 // countOrNone reads a refused count as nothing to count.
-func countOrNone(n int, err error) (int, error) {
+func countOrNone[T any](n T, err error) (T, error) {
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return 0, nil
+		var none T
+		return none, nil
 	}
 	return n, err
 }

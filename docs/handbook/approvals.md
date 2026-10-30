@@ -111,7 +111,7 @@ Also called: commitment, promise task, promised by, who owns this promise, take 
 To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
 The request waits as an approval on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
 
-If the owner accepts, the record is yours. The open deals linked to it and the open tasks on it that the owner held move with it. Closed deals, done tasks and work other colleagues hold stay where they are.
+If the owner accepts, the record is yours. A company brings the owner's open deals on it. A contact brings the owner's open deals on which it is the only contact and that name no company. Either brings the owner's open tasks filed under it alone. Everything else stays with the owner, and the notice says how many deals and tasks stayed.
 
 A notice tells you when the owner accepts or declines, when the request runs out, and when the record goes to someone else first. After a decline you can ask again. To take the request back, press **Withdraw request** in the same place.
 

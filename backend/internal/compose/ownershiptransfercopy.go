@@ -16,7 +16,7 @@ var ownershipTransferWords = struct {
 	Accepted langcopy.Phrase
 	// AcceptedMoved: the deals, then the tasks that moved with it.
 	AcceptedMoved langcopy.Phrase
-	// KeptDeals: the colleague the deals stayed with, then their names.
+	// KeptDeals: the colleague the deals stayed with, then how many.
 	KeptDeals langcopy.Phrase
 	// KeptTasks: the colleague the tasks stayed with, then how many.
 	KeptTasks langcopy.Phrase
@@ -46,14 +46,14 @@ var ownershipTransferWords = struct {
 		Vi: "Giờ nó thuộc về bạn. Số giao dịch đang mở đã chuyển theo: %d. Số việc đang mở: %d.",
 	},
 	KeptDeals: langcopy.Phrase{
-		En: "These deals stayed with %s, because they could not be moved: %s.",
-		De: "Diese Deals sind bei %s geblieben, weil sie sich nicht übertragen ließen: %s.",
-		Vi: "Các giao dịch này vẫn ở lại với %s vì không thể chuyển: %s.",
+		En: "Open deals that stayed with %s, because they belong to other records too or could not be moved: %d.",
+		De: "Offene Deals, die bei %s geblieben sind, weil sie auch zu anderen Datensätzen gehören oder sich nicht übertragen ließen: %d.",
+		Vi: "Số giao dịch đang mở vẫn ở lại với %s vì còn thuộc bản ghi khác hoặc không thể chuyển: %d.",
 	},
 	KeptTasks: langcopy.Phrase{
-		En: "Open tasks that stayed with %s, because they could not be moved: %d.",
-		De: "Offene Aufgaben, die bei %s geblieben sind, weil sie sich nicht übertragen ließen: %d.",
-		Vi: "Số việc đang mở vẫn ở lại với %s vì không thể chuyển: %d.",
+		En: "Open tasks that stayed with %s, because they belong to other records too or could not be moved: %d.",
+		De: "Offene Aufgaben, die bei %s geblieben sind, weil sie auch zu anderen Datensätzen gehören oder sich nicht übertragen ließen: %d.",
+		Vi: "Số việc đang mở vẫn ở lại với %s vì còn thuộc bản ghi khác hoặc không thể chuyển: %d.",
 	},
 	Declined: langcopy.Phrase{
 		En: "%s keeps %s",
