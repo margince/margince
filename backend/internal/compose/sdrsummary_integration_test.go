@@ -60,12 +60,12 @@ func (f *sdrFixture) submit(t *testing.T, name string, to *ids.UUID) ids.UUID {
 	return id
 }
 
-func (f *sdrFixture) summary(t *testing.T, ctx context.Context, owner ids.UUID) crmcontracts.SdrSummary {
+func (f *sdrFixture) summary(ctx context.Context, t *testing.T, owner ids.UUID) crmcontracts.SdrSummary {
 	t.Helper()
 	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
 	id := openapi_types.UUID(owner)
 	var out crmcontracts.SdrSummary
-	body := sdrServe(t, f.e, ctx, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+	body := sdrServe(ctx, t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
 		h.GetSdrSummary(w, r, crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id})
 	}, f.at)
 	if err := json.Unmarshal(body, &out); err != nil {
@@ -74,12 +74,12 @@ func (f *sdrFixture) summary(t *testing.T, ctx context.Context, owner ids.UUID) 
 	return out
 }
 
-func (f *sdrFixture) page(t *testing.T, ctx context.Context, owner ids.UUID, cursor *string, limit int) crmcontracts.SdrWaitingHandoffPage {
+func (f *sdrFixture) page(ctx context.Context, t *testing.T, owner ids.UUID, cursor *string, limit int) crmcontracts.SdrWaitingHandoffPage {
 	t.Helper()
 	kind := crmcontracts.ListSdrWaitingHandoffsParamsScopeKindOwner
 	id := openapi_types.UUID(owner)
 	var out crmcontracts.SdrWaitingHandoffPage
-	body := sdrServe(t, f.e, ctx, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+	body := sdrServe(ctx, t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
 		h.ListSdrWaitingHandoffs(w, r, crmcontracts.ListSdrWaitingHandoffsParams{ScopeKind: &kind, ScopeId: &id, Cursor: cursor, Limit: &limit})
 	}, f.at)
 	if err := json.Unmarshal(body, &out); err != nil {
@@ -88,7 +88,7 @@ func (f *sdrFixture) page(t *testing.T, ctx context.Context, owner ids.UUID, cur
 	return out
 }
 
-func sdrServe(t *testing.T, e *forecastEnv, ctx context.Context, call func(sdrSummaryHandlers, http.ResponseWriter, *http.Request), at time.Time) []byte {
+func sdrServe(ctx context.Context, t *testing.T, e *forecastEnv, call func(sdrSummaryHandlers, http.ResponseWriter, *http.Request), at time.Time) []byte {
 	t.Helper()
 	h := newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return at })
 	w := httptest.NewRecorder()
@@ -115,7 +115,7 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 	if err := f.handoffs.DecideHandoff(f.ctx, returned, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: &reason}); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.summary(t, f.ctx, e.Rep1).Handoffs; got == nil || got.Waiting != 2 || got.Returned != 1 {
+	if got := f.summary(f.ctx, t, e.Rep1).Handoffs; got == nil || got.Waiting != 2 || got.Returned != 1 {
 		t.Fatalf("a recycled handoff waits on its submitter, not on a recipient: %+v", got)
 	}
 	f.at = f.at.Add(2 * time.Hour)
@@ -128,7 +128,7 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 	}
 	f.at = f.at.Add(time.Hour)
 
-	got := f.summary(t, f.ctx, e.Rep1)
+	got := f.summary(f.ctx, t, e.Rep1)
 	totals := got.Handoffs
 	if got.Workflow != crmcontracts.SdrSummaryWorkflowHandoff || totals == nil {
 		t.Fatalf("an SDR framework reads handoffs: %+v", got)
@@ -139,11 +139,11 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 	if totals.OldestWaitingSince == nil || !totals.OldestWaitingSince.Equal(time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)) {
 		t.Fatalf("the oldest wait is the blocked handoff's, since the returned one started again: %v", totals.OldestWaitingSince)
 	}
-	if other := f.summary(t, f.ctx, f.ae).Handoffs; other == nil || other.Waiting != 0 {
+	if other := f.summary(f.ctx, t, f.ae).Handoffs; other == nil || other.Waiting != 0 {
 		t.Fatalf("a handoff is credited to its submitter, not its recipient: %+v", other)
 	}
 
-	first := f.page(t, f.ctx, e.Rep1, nil, 2)
+	first := f.page(f.ctx, t, e.Rep1, nil, 2)
 	if len(first.Rows) != 2 || first.NextCursor == nil || ids.UUID(first.Rows[0].Id) != blocked || ids.UUID(first.Rows[1].Id) != queued {
 		t.Fatalf("page one is the two oldest waits, with a cursor: %+v", first)
 	}
@@ -153,7 +153,7 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 	if first.Rows[1].Recipient != nil || first.Rows[1].Subject == nil || first.Rows[1].Subject.Label != "Queued prospect" {
 		t.Fatalf("a queued handoff names its prospect and no recipient: %+v", first.Rows[1])
 	}
-	second := f.page(t, f.ctx, e.Rep1, first.NextCursor, 2)
+	second := f.page(f.ctx, t, e.Rep1, first.NextCursor, 2)
 	if len(second.Rows) != 1 || second.NextCursor != nil || ids.UUID(second.Rows[0].Id) != returned {
 		t.Fatalf("page two holds the resubmitted handoff alone: %+v", second)
 	}
@@ -184,7 +184,7 @@ func TestSdrSummaryAcceptanceAfterResubmissionCountsOnce(t *testing.T) {
 	if err := f.handoffs.DecideHandoff(f.ctx, handoff, contacts.HandoffDecision{Status: contacts.HandoffAccepted, DealID: &dealID}); err != nil {
 		t.Fatal(err)
 	}
-	if totals := f.summary(t, f.ctx, e.Rep1).Handoffs; totals == nil || totals.Waiting != 0 || totals.Returned != 0 {
+	if totals := f.summary(f.ctx, t, e.Rep1).Handoffs; totals == nil || totals.Waiting != 0 || totals.Returned != 0 {
 		t.Fatalf("an accepted handoff waits on nobody: %+v", totals)
 	}
 	f.at = f.at.Add(time.Minute)
@@ -207,14 +207,14 @@ func TestSdrWaitingHandoffWithheldProspectIsRestricted(t *testing.T) {
 		t.Fatal(err)
 	}
 	own := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
-	page := f.page(t, own, e.Rep1, nil, 10)
+	page := f.page(own, t, e.Rep1, nil, 10)
 	if len(page.Rows) != 1 {
 		t.Fatalf("the seat's own handoff is listed: %+v", page)
 	}
 	if row := page.Rows[0]; !row.Restricted || row.Subject != nil {
 		t.Fatalf("a prospect outside the seat's row scope is neither named nor linked: %+v", row)
 	}
-	if totals := f.summary(t, own, e.Rep1).Handoffs; totals == nil || totals.Waiting != 1 {
+	if totals := f.summary(own, t, e.Rep1).Handoffs; totals == nil || totals.Waiting != 1 {
 		t.Fatalf("the restricted handoff still counts as the seat's own work: %+v", totals)
 	}
 	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
@@ -238,7 +238,7 @@ func TestSdrWaitingHandoffWithAMaskedLeadCompanyIsRestricted(t *testing.T) {
 	actor, _ := principal.Actor(reader)
 	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "lead", Field: "company_name", Condition: principal.MaskAlways}}
 	reader = principal.WithActor(reader, actor)
-	page := f.page(t, reader, e.Rep1, nil, 10)
+	page := f.page(reader, t, e.Rep1, nil, 10)
 	if len(page.Rows) != 1 {
 		t.Fatalf("the seat's own handoff is listed: %+v", page)
 	}
@@ -262,7 +262,7 @@ func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got := f.summary(t, f.ctx, e.Rep1)
+	got := f.summary(f.ctx, t, e.Rep1)
 	if got.Workflow != crmcontracts.SdrSummaryWorkflowQualification || got.Handoffs != nil {
 		t.Fatalf("a sales framework has no handoff workflow, whatever rows exist: %+v", got)
 	}
@@ -292,8 +292,9 @@ func TestLeadsAwaitingResponseCountsTheUnansweredArrivalCohort(t *testing.T) {
 	service := newReportingService(e.Pool, func() time.Time { return now })
 	admin := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll)
 	interval := crmcontracts.ReportingWindow{StartAt: now.AddDate(0, 0, -3), EndAt: now.AddDate(0, 0, 1)}
-	result, err := service.Evaluate(admin, crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open",
-		Metrics: []crmcontracts.ReportingMetricID{"lead_first_response", "leads_awaiting_response"}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}})
+	metrics := []crmcontracts.ReportingMetricID{"lead_first_response", "leads_awaiting_response"}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: metrics, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
+	result, err := service.Evaluate(admin, selection)
 	if err != nil {
 		t.Fatal(err)
 	}

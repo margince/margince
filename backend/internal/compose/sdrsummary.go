@@ -57,10 +57,11 @@ func (h sdrSummaryHandlers) GetSdrSummary(w http.ResponseWriter, r *http.Request
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
+	ctx := r.Context()
 	var out crmcontracts.SdrSummary
-	err := h.db.Tx(r.Context(), func(tx pgx.Tx) error {
+	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readSdrSummary(r.Context(), tx, requested, h.now().UTC())
+		out, err = readSdrSummary(ctx, tx, requested, h.now().UTC())
 		return err
 	})
 	if err != nil {
@@ -94,9 +95,10 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 		after = &position
 	}
 	out := crmcontracts.SdrWaitingHandoffPage{AsOf: h.now().UTC(), Rows: []crmcontracts.SdrWaitingHandoff{}}
-	err := h.db.Tx(r.Context(), func(tx pgx.Tx) error {
+	ctx := r.Context()
+	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out.Rows, out.NextCursor, err = readWaitingHandoffs(r.Context(), tx, requested, after, limit)
+		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, after, limit)
 		return err
 	})
 	if err != nil {
