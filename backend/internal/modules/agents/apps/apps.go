@@ -51,6 +51,14 @@ const CreateFollowupsURI = "ui://margince/create-followups.html"
 // release, with Approve and Reject beside it.
 const ApprovalURI = "ui://margince/approval.html"
 
+// ApprovalQueueURI is the card list_approvals offers: every proposal on the
+// page, each with Approve and Reject, and a bundle answered together.
+const ApprovalQueueURI = "ui://margince/approval-queue.html"
+
+// AttentionURI is the card read_attention offers: slipping deals, relationships
+// at risk or open promises, ranked, each with a way to ask about it.
+const AttentionURI = "ui://margince/attention.html"
+
 // UpdateURI is the card update_record offers: what the call changed, field by
 // field, or why it changed nothing.
 const UpdateURI = "ui://margince/update.html"
@@ -80,6 +88,18 @@ var catalog = []view{
 		name:        "approval_view",
 		title:       "Waiting for a decision",
 		description: "A change an assistant proposed, what it would do, and the choice to approve or reject it.",
+	},
+	{
+		uri:         ApprovalQueueURI,
+		name:        "approval_queue_view",
+		title:       "Waiting for your decision",
+		description: "Every proposal waiting for a human, what each would change and when it runs out, with Approve and Reject on each.",
+	},
+	{
+		uri:         AttentionURI,
+		name:        "attention_view",
+		title:       "What needs attention",
+		description: "Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for each and a way to ask about it.",
 	},
 	{
 		uri:         UpdateURI,

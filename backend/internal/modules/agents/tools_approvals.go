@@ -180,6 +180,9 @@ func (t listApprovalsTool) Spec() mcp.ToolSpec {
 			"cursor":{"type":"string","description":"next_cursor from a previous page."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ApprovalPage](),
+		// The queue's card answers each row through decide_approvals, as the
+		// one-proposal card does.
+		UI: &mcp.ToolUI{ResourceURI: apps.ApprovalQueueURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
