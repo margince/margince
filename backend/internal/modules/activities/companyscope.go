@@ -325,6 +325,12 @@ func unassignedQueueClause() string {
 	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
+// teamQueueClause is the open tasks a team view keeps: a seat's own, or
+// nobody's, as the Worklist's roster filter keeps them.
+func teamQueueClause(seats []ids.UUID, arg func(any) int) string {
+	return sprintf("(a.assignee_id IS NULL OR a.assignee_id = ANY($%d::uuid[])) AND a.kind = 'task' AND NOT a.is_done", arg(seats))
+}
+
 // onMeetingOfClause is the meetings one seat answers for, by the one
 // meeting-responsibility rule. It narrows a worklist and grants nothing: these
 // rows have already passed the row-scope gate and the audience arm.

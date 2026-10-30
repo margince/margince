@@ -299,6 +299,7 @@ internal/compose/weekly/weeklyrelevance_integration_test.go 1
 internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
+internal/compose/worklistbacklog_integration_test.go 1
 internal/compose/worklistageout_integration_test.go 1
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2

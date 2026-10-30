@@ -256,6 +256,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// still paging and a row crossing the page boundary is served twice or
 		// not at all.
 		WithWalks(worklistsnap.New(pool, now)).
+		// The task lane's whole count past its cap, so its categories state a total.
+		WithTaskBacklog(attentionTasks{store: activities.NewStore(db)}).
 		// The done lane's own window, so the worklist's receipts and Home's
 		// lane start at the same instant.
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
