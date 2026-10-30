@@ -26,6 +26,7 @@ import {
 import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
+import { useMailLanguage } from "./publiclocale";
 import "../settings/preferences.css";
 import "./confirm.css";
 
@@ -78,6 +79,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       return data;
     },
   });
+
+  // A contact who got the mail in Vietnamese lands on a Vietnamese page.
+  useMailLanguage(details.data?.language);
 
   // Edits are held against what the server sent, so a field the contact did not
   // touch is never submitted as a correction. Submitting an untouched field

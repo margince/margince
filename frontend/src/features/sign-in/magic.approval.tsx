@@ -10,8 +10,8 @@ import {
   commercialPreviewDisplay,
   dealCloseOutcome,
 } from "../../lib/approvalpreview";
+import type { MagicLine } from "../../lib/magic.queries";
 import { useRecordZone } from "../../lib/recordzone";
-import type { MagicLine } from "./magic.queries";
 
 type Preview = components["schemas"]["ApprovalPreview"];
 

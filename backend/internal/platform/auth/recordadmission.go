@@ -111,7 +111,7 @@ func AdmitChangers(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, ps
 		}
 		visible := st.probe(table, live)
 		write := -1
-		if !Unbounded(p) && shareableTables[table] {
+		if !Unbounded(p) && shareableTables[table] && !admittedCaseMemberFor(ctx, p, table, id) {
 			write = st.probe(table, writeAuthorityPredicate(p, table, st.arg))
 		}
 		return func(answers []bool) error {

@@ -114,7 +114,7 @@ func newestMessage(
 	}
 	var found lastMessage
 	var direction, subject, excerpt *string
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
@@ -124,7 +124,8 @@ func newestMessage(
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
-		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move), args...).
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move)
+	err = tx.QueryRow(ctx, query, args...).
 		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
@@ -178,12 +179,13 @@ func hasOpenTask(
 		return false, err
 	}
 	var scheduled bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&scheduled)
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
+	err = tx.QueryRow(ctx, query, args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}

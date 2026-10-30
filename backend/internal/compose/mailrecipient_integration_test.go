@@ -372,12 +372,12 @@ func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
 	if _, _, err := e.worker.engine.AssembleTeamFor(e.repCtx, e.Team1, "Northstar sales", []weekly.TeamMember{{UserID: e.Rep1, DisplayName: "Alex Example"}}, now); err != nil {
 		t.Fatal(err)
 	}
-	full, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	full, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	e.worker.mail.PublicBaseURL = ""
-	without, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	without, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +399,7 @@ func TestProductionControllerStagingPreviews(t *testing.T) {
 		lane := setupConfirmLane(t)
 		lane.store.WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
 		integration.SetBaseLanguage(lane.e.Admin(), t, lane.e.Pool, language)
-		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact)); err != nil {
+		if _, err := lane.store.IssueConfirmToken(lane.ctx, ids.From[ids.ContactKind](lane.contact), ""); err != nil {
 			t.Fatal(err)
 		}
 		purpose, err := lane.store.CreatePurpose(lane.e.Admin(), "marketing_email", "Product news", true)

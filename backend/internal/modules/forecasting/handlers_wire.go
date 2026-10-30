@@ -41,6 +41,15 @@ func ReadingsToWire(
 		id := openapi_types.UUID(*scope.ID)
 		out.ScopeId = &id
 	}
+	if q := in.Qualified; q != nil {
+		out.Qualified = &crmcontracts.ForecastQualifiedReadings{
+			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
+			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
+			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount,
+			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
+			AmountsPartial: &q.AmountsPartial,
+		}
+	}
 	return out
 }
 

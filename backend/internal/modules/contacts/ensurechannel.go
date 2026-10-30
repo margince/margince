@@ -48,9 +48,7 @@ const fieldChannelIdentity = "channel_identity"
 const fieldChannelUsername = "channel_username"
 
 // EnsureChannelCounterpartyInput is one inbound channel message's counterparty.
-// There is no OwnerID and no Domain: the created contact is ownerless by design,
-// and this path derives no employer even when an address rides along — reading
-// one out of a mail domain is the mail ladder's job, which this path bypasses.
+// The created contact is ownerless. A corroborating work address also reaches employer resolution.
 type EnsureChannelCounterpartyInput struct {
 	Identity    connector.ChannelIdentity
 	DisplayName string // the provider's own name for the sender — untrusted text
@@ -70,8 +68,7 @@ type EnsureChannelCounterpartyInput struct {
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
-// company fields, unlike its mail sibling: this path never derives a
-// company, so there would be nothing honest to put in them.
+// company fields; employer resolution is recorded on the contact and in the domain ledger.
 type EnsureChannelCounterpartyResult struct {
 	ContactID      ids.ContactID
 	ContactCreated bool
@@ -172,6 +169,14 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 			}
 		}
 		return res, nil
+	}
+	if !res.ContactCreated {
+		if err := lockContactForAttach(ctx, tx, res.ContactID); err != nil {
+			return EnsureChannelCounterpartyResult{}, err
+		}
+		if err := s.resolveCreatedEmployer(ctx, tx, res.ContactID, ContactSpec{Source: in.Source, CapturedBy: in.CapturedBy}); err != nil {
+			return EnsureChannelCounterpartyResult{}, err
+		}
 	}
 	if err := refreshChannelUsername(ctx, tx, in.Identity); err != nil {
 		return EnsureChannelCounterpartyResult{}, err
@@ -299,7 +304,7 @@ func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureCha
 	// happen here: both tells quarantineSuspect reads — a punycode domain, a
 	// display name naming a DIFFERENT domain than the message arrived from —
 	// are statements about a mail domain this record does not have.
-	id, err := createContact(ctx, tx, match, ContactSpec{
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		FullName: name,
 		// A channel message arrived from them: the same act as an inbound
 		// mail, over a different transport.
@@ -445,9 +450,7 @@ func refreshChannelUsername(ctx context.Context, tx pgx.Tx, ci connector.Channel
 		handleImage(ci.Provider, previous), handleImage(ci.Provider, current))
 }
 
-// sameHandle compares two handles with "no handle at all" as ONE state rather
-// than two: emptyToNil has already collapsed the empty string the provider
-// reports for a handle-less account into the NULL the column stores.
+// sameHandle treats absent and empty handles as the same state.
 func sameHandle(a, b *string) bool {
 	if a == nil || b == nil {
 		return a == b
@@ -455,9 +458,7 @@ func sameHandle(a, b *string) bool {
 	return *a == *b
 }
 
-// handleImage is the audit/event field image for a handle refresh, provider
-// included for the same reason reachabilityImage carries it. A nil handle is
-// the honest image of an account that has none.
+// handleImage includes the provider so an audit field identifies its channel.
 func handleImage(provider string, handle *string) map[string]any {
 	return map[string]any{fieldChannelUsername: map[string]any{
 		"provider": provider, "username": handle,

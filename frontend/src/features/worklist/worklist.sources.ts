@@ -9,6 +9,7 @@ export const reachNames = {
   domain_question: "brief.coverage.source.domain_question",
   approval: "brief.coverage.source.approval",
   dedupe_candidate: "brief.coverage.source.dedupe_candidate",
+  contact_case: "brief.coverage.source.contact_case",
   deal_suggestion: "brief.coverage.source.deal_suggestion",
   tag_suggestion: "brief.coverage.source.tag_suggestion",
   task: "brief.coverage.source.task",

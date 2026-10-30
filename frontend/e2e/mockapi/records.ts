@@ -85,11 +85,31 @@ export const createCompany: Handler = ({ route, json }) => {
       id: "o-new",
       display_name: String(body.display_name),
       industry: body.industry ?? null,
+      domains: body.domains ?? [],
       captured_by: "human:u1",
       source: "manual",
     },
     201,
   );
+};
+
+// Contacts on the new company's domain that are not linked to it yet.
+export const newCompanyCandidates = {
+  data: [
+    {
+      contact_id: "p-anja",
+      full_name: "Anja Petersen",
+      title: "Head of Procurement",
+      email: "anja.petersen@nordlicht-logistik.example",
+    },
+    {
+      contact_id: "p-jonas",
+      full_name: "Jonas Weber",
+      email: "j.weber@nordlicht-logistik.example",
+      employer: { company_id: "o-brandt", company_name: brandt.display_name },
+    },
+  ],
+  truncated: false,
 };
 
 export const newCompany = {

@@ -247,6 +247,11 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 	if linkColumn(*entityType) == "" {
 		return &InvalidLinkTypeError{EntityType: *entityType}
 	}
+	// Row scope reads every deal and company, so a role without the type's
+	// read grant would learn which activities a record it cannot open holds.
+	if err := auth.Require(ctx, *entityType, principal.ActionRead); err != nil {
+		return err
+	}
 	// The record type IS the table name for every arm of this vocabulary, which
 	// is the same identity linkNameCoalesce reads.
 	return auth.EnsureVisible(ctx, tx, *entityType, *entityID)
@@ -309,7 +314,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 // projection keeps and for the same reason: "may I read this task" is an
 // any-link question, and answering it yes does not license naming every
 // other record the task touches. The rule has one spelling —
-// auth.LinkTargetVisibleClause — and both readers ask it.
+// auth.LinkTargetReadableClause, and both readers ask it.
 func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	if len(tasks) == 0 {
 		return nil
@@ -322,7 +327,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	}
 	args := []any{taskIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}

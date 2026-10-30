@@ -5,9 +5,11 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -15,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -43,9 +46,13 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := "Website form: " + landing.FormName
 	body := webFormNote(landing)
+	raw, err := webFormRaw(landing)
+	if err != nil {
+		return err
+	}
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
-		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource,
+		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the website form's note: %w", err)
@@ -53,9 +60,9 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	return nil
 }
 
-// lead answers the record the note belongs on. Nil with no error is a contact
-// this principal may not read. Its owner has a task about it, and nothing more
-// is written.
+// lead answers the record the note belongs on. Nil with no error means nothing
+// more is written. That is a contact this principal may not read, whose owner
+// has a task about it, or an address on the erasure list.
 func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
@@ -84,6 +91,11 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 			return nil, nil //nolint:nilnil // a contact this principal may not read has no note target, and that is no failure
 		}
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		// The visitor gets the receipt every post gets. A refusal would tell an
+		// anonymous sender that the address belongs to an erased subject.
+		return nil, nil //nolint:nilnil // an erased address has no note target, and that is no failure
 	}
 	if err != nil {
 		return nil, err
@@ -154,8 +166,9 @@ func originDetail(e webforms.Enquiry) string {
 // maxOriginDetail is the lead.origin_detail bound (lead_origin_detail_bounded).
 const maxOriginDetail = 500
 
-// webFormNote is the timeline note. It holds what the visitor wrote, every
-// field the lead has no column for, and the consent in the form's own words.
+// webFormNote is the timeline note: the consent the form recorded, then what
+// the visitor sent as a quote. Every line the visitor wrote is quoted, so no
+// field of theirs can pass for a line Margince wrote, such as the consent.
 func webFormNote(landing webforms.Landing) string {
 	e := landing.Enquiry
 	var b strings.Builder
@@ -180,12 +193,84 @@ func webFormNote(landing webforms.Landing) string {
 	for _, u := range e.UTM {
 		line(u.Name, u.Value)
 	}
-	if e.Consent && landing.ConsentWording != nil {
-		consent := "ticked: " + *landing.ConsentWording
-		if landing.ConsentPolicyVersion != nil {
-			consent += " (policy " + *landing.ConsentPolicyVersion + ")"
-		}
-		line("Consent", consent)
+	sent := quoted(strings.TrimSpace(b.String()))
+	consent := webFormConsent(landing)
+	if consent == "" || sent == "" {
+		return consent + sent
 	}
-	return strings.TrimSpace(b.String())
+	return consent + "\n\n" + sent
+}
+
+// webFormRaw keeps the submission field by field on the note, where the
+// activity read answers it as `web_form`. The body says the same as text.
+//
+//craft:ignore naked-any raw is the activity's free-form source payload column
+func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+	e := landing.Enquiry
+	sent := crmcontracts.WebFormSubmission{
+		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
+		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
+		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
+		Campaign: webFormValues(e.UTM),
+	}
+	if landing.ConsentWording != nil {
+		sent.Consent = &crmcontracts.WebFormConsent{
+			Ticked: e.Consent, Wording: *landing.ConsentWording, PolicyVersion: landing.ConsentPolicyVersion,
+		}
+	}
+	encoded, err := json.Marshal(sent)
+	if err != nil {
+		return nil, fmt.Errorf("compose: encoding the website form's fields: %w", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return nil, fmt.Errorf("compose: decoding the website form's fields: %w", err)
+	}
+	return raw, nil
+}
+
+func webFormValues(fields []webforms.Field) []crmcontracts.WebFormValue {
+	out := make([]crmcontracts.WebFormValue, len(fields))
+	for i, f := range fields {
+		out[i] = crmcontracts.WebFormValue{Name: f.Name, Value: f.Value}
+	}
+	return out
+}
+
+// webFormConsent is the form's own record of its consent box. The admin's
+// wording is kept to one line, so the record is the one line it reads as.
+func webFormConsent(landing webforms.Landing) string {
+	switch {
+	case landing.ConsentWording == nil:
+		return ""
+	case !landing.Enquiry.Consent:
+		return "Consent: not ticked"
+	}
+	consent := "Consent: ticked: " + mailcopy.OneLine(*landing.ConsentWording)
+	if landing.ConsentPolicyVersion != nil {
+		consent += " (policy " + mailcopy.OneLine(*landing.ConsentPolicyVersion) + ")"
+	}
+	return consent
+}
+
+// quoted marks every line of text as a Markdown quote. It splits on each break
+// a reader may draw, so no line of the text is shown unmarked.
+func quoted(text string) string {
+	if text == "" {
+		return ""
+	}
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	var lines []string
+	start := 0
+	for i, r := range text {
+		if mailcopy.LineBreak(r) {
+			lines = append(lines, text[start:i])
+			start = i + utf8.RuneLen(r)
+		}
+	}
+	lines = append(lines, text[start:])
+	for i, l := range lines {
+		lines[i] = strings.TrimRight("> "+l, " ")
+	}
+	return strings.Join(lines, "\n")
 }

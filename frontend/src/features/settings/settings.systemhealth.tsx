@@ -13,11 +13,11 @@ import { ProviderHealthCard } from "../capture/providerhealth";
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
 import { DataTasksHealthCard } from "./datataskshealth";
+import { EmbedReindexCard } from "./embedreindex";
 import {
-  EmbedReindexCard,
   useEmbedReindexAvailable,
   useEmbedReindexStatus,
-} from "./embedreindex";
+} from "./embedreindex.queries";
 import {
   ExtensionIngestHealthCard,
   useExtensionIngestHealth,

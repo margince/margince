@@ -2,11 +2,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { candidateVersion } from "../../testing/voice-candidate";
-import { ActiveVoiceInsights } from "./voice-versions";
+import { CandidateBanner } from "./voice-versions";
 
 // The banner asks the owner to accept or reject a voice that will write their
 // mail. Everything that decision needs has to be ON it: what the voice says
@@ -16,22 +16,6 @@ import { ActiveVoiceInsights } from "./voice-versions";
 // was impossible.
 
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
-
-function stub(version: VoiceProfileVersion) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({
-            data: [version],
-            page: { next_cursor: null, has_more: false },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-    ),
-  );
-}
 
 function view(ui: ReactNode, locale: "en" | "de" | "vi" = "en") {
   return render(
@@ -45,10 +29,20 @@ function view(ui: ReactNode, locale: "en" | "de" | "vi" = "en") {
   );
 }
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
+// The banner carries the version it asks about; nothing on it fetches.
+function review(version: VoiceProfileVersion, locale?: "en" | "de" | "vi") {
+  return view(
+    <CandidateBanner
+      profileId="p-1"
+      candidate={version}
+      canEdit
+      onChanged={() => undefined}
+    />,
+    locale,
+  );
+}
+
+afterEach(cleanup);
 
 describe("reviewing a candidate voice", () => {
   it("formats typed scores for German readers and retains incomplete reasons", async () => {
@@ -66,15 +60,7 @@ describe("reviewing a candidate voice", () => {
       { code: "low_score", text: "Missing score", values: { floor: 0.6 } },
       { code: "malformed", text: "Different reason", values: {} },
     ];
-    stub(version);
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
-      "de",
-    );
+    review(version, "de");
     expect(await screen.findByText(/Ähnlichkeit 0,56/)).toBeTruthy();
     expect(screen.getByText("Missing score")).toBeTruthy();
     expect(screen.getByText("Recorded new reason")).toBeTruthy();
@@ -87,14 +73,7 @@ describe("reviewing a candidate voice", () => {
       { code: "low_score", text: raw, values: { score: 0.56, floor: 0.6 } },
       { code: "future_reason", text: "Unknown recorded reason", values: {} },
     ];
-    stub(version);
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
-    );
+    review(version);
     expect(
       await screen.findByText(/scored 0.56 against your writing/),
     ).toBeTruthy();
@@ -114,14 +93,7 @@ describe("reviewing a candidate voice", () => {
         values: { avoid: 2, register: 3 },
       },
     ];
-    stub(version);
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
-    );
+    review(version);
     expect(
       await screen.findByText(/writing samples changed during this build/),
     ).toBeTruthy();
@@ -142,28 +114,14 @@ describe("reviewing a candidate voice", () => {
       const version = candidateVersion([reason]);
       version.evaluation.review_reason_details =
         code === "missing" ? [] : [{ code, text: reason, values: {} }];
-      stub(version);
-      view(
-        <ActiveVoiceInsights
-          profileId="p-1"
-          canEdit
-          onChanged={() => undefined}
-        />,
-      );
+      review(version);
       expect(await screen.findByText(reason)).toBeTruthy();
       expect(screen.queryByText(/scored 0.56 against your writing/)).toBeNull();
     },
   );
 
   it("shows the voice itself, so the decision is about something visible", async () => {
-    stub(candidateVersion([]));
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
-    );
+    review(candidateVersion([]));
 
     // What the build actually learned, on the card that asks about it.
     expect(
@@ -182,18 +140,11 @@ describe("reviewing a candidate voice", () => {
   // 0.56 is below the 0.60 floor" is not a sentence the contact being asked to
   // decide can act on.
   it("says why it is waiting in words about the owner's own voice", async () => {
-    stub(
+    review(
       candidateVersion([
         "the model returned malformed drafts during evaluation",
         "median voice score 0.56 is below the 0.60 floor",
       ]),
-    );
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
     );
 
     expect(
@@ -209,14 +160,7 @@ describe("reviewing a candidate voice", () => {
   // A reason nobody can read is bad; a reason nobody can SEE is worse, because
   // the candidate would then be held back for a cause never stated.
   it("shows a reason it does not recognize rather than dropping it", async () => {
-    stub(candidateVersion(["some future evaluator sentence"]));
-    view(
-      <ActiveVoiceInsights
-        profileId="p-1"
-        canEdit
-        onChanged={() => undefined}
-      />,
-    );
+    review(candidateVersion(["some future evaluator sentence"]));
 
     expect(
       await screen.findByText("some future evaluator sentence"),

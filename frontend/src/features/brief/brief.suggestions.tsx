@@ -6,7 +6,7 @@ import { type ReactNode, useState } from "react";
 import {
   ENTITY_NAME_KEY,
   EntityRef,
-  fetchEntityName,
+  entityNameQuery,
   useEntityName,
 } from "../../components/entityref";
 import { usableName } from "../../components/entityref.queries";
@@ -97,11 +97,7 @@ function QuietDeals({
 }: Readonly<{ run: MorningBrief; items: readonly MorningBriefItem[] }>) {
   const t = useT();
   const names = useQueries({
-    queries: items.map((item) => ({
-      queryKey: ["deal", ENTITY_NAME_KEY, item.deal_id],
-      queryFn: () => fetchEntityName("deal", item.deal_id),
-      staleTime: 60_000,
-    })),
+    queries: items.map((item) => entityNameQuery("deal", item.deal_id)),
   });
   // A read that answered with no name is a deal this reader may not open; it
   // leaves the list. One still loading or failed stays, for its retry.

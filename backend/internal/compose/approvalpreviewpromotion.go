@@ -55,13 +55,13 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 		return nil, err
 	}
 	consents := consent.NewStore(r.db)
-	store := contacts.NewStore(r.db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil).WithDealOpener(leadDealOpener{deals: r.deals})
+	store := newContactsStore(r.db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil).WithDealOpener(leadDealOpener{deals: r.deals})
 	plan, err := store.PreviewLeadContactChange(ctx, ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId)), in)
 	if errors.Is(err, apperrors.ErrVersionSkew) {
 		out.State = previewStaleState
 		return out, nil
 	}
-	if previewUnavailable(err) || errors.Is(err, apperrors.ErrConflict) {
+	if previewUnavailable(err) || errors.Is(err, apperrors.ErrConflict) || contacts.EmployerRefusalReason(err) != "" {
 		return out, nil
 	}
 	if err != nil {
@@ -77,6 +77,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	}
 	out.Details = &details
 	effects := []string{"promote_lead_archive_source"}
+	if plan.EmployerPreview.Effect != "" {
+		effects = append(effects, plan.EmployerPreview.Effect)
+	}
 	if plan.Create != nil {
 		effects = append(effects, "promote_create_contact")
 	} else {
@@ -90,6 +93,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	}
 	if plan.ReviewContact != nil {
 		effects = append(effects, "promote_queue_duplicate_review")
+	}
+	if plan.CompanyIndustry != nil {
+		effects = append(effects, "promote_fill_company_industry")
 	}
 	out.Effects, out.State = &effects, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
@@ -112,11 +118,19 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 		return nil, err
 	}
 	details = append(details, contact...)
+	employer, err := r.creationFieldDetails(ctx, string(recordTypeContact), map[string]any{refColCompany: plan.Employer.CompanyID, companyNameField: plan.Employer.CompanyName})
+	if err != nil {
+		return nil, err
+	}
+	details = append(details, employer...)
 	carried, err := r.promotionCarryDetails(ctx, plan.LeadPromotionCarry, false)
 	if err != nil {
 		return nil, err
 	}
 	details = append(details, carried...)
+	if plan.CompanyIndustry != nil {
+		details = append(details, previewDetail("promotion_company_industry", *plan.CompanyIndustry))
+	}
 	if plan.Deal != nil {
 		deal, err := r.promotionDealDetails(ctx, *plan.Deal)
 		if err != nil {

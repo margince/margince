@@ -6,11 +6,13 @@ package forecasting
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Deal is what a reading needs to know about one opportunity, already resolved
@@ -47,6 +49,38 @@ type Deal struct {
 	// ask what happened to deals that REACHED a stage — a question the deal's
 	// current stage cannot answer, because it has moved since.
 	StageID string
+	// Qualification is how the qualified readings treat this deal, decided by
+	// the caller from its viability receipt and any open review. NotApplied on
+	// every deal means enforcement is off and no qualified reading exists.
+	Qualification viability.Qualification
+}
+
+// QualifiedReadings are the readings restricted to deals whose customer still
+// supports them. Nil on Readings while enforcement is off.
+//
+// Excluded and unknown are counted apart. An excluded deal was judged and
+// found unsupported; an unknown one could not be judged. Counting it as
+// excluded would report a gap in the mailbox as a gap in the pipeline.
+type QualifiedReadings struct {
+	// OpenMinor is the open money of the deals the qualified readings keep, the
+	// qualified counterpart of Readings.OpenMinor.
+	OpenMinor     int64
+	EvidenceMinor int64
+	BestCaseMinor int64
+	WeightedMinor int64
+	// The baseline open money left out, and how many deals carry it.
+	ExcludedMinor int64
+	UnknownMinor  int64
+	ExcludedCount int
+	UnknownCount  int
+	// The part of the excluded money with no review behind it. Such a deal has a
+	// weak close date or no next step, and the customer still talks about it.
+	UnsupportedMinor int64
+	UnsupportedCount int
+	// AmountsPartial is true when an excluded or unknown deal had no amount
+	// the reader can see: unpriced, no exchange rate, or masked. The two
+	// subtotals are then lower than the money those deals carry.
+	AmountsPartial bool
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -77,6 +111,9 @@ type Readings struct {
 	// Per-deal rows behind the sums, in the order they were given. What gets
 	// frozen as contributions, and what a drill-through reads.
 	Contributions []Contribution
+
+	// Qualified is nil unless the caller qualified the deals.
+	Qualified *QualifiedReadings
 }
 
 // Contribution is one deal's part in one set of readings, with the membership
@@ -111,6 +148,9 @@ type Contribution struct {
 	// inferred from a nil amount, because "we have no price" and "we could not
 	// convert it" are different facts and a reader is owed which one.
 	ExclusionReason string
+	// Qualification is the deal's treatment in the qualified readings. A
+	// different question from ExclusionReason, which is about money.
+	Qualification viability.Qualification
 
 	// What changed this deal since the previous snapshot, recorded at write
 	// time. audit_log has no correlation column to join on later, so
@@ -149,8 +189,11 @@ const (
 // and arithmetic — the two things worth testing exhaustively and the two that
 // are impossible to test exhaustively through a store.
 func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
+	// The rows come in no stated order. Evidence pages are cut by position, so
+	// the contributions follow the deal id and a next page repeats no row.
+	byID := slices.SortedFunc(slices.Values(in), func(a, b Deal) int { return strings.Compare(a.ID, b.ID) })
 	out := Readings{Contributions: make([]Contribution, 0, len(in))}
-	for _, deal := range in {
+	for _, deal := range byID {
 		contribution, err := contribute(period, asOfDay, deal)
 		if err != nil {
 			return Readings{}, err
@@ -198,9 +241,70 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 			}
 			*add.into = sum
 		}
+		if err := qualify(&out, contribution, base); err != nil {
+			return Readings{}, fmt.Errorf("forecasting: qualifying deal %s: %w", deal.ID, err)
+		}
 		out.Contributions = append(out.Contributions, contribution)
 	}
 	return out, nil
+}
+
+// qualify adds one contribution to the qualified readings, starting them on
+// the first qualified deal. The baseline weight is reused, never recomputed, so
+// a qualified total is always a subset of the baseline it sits beside.
+func qualify(out *Readings, c Contribution, base int64) error {
+	if c.Qualification == viability.QualificationNotApplied {
+		return nil
+	}
+	if out.Qualified == nil {
+		out.Qualified = &QualifiedReadings{}
+	}
+	q := out.Qualified
+	if !c.InOpen {
+		return nil
+	}
+	adds := []struct {
+		into *int64
+		by   int64
+		when bool
+	}{
+		{&q.OpenMinor, base, c.Qualification == viability.QualificationEligible},
+		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
+		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
+		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},
+		{&q.ExcludedMinor, base, excluded(c.Qualification)},
+		{&q.UnsupportedMinor, base, c.Qualification == viability.QualificationUnsupported},
+		{&q.UnknownMinor, base, c.Qualification == viability.QualificationUnknown},
+	}
+	for _, add := range adds {
+		if !add.when {
+			continue
+		}
+		sum, err := addMinor(*add.into, add.by)
+		if err != nil {
+			return err
+		}
+		*add.into = sum
+	}
+	switch c.Qualification {
+	case viability.QualificationExcluded:
+		q.ExcludedCount++
+	case viability.QualificationUnsupported:
+		q.ExcludedCount++
+		q.UnsupportedCount++
+	case viability.QualificationUnknown:
+		q.UnknownCount++
+	}
+	if c.Qualification != viability.QualificationEligible && c.BaseMinor == nil {
+		q.AmountsPartial = true
+	}
+	return nil
+}
+
+// excluded reports a deal the qualified readings leave out, under review or
+// unsupported alike.
+func excluded(q viability.Qualification) bool {
+	return q == viability.QualificationExcluded || q == viability.QualificationUnsupported
 }
 
 // ErrReadingOutOfRange marks a total that cannot be represented. A refusal
@@ -233,6 +337,7 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		Category:         EffectiveCategory(asOfDay, deal),
 		StageProbability: deal.StageProbability,
 		StageID:          deal.StageID,
+		Qualification:    deal.Qualification,
 	}
 	switch {
 	case deal.AmountMinor == nil:

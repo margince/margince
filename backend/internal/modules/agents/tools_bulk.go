@@ -151,6 +151,7 @@ type bulkUpdateRecords struct{ changer BulkChanger }
 func (t bulkUpdateRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "bulk_update_records", Title: "Change many records at once", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   bulkUpdateRecordsCopy.render(),
 		Instead:       bulkUpdateRecordsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,

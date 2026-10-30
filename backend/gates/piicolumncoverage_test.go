@@ -65,6 +65,11 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
+	// A revision's selection is the report's public structure: metrics, period,
+	// scope and card shapes. Filters stay in question_bindings, which the
+	// redaction rewrites, so no subject value reaches the selection. The metric
+	// versions map metric ids to definition version numbers.
+	"report_definition_revision": {"selection", "metric_versions"},
 	// The evidence ledger's closed vocabularies: source kind, author side,
 	// commitment and writer. The snippet is the column that quotes the subject,
 	// and the redaction clears it.
@@ -214,6 +219,9 @@ var erasureColumnBaseline = map[string][]string{
 		// which put the address back on the one table whose whole point is that
 		// the address copy is scrubbed.
 		"from_name",
+		// The installation's own relay address a controller delivery was
+		// staged with, the same on every one of them.
+		"from_address",
 		// The storage key of the workspace's own logo the markup embeds. It
 		// names the workspace's mark and is the same on every delivery.
 		"inline_logo_key",
@@ -228,6 +236,8 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A code of the closed industry list, which names no one.
+		"industry",
 		// A key of the closed lead_origin list, which names no one. The note
 		// beside it, origin_detail, is free text and the redaction clears it.
 		"origin",

@@ -42,6 +42,7 @@ var forwardMeasureSites = []struct {
 	// was read under, so it must offer the same set — a review frozen under a
 	// measure the server no longer builds is a record nobody can re-read.
 	{"the frozen weekly outlook", []string{"components", "schemas", "WeeklyReviewOutlook"}},
+	{"the basis of a target comparison", []string{"components", "schemas", "ReportingTargetComparison"}},
 }
 
 // TestEveryForwardMeasureIsOfferedOnTheWire is the gate forecasting.ForwardMeasures names.

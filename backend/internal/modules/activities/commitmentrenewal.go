@@ -95,9 +95,9 @@ func (s *Store) OpenCommitmentTaskTx(ctx context.Context, tx pgx.Tx, locator str
 	var closed bool
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT a.id, a.archived_at IS NOT NULL OR a.is_done, a.assignee_id
- FROM activity a WHERE a.source_system = $%d AND a.source_id = $%d FOR UPDATE OF a`, arg(CommitmentTaskSource), arg(locator)),
-		args...).Scan(&id, &closed, &assignee)
+	query := fmt.Sprintf(`SELECT a.id, a.archived_at IS NOT NULL OR a.is_done, a.assignee_id
+ FROM activity a WHERE a.source_system = $%d AND a.source_id = $%d FOR UPDATE OF a`, arg(CommitmentTaskSource), arg(locator))
+	err := tx.QueryRow(ctx, query, args...).Scan(&id, &closed, &assignee)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && closed) {
 		return CommitmentTaskTarget{}, nil
 	}

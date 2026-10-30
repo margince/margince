@@ -125,7 +125,7 @@ export function firstRunText(blocks: Block[]): string {
 }
 
 /** Every run in the document, in reading order. */
-function runsOf(blocks: Block[]): Run[] {
+export function runsOf(blocks: Block[]): Run[] {
   return blocks.flatMap((block) => {
     if (block.kind === "list") return block.items;
     if (block.kind === "quote") return runsOf(block.blocks);

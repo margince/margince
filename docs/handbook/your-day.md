@@ -29,9 +29,6 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
-### How do I go to the next record on my worklist?
-To go to the next record in Margince, press **Next task** on the **Next** bar of a contact, company, lead or deal. It opens the next record on your Worklist, in list order. A record you opened from the Worklist follows that list, with its **Whose work** and filters; any other record follows your own list. After the last record it starts again at the top. With no other record on the list, the button says "No more records". Also called: next record, work through my list, go through the queue.
-
 ### How do I snooze something on my worklist?
 To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
 **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
@@ -82,8 +79,8 @@ a customer**, press **More actions** at the end of the row.
 A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list.
 A deal suggestion offers its next action, or **Open deal**, plus **Mark handled**. Marking it handled clears the suggestion; it does not change the deal.
 
-To clear several rows at once, tick them, or press **Select all**, then press **Mark done**. One
-**Undo** brings them all back.
+To clear several rows, press **Select** and tick them. **Complete** finishes ticked tasks and
+promises; **Take off my list** clears the rest. One **Undo** brings them all back.
 
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run
@@ -120,7 +117,9 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### What can I do from a task?
-A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app.
+
+It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -263,8 +262,9 @@ Worklist items are in bands, shown in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-Work to check is one more kind. It does not show a band in the list; it has its own panel under it,
-headed **To review**.
+The views are **Today** (your work), **Decisions** (choices someone must make) and **System**
+(problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
+the end of **Today**, holds tasks due later; its count is not in Today's total. Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
@@ -328,21 +328,22 @@ Each says what it did ("Back on your list tomorrow.", "Back on your list when th
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
 
-### "List changed"
+### "New priorities available"
 
 The Worklist holds still while you work through it. Something may come in, or someone may deal with
-something while you work. Then a notice headed **List changed** says which: "{arrived} new since you
-opened the list. Refresh to add them."
-
-Refresh updates the totals when work arrives or leaves the list.
+something while you work. Then a notice headed **New priorities available** says which: "{arrived}
+new since you opened the list. Refresh to add them." **Refresh list** updates the rows and totals.
 
 ### How complete is this?
-The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
+The Worklist counts items, not cards: 8 possible duplicates are one card. More rows load as you move down the list. If they fail to load, the list says "Could not load more." with **Retry**.
 
-- **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
-- "{kinds} may have more items than this list shows", such as "Approvals (200+)": no share,
-  because nobody knows the total. Each load checks a fixed number per category; **Load more** stops
-  there. A filter with no counts says "Some categories may have more items than this list shows."
+- **"{shown} of {considered} items loaded"**: a share, plus "{cards} cards on screen" for a group.
+- "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no share, because nobody
+  knows the total. Each load checks a fixed number per category, and the list stops there. Approvals are counted in
+  full in every view but Team, so Decisions can show the total. Tasks are counted in full, and the list loads all tasks
+  and waiting customers as you move down, oldest first. **Team** shows no task total, nor does **All**, which
+  leaves weekly plans out. A filter with no counts
+  says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**

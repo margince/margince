@@ -300,7 +300,7 @@ describe("the timeline tab", () => {
       <ContactTimelineTab contactId="p-1" view={threaded} />,
     );
 
-    expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
+    expect(container.querySelectorAll(".tl-thread-messages")).toHaveLength(1);
     expect(
       screen.getByText("2 messages · 1 from them, 1 from your team"),
     ).toBeTruthy();
@@ -881,6 +881,7 @@ describe("the meetings tab", () => {
     expect(screen.getByText("Upcoming")).toBeTruthy();
     expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
+    expect(draft.classList.contains("btn-ai")).toBe(true);
     await userEvent.setup().click(draft);
     expect(acted).toEqual([draftAgenda]);
   });

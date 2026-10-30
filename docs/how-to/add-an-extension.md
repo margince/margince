@@ -605,9 +605,9 @@ Entries: []extension.Entry{{
 | Slot | Where the entry shows |
 |---|---|
 | `extension.SlotLogActivity` (`log_activity`) | The Log activity form, under the fields. A form opened as Add task leaves it out. |
-| `extension.SlotContactHeader` (`record_header.contact`) | The verb row of a contact page, after Add task |
+| `extension.SlotContactHeader` (`record_header.contact`) | The verb row of a contact page, after Log activity |
 | `extension.SlotCompanyHeader` (`record_header.company`) | The verb row of a company page, after the booking verb |
-| `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Add task |
+| `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Log activity |
 | `extension.SlotContactMark` (`record_mark.contact`) | A small note in the verb row of a contact page, right after the unit's header buttons. Not a button. |
 | `extension.SlotCompanyMark` (`record_mark.company`) | A small note in the verb row of a company page, right after the unit's header buttons. Not a button. |
 | `extension.SlotDealMark` (`record_mark.deal`) | A small note in the verb row of a deal page, right after the unit's header buttons. Not a button. |
@@ -1207,7 +1207,7 @@ the gates:
    composed frontend registry. A unit's routes, its agent tools *and* `#/ext/<name>` are all live on the one port
    that `make dev` prints.
 
-Push only once `make check` is **green** (finished, not still running). The plain stub check keeps passing,
+Mark the PR ready only once `make check` is **green** (finished, not still running). The plain stub check keeps passing,
 because it is keyed on the *empty* `extensions/` tree. Your unit changes only the composed output, never the
 committed `composition/` stub.
 

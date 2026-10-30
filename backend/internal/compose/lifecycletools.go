@@ -154,7 +154,7 @@ func (c companyEnricher) EnrichCompany(
 
 // lifecycleSeams builds the three adapters over one pool.
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, leadDemoter, projectPhaseAdvancer) {
-	contactsStore := contacts.NewStore(InstallationDB(pool))
+	contactsStore := newContactsStore(InstallationDB(pool))
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
 		leadDisqualifier{store: contactsStore},
 		leadDemoter{store: contactsStore},

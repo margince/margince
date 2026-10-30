@@ -132,6 +132,7 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
+	reviewAnswerHandlers
 	companyOfferedHandlers
 	strengthHandlers
 	recordAccessHandlers
@@ -196,6 +197,7 @@ type Server struct {
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
 	analyticsContextHandlers
+	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
@@ -334,18 +336,10 @@ type Server struct {
 	// pinned baselines.
 	captureConfig CaptureConfig
 
-	// gmailAppConfigured records whether this DEPLOYMENT configured a Google app
-	// that could transmit under a user's mailbox grant — the one fact the send
-	// pre-flight cannot read off a capture_connection row, since the grant
-	// survives the app being removed and a mailbox connected on one deployment
-	// reads the same on another.
-	//
-	// It is a deployment fact, not a role fact: WithGmailCapture records it
-	// before its own transport gate and off canSync, so an installation holding
-	// client credentials but no state key — which mounts no api-side connect
-	// transport yet sends perfectly well from the worker — still counts as
-	// configured. False is the honest default for a composition never told about
-	// a Google app at all.
+	// gmailAppConfigured records whether the ENVIRONMENT carries a Google app.
+	// The send pre-flight asks googleAppResolver too, so false still finds an
+	// app stored in Settings. WithGmailCapture records it before its transport
+	// gate, so an installation with credentials but no state key still counts.
 	gmailAppConfigured bool
 	// graphAppConfigured is the Microsoft twin, recorded by WithGraphCapture on
 	// the same condition and read by the same pre-flight. It exists because

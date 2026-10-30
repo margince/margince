@@ -1,6 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
+import { useActivityGate } from "../../components/activitygate";
+import {
+  LatestInboundLine,
+  useLatestInbound,
+} from "../../components/latestinbound";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -29,7 +34,7 @@ import {
 } from "./companyheaderactions";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
-import { CompanyRail } from "./companyrail";
+import { CompanyRail, useCompanyRename } from "./companyrail";
 
 // openTaskId is scoped to the account being read, like the tab. The route
 // swaps one company for another without unmounting this component, so a
@@ -117,6 +122,7 @@ export function CompanyPage({
   // The daily brief's leading card opens the same drawer from its own verb, so
   // the header strip is not the only door into it.
   const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
+  const activity = useActivityGate();
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal. Keyed by
   // activity id rather than a boolean, because the modal reads that row.
@@ -132,11 +138,13 @@ export function CompanyPage({
     onTab("tasks");
   };
   const receipt = useCitedReceipt();
+  const latest = useLatestInbound("company", company.id);
   // Shared by the Tasks tab's row verbs and its detail modal, so both land on
   // one mutation and invalidate the same reads. Those are the account's
   // timeline (the 360 renders it, not an `["activities", …]` query), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
+  const rename = useCompanyRename(company);
   const rail = (
     <CompanyRail
       company={company}
@@ -172,6 +180,7 @@ export function CompanyPage({
     <RecordView
       back={<WorklistReturnLink />}
       name={company.display_name}
+      rename={rename}
       identity={company.id}
       avatarSrc={company.logo_url}
       // What the account is, its site and the best way in, one line each.
@@ -180,6 +189,11 @@ export function CompanyPage({
       }
       // Where it stands, what it is to us and who may read it.
       pulse={<CompanyMarks company={company} />}
+      latest={
+        tab !== "overview" && (
+          <LatestInboundLine latest={latest} onOpen={() => onTab("overview")} />
+        )
+      }
       zone={recordZone}
       // The composer opens from a button rather than standing open above the
       // page. A whole form in the header's action strip would push the
@@ -193,6 +207,7 @@ export function CompanyPage({
             drawer={activityDrawer}
             onDrawer={setActivityDrawer}
             archivedReasonId={archivedReasonId}
+            activity={activity}
           />
           {/* Last in the row, after the verbs it holds the remainder of. A
             menu of everything else reads as the first thing to press when it
@@ -200,6 +215,8 @@ export function CompanyPage({
           <CompanyActionBadges
             company={company}
             archivedReasonId={archivedReasonId}
+            activity={activity}
+            onAddTask={() => setActivityDrawer("task")}
             onOpenHistory={() => setAuditOpen(true)}
             onSetUpPartner={() => onTab("partner")}
           />
@@ -261,6 +278,7 @@ export function CompanyPage({
         onLogActivity={() => setActivityDrawer("log")}
         taskUpdate={taskUpdate}
         onOpenHistory={showChanges}
+        latest={latest}
       />
       {/* The email drawer, on the same rule as the audit spine below: it
         belongs to the record. In the Timeline tab's own slot it would

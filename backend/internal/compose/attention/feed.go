@@ -34,9 +34,8 @@ const needsYouPage = 10
 // The lane feed's page is a prefetch for a surface that answers one at a time;
 // this is a census for a row that answers a group.
 //
-// Bounded by the approvals engine's own scan cap rather than by a number chosen
-// here — past that the count reads "200+", which is the same message to a reader
-// as the true figure.
+// Whether the read reached every approval is judged against the engine's exact
+// count (Counts.ApprovalsOpen), never against this depth.
 const batchScanDepth = 200
 
 // plannedCap bounds today's agreed work for the same reason. Higher than the
@@ -122,6 +121,8 @@ type Service struct {
 	// noticeCases is OPTIONAL and withheld-by-grant exactly as dsrs is — the
 	// same privacy_request object gates both reads.
 	noticeCases NoticeCases
+	// contactCases is optional; unbound, no contact case reaches the lane.
+	contactCases ContactCases
 	// captureHealth is OPTIONAL like the lanes above it, and per-user on top:
 	// the seam refuses a principal with no human behind it, and the lane
 	// renders that as withheld.
@@ -133,7 +134,8 @@ type Service struct {
 	pins Pins
 	// walks is OPTIONAL like pins above it: nil means this feed freezes no
 	// walk, and every page is an offset into a freshly ranked day.
-	walks Walks
+	walks   Walks
+	backlog backlogState
 	// snapshots composes this feed's ~40 lane reads into ONE transaction, and
 	// is OPTIONAL for the reason snapshot.go's inSnapshot gives: unbound is
 	// what this feed did before, which is what a unit test wants.
@@ -141,6 +143,9 @@ type Service struct {
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
+	// view is the work view this request answers, on a per-request copy.
+	// Empty on the shared service and on a read that named no view.
+	view string
 	// pinned is this request's reader's own pins, resolved once by readingPins
 	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool
@@ -223,7 +228,10 @@ type Service struct {
 	// queue takes a census, because a batch row that says "10" over a pile of
 	// a hundred and fifty is a wrong number rather than a bounded one.
 	decisionDepth int
-	now           Clock
+	// skipReceipts leaves the receipt lane unread. The ranked queue sets it:
+	// a receipt is never one of its rows (handled.go), so reading it is waste.
+	skipReceipts bool
+	now          Clock
 	// taskScope narrows the task lane to whose work this read answers for. Set
 	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
 	// resolved scope sets it), because the same service answers both surfaces.
@@ -235,7 +243,7 @@ type Service struct {
 	// taskOwner is whose queue TasksOwnedBy means. Zero for every other scope,
 	// and never read by them.
 	taskOwner ids.UUID
-	// noticeOwners is a team roster; nil leaves the visible agenda unrestricted.
+	// noticeOwners is the live team audience for requested decisions and disclosures.
 	noticeOwners []ids.UUID
 	// teamRoster is the roster scope=team resolved with, which degradableRoster
 	// answers from rather than asking again; nil under every other scope.
@@ -319,6 +327,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
+		out.Counts.ApprovalsOpen = &count.approvals
 		if count.duplicates > 0 {
 			open := count.duplicates
 			out.Counts.DuplicatesOpen = &open
@@ -348,10 +357,12 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	omitted = roll.omitted
 
-	done, err := s.done(ctx, asOf)
-	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
-	if err != nil {
-		return crmcontracts.Attention{}, besideDay{}, err
+	if !s.skipReceipts {
+		done, err := s.done(ctx, asOf)
+		omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
+		if err != nil {
+			return crmcontracts.Attention{}, besideDay{}, err
+		}
 	}
 
 	if len(omitted) > 0 {
@@ -373,6 +384,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 type laneCount struct {
 	items      int
 	duplicates int
+	approvals  int
 	// suggestions is nil when the reader may not read suggestions at all, or
 	// when the read failed — and then failed names it.
 	suggestions, tagSuggestions *int
@@ -404,11 +416,12 @@ func (s *Service) decisionsDepth() int {
 // decisionsToDepth is the same read at a depth the caller chooses: the lane feed
 // takes a page, and the ranked queue takes a census so its batch rows can count.
 func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontracts.AttentionItem, laneCount, error) {
-	pairs, err := s.duplicates.OpenCandidates(ctx, depth)
+	defer timeStage(ctx, "needs_you")()
+	pairs, openPairs, err := s.duplicateCandidates(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openPairs, err := s.duplicates.CountOpen(ctx)
+	cases, openCases, err := s.openContactCases(ctx, depth)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -433,12 +446,15 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	// Whether the merge would be ACCEPTED, which authority does not answer.
 	// A permission verdict empties the offer the same way it does above: a
 	// reader who may not ask has no verb, which is a complete answer.
-	settleable, err := s.duplicates.SettleablePairs(ctx, pairs)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
-		settleable = nil
-	case err != nil:
-		return nil, laneCount{}, err
+	var settleable map[ids.UUID]bool
+	if len(pairs) > 0 {
+		settleable, err = s.duplicates.SettleablePairs(ctx, pairs)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+			settleable = nil
+		case err != nil:
+			return nil, laneCount{}, err
+		}
 	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
@@ -448,14 +464,17 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	for _, approval := range staged {
 		approvals = append(approvals, approvalItem(approval, s.machine))
 	}
-	count := laneCount{items: openPairs + openStaged, duplicates: openPairs}
+	count := laneCount{items: openCases + openPairs + openStaged, duplicates: openCases + openPairs, approvals: openStaged}
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
-	return interleave(depth, duplicates, approvals, suggestions, tagged), count, nil
+	// Cases lead each round, so a reader's own case is never behind a pile of
+	// other pairs.
+	return interleave(depth, cases, duplicates, approvals, suggestions, tagged), count, nil
 }
 
 // done is the receipt lane: what ran without asking, so a rep can see it and
 // challenge it.
 func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
+	defer timeStage(ctx, "done_for_you")()
 	since := asOf.Add(-24 * time.Hour)
 	recent, err := s.receipts.Recent(ctx, since, doneCap)
 	if err != nil {

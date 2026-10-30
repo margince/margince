@@ -200,16 +200,10 @@ func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name,
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
-	// Stated, not left to the store's own rule: this seed is about the contact
-	// HAVING a current employer, so it says so rather than relying on a
-	// derivation another test could change.
-	primary := true
-	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
-		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
-		IsCurrentPrimary: &primary, Source: "manual",
-	}); err != nil {
-		t.Fatalf("seed employment: %v", err)
+	if err := e.store.ResolveContactEmployer(ctx, contactID, EmployerChoice{CompanyID: &companyID, Source: "manual"}); err != nil {
+		t.Fatal(err)
 	}
+	assertEmployedAt(ctx, t, e, contactID, companyID)
 	return contactID, companyID
 }
 

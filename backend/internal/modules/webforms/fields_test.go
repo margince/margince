@@ -15,7 +15,7 @@ import (
 var testFormID = ids.MustParse("018f0000-0000-7000-8000-000000000001")
 
 func TestCommonFieldSpellingsReadAsLeadFields(t *testing.T) {
-	e := readEnquiry([]field{
+	e := readEnquiry([]Field{
 		{"your-email", "Ada@Example.com"},
 		{"Vorname", "Ada"},
 		{"Nachname", "Lovelace"},
@@ -32,10 +32,10 @@ func TestCommonFieldSpellingsReadAsLeadFields(t *testing.T) {
 		e.Company != "Engines Ltd" || e.Message != "Hi there" || !e.Consent {
 		t.Fatalf("readEnquiry = %+v", e)
 	}
-	if len(e.UTM) != 1 || e.UTM[0] != (field{"utm_source", "spring-mailing"}) {
+	if len(e.UTM) != 1 || e.UTM[0] != (Field{"utm_source", "spring-mailing"}) {
 		t.Fatalf("UTM = %v", e.UTM)
 	}
-	if len(e.Extra) != 1 || e.Extra[0] != (field{"budget", "10k"}) {
+	if len(e.Extra) != 1 || e.Extra[0] != (Field{"budget", "10k"}) {
 		t.Fatalf("Extra = %v, want only the field no lead column takes", e.Extra)
 	}
 	if _, kept := e.controls["_mrg_ts"]; !kept {
@@ -59,16 +59,16 @@ func TestEachSpellingReadsAsOneTarget(t *testing.T) {
 }
 
 func TestAFieldMapNamesWhatTheDefaultsDoNotRead(t *testing.T) {
-	e := readEnquiry([]field{{"field_3", "x@y.example"}, {"Email", "ignored@y.example"}}, map[string]string{"field_3": fieldEmail})
+	e := readEnquiry([]Field{{"field_3", "x@y.example"}, {"Email", "ignored@y.example"}}, map[string]string{"field_3": fieldEmail})
 	if e.Email != "x@y.example" {
 		t.Fatalf("Email = %q, want the mapped field to win", e.Email)
 	}
 }
 
 func TestAnOversizedSubmissionIsBounded(t *testing.T) {
-	fields := make([]field, 0, maxFields+50)
+	fields := make([]Field, 0, maxFields+50)
 	for range maxFields + 50 {
-		fields = append(fields, field{"note", strings.Repeat("x", maxValueLength*2)})
+		fields = append(fields, Field{"note", strings.Repeat("x", maxValueLength*2)})
 	}
 	e := readEnquiry(fields, nil)
 	if len(e.Extra) > maxFields {

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CardBoundary } from "../../design-system/cardboundary";
@@ -21,9 +22,15 @@ import { useMe } from "../../lib/session";
 import { bandTone } from "../ai/aiusage";
 import "./embedreindex.css";
 import { useNow } from "../../format/now";
-import { available } from "../../lib/settingscapability";
-import { holds } from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
+import {
+  embedReindexIdentitiesQueryKey,
+  embedReindexStatusQueryKey,
+  type ReindexIdentities,
+  type ReindexStatus,
+  useEmbedReindexAvailable,
+  useEmbedReindexStatus,
+} from "./embedreindex.queries";
 
 // The v6 B2 embedding-reindex surface (ADR-0068 design §5.6-swap). The
 // status read is admin/ops-only server-side now (migration 0115:
@@ -37,35 +44,10 @@ import { settingsHref } from "../../lib/settingsrouting";
 // reindex and the always-available force rebuild — are admin/ops-only
 // server-side too (embedding_reindex object's update grant).
 
-type ReindexStatus = components["schemas"]["EmbedReindexStatus"];
 type ReindexPreview = components["schemas"]["EmbedReindexPreview"];
 type UtilizationImpact = NonNullable<ReindexPreview["utilization_impact"]>;
 
-// Shared by the settings card and the app-shell banner so a successful
-// confirm's setQueryData (below) updates both surfaces from the one write.
-export const embedReindexStatusQueryKey = ["embed-reindex-status"];
-
-// Whether this installation has an embed lane bound. The status read answers
-// 501 without one, so both surfaces ask this before issuing it.
-export function useEmbedReindexAvailable(): boolean {
-  return holds(available("embedding_reindex"), useMe().data);
-}
 const embedReindexPreviewQueryKey = ["embed-reindex-preview"];
-
-export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
-  return useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled,
-    staleTime,
-    queryFn: async (): Promise<ReindexStatus> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
-}
 
 // impactLabel names the HYPOTHETICAL post-reindex band the estimator
 // disclosed (utilization_impact) — distinct copy from aiusage's bandLabel,
@@ -293,9 +275,12 @@ export function EmbedReindexCard() {
     },
     onSuccess: (data) => {
       // The 202 body is the SAME status read the GET returns — seed the
-      // shared cache directly so the card and the banner both reflect
-      // "reembedding" without an extra round trip.
+      // card's cache and the banner's identities directly, with no extra round trip.
       qc.setQueryData(embedReindexStatusQueryKey, data);
+      qc.setQueryData<ReindexIdentities>(embedReindexIdentitiesQueryKey, {
+        configured_identity: data.configured_identity,
+        populated_identity: data.populated_identity,
+      });
       closeDialog();
     },
   });
@@ -338,9 +323,9 @@ export function EmbedReindexCard() {
         {() => (
           <EmptyState>
             {t("embedreindex.unbound")}{" "}
-            <a href={routeHash(settingsHref("models"))}>
+            <AppLink href={routeHash(settingsHref("models"))}>
               {t("embedreindex.unboundLink")}
-            </a>
+            </AppLink>
           </EmptyState>
         )}
       </QueryGate>

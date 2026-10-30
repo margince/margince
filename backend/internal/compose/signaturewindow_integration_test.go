@@ -163,11 +163,11 @@ func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
 	task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
 	runMachineAddressTask(ctx, t, e, task)
 
-	if got := liveNumbers(t, e, f.bob); !slices.Equal(got, []string{"+442079460000", "+49309999999"}) {
-		t.Errorf("Bob's numbers = %v, want his own, and the older number the quoted one had replaced", got)
+	if got := liveNumbers(t, e, f.bob); !slices.Equal(got, []string{"+442079460000"}) {
+		t.Errorf("Bob's numbers = %v, want only the number with surviving evidence", got)
 	}
 	if got := signatureEvidence(t, e, f.bob); !slices.Equal(got, []string{"phone:+442079460000", "website:"}) {
-		t.Errorf("Bob's evidence = %v, want his own numbers and the corrected website", got)
+		t.Errorf("Bob's evidence = %v, want the supported number and the corrected website", got)
 	}
 	if title := contactTitle(t, e, f.bob); title != nil {
 		t.Errorf("Bob's title = %q, want the quoted title taken back", *title)

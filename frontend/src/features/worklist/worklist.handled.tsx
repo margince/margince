@@ -24,6 +24,7 @@
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
+import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -162,8 +163,8 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   const href = subjectHref(receipt);
   if (!href) return <>{subject.label}</>;
   return (
-    <a className="entity-link" href={href}>
+    <AppLink className="entity-link" href={href}>
       {subject.label}
-    </a>
+    </AppLink>
   );
 }

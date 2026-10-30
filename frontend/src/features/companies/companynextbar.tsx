@@ -1,6 +1,5 @@
 import type { components } from "../../api/schema";
-import { NextTaskSlot } from "../../components/nexttaskslot";
-import { NextBar } from "../../design-system/nextbar";
+import { RecordNextBar } from "../../components/latestinbound";
 import { formatNumber } from "../../format/format";
 import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -146,7 +145,10 @@ export function CompanyNextBar({
   if (moment) {
     const defer = momentDefer(moment, deferOf);
     return (
-      <NextBar
+      <RecordNextBar
+        // A company moment is an owed promise, which outranks a new mail.
+        urgent
+        about={moment.evidence.map((item) => item.id)}
         // The task the moment cites is the thing to do; the headline is the
         // server's sentence about it, kept for a moment that cites none.
         title={task?.subject ?? moment.headline}
@@ -163,12 +165,11 @@ export function CompanyNextBar({
         }
         snooze={defer && { onSnooze: defer.onDefer, pending: defer.pending }}
         more={more}
-        onward={<NextTaskSlot />}
       />
     );
   }
   return (
-    <NextBar
+    <RecordNextBar
       title={task?.subject}
       late={lateTag}
       detail={task && taskDetail(task)}
@@ -181,7 +182,6 @@ export function CompanyNextBar({
       }
       action={task ? fallback : undefined}
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }

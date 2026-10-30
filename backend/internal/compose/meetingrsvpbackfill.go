@@ -209,6 +209,10 @@ func backfillOneMeetingRSVP(ctx context.Context, tx pgx.Tx, c rsvpCandidate, pay
 
 // markMeetingRSVPSettled records that this pass has judged one meeting, so it is
 // never offered again.
+//
+// The ledger retires with the pass. A full sweep that finds no candidate means
+// the work is done. Both then go in one migration, as ordinary cleanup: the
+// ledger holds nothing a reader needs.
 func markMeetingRSVPSettled(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_meeting_rsvp_backfill (activity_id, outcome)

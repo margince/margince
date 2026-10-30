@@ -6,18 +6,22 @@
 package integration
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -83,8 +87,8 @@ func dailyAIModel(tier ai.Tier) string { return "bench-" + string(tier) }
 // seedDailyAICalls records the month's model calls through the meters the
 // router itself writes with: one ai_call row and one ai_usage fold per call.
 // Both models are priced first, through the admin's rate form, so the spend
-// report sums a priced month.
-func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
+// report sums a priced month. It returns how many calls it recorded.
+func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) int {
 	t.Helper()
 	for _, tier := range []ai.Tier{ai.TierCheapCloud, ai.TierPremium} {
 		mustCall(t, e, "POST", "/v1/ai-model-rates", AnyMap{
@@ -114,6 +118,7 @@ func seedDailyAICalls(t *testing.T, e *apptest.AppEnv, scale float64) {
 		}
 	}
 	t.Logf("seed: %d AI calls recorded", n)
+	return n
 }
 
 // makeDailyBriefs assembles today's brief for every seat, the admin included,
@@ -128,5 +133,56 @@ func makeDailyBriefs(t *testing.T, e *apptest.AppEnv, seats Seats) {
 		}
 		mustCall(t, seat.env(e), "POST", "/v1/brief", nil, http.StatusCreated, &run)
 		t.Logf("brief: %s holds %d items", seat.Name, len(run.Items))
+	}
+}
+
+// worklistStageMark is the stage collector at one moment, which
+// logWorklistStages later subtracts.
+type worklistStageMark struct {
+	durations map[attention.StageKey]httpserver.Histogram
+	costs     map[attention.StageKey]attention.StageCost
+}
+
+func worklistStagesSoFar() worklistStageMark {
+	return worklistStageMark{durations: attention.StageTimings(), costs: attention.StageCosts()}
+}
+
+// logWorklistStages prints each stage's mean over one seat's latency runs, by
+// read and slowest first. Beside it go its statements, pgx time, pool wait and the
+// rest per run. The collector is process-wide, so the reads before the step are
+// subtracted.
+func logWorklistStages(t *testing.T, seat string, before worklistStageMark) {
+	t.Helper()
+	now := worklistStagesSoFar()
+	// outside_stages has costs and no duration, so its runs come from the costs.
+	runs := func(key attention.StageKey) uint64 {
+		return max(now.durations[key].Count(), now.costs[key].DB.Count()) -
+			max(before.durations[key].Count(), before.costs[key].DB.Count())
+	}
+	perRun := func(key attention.StageKey, sum func(worklistStageMark) float64) float64 {
+		return (sum(now) - sum(before)) / float64(max(1, runs(key)))
+	}
+	keys := slices.Collect(maps.Keys(now.costs))
+	for key := range maps.Keys(now.durations) {
+		if !slices.Contains(keys, key) {
+			keys = append(keys, key)
+		}
+	}
+	mean := func(key attention.StageKey) float64 {
+		return perRun(key, func(m worklistStageMark) float64 { return m.durations[key].Sum() })
+	}
+	slices.SortFunc(keys, func(a, b attention.StageKey) int {
+		return cmp.Or(cmp.Compare(a.Read, b.Read), cmp.Compare(mean(b), mean(a)))
+	})
+	for _, key := range keys {
+		cost := func(read func(attention.StageCost) float64) float64 {
+			return perRun(key, func(m worklistStageMark) float64 { return read(m.costs[key]) })
+		}
+		t.Logf("%-8s %-15s stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms pgx %6.1f ms pool %8.1f ms rest per run",
+			seat, key.Read, key.Stage, mean(key)*1000, runs(key),
+			cost(func(c attention.StageCost) float64 { return float64(c.Statements) }),
+			cost(func(c attention.StageCost) float64 { return c.DB.Sum() })*1000,
+			cost(func(c attention.StageCost) float64 { return c.PoolWait.Sum() })*1000,
+			cost(func(c attention.StageCost) float64 { return c.App.Sum() })*1000)
 	}
 }

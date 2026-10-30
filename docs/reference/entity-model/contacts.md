@@ -276,7 +276,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `category` | `text` | yes | One of `company`, `offering`, `market`, `signal`. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_snippet` | `text` |  |  |
 | `field` | `text` | yes |  |
 | `retrieved_at` | `timestamp with time zone` |  | When the source was last read. |
@@ -301,7 +301,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_fact_category_check`: `CHECK ((category = ANY (ARRAY['company', 'offering', 'market', 'signal'])))`
-- `company_fact_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `company_fact_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `company_fact_field_vocab`: `CHECK ((((category = 'company') AND (field = ANY (ARRAY['founded_year', 'employee_range', 'phone', 'contact_email', 'location']))) OR ((category = 'offering') AND (field = ANY (ARRAY['service', 'product', 'capability']))) OR ((category = 'market') AND (field = ANY (ARRAY['served_industry', 'company_size', 'geography', 'language']))) OR ((category = 'signal') AND (field = ANY (ARRAY['certification', 'partner', 'named_customer', 'technology', 'quantified_outcome', 'mail_provider', 'email_security', 'hosting_provider', 'operated_service'])))))`
 - `company_fact_site_evidence`: `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
 - `company_fact_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration', 'technical_lookup'])))`
@@ -314,6 +314,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_fact_pkey`: `unique, btree (id)`
+- `idx_company_fact_dedupe_scan`: `btree (updated_at, id)`
 - `idx_company_fact_lookup`: `btree (category, field, value_key)`
 - `uq_company_fact`: `unique, btree (company_id, category, field, value_key)`
 
@@ -413,7 +414,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `id` | `uuid`, default `uuidv7()` | yes | The stored row, so a dossier sentence written from this field can cite something the reader can open. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_snippet` | `text` |  |  |
 | `field` | `text` | yes | One of `display_name`, `offer_summary`, `icp`, `value_proposition`, `usp`, `customer_pains` and 13 more. |
 | `retrieved_at` | `timestamp with time zone` |  | When the source was last read. |
@@ -434,7 +435,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `company_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['display_name', 'offer_summary', 'icp', 'value_proposition', 'usp', 'customer_pains', 'desired_outcomes', 'buying_center', 'buying_intents', 'common_objections', 'sales_motion', 'legal_name', 'registered_address', 'register_vat', 'industry', 'history', 'legal_form', 'register_court', 'register_number'])))`
 - `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration'])))`
 - `company_profile_field_verified_pair`: `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
@@ -782,6 +783,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
 - `idx_contact_email_dedupe_scan`: `btree (updated_at, id)`
+- `idx_contact_email_domain_reversed`: `btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)`
 - `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
 - `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`
@@ -892,7 +894,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `claim_key` | `text` | yes | One of `professional_emails`, `personal_emails`, `mobile_phones`, `linkedin_profile`, `current_employment`, `job_history` and 3 more. |
-| `confidence` | `numeric(5,4)` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `employment_processed_at` | `timestamp with time zone` |  |  |
 | `employment_processing_error` | `text` |  |  |
@@ -1107,11 +1109,11 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `scanned_through_at` | `timestamp with time zone` | yes |  |
 | `scanned_through_id` | `uuid` | yes |  |
-| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`. |
+| `stream` | `text` | yes | One of `company`, `company_domain`, `contact`, `contact_email`, `contact_phone`, `company_fact` and 1 more. |
 
 **Rules**
 
-- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone'])))`
+- `dedupe_scan_state_stream_check`: `CHECK ((stream = ANY (ARRAY['company', 'company_domain', 'contact', 'contact_email', 'contact_phone', 'company_fact', 'relationship'])))`
 
 **Indexes**
 
@@ -1190,11 +1192,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-42 columns · primary key `(id)` · referenced by 18 foreign keys
+44 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `arrival_owner_id` | `uuid` |  |  |
 | `candidate_company_key` | `text` |  | Loose key for ABM routing without creating a company. |
 | `company_id` | `uuid` |  | The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. |
 | `company_name` | `text` |  | Free text, as captured or typed. |
@@ -1206,6 +1209,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `first_response_at` | `timestamp with time zone` |  | First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. |
 | `from_contact_id` | `uuid` |  | The contact an older lead was created from, and null for every newly created lead. |
 | `full_name` | `text` |  |  |
+| `industry` | `text` |  | The industry typed on the lead, one of the fixed codes, or null. |
 | `linkedin_url` | `text` |  | Normalized LinkedIn profile URL; the exact-match dedupe key. |
 | `merged_into_id` | `uuid` |  | Set when this lead was merged away into another, and null otherwise. |
 | `origin` | `text` |  | Where the lead came from, a key from `/lead-origins`. |
@@ -1837,6 +1841,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_rel_history_deal`: `btree (deal_id)`
 - `idx_rel_history_project`: `btree (project_id)`
 - `idx_relationship_counterparty_contact`: `btree (counterparty_contact_id)`
+- `idx_relationship_dedupe_scan`: `btree (updated_at, id) WHERE ((kind = 'employment') AND (company_id IS NOT NULL))`
 - `relationship_pkey`: `unique, btree (id)`
 - `uq_rel_billing_contact`: `unique, btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact') AND (archived_at IS NULL))`
 - `uq_rel_current_primary_employer`: `unique, btree (contact_id) WHERE ((kind = 'employment') AND is_current_primary AND (archived_at IS NULL))`

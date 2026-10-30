@@ -6,9 +6,11 @@
       "actions": {
         "attach": "attach_document",
         "log": "log_activity",
+        "ready": "confirm_meeting_ready",
         "relink": "relink_activity",
         "relink_many": "relink_activities",
-        "task": "create_task"
+        "task": "create_task",
+        "unready": "undo_meeting_ready"
       }
     },
     "change_reports": {

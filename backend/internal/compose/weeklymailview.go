@@ -13,7 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, now time.Time, words mailcopy.Copy) (emailview.Message, error) {
+// weeklyMessage builds the weekly mail, and says whether it carries a team's week.
+func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, now time.Time, words mailcopy.Copy) (emailview.Message, bool, error) {
 	scope := settings.ScopeChoice()
 	body, title, hasTeam := w.weeklyBaseMessage(ctx, review, settings, words)
 	if scope != identity.RoutineTeam && !routineCombines(settings) {
@@ -29,7 +30,7 @@ func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.
 	}
 	morning, err := w.combinedMorningMessage(ctx, settings, now, words)
 	if err != nil {
-		return emailview.Message{}, err
+		return emailview.Message{}, false, err
 	}
 	if len(morning.Blocks) > 0 {
 		if len(body.Blocks) == 0 {
@@ -40,14 +41,14 @@ func (w *weeklyGenerateWorker) weeklyMessage(ctx context.Context, review weekly.
 		body.Append(emailview.Content{Blocks: morning.Blocks})
 	}
 	if len(body.Blocks) == 0 {
-		return emailview.Message{}, nil
+		return emailview.Message{}, false, nil
 	}
 	if scope == identity.RoutineTeam && hasTeam {
 		body.Action(words.MailTeamOpen, w.teamWeekURL(settings, review))
 	} else if weekly.MailUseful(review) {
 		body.Action(words.WeeklyFullWeek, mailcopy.Destination(w.mail.PublicBaseURL, mailcopy.WeeklyFragment(review.LocalWeekStart.Format(time.DateOnly))))
 	}
-	return body.Message(title, string(words.Language), body.Preview(words.WeeklyPreview)), nil
+	return body.Message(title, string(words.Language), body.Preview(words.WeeklyPreview)), hasTeam, nil
 }
 
 func (w *weeklyGenerateWorker) weeklyBaseMessage(ctx context.Context, review weekly.Review, settings identity.Delivery, words mailcopy.Copy) (emailview.Content, string, bool) {

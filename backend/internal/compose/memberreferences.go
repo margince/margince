@@ -130,6 +130,7 @@ var memberReferences = map[string]memberReference{
 	"mail_draft.author_id":                     {disposition: referenceResolve, live: jsonTrue, remedy: "mail_drafts"},
 	"meeting_invitation.host_user_id":          {disposition: referenceResolve, live: `status NOT IN ('canceled','erased') OR NOT cleanup_complete`, remedy: "meeting_invitations"},
 	"meeting_proposal.host_user_id":            {disposition: referenceResolve, live: jsonTrue, remedy: "meeting_proposals"},
+	"meeting_readiness.attendee_id":            {disposition: referenceRetain},
 	"notice.recipient_user_id":                 {disposition: referenceRetain},
 	"notification_digest_run.user_id":          {disposition: referenceRetain},
 	"notification_preference.user_id":          {disposition: referenceRetain},

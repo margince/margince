@@ -13,11 +13,12 @@
 // deal, while a refused one names the reason.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, CheckSquare, FileText, Phone } from "lucide-react";
-import { useId, useState } from "react";
+import { CalendarPlus, FileText, Phone } from "lucide-react";
+import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
+import { useActivityGate } from "../../../components/activitygate";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
@@ -29,10 +30,8 @@ import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
-import { useCanWrite } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
-import { useMe } from "../../../lib/session";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { CorrectCloseDayAction } from "./correctcloseday";
@@ -184,22 +183,13 @@ export function DealActions({
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
-  // useCanWrite, not useCan: the two log verbs issue a POST, and a read seat
-  // is refused before RBAC is consulted, the rule every other record header
-  // states for the identical verb.
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  const logRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet.
-  const logGrantKnown = me.data?.authorization !== undefined;
-  const logRefused =
-    refusedByArchive ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
-  const logPending = !refusedByArchive && !logGrantKnown;
+  const activity = useActivityGate();
+  const logRefused = refusedByArchive ?? activity.refusedId;
+  const logPending = !refusedByArchive && activity.pending;
   return (
     <>
-      {!refusedByArchive && logGrantKnown && !canLog && (
-        <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
+      {!refusedByArchive && activity.refusedId && (
+        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
       )}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,
@@ -217,7 +207,7 @@ export function DealActions({
       </Button>
       <DealBookMeeting
         companyId={deal.company_id ?? undefined}
-        allowed={logGrantKnown && canLog && !refusedByArchive}
+        allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={logRefused}
       />
@@ -229,15 +219,6 @@ export function DealActions({
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
-      </Button>
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        title={t("log.addTask")}
-        onClick={() => setDrawer("task")}
-      >
-        <CheckSquare aria-hidden="true" />
-        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
       </Button>
       <ExtensionEntries
         slot="record_header.deal"
@@ -263,6 +244,14 @@ export function DealActions({
         label={t("record.moreActions")}
         word={t("record.verb.more")}
       >
+        {/* First: the most frequent verb in the menu. */}
+        <Button
+          disabled={logPending}
+          reasonId={logRefused}
+          onClick={() => setDrawer("task")}
+        >
+          {t("log.addTask")}
+        </Button>
         {/* Worded rather than a bare pencil: among named verbs the square
             would be the one row naming nothing. */}
         <Button onClick={onEditDetails}>{t("deal.editDetails")}</Button>

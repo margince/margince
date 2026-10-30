@@ -3,6 +3,7 @@ import { Building2 } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
@@ -300,7 +301,9 @@ export function MailSharingPlate() {
           { company },
         )}{" "}
         {canChangeIt && (
-          <a href="#/settings/capture">{t("mailSharing.posture.where")}</a>
+          <AppLink href="#/settings/capture">
+            {t("mailSharing.posture.where")}
+          </AppLink>
         )}
       </p>
     </PanelPlate>

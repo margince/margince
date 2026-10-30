@@ -41,6 +41,7 @@ function check(id: string, label: string): InputCheck {
     status: "open",
     first_seen_at: "2026-09-01T09:00:00Z",
     last_seen_at: "2026-09-07T09:00:00Z",
+    inputs_changed: false,
   };
 }
 
@@ -106,6 +107,22 @@ function show({
             },
           }),
         );
+      if (url.endsWith("/loss-reasons"))
+        return jsonResponse({
+          data: [
+            {
+              id: "r-1",
+              key: "competitor",
+              label: "Chose a competitor",
+              active: true,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        });
       if (url.includes("/deal-suggestions"))
         return jsonResponse({ data: covered ? [suggestion] : [] });
       if (url.includes("/signals/"))
@@ -480,4 +497,56 @@ it("explains when a signal reader cannot answer the finding", async () => {
   expect(
     within(sheet).queryByRole("button", { name: "Save answer" }),
   ).toBeNull();
+});
+
+// A customer review is answered in the rep's words, and the two answers that
+// move the deal go to their own routes. Close as lost asks for the reason and
+// no end date: a lost deal has nothing to end.
+it("sends a customer review's wait and lost answers to the routes that move the deal", async () => {
+  const user = userEvent.setup();
+  const review: InputCheck = {
+    ...check("e-9", FIRST_DEAL),
+    type: "deal_viability",
+  };
+  const { posted } = show({ findings: [review] });
+
+  await user.click(await answerButton(FIRST_DEAL));
+  let sheet = await screen.findByRole("dialog");
+  for (const answer of [/customer is back/, /asked to wait/, /Close as lost/]) {
+    expect(within(sheet).getByRole("radio", { name: answer })).toBeTruthy();
+  }
+  await user.click(within(sheet).getByRole("radio", { name: /Close as lost/ }));
+  expect(within(sheet).queryByLabelText(/hidden until/i)).toBeNull();
+  await user.type(within(sheet).getByRole("textbox"), "Chose another supplier");
+  // The same reason picker as the deal's own close-lost dialog: no reason, no save.
+  const save = within(sheet).getByRole("button", { name: "Save answer" });
+  expect(save.hasAttribute("disabled")).toBe(true);
+  await pickOption(
+    user,
+    within(sheet).getByRole("combobox", { name: "Why was it lost?" }),
+    "Chose a competitor",
+  );
+  await user.click(save);
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0]?.url).toContain(
+    `/forecast/assurance/exceptions/${review.id}/close-lost`,
+  );
+  expect(posted[0]?.body).toEqual({
+    lost_reason: "Chose another supplier",
+    lost_reason_code: "competitor",
+  });
+
+  await user.click(await answerButton(FIRST_DEAL));
+  sheet = await screen.findByRole("dialog");
+  await user.click(within(sheet).getByRole("radio", { name: /asked to wait/ }));
+  await user.type(
+    within(sheet).getByRole("textbox", { name: "Wait until" }),
+    "1.12.2026{Enter}",
+  );
+  await user.click(within(sheet).getByRole("button", { name: "Save answer" }));
+  await waitFor(() => expect(posted).toHaveLength(2));
+  expect(posted[1]?.url).toContain(
+    `/forecast/assurance/exceptions/${review.id}/wait`,
+  );
+  expect(posted[1]?.body).toEqual({ until: "2026-12-01" });
 });

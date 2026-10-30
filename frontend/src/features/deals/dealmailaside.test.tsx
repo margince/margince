@@ -106,7 +106,7 @@ describe("DealMailAside", () => {
       screen
         .getByRole("link", { name: "View all activity" })
         .getAttribute("href"),
-    ).toBe("#/deals/d1");
+    ).toBe("/#/deals/d1");
     // ONE read, narrowed to this deal's mail and capped: the flyout is an
     // aside, and an aside that paged the whole timeline would be the page.
     expect(seen).toHaveLength(1);

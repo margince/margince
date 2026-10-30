@@ -3,6 +3,7 @@
 
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelRow } from "../../design-system/panel";
@@ -292,12 +293,12 @@ type Deal = WeeklyReview["deals"][number];
  *  renamed since still reads as it did that week. */
 function DealName({ deal }: Readonly<{ deal: Deal }>) {
   return (
-    <a
+    <AppLink
       className="brief-weekly-deal-name link-button"
       href={routeHash({ screen: "deals", id: deal.deal_id })}
     >
       {deal.label}
-    </a>
+    </AppLink>
   );
 }
 

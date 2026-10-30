@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -104,7 +105,7 @@ func TestTheWaitingSeamAttachesAnEmailRowToEmailsAlone(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf, nil)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -149,7 +150,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	before, _, err := seam.Unanswered(e.Admin(), asOf, nil)
+	before, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -169,7 +170,7 @@ func TestTheWaitingSeamHandsNoRowForAMessageTheReaderCannotRead(t *testing.T) {
 	// missing permission. A reader who could not have seen it either way would
 	// pass this test while proving nothing about the audience.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
-	after, _, err := seam.Unanswered(colleague, asOf, nil)
+	after, _, err := seam.Unanswered(colleague, asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("colleague reading who is waiting: %v", err)
 	}
@@ -187,10 +188,10 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 		_, err := tx.Exec(context.Background(), `
 			WITH flooded AS (
 			  INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
-			                        source, captured_by, audience, occurred_at, thread_key)
+			                        source, captured_by, audience, occurred_at, thread_key, sender_is_machine)
 			  SELECT gen_random_uuid(), 'email', 'Build #'||n||' passed', 'Nothing here needs you.',
 			         'inbound', 'gmail', 'flood-'||n, 'gmail:flood-'||n, $4,
-			         'workspace', $1::timestamptz + make_interval(mins => n), 'flood-thread-'||n
+			         'workspace', $1::timestamptz + make_interval(mins => n), 'flood-thread-'||n, $5
 			    FROM generate_series(1, $2::int) AS n
 			  RETURNING id
 			), wrote AS (
@@ -200,7 +201,8 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 			)
 			INSERT INTO activity_link (activity_id, entity_type, contact_id)
 			SELECT activity_id, 'contact', $3::uuid FROM wrote`,
-			from, count, contact, "user:"+e.AdminUser.String())
+			from, count, contact, "user:"+e.AdminUser.String(),
+			mailidentity.InboundFromSendingSystem("email", "inbound", "bounces@sendgrid.net"))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding %d machine mails: %v", count, err)
@@ -211,7 +213,7 @@ func seedMachineFlood(t *testing.T, e *integration.Env, contact ids.UUID, count 
 // customer off the queue.
 //
 // The store's machine rule is six patterns against an address; the seam's is
-// capture.IsMachineAddress, which reads a registrable domain against the
+// the sender_is_machine stamp, which reads a registrable domain against the
 // transactional baseline. A relay like sendgrid.net matches none of the six, so
 // a scan cap's worth of it is admitted by the store and discarded above the
 // store — and the customer underneath was never read at all. The seam answers
@@ -230,7 +232,7 @@ func TestAFloodOfMachineMailDoesNotHideAWaitingCustomer(t *testing.T) {
 		store: activities.NewStore(e.DB()),
 		now:   func() time.Time { return asOf },
 	}
-	rows, _, err := seam.Unanswered(e.Admin(), asOf, nil)
+	rows, _, err := seam.Unanswered(e.Admin(), asOf, attention.WaitingFor{})
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}

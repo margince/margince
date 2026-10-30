@@ -50,9 +50,9 @@ export function reportingAmount(
   return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
-export function metricLabel(metric: ReportingMetricID, t: Translator): string {
-  return t(`reporting.${metric}`);
-}
+// Names a metric as the catalog does, in the reader's language.
+export type MetricNames = (metric: ReportingMetricID) => string;
+
 export function blockLabel(block: ReportingBlockKind, t: Translator): string {
   return t(`reporting.${block}`);
 }
@@ -116,11 +116,23 @@ export function reportingCompactAmount(
     : reportingAmount(value, unit, currency, locale);
 }
 
+// A period read at its first instant, such as this week at Monday midnight.
+export function reportingPeriodIsEmpty(interval: {
+  start_at: string;
+  end_at: string;
+}): boolean {
+  return Date.parse(interval.end_at) <= Date.parse(interval.start_at);
+}
+
 export function reportingPeriodLabel(
   interval: { start_at: string; end_at: string },
   zone: string,
   locale: Locale,
 ): string {
+  // An empty period has no last day to name, only the day it starts.
+  if (reportingPeriodIsEmpty(interval)) {
+    return formatDateAbbrev(interval.start_at, locale, zone);
+  }
   return `${formatDateAbbrev(interval.start_at, locale, zone)} – ${formatDateAbbrev(new Date(Date.parse(interval.end_at) - 1).toISOString(), locale, zone)}`;
 }
 

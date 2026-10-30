@@ -326,7 +326,7 @@ describe("MailSharingPlate", () => {
       screen
         .getByRole("link", { name: "Change in Capture rules" })
         .getAttribute("href"),
-    ).toBe("#/settings/capture");
+    ).toBe("/#/settings/capture");
   });
 
   it("states a held posture and offers no link to a reader who cannot change it", async () => {

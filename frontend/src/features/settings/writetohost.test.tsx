@@ -7,6 +7,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -134,5 +135,47 @@ describe("WriteToHost", () => {
     expect(
       screen.getByRole("button", { name: "dung.ly@newsky.example" }),
     ).toBeTruthy();
+  });
+
+  it("drafts on arrival when an AI verb opened it, steered by the verb's words", async () => {
+    // A writer's voice to draft in; without one the composer waits for a press.
+    const voice = {
+      data: [{ id: "vp-1", status: "ready", maturity: "provisional" }],
+      page: { next_cursor: null, has_more: false },
+    };
+    const drafts: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        if (path.endsWith("/connectors"))
+          return jsonResponse(CONNECTED_MAILBOX);
+        if (path.endsWith("/voice-profiles")) return jsonResponse(voice);
+        if (
+          request.method === "POST" &&
+          path.endsWith("/contacts/c-1/draft-email")
+        ) {
+          drafts.push(await request.clone().json());
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    render(
+      <ContactLink
+        kind="email"
+        appearance="button"
+        label="Email"
+        draft={{ label: "Draft email", intent: "deliver on a commitment" }}
+        address="alice@example.com"
+        record={{ entityType: "contact", entityId: "c-1" }}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Draft email" }),
+    );
+
+    await waitFor(() => expect(drafts).toHaveLength(1));
+    expect(drafts[0]).toMatchObject({ intent: "deliver on a commitment" });
   });
 });

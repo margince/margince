@@ -52,10 +52,11 @@ type DedupeRecheckResult struct {
 
 // openPair is one open, undecided dedupe candidate and its two ends.
 type openPair struct {
-	id          ids.UUID
-	entityType  string
-	left, right ids.UUID
-	confidence  float64
+	id             ids.UUID
+	entityType     string
+	left, right    ids.UUID
+	confidence     float64
+	phoneCollision bool
 }
 
 // RecheckOpenDedupeCandidates closes every open pair the filing rule would no
@@ -131,7 +132,7 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 		SELECT d.id, d.entity_type,
 		       coalesce(d.left_contact_id, d.left_company_id, d.left_lead_id),
 		       coalesce(d.right_contact_id, d.right_company_id, d.right_lead_id),
-		       d.confidence::float8
+		       d.confidence::float8, `+phoneCollisionEvidenceSQL+`
 		  FROM dedupe_candidate d
 		 WHERE d.disposition = 'open' AND d.archived_at IS NULL AND d.id > $1
 		   AND NOT EXISTS (SELECT 1 FROM audit_log a
@@ -145,7 +146,7 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 	}
 	pairs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openPair, error) {
 		var p openPair
-		err := row.Scan(&p.id, &p.entityType, &p.left, &p.right, &p.confidence)
+		err := row.Scan(&p.id, &p.entityType, &p.left, &p.right, &p.confidence, &p.phoneCollision)
 		return p, err
 	})
 	if err != nil {
@@ -155,13 +156,22 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 }
 
 // stillFiled answers whether today's rule would file this pair, and its score
-// now. An identity conflict (a shared phone, a domain two companies claim) is a
-// fact rather than a score and stands while both companies are live. A contact
+// now. A routing conflict stands for a human to decide; a shared phone must
+// still be held by both contacts. A contact
 // or lead pair with an end this pass cannot read stands. Leads have no
 // identity-conflict lane, so a lead pair at 1.0 is scored again.
 func stillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, pair openPair) (bool, float64, error) {
 	if pair.confidence >= identityConflictConfidence && pair.entityType == entityContact {
-		return true, pair.confidence, nil
+		if !pair.phoneCollision {
+			return true, pair.confidence, nil
+		}
+		_, found, err := sharedContactPhone(ctx, tx, pair.left, pair.right)
+		if err != nil {
+			return false, 0, err
+		}
+		if found {
+			return true, pair.confidence, nil
+		}
 	}
 	switch pair.entityType {
 	case entityContact:
@@ -219,8 +229,12 @@ func contactPairStillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemai
 	// The review lanes' own pair tests. A pair stays while the evidence it was
 	// filed on still holds, and retires once an edit removes it.
 	_, _, variant := addressVariantPair(left.emails, right.emails)
-	return score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant ||
-		linkedInProfilesMatch(left.linkedIn, right.linkedIn), score, nil
+	filed := score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant ||
+		linkedInProfilesMatch(left.linkedIn, right.linkedIn)
+	if filed && pair.phoneCollision {
+		return true, score, refreshContactPhoneEvidence(ctx, tx, pair, left, right, score)
+	}
+	return filed, score, nil
 }
 
 // contactScore is contactConfidence with one side as the candidate and the
@@ -375,6 +389,13 @@ func companyPairStillFiled(ctx context.Context, tx pgx.Tx, pair openPair) (bool,
 func refileArchivedCandidateTx(ctx context.Context, tx pgx.Tx, entityType, leftCol, rightCol string,
 	left, right ids.UUID, confidence float64, evidence []byte,
 ) (bool, error) {
+	// A recheck may be closing this open pair. Wait for its commit before
+	// deciding whether this filing needs to reopen it.
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`SELECT id FROM dedupe_candidate
+		WHERE entity_type = @kind AND %s = @left AND %s = @right FOR UPDATE`, leftCol, rightCol),
+		pgx.StrictNamedArgs{"kind": entityType, "left": left, "right": right}); err != nil {
+		return false, fmt.Errorf("contacts: holding the duplicate pair being filed again: %w", err)
+	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		UPDATE dedupe_candidate

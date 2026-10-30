@@ -150,7 +150,7 @@
   text-decoration: none;
 }
 .settings-home-row:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .settings-home-glyph {
   align-self: center;

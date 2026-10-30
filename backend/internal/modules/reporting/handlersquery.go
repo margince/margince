@@ -65,7 +65,7 @@ func textOrEmpty(value *string) string {
 
 // EvaluateReporting uses the same selection parser as evidence reads.
 func (h Handlers) EvaluateReporting(w http.ResponseWriter, r *http.Request, _ crmcontracts.EvaluateReportingParams) {
-	selection, err := SelectionFromQuery(r.URL.Query())
+	selection, err := SelectionFromQuery(r.URL.Query(), h.opening)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -76,7 +76,7 @@ func (h Handlers) EvaluateReporting(w http.ResponseWriter, r *http.Request, _ cr
 
 // GetReportingEvidence checks the live evaluation receipt before returning source rows.
 func (h Handlers) GetReportingEvidence(w http.ResponseWriter, r *http.Request, params crmcontracts.GetReportingEvidenceParams) {
-	selection, err := SelectionFromQuery(r.URL.Query())
+	selection, err := SelectionFromQuery(r.URL.Query(), h.opening)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -91,9 +91,22 @@ func (h Handlers) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Req
 	respond(w, r, out, err)
 }
 
+// OpeningSelection is what a request that names no metrics opens on.
+//
+// Passed in rather than spelled here. The catalog publishes it as a preset,
+// which the Analytics screen and the daily benchmark read. A second copy here
+// drifted from it by two metrics.
+type OpeningSelection struct {
+	Metrics []crmcontracts.ReportingMetricID
+	Blocks  []crmcontracts.ReportingBlockKind
+}
+
 // SelectionFromQuery gives live views and evidence identical filter parsing.
-func SelectionFromQuery(q url.Values) (crmcontracts.ReportingSelection, error) {
-	selection := crmcontracts.ReportingSelection{Period: reportingThisMonth, TargetBasis: "month", CloseWindow: reportingFiscalQuarter, Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "open_pipeline", reportingStageAge}, Blocks: []crmcontracts.ReportingBlockKind{"bookings_trend", "stage_distribution", reportingOwnerAttainment, reportingStageAge}}
+func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.ReportingSelection, error) {
+	selection := crmcontracts.ReportingSelection{
+		Period: reportingThisMonth, TargetBasis: "month", CloseWindow: reportingFiscalQuarter,
+		Metrics: opening.Metrics, Blocks: opening.Blocks,
+	}
 	selection.Scope.Kind = crmcontracts.ReportingScopeKind(q.Get("scope_kind"))
 	for _, binding := range []struct {
 		name        string
@@ -128,23 +141,7 @@ func SelectionFromQuery(q url.Values) (crmcontracts.ReportingSelection, error) {
 		}
 		selection.Interval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
 	}
-	if q.Has("metrics") {
-		selection.Metrics = nil
-		for _, value := range queryItems(q["metrics"]) {
-			selection.Metrics = append(selection.Metrics, crmcontracts.ReportingMetricID(value))
-		}
-		// The default charts belong to the default metrics; paired with metrics
-		// the caller chose they fail the "charts belong to the metrics" rule.
-		if !q.Has("blocks") {
-			selection.Blocks = []crmcontracts.ReportingBlockKind{}
-		}
-	}
-	if q.Has("blocks") {
-		selection.Blocks = nil
-		for _, value := range queryItems(q["blocks"]) {
-			selection.Blocks = append(selection.Blocks, crmcontracts.ReportingBlockKind(value))
-		}
-	}
+	chooseMembers(q, &selection)
 	return selection, nil
 }
 
@@ -162,4 +159,28 @@ func queryItems(values []string) []string {
 		out = append(out, strings.Split(value, ",")...)
 	}
 	return out
+}
+
+// chooseMembers replaces the opening selection's metrics and charts with the
+// ones the query names.
+//
+// Metrics named alone carry no charts. The opening's charts belong to the
+// opening's metrics. Drawing them over metrics the caller chose breaks the
+// rule that a chart belongs to what it draws.
+func chooseMembers(q url.Values, selection *crmcontracts.ReportingSelection) {
+	if q.Has("metrics") {
+		selection.Metrics = nil
+		for _, value := range queryItems(q["metrics"]) {
+			selection.Metrics = append(selection.Metrics, crmcontracts.ReportingMetricID(value))
+		}
+		if !q.Has("blocks") {
+			selection.Blocks = []crmcontracts.ReportingBlockKind{}
+		}
+	}
+	if q.Has("blocks") {
+		selection.Blocks = nil
+		for _, value := range queryItems(q["blocks"]) {
+			selection.Blocks = append(selection.Blocks, crmcontracts.ReportingBlockKind(value))
+		}
+	}
 }

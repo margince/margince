@@ -122,7 +122,7 @@ it("opens on a press where there is no door, and takes focus to the first row", 
   await user.click(screen.getByRole("button", { name: "4 open" }));
 
   const first = screen.getByRole("link", { name: "Expansion" });
-  expect(first.getAttribute("href")).toBe("#/deals/a");
+  expect(first.getAttribute("href")).toBe("/#/deals/a");
   expect(document.activeElement).toBe(first);
 });
 

@@ -142,6 +142,14 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/analytics/reporting.questioncard.test.tsx",
+    why: "A bound card shows the calendar its saved question keeps; that stored basis names a zone, and the note must print it as stored.",
+  },
+  {
+    file: "features/analytics/reporting.charts.stories.tsx",
+    why: "The story of a sent edition's bound card carries the calendar basis its question was kept in, which names a zone.",
+  },
+  {
     file: "features/settings/rates.test.tsx",
     why: "The model price form opens on the UTC day its server counts. Only a reader west of UTC, in the evening, makes that day differ from the reader's own.",
   },

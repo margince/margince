@@ -94,14 +94,15 @@ func (s *Store) ListSubmissions(
 		// ONE MORE THAN ASKED FOR, so `has_more` is a fact rather than a guess:
 		// a page that came back exactly full says nothing about what is behind
 		// it, and guessing either way is a lie half the time.
-		rows, err := tx.Query(ctx, `
-			SELECT `+prefixed(submissionColumns, "s")+`,
-			       coalesce(c.full_name, ''), `+currentValueSQL("c")+`
+		query := `
+			SELECT ` + prefixed(submissionColumns, "s") + `,
+			       coalesce(c.full_name, ''), ` + currentValueSQL("c") + `
 			  FROM contact_confirm_submission s
 			  JOIN contact c ON c.id = s.contact_id
-			 WHERE `+where+`
+			 WHERE ` + where + `
 			 ORDER BY s.resolution IS NOT NULL, s.submitted_at, s.id
-			 LIMIT `+fmt.Sprintf("$%d", arg(limit+1)), args...)
+			 LIMIT ` + fmt.Sprintf("$%d", arg(limit+1))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("consent: listing what subjects proposed: %w", err)
 		}

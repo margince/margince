@@ -50,8 +50,8 @@ func (w *csvWriters) resolveReviewLink(ctx context.Context, link migration.Revie
 		if err != nil {
 			return link, err
 		}
-		link.Dropped = candidate.count != 1
-		link.Pending = !link.Dropped && candidate.pending
+		link.Dropped = candidate.count > 1
+		link.Pending = !link.Dropped && candidate.pending && !w.links.plannedEmployerLink(link)
 		if !link.Dropped && !candidate.id.IsZero() {
 			link.TargetID = candidate.id.String()
 		}
@@ -61,7 +61,7 @@ func (w *csvWriters) resolveReviewLink(ctx context.Context, link migration.Revie
 	if err != nil {
 		return link, err
 	}
-	link.Pending, link.Dropped = answer.Pending, !answer.resolves()
+	link.Pending, link.Dropped = answer.Pending && !w.links.plannedEmployerLink(link), !answer.resolves()
 	if answer.Found {
 		link.TargetID = answer.ID.String()
 	}

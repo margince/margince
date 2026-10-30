@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatMoney } from "../../format/format";
 import { en } from "../../i18n/en";
 import { SECTIONS, sectionFromAddress } from "../../lib/analytics.address";
-import { AnalyticsScreen, analyticsTabs } from "./analytics";
+import { AnalyticsScreen } from "./analytics";
+import { analyticsTabs } from "./analytics.tabs";
 import {
   openPipeline,
   ownLensContext,
@@ -21,12 +22,16 @@ afterEach(() => {
 
 it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
   expect(analyticsTabs(SECTIONS)).toEqual([
+    "overview",
     "performance",
+    "sdr",
+    "leads",
+    "partners",
+    "conversion",
     "forecast",
     "pipeline",
     "outcomes",
     "delivery",
-    "reports",
   ]);
   expect(analyticsTabs([...SECTIONS].reverse())).toEqual(
     analyticsTabs(SECTIONS),
@@ -69,7 +74,7 @@ describe("the delivery section", () => {
       await screen.findByText(formatMoney(400000, "EUR", "en")),
     ).toBeTruthy();
     const link = await screen.findByRole("link", { name: "Rollout Nord" });
-    expect(link.getAttribute("href")).toBe("#/projects/p1");
+    expect(link.getAttribute("href")).toBe("/#/projects/p1");
     expect(
       screen.getByText("No project in delivery has gone quiet."),
     ).toBeTruthy();
@@ -99,7 +104,7 @@ describe("the delivery section", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Delivery" }));
     const link = await screen.findByRole("link", { name: "Rollout Süd" });
-    expect(link.getAttribute("href")).toBe("#/projects/p9");
+    expect(link.getAttribute("href")).toBe("/#/projects/p9");
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     expect(
       (
@@ -511,10 +516,25 @@ describe("sectionFromAddress", () => {
     expect(sectionFromAddress("open-deals-per-company")).toBe("pipeline");
   });
 
+  // Performance's views were once one page with a switch named by `?view=`.
+  it("answers an old view-switch address with that view's tab", () => {
+    expect(sectionFromAddress("performance", "performance", "sdr")).toBe("sdr");
+    expect(sectionFromAddress(undefined, "performance", "leads")).toBe("leads");
+    expect(sectionFromAddress("performance", "performance", "sales")).toBe(
+      "performance",
+    );
+    expect(sectionFromAddress("forecast", "performance", "sdr")).toBe(
+      "forecast",
+    );
+    expect(
+      sectionFromAddress("performance", "performance", "constructor"),
+    ).toBe("performance");
+  });
+
   // A segment is whatever a reader typed. Anything unrecognized lands on the
   // first section rather than rendering an empty screen.
   it("falls back to the first section for anything it does not know", () => {
-    expect(sectionFromAddress(undefined)).toBe("performance");
-    expect(sectionFromAddress("nonsense")).toBe("performance");
+    expect(sectionFromAddress(undefined)).toBe("overview");
+    expect(sectionFromAddress("nonsense")).toBe("overview");
   });
 });

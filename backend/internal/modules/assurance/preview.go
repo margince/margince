@@ -83,11 +83,11 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
 
 	err = s.store.InPreviewTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		out.Coverage = s.coverage(ctx, tx, now)
-		subjects, err := s.subjects(ctx, tx)
+		subjects, err := s.subjects(ctx, tx, now, out.Coverage)
 		if err != nil {
 			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
 		}
-		pass := askEveryRule(now, subjects, s.cfg)
+		pass := askEveryRule(now, subjects, s.cfg, out.Coverage)
 		if _, err := s.askSignals(ctx, tx, now, &pass); err != nil {
 			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
 		}

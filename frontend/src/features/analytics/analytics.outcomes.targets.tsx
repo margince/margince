@@ -9,7 +9,6 @@ import { type Locale, type Translator, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingMetricID,
   type ReportingSelection,
@@ -17,7 +16,7 @@ import {
   reportingPeriodLabel,
   reportingQuery,
 } from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 
 type TargetBasis = ReportingSelection["target_basis"];
 type Metric = ReportingEvaluation["metrics"][number];
@@ -70,6 +69,7 @@ function TargetReadings({
   locale: Locale;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const query = useQuery({
     queryKey: ["reporting-evaluation", "my-targets", self, metrics],
     queryFn: async (): Promise<Readings> => {
@@ -85,7 +85,7 @@ function TargetReadings({
       {(readings) => (
         <StatStrip>
           {metrics.flatMap((id) =>
-            targetCards(id, readings, t, locale).map((card) => (
+            targetCards(id, metricName(id), readings, t, locale).map((card) => (
               <StatCard
                 key={card.key}
                 narrow="row"
@@ -134,53 +134,64 @@ type Card = Readonly<{
 // so and still shows the month so far.
 function targetCards(
   id: ReportingMetricID,
+  label: string,
   readings: Readings,
   t: Translator,
   locale: Locale,
 ): Card[] {
-  const label = metricLabel(id, t);
   const cards = BASES.flatMap((basis): Card[] => {
     const metric = readings[basis].metrics.find((each) => each.id === id);
     if (metric?.target == null) return [];
-    const amount = (value: number) =>
-      reportingCompactAmount(
-        value,
-        metric.unit,
-        readings[basis].context.currency,
-        locale,
-      );
-    const actual = metric.target_actual;
-    const { context } = readings[basis];
-    // The dates the target covers, named as Performance names them.
-    const period = context.target_interval
-      ? reportingPeriodLabel(context.target_interval, context.timezone, locale)
-      : null;
-    const share =
-      metric.attainment == null
-        ? null
-        : t("reporting.attainment", {
-            percent: formatNumber(Math.round(metric.attainment), locale),
-          });
     return [
       {
+        ...targetCard(metric, readings[basis].context, label, t, locale),
         key: `${id}-${basis}`,
-        label,
-        value:
-          actual == null
-            ? t(`reporting.status.${metric.coverage.status}`)
-            : t("analytics.targetOf", {
-                actual: amount(actual),
-                target: amount(metric.target),
-              }),
-        detail: [period, share].filter((part) => part != null).join(" · "),
-        meter:
-          actual == null ? undefined : { filled: actual, total: metric.target },
       },
     ];
   });
   if (cards.length) return cards;
   const month = readings.month.metrics.find((each) => each.id === id);
   return month ? [untargeted(month, label, readings, t, locale)] : [];
+}
+
+/**
+ * One figure against its target, as the server measured both. A missing
+ * actual stays missing, and the share reached is the server's attainment.
+ */
+export function targetCard(
+  metric: Metric,
+  context: ReportingEvaluation["context"],
+  label: string,
+  t: Translator,
+  locale: Locale,
+): Card {
+  const target = metric.target ?? 0;
+  const amount = (value: number) =>
+    reportingCompactAmount(value, metric.unit, context.currency, locale);
+  const actual = metric.target_actual;
+  // The dates the target covers, named as Performance names them.
+  const period = context.target_interval
+    ? reportingPeriodLabel(context.target_interval, context.timezone, locale)
+    : null;
+  const share =
+    metric.attainment == null
+      ? null
+      : t("reporting.attainment", {
+          percent: formatNumber(Math.round(metric.attainment), locale),
+        });
+  return {
+    key: metric.id,
+    label,
+    value:
+      actual == null
+        ? t(`reporting.status.${metric.coverage.status}`)
+        : t("analytics.targetOf", {
+            actual: amount(actual),
+            target: amount(target),
+          }),
+    detail: [period, share].filter((part) => part != null).join(" · "),
+    meter: actual == null ? undefined : { filled: actual, total: target },
+  };
 }
 
 function untargeted(

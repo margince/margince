@@ -129,6 +129,8 @@ internal/compose/integration/contract_lifecycle_integration_test.go 1
 internal/compose/integration/controllerpayloadsweep_integration_test.go 2
 internal/compose/integration/customfields/customfields_vocab_http_integration_test.go 1
 internal/compose/integration/customfields_vocab_integration_test.go 1
+internal/compose/integration/daily_approvals_bench_test.go 1
+internal/compose/integration/daily_backlog_bench_test.go 3
 internal/compose/integration/daily_bench_test.go 1
 internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
@@ -297,6 +299,7 @@ internal/compose/weekly/weeklyrelevance_integration_test.go 1
 internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
+internal/compose/worklistbacklog_integration_test.go 2
 internal/compose/worklistageout_integration_test.go 1
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2
@@ -335,11 +338,14 @@ internal/modules/ai/decisionsummary_integration_test.go 3
 internal/modules/ai/modelfacts_test.go 1
 internal/modules/ai/providerhealthshare_test.go 1
 internal/modules/ai/ratelane_integration_test.go 2
+internal/modules/approvals/batcheligibility_integration_test.go 1
 internal/modules/approvals/lapsemark_integration_test.go 1
+internal/modules/approvals/pendingcount_integration_test.go 2
+internal/modules/approvals/pendingtargetcount_integration_test.go 1
 internal/modules/approvals/sameagent_test.go 2
-internal/modules/assurance/preview_integration_test.go 9
+internal/modules/assurance/preview_integration_test.go 8
 internal/modules/assurance/runmembership_integration_test.go 2
-internal/modules/assurance/scan_integration_test.go 30
+internal/modules/assurance/scan_integration_test.go 28
 internal/modules/automation/automationpreview_integration_test.go 1
 internal/modules/automation/handlers_clock_test.go 2
 internal/modules/automation/handlers_event_route_lead_test.go 1
@@ -422,6 +428,7 @@ internal/modules/introductions/store_integration_test.go 2
 internal/modules/privacy/sarconsentlinks_integration_test.go 3
 internal/modules/search/graphedge_test.go 4
 internal/modules/search/graphtrust_test.go 2
+internal/platform/database/statementmeter_test.go 1
 internal/platform/events/bus_integration_test.go 1
 internal/platform/events/subscriberrecovery_integration_test.go 1
 internal/platform/jobs/deadwindow_integration_test.go 2

@@ -60,9 +60,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   overflow: hidden;
   transition: border-color var(--dur-state) var(--ease-out);
 }
@@ -83,8 +82,7 @@
   align-items: flex-end;
   height: 112px;
   overflow: hidden;
-  background: var(--bgInset);
-  border-bottom: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--groundEdge);
 }
 
 /* A file the buyer no longer gets: its paper recedes, so the tile does not

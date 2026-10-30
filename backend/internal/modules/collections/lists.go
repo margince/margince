@@ -253,9 +253,9 @@ func (s *Store) ListLists(ctx context.Context, filter ListFilter) ([]listRow, bo
 		if scope != "" {
 			where = append(where, scope)
 		}
-		rows, err := tx.Query(ctx,
-			"SELECT "+listColumns+" FROM list l WHERE "+strings.Join(where, " AND ")+
-				fmt.Sprintf(" ORDER BY l.name, l.id LIMIT $%d", arg(catalogCap+1)), args...)
+		query := "SELECT " + listColumns + " FROM list l WHERE " + strings.Join(where, " AND ") +
+			fmt.Sprintf(" ORDER BY l.name, l.id LIMIT $%d", arg(catalogCap+1))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

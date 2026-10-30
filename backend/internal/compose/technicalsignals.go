@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -46,16 +47,22 @@ const (
 // together or not at all.
 func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 	return func(ctx context.Context, tx pgx.Tx, change contacts.TechnicalChange, at time.Time) error {
-		summary, ok := technicalChangeSummary(identity.BaseLanguageForRecord(ctx, tx), change)
+		parts := technicalPartsOf(change)
+		summary, ok := parts.worded(identity.BaseLanguageForRecord(ctx, tx))
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
 			// it; it just does not earn a line on the account's signal list.
 			return nil
 		}
-		_, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:      kindTechnicalChange,
-			CompanyID: change.CompanyID.UUID,
-			Summary:   summary,
+		params, err := json.Marshal(parts)
+		if err != nil {
+			return fmt.Errorf("encoding a technical change summary's parts: %w", err)
+		}
+		_, err = signals.RecordDerived(ctx, tx, signals.DerivedSignal{
+			Kind:          kindTechnicalChange,
+			CompanyID:     change.CompanyID.UUID,
+			Summary:       summary,
+			SummaryParams: params,
 			// Never `warn` or `urgent`: a company changing its own systems is
 			// news about the account, not a problem with it.
 			Severity: severityInfo,
@@ -92,15 +99,19 @@ func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
 // two "moved" forms interpolate change.Previous after it; product and provider
 // names are never translated, which is why the holes are all there is.
 type technicalSummaryCopy struct {
-	// mailMoved / mailSet: the mail system moved, or was seen for the first time.
+	// mailMoved / mailSet / mailGone: the mail system moved, was seen for the
+	// first time, or is no longer seen.
 	mailMoved string
 	mailSet   string
+	mailGone  string
 	// serviceGone / serviceNew: an operated service left the air, or arrived.
 	serviceGone string
 	serviceNew  string
-	// hostingMoved / hostingSet: the hosting provider changed, or was first seen.
+	// hostingMoved / hostingSet / hostingGone: the hosting provider changed,
+	// was first seen, or is no longer seen.
 	hostingMoved string
 	hostingSet   string
+	hostingGone  string
 	// technologyGone / technologyNew: a product left the stack, or joined it.
 	technologyGone string
 	technologyNew  string
@@ -197,76 +208,115 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 	textlang.English: {
 		mailMoved:      "Mail now runs on %s (was %s)",
 		mailSet:        "Mail runs on %s",
+		mailGone:       "Mail no longer runs on %s",
 		serviceGone:    "%s went offline",
 		serviceNew:     "%s is newly online",
 		hostingMoved:   "Hosting moved to %s (was %s)",
 		hostingSet:     "Hosted at %s",
+		hostingGone:    "No longer hosted at %s",
 		technologyGone: "No longer uses %s",
 		technologyNew:  "Now uses %s",
 	},
 	textlang.German: {
 		mailMoved:      "Mail läuft jetzt über %s (vorher %s)",
 		mailSet:        "Mail läuft über %s",
+		mailGone:       "Mail läuft nicht mehr über %s",
 		serviceGone:    "%s ist offline gegangen",
 		serviceNew:     "%s ist neu online",
 		hostingMoved:   "Hosting jetzt bei %s (vorher %s)",
 		hostingSet:     "Hosting bei %s",
+		hostingGone:    "Hosting nicht mehr bei %s",
 		technologyGone: "%s wird nicht mehr eingesetzt",
 		technologyNew:  "Setzt jetzt %s ein",
 	},
 	textlang.Vietnamese: {
 		mailMoved:      "Mail hiện chạy trên %s (trước đây là %s)",
 		mailSet:        "Mail chạy trên %s",
+		mailGone:       "Mail không còn chạy trên %s",
 		serviceGone:    "%s đã ngừng hoạt động",
 		serviceNew:     "%s vừa xuất hiện trực tuyến",
 		hostingMoved:   "Hosting đã chuyển sang %s (trước đây là %s)",
 		hostingSet:     "Hosting tại %s",
+		hostingGone:    "Không còn hosting tại %s",
 		technologyGone: "Không còn dùng %s",
 		technologyNew:  "Hiện đang dùng %s",
 	},
 }
 
-// technicalChangeSummary is the sentence a rep reads on the account.
+type technicalChangeParts struct {
+	Field       string                       `json:"field"`
+	Kind        contacts.TechnicalChangeKind `json:"kind"`
+	Value       string                       `json:"value"`
+	ValueKey    string                       `json:"value_key,omitempty"`
+	Previous    string                       `json:"previous,omitempty"`
+	PreviousKey string                       `json:"previous_key,omitempty"`
+}
+
+func technicalPartsOf(change contacts.TechnicalChange) technicalChangeParts {
+	return technicalChangeParts{
+		Field: change.Field, Kind: change.Kind, Value: change.Value, ValueKey: change.ValueKey,
+		Previous: change.Previous, PreviousKey: change.PreviousKey,
+	}
+}
+
+// worded is the sentence a rep reads on the account.
 //
 // Written per field rather than from a template, because the four fields are
 // four different pieces of news: a mail system moving is an IT decision worth a
 // call, a careers page appearing is a hiring signal, and a shared phrasing
 // would flatten both into "a technical signal changed".
-func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange) (string, bool) {
+func (parts technicalChangeParts) worded(lang textlang.Lang) (string, bool) {
 	said := technicalCopyFor(lang)
 
-	switch change.Field {
+	switch parts.Field {
 	case contacts.FactMailProvider:
 		// The fallback mail labels are prose and follow the language; a real
 		// provider's key misses the map and its vendor name passes through.
-		value := nameOr(mailSentenceVocabulary, lang, change.ValueKey, change.Value)
-		if change.Kind == contacts.TechnicalMoved {
-			previous := nameOr(mailSentenceVocabulary, lang, change.PreviousKey, change.Previous)
+		value := nameOr(mailSentenceVocabulary, lang, parts.ValueKey, parts.Value)
+		switch parts.Kind {
+		case contacts.TechnicalMoved:
+			previous := nameOr(mailSentenceVocabulary, lang, parts.PreviousKey, parts.Previous)
 			return fmt.Sprintf(said.mailMoved, value, previous), true
+		case contacts.TechnicalGone:
+			return fmt.Sprintf(said.mailGone, value), true
 		}
 		return fmt.Sprintf(said.mailSet, value), true
 	case contacts.FactOperatedService:
-		value := nameOr(serviceVocabulary, lang, change.ValueKey, change.Value)
-		if change.Kind == contacts.TechnicalGone {
+		value := nameOr(serviceVocabulary, lang, parts.ValueKey, parts.Value)
+		if parts.Kind == contacts.TechnicalGone {
 			return fmt.Sprintf(said.serviceGone, value), true
 		}
 		return fmt.Sprintf(said.serviceNew, value), true
 	case contacts.FactHostingProvider:
-		if change.Kind == contacts.TechnicalMoved {
-			return fmt.Sprintf(said.hostingMoved, change.Value, change.Previous), true
+		switch parts.Kind {
+		case contacts.TechnicalMoved:
+			return fmt.Sprintf(said.hostingMoved, parts.Value, parts.Previous), true
+		case contacts.TechnicalGone:
+			return fmt.Sprintf(said.hostingGone, parts.Value), true
 		}
-		return fmt.Sprintf(said.hostingSet, change.Value), true
+		return fmt.Sprintf(said.hostingSet, parts.Value), true
 	case contacts.FactTechnology:
-		if change.Kind == contacts.TechnicalGone {
-			return fmt.Sprintf(said.technologyGone, change.Value), true
+		if parts.Kind == contacts.TechnicalGone {
+			return fmt.Sprintf(said.technologyGone, parts.Value), true
 		}
-		return fmt.Sprintf(said.technologyNew, change.Value), true
+		return fmt.Sprintf(said.technologyNew, parts.Value), true
 	default:
 		// email_security lands here on purpose. A DMARC policy tightening is a
 		// real fact about the company and belongs on the record, but it is not
 		// a reason to pick up the phone, and every account publishing one would
 		// put a line on every signal list for nobody to act on.
 		return "", false
+	}
+}
+
+func (parts technicalChangeParts) complete() bool {
+	switch parts.Kind {
+	case contacts.TechnicalMoved:
+		return parts.Value != "" && parts.Previous != ""
+	case contacts.TechnicalAppeared, contacts.TechnicalGone:
+		return parts.Value != ""
+	default:
+		return false
 	}
 }
 

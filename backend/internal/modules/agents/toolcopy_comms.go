@@ -19,7 +19,7 @@ var draftEmailCopy = toolCopy{
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
 		"sends a reply, send_company_email a first message.",
 	Retain: "Keep what comes back — subject, body, to, and the activity_id or links echoed with " +
-		"it; the send takes them. Re-writing the text in between means a human approves one " +
+		"it; the send takes them. Re-writing the text in between means the user agrees to one " +
 		"message and another goes out.",
 }
 

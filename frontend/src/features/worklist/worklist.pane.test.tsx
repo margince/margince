@@ -197,7 +197,7 @@ describe("what the selected row is about", () => {
     });
     // Re-render through the filter, which refetches: the row is gone, and the
     // pane goes with it rather than outliving the row it describes.
-    await userEvent.click(screen.getByRole("button", { name: /Approvals/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Tasks/ }));
     await waitFor(() => {
       expect(screen.queryByText("Last from this contact")).toBeNull();
     });

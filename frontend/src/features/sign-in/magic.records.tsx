@@ -15,6 +15,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChangeList } from "../../components/changelist";
 import { ReceiptReview } from "../../components/receiptreview";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
@@ -25,9 +26,9 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
+import { type MagicLine, magicKey } from "../../lib/magic.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
-import { type MagicLine, magicKey } from "./magic.queries";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
@@ -149,7 +150,7 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   return (
     <li className="magic-record">
       <div className="magic-record-head">
-        {href ? <a href={href}>{label}</a> : <span>{label}</span>}
+        {href ? <AppLink href={href}>{label}</AppLink> : <span>{label}</span>}
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>

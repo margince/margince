@@ -232,6 +232,16 @@ export const BUSINESS_PAGES = [
     changes: acts(writes("custom_field")),
   },
   {
+    id: "lossreasons",
+    // `custom_field`, as the vocabularies above: the reasons a deal is lost
+    // for are read by everyone and changed by admin/ops. No destroys: a reason
+    // is retired through its switch, because a lost deal keeps its code.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: acts(writes("custom_field")),
+  },
+  {
     id: "reviewtemplates",
     // `custom_field` read, which is what the templates endpoint requires.
     // Editing a template's questions is `custom_field` update on the server.

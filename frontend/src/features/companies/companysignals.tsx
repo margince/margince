@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import {
@@ -115,12 +116,12 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
                   opens it. An account- or contact-subject signal already
                   sits on the page it is about. */}
               {signal.entity_type === "project" && signal.entity_id && (
-                <a
+                <AppLink
                   className="co-rowlink co-signal-link"
                   href={routeHash({ screen: "projects", id: signal.entity_id })}
                 >
                   {t("co.signals.openProject")}
-                </a>
+                </AppLink>
               )}
               {/* The page the claim was read off. A newsroom signal cites the
                   article rather than copying it, so the headline on this row

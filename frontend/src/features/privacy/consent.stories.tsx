@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ConsentSection } from "./consent";
+import { mailPreview, NO_ADDRESS_PROBLEM } from "./controllermail.fixtures";
 
 // The Contact 360's Art. 7 proof log + DOI redeem field (G-4/G-5). Three
 // purposes cover the ternary state matrix in one render: transactional
@@ -162,7 +163,23 @@ export const LoadError: Story = {
 const ROWS: RouteMap = {
   "GET /consent-purposes": () => jsonResponse(PURPOSES),
   "GET /contacts/contact-1/consent": () => jsonResponse(CONSENT),
+  "GET /contacts/contact-1/consent/mail-preview": () =>
+    jsonResponse(mailPreview("record_confirmation")),
 };
+
+// The ask opens the mail it would send; the dialog portals, so read the document.
+async function openPreview(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
+  return within(await screen.findByRole("dialog"));
+}
+
+async function askAndSend({ canvasElement }: { canvasElement: HTMLElement }) {
+  const dialog = await openPreview(canvasElement);
+  await dialog.findByText("Ihre Kontaktdaten prüfen");
+  await userEvent.click(dialog.getByRole("button", { name: "Send request" }));
+  await within(canvasElement).findByTestId("confirm-details-sent");
+}
 
 // The link went out. The address is the one the SERVER derived from the
 // contact's own record — this surface reports it and cannot choose it.
@@ -180,11 +197,7 @@ export const ConfirmDetailsSent: Story = {
         201,
       ),
   }),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
-    await canvas.findByTestId("confirm-details-sent");
-  },
+  play: askAndSend,
 };
 
 // An installation with no outbound relay. The ask is shown with its reason
@@ -214,10 +227,15 @@ export const ConfirmDetailsUndelivered: Story = {
         201,
       ),
   }),
+  play: askAndSend,
+};
+
+// The mail the ask would send, before the rep sends it.
+export const ConfirmDetailsPreview: Story = {
+  render: section({ ...ROWS, "GET /me": () => jsonResponse(MAY_WRITE) }),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
-    await canvas.findByTestId("confirm-details-sent");
+    const dialog = await openPreview(canvasElement);
+    await dialog.findByText("Ihre Kontaktdaten prüfen");
   },
 };
 
@@ -227,19 +245,11 @@ export const ConfirmDetailsRefused: Story = {
   render: section({
     ...ROWS,
     "GET /me": () => jsonResponse(MAY_WRITE),
-    "POST /contacts/contact-1/consent/confirm-request": () =>
-      jsonResponse(
-        {
-          title: "Unprocessable Entity",
-          detail:
-            "this contact carries no live email address, so there is no mailbox a confirm link could reach",
-          status: 422,
-        },
-        422,
-      ),
+    "GET /contacts/contact-1/consent/mail-preview": () =>
+      jsonResponse(NO_ADDRESS_PROBLEM, 422),
   }),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByTestId("confirm-details-ask"));
+    const dialog = await openPreview(canvasElement);
+    await dialog.findByText(/no live email address/);
   },
 };

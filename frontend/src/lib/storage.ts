@@ -56,6 +56,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // A "Just in" item a reader set aside with "Noticed", keyed by activity id.
+  latestInboundNoticed: {
+    prefix: "margince.latestInbound.noticed:",
+    area: "local",
+    lifetime: "seat",
+  },
   platformDeclined: {
     prefix: "margince.first-run.platform-declined:",
     area: "local",
@@ -82,6 +88,12 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // When this tab last reloaded onto a newer build, so it reloads once per deploy.
+  staleBuildReloadedAt: {
+    name: "margince.staleBuildReloadedAt",
+    area: "session",
+    lifetime: "device",
+  },
   // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
   // the session brings the reminder back.
   setupReminderHidden: {
@@ -93,6 +105,19 @@ export const STORAGE_KEYS = {
   // shown once across its tabs. Seat: the next seat to sign in starts afresh.
   taskRemindersShown: {
     name: "margince.taskReminders.shown",
+    area: "local",
+    lifetime: "seat",
+  },
+  // Fingerprints of machine-written text this browser has played in, so each
+  // arrives with the reveal once. Seat: the next seat to sign in starts afresh.
+  aiRevealSeen: {
+    name: "margince.aiReveal.seen",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Analytics Overview view a reader chose last. Seat: it is about their work.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
     area: "local",
     lifetime: "seat",
   },

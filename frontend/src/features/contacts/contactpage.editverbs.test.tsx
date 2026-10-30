@@ -97,9 +97,12 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     const subtitle = () =>
       document.querySelector(".record-split-lines")?.textContent ?? "";
     await waitFor(() => expect(subtitle()).toContain("Old title"));
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Title" }),
-    );
+    // The left column edits the title too; this is the Research tab's grid.
+    const [, research] = await screen.findAllByRole("button", {
+      name: "Change Title",
+    });
+    if (!research) throw new Error("the Research tab draws no title editor");
+    await userEvent.click(research);
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
     await userEvent.type(title, "New title{Enter}");
@@ -173,9 +176,10 @@ async function menuPanel(): Promise<HTMLElement> {
 }
 
 describe("every secondary verb is a row of the header's one menu", () => {
-  // In the order a reader meets them: the record's own writes, then the
-  // quieter doors, then the destructive one last.
+  // In the order a reader meets them: Add task, the most frequent, then the
+  // record's own writes, the quieter doors, and the destructive one last.
   const ROWS = [
+    en["contact.action.addTask"],
     en["merge.contact"],
     en["scheduling.new"],
     en["record.share"],
@@ -202,10 +206,59 @@ describe("every secondary verb is a row of the header's one menu", () => {
     for (const row of ROWS) {
       expect(within(actions).queryByRole("button", { name: row })).toBeNull();
     }
-    // The other direction: a verb a reader came to do must not cost them an
-    // opening press.
-    for (const daily of [en["log.title"], en["contact.action.addTask"]]) {
+    // The other direction: the verbs a reader came to do must not cost them
+    // an opening press.
+    for (const daily of [en["log.title"], en["contact.action.meetings"]]) {
       expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
     }
+  });
+});
+
+describe("the left column edits a contact's fields in place", () => {
+  const withVersion: Contact360 = {
+    ...view,
+    contact: { ...view.contact, version: 3, title: "Old title" },
+  };
+  const column = async () =>
+    within(
+      await waitFor(() => {
+        const details = document.querySelector<HTMLElement>(
+          ".record-split-details",
+        );
+        if (!details) throw new Error("the page drew no left column");
+        return details;
+      }),
+    );
+
+  it("saves a changed title as a PATCH of that field alone", async () => {
+    let patchBody: unknown = null;
+    mount("overview", withVersion, [], {
+      "PATCH /contacts/p-1": (body) => {
+        patchBody = body;
+        return jsonResponse({ ...withVersion.contact, title: "New title" });
+      },
+      "GET /contacts/p-1": () => jsonResponse(withVersion.contact),
+    });
+
+    const left = await column();
+    await userEvent.click(
+      await left.findByRole("button", { name: "Change Title" }),
+    );
+    const title = await left.findByLabelText("Title");
+    await userEvent.clear(title);
+    await userEvent.type(title, "New title{Enter}");
+
+    await waitFor(() => expect(patchBody).toEqual({ title: "New title" }));
+  });
+
+  it("offers no change to a contact the reader may not write", async () => {
+    mount("overview", {
+      ...withVersion,
+      contact: { ...withVersion.contact, owner_id: "u-other", writable: false },
+    });
+
+    const left = await column();
+    await left.findAllByText("Old title");
+    expect(left.queryByRole("button", { name: "Change Title" })).toBeNull();
   });
 });

@@ -13,6 +13,7 @@ import {
   subscribeConnectivity,
 } from "../lib/connectivity";
 import { logUnexpectedError, ProblemError } from "../lib/problem";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { isLiveWorkRead } from "../lib/workkeys";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
@@ -42,7 +43,64 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
 export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
-  return isLiveRead(query.queryKey) && "always";
+  return (
+    (isLiveRead(query.queryKey) || isInstallationRead(query.queryKey)) &&
+    "always"
+  );
+}
+
+// The installation read comes back with the reader, and it is one small object.
+// A policy on it decides whether figures already on screen may stay there. So a
+// session left on a tab must not go on showing them.
+function isInstallationRead(key: QueryKey): boolean {
+  return key[0] === INSTALLATION_SETTINGS_KEY[0];
+}
+
+// A live work read is read again on every mount, so a screen never opens on an
+// answer fetched before it. Two exceptions. The answer the shell prefetched for
+// the screen being opened (app/homeprefetch.ts) serves that mount while under a
+// second old. And the queue drawer shares Home's day already on screen: Home
+// keeps it current, so only staleness refetches it. Other live reads, such as a
+// record's review verbs, still read again on every mount.
+export const LIVE_ANSWER_CURRENT_MS = 1_000;
+
+const prefetchedAnswers = new Map<string, number>();
+
+/** Records the answer a prefetch fetched, by query hash and its stamp. */
+export function notePrefetched(queryHash: string, answeredAt: number): void {
+  prefetchedAnswers.set(queryHash, answeredAt);
+}
+
+// The day's worklist key (worklistKey, mine, all, no owner): Home and its queue
+// drawer both read it.
+function isSharedDay(key: QueryKey): boolean {
+  return (
+    key[0] === "worklist" &&
+    key[1] === "mine" &&
+    key[2] === "all" &&
+    key[3] === ""
+  );
+}
+
+export function liveOnMount(
+  query: {
+    queryKey: QueryKey;
+    queryHash: string;
+    state: { dataUpdatedAt: number };
+    // The mounting observer counts itself, so more than one means another view.
+    getObserversCount?: () => number;
+  },
+  now = Date.now(),
+): "always" | true {
+  if (!isLiveWorkRead(query.queryKey)) return true;
+  if (isSharedDay(query.queryKey) && (query.getObserversCount?.() ?? 0) > 1) {
+    return true;
+  }
+  const answeredAt = query.state.dataUpdatedAt;
+  const prefetched = prefetchedAnswers.get(query.queryHash) === answeredAt;
+  return prefetched && now - answeredAt < LIVE_ANSWER_CURRENT_MS
+    ? true
+    : "always";
 }
 
 // Decisions and receipt controls can change in another tab or a worker.
@@ -53,7 +111,7 @@ function isLiveRead(key: QueryKey): boolean {
 
 // FE-PARAM-2. Two retries, and only for a failure the server reported as its
 // own fault.
-const MAX_RETRIES = 2;
+export const MAX_RETRIES = 2;
 
 // The 5xx statuses that are SETTLED rather than failed, and so are not retried.
 //
@@ -217,8 +275,7 @@ export function createQueryClient(): QueryClient {
         // coming back to one is exactly when the cached answer is wrong, and
         // exactly when the reader acts on it.
         refetchOnWindowFocus: liveOnReturn,
-        refetchOnMount: (query) =>
-          isLiveWorkRead(query.queryKey) ? "always" : true,
+        refetchOnMount: liveOnMount,
       },
       // Reads wait out an outage and rerun when it clears. A write never
       // waits: a paused one would run on reconnect, after the reader moved on.

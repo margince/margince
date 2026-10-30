@@ -74,9 +74,10 @@ func requestAvailableForAcceptance(ctx context.Context, tx pgx.Tx, original, rea
 	readerSQL := fmt.Sprintf("$%d::uuid", arg(reader))
 	recipient := storekit.DirectMailRecipientSQL("source", storekit.MailSeatAddressesSQL(identities, readerSQL))
 	var recoverable bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce(%s AND %s, false)
+	query := fmt.Sprintf(`SELECT coalesce(%s AND %s, false)
  FROM activity reminder JOIN activity source ON source.id=reminder.source_activity_id
- WHERE reminder.id=$%d AND reminder.restricted_at IS NULL AND source.archived_at IS NULL AND source.restricted_at IS NULL`, `reminder.assignee_id IS DISTINCT FROM `+readerSQL+` AND reminder.kind='task' AND NOT reminder.is_done AND NOT `+storekit.HeldTaskClause("reminder")+` AND EXISTS(SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=reminder.id AND creation.action='create')`, recipient, arg(original)), args...).Scan(&recoverable)
+ WHERE reminder.id=$%d AND reminder.restricted_at IS NULL AND source.archived_at IS NULL AND source.restricted_at IS NULL`, `reminder.assignee_id IS DISTINCT FROM `+readerSQL+` AND reminder.kind='task' AND NOT reminder.is_done AND NOT `+storekit.HeldTaskClause("reminder")+` AND EXISTS(SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=reminder.id AND creation.action='create')`, recipient, arg(original))
+	err = tx.QueryRow(ctx, query, args...).Scan(&recoverable)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

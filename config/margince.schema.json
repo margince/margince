@@ -407,6 +407,23 @@
         "null"
       ]
     },
+    "assurance": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "qualified_forecast_enforced": {
+          "description": "Leave a deal whose customer stopped answering out of the forecast line of deals the customer supports, and stop the close-date sweep lowering forecast categories.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        }
+      }
+    },
     "auth": {
       "type": [
         "object",
@@ -788,6 +805,14 @@
           "minimum": 15,
           "maximum": 10080,
           "default": 240
+        },
+        "shared_merge_reviews": {
+          "description": "Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
         },
         "signature_template": {
           "description": "The email signature of the workspace, used in place of the own signature of each sender; empty means none.",
@@ -1323,6 +1348,14 @@
           "minimum": 600,
           "maximum": 43200,
           "default": 21600
+        },
+        "individual_performance": {
+          "description": "Show each colleague's figures in reports, forecasts and team reviews. Off, each member sees their own figures and team totals only.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         },
         "name": {
           "description": "The company's name. Set at boot, it also refuses a different name on the company profile.",

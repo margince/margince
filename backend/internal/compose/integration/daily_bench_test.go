@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -28,7 +29,10 @@ func TestDailyUseBudgets(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("daily bench at scale %g", scale)
-	e := apptest.SetupApp(t)
+	// The reindex identity row needs a bound embeddings model, or its route answers 501.
+	embedder := embedReindexRouter(t, "daily-bench-embed-v1")
+	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, insertOnlyRunner(t)))
+	seedRouterBinding(t, e, embedder)
 	// Without a statement cache nothing is prepared, so the generic-plan
 	// regressions this bench exists to catch could never appear in a sample.
 	if mode := e.Pool.Config().ConnConfig.DefaultQueryExecMode; mode != pgx.QueryExecModeCacheStatement {
@@ -39,6 +43,8 @@ func TestDailyUseBudgets(t *testing.T) {
 
 	var seats Seats
 	var corpus DailyCorpus
+	var made DailyApprovals
+	var aiCalls int
 	var rows []dailyRow
 	step := func(name string, run func(t *testing.T)) {
 		if !t.Run(name, run) {
@@ -62,8 +68,10 @@ func TestDailyUseBudgets(t *testing.T) {
 	})
 
 	step("home_sources", func(t *testing.T) {
+		made = seedDailyApprovals(t, e, seats, scale)
 		makeDailyBriefs(t, e, seats)
-		seedDailyAICalls(t, e, scale)
+		made = applyDailyApprovals(t, e, made)
+		aiCalls = seedDailyAICalls(t, e, scale)
 	})
 
 	step("first_load", func(t *testing.T) {
@@ -74,11 +82,13 @@ func TestDailyUseBudgets(t *testing.T) {
 	step("latency", func(t *testing.T) {
 		rep := seats.Reps[slices.IndexFunc(seats.Reps, func(s Seat) bool { return s.UserID == corpus.MedianRepID })]
 		for _, seat := range []Seat{rep, seats.Managers[0]} {
+			stagesBefore := worklistStagesSoFar()
 			in := newDailyInput(t, e, seat, seats.Teams[0], corpus)
 			in.EvaluateArgs = dailyEvaluateArgs(t, e, seat)
 			for _, f := range dailyFlows {
 				rows = append(rows, runDailyFlow(t, e, f, in)...)
 			}
+			logWorklistStages(t, seat.Role, stagesBefore)
 		}
 		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
 		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
@@ -103,6 +113,7 @@ func TestDailyUseBudgets(t *testing.T) {
 	results := make([]DailyResult, 0, len(rows))
 	for _, row := range applySampleFloor(rows) {
 		row.Measurement.Allowed5xx = row.Result.Status5xx > 0 && allows5xx(row.Result.Flow, row.Result.Row)
+		row.Measurement.Allowed422 = row.Result.Status422 > 0 && row.Result.Allow422
 		if scale != 1 {
 			row.Measurement.Caveat = fmt.Sprintf("development scale %g", scale)
 		}
@@ -111,10 +122,14 @@ func TestDailyUseBudgets(t *testing.T) {
 	}
 	record := newPerfRecord("bench-daily", benchPostgresVersion(e.Owner), measurements)
 	record.Corpus = dailyCorpusFacts(scale, seats)
+	record.Corpus.AICalls = aiCalls
+	record.Corpus.PendingApprovals, record.Corpus.AppliedApprovals, record.Corpus.ExpiredApprovals = made.Pending, made.Applied, made.Expired
 	record.Advisories = DailyAdvisories(results, scale)
 	for _, advisory := range record.Advisories {
 		t.Logf("advisory: %s", advisory)
 	}
+	record.StrictHome = JudgeStrictHome(results)
+	t.Logf("perfbench [daily]: %s", strictHomeSummary(record.StrictHome))
 	writePerfRecordTo(t, dailyRecordDir(t, scale), record)
 	if err := DailyGate(results, scale); err != nil {
 		t.Fatalf("daily-use budget gate is red: %v", err)

@@ -3,7 +3,10 @@
 
 package agents
 
-import "github.com/margince/margince/backend/internal/shared/ports/mcp"
+import (
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // The routers below each front one family of verbs under one listed name. A
 // call runs as the verb its action names, at that verb's tier and scope.
@@ -55,6 +58,7 @@ func (readAttention) Spec() mcp.ToolSpec {
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.AttentionURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -136,7 +140,7 @@ func (changeActivities) Spec() mcp.ToolSpec {
 		Name: "change_activities", Title: "Log, plan and file activities", Version: toolVersionV1,
 		Description: changeActivitiesCopy.render(), Instead: changeActivitiesCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set"}}}`),
+			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back"}}}`),
 	}
 }
 
@@ -146,6 +150,7 @@ func (changeActivities) routeTargets() map[string]string {
 	return map[string]string{
 		"log": "log_activity", resultTypeTask: "create_task", "attach": "attach_document",
 		"relink": relinkActivityTool, "relink_many": relinkActivitiesTool,
+		"ready": confirmMeetingReadyTool, "unready": undoMeetingReadyTool,
 	}
 }
 

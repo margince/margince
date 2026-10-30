@@ -111,7 +111,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(req.Scope), req.Filters); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(req.Scope), groupBy, req.Filters); err != nil {
 			return err
 		}
 		var args []any
@@ -139,6 +139,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			}
 			out.excluded = &n
 			where = append(where, maskClauses...)
+		}
+		if err := requireNoLoneColleagueIn(ctx, tx, out.frame, contributorsSQL(spec, where, dimensionExprs(spec, groupBy)), args); err != nil {
+			return err
 		}
 		// Bound separately from `args`, which stays the unbound slice the count
 		// below binds its own statement from. Binding appends a value per token

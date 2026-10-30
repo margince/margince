@@ -60,7 +60,7 @@ describe("the approval card", () => {
 
   it("shows what is proposed, by whom and for whom", () => {
     const root = mount();
-    expect(root.querySelector(".name")?.textContent).toBe(
+    expect(root.querySelector("h1")?.textContent).toBe(
       "Move Acme renewal to Negotiation",
     );
     expect(root.textContent).toContain("Proposed by an assistant for Sam Rep");
@@ -119,7 +119,7 @@ describe("the approval card", () => {
     expect(root.querySelector("tbody")).toBeNull();
   });
 
-  it("approves through decide_approvals and says the assistant still has to run it", async () => {
+  it("approves through decide_approvals and asks the assistant to run it", async () => {
     const root = mount();
     await press(root, "Approve");
     expect(calls).toEqual([
@@ -129,9 +129,27 @@ describe("the approval card", () => {
       },
     ]);
     expect(root.textContent).toContain(
-      "Approved. The assistant still has to run it again.",
+      "Approved. The assistant is running it now.",
     );
     expect(labels(root)).toEqual([]);
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toContain(`approval_id ${ID}`);
+  });
+
+  it("asks nothing of the assistant once a colleague's proposal is approved", async () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      proposed_by: "human:0195c3a0-0000-7000-8000-0000000000a3",
+    });
+    await press(root, "Approve");
+    expect(root.textContent).toContain("Approved.");
+    expect(asked).toEqual([]);
+  });
+
+  it("asks nothing of the assistant after a rejection", async () => {
+    const root = mount();
+    await press(root, "Reject");
+    expect(asked).toEqual([]);
   });
 
   it("rejects, and the settled line survives a redelivered result", async () => {
@@ -149,7 +167,7 @@ describe("the approval card", () => {
     expect(root.querySelector(".refusal")?.textContent).toBe(
       "Only the owner can release a send.",
     );
-    expect(labels(root)).toEqual(["Approve", "Reject"]);
+    expect(labels(root)).toEqual(["Reject", "Approve"]);
   });
 
   it("offers no choice for an item already answered", () => {
@@ -158,7 +176,9 @@ describe("the approval card", () => {
       status: "approved",
     });
     expect(labels(root)).toEqual([]);
-    expect(root.textContent).toContain("Already approved.");
+    expect(root.querySelector(".dcard-meta")?.textContent).toContain(
+      "Approved",
+    );
   });
 
   it("offers no choice for a lapsed item", () => {
@@ -167,7 +187,7 @@ describe("the approval card", () => {
       expires_at: "2020-01-01T00:00:00Z",
     });
     expect(labels(root)).toEqual([]);
-    expect(root.textContent).toContain("Expired");
+    expect(root.textContent).toContain("ran out of time");
   });
 
   it("asks the assistant in chat when the host will not run tools for a view", async () => {

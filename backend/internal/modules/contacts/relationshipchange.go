@@ -104,17 +104,23 @@ func (s *Store) RelationshipChangesForContacts(
 	if err != nil {
 		return nil, err
 	}
+	touched := make([]ids.ContactID, 0, len(visible))
+	for _, contact := range visible {
+		if _, ok := touches[contact.id]; ok {
+			touched = append(touched, contact.id)
+		}
+	}
+	inputs, err := changeInputsFor(ctx, tx, touched, now, nil)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]ContactChanges, 0, len(visible))
 	for _, contact := range visible {
 		touch, ok := touches[contact.id]
 		if !ok {
 			continue
 		}
-		in, err := changeInputs(ctx, tx, contact.id, now, nil)
-		if err != nil {
-			return nil, err
-		}
-		changes := relstrength.Changes(withTouch(in, touch, zone), now)
+		changes := relstrength.Changes(withTouch(inputs[contact.id], touch, zone), now)
 		if len(changes) == 0 {
 			continue
 		}
@@ -184,6 +190,21 @@ func changeInputs(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, within *ids.ProjectID,
 ) (relstrength.ChangeInputs, error) {
+	inputs, err := changeInputsFor(ctx, tx, []ids.ContactID{contactID}, now, within)
+	return inputs[contactID], err
+}
+
+// changeInputsFor is changeInputs for a set of contacts, in one grouped pass.
+// A contact with no qualifying interaction is absent, and its zero inputs are
+// what the fold answers over no rows.
+func changeInputsFor(
+	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
+	now time.Time, within *ids.ProjectID,
+) (map[ids.ContactID]relstrength.ChangeInputs, error) {
+	out := make(map[ids.ContactID]relstrength.ChangeInputs, len(contacts))
+	if len(contacts) == 0 {
+		return out, nil
+	}
 	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)
 
 	// BOTH windows and both statements, or the comparison is between two
@@ -191,7 +212,7 @@ func changeInputs(
 	// the "after" covered one, and the change it reported would be the
 	// narrowing rather than anything that happened.
 	foldArgs := []any{
-		contactID,
+		contacts,
 		now.AddDate(0, 0, -relStrengthWindowDays),
 		asOf,
 		asOf.AddDate(0, 0, -relStrengthWindowDays),
@@ -203,13 +224,13 @@ func changeInputs(
 		foldWithin = " AND " + activityWithinProject("a", len(foldArgs))
 	}
 
-	var in relstrength.ChangeInputs
-	// One pass over the contact's qualifying interactions answers both windows.
+	// One pass over the contacts' qualifying interactions answers both windows.
 	// The earlier fold's own last-interaction is the last one BEFORE asOf, not
 	// the overall one — inheriting today's recency would make every band look
 	// unchanged and the whole derivation silent.
-	if err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at),
+	rows, err := tx.Query(ctx, `
+		SELECT l.contact_id,
+		       max(a.occurred_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'inbound'),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
@@ -218,16 +239,26 @@ func changeInputs(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'inbound'),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'outbound')
 		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
+		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
 		 WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
-		auth.AudienceWorkspaceOnly("a")+foldWithin,
+		auth.AudienceWorkspaceOnly("a")+foldWithin+`
+		 GROUP BY l.contact_id`,
 		foldArgs...,
-	).Scan(
-		&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
-		&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
-	); err != nil {
-		return relstrength.ChangeInputs{}, fmt.Errorf("contacts: reading a contact's relationship history: %w", err)
+	)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 	}
-
-	return in, nil
+	defer rows.Close()
+	for rows.Next() {
+		var contactID ids.ContactID
+		var in relstrength.ChangeInputs
+		if err := rows.Scan(&contactID,
+			&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
+			&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
+		); err != nil {
+			return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
+		}
+		out[contactID] = in
+	}
+	return out, rows.Err()
 }

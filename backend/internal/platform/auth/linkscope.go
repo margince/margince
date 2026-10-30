@@ -60,6 +60,19 @@ const (
 //
 // alias names the activity_link table in the caller's query.
 func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	return linkTargetClause(ctx, alias, arg, everyLinkTarget)
+}
+
+// LinkTargetReadableClause is LinkTargetVisibleClause for a read that shows
+// the caller a linked record. It also drops a link whose target type the
+// caller holds no read grant on. Every seat's scope reads deal, so scope alone
+// would name deals to a role without deal read. The visible clause stays for a
+// row-scope question asked for somebody else, such as a SeatPrincipal.
+func LinkTargetReadableClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	return linkTargetClause(ctx, alias, arg, func(table string) bool { return ReadGranted(ctx, table) })
+}
+
+func linkTargetClause(ctx context.Context, alias string, arg func(any) int, counted func(table string) bool) (string, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return "", err
@@ -67,8 +80,11 @@ func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) in
 	if UnboundedFor(p, linkTargetTables...) {
 		return "", nil
 	}
-	return linkTargetVisible(p, alias, arg), nil
+	return linkTargetVisible(p, alias, arg, counted), nil
 }
+
+// everyLinkTarget counts every link type, for the row-scope-only clauses.
+func everyLinkTarget(string) bool { return true }
 
 // The row-scoped record types, named once. Several of these appear in
 // half a dozen table-name positions across the package, and a typo in any
@@ -89,8 +105,9 @@ const (
 var linkTargetTables = []string{tableContact, tableCompany, tableDeal, tableLead, tableProject}
 
 // linkTargetVisible renders the per-arm "this link's target is visible"
-// disjunction over activity_link's polymorphic columns.
-func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) string {
+// disjunction over activity_link's polymorphic columns. A type counted
+// rejects gets no arm, so a link of that type matches nothing.
+func linkTargetVisible(p principal.Principal, alias string, arg func(any) int, counted func(table string) bool) string {
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
 		{contactIDColumn, tableContact, "sp"},
@@ -99,8 +116,14 @@ func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) s
 		{leadIDColumn, tableLead, "sl"},
 		{projectIDColumn, tableProject, "spr"},
 	} {
+		if !counted(t.table) {
+			continue
+		}
 		arms = append(arms, linkTargetArm(alias, t.column, t.table, t.probe,
 			VisiblePredicate(p, t.table, arg)(t.probe)))
+	}
+	if len(arms) == 0 {
+		return sqlNoRow
 	}
 	return "(\n\t      " + strings.Join(arms, "\n\t   OR ") + ")"
 }

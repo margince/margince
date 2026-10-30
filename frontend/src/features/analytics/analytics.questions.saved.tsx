@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
@@ -27,17 +26,21 @@ import { useAnalyticsSchema } from "./analytics.schema";
 export const SAVED_QUESTIONS_KEY = ["analytics-saved-questions"] as const;
 
 /**
- * The reader's own saved questions, newest first, a page at a time. Only the
- * questions come back: opening one asks it again for whoever opens it.
+ * The reader's own saved questions, newest first, a page at a time, about one
+ * population when `entity` names it. Only the questions come back: opening one
+ * asks it again for whoever opens it. Off until `enabled`, so a picker reads
+ * nothing until it is opened.
  */
-export function useSavedQuestions() {
+export function useSavedQuestions(entity?: string, enabled = true) {
   return useInfiniteQuery({
-    queryKey: SAVED_QUESTIONS_KEY,
+    queryKey: [...SAVED_QUESTIONS_KEY, entity ?? null],
+    enabled,
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) =>
+    queryFn: async ({ pageParam, signal }) =>
       unwrap(
         await api.GET("/analytics/runs", {
-          params: { query: { cursor: pageParam ?? undefined } },
+          params: { query: { cursor: pageParam ?? undefined, entity } },
+          signal,
         }),
       ),
     getNextPageParam: (last) =>
@@ -55,16 +58,6 @@ export function savedQuestionShape(run: SavedQuestion): AnalyticsQuery {
     measures: run.measures,
     limit: run.limit,
   };
-}
-
-/** Every saved question of the reader's, for a picker that offers them all. */
-export function useAllSavedQuestions() {
-  const saved = useSavedQuestions();
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = saved;
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-  return (saved.data?.pages ?? []).flatMap((page) => page.data);
 }
 
 /** A saved question named by what it asks, since it has no name of its own. */

@@ -50,7 +50,7 @@ func latest(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lock bool) (F
 	}
 	records, page, err := signals.ListSignalsTx(ctx, tx, signals.ListSignalsInput{
 		CompanyID: &company.UUID, Kind: new("contract_ended"), Status: new("open"), Limit: new(sourceReadLimit),
-	})
+	}, nil)
 	if err != nil {
 		return Finding{}, err
 	}

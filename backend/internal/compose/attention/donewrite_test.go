@@ -56,7 +56,7 @@ func TestDoneIsWrittenOnlyForARowTheReadersDayDraws(t *testing.T) {
 	}
 	for _, tc := range cases {
 		spy := &doneStoreSpy{already: tc.already}
-		kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), PrepKnown: true}
+		kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), Preparation: ownPreparation(true)}
 		svc := meetingPrepService([]Meeting{kickOff}).WithDone(spy)
 		err := svc.MarkRowsDone(meetingPrepReader(), tc.rows)
 		if !errors.Is(err, tc.want) {
@@ -74,7 +74,7 @@ func TestDoneOnALaneThatNeverOffersItIsAValidationRefusal(t *testing.T) {
 	t.Parallel()
 	meeting := ids.NewV7()
 	spy := &doneStoreSpy{}
-	kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), PrepKnown: true}
+	kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), Preparation: ownPreparation(true)}
 	svc := meetingPrepService([]Meeting{kickOff}).WithDone(spy)
 
 	err := svc.MarkRowsDone(meetingPrepReader(), []RowRef{{Source: sourceTask, RowID: meeting.String()}})

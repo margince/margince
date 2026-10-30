@@ -1,3 +1,4 @@
+import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { useNow } from "../format/now";
@@ -178,9 +179,9 @@ export function RuntimeFacts({
               page, so a link around it takes them there: the badge stays the
               label nobody presses, and the anchor carries the press. */}
           {licenceFault && (
-            <a className="arwarning" href={LICENSE_SETTINGS_HREF}>
+            <AppLink className="arwarning" href={LICENSE_SETTINGS_HREF}>
               <Badge tone="warning">{licenseLine}</Badge>
-            </a>
+            </AppLink>
           )}
         </div>
       )}

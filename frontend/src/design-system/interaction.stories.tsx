@@ -17,7 +17,7 @@ import { type CSSProperties, useEffect, useRef } from "react";
  *
  * Flip the theme in the toolbar: each value is a token, so all of it re-resolves.
  * The selection pair was checked for contrast rather than eyeballed — --bgPage on
- * --accent is 5.21:1 in light and 5.37:1 in dark.
+ * --accent is 7.89:1 in light and 6.86:1 in dark.
  */
 const meta = {
   title: "Foundations/Color/Interaction colors",
@@ -93,9 +93,9 @@ export const NativeControls: Story = {
 /**
  * The scrollbar: thin, a neutral thumb that takes the accent only while the
  * pointer is over the bar itself, and a TRANSPARENT track. The track colour is
- * the interesting decision — a scroller is not always on the page surface (the
- * rail is a dark green field in both themes, a code block has its own fill), so
- * naming a colour would be wrong for every scroller that sits somewhere else.
+ * the interesting decision. A scroller is not always on the page surface: the
+ * sidebar is glass, a docked window is on the ink field. Naming one colour
+ * would be wrong for most scrollers.
  */
 export const Scrollbars: Story = {
   render: () => (

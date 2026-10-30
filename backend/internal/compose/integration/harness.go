@@ -96,6 +96,12 @@ func Setup(t *testing.T) *Env {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// Refused rather than reported, because the reset is what makes a leak
+	// invisible: it truncates the rows the leaked workers are still reading.
+	if leaked := leakedRunners(); leaked != "" {
+		t.Fatalf("a job runner outlived the test that started it, so this reset would "+
+			"pull the database out from under its workers:%s", leaked)
+	}
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}

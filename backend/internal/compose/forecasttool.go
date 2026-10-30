@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -180,6 +181,14 @@ func forecastToolResult(
 		id := scope.ID.String()
 		out.ScopeID = &id
 	}
+	if q := in.Qualified; q != nil {
+		out.Qualified = &agents.ForecastQualifiedResult{
+			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
+			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
+			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount, AmountsPartial: q.AmountsPartial,
+			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
+		}
+	}
 	return out
 }
 
@@ -286,7 +295,8 @@ func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
 			EligibleDeals: run.EligibleDeals,
 			// Empty, never nil: a run that recorded no coverage is a real
 			// answer, and null reads as "unknown" to a model.
-			Sources: []agents.ForecastAssuranceSourceResult{},
+			Sources:   []agents.ForecastAssuranceSourceResult{},
+			Freshness: freshnessToolResult(assurance.FreshnessToWire(run.Freshness)),
 		}
 		if run.Readiness != nil {
 			out.Readiness = *run.Readiness
@@ -304,6 +314,19 @@ func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
 		}
 		return json.Marshal(out)
 	}
+}
+
+// freshnessToolResult is the endpoint's freshness in the tool's shape, so the
+// two never decide "out of date" apart.
+func freshnessToolResult(in crmcontracts.AssuranceFreshness) agents.ForecastAssuranceFreshnessResult {
+	out := agents.ForecastAssuranceFreshnessResult{
+		State: string(in.State), ChangedDeals: in.ChangedDeals, ChangedSignals: in.ChangedSignals,
+		WorkspaceChanged: in.WorkspaceChanged,
+	}
+	if in.ChangedSince != nil {
+		out.ChangedSince = in.ChangedSince.UTC().Format(time.RFC3339)
+	}
+	return out
 }
 
 // inputChecksToolReader answers list_input_checks, through the same scoped read
@@ -340,10 +363,11 @@ func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 				ID: e.ID.String(), Type: e.Type, SubjectKind: e.SubjectKind,
 				SubjectID: e.SubjectID.String(), Severity: e.Severity,
 				AffectedMinor: e.AffectedMinor, Currency: e.Currency,
-				Claim:       storedSlots(e.Claim),
-				Observed:    storedSlots(e.Observed),
-				FirstSeenAt: e.FirstSeenAt.UTC().Format(time.RFC3339),
-				LastSeenAt:  e.LastSeenAt.UTC().Format(time.RFC3339),
+				Claim:         storedSlots(e.Claim),
+				Observed:      storedSlots(e.Observed),
+				FirstSeenAt:   e.FirstSeenAt.UTC().Format(time.RFC3339),
+				LastSeenAt:    e.LastSeenAt.UTC().Format(time.RFC3339),
+				InputsChanged: e.InputsChanged,
 			}
 			out.Data = append(out.Data, check)
 		}

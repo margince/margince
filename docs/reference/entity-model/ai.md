@@ -24,7 +24,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `context_scopes` | `text[]`, default `'{}'::text[]` | yes |  |
 | `context_tokens_estimate` | `bigint`, default `0` | yes |  |
 | `decision_choice` | `text` |  |  |
-| `decision_confidence` | `double precision` |  |  |
+| `decision_confidence` | `numeric(4,3)` |  |  |
 | `degraded` | `boolean`, default `false` | yes |  |
 | `error_sentinel` | `text` |  |  |
 | `finish_reason` | `text`, default `''::text` | yes |  |
@@ -67,6 +67,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_context_tokens_estimate_check`: `CHECK ((context_tokens_estimate >= 0))`
 - `ai_call_decision_answer_kind`: `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
 - `ai_call_decision_answer_shape`: `CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))`
+- `ai_call_decision_confidence_range`: `CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric))))`
 - `ai_call_kind_check`: `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
 - `ai_call_latency_ms_js_safe`: `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
 - `ai_call_reasoning_tokens_js_safe`: `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`

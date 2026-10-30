@@ -3,12 +3,12 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { RecordNextBar } from "../../components/latestinbound";
 import { MailCoverageNotice } from "../../components/mailcoveragenotice";
-import { NextTaskSlot } from "../../components/nexttaskslot";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
-import { NextBar, type NextBarMore } from "../../design-system/nextbar";
+import type { NextBarMore } from "../../design-system/nextbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
@@ -383,7 +383,7 @@ function DealNextBar({
   const notNow = useDealMoveSetAside(dealId);
   const move = card.next;
   if (!move) {
-    return <NextBar more={more} onward={<NextTaskSlot />} />;
+    return <RecordNextBar more={more} />;
   }
   // Only the message the buyer is owed an answer to opens in the email
   // drawer. A task or a meeting the move cites is not a message.
@@ -400,7 +400,11 @@ function DealNextBar({
   const snooze = move.fingerprint ? notNow.deferOf(move.fingerprint) : null;
   return (
     <>
-      <NextBar
+      <RecordNextBar
+        // The deal's ladder already weighs its requests, so its move keeps
+        // the bar and what just came in sits above it.
+        urgent
+        about={[source, ...move.evidence.map((row) => row.activity_id)]}
         title={move.reason}
         sub={move.evidence[0]?.text}
         insight={
@@ -421,7 +425,6 @@ function DealNextBar({
             : undefined
         }
         more={more}
-        onward={<NextTaskSlot />}
       />
       {notNow.failure && <ErrorLine error={notNow.failure} />}
     </>

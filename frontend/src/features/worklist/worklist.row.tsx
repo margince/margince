@@ -6,6 +6,7 @@ import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { askKey } from "./worklist.ask";
@@ -14,7 +15,6 @@ import {
   briefContextTitle,
   briefSubjectLabel,
   dealFactsText,
-  isUnprepared,
   itemTitle,
   phrasedReasons,
   reasonText,
@@ -47,6 +47,7 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
@@ -188,9 +189,9 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row — overdue, or a meeting with
-  // nothing prepared. They ride on the title line, which is why it is drawn on
-  // a row that has no title of its own to draw.
+  // Whether the day put a state on this row: overdue, or a meeting the reader
+  // has not confirmed ready. They ride on the title line, which is why it is
+  // drawn on a row that has no title of its own to draw.
   const badged = item.overdue === true || isUnprepared(item);
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
@@ -290,6 +291,7 @@ export function WorklistRow({
             />
           )}
           <RowAsk item={item} framed={framed} />
+          <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />

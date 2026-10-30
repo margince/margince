@@ -71,7 +71,12 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		commsauthz.ContactStopSubject(contactID)); err != nil {
 		return PromoteOutcome{}, fmt.Errorf("carry the lead's consent links: %w", err)
 	}
-	if err := s.carryLeadCompany(ctx, tx, id, contactID, deref(lead.Title)); err != nil {
+	if out.Merged {
+		if err := s.resolveCreatedEmployer(ctx, tx, contactID, promotionContactSpec(lead, leadIdentityName(lead), by)); err != nil {
+			return PromoteOutcome{}, err
+		}
+	}
+	if err := s.carryLeadIndustry(ctx, tx, company, lead.Industry); err != nil {
 		return PromoteOutcome{}, err
 	}
 	carried, err := carryLeadActivities(ctx, tx, id, contactID)

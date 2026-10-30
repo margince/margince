@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { SearchScreen } from "./search";
 
 // A meeting, call, note or task found by search opens in a panel over the
@@ -80,8 +81,8 @@ function stubServer(activity: Record<string, unknown> = meeting) {
     if (url.includes("/activities/a2")) return json(activity);
     if (url.includes("/contacts/p-1"))
       return json({ id: "p-1", full_name: "Dana Buyer" });
-    if (url.includes("/companies/c-1"))
-      return json({ id: "c-1", display_name: "Demo GmbH" });
+    const company = companyNamesAnswer(url, { "c-1": "Demo GmbH" });
+    if (company) return company;
     if (url.includes("/deals/d-1"))
       return json({ id: "d-1", name: "Demo rollout" });
     if (url.includes("/attachments"))

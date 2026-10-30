@@ -41,6 +41,7 @@ func (s *Service) WithWeeklyPlans(plans WeeklyPlans) *Service {
 // Plan work joins the same ranking used by the browser and the worklist tool.
 // The request copy carries it; the shared service never holds a reader's plan.
 func (s *Service) readingPlan(ctx context.Context, scope string, now time.Time) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage(ctx, "plan")()
 	scoped := *s
 	if s.weeklyPlans == nil || s.taskScope == TasksUnassigned {
 		return &scoped, nil

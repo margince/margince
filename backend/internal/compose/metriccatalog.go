@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -42,14 +43,85 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadStatusMoves, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadStatusMoves].En}, string(recordTypeLead), readReportingLeadStatusMoves},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsPromoted, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsPromoted].En}, string(recordTypeLead), readReportingLeadsPromoted},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadFirstResponse, Version: "1", Unit: "hours", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadFirstResponse].En}, string(recordTypeLead), readReportingLeadFirstResponse},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadsAwaitingResponse, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadsAwaitingResponse].En}, string(recordTypeLead), readReportingLeadsAwaitingResponse},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerPipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerPipeline].En}, string(recordTypeDeal), readReportingPartnerPipeline},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerWon, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerWon].En}, string(recordTypeDeal), readReportingPartnerWon},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerCommission, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerCommission].En}, objectCommission, readReportingPartnerCommission},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingStageConversion, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingStageConversion].En}, string(recordTypeDeal), readReportingStageConversion},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadCohortOutcomes, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingLeadCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadCohortOutcomes].En}, string(recordTypeLead), readReportingLeadCohort},
+}
+
+// reportingPresets are the selections the Analytics screen opens on. A preset
+// names metrics and charts only: each metric's meaning and read grant stay in
+// reportingMetrics.
+var reportingPresets = []crmcontracts.ReportingPreset{
+	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge}},
+	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+	// A team's prospecting, counted once for the team: the handoff feedback
+	// beside it comes from GET /analytics/sdr-team.
+	{Id: crmcontracts.ReportingPresetIdTeam, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
+}
+
+// openingSelection answers a request that names no metrics: the sales preset,
+// which the Analytics screen opens on and the daily benchmark measures.
+//
+// The doors kept a copy of this, and it had drifted. The preset gained
+// closed_win_rate and qualified_pipeline_created; the copy did not.
+//
+// TestTheOpeningSelectionIsTheSalesPreset holds that the preset is there.
+func openingSelection() reporting.OpeningSelection {
+	for _, preset := range reportingPresets {
+		if preset.Id == crmcontracts.ReportingPresetIdSales {
+			return reporting.OpeningSelection{Metrics: preset.Metrics, Blocks: preset.Blocks}
+		}
+	}
+	return reporting.OpeningSelection{}
+}
+
+// readablePresets narrows each preset to the offered metrics and the charts
+// they draw, so the screen's opening request is one the reader may ask.
+func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcontracts.ReportingPreset {
+	out := []crmcontracts.ReportingPreset{}
+	for _, preset := range reportingPresets {
+		readable := crmcontracts.ReportingPreset{Id: preset.Id, Metrics: []crmcontracts.ReportingMetricID{}, Blocks: []crmcontracts.ReportingBlockKind{}}
+		var drawn []crmcontracts.ReportingBlockKind
+		for _, metric := range offered {
+			if slices.Contains(preset.Metrics, metric.Id) {
+				readable.Metrics = append(readable.Metrics, metric.Id)
+				drawn = append(drawn, metric.Blocks...)
+			}
+		}
+		for _, block := range preset.Blocks {
+			if slices.Contains(drawn, block) {
+				readable.Blocks = append(readable.Blocks, block)
+			}
+		}
+		if len(readable.Metrics) > 0 {
+			out = append(out, readable)
+		}
+	}
+	return out
 }
 
 type metricEvaluator struct {
 	forecast *forecasting.Store
+	// compared receives what the forecast reader measured for a target
+	// comparison. Evaluate gives each evaluation its own.
+	compared *forecastCapture
+}
+
+// forecastCapture holds the forecast reading of one evaluation.
+type forecastCapture struct{ operands *reporting.ForecastOperands }
+
+func (metricEvaluator) MetricVersions(metrics []crmcontracts.ReportingMetricID) reporting.MetricVersions {
+	out := reporting.MetricVersions{}
+	for _, spec := range reportingMetrics {
+		if slices.Contains(metrics, spec.definition.Id) {
+			out[spec.definition.Id] = spec.definition.Version
+		}
+	}
+	return out
 }
 
 func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crmcontracts.ReportingCatalog, error) {
@@ -59,16 +131,27 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 			out.Metrics = append(out.Metrics, reportingMetricMetadata(spec, language))
 		}
 	}
+	out.Presets = readablePresets(out.Metrics)
+	// Team prospecting reads handoffs beside its figures, so a seat that may
+	// not read them is not offered the view.
+	if !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
+		out.Presets = slices.DeleteFunc(out.Presets, func(preset crmcontracts.ReportingPreset) bool { return preset.Id == crmcontracts.ReportingPresetIdTeam })
+	}
 	return out, nil
 }
 
 func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (reporting.Evaluation, error) {
-	frame, err := reportingContext(ctx, tx, selection, framework, at)
+	owners, err := readerMeasurableOwners(ctx, tx)
+	if err != nil {
+		return reporting.Evaluation{}, err
+	}
+	frame, err := reportingContext(ctx, tx, selection, framework, owners, at)
 	if err != nil {
 		return reporting.Evaluation{}, err
 	}
 
 	selection.Scope = frame.Scope
+	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}
 	for _, spec := range reportingMetrics {
 		if !slices.Contains(selection.Metrics, spec.definition.Id) {
@@ -81,13 +164,25 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err != nil {
 			return out, err
 		}
-		if err := markOwnerWithheld(ctx, tx, facts); err != nil {
+		read := len(facts)
+		facts, coverage, err = withholdColleagues(ctx, tx, frame, owners, facts, coverage)
+		if err != nil {
 			return out, err
 		}
 		out.Facts = append(out.Facts, facts...)
 		out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, facts, coverage))
+		// A failed reading's savepoint rolled its figures back.
+		if spec.definition.Id == reportingForecastLanding && coverage.Status != reportingFailed {
+			out.Forecast = e.compared.operands
+			if out.Forecast != nil && read > len(facts) {
+				out.Forecast.ColleagueWithheld = true
+			}
+		}
 	}
 	if err := projectReportingCharts(&out); err != nil {
+		return out, err
+	}
+	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}
 	for index, chart := range out.Result.Charts {

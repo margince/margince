@@ -159,3 +159,35 @@ describe("the writing surface inside a host that hands it a height", () => {
     expect(frame).not.toContain("min-block-size: 0");
   });
 });
+
+describe("a model writing into the surface", () => {
+  function surface(thinking: string | null) {
+    return (
+      <RichText
+        value=""
+        onChange={() => {}}
+        label="Nachricht"
+        labels={LABELS}
+        thinking={thinking}
+      />
+    );
+  }
+
+  it("holds the place with speck rows and says what is being written", () => {
+    const { rerender } = render(surface("Der Entwurf wird geschrieben."));
+    expect(screen.getByText("Der Entwurf wird geschrieben.")).toBeTruthy();
+    expect(document.querySelector(".richtext .aipending")).not.toBeNull();
+
+    rerender(surface(null));
+    expect(document.querySelector(".richtext .aipending")).toBeNull();
+  });
+
+  // Read from the sheet: neither engine the unit suite runs matches :empty
+  // against typed text the way a browser does.
+  it("gives way to the first words a reader types", () => {
+    const css = readFileSync(join(here, "richtext.css"), "utf8");
+    expect(css).toContain(
+      ".richtext-input:not(:empty):not(:has(> br:only-child)) ~ .richtext-thinking",
+    );
+  });
+});

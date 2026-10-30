@@ -18,6 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// assuranceExceptionsOwnedBy is the one read every surface that shows findings
+// goes through: the list endpoint, list_input_checks and the weekly digest. It
+// is also where each finding learns whether its inputs moved since the check,
+// so no surface can show a finding without that answer.
 func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
 	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
 	if err != nil {
@@ -39,6 +43,9 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 	})
 	if limit > 0 && len(found) > limit {
 		found = found[:limit]
+	}
+	if err := assurance.MarkOutOfDate(ctx, tx, found); err != nil {
+		return nil, err
 	}
 	return found, nil
 }
@@ -74,7 +81,14 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	if companyScope != "" {
 		signalScope += " AND " + companyScope
 	}
-	content, err := auth.ActivityContentClause(ctx, "ca", arg)
+	// The content gate runs once, over every activity an open finding's signal
+	// or its suggestion's evidence cites. Each copy is planned separately, and
+	// the planner's memory stays with the pooled connection.
+	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
+   SELECT `+storekit.CitedActivityID("cite")+` FROM signal os, jsonb_array_elements(os.evidence) cite
+    WHERE cite->>'source_type' = 'activity' AND os.id IN (`+fmt.Sprintf(open, "oe.subject_id")+`)
+   UNION ALL `+deals.SuggestionEvidenceActivitiesSQL(fmt.Sprintf(open, "oe.observed->>'suggestion_id'"))+`)`, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -90,21 +104,22 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 			signalScope += " AND " + population
 		}
 	}
-	suggestionScope, err := deals.ReadableSuggestionClause(ctx, arg)
+	suggestionScope, err := deals.ReadableSuggestionClauseWithin(ctx, arg, "readable_activity")
 	if err != nil {
 		return nil, err
 	}
 	columns := strings.Replace(exceptionSelect(rawFindingMoney), rawFindingMoney.observed, `CASE WHEN EXISTS (
   SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
   AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
-	rows, err := tx.Query(ctx, `SELECT `+columns+`, c.display_name, c.owner_id
+	rows, err := tx.Query(ctx, `WITH readable_activity AS MATERIALIZED (`+readable+`)
+ SELECT `+columns+`, c.display_name, c.owner_id
  FROM assurance_exception e JOIN signal signal_subject ON signal_subject.id = e.subject_id
  JOIN company c ON c.id = signal_subject.resolved_company_id
  WHERE e.subject_kind = 'signal' AND e.status = 'open'
  AND signal_subject.archived_at IS NULL AND c.archived_at IS NULL AND `+signalScope+`
  AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(signal_subject.evidence) cite
-  WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-   WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND ca.archived_at IS NULL AND `+content+`))
+  WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM readable_activity ca
+   WHERE ca.id = `+storekit.CitedActivityID("cite")+`))
  ORDER BY e.last_seen_at DESC, e.id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading signal findings: %w", err)

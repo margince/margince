@@ -202,7 +202,11 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Cursor != nil {
 		token = *params.Cursor
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
+	view := ""
+	if params.View != nil {
+		view = string(*params.View)
+	}
+	out, err := h.svc.WorklistView(r.Context(), view, scope, filter, owner, limit, token)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

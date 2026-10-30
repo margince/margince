@@ -88,14 +88,15 @@ type ListDealsInput struct {
 	IDs []ids.UUID
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
-	TagIDs     []ids.UUID
-	TagMode    storekit.TagMode
-	Cursor     *string
-	Limit      *int
-	Query      *string
-	PipelineID *ids.PipelineID
-	StageID    *ids.StageID
-	OwnerID    *ids.UserID
+	TagIDs      []ids.UUID
+	TagMode     storekit.TagMode
+	Cursor      *string
+	Limit       *int
+	Query       *string
+	PipelineID  *ids.PipelineID
+	StageID     *ids.StageID
+	OwnerID     *ids.UserID
+	ScopeOwners *storekit.OwnerSet
 	// OwnerTeamID and Unassigned are the other two owner dials; with OwnerID
 	// they are one predicate, storekit.OwnershipClause.
 	OwnerTeamID      *ids.TeamID
@@ -132,6 +133,10 @@ type ListDealsInput struct {
 	QuietForDays *int
 	// CloseBefore filters calendar dates before the bound, before pagination.
 	CloseBefore *time.Time
+	// AtRisk narrows to the at-risk candidates, quiet or past their close.
+	AtRisk *AtRiskWindow
+	// positions, set by ListDealsPositioned, receives each row's resume cursor.
+	positions *[]string
 	// RangeFilters are the close-day, value, currency and country dials.
 	RangeFilters
 	IncludeArchived bool
@@ -278,7 +283,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	if err != nil {
 		return nil, nil, err
 	}
-	return pre, where, nil
+	return pre, in.atRiskTerms(pre, where), nil
 }
 
 // scanDealPage drains one list query's rows: each deal plus, under a
@@ -325,6 +330,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	}
 	if in.StageID != nil {
 		where = append(where, storekit.SQLf("stage_id = $%d", arg(*in.StageID)))
+	}
+	if scoped := storekit.OwnerSetClause("owner_id", in.ScopeOwners, arg); scoped != "" {
+		where = append(where, scoped)
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {
@@ -401,16 +409,6 @@ func appendIdleFilters(where []string, in ListDealsInput) []string {
 	return where
 }
 
-// uuidOfFilter widens one optional typed filter id to the untyped UUID the
-// reference table above walks. It is deliberately the only widening here: the
-// phantom kind is what stops a project id being probed against company.
-func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
-	if id == nil {
-		return nil
-	}
-	return &id.UUID
-}
-
 // referenceFilterClause narrows a filter on a column that NAMES another record
 // to the rows whose target the caller may read.
 //
@@ -428,7 +426,12 @@ func uuidOfFilter[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 // A role that WITHHOLDS the column is the other half, and it is refused rather
 // than narrowed: the target is one this caller could open, so every arm here
 // would answer, and the answer is the reference masked_fields declined to name.
+// A role holding no read grant on the target type is refused for the same
+// reason, since row scope alone reads every company and project.
 func referenceFilterClause(ctx context.Context, column, table string, id ids.UUID, arg func(any) int) (string, error) {
+	if err := auth.RefuseUnreadableReferenceFilter(ctx, column, table); err != nil {
+		return "", err
+	}
 	if err := auth.RefuseMaskedFilter(ctx, maskObject, column, column); err != nil {
 		return "", err
 	}
@@ -443,57 +446,4 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 	}
 	return clause + storekit.SQLf(
 		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope), nil
-}
-
-// partnerAttributionFilterClause narrows to what a partner did for the deal,
-// and carries the partner's OWN visibility with it.
-//
-// Without that second half the filter is an existence oracle for the fact the
-// field mask withholds: a caller whose read of a deal masks both partner
-// columns could still ask for `partner_attribution=sourced` and learn from the
-// row's presence that some partner brought it. The mask and the filter have to
-// withhold the same fact, so this arm answers only for deals whose partner the
-// caller could open.
-func partnerAttributionFilterClause(ctx context.Context, attribution string, arg func(any) int) (string, error) {
-	if err := validPartnerAttribution(attribution); err != nil {
-		return "", err
-	}
-	// The claim travels with the partner, so a role withholding one withholds
-	// both, and this arm answers for the rows a mask already declined to name.
-	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerAttribution, filterPartnerAttribution); err != nil {
-		return "", err
-	}
-	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))
-	scope, err := auth.ScopeClauseFor(ctx, "company", "pref", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		return clause, nil
-	}
-	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
-}
-
-func appendPartnerFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
-	if in.PartnerSourced != nil {
-		// Whether a partner is named at all is a reading of partner_company_id,
-		// and the page's membership is the answer the mask declined to give.
-		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
-			return nil, err
-		}
-		if *in.PartnerSourced {
-			where = append(where, PartnerSourcedSQL(""))
-		} else {
-			where = append(where, "NOT "+PartnerSourcedSQL(""))
-		}
-	}
-	if in.PartnerAttribution != nil {
-		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
-		if err != nil {
-			return nil, err
-		}
-		where = append(where, clause)
-	}
-	return where, nil
 }

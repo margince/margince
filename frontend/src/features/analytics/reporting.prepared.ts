@@ -4,24 +4,38 @@
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 import type { Section } from "../../lib/analytics.address";
+import {
+  presetRequest,
+  type ReportingView,
+  viewRequest,
+} from "./reporting.views";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
 type MetricID = components["schemas"]["ReportingMetricID"];
 type BlockKind = components["schemas"]["ReportingBlockKind"];
+type PresetID = components["schemas"]["ReportingPreset"]["id"];
 
 // A prepared report is a question the reporting engine answers, which a reader
 // previews and saves a copy of. Or it is a section that already holds the
 // answer, which the entry opens.
 export type PreparedReport =
-  | Readonly<{
+  | (Readonly<{
       id: string;
       title: MessageKey;
       purpose: MessageKey;
       kind: "question";
       period: ReportingSelection["period"];
-      metrics: readonly MetricID[];
-      blocks: readonly BlockKind[];
-    }>
+    }> &
+      // A question lists its metrics and charts, or asks what a view's or a
+      // server preset asks, so the template cannot drift from the screen.
+      (
+        | Readonly<{
+            metrics: readonly MetricID[];
+            blocks: readonly BlockKind[];
+          }>
+        | Readonly<{ view: ReportingView }>
+        | Readonly<{ preset: PresetID }>
+      ))
   | Readonly<{
       id: string;
       title: MessageKey;
@@ -51,6 +65,22 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
     period: "this_quarter",
     metrics: ["open_pipeline", "stage_age"],
     blocks: ["stage_distribution", "stage_age", "pipeline_movement"],
+  },
+  {
+    id: "my-prospecting-progress",
+    title: "reporting.prepared.prospectingTitle",
+    purpose: "reporting.prepared.prospectingPurpose",
+    kind: "question",
+    period: "this_week",
+    view: "sdr",
+  },
+  {
+    id: "team-prospecting-review",
+    title: "reporting.prepared.teamTitle",
+    purpose: "reporting.prepared.teamPurpose",
+    kind: "question",
+    period: "this_week",
+    preset: "team",
   },
   {
     id: "sales-by-owner",
@@ -111,13 +141,19 @@ export function preparedSelection(
   scope: ReportingSelection["scope"],
   pipelineId: string | undefined,
 ): ReportingSelection | null {
+  const asked =
+    "view" in report
+      ? viewRequest(report.view, catalog, report.period)
+      : "preset" in report
+        ? presetRequest(report.preset, catalog)
+        : report;
   const offered = catalog.metrics.filter((metric) =>
-    report.metrics.includes(metric.id),
+    asked.metrics.includes(metric.id),
   );
   if (offered.length === 0) {
     return null;
   }
-  const blocks = report.blocks.filter((block) =>
+  const blocks = asked.blocks.filter((block) =>
     offered.some((metric) => metric.blocks.includes(block)),
   );
   return {

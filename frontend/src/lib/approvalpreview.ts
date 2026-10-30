@@ -5,6 +5,7 @@ import { RELATIONSHIP_TYPE_LABELS } from "../format/companyrelationships";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
 import { DEAL_STATUS_LABEL } from "../format/dealstatus";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
+import { industryWords } from "../format/industry";
 import { LEAD_STATUS_LABEL } from "../format/leadstatus";
 import { offerStatusLabel } from "../format/offerstatus";
 import { templateLanguage } from "../format/offertemplatelocale";
@@ -56,6 +57,9 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   archive_template_preserve_offers: "approval.preview.archiveTemplate",
   archive_offer_preserve_lines: "approval.preview.archiveOffer",
   record_confirmation_only: "approval.preview.confirmationOnly",
+  create_contact_employer: "approval.preview.createEmployer",
+  reuse_contact_employer: "approval.preview.reuseEmployer",
+  resolve_contact_employer: "approval.preview.resolveEmployer",
   create_contact_record: "approval.preview.createContact",
   record_contact_acquisition: "approval.preview.recordAcquisition",
   create_offer_draft: "approval.preview.createOffer",
@@ -80,6 +84,7 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_fill_contact: "approval.preview.promotionFill",
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
+  promote_fill_company_industry: "approval.preview.promotionFillIndustry",
   restore_lead_archive_contact: "approval.preview.demoteArchive",
   restore_lead_preserve_contact: "approval.preview.demotePreserve",
   send_without_human_signature: "approval.preview.unsignedSend",
@@ -173,6 +178,7 @@ const PREVIEW_TEXT_FORMATTERS = new Map<
   ["billing_model", billingModelLabel],
   ["locale", templateLanguage],
   ["offer_status", offerStatusLabel],
+  ["promotion_company_industry", (value, t) => industryWords(t, value)],
 ]);
 
 const PREVIEW_CATALOG_ALIASES: Readonly<Record<string, string>> = {

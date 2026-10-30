@@ -115,7 +115,7 @@ contract, its tests and its docs come first. If an older document disagrees with
 conflict and keep going.
 [docs/principles/the-record-is-the-code.md](docs/principles/the-record-is-the-code.md) explains why.
 
-## Before you open a pull request
+## Before you mark a pull request ready
 
 - Keep the pull request small, and make it tell the story: what changed, why, and how you checked it.
 - Check your change against the Craftsmanship section of [AGENTS.md](AGENTS.md).

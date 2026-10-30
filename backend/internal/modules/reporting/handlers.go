@@ -12,10 +12,17 @@ import (
 )
 
 // Handlers adapts generated HTTP contracts to the shared reporting service.
-type Handlers struct{ service *Service }
+type Handlers struct {
+	service *Service
+	opening OpeningSelection
+}
 
-// NewHandlers keeps transport parsing outside reporting calculations.
-func NewHandlers(service *Service) Handlers { return Handlers{service: service} }
+// NewHandlers keeps transport parsing outside reporting calculations. It takes
+// the selection a request that names no metrics opens on, which this package
+// reads rather than spells.
+func NewHandlers(service *Service, opening OpeningSelection) Handlers {
+	return Handlers{service: service, opening: opening}
+}
 
 // GetReportingMetrics returns permission-filtered metric definitions.
 func (h Handlers) GetReportingMetrics(w http.ResponseWriter, r *http.Request) {

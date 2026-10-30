@@ -78,6 +78,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 		ReferencesFromRequest:    true,
 		ToStageID:                pathID[ids.StageKind](req.ToStageId),
 		LostReason:               req.LostReason,
+		LostReasonCode:           req.LostReasonCode,
 		IfVersion:                ifVersion,
 		WonWithoutContractDetail: req.WonWithoutContractDetail,
 	}

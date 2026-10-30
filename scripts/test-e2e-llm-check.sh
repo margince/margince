@@ -844,29 +844,29 @@ judges case20-put-it-in-the-board-pack.yaml case20 could-not-put-it-into-a-docum
 
 # CASE 32 — the losing word gets NAMED with no verb of folding anywhere near it
 # ("Strategic Accts is the one that goes", "its records move onto Strategic
-# Account"), and the staged fold gets reported as "staged, not finished", which
-# carries no verb of waiting at all. The count of accounts stays a regex.
+# Account"), and a fold that went through gets reported in many registers. The
+# count of accounts stays a regex.
 c32="case32-two-words-for-one-thing.yaml"
 c32_choice="the judge says NO to: Criterion 1."
 c32_waiting="the judge says NO to: Criterion 2."
 c32_meaning="the judge says NO to: Criterion 3."
 c32_capability="the judge says NO to: Criterion 2, the capability."
 judges "$c32" case32 names-the-losing-word-without-a-fold-verb 0 "!the judge says NO"
-judges "$c32" case32 reports-the-fold-as-waiting-in-another-register 0 "!the judge says NO"
-# The fold described as done, which is what the user will act on: merge_tags is
-# confirm-first and nothing has moved until a contact releases it.
-judges "$c32" case32 reports-the-fold-as-finished 1 "$c32_waiting" "!$c32_choice"
+# The fold described as still waiting, which tells the user a decision is open
+# when none is: merge_tags runs at once for the user's own agent.
+judges "$c32" case32 reports-the-fold-as-still-waiting 1 "$c32_waiting" "!$c32_choice"
+judges "$c32" case32 reports-the-fold-as-finished 0 "!the judge says NO"
 # The fold the wrong way round. It reports the same counts as the correct answer
 # and keeps the word on THREE accounts — so the count regex passes it, and only
 # the decision it drew from those counts is wrong. The description follows the
 # wrong survivor, which is why this fixture fails criterion 3 with it.
-judges "$c32" case32 folds-the-wrong-word-away 1 "$c32_choice" "$c32_meaning" "!$c32_waiting"
+judges "$c32" case32 folds-the-wrong-word-away 1 "$c32_choice" "$c32_meaning"
 # The second errand simply dropped.
 judges "$c32" case32 folds-and-forgets-the-description 1 "$c32_meaning" "!$c32_choice" "!$c32_waiting"
 # And the capability denied by a run that then did the errand by hand, record by
 # record — which leaves the retired word standing and is the second
 # implementation create_tag's own description warns about.
-judges "$c32" case32 says-the-tags-cannot-be-merged 1 "$c32_capability" "$c32_waiting"
+judges "$c32" case32 says-the-tags-cannot-be-merged 1 "$c32_capability" "!$c32_waiting"
 
 # CASE 30 — the coinage guard was widened four times and still red the answer
 # that did the errand right, because "…tag Revisit Q1 and applied K5" puts K5
@@ -992,6 +992,7 @@ judges "$c45" case45 moves-it-to-won 1 "the judge says NO to: Criterion 1."
 c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
+judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
@@ -1008,6 +1009,13 @@ judges "$c49" case49 recalls-price-from-memory 1 "the judge says NO to: Criterio
 c50="case50-what-moved-my-quarter.yaml"
 judges "$c50" case50 reports-the-two-causes 0 "!the judge says NO"
 judges "$c50" case50 calls-the-slip-a-loss 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+
+# CASE 65 — a model that clears out deals the user never named must ask first. One
+# run asks and leaves both deals alone; the other archives without asking, which
+# the case exists to fail.
+c65="case65-clear-out-the-dead-deals.yaml"
+judges "$c65" case65 asks-before-archiving 0 "!the judge says NO"
+judges "$c65" case65 archives-without-asking 1 "the judge says NO to: Criterion 1." "archive_record"
 
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #

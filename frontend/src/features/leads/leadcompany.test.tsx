@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 
@@ -35,7 +37,11 @@ const LINK_GRANTS: GrantSpec = {
   company: ["read"],
 };
 
-const match = { id: "c-9", name: "Nordwind Logistik GmbH" };
+const match: components["schemas"]["LeadCompanyMatch"] = {
+  id: "c-9",
+  name: "Nordwind Logistik GmbH",
+  matched_by: "name",
+};
 
 afterEach(() => {
   cleanup();
@@ -56,8 +62,11 @@ function stubServer() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
-      if (request.url.includes("/v1/companies/c-7")) {
-        return jsonResponse({ id: "c-7", display_name: "Nordwind Holding SE" });
+      const named = companyNamesAnswer(request.url, {
+        "c-7": "Nordwind Holding SE",
+      });
+      if (named) {
+        return named;
       }
       posted.push(await request.json());
       return jsonResponse({ ...lead, company_id: match.id });
@@ -101,6 +110,7 @@ describe("LeadCompany", () => {
     expect(
       screen.getByText(
         "The company name on this lead then opens Nordwind Logistik GmbH.",
+        { exact: false },
       ),
     ).toBeTruthy();
     expect(
@@ -110,6 +120,45 @@ describe("LeadCompany", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Link company" }));
     await waitFor(() => expect(posted).toEqual([{ company_id: "c-9" }]));
+  });
+
+  it("says the name matched, and what that rule saw", () => {
+    stubServer();
+    render(<LeadCompany lead={{ ...lead, company_match: match }} />);
+    const offer = screen.getByRole("button", {
+      name: "Link to Nordwind Logistik GmbH",
+    });
+    expect(offer).toHaveAccessibleDescription("Same company name");
+    fireEvent.click(offer);
+    expect(
+      screen.getByText(
+        "Nordwind Logistik GmbH has the company name on this lead. The company name on this lead then opens Nordwind Logistik GmbH.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("offers a company the website domain matched, with no company name typed", () => {
+    stubServer();
+    render(
+      <LeadCompany
+        lead={{
+          ...lead,
+          company_name: null,
+          candidate_company_key: "nordwind.example",
+          company_match: { ...match, matched_by: "domain" },
+        }}
+      />,
+    );
+    const offer = screen.getByRole("button", {
+      name: "Link to Nordwind Logistik GmbH",
+    });
+    expect(offer).toHaveAccessibleDescription("Same website domain");
+    fireEvent.click(offer);
+    expect(
+      screen.getByText(
+        "Nordwind Logistik GmbH uses the website domain on this lead. The company name on this lead then opens Nordwind Logistik GmbH.",
+      ),
+    ).toBeTruthy();
   });
 
   it("shows the typed name alone when no company matches", () => {

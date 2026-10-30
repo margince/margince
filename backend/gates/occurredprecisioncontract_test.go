@@ -173,14 +173,14 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
-	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp,
+	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,
 
 	"expires_at": aheadStamp, "credential_expires_at": aheadStamp, "watch_expires_at": aheadStamp, "deletes_at": aheadStamp,
 	"next_attempt_at": aheadStamp, "next_retry_at": aheadStamp, "next_pass_at": aheadStamp, "next_capture_at": aheadStamp,
 	"next_sync_due_at": aheadStamp, "next_due_at": aheadStamp, "intended_due_at": aheadStamp, "resets_at": aheadStamp,
 	"resumes_at": aheadStamp, "agent_window_next_starts_at": aheadStamp, "agent_window_resets_at": aheadStamp,
 	"scheduled_at": aheadStamp, "remind_at": aheadStamp, "due_at": aheadStamp, "next_step_due_at": aheadStamp,
-	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp,
+	"next_task_due_at": aheadStamp, "sla_deadline_at": aheadStamp, "next_expiry_at": aheadStamp,
 
 	"accepted_at": actStamp, "approved_at": actStamp, "applied_at": actStamp, "decided_at": actStamp,
 	"resolved_at": actStamp, "closed_at": actStamp, "submitted_at": actStamp, "requested_at": actStamp,

@@ -93,8 +93,8 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 		}
 		var panel int
 		if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-			out, pendErr := e.svc.PendingForTarget(as, tx, targetType, target, PendingScanCap)
-			panel = len(out)
+			out, pendErr := e.svc.PendingForTarget(as, tx, targetType, target)
+			panel = len(out.Approvals)
 			return pendErr
 		}); err != nil {
 			t.Fatalf("PendingForTarget: %v", err)
@@ -185,8 +185,8 @@ func TestALinkedInMatchIsReadableByAColleagueWhoCanSeeTheContact(t *testing.T) {
 
 	var panel int
 	if err := e.svc.db.Tx(seatFor(e.ws, colleague), func(tx pgx.Tx) error {
-		out, pendErr := e.svc.PendingForTarget(seatFor(e.ws, colleague), tx, targetType, target, PendingScanCap)
-		panel = len(out)
+		out, pendErr := e.svc.PendingForTarget(seatFor(e.ws, colleague), tx, targetType, target)
+		panel = len(out.Approvals)
 		return pendErr
 	}); err != nil {
 		t.Fatalf("PendingForTarget as the colleague: %v", err)

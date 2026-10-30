@@ -26,15 +26,19 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-// search resolves a `record_name` on the engine search_records runs.
+// search resolves a `record_name` on the engine search_records runs. The
+// readiness verbs need no retriever and share prep_for_meeting's seam, so both
+// read one preparation revision.
 func RegisterIntentTools(
 	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader, search RecordSearch,
+	readiness MeetingReadiness,
 ) {
+	registerMeetingReadinessTools(r, readiness)
 	if retriever == nil {
 		return
 	}
 	r.Register(catchMeUpOn{retriever: retriever, search: search})
-	r.Register(prepForMeeting{retriever: retriever, brief: brief, search: search})
+	r.Register(prepForMeeting{retriever: retriever, brief: brief, search: search, readiness: readiness})
 }
 
 // assembleAnchored settles which record the caller meant and builds the
@@ -216,6 +220,9 @@ type prepForMeeting struct {
 	// assembled picture, which is what this tool has always returned, instead
 	// of losing a read it can still perform.
 	brief MeetingBriefReader
+	// readiness answers the caller's own preparation for a meeting anchor, so
+	// an agent reads the revision it confirms. Nil leaves it absent.
+	readiness MeetingReadiness
 }
 
 func (t prepForMeeting) Spec() mcp.ToolSpec {
@@ -271,6 +278,15 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if hasBrief {
 		noteBriefEvidence(ctx, written)
 		result.Brief = &written
+	}
+	if t.readiness != nil && args.RecordType == string(datasource.EntityActivity) {
+		prepared, attends, err := t.readiness.Read(ctx, anchored)
+		if err != nil {
+			return nil, err
+		}
+		if attends {
+			result.Preparation = &prepared
+		}
 	}
 	return json.Marshal(result)
 }

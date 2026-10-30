@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
@@ -10,6 +10,7 @@ import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import {
   CommandPalette,
@@ -35,14 +36,15 @@ import {
   fetchSetupStatus,
   SetupClaimScreen,
 } from "./features/sign-in/setupclaim";
-import { NextTaskHost } from "./features/worklist/worklist.nexttask";
 import { useLocale } from "./i18n";
 import { useInstallationDescribed } from "./lib/installationcompany";
+import { markJourney } from "./lib/journeymarks";
 import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
+import { currentParams } from "./lib/urlstate";
 
 // The anonymous public surfaces render without a session — their slug in the
 // path is the whole address (security: [] in the contract).
@@ -170,6 +172,7 @@ function AuthedApp({
     if (me.data) {
       hadSession.current = true;
       setNotice(null);
+      markJourney("session");
       return;
     }
     if (
@@ -226,6 +229,27 @@ function AuthedApp({
 
   const { refusal, confinement } = useProbeAnswer(me);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const gatesPending = companyPending || recordZone.pending || progress.pending;
+  const shellReady = authed && !gatesPending;
+  // Home's reads start here rather than when its lazy screen commits, and only
+  // once nothing will send the reader to onboarding instead.
+  const opensHome =
+    shellReady &&
+    described === true &&
+    !progress.unfinished &&
+    route.screen === "home";
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (shellReady) {
+      markJourney("gates");
+    }
+  }, [shellReady]);
+  useEffect(() => {
+    if (!opensHome) {
+      return;
+    }
+    prefetchHome(queryClient, currentParams());
+  }, [opensHome, queryClient]);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);
   useTaskReminderNotifications(authed);
@@ -291,7 +315,7 @@ function AuthedApp({
   // The progress and rollout reads join the splash for the same reason the
   // company read does: a shell painted before they answer is a landing page the
   // gate then pulls away from under the reader.
-  if (companyPending || recordZone.pending || progress.pending) {
+  if (gatesPending) {
     return (
       <RaillessFrame>
         <AuthSplash />
@@ -306,17 +330,15 @@ function AuthedApp({
           the product's, not the reader's mail client's. */}
         <WriteToHost>
           <CallLogHost>
-            <NextTaskHost>
-              <SourceHost>
-                <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-                  <ScreenView
-                    screen={route.screen}
-                    id={route.id}
-                    id2={route.id2}
-                  />
-                </AuthedShell>
-              </SourceHost>
-            </NextTaskHost>
+            <SourceHost>
+              <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                <ScreenView
+                  screen={route.screen}
+                  id={route.id}
+                  id2={route.id2}
+                />
+              </AuthedShell>
+            </SourceHost>
           </CallLogHost>
         </WriteToHost>
         <CommandPalette
