@@ -67878,7 +67878,7 @@ type GetWorklistParams struct {
 	// than everything: absent is not false, and a reader asking what changed since a
 	// night that never happened is owed nothing, not the whole queue.
 	//
-	// `upcoming` is planned work due after today: the Upcoming and backlog section
+	// `upcoming` is planned work due in the 14 days after today: the Upcoming and backlog section
 	// at the end of the Today view. These rows never appear in a queue that does not
 	// ask for them, and `summary` never counts them; `counts` reports them under the
 	// `upcoming` category.

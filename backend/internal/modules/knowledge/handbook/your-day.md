@@ -255,7 +255,7 @@ Worklist items are in bands, shown in this order:
 
 The views are **Today** (your work), **Decisions** (choices someone must make) and **System**
 (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at
-the end of **Today**, holds tasks due later; its count is not in Today's total. Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A band you have cleared still shows its heading and says so, but only when the whole day is loaded.
 
@@ -341,7 +341,7 @@ Each count is exact, or Margince says it is not:
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
 ### Where are tasks due later?
-**Upcoming and backlog**, at the end of **Today**, holds tasks due after today. Press it to open it. Its rows load as you move down, until it says "All upcoming work is loaded." With nothing planned it says "Nothing planned after today." Its count is not part of Today's count.
+**Upcoming and backlog**, at the end of **Today**, holds tasks due in the 14 days after today. A task due later than that shows on its record until it comes within 14 days. Press it to open it. Its rows load as you move down, until it says "All upcoming work is loaded." With nothing planned it says "Nothing planned after today." Its count is not part of Today's count.
 
 A task that is late, or whose reminder is due, stays in Today. Also called: later tasks, planned work, future tasks.
 
