@@ -36727,6 +36727,14 @@ export interface components {
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
+            /**
+             * @description Who recorded the activity, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System".
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
             readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
             raw?: {

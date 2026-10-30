@@ -26980,6 +26980,13 @@ type Activity struct {
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 
+	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
 	DoneAt    *time.Time         `json:"done_at,omitempty"`
@@ -69518,6 +69525,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "created_at")
 	}
 
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
 	if raw, found := object["direction"]; found {
 		err = json.Unmarshal(raw, &a.Direction)
 		if err != nil {
@@ -69935,6 +69950,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Direction != nil {

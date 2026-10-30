@@ -1134,6 +1134,33 @@ func (e PartnerRelationshipStage) Valid() bool {
 	}
 }
 
+// Defines values for PrincipalAttributionActorType.
+const (
+	Agent     PrincipalAttributionActorType = "agent"
+	Buyer     PrincipalAttributionActorType = "buyer"
+	Connector PrincipalAttributionActorType = "connector"
+	Human     PrincipalAttributionActorType = "human"
+	System    PrincipalAttributionActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
+func (e PrincipalAttributionActorType) Valid() bool {
+	switch e {
+	case Agent:
+		return true
+	case Buyer:
+		return true
+	case Connector:
+		return true
+	case Human:
+		return true
+	case System:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipStrengthBucket.
 const (
 	Moderate RelationshipStrengthBucket = "moderate"
@@ -1541,6 +1568,13 @@ type Activity struct {
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
+
+	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -2501,6 +2535,35 @@ type PartnerPartnerRole string
 // PartnerRelationshipStage defines model for Partner.RelationshipStage.
 type PartnerRelationshipStage string
 
+// PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
+// wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+// renders them with the same helper.
+type PrincipalAttribution struct {
+	ActorId string `json:"actor_id"`
+
+	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
+	ActorName *string                       `json:"actor_name,omitempty"`
+	ActorType PrincipalAttributionActorType `json:"actor_type"`
+
+	// AgentClient The NAME of the tool a delegated change was typed through — "Claude",
+	// "Cursor" — resolved from the OAuth client behind the row's passport.
+	// Null when the passport was minted by hand in Settings, when the client
+	// row is gone, and for every write that was not delegated.
+	AgentClient *string `json:"agent_client,omitempty"`
+
+	// OnBehalfOf Granting human's user id for agent actions.
+	OnBehalfOf *string `json:"on_behalf_of,omitempty"`
+
+	// OnBehalfOfName Resolved display name for on_behalf_of.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
+
+	// PassportId The Agent Seat Passport the change was made under; null for a write that was not delegated.
+	PassportId *string `json:"passport_id,omitempty"`
+}
+
+// PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
+type PrincipalAttributionActorType string
+
 // ProviderRef A reference to a messaging transport registered in THIS installation
 // (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
@@ -2993,6 +3056,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "created_at")
 	}
 
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
 	if raw, found := object["direction"]; found {
 		err = json.Unmarshal(raw, &a.Direction)
 		if err != nil {
@@ -3410,6 +3481,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Direction != nil {
