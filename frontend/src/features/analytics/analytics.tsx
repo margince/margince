@@ -114,6 +114,7 @@ export function AnalyticsScreen({
           sdr: t(VIEW_SHAPE.sdr.label),
           leads: t(VIEW_SHAPE.leads.label),
           partners: t(VIEW_SHAPE.partners.label),
+          conversion: t(VIEW_SHAPE.conversion.label),
           outcomes: t("analytics.sectionOutcomes"),
           coverage: t("analytics.sectionCoverage"),
           delivery: t("analytics.sectionDelivery"),

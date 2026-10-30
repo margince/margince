@@ -1191,11 +1191,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-43 columns · primary key `(id)` · referenced by 18 foreign keys
+44 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `arrival_owner_id` | `uuid` |  |  |
 | `candidate_company_key` | `text` |  | Loose key for ABM routing without creating a company. |
 | `company_id` | `uuid` |  | The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. |
 | `company_name` | `text` |  | Free text, as captured or typed. |

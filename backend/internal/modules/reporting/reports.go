@@ -289,9 +289,13 @@ func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report *crm
 	if err != nil {
 		return err
 	}
+	versions, err := encode(s.evaluator.MetricVersions(report.Selection.Metrics))
+	if err != nil {
+		return err
+	}
 	var b bindings
-	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author), b.add(questions)}
-	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by,question_bindings) VALUES ("+strings.Join(values, ",")+")", b.values...)
+	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author), b.add(questions), b.add(versions)}
+	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by,question_bindings,metric_versions) VALUES ("+strings.Join(values, ",")+")", b.values...)
 	return err
 }
 

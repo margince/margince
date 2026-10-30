@@ -240,6 +240,7 @@ const TAB_LABEL = {
   sdr: "reporting.sdr",
   leads: "reporting.leads",
   partners: "reporting.partners",
+  conversion: "reporting.conversion",
 } as const;
 
 describe("which views a seat reads", () => {

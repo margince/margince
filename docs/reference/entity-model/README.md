@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 338 |
-| Columns | 4012 |
+| Columns | 4017 |
 | Foreign keys | 558 |
 | Owning areas | 37 |
 
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 40 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 46 | 27 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 43 | 18 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 44 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
@@ -289,7 +289,7 @@ erDiagram
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
 | [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
-| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 20 | 2 |
+| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 23 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |
@@ -327,7 +327,7 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 43 | 18 |
+| [`lead`](contacts.md#lead) | contacts | 44 | 18 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |
@@ -388,7 +388,7 @@ erDiagram
 | [`relationship`](contacts.md#relationship) | contacts | 22 | 1 |
 | [`relationship_nudge_dismissal`](contacts.md#relationship_nudge_dismissal) | contacts | 5 | 0 |
 | [`report_definition`](reporting.md#report_definition) | reporting | 11 | 2 |
-| [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 7 | 2 |
+| [`report_definition_revision`](reporting.md#report_definition_revision) | reporting | 8 | 2 |
 | [`report_edition`](reporting.md#report_edition) | reporting | 12 | 2 |
 | [`report_edition_contribution`](reporting.md#report_edition_contribution) | reporting | 9 | 0 |
 | [`report_edition_question`](reporting.md#report_edition_question) | reporting | 5 | 1 |

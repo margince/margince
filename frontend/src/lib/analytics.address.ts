@@ -27,6 +27,7 @@ export const SECTIONS = [
   "sdr",
   "leads",
   "partners",
+  "conversion",
   "forecast",
   "reports",
   "targets",

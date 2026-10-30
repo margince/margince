@@ -179,7 +179,7 @@ function OverviewBody({
     target_basis: targetBasis,
     // The contract asks for a close window on every selection. Only deal
     // figures read it, so other views keep the default and never the address's.
-    close_window: shape.dealFilters ? closeWindow : "all_open",
+    close_window: shape.closeWindow ? closeWindow : "all_open",
     metrics,
     blocks,
   };
@@ -217,7 +217,7 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={shape.dealFilters}
+          showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
           showTargets={false}
           dates={{

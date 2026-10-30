@@ -18,6 +18,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
 import { isVersionSkewOf, throwProblem } from "../../lib/problem";
+import { cohortOutcomeLabel } from "./reporting.cohort";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
   type ReportingEvaluation,
@@ -49,7 +50,16 @@ const metricDateHeading: Partial<
   partner_pipeline: "reporting.createdOn",
   partner_won: "reporting.closedOn",
   partner_commission: "reporting.accruedOn",
+  stage_conversion: "reporting.enteredOn",
+  lead_cohort_outcomes: "reporting.arrivedOn",
 };
+
+// A cohort member's row carries its days to an outcome, or open so far, where
+// the reading itself is a rate.
+const COHORT_METRICS: readonly ReportingEvidenceRef["metric"][] = [
+  "stage_conversion",
+  "lead_cohort_outcomes",
+];
 
 // A record's figure is a deal's value unless the metric counts or times it, or
 // the money is a commission rather than the deal.
@@ -111,10 +121,13 @@ export function ReportingEvidenceDrawer({
   const definition = catalog.data?.metrics.find(
     (metric) => metric.id === reference.metric,
   );
-  const { metric, point, interval, selectedValue } = evidenceSelection(
+  const { metric, point, outcome, interval, selectedValue } = evidenceSelection(
     evaluation,
     reference,
   );
+  const rowUnit = COHORT_METRICS.includes(reference.metric)
+    ? "days"
+    : (metric?.unit ?? definition?.unit ?? "count");
   const stateLabel = editionId
     ? formatDateTime(
         evaluation.context.state_at,
@@ -148,6 +161,9 @@ export function ReportingEvidenceDrawer({
           {evaluation.context.scope.label}
           {point?.label
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
+            : ""}
+          {outcome
+            ? ` · ${cohortOutcomeLabel(outcome, t)} · ${formatNumber(outcome.count, locale)}`
             : ""}
         </p>
         <p className="t-caption">
@@ -268,11 +284,11 @@ export function ReportingEvidenceDrawer({
                       },
                       {
                         key: "amount",
-                        header: valueHeading(reference, metric?.unit, t),
+                        header: valueHeading(reference, rowUnit, t),
                         render: (row) =>
                           reportingAmount(
                             row.value,
-                            metric?.unit ?? definition?.unit ?? "count",
+                            rowUnit,
                             evidence.context.currency,
                             locale,
                           ),
@@ -320,7 +336,7 @@ function evidenceSelection(
             point.evidence.through === reference.through,
         )),
   );
-  const point =
+  const named =
     reference.group_key || reference.through
       ? chart?.points.find(
           (point) =>
@@ -328,8 +344,19 @@ function evidenceSelection(
             point.evidence?.through === reference.through,
         )
       : undefined;
+  // A cohort's outcome count names its own members inside a point.
+  const counted = reference.group_key
+    ? chart?.points
+        .flatMap((point) =>
+          (point.outcomes ?? []).map((count) => ({ point, count })),
+        )
+        .find(({ count }) => count.evidence?.group_key === reference.group_key)
+    : undefined;
+  const point = named ?? counted?.point;
+  const outcome = counted?.count;
+  // An outcome's count is drawn beside its name, not as the point's value.
   const selectedValue =
-    point?.value ??
+    (outcome ? undefined : point?.value) ??
     (!reference.group_key &&
     !reference.through &&
     metric?.evidence.context_id === reference.context_id
@@ -342,7 +369,7 @@ function evidenceSelection(
       : reference.context_id === "state"
         ? undefined
         : evaluation.context.interval);
-  return { metric, point, interval, selectedValue };
+  return { metric, point, outcome, interval, selectedValue };
 }
 
 function MetricDefinition({

@@ -40458,14 +40458,21 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
          *     the deal, or whether a partner is active.
+         *
+         *     `stage_cohort` follows the deals that entered each open stage in the
+         *     interval to the evaluation instant: one point per stage, its `outcomes`
+         *     saying how each entry left the stage or that it has not left yet.
+         *     `lead_cohort` follows the leads that arrived in the interval the same
+         *     way: one point, its `outcomes` saying whether each lead was accepted,
+         *     qualified, disqualified or is still open.
          * @enum {string}
          */
-        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown";
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort";
         /**
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
@@ -40693,7 +40700,7 @@ export interface components {
          * @description A chart kind, or `question`, a custom analytics question the card asks for each reader.
          * @enum {string}
          */
-        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "question";
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "question";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
          *     `question`. Every reader of the report receives it, so it carries no filters (a filter
@@ -40824,6 +40831,42 @@ export interface components {
             at?: string;
             evidence?: components["schemas"]["ReportingEvidenceRef"];
             status: components["schemas"]["ReportingStatus"];
+            /**
+             * @description On a cohort point, what became of its members by the evaluation
+             *     instant. Every member is in exactly one outcome, so the counts add
+             *     up to `observations`. `unresolved` members have not reached an
+             *     outcome yet and are never counted as lost; `history_partial`
+             *     members have a move recorded before Margince kept the stage order,
+             *     so the direction of that move is unknown.
+             */
+            outcomes?: components["schemas"]["ReportingCohortCount"][];
+            /**
+             * @description On a `stage_cohort` point, how its members entered the stage:
+             *     `first` had never been in the stage before, `repeat` had, and
+             *     `reopened` entered it straight from a won or lost close. `reopened`
+             *     is also `first` or `repeat`, so only `first` and `repeat` add up to
+             *     `observations`.
+             */
+            entries?: components["schemas"]["ReportingCohortCount"][];
+        };
+        ReportingCohortCount: {
+            key: string;
+            label: string;
+            /** Format: int64 */
+            count: number;
+            /**
+             * Format: double
+             * @description The median of `duration_basis` over these members. Null below the sample floor.
+             */
+            median_days?: number | null;
+            /**
+             * @description `completed` is the time from entry to the outcome: for a stage, the
+             *     time the deal spent in the stage. `current_age` is the time from
+             *     entry to the evaluation instant, for members with no outcome yet.
+             * @enum {string}
+             */
+            duration_basis?: "completed" | "current_age";
+            evidence?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingCaptureStatus: {
             /** Format: date-time */

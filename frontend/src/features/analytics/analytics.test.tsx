@@ -27,6 +27,7 @@ it("draws the tabs in the row's own order, whatever order the sections are liste
     "sdr",
     "leads",
     "partners",
+    "conversion",
     "forecast",
     "pipeline",
     "outcomes",

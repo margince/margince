@@ -17004,11 +17004,13 @@ const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
+	ReportingBlockKindLeadCohort        ReportingBlockKind = "lead_cohort"
 	ReportingBlockKindMetricReading     ReportingBlockKind = "metric_reading"
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
+	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
 	ReportingBlockKindTargetProgress    ReportingBlockKind = "target_progress"
 )
@@ -17022,6 +17024,8 @@ func (e ReportingBlockKind) Valid() bool {
 		return true
 	case ReportingBlockKindForecastSupport:
 		return true
+	case ReportingBlockKindLeadCohort:
+		return true
 	case ReportingBlockKindMetricReading:
 		return true
 	case ReportingBlockKindOwnerAttainment:
@@ -17031,6 +17035,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindSdrOutcomes:
 		return true
 	case ReportingBlockKindStageAge:
+		return true
+	case ReportingBlockKindStageCohort:
 		return true
 	case ReportingBlockKindStageDistribution:
 		return true
@@ -17064,12 +17070,14 @@ const (
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
 	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
+	ReportingCardKindLeadCohort        ReportingCardKind = "lead_cohort"
 	ReportingCardKindMetricReading     ReportingCardKind = "metric_reading"
 	ReportingCardKindOwnerAttainment   ReportingCardKind = "owner_attainment"
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
+	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
 	ReportingCardKindTargetProgress    ReportingCardKind = "target_progress"
 )
@@ -17083,6 +17091,8 @@ func (e ReportingCardKind) Valid() bool {
 		return true
 	case ReportingCardKindForecastSupport:
 		return true
+	case ReportingCardKindLeadCohort:
+		return true
 	case ReportingCardKindMetricReading:
 		return true
 	case ReportingCardKindOwnerAttainment:
@@ -17095,9 +17105,29 @@ func (e ReportingCardKind) Valid() bool {
 		return true
 	case ReportingCardKindStageAge:
 		return true
+	case ReportingCardKindStageCohort:
+		return true
 	case ReportingCardKindStageDistribution:
 		return true
 	case ReportingCardKindTargetProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportingCohortCountDurationBasis.
+const (
+	ReportingCohortCountDurationBasisCompleted  ReportingCohortCountDurationBasis = "completed"
+	ReportingCohortCountDurationBasisCurrentAge ReportingCohortCountDurationBasis = "current_age"
+)
+
+// Valid indicates whether the value is a known member of the ReportingCohortCountDurationBasis enum.
+func (e ReportingCohortCountDurationBasis) Valid() bool {
+	switch e {
+	case ReportingCohortCountDurationBasisCompleted:
+		return true
+	case ReportingCohortCountDurationBasisCurrentAge:
 		return true
 	default:
 		return false
@@ -17224,6 +17254,7 @@ const (
 	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
+	ReportingMetricIDLeadCohortOutcomes       ReportingMetricID = "lead_cohort_outcomes"
 	ReportingMetricIDLeadFirstResponse        ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves          ReportingMetricID = "lead_status_moves"
 	ReportingMetricIDLeadsAwaitingResponse    ReportingMetricID = "leads_awaiting_response"
@@ -17237,6 +17268,7 @@ const (
 	ReportingMetricIDPartnerWon               ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedPipelineCreated ReportingMetricID = "qualified_pipeline_created"
 	ReportingMetricIDStageAge                 ReportingMetricID = "stage_age"
+	ReportingMetricIDStageConversion          ReportingMetricID = "stage_conversion"
 )
 
 // Valid indicates whether the value is a known member of the ReportingMetricID enum.
@@ -17249,6 +17281,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDClosedWinRate:
 		return true
 	case ReportingMetricIDForecastLanding:
+		return true
+	case ReportingMetricIDLeadCohortOutcomes:
 		return true
 	case ReportingMetricIDLeadFirstResponse:
 		return true
@@ -17275,6 +17309,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedPipelineCreated:
 		return true
 	case ReportingMetricIDStageAge:
+		return true
+	case ReportingMetricIDStageConversion:
 		return true
 	default:
 		return false
@@ -51588,6 +51624,13 @@ type ReportVocabulary struct {
 // ReportingBlockKind `breakdown` splits one metric's figure into named groups: a lead's origin,
 // the status a lead moved to, a partner and whether it sourced or influenced
 // the deal, or whether a partner is active.
+//
+// `stage_cohort` follows the deals that entered each open stage in the
+// interval to the evaluation instant: one point per stage, its `outcomes`
+// saying how each entry left the stage or that it has not left yet.
+// `lead_cohort` follows the leads that arrived in the interval the same
+// way: one point, its `outcomes` saying whether each lead was accepted,
+// qualified, disqualified or is still open.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -51678,6 +51721,13 @@ type ReportingChart struct {
 	// Kind `breakdown` splits one metric's figure into named groups: a lead's origin,
 	// the status a lead moved to, a partner and whether it sourced or influenced
 	// the deal, or whether a partner is active.
+	//
+	// `stage_cohort` follows the deals that entered each open stage in the
+	// interval to the evaluation instant: one point per stage, its `outcomes`
+	// saying how each entry left the stage or that it has not left yet.
+	// `lead_cohort` follows the leads that arrived in the interval the same
+	// way: one point, its `outcomes` saying whether each lead was accepted,
+	// qualified, disqualified or is still open.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`
@@ -51688,6 +51738,27 @@ type ReportingChart struct {
 	StateAt           *time.Time          `json:"state_at,omitempty"`
 	Unit              string              `json:"unit"`
 }
+
+// ReportingCohortCount defines model for ReportingCohortCount.
+type ReportingCohortCount struct {
+	Count int64 `json:"count"`
+
+	// DurationBasis `completed` is the time from entry to the outcome: for a stage, the
+	// time the deal spent in the stage. `current_age` is the time from
+	// entry to the evaluation instant, for members with no outcome yet.
+	DurationBasis *ReportingCohortCountDurationBasis `json:"duration_basis,omitempty"`
+	Evidence      *ReportingEvidenceRef              `json:"evidence,omitempty"`
+	Key           string                             `json:"key"`
+	Label         string                             `json:"label"`
+
+	// MedianDays The median of `duration_basis` over these members. Null below the sample floor.
+	MedianDays *float64 `json:"median_days,omitempty"`
+}
+
+// ReportingCohortCountDurationBasis `completed` is the time from entry to the outcome: for a stage, the
+// time the deal spent in the stage. `current_age` is the time from
+// entry to the evaluation instant, for members with no outcome yet.
+type ReportingCohortCountDurationBasis string
 
 // ReportingComparison defines model for ReportingComparison.
 type ReportingComparison struct {
@@ -51949,12 +52020,27 @@ type ReportingPeriodBasis struct {
 
 // ReportingPoint defines model for ReportingPoint.
 type ReportingPoint struct {
-	At           *time.Time            `json:"at,omitempty"`
-	Comparison   *float64              `json:"comparison,omitempty"`
-	Evidence     *ReportingEvidenceRef `json:"evidence,omitempty"`
-	Key          string                `json:"key"`
-	Label        string                `json:"label"`
-	Observations *int64                `json:"observations,omitempty"`
+	At         *time.Time `json:"at,omitempty"`
+	Comparison *float64   `json:"comparison,omitempty"`
+
+	// Entries On a `stage_cohort` point, how its members entered the stage:
+	// `first` had never been in the stage before, `repeat` had, and
+	// `reopened` entered it straight from a won or lost close. `reopened`
+	// is also `first` or `repeat`, so only `first` and `repeat` add up to
+	// `observations`.
+	Entries      *[]ReportingCohortCount `json:"entries,omitempty"`
+	Evidence     *ReportingEvidenceRef   `json:"evidence,omitempty"`
+	Key          string                  `json:"key"`
+	Label        string                  `json:"label"`
+	Observations *int64                  `json:"observations,omitempty"`
+
+	// Outcomes On a cohort point, what became of its members by the evaluation
+	// instant. Every member is in exactly one outcome, so the counts add
+	// up to `observations`. `unresolved` members have not reached an
+	// outcome yet and are never counted as lost; `history_partial`
+	// members have a move recorded before Margince kept the stage order,
+	// so the direction of that move is unknown.
+	Outcomes *[]ReportingCohortCount `json:"outcomes,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this
 	// read. The other figures in the same evaluation are unaffected, and a
