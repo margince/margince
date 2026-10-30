@@ -42,11 +42,12 @@ func TestEveryAmountBesideACurrencyGetsAReadableFigure(t *testing.T) {
 		`{"name":"Tokyo","amount_minor":500000,"currency":"JPY"},` +
 		`{"name":"Kept","amount_minor":100,"amount_display":"set by the tool","currency":"EUR"},` +
 		`{"name":"Unpriced"}],` +
-		`"count":9007199254740993}`)
+		`"count":9007199254740993,"weighted_minor":123456,"base_currency":"EUR"}`)
 
 	var got struct {
-		Deals []map[string]any `json:"deals"`
-		Count json.Number      `json:"count"`
+		Deals    []map[string]any `json:"deals"`
+		Count    json.Number      `json:"count"`
+		Weighted string           `json:"weighted_display"`
 	}
 	decoder := json.NewDecoder(bytes.NewReader(withReadableAmounts(in)))
 	decoder.UseNumber()
@@ -57,6 +58,9 @@ func TestEveryAmountBesideACurrencyGetsAReadableFigure(t *testing.T) {
 		if display := got.Deals[i]["amount_display"]; display != want {
 			t.Errorf("deal %d amount_display = %v, want %v", i, display, want)
 		}
+	}
+	if got.Weighted != "1234.56 EUR" {
+		t.Errorf("a forecast figure beside its base_currency reads %q", got.Weighted)
 	}
 	if got.Count != "9007199254740993" {
 		t.Errorf("an integer past float64 precision came back as %s", got.Count)

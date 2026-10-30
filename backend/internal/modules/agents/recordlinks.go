@@ -48,13 +48,15 @@ func linkEvidence(refs []EvidenceRef, origin string) {
 	}
 }
 
-// minorSuffix and currencyMember are the spelling every money pair on this
-// surface uses: `<name>_minor` beside the `currency` it is counted in.
+// minorSuffix and currencyMembers are how money is spelled on this surface:
+// `<name>_minor` beside the `currency` it is counted in. A forecast's figures
+// sit beside the `base_currency` they were converted to.
 const (
-	minorSuffix    = "_minor"
-	currencyMember = "currency"
-	displaySuffix  = "_display"
+	minorSuffix   = "_minor"
+	displaySuffix = "_display"
 )
+
+var currencyMembers = []string{"currency", "base_currency"}
 
 // withReadableAmounts adds `<name>_display` ("72000.00 USD") beside every
 // `<name>_minor` that sits next to a currency. A model then reads money in major
@@ -64,7 +66,7 @@ const (
 // Bytes with no money pair are returned untouched, so a result that carries no
 // amount keeps the handler's exact rendering.
 func withReadableAmounts(data json.RawMessage) json.RawMessage {
-	if !bytes.Contains(data, []byte(minorSuffix+`"`)) || !bytes.Contains(data, []byte(`"`+currencyMember+`"`)) {
+	if !bytes.Contains(data, []byte(minorSuffix+`"`)) || !bytes.Contains(data, []byte(`currency"`)) {
 		return data
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -90,7 +92,7 @@ func addDisplays(node any) bool {
 	added := false
 	switch typed := node.(type) {
 	case map[string]any:
-		if currency, ok := typed[currencyMember].(string); ok && currency != "" {
+		if currency := currencyOf(typed); currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
 		for _, child := range typed {
@@ -102,6 +104,16 @@ func addDisplays(node any) bool {
 		}
 	}
 	return added
+}
+
+// currencyOf is the currency an object's amounts are counted in, if it names one.
+func currencyOf(object map[string]any) string {
+	for _, member := range currencyMembers {
+		if currency, ok := object[member].(string); ok && currency != "" {
+			return currency
+		}
+	}
+	return ""
 }
 
 func addPairDisplays(object map[string]any, currency string) bool {

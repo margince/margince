@@ -41,6 +41,7 @@ func (readContext) Spec() mcp.ToolSpec {
 		Description: readContextCopy.render(), Instead: readContextCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"about":{"description":"catch_up: what has been happening on one record; meeting: what to know before a meeting; brief: this morning's brief"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.ContextURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 

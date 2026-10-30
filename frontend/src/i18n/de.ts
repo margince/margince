@@ -15450,6 +15450,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "verbraucht Anreicherungs-Credits, fragt aber vor jedem Kauf weiterhin nach",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Zugang trennen.",
+  "consent.preset.label": "Was der Assistent darf",
+  "consent.preset.readDraft": "Lesen und entwerfen",
+  "consent.preset.full": "Voller Assistent",
+  "consent.preset.custom": "Selbst wählen",
   "consent.pickOne":
     "Wähle mindestens eine Berechtigung aus oder verweigere den Zugriff.",
   "consent.offline":

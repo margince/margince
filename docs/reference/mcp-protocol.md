@@ -72,8 +72,8 @@ set, it also carries `websiteUrl` and `icons`, both on that origin. The server i
 and the tools to start with, before the rules.
 
 **Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
-`web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency` gets a
-`<name>_display` such as `72000.00 USD`, from `values.MajorUnits`. A model quotes that text, so it never works out the
+`web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency`, or beside
+a forecast's `base_currency`, gets a `<name>_display` such as `72000.00 USD`, from `values.MajorUnits`. A model quotes that text, so it never works out the
 amount on its own. A result with no amount keeps its bytes as the handler wrote them.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
