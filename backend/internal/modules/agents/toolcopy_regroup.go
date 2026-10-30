@@ -79,7 +79,7 @@ var changeActivitiesCopy = toolCopy{
 
 var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the calendar. book places it on the calendar of the seat this " +
-		"passport acts for. invite sends the invitation to its attendees.",
+		"passport acts for and tells nobody else. invite sends the invitation to its attendees.",
 	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
 		"the user's yes first. Read check_availability before booking a time.",
 	Instead: "Use change_activities with log to record a meeting that already happened.",

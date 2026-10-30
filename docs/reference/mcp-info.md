@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 11 |
 | Tool catalog | 138.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36557 |
+| Approx. wire tokens | 36562 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_view`](#read_view) | Read a view | yes |  | 1022 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 473 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -7722,13 +7722,14 @@ before calling, unless they asked for this call themselves; requires passport sc
 **Book or invite to a meeting**
 
 ```text
-Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for.
-invite sends the invitation to its attendees. invite reaches attendees outside the workspace, so
-name them and the time and get the user's yes first. Read check_availability before booking a time.
-Use change_activities with log to record a meeting that already happened. Keep the meeting's id to
-send its invitation. (Governance: runs immediately for book; a human approves first for invite; the
-action book cannot be undone, so tell the user what the call will change and get their yes before
-calling, unless they asked for this call themselves; requires passport scope "send".)
+Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for and
+tells nobody else. invite sends the invitation to its attendees. invite reaches attendees outside
+the workspace, so name them and the time and get the user's yes first. Read check_availability
+before booking a time. Use change_activities with log to record a meeting that already happened.
+Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human
+approves first for invite; the action book cannot be undone, so tell the user what the call will
+change and get their yes before calling, unless they asked for this call themselves; requires
+passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>

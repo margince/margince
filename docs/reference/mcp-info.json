@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 141878,
+    "tool_catalog_bytes": 141900,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36557,
+    "approx_wire_tokens_total": 36562,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 35869,
+      "description_bytes": 35891,
       "input_schema_bytes": 65893,
       "output_schema_bytes": 30862,
-      "description_plus_input_schema_bytes": 101762
+      "description_plus_input_schema_bytes": 101784
     }
   },
   "tools": {
@@ -7052,7 +7052,7 @@
           "readOnlyHint": false,
           "title": "Book or invite to a meeting"
         },
-        "description": "Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for. invite sends the invitation to its attendees. invite reaches attendees outside the workspace, so name them and the time and get the user's yes first. Read check_availability before booking a time. Use change_activities with log to record a meeting that already happened. Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human approves first for invite; the action book cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"send\".)",
+        "description": "Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for and tells nobody else. invite sends the invitation to its attendees. invite reaches attendees outside the workspace, so name them and the time and get the user's yes first. Read check_availability before booking a time. Use change_activities with log to record a meeting that already happened. Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human approves first for invite; the action book cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"send\".)",
         "inputSchema": {
           "properties": {
             "action": {
