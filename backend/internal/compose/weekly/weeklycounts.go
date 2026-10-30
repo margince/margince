@@ -235,12 +235,15 @@ func NextStepTaskSQL(task, meeting string) string {
 }
 
 func countWeekMeetings(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, now, start, end time.Time,
 ) (held, withNextStep int, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos := arg(start), arg(end)
 	hostPos := arg(userID)
+	// The reader Analytics counts a held meeting through. So a meeting redated
+	// after it was held stays in its held week on both surfaces.
+	transition := storekit.MeetingHeldAsOfSQL("m", fmt.Sprintf("$%d", arg(now)))
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
 		return 0, 0, err
@@ -253,15 +256,25 @@ func countWeekMeetings(
 	// meeting nothing said was off, whose time has come and gone, is one that
 	// happened. A calendar connector records no status at all, so the strict
 	// form counted none of a rep's synced meetings in their own review.
+	// The transition's status when it recorded one, so a meeting marked held
+	// and later reopened is not still counted.
+	status := "COALESCE(held.status,m.meeting_status)"
+	// A start whose day cannot be settled is read under either day, as the
+	// Analytics reader reads it.
+	within := "(" + occurredday.WithinAtSQL(transition.Start, transition.Precision, "$%[1]d", "$%[2]d") +
+		" OR (" + transition.UnknownDay + " AND (" +
+		occurredday.WithinAtSQL(transition.Start, "'instant'", "$%[1]d", "$%[2]d") + " OR " +
+		occurredday.WithinAtSQL(transition.Start, "'day'", "$%[1]d", "$%[2]d") + ")))"
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
-		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
+		      AND (` + status + ` IS NULL OR ` + status + ` = 'held')
+		      AND ` + transition.Recorded + `
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
-		      AND ` + occurredday.WithinSQL("m", "$%[1]d", "$%[2]d") + `
+		      AND ` + within + `
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`),
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
+		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`),
+		  (SELECT count(*) FROM activity m `+transition.Join+` WHERE `+heldByRep+`
 		      AND EXISTS (
 		        SELECT 1 FROM activity task
 		         WHERE %[6]s
