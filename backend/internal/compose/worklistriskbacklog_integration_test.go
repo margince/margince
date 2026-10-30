@@ -48,7 +48,11 @@ func seedRiskBacklog(t *testing.T) riskBacklog {
 	}
 	// Past their close, recently touched, also past the sweep's fifty.
 	for i := range slippingScanLimit + 5 {
-		b.closes(t, b.deal(t, rep1, fmt.Sprintf("Overdue %d", i)), -(6 + i))
+		id := b.deal(t, rep1, fmt.Sprintf("Overdue %d", i))
+		b.closes(t, id, -(6 + i))
+		if i == 0 {
+			b.taskOnDeal(t, id)
+		}
 	}
 	for i := range 8 {
 		b.closes(t, b.deal(t, w.r.e.Rep2, fmt.Sprintf("Rep2 overdue %d", i)), -(2 + i))
@@ -99,6 +103,20 @@ func (b *riskBacklog) quiet(t *testing.T, deal ids.UUID, days int) {
 func (b *riskBacklog) closes(t *testing.T, deal ids.UUID, days int) {
 	t.Helper()
 	b.r.e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, deal, b.r.now.AddDate(0, 0, days).Format(time.DateOnly))
+}
+
+// taskOnDeal gives Rep1 the most overdue task, filed under a deal past the
+// sweep. The task ranks above the tail and its deal stays at risk below it.
+func (b *riskBacklog) taskOnDeal(t *testing.T, deal ids.UUID) {
+	t.Helper()
+	subject, due := "Chase the deal", b.r.now.AddDate(0, 0, -20)
+	rep1 := ids.From[ids.UserKind](b.r.e.Rep1)
+	if _, _, err := b.r.e.Activities.LogActivity(b.r.e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, Source: "manual", AssigneeID: &rep1,
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+	}); err != nil {
+		t.Fatalf("logging the task on the deal: %v", err)
+	}
 }
 
 // mailOnDeal logs one waiting request to Rep1, filed under the deal.
