@@ -12017,7 +12017,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.noticeSkippedType":
     "Đã bỏ qua {name}. Định dạng hỗ trợ: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "settings.voice.noticeSkippedUnreadable":
-    "Không thể mở {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy dán nội dung văn bản vào thay thế.",
+    "Không thể mở {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy lưu lại dưới dạng .txt hoặc .docx rồi thêm tệp đó.",
   "settings.voice.noticeSkippedEmpty":
     "Đã bỏ qua {name}. Tệp không có văn bản.",
   "settings.voice.noticeDismissed":
