@@ -77,14 +77,12 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 		willNotLand[id] = true
 	}
 	for _, edge := range edges {
-		if willNotLand[edge.FromID] {
-			report.AssociationsSkipped = append(report.AssociationsSkipped,
-				skippedAssocFor(edge, migration.Why(migration.ReasonLinkRowNotImported, "name", edge.ToID)))
-			continue
-		}
 		why, err := writers.predictLink(ctx, edge)
 		if err != nil {
 			return migration.Report{}, err
+		}
+		if why.Code == "" && willNotLand[edge.FromID] {
+			why = migration.Why(migration.ReasonLinkRowNotImported, "name", edge.ToID)
 		}
 		if why.Code == "" {
 			report.Associations++
@@ -115,7 +113,7 @@ func (w *csvWriters) predictLink(ctx context.Context, edge migration.Assoc) (mig
 		return answer.Why, nil
 	}
 	resolved, err := w.resolveEmployer(ctx, edge.ToID)
-	if err != nil || resolved.found {
+	if err != nil || resolved.found || resolved.why.Code == migration.ReasonEmployerNotFound {
 		return migration.Reason{}, err
 	}
 	return resolved.why, nil

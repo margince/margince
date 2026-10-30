@@ -511,6 +511,12 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "approval.preview.createEmployer":
+    "Create the missing company and link this contact as an employee.",
+  "approval.preview.reuseEmployer":
+    "Link this contact to the existing company.",
+  "approval.preview.resolveEmployer":
+    "Resolves the employer from the company or work address, reuses or creates the company, and links employment. Uncertain domains wait for review; eligible enrichment follows company settings.",
   "approval.preview.createContact":
     "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
   "approval.preview.recordAcquisition":
@@ -8335,6 +8341,10 @@ export const en = {
     "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
     "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_refused":
+    "The employer could not be resolved. Choose an unambiguous company that you may link.",
+  "import.reason.employer_will_create":
+    "The employer {name} will be created if it is still missing when this row is imported.",
   "import.reason.empty_payload": "The row has no fields.",
   "import.reason.field_inactive":
     "“{value}” cannot be written: this field is no longer active.",

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
+<!-- describes: backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -116,9 +116,13 @@ One pipeline step runs *inside* the Sink, before anything is written:
   contacts module. A full match is used again, and a close match makes a record and logs it for the
   review queue. An erased address stays erased.
 
-  The **company** is not made here. Making a company from every mail domain that is not a consumer one
-  would make companies named after single users (`sebastian@kestner.example` would become "Kestner").
-  - Capture records an open question in `company_domain_disposition`, and a `domain_triage` site read
+  The employer check belongs to the shared contact writer in
+  `backend/internal/modules/contacts/employerresolve.go`. Typed entry, agents, leads,
+  imports and capture all reach it. A chosen company is used again. A company
+  name uses one clear match or creates a company and employment in the same write. Conflicting
+  name and domain matches are refused. Without a name, a business domain reuses a known company
+  or enters durable triage; a personal domain never supplies a made-up company name.
+  - The resolver records an open question in `company_domain_disposition`, and a `domain_triage` site read
     answers it. A `company` verdict makes the company from what the site states. A `personal` or
     `provider` verdict refuses one for good.
   - Mail from a consumer domain is answered by that domain, and asks nothing. The list is the shipped baseline plus
