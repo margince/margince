@@ -110,6 +110,14 @@ export function button(
   return node;
 }
 
+/** rowAction is a row's way on, drawn as a text action; view.css adds its arrow. */
+export function rowAction(label: string, onPress: () => void): HTMLElement {
+  const action = el("button", "row-action", label);
+  action.setAttribute("type", "button");
+  action.addEventListener("click", onPress);
+  return action;
+}
+
 /**
  * keepFocus runs a renderer that rebuilds the whole card and puts focus back on
  * the button the reader was on, matched by its label. A press re-renders for its

@@ -10,7 +10,7 @@ import { askAssistant } from "../actions";
 import { badge } from "../badge";
 import { el } from "../bridge";
 import { hero, type Part, ring, segments, share } from "../hero";
-import { avatar, button, panel, panelBody, viewRenderer } from "../parts";
+import { avatar, panel, panelBody, rowAction, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asFiniteNumber,
@@ -83,9 +83,7 @@ function row(r: Row): HTMLElement {
     end.appendChild(el("span", "figure attention-figure", r.figure));
   }
   if (r.bar !== undefined) end.appendChild(r.bar);
-  end.appendChild(
-    button("Catch me up", "ghost", () => askAssistant(r.question)),
-  );
+  end.appendChild(rowAction("Catch me up", () => askAssistant(r.question)));
   item.append(r.marker, text, end);
   return item;
 }

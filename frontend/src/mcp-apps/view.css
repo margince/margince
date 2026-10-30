@@ -213,16 +213,26 @@ ol {
   list-style: none;
 }
 
-/* A queue of proposals: one card per row, with air between them. */
+/* A queue of proposals: one flat row each, divided by a hairline. */
 .decision-list {
   display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  margin-top: var(--space-2);
 }
 
 .decision-list > li {
   display: grid;
   gap: var(--space-2);
+}
+
+.decision-list > li + li {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.decision-list .dcard {
+  border: 0;
+  border-radius: 0;
+  padding-inline: 0;
+  box-shadow: none;
 }
 
 /* In a chat the staged tint turns the whole card one colour, so a decision
@@ -234,10 +244,37 @@ ol {
 }
 
 .bundle-line {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-md);
-  background: var(--bgChip);
+  justify-content: space-between;
+  padding-top: var(--space-4);
+}
+
+/* A row's quiet way on: a text action that reads as a link, not a control
+   competing with the row's own figure. */
+.row-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.row-action::after {
+  content: "→" / "";
+}
+
+.row-action:hover {
   color: var(--textPrimary);
+}
+
+.row-action:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* The lead of a card: the figure it is about, read before the rows. It sits
@@ -245,8 +282,8 @@ ol {
 .view-hero {
   display: grid;
   gap: var(--space-4);
-  padding-block-end: var(--space-4);
-  border-block-end: 1px solid var(--groundEdge);
+  padding-block-end: var(--space-5);
+  border-block-end: 1px solid var(--borderSubtle);
 }
 
 /* With a picture beside the words, the two share a row while there is room
@@ -290,7 +327,7 @@ ol {
 }
 
 .view-hero-sentence {
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
   color: var(--textSecondary);
 }
 
@@ -303,8 +340,8 @@ ol {
 
 .view-segments-track {
   display: flex;
-  gap: 3px;
-  block-size: var(--space-3);
+  gap: 2px;
+  block-size: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
   overflow: hidden;
@@ -360,9 +397,10 @@ ol {
 }
 
 .view-swatch {
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: var(--r-xs);
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 .view-legend-value {
@@ -401,8 +439,8 @@ ol {
 .view-ring-middle {
   display: grid;
   place-items: center;
-  inline-size: 78px;
-  block-size: 78px;
+  inline-size: 92px;
+  block-size: 92px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--ground);
@@ -420,22 +458,21 @@ ol {
   color: var(--textSecondary);
 }
 
-/* The ranked list under a lead: each row a quiet card of its own. */
+/* The ranked list under a lead: flat rows divided by a hairline. */
 .attention-list {
-  display: grid;
-  gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-4);
+  padding: 0 var(--space-4) var(--space-2);
 }
 
 .attention-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-md);
-  background: var(--ground);
+  gap: var(--space-4);
+  align-items: start;
+  padding-block: var(--space-4);
+}
+
+.attention-row + .attention-row {
+  border-top: 1px solid var(--borderSubtle);
 }
 
 .attention-name {
@@ -443,14 +480,9 @@ ol {
 }
 
 .attention-rank {
-  display: inline-grid;
-  place-items: center;
-  inline-size: 28px;
-  block-size: 28px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-  color: var(--textPrimary);
+  min-inline-size: var(--space-4);
+  font-variant-numeric: tabular-nums;
+  color: var(--textSecondary);
 }
 
 .attention-reasons {
@@ -463,7 +495,7 @@ ol {
   display: grid;
   justify-items: end;
   gap: var(--space-2);
-  min-inline-size: 7rem;
+  min-inline-size: 8rem;
 }
 
 .attention-figure {

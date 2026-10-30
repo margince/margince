@@ -17,7 +17,7 @@ import {
   proposalOf,
 } from "../decision";
 import { hero, segments } from "../hero";
-import { button, panel, panelBody, viewRenderer } from "../parts";
+import { button, panel, panelBody, rowAction, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asList,
@@ -185,7 +185,7 @@ function morePage(cursor: string): HTMLElement {
   const line = el("div", "choices");
   line.append(
     el("p", "meta", "More are waiting than this page shows."),
-    button("Show the next page", "ghost", () =>
+    rowAction("Show the next page", () =>
       askAssistant(
         `Show me the next page of approvals waiting for me (cursor ${cursor}).`,
       ),
