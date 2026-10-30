@@ -443,6 +443,8 @@ export interface components {
             currency_at_change?: string;
             /** @description The target stage's win probability, frozen at the moment of the move. */
             win_probability: number;
+            /** @description The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note. */
+            lost_reason_code?: string;
             /**
              * Format: uuid
              * @description The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards.

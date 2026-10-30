@@ -3674,7 +3674,10 @@ public.deal.deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-900
 public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
-public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL)))
+public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))
+public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded'::text, 'mapped'::text])))))
+public.deal.deal_lost_reason_code_fkey FOREIGN KEY (lost_reason_code) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
+public.deal.deal_lost_reason_code_only_when_lost CHECK (((lost_reason_code IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -3707,6 +3710,8 @@ public.deal.id uuid NOT NULL gen=- def=uuidv7()
 public.deal.last_activity_at timestamp with time zone gen=- def=-
 public.deal.legal_hold boolean NOT NULL gen=- def=false
 public.deal.lost_reason text gen=- def=-
+public.deal.lost_reason_basis text gen=- def=-
+public.deal.lost_reason_code text gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
@@ -3815,6 +3820,43 @@ public.deal_document_hide.deal_id uuid NOT NULL gen=- def=-
 public.deal_document_hide.hidden_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_document_hide.hidden_by text NOT NULL gen=- def=-
 public.deal_document_hide_pkey CREATE UNIQUE INDEX deal_document_hide_pkey ON public.deal_document_hide USING btree (deal_id, attachment_id)
+public.deal_loss_reason acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_loss_reason.active boolean NOT NULL gen=- def=true
+public.deal_loss_reason.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_loss_reason.deal_loss_reason_key_key UNIQUE (key)
+public.deal_loss_reason.deal_loss_reason_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text))
+public.deal_loss_reason.deal_loss_reason_label_present CHECK ((length(btrim(label)) > 0))
+public.deal_loss_reason.deal_loss_reason_pkey PRIMARY KEY (id)
+public.deal_loss_reason.deal_loss_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.deal_loss_reason.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_loss_reason.key text NOT NULL gen=- def=-
+public.deal_loss_reason.label text NOT NULL gen=- def=-
+public.deal_loss_reason.label_key text gen=s def=label_key_while_shipped(label, shipped_label, shipped_label_key)
+public.deal_loss_reason.shipped_label text gen=- def=-
+public.deal_loss_reason.shipped_label_key text gen=- def=-
+public.deal_loss_reason.sort_order integer NOT NULL gen=- def=0
+public.deal_loss_reason.system boolean NOT NULL gen=- def=false
+public.deal_loss_reason.trg_deal_loss_reason_updated CREATE TRIGGER trg_deal_loss_reason_updated BEFORE UPDATE ON public.deal_loss_reason FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_loss_reason.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_loss_reason.version bigint NOT NULL gen=- def=1
+public.deal_loss_reason_key_key CREATE UNIQUE INDEX deal_loss_reason_key_key ON public.deal_loss_reason USING btree (key)
+public.deal_loss_reason_mapping acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_loss_reason_mapping.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_key_shape CHECK ((note_key ~ '^[0-9a-f]{32}$'::text))
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_note_key_key UNIQUE (note_key)
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_pkey PRIMARY KEY (id)
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_reason_fkey FOREIGN KEY (reason_key) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.deal_loss_reason_mapping.decided_by text NOT NULL gen=- def=-
+public.deal_loss_reason_mapping.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_loss_reason_mapping.note_key text NOT NULL gen=- def=-
+public.deal_loss_reason_mapping.reason_key text NOT NULL gen=- def=-
+public.deal_loss_reason_mapping.trg_deal_loss_reason_mapping_updated CREATE TRIGGER trg_deal_loss_reason_mapping_updated BEFORE UPDATE ON public.deal_loss_reason_mapping FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.deal_loss_reason_mapping.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_loss_reason_mapping.version bigint NOT NULL gen=- def=1
+public.deal_loss_reason_mapping_note_key_key CREATE UNIQUE INDEX deal_loss_reason_mapping_note_key_key ON public.deal_loss_reason_mapping USING btree (note_key)
+public.deal_loss_reason_mapping_pkey CREATE UNIQUE INDEX deal_loss_reason_mapping_pkey ON public.deal_loss_reason_mapping USING btree (id)
+public.deal_loss_reason_pkey CREATE UNIQUE INDEX deal_loss_reason_pkey ON public.deal_loss_reason USING btree (id)
 public.deal_move_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_move_dismissal.deal_id uuid NOT NULL gen=- def=-
 public.deal_move_dismissal.deal_move_dismissal_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
@@ -4068,6 +4110,7 @@ public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_deal_id_id_key UNIQUE (deal_id, id)
 public.deal_stage_history.deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE SET NULL (from_stage_id)
+public.deal_stage_history.deal_stage_history_lost_reason_code_fkey FOREIGN KEY (lost_reason_code_at_change) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
 public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))))
@@ -4077,6 +4120,7 @@ public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.fx_date_at_change date gen=- def=-
 public.deal_stage_history.fx_rate_at_change numeric gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.lost_reason_code_at_change text gen=- def=-
 public.deal_stage_history.owner_id_at_change uuid gen=- def=-
 public.deal_stage_history.pipeline_id_at_change uuid gen=- def=-
 public.deal_stage_history.reversal_of uuid gen=- def=-
@@ -4839,6 +4883,9 @@ public.idx_deal_commercial_motion CREATE INDEX idx_deal_commercial_motion ON pub
 public.idx_deal_company CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_deal_correction_deal CREATE INDEX idx_deal_correction_deal ON public.deal_correction USING btree (deal_id)
 public.idx_deal_document_hide_attachment CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id)
+public.idx_deal_loss_reason_mapping_reason CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key)
+public.idx_deal_lost_reason_code CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)
+public.idx_deal_lost_reason_note_key CREATE INDEX idx_deal_lost_reason_note_key ON public.deal USING btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
 public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))
@@ -4864,6 +4911,7 @@ public.idx_deal_room_thread_room CREATE INDEX idx_deal_room_thread_room ON publi
 public.idx_deal_search CREATE INDEX idx_deal_search ON public.deal USING gin (search_tsv)
 public.idx_deal_stage CREATE INDEX idx_deal_stage ON public.deal USING btree (stage_id) WHERE (archived_at IS NULL)
 public.idx_deal_stage_history_changed CREATE INDEX idx_deal_stage_history_changed ON public.deal_stage_history USING btree (changed_at)
+public.idx_deal_stage_history_lost_reason_code CREATE INDEX idx_deal_stage_history_lost_reason_code ON public.deal_stage_history USING btree (lost_reason_code_at_change) WHERE (lost_reason_code_at_change IS NOT NULL)
 public.idx_deal_stalled CREATE INDEX idx_deal_stalled ON public.deal USING btree (last_activity_at) WHERE ((status = 'open'::text) AND (archived_at IS NULL))
 public.idx_deal_suggestion_accepted_deal CREATE INDEX idx_deal_suggestion_accepted_deal ON public.deal_suggestion USING btree (accepted_deal_id) WHERE (accepted_deal_id IS NOT NULL)
 public.idx_deal_suggestion_company CREATE INDEX idx_deal_suggestion_company ON public.deal_suggestion USING btree (company_id, decided_at)

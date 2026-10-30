@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
+<!-- describes: frontend/src/features/analytics frontend/src/features/settings/lossreasons.tsx backend/internal/modules/deals/lossreasonmapping.go backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
 # Performance and saved sales reports
 
 ## Where do I start my sales review?
@@ -74,6 +74,16 @@ This comparison is not **Deal value needed** on the **Forecast** page. That figu
   real dates; a new view needs two captures before it can show movement.
 
 Open **Definitions** to see how each number is worked out, the rules for credit, the required fields and what the numbers cover. A value that is not there, only in part, or held back is not a measured zero. Qualified pipeline needs an admin to set up the qualifying stages first; they count only from then on.
+
+## Why were deals lost?
+
+Ask a question about won and lost deals, and group it by **Loss reason from the list**. Group by **How the loss reason was set** to see where each answer came from:
+
+- **Picked at close**: the reason was picked when the deal was closed.
+- **Mapped from a note**: an administrator matched the deal's older note to a reason.
+- **Note not mapped**: the deal has only a note, and nobody has matched it yet.
+
+Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
 
 ## How do I save or share a report?
 

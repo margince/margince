@@ -1776,6 +1776,9 @@ type PublicEventDealStageChanged struct {
 	// Imported True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise.
 	Imported *bool `json:"imported,omitempty"`
 
+	// LostReasonCode The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
+
 	// PartnerAttribution What that partner did — sourced or influenced — at the moment of the move. Commission accrues on sourced only.
 	PartnerAttribution *string `json:"partner_attribution,omitempty"`
 
@@ -3620,7 +3623,7 @@ var PublicEventSamples = map[string]string{
 	"deal.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.owner_changed":                        "{\"from_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"to_owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal.restored":                             "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
-	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
+	"deal.stage_changed":                        "{\"amount_minor_at_change\":1,\"currency_at_change\":\"Sample currency at change\",\"deal_name\":\"Sample deal name\",\"from_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"from_stage_name\":\"Sample from stage name\",\"from_status\":\"Sample from status\",\"fx_rate_to_base\":\"Sample fx rate to base\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"lost_reason_code\":\"Sample lost reason code\",\"partner_attribution\":\"Sample partner attribution\",\"partner_company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"to_stage_name\":\"Sample to stage name\",\"to_status\":\"Sample to status\",\"win_probability\":1}",
 	"deal.updated":                              "{\"changed_fields\":{},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"deal_room.archived":                        "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"deal_room.closed":                          "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

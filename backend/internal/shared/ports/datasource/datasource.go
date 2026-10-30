@@ -239,9 +239,12 @@ type UpdateInput struct {
 type AdvanceDealInput struct {
 	DealID    ids.UUID
 	ToStageID ids.UUID
-	// LostReason is required when the target stage's semantic is lost
-	// (deal_lost_reason); ignored otherwise.
+	// LostReason is the note on a loss. A move to a lost stage needs it or
+	// LostReasonCode (deal_lost_reason); a move elsewhere ignores it.
 	LostReason *string
+	// LostReasonCode is a loss reason key, validated by the deal store's loss
+	// check. Without one a loss is recorded with its note alone, as unmapped.
+	LostReasonCode *string
 	// WonWithoutContractReason says why a win has no agreement behind it
 	// (ADR-0109 §6). Without it on this seam an assistant could not answer the
 	// win gate at all — the rule would refuse every agent-driven close of a

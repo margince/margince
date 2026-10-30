@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 137.3 KB |
+| Tool catalog | 137.5 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36242 |
+| Approx. wire tokens | 36286 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 33.6 KB | 24% | Yes, every step |
-| Input schemas | 64.6 KB | 47% | Yes, every step |
+| Descriptions (incl. governance clause) | 33.5 KB | 24% | Yes, every step |
+| Input schemas | 64.8 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
-| **Description + input schema** | **98.1 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **98.3 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1271 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1022 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
@@ -2162,7 +2162,11 @@ passport scope "write".)
       "type": "string"
     },
     "lost_reason": {
-      "description": "move_deal only: Required when the target stage closes the deal as lost",
+      "description": "move_deal only: A free note explaining a loss",
+      "type": "string"
+    },
+    "lost_reason_code": {
+      "description": "move_deal only: An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped",
       "type": "string"
     },
     "next_step": {
@@ -7162,9 +7166,9 @@ which offers it without applying it.
 ```text
 Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
 deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
-record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly
-what the matching REST route answers. Name the view, then the id it reads and any of its filters. A
-view refuses an argument it does not take and names the ones it does.
+record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers what its
+REST route answers. Name the view, then the id it reads and any of its filters. A view refuses an
+argument it does not take and names the ones it does.
 ```
 
 <details><summary>Input schema</summary>
@@ -7404,6 +7408,7 @@ view refuses an argument it does not take and names the ones it does.
         "lead_sources",
         "list_members",
         "lists",
+        "loss_reasons",
         "meeting_brief",
         "meeting_invitation",
         "name_seats",

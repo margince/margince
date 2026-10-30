@@ -36,7 +36,7 @@ var readViewCopy = toolCopy{
 	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
 		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
 		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
-		"Each view answers exactly what the matching REST route answers.",
+		"Each view answers what its REST route answers.",
 	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
 		"it does not take and names the ones it does.",
 }
@@ -234,7 +234,7 @@ var advanceDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won/lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"decision: staged for approval, with a lost_reason_code from the loss reasons view for a losing stage. A lost_reason note explains it; a note alone is recorded as an unmapped loss. Read the target " +
 		"stage's semantic rather than guessing from its name.",
 	Instead: "Use progress_deal when the move should also leave a note explaining it, which is " +
 		"almost always what a human means by moving a deal on.",
@@ -247,7 +247,7 @@ var progressDealCopy = toolCopy{
 		"timeline saying why, in one call.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"decision: staged for approval, with a lost_reason_code from the loss reasons view for a losing stage. A lost_reason note explains it; a note alone is recorded as an unmapped loss. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +
 		"note follows it, so a note that fails to write does not put the deal back — the answer " +
 		"says so, and the note is then log_activity's to retry.",

@@ -135,6 +135,8 @@ var tableOwners = map[string]string{
 	"stage_progression_policy":  "internal/modules/deals",
 	"deal_stage_history":        "internal/modules/deals",
 	"deal_acquisition_source":   "internal/modules/deals",
+	"deal_loss_reason":          "internal/modules/deals",
+	"deal_loss_reason_mapping":  "internal/modules/deals",
 	"record_assignment":         "internal/modules/assignments",
 	"record_role":               "internal/modules/assignments",
 	"project_health_assessment": "internal/modules/projects",

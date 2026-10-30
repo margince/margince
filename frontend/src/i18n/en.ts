@@ -5108,7 +5108,10 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
-  "deals.lostReasonNeeded": "Enter why the deal was lost.",
+  "deals.lostReasonNeeded": "Pick why the deal was lost.",
+  "deals.lostReasonCode": "Why was it lost?",
+  "deals.lostReasonPick": "Pick a reason",
+  "deals.lostReasonNote": "Note (optional)",
   "deals.winReasonNeeded": "Pick how the deal was won.",
   "deals.winDetailNeeded": "Describe how the deal was won.",
   "deals.closeTasks.legend_one":
@@ -5268,6 +5271,46 @@ export const en = {
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
   "legalEntities.countryHint": "Two letters, for example AT.",
+  "lossReasons.title": "Loss reasons",
+  "lossReasons.sub":
+    "The reasons to pick from when a deal is lost. Reports count lost deals by them.",
+  "lossReasons.builtin.price": "Price",
+  "lossReasons.builtin.competitor": "Chose a competitor",
+  "lossReasons.builtin.no_budget": "No budget",
+  "lossReasons.builtin.no_decision": "No decision",
+  "lossReasons.builtin.timing": "Bad timing",
+  "lossReasons.builtin.product_fit": "Product did not fit",
+  "lossReasons.builtin.went_silent": "Stopped responding",
+  "lossReasons.builtin.other": "Other",
+  "lossReasons.loading": "Loading reasons…",
+  "lossReasons.addOpen": "New reason",
+  "lossReasons.addTitle": "New loss reason",
+  "lossReasons.addConfirm": "Add reason",
+  "lossReasons.renameTitle": "Rename reason",
+  "lossReasons.activeFor": "{label} can be picked when a deal is lost",
+  "lossReasons.colReason": "Reason",
+  "lossReasons.colDeals": "Deals",
+  "lossReasons.deals_one": "{count} deal",
+  "lossReasons.deals_other": "{count} deals",
+  "lossReasons.duplicate":
+    "A reason with this name or key already exists. Choose another name.",
+  "lossReasons.legacyTitle": "Older loss notes",
+  "lossReasons.legacySub":
+    "Deals lost before this list existed have only a note. Pick the reason each note counts as, then apply. The notes stay as they were written.",
+  "lossReasons.colPending": "To change",
+  "lossReasons.colNote": "Note",
+  "lossReasons.colMapTo": "Counts as",
+  "lossReasons.mapFor": "Reason for “{note}”",
+  "lossReasons.pick": "Pick a reason",
+  "lossReasons.apply": "Apply to deals",
+  "lossReasons.applied_one": "{count} deal will be updated in the background.",
+  "lossReasons.applied_other":
+    "{count} deals will be updated in the background.",
+  "lossReasons.remaining_one":
+    "Showing the {shown} most common of {count} note.",
+  "lossReasons.remaining_other":
+    "Showing the {shown} most common of {count} notes.",
+  "lossReasons.legacyEmpty": "Every lost deal has a reason.",
   "acqSources.title": "Source list",
   "acqSources.builtin.inbound": "Inbound",
   "acqSources.builtin.outbound": "Outbound",
@@ -7153,6 +7196,12 @@ export const en = {
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
   "analytics.field.lost_reason": "Lost reason",
+  "analytics.field.loss_reason": "Loss reason from the list",
+  "analytics.field.loss_reason_state": "How the loss reason was set",
+  "analytics.lossState.recorded": "Picked at close",
+  "analytics.lossState.mapped": "Mapped from a note",
+  "analytics.lossState.unmapped": "Note not mapped",
+  "analytics.lossState.missing": "No reason",
   "analytics.field.meeting_status": "Meeting status",
   "analytics.field.open_commitments": "Open tasks",
   "analytics.field.open_deal_value_minor": "Open deal value",
@@ -11798,6 +11847,8 @@ export const en = {
     "Stages a deal moves through, for the whole company.",
   "settings.page.acquisition.sub":
     "Business channels a deal can be attributed to.",
+  "settings.page.lossreasons.sub":
+    "Why deals are lost, and which reason older notes count as.",
   "settings.page.recordroles.sub":
     "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
@@ -11858,6 +11909,7 @@ export const en = {
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Acquisition sources",
+  "settings.tab.lossreasons": "Loss reasons",
   "settings.tab.recordroles": "Responsibility roles",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",

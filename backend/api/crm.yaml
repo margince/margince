@@ -12300,6 +12300,167 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /loss-reasons:
+    get:
+      tags: [Deals]
+      operationId: listLossReasons
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the reasons a deal can be lost for, active and retired, in display order.
+      description: |
+        The administered list a closer picks from when a deal is lost. Retired entries are
+        returned so a deal still carrying one renders its label and a report can still group
+        by it; they cannot be newly chosen.
+      responses:
+        '200':
+          description: The loss reason list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LossReasonListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Deals]
+      operationId: createLossReason
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Add a loss reason.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateLossReasonRequest' }
+      responses:
+        '201':
+          description: Created loss reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LossReason' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /loss-reasons/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Deals]
+      operationId: updateLossReason
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Relabel, reorder or retire a loss reason.
+      description: |
+        Retirement is `active: false`, and there is no delete: a key a lost deal carries must
+        stay resolvable. Relabelling never rewrites the stored key, so a report keyed on it
+        stays comparable across the rename.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateLossReasonRequest' }
+      responses:
+        '200':
+          description: Updated loss reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LossReason' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /loss-reasons/legacy:
+    get:
+      tags: [Deals]
+      operationId: listLegacyLossReasons
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: List the notes of lost deals that a mapping speaks for.
+      description: |
+        For the administrator who maps old notes to codes. One row per note, trimmed and
+        compared without case, over the lost deals with no code or a mapped one. Each row says
+        how many deals carry the note, the decision taken for it, and how many deals that
+        decision would still change. Undecided notes come first, then the most frequent. Only
+        deals the caller may read count.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: The notes still to map, and the decisions already taken for them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegacyLossReasonListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /loss-reasons/legacy/{text_hash}:
+    parameters:
+      - name: text_hash
+        in: path
+        required: true
+        description: The `text_hash` a legacy list row names.
+        schema: { type: string, pattern: '^[0-9a-f]{32}$' }
+    put:
+      tags: [Deals]
+      operationId: decideLegacyLossReason
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Decide which loss reason one legacy note counts under.
+      description: |
+        Records the decision and who took it. No deal changes here: the mapping reaches the
+        deals when an administrator applies the reviewed mappings. A deal whose closer chose
+        a code keeps it.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideLegacyLossReasonRequest' }
+      responses:
+        '200':
+          description: The decision as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LossReasonMapping' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /loss-reasons/legacy/apply:
+    post:
+      tags: [Deals]
+      operationId: applyLegacyLossReasons
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Apply the reviewed legacy mappings to the lost deals they match.
+      description: |
+        Starts the background correction that writes each named decision onto the lost deals
+        whose note matches it, with an audit entry and an event per deal. Only the decisions
+        named, at the versions named, are applied: 409 when one has since changed or gone. A
+        deal whose closer chose a code is left as it is, and a second run changes nothing the
+        first one wrote. 409 while an earlier run is still working. Progress shows in System
+        health. Requires data_task:update as well as the right to decide the mappings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplyLegacyLossReasonsRequest' }
+      responses:
+        '202':
+          description: The correction was started.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApplyLegacyLossReasonsResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /record-roles:
     get:
       tags: [Assignments]
@@ -28916,6 +29077,7 @@ paths:
               required: [lost_reason]
               properties:
                 lost_reason: { type: string, minLength: 1 }
+                lost_reason_code: { type: string, description: 'An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.' }
               additionalProperties: false
       responses:
         '204':
@@ -46816,7 +46978,10 @@ components:
           description: The stage to move to. Its semantic decides whether the move is confirm-first.
         lost_reason:
           type: string
-          description: Required when the stage closes the deal as lost.
+          description: 'A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.'
+        lost_reason_code:
+          type: string
+          description: 'An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.'
         won_without_contract_reason:
           type: string
           enum: [imported, purchase_order, verbal, renewal_by_email, other]
@@ -47955,7 +48120,21 @@ components:
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
         status: { type: string, enum: [open, won, lost], default: open }
-        lost_reason: { type: [string, 'null'], description: Required when status=lost. }
+        lost_reason: { type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.' }
+        lost_reason_code:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            The key from `/loss-reasons` this loss counts under. Set at the close, or later by an
+            administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a
+            lost deal with only a note nobody has mapped yet.
+        lost_reason_basis:
+          type: [string, 'null']
+          readOnly: true
+          enum: [recorded, mapped, null]
+          description: >-
+            How the code was set: `recorded` when the closer chose it, `mapped` when an
+            administrator mapped the deal's legacy note to it. Null when there is no code.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
@@ -48177,7 +48356,13 @@ components:
       properties:
         to_stage_id: { type: string, format: uuid, description: Target stage (must belong to the deal's pipeline). }
         status: { type: string, enum: [open, won, lost], description: Set when advancing into a terminal stage. }
-        lost_reason: { type: [string, 'null'], description: Required if status=lost. }
+        lost_reason: { type: [string, 'null'], description: 'A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.' }
+        lost_reason_code:
+          type: [string, 'null']
+          description: >-
+            An active key from `/loss-reasons`, expected on a move to a lost stage and refused
+            on any other move. A loss with only `lost_reason` is accepted and recorded with no
+            code: it counts as unmapped until an administrator maps its note.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
@@ -53130,6 +53315,131 @@ components:
         label: { type: string, minLength: 1, maxLength: 120 }
         sort_order: { type: integer }
         active: { type: boolean }
+
+    LossReason:
+      type: object
+      description: One administered reason a deal can be lost for.
+      required: [id, key, label, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        key:
+          type: string
+          description: >-
+            The stable identifier stored on the deal. Lowercase, never changes once created, so a
+            report keyed on it survives a rename.
+        label: { type: string, description: What readers see. }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
+        sort_order: { type: integer, description: Display order in pickers and settings. }
+        active:
+          type: boolean
+          description: False is retired. Deals keep it and reports group by it, but no new loss can choose it.
+        system:
+          type: boolean
+          readOnly: true
+          description: Seeded with the installation. Fully editable; it cannot be removed.
+        deal_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >-
+            Live lost deals carrying this key that the caller may see. Absent when the caller may
+            not read deals. Set on the list read; absent on the record a write answers.
+        version: { type: integer, format: int64, readOnly: true }
+        created_at: { type: string, format: date-time, readOnly: true }
+        updated_at: { type: string, format: date-time, readOnly: true }
+
+    LossReasonListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/LossReason' } }
+
+    CreateLossReasonRequest:
+      type: object
+      required: [label]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: Derived from the label when omitted.
+        label: { type: string, minLength: 1, maxLength: 120 }
+        sort_order: { type: integer }
+
+    UpdateLossReasonRequest:
+      type: object
+      description: Every field optional; an omitted one is left alone.
+      properties:
+        label: { type: string, minLength: 1, maxLength: 120 }
+        sort_order: { type: integer }
+        active: { type: boolean }
+
+    LossReasonMapping:
+      type: object
+      description: An administrator's decision that one legacy note counts under one loss reason.
+      required: [id, text_hash, reason_key, decided_by, decided_at, version]
+      properties:
+        id: { type: string, format: uuid }
+        text_hash: { type: string, description: 'The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note.' }
+        reason_key: { type: string, description: The key from `/loss-reasons`. }
+        decided_by: { type: string, description: 'Who took the decision, in the `captured_by` form.' }
+        decided_at: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+
+    LegacyLossReason:
+      type: object
+      description: One note of lost deals a mapping speaks for.
+      required: [text_hash, text, deal_count, pending_count]
+      properties:
+        text_hash: { type: string, description: The key to decide this note under. }
+        text: { type: string, description: The note as one of its deals carries it. }
+        deal_count: { type: integer, minimum: 1, description: Lost deals the caller may read that carry it with no code or a mapped one. }
+        pending_count: { type: integer, minimum: 0, description: 'Of those, how many the decision would change if applied now. Zero with no decision.' }
+        mapping: { $ref: '#/components/schemas/LossReasonMapping' }
+
+    LegacyLossReasonListResponse:
+      type: object
+      required: [data, distinct_total]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/LegacyLossReason' } }
+        distinct_total: { type: integer, minimum: 0, description: 'How many notes the list holds, of which `data` is the first page.' }
+
+    DecideLegacyLossReasonRequest:
+      type: object
+      required: [reason_key]
+      additionalProperties: false
+      properties:
+        reason_key: { type: string, description: An active key from `/loss-reasons`. }
+
+    ApplyLegacyLossReasonsRequest:
+      type: object
+      required: [mappings]
+      additionalProperties: false
+      properties:
+        mappings:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: The decisions the administrator reviewed, each at the version shown.
+          items:
+            type: object
+            required: [id, version]
+            additionalProperties: false
+            properties:
+              id: { type: string, format: uuid }
+              version: { type: integer, format: int64, minimum: 1 }
+
+    ApplyLegacyLossReasonsResponse:
+      type: object
+      required: [mappings, deals]
+      properties:
+        mappings: { type: integer, minimum: 0, description: How many reviewed mappings the correction applies. }
+        deals:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          description: >-
+            How many lost deals this run changes. One run changes at most 1000; apply again for
+            the rest. Zero starts no run.
 
     RecordRole:
       type: object

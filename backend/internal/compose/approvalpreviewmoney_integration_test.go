@@ -149,7 +149,7 @@ func TestALostReasonIsClearedOnEveryLandingThatIsNotLost(t *testing.T) {
 	}
 	for _, destination := range []ids.StageID{won, open} {
 		deal := ids.From[ids.DealKind](e.SeedDeal(t, "Harbor renewal", pipeline, open, &e.Rep1))
-		if _, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: lost, LostReason: new("competitor")}); err != nil {
+		if _, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: lost, LostReasonCode: new("competitor")}); err != nil {
 			t.Fatal(err)
 		}
 		landed, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: destination, WonWithoutContractReason: new("verbal")})

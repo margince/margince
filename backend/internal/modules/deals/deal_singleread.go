@@ -31,7 +31,7 @@ import (
 // stalled flag reads both from one snapshot.
 var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
-	won_without_contract_reason, won_without_contract_detail,
+	lost_reason_code, lost_reason_basis, won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
 	expected_close_date, close_date_provisional, closed_at, forecast_category, wait_until, last_activity_at,
 	` + MeetingAheadSQL("") + `,
@@ -68,13 +68,13 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var closeDateProvisional, meetingAhead bool
 	var version int64
 
-	var wonReason, motion, priority *string
+	var wonReason, motion, priority, lossBasis *string
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 	dests := []any{
 		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
-		&wonReason, &d.WonWithoutContractDetail,
+		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
 		&expectedClose, &closeDateProvisional, &d.ClosedAt, &forecastCat, &waitUntil, &d.LastActivityAt,
 		&meetingAhead,
@@ -96,6 +96,10 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	if wonReason != nil {
 		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
 		d.WonWithoutContractReason = &reason
+	}
+	if lossBasis != nil {
+		basis := crmcontracts.DealLostReasonBasis(*lossBasis)
+		d.LostReasonBasis = &basis
 	}
 	if motion != nil {
 		m := crmcontracts.DealCommercialMotion(*motion)

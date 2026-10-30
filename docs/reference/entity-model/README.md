@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 336 |
-| Columns | 3990 |
-| Foreign keys | 555 |
+| Tables | 338 |
+| Columns | 4012 |
+| Foreign keys | 558 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them.
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 45 | 49 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 40 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 27 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 46 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 43 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
@@ -109,7 +109,7 @@ erDiagram
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
 | [dealrooms](dealrooms.md) | 8 |
-| [deals](deals.md) | 23 |
+| [deals](deals.md) | 25 |
 | [finance](finance.md) | 5 |
 | [forecasting](forecasting.md) | 4 |
 | [identity](identity.md) | 22 |
@@ -270,11 +270,13 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 44 | 27 |
+| [`deal`](deals.md#deal) | deals | 46 | 27 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
 | [`deal_authorship_sweep_cursor`](deals.md#deal_authorship_sweep_cursor) | deals | 3 | 0 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
+| [`deal_loss_reason`](deals.md#deal_loss_reason) | deals | 12 | 3 |
+| [`deal_loss_reason_mapping`](deals.md#deal_loss_reason_mapping) | deals | 7 | 0 |
 | [`deal_move_dismissal`](compose.md#deal_move_dismissal) | compose | 4 | 0 |
 | [`deal_risk_day`](deals.md#deal_risk_day) | deals | 7 | 1 |
 | [`deal_risk_verdict`](deals.md#deal_risk_verdict) | deals | 2 | 0 |
@@ -287,7 +289,7 @@ erDiagram
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
 | [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
-| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 19 | 2 |
+| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 20 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |

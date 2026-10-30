@@ -50,6 +50,7 @@ DECLARE
     'data_task_run',
     'data_task_run_history',
     'deal_acquisition_source',
+    'deal_loss_reason',
     'embed_store_binding',
     'consent_text_version',
     'event_outbox',

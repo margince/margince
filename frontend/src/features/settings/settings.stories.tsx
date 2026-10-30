@@ -641,6 +641,7 @@ export const PipelinesPage: Story = catalogPage("pipelines");
 export const StageautomationPage: Story = catalogPage("stageautomation");
 export const LeadsPage: Story = catalogPage("leads");
 export const AcquisitionPage: Story = catalogPage("acquisition");
+export const LossreasonsPage: Story = catalogPage("lossreasons");
 export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
 export const RecordrolesPage: Story = catalogPage("recordroles");
 export const FieldsPage: Story = catalogPage("fields");
