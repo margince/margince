@@ -379,6 +379,14 @@ type QualifyLeadResult struct {
 // and the note it left if it left one.
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
+	// OpenTasks are the deal's tasks still open after the move. Closing a deal
+	// never settles them silently, so a caller that closed one is told what it
+	// left behind, and can settle it with the settle argument.
+	OpenTasks []crmcontracts.DealOpenTask `json:"open_tasks,omitempty"`
+	// SettledTaskIDs are the tasks this call completed, present only when the
+	// caller asked for that. Empty and absent are the same claim here, which is
+	// why it carries no count beside it.
+	SettledTaskIDs []ids.UUID `json:"settled_task_ids,omitempty"`
 	// NoteActivityID is absent when the call carried no note. It is a pointer
 	// rather than a zero uuid because "no note was asked for" and "a note whose
 	// id is all zeroes" are different claims, and only one of them is true.
