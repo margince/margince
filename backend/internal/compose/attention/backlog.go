@@ -82,7 +82,7 @@ func (s *Service) readingBacklog(
 	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}
-	todayCut, laterCut := plannedWindowsAtCap(day.Planned)
+	todayCut, laterCut := plannedWindowsAtCap(day.Planned, true)
 	for key, window := range s.taskWindows(day, until) {
 		cut := laterCut
 		if window.From.IsZero() {
