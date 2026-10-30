@@ -8171,6 +8171,125 @@ export interface paths {
         patch: operations["updateAcquisitionSource"];
         trace?: never;
     };
+    "/loss-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the reasons a deal can be lost for, active and retired, in display order.
+         * @description The administered list a closer picks from when a deal is lost. Retired entries are
+         *     returned so a deal still carrying one renders its label and a report can still group
+         *     by it; they cannot be newly chosen.
+         */
+        get: operations["listLossReasons"];
+        put?: never;
+        /** Add a loss reason. */
+        post: operations["createLossReason"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Relabel, reorder or retire a loss reason.
+         * @description Retirement is `active: false`, and there is no delete: a key a lost deal carries must
+         *     stay resolvable. Relabelling never rewrites the stored key, so a report keyed on it
+         *     stays comparable across the rename.
+         */
+        patch: operations["updateLossReason"];
+        trace?: never;
+    };
+    "/loss-reasons/legacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the distinct notes of lost deals that have no loss reason code yet.
+         * @description For the administrator who maps old notes to codes. One row per distinct note, trimmed
+         *     and compared without case, with how many lost deals carry it and the code already
+         *     decided for it, if any. Most frequent first. Only deals the caller may read count.
+         */
+        get: operations["listLegacyLossReasons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/legacy/{text_hash}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `text_hash` a legacy list row names. */
+                text_hash: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Decide which loss reason one legacy note counts under.
+         * @description Records the decision and who took it. No deal changes here: the mapping reaches the
+         *     deals when an administrator applies the reviewed mappings. A deal whose closer chose
+         *     a code keeps it.
+         */
+        put: operations["decideLegacyLossReason"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/legacy/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the reviewed legacy mappings to the lost deals they match.
+         * @description Starts the background correction that writes each decided code onto the lost deals
+         *     whose note matches it, with an audit entry and an event per deal. A deal whose closer
+         *     chose a code is left as it is, and a second run changes nothing the first one wrote.
+         *     409 while an earlier run is still working. Progress shows in System health.
+         *     Requires data_task:update as well as the right to decide the mappings.
+         */
+        post: operations["applyLegacyLossReasons"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/record-roles": {
         parameters: {
             query?: never;
@@ -33213,8 +33332,10 @@ export interface components {
              * @description The stage to move to. Its semantic decides whether the move is confirm-first.
              */
             to_stage_id: string;
-            /** @description Required when the stage closes the deal as lost. */
+            /** @description A free note on the loss. A lost stage needs this, `lost_reason_code`, or both. */
             lost_reason?: string;
+            /** @description An active key from `/loss-reasons`, when the stage closes the deal as lost. */
+            lost_reason_code?: string;
             /**
              * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
              * @enum {string}
@@ -34238,8 +34359,15 @@ export interface components {
              * @enum {string}
              */
             status: "open" | "won" | "lost";
-            /** @description Required when status=lost. */
+            /** @description The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both. */
             lost_reason?: string | null;
+            /** @description The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet. */
+            readonly lost_reason_code?: string | null;
+            /**
+             * @description How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+             * @enum {string|null}
+             */
+            readonly lost_reason_basis?: "recorded" | "mapped" | null;
             /**
              * @description Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
              * @enum {string|null}
@@ -34452,8 +34580,10 @@ export interface components {
              * @enum {string}
              */
             status?: "open" | "won" | "lost";
-            /** @description Required if status=lost. */
+            /** @description The free note on a loss. A move to a lost stage needs this, `lost_reason_code`, or both. */
             lost_reason?: string | null;
+            /** @description An active key from `/loss-reasons`, on a move to a lost stage. Refused on any other move. A client that sends only `lost_reason` still closes the deal; the loss then counts as unmapped until an administrator maps its note. */
+            lost_reason_code?: string | null;
             /**
              * @description Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.
              * @enum {string|null}
@@ -38763,6 +38893,85 @@ export interface components {
             label?: string;
             sort_order?: number;
             active?: boolean;
+        };
+        /** @description One administered reason a deal can be lost for. */
+        LossReason: {
+            /** Format: uuid */
+            id: string;
+            /** @description The stable identifier stored on the deal. Lowercase, never changes once created, so a report keyed on it survives a rename. */
+            key: string;
+            /** @description What readers see. */
+            label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
+            /** @description Display order in pickers and settings. */
+            sort_order: number;
+            /** @description False is retired. Deals keep it and reports group by it, but no new loss can choose it. */
+            active: boolean;
+            /** @description Seeded with the installation. Fully editable; it cannot be removed. */
+            readonly system: boolean;
+            /** @description Live lost deals carrying this key that the caller may see. Absent when the caller may not read deals. Set on the list read; absent on the record a write answers. */
+            readonly deal_count?: number;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        LossReasonListResponse: {
+            data: components["schemas"]["LossReason"][];
+        };
+        CreateLossReasonRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            sort_order?: number;
+        };
+        /** @description Every field optional; an omitted one is left alone. */
+        UpdateLossReasonRequest: {
+            label?: string;
+            sort_order?: number;
+            active?: boolean;
+        };
+        /** @description An administrator's decision that one legacy note counts under one loss reason. */
+        LossReasonMapping: {
+            /** Format: uuid */
+            id: string;
+            /** @description The sha256 of the note, trimmed and lower-cased, in hex. */
+            text_hash: string;
+            /** @description The key from `/loss-reasons`. */
+            reason_key: string;
+            /** @description Who took the decision, in the `captured_by` form. */
+            decided_by: string;
+            /** Format: date-time */
+            decided_at: string;
+            /** Format: int64 */
+            version: number;
+        };
+        /** @description One distinct note of lost deals with no loss reason code. */
+        LegacyLossReason: {
+            /** @description The key to decide this note under. */
+            text_hash: string;
+            /** @description The note as one of its deals carries it. */
+            text: string;
+            /** @description Lost deals the caller may read that carry it. */
+            deal_count: number;
+            mapping?: components["schemas"]["LossReasonMapping"];
+        };
+        LegacyLossReasonListResponse: {
+            data: components["schemas"]["LegacyLossReason"][];
+            /** @description How many distinct notes are still unmapped, of which `data` is the most frequent. */
+            distinct_total: number;
+        };
+        DecideLegacyLossReasonRequest: {
+            /** @description An active key from `/loss-reasons`. */
+            reason_key: string;
+        };
+        ApplyLegacyLossReasonsResponse: {
+            /** @description How many reviewed mappings the correction applies. */
+            mappings: number;
+            /** @description How many lost deals this run changes. One run changes at most 1000; apply again for the rest. Zero starts no run. */
+            deals: number;
         };
         /** @description One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own. */
         RecordRole: {
@@ -66438,6 +66647,230 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listLossReasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The loss reason list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReasonListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created loss reason. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReason"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated loss reason. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReason"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLegacyLossReasons: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notes still to map, and the decisions already taken for them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyLossReasonListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    decideLegacyLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description The `text_hash` a legacy list row names. */
+                text_hash: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideLegacyLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description The decision as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReasonMapping"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    applyLegacyLossReasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The correction was started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyLegacyLossReasonsResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     listRecordRoles: {
         parameters: {
             query?: never;
@@ -83240,6 +83673,8 @@ export interface operations {
             content: {
                 "application/json": {
                     lost_reason: string;
+                    /** @description An active key from `/loss-reasons`. */
+                    lost_reason_code?: string;
                 };
             };
         };

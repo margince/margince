@@ -108,6 +108,7 @@ describe("the scope each page declares", () => {
     stageautomation: "workspace",
     leads: "workspace",
     acquisition: "workspace",
+    lossreasons: "workspace",
     reviewtemplates: "workspace",
     recordroles: "workspace",
     fields: "workspace",
@@ -229,6 +230,8 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
     // No delete arm: a source is retired through its switch, never removed.
     acquisition:
+      "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    lossreasons:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     // Edit questions is the one write, and the server gates it on update.
     reviewtemplates: "all(full-seat, any(any(custom_field:update)))",
@@ -955,6 +958,9 @@ describe("what the rail carries and what it leaves behind", () => {
       // The acquisition-source catalog, gated on custom_field like the lead
       // vocabulary beside it: a rep reads the channels and changes none.
       "acquisition",
+      // The loss reasons, gated the same way: a rep picks one when a deal is
+      // lost and changes the list nowhere.
+      "lossreasons",
       // The outcome-review questions: a rep is asked them when a deal closes
       // and reads them here, but editing them is custom_field update.
       "reviewtemplates",
