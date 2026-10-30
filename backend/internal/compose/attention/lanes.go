@@ -143,11 +143,10 @@ const (
 
 // Tasks is the open-task read, through the activities module.
 //
-// The scope belongs in the QUERY and not in a filter afterwards: the store
-// bounds what it returns, so narrowing later would cut a colleague's twelve
-// rows out of a page of twelve and leave the reader's own overdue task
-// unreachable behind them. team is the seats a team view keeps, plus
-// unassigned work, as TaskWindow.Team; nil reads the scope unnarrowed.
+// The scope belongs in the QUERY and not in a filter afterwards, because the
+// store bounds what it returns. Narrowing later would fill a page of twelve
+// with a colleague's rows and hide the reader's own overdue task. The team argument is TaskWindow.Team: the seats a
+// team view keeps, plus unassigned work. Nil reads the scope unnarrowed.
 type Tasks interface {
 	OpenForViewer(ctx context.Context, asOf, until time.Time, limit int, scope TaskScope, owner ids.UUID, team []ids.UUID) ([]Task, error)
 	// CountOpenForViewer answers how many there ARE under the same narrowing,

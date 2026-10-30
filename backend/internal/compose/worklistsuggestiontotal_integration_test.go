@@ -71,8 +71,8 @@ func (e *scoutEnv) distinctBuyerPair(t *testing.T, company ids.UUID, name string
 	e.signal(t, "commitment_made", company, ids.UUID(logged.Id), e.now, ids.Nil)
 }
 
-// The store's open suggestion count, which a cut lane states as its total, is
-// the number of suggestion rows the list holds in each scope that reads them.
+// A cut lane states the store's open suggestion count as its total. That count
+// is the number of suggestion rows the list holds in each scope that reads them.
 // A dismissed suggestion and one on another team's account count in neither.
 func TestTheSuggestionCountMatchesTheWalkInEveryScopeThatReadsIt(t *testing.T) {
 	e := setupScout(t)
