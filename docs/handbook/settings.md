@@ -156,7 +156,7 @@ Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
 
-The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it. **Roles and permissions** also holds **Shared merge reviews**, off at the start, which only an admin can turn on. Then an owner of one duplicate contact may also merge the copies their colleagues own; see [what a merge keeps](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
+The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it. **Roles and permissions** also holds **Shared merge reviews**, off at the start, which only an admin can turn on. Then an owner of one contact in a group of possible duplicates may merge the whole group, with the copies their colleagues own. Two possible duplicates need no setting: the owner of either may merge them. See [what a merge keeps](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
 
 **Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 

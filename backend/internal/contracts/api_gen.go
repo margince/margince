@@ -2493,6 +2493,7 @@ const (
 	AttentionContactCaseMergeModeDelegated AttentionContactCaseMergeMode = "delegated"
 	AttentionContactCaseMergeModeNone      AttentionContactCaseMergeMode = "none"
 	AttentionContactCaseMergeModeOrdinary  AttentionContactCaseMergeMode = "ordinary"
+	AttentionContactCaseMergeModePair      AttentionContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the AttentionContactCaseMergeMode enum.
@@ -2503,6 +2504,8 @@ func (e AttentionContactCaseMergeMode) Valid() bool {
 	case AttentionContactCaseMergeModeNone:
 		return true
 	case AttentionContactCaseMergeModeOrdinary:
+		return true
+	case AttentionContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -7077,6 +7080,7 @@ const (
 	ContactCaseMergeModeDelegated ContactCaseMergeMode = "delegated"
 	ContactCaseMergeModeNone      ContactCaseMergeMode = "none"
 	ContactCaseMergeModeOrdinary  ContactCaseMergeMode = "ordinary"
+	ContactCaseMergeModePair      ContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseMergeMode enum.
@@ -7087,6 +7091,8 @@ func (e ContactCaseMergeMode) Valid() bool {
 	case ContactCaseMergeModeNone:
 		return true
 	case ContactCaseMergeModeOrdinary:
+		return true
+	case ContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -7154,6 +7160,7 @@ func (e ContactCaseEdgeStatus) Valid() bool {
 const (
 	ContactCaseOutcomeModeDelegated ContactCaseOutcomeMode = "delegated"
 	ContactCaseOutcomeModeOrdinary  ContactCaseOutcomeMode = "ordinary"
+	ContactCaseOutcomeModePair      ContactCaseOutcomeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseOutcomeMode enum.
@@ -7162,6 +7169,8 @@ func (e ContactCaseOutcomeMode) Valid() bool {
 	case ContactCaseOutcomeModeDelegated:
 		return true
 	case ContactCaseOutcomeModeOrdinary:
+		return true
+	case ContactCaseOutcomeModePair:
 		return true
 	default:
 		return false
@@ -37358,7 +37367,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37384,7 +37393,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -37416,8 +37425,8 @@ type ContactCaseEdge struct {
 	CanDismiss bool `json:"can_dismiss"`
 
 	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
-	// route. True only with write access to both ends. `policy_enabled` does not widen it:
-	// the policy admits a merge of the whole case, never of a single pair.
+	// route. True with write access to either end: the owner of either half of a filed
+	// duplicate may merge it. `policy_enabled` does not widen it further.
 	CanMerge   bool               `json:"can_merge"`
 	Confidence float32            `json:"confidence"`
 	Evidence   []DedupeEvidence   `json:"evidence"`
@@ -37457,10 +37466,12 @@ type ContactCaseMember struct {
 // ContactCaseOutcome What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
 type ContactCaseOutcome struct {
 	// Committed `false` for a preview: nothing was written.
-	Committed bool                   `json:"committed"`
-	MergedIds []openapi_types.UUID   `json:"merged_ids"`
-	Mode      ContactCaseOutcomeMode `json:"mode"`
-	OwnerId   openapi_types.UUID     `json:"owner_id"`
+	Committed bool                 `json:"committed"`
+	MergedIds []openapi_types.UUID `json:"merged_ids"`
+
+	// Mode The authority the merge ran under, as `merge_mode` on the case names it.
+	Mode    ContactCaseOutcomeMode `json:"mode"`
+	OwnerId openapi_types.UUID     `json:"owner_id"`
 
 	// Shares The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
 	Shares []ContactCaseShare `json:"shares"`
@@ -37473,7 +37484,7 @@ type ContactCaseOutcome struct {
 	SurvivorId openapi_types.UUID `json:"survivor_id"`
 }
 
-// ContactCaseOutcomeMode defines model for ContactCaseOutcome.Mode.
+// ContactCaseOutcomeMode The authority the merge ran under, as `merge_mode` on the case names it.
 type ContactCaseOutcomeMode string
 
 // ContactCaseOwner defines model for ContactCaseOwner.
@@ -41073,23 +41084,28 @@ type DeclaredExtensionSettingKind string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
-	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
-	// or undo a decision. Deciding needs write authority over BOTH ends:
-	// dismissing suppresses both records as duplicates for the whole
-	// workspace, and merging rewrites one into the other.
+	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
+	// That needs write authority over BOTH ends: dismissing suppresses both
+	// records as duplicates for the whole workspace. Whether the caller may
+	// merge the pair is `can_merge`.
 	//
-	// A pair whose ends have different owners is therefore undecidable by
-	// any bounded seat, and it is a common shape — capture creates the
-	// near-duplicate owned by the mailbox owner while the incumbent belongs
-	// to whoever worked it. The pair is still LISTED, because the contact
-	// who can see a duplicate is the contact best placed to notice it; this
-	// says whether the buttons will work, which the client should gate on
-	// rather than discovering through a 403 after the POST.
+	// The pair is LISTED either way, because the contact who can see a
+	// duplicate is the contact best placed to notice it; this says whether
+	// the buttons will work, which the client should gate on rather than
+	// discovering through a 403 after the POST.
 	//
 	// With `contacts.shared_merge_reviews` on, an owner of one end of a
-	// contact pair may dismiss it and undo that, though not merge it. That
-	// answer is the pair's `can_dismiss` in its contact case.
+	// contact pair may dismiss it and undo that. That answer is the pair's
+	// `can_dismiss` in its contact case.
 	CanDecide bool `json:"can_decide"`
+
+	// CanMerge Whether THIS caller could merge the pair: an open pair whose two
+	// records they can see, with write authority over either end. The owner
+	// of either half of a filed duplicate may merge it, so a pair whose ends
+	// have different owners is not stuck waiting for a manager. A merge of
+	// two records nobody filed as duplicates still needs write authority
+	// over both.
+	CanMerge bool `json:"can_merge"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
 	Confidence float32             `json:"confidence"`

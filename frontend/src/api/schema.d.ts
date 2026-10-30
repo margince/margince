@@ -26679,24 +26679,30 @@ export interface components {
             /** @enum {string} */
             status: "open" | "merged" | "not_a_duplicate";
             /**
-             * @description Whether THIS caller could dispose of the pair — merge it, dismiss it,
-             *     or undo a decision. Deciding needs write authority over BOTH ends:
-             *     dismissing suppresses both records as duplicates for the whole
-             *     workspace, and merging rewrites one into the other.
+             * @description Whether THIS caller could dismiss the pair or undo a decision on it.
+             *     That needs write authority over BOTH ends: dismissing suppresses both
+             *     records as duplicates for the whole workspace. Whether the caller may
+             *     merge the pair is `can_merge`.
              *
-             *     A pair whose ends have different owners is therefore undecidable by
-             *     any bounded seat, and it is a common shape — capture creates the
-             *     near-duplicate owned by the mailbox owner while the incumbent belongs
-             *     to whoever worked it. The pair is still LISTED, because the contact
-             *     who can see a duplicate is the contact best placed to notice it; this
-             *     says whether the buttons will work, which the client should gate on
-             *     rather than discovering through a 403 after the POST.
+             *     The pair is LISTED either way, because the contact who can see a
+             *     duplicate is the contact best placed to notice it; this says whether
+             *     the buttons will work, which the client should gate on rather than
+             *     discovering through a 403 after the POST.
              *
              *     With `contacts.shared_merge_reviews` on, an owner of one end of a
-             *     contact pair may dismiss it and undo that, though not merge it. That
-             *     answer is the pair's `can_dismiss` in its contact case.
+             *     contact pair may dismiss it and undo that. That answer is the pair's
+             *     `can_dismiss` in its contact case.
              */
             can_decide: boolean;
+            /**
+             * @description Whether THIS caller could merge the pair: an open pair whose two
+             *     records they can see, with write authority over either end. The owner
+             *     of either half of a filed duplicate may merge it, so a pair whose ends
+             *     have different owners is not stuck waiting for a manager. A merge of
+             *     two records nobody filed as duplicates still needs write authority
+             *     over both.
+             */
+            can_merge: boolean;
             /** Format: uuid */
             disposed_by?: string | null;
             /** Format: date-time */
@@ -26759,10 +26765,10 @@ export interface components {
             /** @description Whether this caller may merge at least two members of this case. */
             can_merge: boolean;
             /**
-             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
              * @enum {string}
              */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             /**
              * @description Why `can_merge` is false.
              * @enum {string|null}
@@ -26814,8 +26820,8 @@ export interface components {
             can_dismiss: boolean;
             /**
              * @description Whether this caller may merge this one open pair through the pair's own decision
-             *     route. True only with write access to both ends. `policy_enabled` does not widen it:
-             *     the policy admits a merge of the whole case, never of a single pair.
+             *     route. True with write access to either end: the owner of either half of a filed
+             *     duplicate may merge it. `policy_enabled` does not widen it further.
              */
             can_merge: boolean;
         };
@@ -26865,8 +26871,11 @@ export interface components {
             merged_ids: string[];
             /** Format: uuid */
             owner_id: string;
-            /** @enum {string} */
-            mode: "ordinary" | "delegated";
+            /**
+             * @description The authority the merge ran under, as `merge_mode` on the case names it.
+             * @enum {string}
+             */
+            mode: "ordinary" | "delegated" | "pair";
             /** @description The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access. */
             shares: components["schemas"]["ContactCaseShare"][];
             /** @description Owners who get no new grant, and why. */
@@ -50700,7 +50709,7 @@ export interface components {
             owners: string[];
             can_merge: boolean;
             /** @enum {string} */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             too_large?: boolean;
         };
         /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */

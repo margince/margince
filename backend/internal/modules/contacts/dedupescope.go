@@ -101,17 +101,20 @@ func dedupeVisibilityClause(ctx context.Context, arg func(any) int, mustBeLive b
 // needs no merge decision — so the more diligently a workspace resolves them
 // that way, the faster its queue fills with its own finished work.
 func bothSidesServable(entityType, alias, leftColumn, rightColumn, scopeClause string, mustBeLive bool) string {
-	side := func(column string) string {
-		terms := fmt.Sprintf("%[1]s.id = dedupe_candidate.%[2]s", alias, column)
-		if mustBeLive {
-			terms += fmt.Sprintf(" AND %s.archived_at IS NULL", alias)
-		}
-		if scopeClause != "" {
-			terms += " AND " + scopeClause
-		}
-		return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
+	return "(" + sideServable(entityType, alias, leftColumn, scopeClause, mustBeLive) + " AND " +
+		sideServable(entityType, alias, rightColumn, scopeClause, mustBeLive) + ")"
+}
+
+// sideServable is bothSidesServable's predicate for one end of the pair.
+func sideServable(entityType, alias, column, scopeClause string, mustBeLive bool) string {
+	terms := fmt.Sprintf("%[1]s.id = dedupe_candidate.%[2]s", alias, column)
+	if mustBeLive {
+		terms += fmt.Sprintf(" AND %s.archived_at IS NULL", alias)
 	}
-	return "(" + side(leftColumn) + " AND " + side(rightColumn) + ")"
+	if scopeClause != "" {
+		terms += " AND " + scopeClause
+	}
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
 }
 
 // dedupeDecidableExpr renders the per-row "could this caller dispose of it"
@@ -143,6 +146,42 @@ func dedupeDecidableExpr(ctx context.Context, arg func(any) int, mustBeLive bool
 		return "", err
 	}
 	return expr + " AS can_decide", nil
+}
+
+// dedupeAuthorityColumns renders can_decide and then can_merge.
+func dedupeAuthorityColumns(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
+	decidable, err := dedupeDecidableExpr(ctx, arg, mustBeLive)
+	if err != nil {
+		return "", err
+	}
+	mergeable, err := dedupeMergeableExpr(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return decidable + ", " + mergeable, nil
+}
+
+// dedupeMergeableExpr renders MayMergePair for a filed pair, row by row: the
+// pair is open and the caller may change either end. That both ends are
+// visible and live is the open lane's own filter.
+func dedupeMergeableExpr(ctx context.Context, arg func(any) int) (string, error) {
+	arms := make([]string, 0, len(dedupePairSides))
+	for i, side := range dedupePairSides {
+		alias := fmt.Sprintf("m%d", i)
+		scope, err := auth.ScopeClauseFor(ctx, side.entity, alias, arg)
+		if err != nil {
+			return "", err
+		}
+		write, err := auth.WriteAuthorityClauseFor(ctx, side.entity, alias, arg)
+		if err != nil {
+			return "", err
+		}
+		authority := andClauses(scope, write)
+		arms = append(arms, fmt.Sprintf("(entity_type = '%s' AND (%s OR %s))", side.entity,
+			sideServable(side.entity, alias, side.left, authority, true),
+			sideServable(side.entity, alias, side.right, authority, true)))
+	}
+	return "(dedupe_candidate.disposition = 'open' AND (" + strings.Join(arms, " OR ") + ")) AS can_merge", nil
 }
 
 // andClauses joins the two authority halves, skipping an empty one — an

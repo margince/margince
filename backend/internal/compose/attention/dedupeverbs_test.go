@@ -46,17 +46,16 @@ func TestAnUnreadableSideCostsEveryVerbRatherThanLeakingTheRecord(t *testing.T) 
 	}
 }
 
-// A pair naming a record the reader may see but could not change offers no
-// verb. This is the ordinary case for a rep: everyone here reads every
-// colleague's customer records and can write almost none of them, so a merge
+// A pair whose records the reader may see but could change neither of offers
+// no verb. This is the ordinary case for a rep on two colleagues' records: a
 // button decided by visibility refused every press it invited.
 func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
-	theirs := ids.NewV7()
+	theirs, alsoTheirs := ids.NewV7(), ids.NewV7()
 	svc := NewService(
 		stubApprovals{},
-		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
+		stubDuplicates{open: 1, undecidable: []ids.UUID{theirs, alsoTheirs}, pairs: []DuplicatePair{{
 			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
-			LeftID: ids.NewV7(), RightID: theirs,
+			LeftID: alsoTheirs, RightID: theirs,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
@@ -75,24 +74,29 @@ func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
 	}
 }
 
-// Authority over ONE side is not authority to decide the pair: the merge
-// archives one record and rewrites the other, so half the authority settles
-// nothing and a verb offered on it would refuse.
-func TestOwningOneSideOfAPairDoesNotOfferTheVerb(t *testing.T) {
-	mine, theirs := ids.NewV7(), ids.NewV7()
-	svc := NewService(
-		stubApprovals{},
-		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "company", Confidence: 1,
-			LeftID: mine, RightID: theirs,
-		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
-	out, err := svc.Assemble(pageReader())
-	if err != nil {
-		t.Fatalf("assembling: %v", err)
-	}
-	if len(out.NeedsYou[0].Actions) != 0 {
-		t.Errorf("actions %v offered on a pair the reader owns half of", out.NeedsYou[0].Actions)
+// The owner of one side of a filed pair is offered the merge, which the merge
+// admits for them. The dismissal still writes both records, so it is withheld.
+func TestOwningOneSideOfAPairOffersTheMergeAlone(t *testing.T) {
+	for _, mineOnTheLeft := range []bool{true, false} {
+		mine, theirs := ids.NewV7(), ids.NewV7()
+		left, right := mine, theirs
+		if !mineOnTheLeft {
+			left, right = theirs, mine
+		}
+		svc := NewService(
+			stubApprovals{},
+			stubDuplicates{open: 1, undecidable: []ids.UUID{theirs}, pairs: []DuplicatePair{{
+				ID: ids.NewV7(), EntityType: "company", Confidence: 1,
+				LeftID: left, RightID: right,
+			}}},
+			&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
+		out, err := svc.Assemble(pageReader())
+		if err != nil {
+			t.Fatalf("assembling: %v", err)
+		}
+		if got := out.NeedsYou[0].Actions; len(got) != 1 || got[0] != "merge" {
+			t.Errorf("mine on the left %v: actions %v, want only merge", mineOnTheLeft, got)
+		}
 	}
 }
 

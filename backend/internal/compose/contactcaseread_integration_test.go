@@ -39,17 +39,24 @@ func TestAResolvedCaseNamesNoSurvivorItsReaderCannotSee(t *testing.T) {
 	}
 }
 
-func TestAPairIsMergeableOnlyWithWriteAccessToBothEnds(t *testing.T) {
+func TestAPairIsMergeableByTheOwnerOfEitherEnd(t *testing.T) {
 	c := setupCases(t)
 	shared := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	own := c.seedCase(t, c.e.Rep1, c.e.Rep1)
-	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
 
-	delegated := c.read(rep, t, shared[0]).Edges[0]
-	if !delegated.CanDismiss || delegated.CanMerge {
-		t.Errorf("an owner of one end under the policy reads can_dismiss %v and can_merge %v, want true and false",
-			delegated.CanDismiss, delegated.CanMerge)
+	half := c.read(rep, t, shared[0]).Edges[0]
+	if half.CanDismiss || !half.CanMerge {
+		t.Errorf("an owner of one end reads can_dismiss %v and can_merge %v, want false and true",
+			half.CanDismiss, half.CanMerge)
+	}
+	if edge := c.read(c.rep(c.e.Rep3), t, shared[0]).Edges[0]; edge.CanMerge {
+		t.Error("a rep who owns neither end may merge the pair")
+	}
+	c.setPolicy(t, true)
+	if edge := c.read(rep, t, shared[0]).Edges[0]; !edge.CanDismiss || !edge.CanMerge {
+		t.Errorf("under the policy an owner of one end reads can_dismiss %v and can_merge %v, want both",
+			edge.CanDismiss, edge.CanMerge)
 	}
 	if edge := c.read(c.e.Admin(), t, shared[0]).Edges[0]; !edge.CanMerge {
 		t.Error("an admin may not merge a pair they may write both ends of")

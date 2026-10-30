@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx -->
+<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -341,7 +341,9 @@ When two contacts merge, the owner of the merged-away contact keeps access to th
 
 This holds for every contact merge: **Merge contact** on the record, a group of possible duplicates, or a merge an agent makes. Shares the merged-away contact had move to the remaining contact; of two shares, the higher access stays.
 
-**Who may merge a group.** You may merge a group of possible duplicate contacts when you can edit every contact you tick. A group often holds contacts that different colleagues own. An owner who may edit only their own contacts then cannot merge the group.
+**Who may merge two records.** You may merge two records when you can edit both. Two contacts, companies or leads that Margince lists as a possible duplicate need less: the owner of either one may merge them, also when a colleague owns the other. A pair someone marked as different people is no longer a possible duplicate. Marking a pair as different people still needs edit access to both.
+
+**Who may merge a group.** You may merge a whole group of possible duplicate contacts when you can edit every contact you tick. A group often holds contacts that different colleagues own. An owner who may edit only their own contacts then merges one pair at a time: tick their own contact and one possible duplicate of it.
 
 **Shared merge reviews** changes that. An admin turns it on in **Settings → Roles and permissions**; it is off at the start. When it is on, an owner of one ticked contact with a full seat may merge the other ticked contacts too. That opens only those contacts, and only for that merge. It opens no mail, no files and no other record. The owners of the other contacts keep access through the share above.
 

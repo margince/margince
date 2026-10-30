@@ -242,18 +242,21 @@ func checkCaseSelection(c contactCase, selected []ids.UUID) error {
 // admitCaseDecision answers under which authority the merge runs. Ordinary:
 // the caller may change every selected member and hand the survivor to the
 // owner. Delegated: the policy is on and the caller is a live full-seat owner
-// of a selected member. The context then admits the selected contacts and
-// their owners, and nothing else.
+// of a selected member. Pair: the selection is the two ends of one open pair
+// and MayMergePair admits the caller. Under the last two the context admits
+// the selected contacts and their owners, and nothing else.
 func admitCaseDecision(ctx context.Context, tx pgx.Tx, c contactCase, selected []ids.UUID,
 	survivor caseMember, owner ids.UUID, policy bool,
 ) (context.Context, crmcontracts.ContactCaseOutcomeMode, error) {
 	ordinary := true
+	writable := make([]bool, 0, len(selected))
 	for _, id := range selected {
-		writable, err := auth.WritableBy(ctx, tx, contactEntity, id)
+		canWrite, err := auth.WritableBy(ctx, tx, contactEntity, id)
 		if err != nil {
 			return ctx, "", err
 		}
-		ordinary = ordinary && writable
+		ordinary = ordinary && canWrite
+		writable = append(writable, canWrite)
 	}
 	var assignee error
 	if ordinary && !sameOwner(survivor.OwnerID, &owner) {
@@ -268,6 +271,12 @@ func admitCaseDecision(ctx context.Context, tx pgx.Tx, c contactCase, selected [
 	if actor, ok := principal.Actor(ctx); ok && policy && c.actorOwnsAMember(actor, selected) {
 		admitted, err := auth.WithContactCaseAdmission(ctx, selected, c.liveOwners(selected))
 		return admitted, crmcontracts.ContactCaseOutcomeModeDelegated, err
+	}
+	// checkCaseSelection has joined the selection by open pairs, so two
+	// members are the two ends of one filed pair.
+	if len(selected) == 2 && MayMergePair(PairWriters{Left: writable[0], Right: writable[1]}, true) {
+		admitted, err := auth.WithContactCaseAdmission(ctx, selected, c.liveOwners(selected))
+		return admitted, crmcontracts.ContactCaseOutcomeModePair, err
 	}
 	if assignee != nil {
 		return ctx, "", assignee

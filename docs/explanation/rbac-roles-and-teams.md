@@ -130,10 +130,12 @@ team above reaches the members of a team below it only by being in that team too
 A record grant may still name a **team**, so sharing with a group is one act, not one per member.
 It stays the way to reach across teams, and the way for every seat other than `manager`.
 
-A contact case merge is the one exception, and it is off by default. With the setting
-`contacts.shared_merge_reviews` on, the owner of one contact in a case may merge it with other
-contacts of that case. This holds also for those a colleague owns. The owner must be live and hold a
-full seat. The write check then passes for the selected contacts and no other row.
+A merge of duplicates is the one exception. The dedupe queue files two records it finds alike as a
+pair. The caller may merge such a pair while they may change either end of it, so either owner can
+resolve it. With the setting `contacts.shared_merge_reviews` on, the owner of one contact in a case
+may also merge it with the other contacts of that case, including those a colleague owns. That
+owner must be live and hold a full seat. In both, the write check passes for the merged records and
+no other row.
 Where the check is, and what it leaves in place, is in
 [authorization.md](authorization.md#a-contact-case-merge-and-the-one-write-check-it-lets-pass).
 

@@ -9273,7 +9273,7 @@ components:
           description: The activity's version, for the If-Match its own actions send.
     DedupeCandidate:
       type: object
-      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide]
+      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge]
       properties:
         id: {type: string, format: uuid}
         entity_type: {type: string, enum: [contact, company, lead], description: 'A pair is always same-type: a lead is proposed as a duplicate of a lead or of nothing.'}
@@ -9288,10 +9288,19 @@ components:
         can_decide:
           type: boolean
           description: |-
-            Whether THIS caller could dispose of the pair — merge it, dismiss it,
-            or undo a decision. Deciding needs write authority over BOTH ends:
-            dismissing suppresses both records as duplicates for the whole
-            workspace, and merging rewrites one into the other.
+            Whether THIS caller could dismiss the pair or undo a decision on it.
+            That needs write authority over BOTH ends: dismissing suppresses both
+            records as duplicates for the whole workspace. Whether the caller may
+            merge the pair is `can_merge`.
+        can_merge:
+          type: boolean
+          description: |-
+            Whether THIS caller could merge the pair: an open pair whose two
+            records they can see, with write authority over either end. The owner
+            of either half of a filed duplicate may merge it, so a pair whose ends
+            have different owners is not stuck waiting for a manager. A merge of
+            two records nobody filed as duplicates still needs write authority
+            over both.
         disposed_by: {type: [string, 'null'], format: uuid}
         disposed_at: {type: [string, 'null'], format: date-time}
         created_at: {type: string, format: date-time}
@@ -9343,8 +9352,8 @@ components:
         can_merge: {type: boolean, description: 'Whether this caller may merge at least two members of this case.'}
         merge_mode:
           type: string
-          enum: [ordinary, delegated, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.'
+          enum: [ordinary, delegated, pair, none]
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -9388,8 +9397,8 @@ components:
           type: boolean
           description: |-
             Whether this caller may merge this one open pair through the pair's own decision
-            route. True only with write access to both ends. `policy_enabled` does not widen it:
-            the policy admits a merge of the whole case, never of a single pair.
+            route. True with write access to either end: the owner of either half of a filed
+            duplicate may merge it. `policy_enabled` does not widen it further.
     ContactCaseOwner:
       type: object
       required: [user_id, name, seat, member_ids]
@@ -9435,7 +9444,7 @@ components:
         survivor_id: {type: string, format: uuid}
         merged_ids: {type: array, items: {type: string, format: uuid}}
         owner_id: {type: string, format: uuid}
-        mode: {type: string, enum: [ordinary, delegated]}
+        mode: {type: string, enum: [ordinary, delegated, pair], description: 'The authority the merge ran under, as `merge_mode` on the case names it.'}
         shares:
           type: array
           description: The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.

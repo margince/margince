@@ -81,6 +81,29 @@ func TestTheMergeCardAsksTheSameAuthorityTheWriteAsks(t *testing.T) {
 	}
 }
 
+// mergeRuleAskers are the places that decide who may merge a pair. For a
+// filed pair merging needs less than dismissing, so it has its own rule:
+// contacts.MayMergePair. Each of these must call it. The queue's can_merge
+// column states the rule in SQL, which its integration tests hold.
+var mergeRuleAskers = []struct{ file, function, asks string }{
+	{"internal/modules/contacts/duplicatepairmerge.go", "admitDuplicatePairMerge", "MayMergePair"},
+	{"internal/modules/contacts/contactcasedecide.go", "admitCaseDecision", "MayMergePair"},
+	{"internal/modules/contacts/contactcaseread.go", "mayMergePair", "MayMergePair"},
+	{"internal/compose/attention/render.go", "mayMerge", "contacts.MayMergePair"},
+}
+
+func TestEveryMergeOfferAsksTheMergeDoorsRule(t *testing.T) {
+	t.Parallel()
+	for _, asker := range mergeRuleAskers {
+		if !callsQualified(methodBody(t, asker.file, asker.function), asker.asks) {
+			t.Errorf("%s in %s does not CALL %s.\n\n"+
+				"An offer of the merge that combines the two write answers itself drifts from the\n"+
+				"door: it withholds the merge from the owner of one half, or offers it to nobody's.",
+				asker.function, asker.file, asker.asks)
+		}
+	}
+}
+
 // callsQualified reports whether the body calls the named function, spelled
 // `pkg.Name`.
 func callsQualified(body *ast.BlockStmt, want string) bool {
