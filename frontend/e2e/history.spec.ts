@@ -169,7 +169,10 @@ test("a section is an address, and Back steps between sections", async ({
   page,
 }) => {
   await page.goto("/#/analytics");
-  await page.getByRole("button", { name: "Pipeline", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Analytics-Bereiche" })
+    .getByRole("button", { name: "Pipeline", exact: true })
+    .click();
   await expect(page).toHaveURL(/#\/analytics\/pipeline$/);
 
   await page.goBack();
