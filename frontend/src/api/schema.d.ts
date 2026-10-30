@@ -40294,19 +40294,27 @@ export interface components {
              *     target is never zero. `fx_missing` means a deal amount has no
              *     exchange rate to the base currency, so the totals are incomplete
              *     and no gap or coverage is given. `partial_visibility` means the
-             *     reader cannot see every deal of the scope, so its figures cannot
-             *     stand against the scope's whole target. `incompatible` names why
-             *     in `incompatibility` and offers `supported_selection`.
+             *     reader cannot see every deal of the population asked for, or a
+             *     deal's amount, so its figures cannot stand against the scope's
+             *     whole target.
+             *     `colleague_withheld` means individual performance is off and the
+             *     figure would be one colleague's own. `call_below_won` means the
+             *     manager call is below what is already won, so the landing and the
+             *     sales won disagree and no gap or coverage is given. `incompatible`
+             *     names why in `incompatibility` and offers `supported_selection`
+             *     when a selection can fix it.
              * @enum {string}
              */
-            status: "compared" | "target_reached" | "no_target" | "fx_missing" | "partial_visibility" | "incompatible";
+            status: "compared" | "target_reached" | "no_target" | "fx_missing" | "partial_visibility" | "colleague_withheld" | "call_below_won" | "incompatible";
             /**
-             * @description Present only with status `incompatible`. `period`: the target
-             *     interval is not the current fiscal quarter. `scope`: the forecast
+             * @description Present only with status `incompatible`. `period`: the selection
+             *     is not `this_quarter`, or its target interval is not the current
+             *     fiscal quarter. `scope`: the forecast
              *     does not read this scope as one population. `pipeline`: only a
              *     target for the whole scope exists, and it is not split across
              *     pipelines. `manager_call_pipeline`: the landing is a manager call,
-             *     which covers every pipeline. `currency`: the target was set in
+             *     which covers every pipeline. `currency`: the target that would
+             *     apply, for this pipeline or else for every pipeline, was set in
              *     another currency than the base currency.
              * @enum {string}
              */

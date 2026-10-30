@@ -1187,6 +1187,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",
   "reporting.openPipelineBasis_other": "Deal đang mở: {count} · tính đến {at}",
   "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo deal",
+  "reporting.compare.atTarget": "Đúng bằng mục tiêu {target}",
+  "reporting.compare.colleague_withheld":
+    "Số liệu này sẽ cho thấy kết quả riêng của một đồng nghiệp",
+  "reporting.compare.colleague_withheldBody":
+    "Hiệu suất cá nhân đang tắt, và ngoài bạn chỉ có một đồng nghiệp tạo nên các số liệu này. Chọn một nhóm lớn hơn hoặc cả công ty.",
+  "reporting.compare.call_below_won":
+    "Ước tính của quản lý thấp hơn doanh số đã thắng",
+  "reporting.compare.call_below_wonBody":
+    "Ước tính cho thấy quý kết thúc thấp hơn doanh số đã thắng, nên không hiển thị khoảng cách hay mức bao phủ. Cập nhật ước tính để so sánh.",
+  "reporting.compare.apply.period": "Xem quý này",
+  "reporting.compare.apply.scope": "Xem một nhóm",
+  "reporting.compare.apply.pipeline": "Xem tất cả pipeline",
+  "reporting.compare.apply.manager_call_pipeline": "Xem tất cả pipeline",
   "reporting.compare.title": "Quý này so với mục tiêu",
   "reporting.compare.gap": "Khoảng cách đến mục tiêu",
   "reporting.compare.short": "Thấp hơn mục tiêu {target}",
@@ -1217,7 +1230,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.partial_visibility":
     "Bạn không xem được mọi deal trong phạm vi này",
   "reporting.compare.partial_visibilityBody":
-    "Số liệu của bạn chỉ gồm các deal bạn xem được, nên không được so với mục tiêu của cả phạm vi.",
+    "Một số deal hoặc số tiền deal trong phạm vi này bị ẩn với bạn, nên số liệu của bạn không được so với mục tiêu của cả phạm vi.",
   "reporting.compare.incompatible.period":
     "Chọn quý tài chính này để so với mục tiêu",
   "reporting.compare.incompatible.periodBody":

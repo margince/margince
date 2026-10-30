@@ -1207,6 +1207,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_other": "Offene Deals: {count} · Stand {at}",
   "reporting.forecastLandingBasis":
     "Dieses Geschäftsquartal, berechnet aus der Deal-Prognose",
+  "reporting.compare.atTarget": "Genau beim Ziel von {target}",
+  "reporting.compare.colleague_withheld":
+    "Das würde die Ergebnisse eines einzelnen Teammitglieds zeigen",
+  "reporting.compare.colleague_withheldBody":
+    "Die Einzelleistung ist ausgeschaltet, und außer dir steht nur ein weiteres Teammitglied hinter diesen Zahlen. Wähle ein größeres Team oder das ganze Unternehmen.",
+  "reporting.compare.call_below_won":
+    "Die Einschätzung liegt unter dem bereits gewonnenen Umsatz",
+  "reporting.compare.call_below_wonBody":
+    "Laut Einschätzung endet das Quartal unter dem, was schon gewonnen ist. Darum werden Abstand und Deckung nicht gezeigt. Aktualisiere die Einschätzung, um zu vergleichen.",
+  "reporting.compare.apply.period": "Dieses Quartal zeigen",
+  "reporting.compare.apply.scope": "Ein Team zeigen",
+  "reporting.compare.apply.pipeline": "Alle Pipelines zeigen",
+  "reporting.compare.apply.manager_call_pipeline": "Alle Pipelines zeigen",
   "reporting.compare.title": "Dieses Quartal im Vergleich zum Ziel",
   "reporting.compare.gap": "Abstand zum Ziel",
   "reporting.compare.short": "Unter dem Ziel von {target}",
@@ -1238,7 +1251,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.partial_visibility":
     "Du siehst nicht alle Deals in diesem Bereich",
   "reporting.compare.partial_visibilityBody":
-    "Deine Zahlen umfassen nur die Deals, die du siehst. Darum werden sie nicht mit dem Ziel des ganzen Bereichs verglichen.",
+    "Einige Deals oder Deal-Beträge in diesem Bereich sind für dich verborgen. Darum werden deine Zahlen nicht mit dem Ziel des ganzen Bereichs verglichen.",
   "reporting.compare.incompatible.period":
     "Wähle dieses Geschäftsquartal, um mit einem Ziel zu vergleichen",
   "reporting.compare.incompatible.periodBody":

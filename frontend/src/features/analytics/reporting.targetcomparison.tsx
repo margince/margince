@@ -1,4 +1,5 @@
 import { StatCard } from "../../design-system/atoms";
+import { Button } from "../../design-system/button";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
@@ -6,6 +7,7 @@ import { formatDecimal } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import {
   type ReportingEvaluation,
+  type ReportingSelection,
   reportingCompactAmount,
 } from "./reporting.model";
 
@@ -17,11 +19,16 @@ type Qualified = NonNullable<Comparison["qualified"]>;
 /**
  * Where this fiscal quarter's expected landing stands against its sales
  * target, as the server compared them. Every figure is the server's; this
- * only formats them and says why a figure is missing.
+ * only formats them and says why a figure is missing. `onApply` takes the
+ * selection the server says it can compare, on a page that can switch to it.
  */
 export function TargetComparison({
   evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  onApply,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  onApply?: (selection: ReportingSelection) => void;
+}>) {
   const t = useT();
   const comparison = evaluation.metrics.find(
     (metric) => metric.id === "forecast_landing",
@@ -37,7 +44,7 @@ export function TargetComparison({
             currency={evaluation.context.currency}
           />
         ) : (
-          <ComparisonState comparison={comparison} />
+          <ComparisonState comparison={comparison} onApply={onApply} />
         )}
       </PanelBody>
     </Panel>
@@ -59,12 +66,7 @@ function ComparedFigures({
       <StatCard
         label={t("reporting.compare.gap")}
         value={amount(Math.abs(gap))}
-        detail={t(
-          gap > 0 ? "reporting.compare.short" : "reporting.compare.ahead",
-          {
-            target: amount(comparison.target),
-          },
-        )}
+        detail={t(gapWords(gap), { target: amount(comparison.target) })}
         basis={t("reporting.compare.gapBasis", {
           landing: amount(comparison.landing),
           basis: t(
@@ -135,6 +137,11 @@ function QualifiedCard({
   );
 }
 
+function gapWords(gap: number) {
+  if (gap > 0) return "reporting.compare.short";
+  return gap < 0 ? "reporting.compare.ahead" : "reporting.compare.atTarget";
+}
+
 function coverageValue(
   coverage: number | undefined,
   reached: boolean,
@@ -151,6 +158,8 @@ type StateKey =
   | "no_target"
   | "fx_missing"
   | "partial_visibility"
+  | "colleague_withheld"
+  | "call_below_won"
   | `incompatible.${NonNullable<Comparison["incompatibility"]>}`;
 
 function stateKey(comparison: Comparison): StateKey | null {
@@ -160,6 +169,8 @@ function stateKey(comparison: Comparison): StateKey | null {
     case "no_target":
     case "fx_missing":
     case "partial_visibility":
+    case "colleague_withheld":
+    case "call_below_won":
       return comparison.status;
     default:
       return null;
@@ -167,15 +178,30 @@ function stateKey(comparison: Comparison): StateKey | null {
 }
 
 // Why the quarter has no comparison, and what would give it one.
-function ComparisonState({ comparison }: Readonly<{ comparison: Comparison }>) {
+function ComparisonState({
+  comparison,
+  onApply,
+}: Readonly<{
+  comparison: Comparison;
+  onApply?: (selection: ReportingSelection) => void;
+}>) {
   const t = useT();
   const key = stateKey(comparison);
   if (!key) return null;
+  const supported = comparison.supported_selection;
+  const why = comparison.incompatibility;
+  const apply =
+    supported && onApply && why && why !== "currency" ? (
+      <Button onClick={() => onApply(supported)}>
+        {t(`reporting.compare.apply.${why}`)}
+      </Button>
+    ) : undefined;
   return (
     <Callout
       tone={comparison.status === "no_target" ? "info" : "warning"}
       kind="standing"
       title={t(`reporting.compare.${key}`)}
+      actions={apply}
     >
       <p>{t(`reporting.compare.${key}Body`)}</p>
     </Callout>

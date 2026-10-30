@@ -123,6 +123,6 @@ export function writableScope(
  * the same words, and a cache that collapsed them would serve one team's
  * numbers under the other's name.
  */
-export function scopeKey(scope: AnalyticsScope): string {
+export function scopeKey(scope: Pick<AnalyticsScope, "kind" | "id">): string {
   return scope.id ? `${scope.kind}:${scope.id}` : scope.kind;
 }

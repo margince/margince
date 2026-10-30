@@ -1161,6 +1161,19 @@ export const en = {
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
     "This fiscal quarter, from the deal forecast",
+  "reporting.compare.atTarget": "At the {target} target",
+  "reporting.compare.colleague_withheld":
+    "This would show one colleague’s own results",
+  "reporting.compare.colleague_withheldBody":
+    "Individual performance is off, and one colleague besides you makes up these figures. Pick a larger team or the whole company.",
+  "reporting.compare.call_below_won":
+    "The manager’s call is below what is already won",
+  "reporting.compare.call_below_wonBody":
+    "The call says the quarter ends lower than the sales already won, so no gap or coverage is shown. Update the call to compare.",
+  "reporting.compare.apply.period": "Show this quarter",
+  "reporting.compare.apply.scope": "Show one team",
+  "reporting.compare.apply.pipeline": "Show all pipelines",
+  "reporting.compare.apply.manager_call_pipeline": "Show all pipelines",
   "reporting.compare.title": "This quarter against its target",
   "reporting.compare.gap": "Gap to target",
   "reporting.compare.short": "Short of the {target} target",
@@ -1191,7 +1204,7 @@ export const en = {
   "reporting.compare.partial_visibility":
     "You cannot see every deal in this scope",
   "reporting.compare.partial_visibilityBody":
-    "Your figures cover only the deals you can see, so they are not held against the target for the whole scope.",
+    "Some deals or deal amounts in this scope are hidden from you, so your figures are not held against the target for the whole scope.",
   "reporting.compare.incompatible.period":
     "Pick this fiscal quarter to compare with a target",
   "reporting.compare.incompatible.periodBody":

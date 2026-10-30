@@ -1,13 +1,29 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
-import { StoryProviders } from "../../testing/story-utils";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
+import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import type { ReportingEvaluation } from "./reporting.model";
-import { reportingStoryEvaluation } from "./reporting.story-fixtures";
+import { ReportingOverview } from "./reporting.overview";
+import {
+  reportingStoryEvaluation,
+  reportingStoryRoutes,
+  reportingStoryScope,
+} from "./reporting.story-fixtures";
 import { TargetComparison } from "./reporting.targetcomparison";
 
-afterEach(cleanup);
+const originalFetch = globalThis.fetch;
+afterEach(() => {
+  cleanup();
+  globalThis.fetch = originalFetch;
+  window.location.hash = "";
+});
 
 type Comparison = NonNullable<
   ReportingEvaluation["metrics"][number]["target_comparison"]
@@ -30,10 +46,16 @@ function evaluationWith(comparison: Comparison): ReportingEvaluation {
   };
 }
 
-function show(comparison: Comparison) {
+function show(
+  comparison: Comparison,
+  onApply?: (selection: ReportingEvaluation["selection"]) => void,
+) {
   render(
     <StoryProviders>
-      <TargetComparison evaluation={evaluationWith(comparison)} />
+      <TargetComparison
+        evaluation={evaluationWith(comparison)}
+        onApply={onApply}
+      />
     </StoryProviders>,
   );
 }
@@ -103,6 +125,16 @@ it.each([
     "Pick All pipelines to compare the manager’s call",
   ],
   ["incompatible", "currency", "The target is in another currency"],
+  [
+    "colleague_withheld",
+    undefined,
+    "This would show one colleague’s own results",
+  ],
+  [
+    "call_below_won",
+    undefined,
+    "The manager’s call is below what is already won",
+  ],
 ] as const)(
   "explains a %s (%s) comparison and draws no figure",
   (status, incompatibility, title) => {
@@ -111,3 +143,83 @@ it.each([
     expect(screen.queryByText("Gap to target")).toBeNull();
   },
 );
+
+it("says a landing exactly on the target is at it, not ahead of it", () => {
+  show({ ...sample, gap: 0, landing: 80_000_000 });
+  expect(screen.getByText("At the €800k target")).toBeVisible();
+});
+
+it("offers the selection the server can compare and applies it as given", async () => {
+  const supported = {
+    ...reportingStoryEvaluation.selection,
+    pipeline_id: undefined,
+  };
+  const onApply = vi.fn();
+  show(
+    {
+      status: "incompatible",
+      incompatibility: "pipeline",
+      target_metric: "bookings_won",
+      supported_selection: supported,
+    },
+    onApply,
+  );
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Show all pipelines" }));
+  expect(onApply).toHaveBeenCalledWith(supported);
+});
+
+it("offers no switch where no selection fixes the comparison", () => {
+  show(
+    {
+      status: "incompatible",
+      incompatibility: "currency",
+      target_metric: "bookings_won",
+    },
+    () => {},
+  );
+  expect(screen.queryByRole("button")).toBeNull();
+});
+
+const landingDefinition = {
+  id: "forecast_landing",
+  version: "1",
+  unit: "money",
+  temporal_basis: "state_at",
+  supports_target: false,
+  definition: "The deal forecast's expected finish for this fiscal quarter.",
+  blocks: ["forecast_support", "metric_reading"],
+} as const;
+
+it("takes the Overview from its default pipeline to all pipelines in one click", async () => {
+  window.location.hash = "#/analytics/performance?period=this_quarter";
+  const refused = evaluationWith({
+    status: "incompatible",
+    incompatibility: "pipeline",
+    target_metric: "bookings_won",
+    supported_selection: {
+      ...reportingStoryEvaluation.selection,
+      period: "this_quarter",
+      pipeline_id: undefined,
+    },
+  });
+  installFetchStub({
+    ...reportingStoryRoutes(refused),
+    "GET /analytics/metrics": () =>
+      jsonResponse({
+        ...reportingStoryCatalog,
+        metrics: [...reportingStoryCatalog.metrics, landingDefinition],
+        schedule_ready: true,
+      }),
+  });
+  render(
+    <StoryProviders>
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: "Show all pipelines" }));
+  expect(window.location.hash).toContain("pipeline=all");
+});
