@@ -87,11 +87,11 @@ func openLane(ctx context.Context, tx pgx.Tx, budget time.Duration) (string, err
 
 // abandonLane undoes everything the lane did, including the abort a failed
 // statement leaves on the transaction, and closes the savepoint.
+//
+// One Exec with no arguments: pgx sends it over the simple protocol, which an
+// aborted transaction still accepts and a batch's extended protocol does not.
 func abandonLane(ctx context.Context, tx pgx.Tx) error {
-	undo := &pgx.Batch{}
-	undo.Queue(`ROLLBACK TO SAVEPOINT degradable_read`)
-	undo.Queue(`RELEASE SAVEPOINT degradable_read`)
-	if err := tx.SendBatch(ctx, undo).Close(); err != nil {
+	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT degradable_read; RELEASE SAVEPOINT degradable_read`); err != nil {
 		return fmt.Errorf("pg: rolling back a degradable read: %w", err)
 	}
 	return nil
