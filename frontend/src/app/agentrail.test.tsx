@@ -67,6 +67,7 @@ const CANDIDATE = (id: string): Candidate => ({
   // the authority is granted rather than left as a second reason for silence.
   can_decide: true,
   can_merge: true,
+  keep_id: null,
   status: "open",
   created_at: "2026-08-01T09:00:00Z",
 });

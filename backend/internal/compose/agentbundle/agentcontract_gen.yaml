@@ -9273,7 +9273,7 @@ components:
           description: The activity's version, for the If-Match its own actions send.
     DedupeCandidate:
       type: object
-      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge]
+      required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge, keep_id]
       properties:
         id: {type: string, format: uuid}
         entity_type: {type: string, enum: [contact, company, lead], description: 'A pair is always same-type: a lead is proposed as a duplicate of a lead or of nothing.'}
@@ -9296,11 +9296,16 @@ components:
           type: boolean
           description: |-
             Whether THIS caller could merge the pair: an open pair whose two
-            records they can see, with write authority over either end. The owner
-            of either half of a filed duplicate may merge it, so a pair whose ends
-            have different owners is not stuck waiting for a manager. A merge of
-            two records nobody filed as duplicates still needs write authority
-            over both.
+            records they can see, with write authority over both ends or over
+            one. With write authority over one end, that end is the one merged
+            away, and `keep_id` names the end that survives with its owner. So a
+            caller can give their own record away but never archive a
+            colleague's. A merge of two records nobody filed as duplicates still
+            needs write authority over both.
+        keep_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
         disposed_by: {type: [string, 'null'], format: uuid}
         disposed_at: {type: [string, 'null'], format: date-time}
         created_at: {type: string, format: date-time}
@@ -9353,7 +9358,7 @@ components:
         merge_mode:
           type: string
           enum: [ordinary, delegated, pair, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.'
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -9397,8 +9402,13 @@ components:
           type: boolean
           description: |-
             Whether this caller may merge this one open pair through the pair's own decision
-            route. True with write access to either end: the owner of either half of a filed
-            duplicate may merge it. `policy_enabled` does not widen it further.
+            route. True with write access to both ends, or to one end: then that end is the one
+            merged away and `keep_id` names the end that survives. `policy_enabled` does not
+            widen it further.
+        keep_id:
+          type: [string, 'null']
+          format: uuid
+          description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
     ContactCaseOwner:
       type: object
       required: [user_id, name, seat, member_ids]

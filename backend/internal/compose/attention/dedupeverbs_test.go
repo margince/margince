@@ -74,8 +74,9 @@ func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
 	}
 }
 
-// The owner of one side of a filed pair is offered the merge, which the merge
-// admits for them. The dismissal still writes both records, so it is withheld.
+// The owner of one side of a filed pair may only give their record away. So
+// the card offers the merge and names the colleague's record as the one kept.
+// The dismissal still writes both records, so it is withheld.
 func TestOwningOneSideOfAPairOffersTheMergeAlone(t *testing.T) {
 	for _, mineOnTheLeft := range []bool{true, false} {
 		mine, theirs := ids.NewV7(), ids.NewV7()
@@ -96,6 +97,9 @@ func TestOwningOneSideOfAPairOffersTheMergeAlone(t *testing.T) {
 		}
 		if got := out.NeedsYou[0].Actions; len(got) != 1 || got[0] != "merge" {
 			t.Errorf("mine on the left %v: actions %v, want only merge", mineOnTheLeft, got)
+		}
+		if keep := out.NeedsYou[0].Pair.KeepId; keep == nil || ids.UUID(*keep) != theirs {
+			t.Errorf("mine on the left %v: keep_id %v, want the colleague's record, which must survive", mineOnTheLeft, keep)
 		}
 	}
 }

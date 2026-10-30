@@ -90,9 +90,10 @@ type DedupeCandidateRow struct {
 	// duplicate is the contact best placed to notice it. The flags tell the
 	// client whether the buttons will work before the POST does.
 	CanDecide bool
-	// CanMerge is MayMergePair for this filed pair: open, and the caller may
-	// change either end.
+	// CanMerge and KeepID are OfferMerge for this pair while it is open. KeepID
+	// names the end that must survive when only one direction is admitted.
 	CanMerge bool
+	KeepID   *ids.UUID
 }
 
 // DedupeQueueInput filters one list page.
@@ -235,7 +236,7 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	// answer is a predicate over the two subject rows, and asking it row by row
 	// would be two round trips per candidate for a fact the query already has
 	// the joins for.
-	authority, err := dedupeAuthorityColumns(ctx, arg, in.Status == dispositionOpen)
+	authority, err := dedupeSideWritableColumns(ctx, arg, in.Status == dispositionOpen)
 	if err != nil {
 		return nil, "", err
 	}
@@ -279,11 +280,13 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 		defer res.Close()
 		for res.Next() {
 			var r DedupeCandidateRow
+			var writers PairWriters
 			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
 				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
-				&r.CanDecide, &r.CanMerge); err != nil {
+				&writers.Left, &writers.Right); err != nil {
 				return err
 			}
+			r.pairAuthority(writers)
 			rows = append(rows, r)
 		}
 		return res.Err()
@@ -350,7 +353,10 @@ func (s *Store) GetDedupeCandidate(ctx context.Context, id ids.UUID) (DedupeCand
 		if err != nil {
 			return err
 		}
-		return bothSidesReadable(ctx, tx, row)
+		if err := bothSidesReadable(ctx, tx, row); err != nil {
+			return err
+		}
+		return readPairAuthority(ctx, tx, &row)
 	})
 	if err != nil {
 		return DedupeCandidateRow{}, err

@@ -26696,13 +26696,19 @@ export interface components {
             can_decide: boolean;
             /**
              * @description Whether THIS caller could merge the pair: an open pair whose two
-             *     records they can see, with write authority over either end. The owner
-             *     of either half of a filed duplicate may merge it, so a pair whose ends
-             *     have different owners is not stuck waiting for a manager. A merge of
-             *     two records nobody filed as duplicates still needs write authority
-             *     over both.
+             *     records they can see, with write authority over both ends or over
+             *     one. With write authority over one end, that end is the one merged
+             *     away, and `keep_id` names the end that survives with its owner. So a
+             *     caller can give their own record away but never archive a
+             *     colleague's. A merge of two records nobody filed as duplicates still
+             *     needs write authority over both.
              */
             can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id: string | null;
             /** Format: uuid */
             disposed_by?: string | null;
             /** Format: date-time */
@@ -26765,7 +26771,7 @@ export interface components {
             /** @description Whether this caller may merge at least two members of this case. */
             can_merge: boolean;
             /**
-             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
              * @enum {string}
              */
             merge_mode: "ordinary" | "delegated" | "pair" | "none";
@@ -26820,10 +26826,16 @@ export interface components {
             can_dismiss: boolean;
             /**
              * @description Whether this caller may merge this one open pair through the pair's own decision
-             *     route. True with write access to either end: the owner of either half of a filed
-             *     duplicate may merge it. `policy_enabled` does not widen it further.
+             *     route. True with write access to both ends, or to one end: then that end is the one
+             *     merged away and `keep_id` names the end that survives. `policy_enabled` does not
+             *     widen it further.
              */
             can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
         };
         ContactCaseOwner: {
             /** Format: uuid */
@@ -50548,6 +50560,11 @@ export interface components {
          *     item the reader may not fully see is not offered as a decision at all.
          */
         AttentionPair: {
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
             left: components["schemas"]["AttentionPairSide"];
             right: components["schemas"]["AttentionPairSide"];
             /**

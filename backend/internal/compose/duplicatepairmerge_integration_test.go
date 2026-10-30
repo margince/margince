@@ -45,33 +45,103 @@ func (c *caseEnv) mergedBy(t *testing.T, rep ids.UUID, records ...ids.UUID) int 
 		AND entity_id = ANY($1) AND actor_id = $2`, records, "human:"+rep.String())
 }
 
-func TestTheOwnerOfEitherHalfMergesAFiledPair(t *testing.T) {
+// Each owner of a filed pair may give their own record away into the other's.
+// Neither may archive the colleague's record into their own.
+func TestEachOwnerOfAFiledPairMergesTheirRecordIntoTheColleagues(t *testing.T) {
 	c := setupCases(t)
-	rep := c.rep(c.e.Rep1)
-	for _, keepMine := range []bool{true, false} {
+	for _, merger := range []ids.UUID{c.e.Rep1, c.e.Rep2} {
 		pair := c.seedCase(t, c.e.Rep1, c.e.Rep2)
-		mine, theirs := pair[0], pair[1]
-		source, target, owner := theirs, mine, c.e.Rep1
-		if !keepMine {
-			source, target, owner = mine, theirs, c.e.Rep2
+		mine, theirs, colleague := pair[0], pair[1], c.e.Rep2
+		if merger == c.e.Rep2 {
+			mine, theirs, colleague = pair[1], pair[0], c.e.Rep1
 		}
-		if _, err := c.store.PreviewMergeSurvivorship(c.previewer(c.e.Rep1), "contact", source, target, nil, nil); err != nil {
-			t.Fatalf("keep mine %v: the preview refused the owner of one half: %v", keepMine, err)
+		rep := c.rep(merger)
+		if _, err := c.store.PreviewMergeSurvivorship(c.previewer(merger), "contact", theirs, mine, nil, nil); !isMergeDirection(err) {
+			t.Errorf("a preview archiving the colleague's record = %v, want the merge_direction refusal", err)
 		}
-		survivor, err := c.store.MergeContact(rep, contactID(source), contactID(target), nil)
+		if _, err := c.store.MergeContact(rep, contactID(theirs), contactID(mine), nil); !isMergeDirection(err) {
+			t.Errorf("a merge archiving the colleague's record = %v, want the merge_direction refusal", err)
+		}
+		if _, err := c.store.PreviewMergeSurvivorship(c.previewer(merger), "contact", mine, theirs, nil, nil); err != nil {
+			t.Fatalf("the preview refused giving one's own record away: %v", err)
+		}
+		survivor, err := c.store.MergeContact(rep, contactID(mine), contactID(theirs), nil)
 		if err != nil {
-			t.Fatalf("keep mine %v: the owner of one half was refused: %v", keepMine, err)
+			t.Fatalf("giving one's own record away was refused: %v", err)
 		}
-		if survivor.OwnerId == nil || ids.UUID(*survivor.OwnerId) != owner {
-			t.Errorf("keep mine %v: the survivor's owner changed, want the target's owner %s", keepMine, owner)
+		if survivor.OwnerId == nil || ids.UUID(*survivor.OwnerId) != colleague {
+			t.Errorf("the survivor's owner changed, want the colleague %s", colleague)
 		}
-		if n := c.mergedBy(t, c.e.Rep1, source, target); n != 2 {
-			t.Errorf("keep mine %v: %d merge audit rows name the rep on the two records, want 2", keepMine, n)
+		if n := c.mergedBy(t, merger, mine, theirs); n != 2 {
+			t.Errorf("%d merge audit rows name the merger on the two records, want 2", n)
 		}
 		if got := c.e.WsScalar(t, `SELECT disposition FROM dedupe_candidate WHERE id = $1`, c.pairID(t, mine, theirs)); got != "merged" {
-			t.Errorf("keep mine %v: the filed pair reads %s, want merged", keepMine, got)
+			t.Errorf("the filed pair reads %s, want merged", got)
 		}
 	}
+}
+
+// A rep who makes their own contact look like a colleague's gets a filed pair.
+// Through it they may only give their own contact away.
+func TestAManufacturedCollisionCannotArchiveTheColleaguesRecord(t *testing.T) {
+	c := setupCases(t)
+	rep := c.rep(c.e.Rep1)
+	newContact := func(ctx context.Context, owner ids.UUID) ids.UUID {
+		user := ids.From[ids.UserKind](owner)
+		created, err := c.store.CreateContact(ctx, contacts.CreateContactInput{
+			FullName: "Hedy Lamarr", Source: "manual", OwnerID: &user,
+			Phones: []contacts.ContactPhoneInput{{Phone: "+493055599001", PhoneType: "work", IsPrimary: true, Position: 1}},
+		})
+		if err != nil {
+			t.Fatalf("creating a contact: %v", err)
+		}
+		return ids.UUID(created.Id)
+	}
+	theirs := newContact(c.e.Admin(), c.e.Rep2)
+	mine := newContact(rep, c.e.Rep1)
+	c.pairID(t, mine, theirs)
+	if _, err := c.store.MergeContact(rep, contactID(theirs), contactID(mine), nil); !isMergeDirection(err) {
+		t.Fatalf("archiving the colleague's record through a made-up pair = %v, want the merge_direction refusal", err)
+	}
+	if n := c.e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND archived_at IS NULL AND owner_id = $2`, theirs, c.e.Rep2); n != 1 {
+		t.Error("the colleague's record is no longer live and theirs")
+	}
+}
+
+// A pair re-homed onto a survivor by an earlier merge is open between two
+// records nobody compared. It still only lets a rep give their own away.
+func TestARehomedPairCannotArchiveTheColleaguesRecord(t *testing.T) {
+	c := setupCases(t)
+	newContact := func(name string, owner ids.UUID, phones ...string) ids.UUID {
+		user := ids.From[ids.UserKind](owner)
+		in := contacts.CreateContactInput{FullName: name, Source: "manual", OwnerID: &user}
+		for i, phone := range phones {
+			in.Phones = append(in.Phones, contacts.ContactPhoneInput{Phone: phone, PhoneType: "work", IsPrimary: i == 0, Position: i + 1})
+		}
+		created, err := c.store.CreateContact(c.e.Admin(), in)
+		if err != nil {
+			t.Fatalf("creating %s: %v", name, err)
+		}
+		return ids.UUID(created.Id)
+	}
+	mine := newContact("Ada Rehome", c.e.Rep1, "+493055599002")
+	retired := newContact("Ada Rehome", c.e.Rep2, "+493055599003", "+493055599002")
+	theirs := newContact("Zoltan Third", c.e.Rep2, "+493055599003")
+	if n := c.e.WsCount(t, `SELECT count(*) FROM dedupe_candidate WHERE $1 IN (left_contact_id, right_contact_id)
+		AND $2 IN (left_contact_id, right_contact_id)`, mine, theirs); n != 0 {
+		t.Fatalf("the two ends were filed against each other %d time(s) before any merge", n)
+	}
+	if _, err := c.store.MergeContact(c.e.Admin(), contactID(retired), contactID(mine), nil); err != nil {
+		t.Fatalf("the earlier merge: %v", err)
+	}
+	c.pairID(t, mine, theirs)
+	if _, err := c.store.MergeContact(c.rep(c.e.Rep1), contactID(theirs), contactID(mine), nil); !isMergeDirection(err) {
+		t.Errorf("archiving the colleague's record through a re-homed pair = %v, want the merge_direction refusal", err)
+	}
+}
+
+func isMergeDirection(err error) bool {
+	return errors.Is(err, apperrors.ErrPermissionDenied) && caseCode(err) == "merge_direction"
 }
 
 func TestTheOwnerOfEitherHalfMergesThroughTheQueueAndTheCase(t *testing.T) {
@@ -83,8 +153,12 @@ func TestTheOwnerOfEitherHalfMergesThroughTheQueueAndTheCase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed) != 1 || !listed[0].CanMerge || listed[0].CanDecide {
-		t.Fatalf("the owner of one half lists %+v, want the pair with can_merge and without can_decide", listed)
+	if len(listed) != 1 || !listed[0].CanMerge || listed[0].CanDecide || listed[0].KeepID == nil || *listed[0].KeepID != queued[0] {
+		t.Fatalf("the owner of one half lists %+v, want can_merge keeping the colleague's record and no can_decide", listed)
+	}
+	mine := queued[1]
+	if _, err := c.store.DisposeDedupeCandidate(c.rep(c.e.Rep2), c.pairID(t, queued[0], queued[1]), "merge", &mine); !isMergeDirection(err) {
+		t.Errorf("a queue merge keeping the merger's own record = %v, want the merge_direction refusal", err)
 	}
 	winner := queued[0]
 	if _, err := c.store.DisposeDedupeCandidate(c.rep(c.e.Rep2), c.pairID(t, queued[0], queued[1]), "merge", &winner); err != nil {
@@ -134,8 +208,8 @@ func TestAMergeOutsideAFiledPairStillNeedsBothRecords(t *testing.T) {
 	if _, err := c.store.DisposeDedupeCandidate(c.e.Admin(), c.pairID(t, dismissed[0], dismissed[1]), "not_a_duplicate", nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := c.store.MergeContact(rep, contactID(dismissed[1]), contactID(dismissed[0]), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a merge of a pair someone marked as two people = %v, want 403", err)
+	if _, err := c.store.MergeContact(rep, contactID(dismissed[0]), contactID(dismissed[1]), nil); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a merge of one's own record into a pair someone marked as two contacts = %v, want the bare conflict", err)
 	}
 }
 
@@ -190,12 +264,19 @@ func TestTheOwnerOfEitherHalfMergesAFiledCompanyPair(t *testing.T) {
 		AND $1 IN (left_company_id, right_company_id) AND $2 IN (left_company_id, right_company_id)`, mine, theirs); n != 1 {
 		t.Fatalf("the two companies were filed %d time(s), want once", n)
 	}
-	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](theirs), ids.From[ids.CompanyKind](mine), nil); err != nil {
-		t.Fatalf("the owner of one company of a filed pair was refused: %v", err)
-	}
 	stranger := c.unlikeCompany(t, c.e.Rep2)
-	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](stranger), ids.From[ids.CompanyKind](mine), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a merge of a colleague's unfiled company = %v, want 403", err)
+	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](mine), ids.From[ids.CompanyKind](stranger), nil); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a merge into a colleague's unfiled company = %v, want the bare conflict", err)
+	}
+	if _, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](theirs), ids.From[ids.CompanyKind](mine), nil); !isMergeDirection(err) {
+		t.Errorf("archiving the colleague's company = %v, want the merge_direction refusal", err)
+	}
+	survivor, err := c.store.MergeCompany(rep, ids.From[ids.CompanyKind](mine), ids.From[ids.CompanyKind](theirs), nil)
+	if err != nil {
+		t.Fatalf("the owner of one company giving it away was refused: %v", err)
+	}
+	if survivor.OwnerId == nil || ids.UUID(*survivor.OwnerId) != c.e.Rep2 {
+		t.Error("the surviving company changed owner")
 	}
 }
 

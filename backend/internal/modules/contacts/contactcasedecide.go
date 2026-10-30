@@ -56,6 +56,10 @@ var (
 		Code: "owner_not_eligible",
 		Msg:  "the owner must be a current owner of one of the selected contacts",
 	}
+	errCasePairOwnerKept = &CaseSelectionError{
+		Code: "owner_not_eligible",
+		Msg:  "merging your contact into a colleague's keeps the colleague as its owner",
+	}
 	errCaseTooLarge = &CaseSelectionError{
 		Code: "too_large",
 		Msg:  "this case has more contacts than one review may merge; decide its pairs one by one",
@@ -242,9 +246,8 @@ func checkCaseSelection(c contactCase, selected []ids.UUID) error {
 // admitCaseDecision answers under which authority the merge runs. Ordinary:
 // the caller may change every selected member and hand the survivor to the
 // owner. Delegated: the policy is on and the caller is a live full-seat owner
-// of a selected member. Pair: the selection is the two ends of one open pair
-// and MayMergePair admits the caller. Under the last two the context admits
-// the selected contacts and their owners, and nothing else.
+// of a selected member. Pair: see admitCasePair. Under the last two the
+// context admits the selected contacts and their owners, and nothing else.
 func admitCaseDecision(ctx context.Context, tx pgx.Tx, c contactCase, selected []ids.UUID,
 	survivor caseMember, owner ids.UUID, policy bool,
 ) (context.Context, crmcontracts.ContactCaseOutcomeMode, error) {
@@ -272,16 +275,30 @@ func admitCaseDecision(ctx context.Context, tx pgx.Tx, c contactCase, selected [
 		admitted, err := auth.WithContactCaseAdmission(ctx, selected, c.liveOwners(selected))
 		return admitted, crmcontracts.ContactCaseOutcomeModeDelegated, err
 	}
-	// checkCaseSelection has joined the selection by open pairs, so two
-	// members are the two ends of one filed pair.
-	if len(selected) == 2 && MayMergePair(PairWriters{Left: writable[0], Right: writable[1]}, true) {
-		admitted, err := auth.WithContactCaseAdmission(ctx, selected, c.liveOwners(selected))
-		return admitted, crmcontracts.ContactCaseOutcomeModePair, err
+	if len(selected) == 2 && writable[0] != writable[1] {
+		return admitCasePair(ctx, selected, writable, survivor, owner)
 	}
 	if assignee != nil {
 		return ctx, "", assignee
 	}
 	return ctx, "", apperrors.ErrPermissionDenied
+}
+
+// admitCasePair admits a selection that is the two ends of one filed pair,
+// of which the caller may change one. checkCaseSelection has joined them by
+// an open pair. The survivor must be the other end and keeps its owner, so
+// no handover runs.
+func admitCasePair(ctx context.Context, selected []ids.UUID, writable []bool, survivor caseMember, owner ids.UUID,
+) (context.Context, crmcontracts.ContactCaseOutcomeMode, error) {
+	kept := slices.Index(selected, survivor.ID)
+	if !MayMergePair(MergeWriters{Source: writable[1-kept], Target: writable[kept]}, true) {
+		return ctx, "", errMergeIntoYours
+	}
+	if !sameOwner(survivor.OwnerID, &owner) {
+		return ctx, "", errCasePairOwnerKept
+	}
+	admitted, err := auth.WithContactCaseAdmission(ctx, selected, []ids.UUID{owner})
+	return admitted, crmcontracts.ContactCaseOutcomeModePair, err
 }
 
 // caseMergePlan is a checked decision, ready to write.

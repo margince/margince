@@ -105,8 +105,9 @@ func (s *Service) duplicateItem(
 	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
 		item.Actions = append(item.Actions, actionDismiss)
 	}
-	if decidable.mayMerge(pair.EntityType, pair.LeftID, pair.RightID) && settleable[pair.ID] {
+	if offer := decidable.mergeOffer(pair.EntityType, pair.LeftID, pair.RightID); offer.May && settleable[pair.ID] {
 		item.Actions = append(item.Actions, "merge")
+		item.Pair.KeepId = (*openapi_types.UUID)(offer.Keep)
 	}
 	return item
 }
@@ -126,10 +127,10 @@ func (a pairAuthority) both(entityType string, left, right ids.UUID) bool {
 	return rows[left] && rows[right]
 }
 
-// mayMerge is the merge's own question of a filed pair.
-func (a pairAuthority) mayMerge(entityType string, left, right ids.UUID) bool {
+// mergeOffer is the merge's own question of a filed pair.
+func (a pairAuthority) mergeOffer(entityType string, left, right ids.UUID) contacts.MergeOffer {
 	rows := a[entityType]
-	return contacts.MayMergePair(contacts.PairWriters{Left: rows[left], Right: rows[right]}, true)
+	return contacts.OfferMerge(left, right, contacts.PairWriters{Left: rows[left], Right: rows[right]}, true)
 }
 
 func (f pairFaces) side(entityType string, id ids.UUID) (crmcontracts.AttentionPairSide, bool) {

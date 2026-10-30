@@ -110,7 +110,7 @@ Margince also groups contacts that may be duplicates of each other, so you can m
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
 2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one.
 3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
-The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. You may merge your own contact with one possible duplicate a colleague owns. To merge a larger group of contacts you cannot edit, see **Shared merge reviews** in [Seats, roles and who can see what](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
+The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. You may merge your own contact into a colleague's possible duplicate, which stays with its owner ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
@@ -191,7 +191,7 @@ To merge two duplicate companies in Margince, open the company you want to remov
 3. Choose **Merge**. Margince opens the company you kept.
 The company you merged away is archived, not deleted. You cannot merge an archived company.
 
-Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself. The owner of either company of a possible duplicate may merge the two.
+Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself. The owner of one company of a possible duplicate may merge it into the other, which stays with its owner.
 
 Margince also lists two companies whose names are the same once the legal form is left out, such as "Fabrikam GmbH" and "Fabrikam". Two names that are only close, such as "Fabrikam GmbH" and "Fabrikam Cloud Services", need one more fact in common. That fact is an address, a phone number or a contact who works at both.
 Also called: combine companies, deduplicate accounts.

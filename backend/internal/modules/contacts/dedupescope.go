@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -117,57 +119,19 @@ func sideServable(entityType, alias, column, scopeClause string, mustBeLive bool
 	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s %s WHERE %s)", entityType, alias, terms)
 }
 
-// dedupeDecidableExpr renders the per-row "could this caller dispose of it"
-// answer, in the same both-sides shape the visibility filter uses.
-//
-// BOTH halves of authority, and both ENDS. The visibility clause is not enough:
-// a seat can read a record it may not change, and disposing of a pair changes
-// both — dismissing suppresses them for the whole workspace and merging rewrites
-// one into the other. So each side must pass the read scope AND the write arm,
-// which is exactly what EnsureWritable checks one row at a time on the way in.
+// dedupeSideWritableColumns renders, per row, whether the caller may change
+// each end of the pair. It asks the read scope and the write arm, as
+// EnsureWritable does for one row. pairAuthority turns the two answers into the flags. So
+// the queue asks MayMergePair rather than restating it in SQL.
 //
 // It answers about the CALLER, so it is a column and not a filter. Narrowing the
 // list to decidable pairs would hide a real duplicate from the contact best
-// placed to notice it, and a pair nobody can decide would become invisible
-// rather than merely stuck.
-func dedupeDecidableExpr(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
-	expr, err := dedupePairArms("d", mustBeLive, func(entity, alias string) (string, error) {
-		scope, err := auth.ScopeClauseFor(ctx, entity, alias, arg)
-		if err != nil {
-			return "", err
-		}
-		write, err := auth.WriteAuthorityClauseFor(ctx, entity, alias, arg)
-		if err != nil {
-			return "", err
-		}
-		return andClauses(scope, write), nil
-	})
-	if err != nil {
-		return "", err
-	}
-	return expr + " AS can_decide", nil
-}
-
-// dedupeAuthorityColumns renders can_decide and then can_merge.
-func dedupeAuthorityColumns(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
-	decidable, err := dedupeDecidableExpr(ctx, arg, mustBeLive)
-	if err != nil {
-		return "", err
-	}
-	mergeable, err := dedupeMergeableExpr(ctx, arg)
-	if err != nil {
-		return "", err
-	}
-	return decidable + ", " + mergeable, nil
-}
-
-// dedupeMergeableExpr renders MayMergePair for a filed pair, row by row: the
-// pair is open and the caller may change either end. That both ends are
-// visible and live is the open lane's own filter.
-func dedupeMergeableExpr(ctx context.Context, arg func(any) int) (string, error) {
-	arms := make([]string, 0, len(dedupePairSides))
+// placed to notice it.
+func dedupeSideWritableColumns(ctx context.Context, arg func(any) int, mustBeLive bool) (string, error) {
+	left := make([]string, 0, len(dedupePairSides))
+	right := make([]string, 0, len(dedupePairSides))
 	for i, side := range dedupePairSides {
-		alias := fmt.Sprintf("m%d", i)
+		alias := fmt.Sprintf("w%d", i)
 		scope, err := auth.ScopeClauseFor(ctx, side.entity, alias, arg)
 		if err != nil {
 			return "", err
@@ -177,11 +141,40 @@ func dedupeMergeableExpr(ctx context.Context, arg func(any) int) (string, error)
 			return "", err
 		}
 		authority := andClauses(scope, write)
-		arms = append(arms, fmt.Sprintf("(entity_type = '%s' AND (%s OR %s))", side.entity,
-			sideServable(side.entity, alias, side.left, authority, true),
-			sideServable(side.entity, alias, side.right, authority, true)))
+		arm := func(column string) string {
+			return fmt.Sprintf("(dedupe_candidate.entity_type = '%s' AND %s)", side.entity,
+				sideServable(side.entity, alias, column, authority, mustBeLive))
+		}
+		left, right = append(left, arm(side.left)), append(right, arm(side.right))
 	}
-	return "(dedupe_candidate.disposition = 'open' AND (" + strings.Join(arms, " OR ") + ")) AS can_merge", nil
+	return "(" + strings.Join(left, " OR ") + ") AS left_writable, (" +
+		strings.Join(right, " OR ") + ") AS right_writable", nil
+}
+
+// pairAuthority sets what the caller may decide from whether they may change
+// each end. Only an open pair is filed for a merge.
+func (r *DedupeCandidateRow) pairAuthority(writers PairWriters) {
+	r.CanDecide = writers.Left && writers.Right
+	offer := OfferMerge(r.LeftID, r.RightID, writers, r.Disposition == dispositionOpen)
+	r.CanMerge = offer.May && r.Disposition == dispositionOpen
+	r.KeepID = offer.Keep
+}
+
+// readPairAuthority is the by-id twin of the list's authority columns.
+func readPairAuthority(ctx context.Context, tx pgx.Tx, row *DedupeCandidateRow) error {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	columns, err := dedupeSideWritableColumns(ctx, arg, row.Disposition == dispositionOpen)
+	if err != nil {
+		return err
+	}
+	query := fmt.Sprintf(`SELECT %s FROM dedupe_candidate WHERE id = $%d`, columns, arg(row.ID))
+	var writers PairWriters
+	if err := tx.QueryRow(ctx, query, args...).Scan(&writers.Left, &writers.Right); err != nil {
+		return fmt.Errorf("contacts: reading what the caller may decide: %w", err)
+	}
+	row.pairAuthority(writers)
+	return nil
 }
 
 // andClauses joins the two authority halves, skipping an empty one — an

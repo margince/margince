@@ -30968,6 +30968,9 @@ type AttentionPair struct {
 	// database rather than their own records.
 	Evidence []AttentionPairEvidence `json:"evidence"`
 
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id,omitempty"`
+
 	// Left One side of a proposed merge, named and weighed so a reader can tell which record to keep.
 	Left AttentionPairSide `json:"left"`
 
@@ -37367,7 +37370,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37393,7 +37396,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members. `none`: none of these.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -37425,14 +37428,18 @@ type ContactCaseEdge struct {
 	CanDismiss bool `json:"can_dismiss"`
 
 	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
-	// route. True with write access to either end: the owner of either half of a filed
-	// duplicate may merge it. `policy_enabled` does not widen it further.
-	CanMerge   bool               `json:"can_merge"`
-	Confidence float32            `json:"confidence"`
-	Evidence   []DedupeEvidence   `json:"evidence"`
-	LeftId     openapi_types.UUID `json:"left_id"`
-	PairId     openapi_types.UUID `json:"pair_id"`
-	RightId    openapi_types.UUID `json:"right_id"`
+	// route. True with write access to both ends, or to one end: then that end is the one
+	// merged away and `keep_id` names the end that survives. `policy_enabled` does not
+	// widen it further.
+	CanMerge   bool             `json:"can_merge"`
+	Confidence float32          `json:"confidence"`
+	Evidence   []DedupeEvidence `json:"evidence"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId  *openapi_types.UUID `json:"keep_id,omitempty"`
+	LeftId  openapi_types.UUID  `json:"left_id"`
+	PairId  openapi_types.UUID  `json:"pair_id"`
+	RightId openapi_types.UUID  `json:"right_id"`
 
 	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
 	Status ContactCaseEdgeStatus `json:"status"`
@@ -41100,11 +41107,12 @@ type DedupeCandidate struct {
 	CanDecide bool `json:"can_decide"`
 
 	// CanMerge Whether THIS caller could merge the pair: an open pair whose two
-	// records they can see, with write authority over either end. The owner
-	// of either half of a filed duplicate may merge it, so a pair whose ends
-	// have different owners is not stuck waiting for a manager. A merge of
-	// two records nobody filed as duplicates still needs write authority
-	// over both.
+	// records they can see, with write authority over both ends or over
+	// one. With write authority over one end, that end is the one merged
+	// away, and `keep_id` names the end that survives with its owner. So a
+	// caller can give their own record away but never archive a
+	// colleague's. A merge of two records nobody filed as duplicates still
+	// needs write authority over both.
 	CanMerge bool `json:"can_merge"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
@@ -41119,6 +41127,9 @@ type DedupeCandidate struct {
 	// Evidence Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.
 	Evidence []DedupeEvidence   `json:"evidence"`
 	Id       openapi_types.UUID `json:"id"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id"`
 
 	// LeftId Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.
 	LeftId  openapi_types.UUID    `json:"left_id"`

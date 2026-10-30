@@ -122,16 +122,25 @@ owners. A rep with `own` scope cannot change a colleague's contact, so without h
 could merge the case.
 
 The same holds for one pair the dedupe queue filed. The rule for who may merge two records is
-`contacts.MayMergePair` (`modules/contacts/duplicatepairmerge.go`): write authority over both, or
-over either end of a filed pair. A pair is filed while a live `dedupe_candidate` row names those
-two records with the disposition `open`. A `merged` row counts too, because the queue marks its pair
-before the merge runs, in the same transaction. The merge code calls
-`admitDuplicatePairMerge` after it takes its row locks. When only the filed pair admits the caller,
-that function puts `auth.WithDuplicatePairAdmission` on the context. It names the two records and
-no owner. Both records must still be live and visible to the caller. The consent, introduction and
-grant carriers that the merge calls then pass the same check the merge passed. The queue's
-`can_merge`, the case's `merge_mode` `pair` and the Worklist card read the same rule. Of the three
-checks below, the pair admission changes the first two and never `EnsureAssignee`.
+`contacts.MayMergePair` (`modules/contacts/duplicatepairmerge.go`). It needs write authority over
+both, or over the source alone when the pair is filed. So the one-sided merge only gives the
+caller's own record away, and the record they cannot change stays with its owner. A rep who copies a
+colleague's record, or meets a pair an earlier merge moved, still cannot archive the colleague's
+record. The other direction answers 403 `merge_direction`.
+
+A pair is filed while a live `dedupe_candidate` row names those two records with the disposition
+`open`. A `merged` row counts only when this transaction marked it (`disposed_at = now()`). The
+queue and the case merge mark their pair that way before the merge runs.
+
+The merge code calls `admitDuplicatePairMerge` after it takes its row locks. When only the filed
+pair admits the caller, that function puts `auth.WithDuplicatePairAdmission` on the context. It
+names the two records and no owner. Both records must still be live and visible to the caller. The
+consent, introduction and grant carriers that the merge calls then pass the same check. Of the
+three checks below, the pair admission changes the first two and never `EnsureAssignee`.
+
+`contacts.OfferMerge` asks the rule of both directions for a reader. The queue's `can_merge`, the
+case's `merge_mode` `pair` and the Worklist card read it. Their `keep_id` names the record that must
+stay.
 
 `auth.WithContactCaseAdmission` (`platform/auth/contactcaseadmission.go`) puts a case admission on
 the context. It names the selected contacts and the live owners of those contacts. It changes three
@@ -159,7 +168,9 @@ only when all of these hold:
 Otherwise the merge is refused. The decision reads the setting in its own transaction, under a
 shared lock, so a change to the setting waits for a merge in flight. The audit row of the merge
 records the mode (`ordinary`, `delegated` or `pair`) and the setting. The mode is `pair` when the
-selection is the two ends of one open pair and `MayMergePair` admits the caller.
+two picked contacts are the ends of one open pair and `MayMergePair` admits the caller. The kept
+record must then be the end the caller cannot change. `owner_id` must be its current owner, so the
+owner never changes.
 
 `auth.WithIndividualPerformance` (`platform/auth/individualperformance.go`) puts the installation
 setting `installation.individual_performance` on the context. The session and passport checks in
