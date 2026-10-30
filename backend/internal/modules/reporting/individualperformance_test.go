@@ -46,6 +46,10 @@ func TestTargetReachBindsWhatItsClauseReads(t *testing.T) {
 		"every target":           {every: true, owners: MeasurableOwners{Every: true}},
 		"switch off, every team": {every: true, owners: MeasurableOwners{Members: []ids.UUID{self}, IndividualOff: true}},
 		"a lead":                 {owners: MeasurableOwners{Members: []ids.UUID{self}}, teams: []ids.UUID{ids.NewV7()}},
+		"switch off, a floor": {
+			every: true, owners: MeasurableOwners{Members: []ids.UUID{self}, IndividualOff: true},
+			floor: TargetFloor{Applies: true, Teams: []ids.UUID{ids.NewV7()}},
+		},
 	} {
 		var b bindings
 		clause := reach.clause(&b)

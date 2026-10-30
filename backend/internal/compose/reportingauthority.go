@@ -72,8 +72,8 @@ func (a reportingAuthority) MeasurableOwnerSet(ctx context.Context, tx pgx.Tx) (
 	return readerMeasurableOwners(ctx, tx)
 }
 
-func (a reportingAuthority) WithheldTeams(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
-	return withheldTeams(ctx, tx)
+func (a reportingAuthority) TargetFloor(ctx context.Context, tx pgx.Tx) (reporting.TargetFloor, error) {
+	return targetFloor(ctx, tx)
 }
 
 // readerMeasurableOwners answers whose figures the reader may see one by one.

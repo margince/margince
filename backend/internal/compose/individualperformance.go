@@ -142,19 +142,21 @@ func thinGroups(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, er
 	return out, nil
 }
 
-// withheldTeams answers the live teams whose target would be a colleague's own
-// while the switch is off. Such a team has other members, but fewer than
-// fewestColleagues live ones besides the reader. Nil while the switch is on.
-func withheldTeams(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
+// targetFloor answers, while the switch is off, which team and company
+// targets keep enough colleagues behind them to show. A target is in effect a
+// colleague's own when its scope has other members but fewer than
+// fewestColleagues live ones besides the reader. Archived teams are checked
+// too, and a team the check never reads is not on the list, so it is withheld.
+func targetFloor(ctx context.Context, tx pgx.Tx) (reporting.TargetFloor, error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return nil, err
+		return reporting.TargetFloor{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT tm.team_id, array_agg(tm.user_id) FROM team_membership tm
-		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		GROUP BY tm.team_id ORDER BY tm.team_id`)
+	rows, err := tx.Query(ctx, `SELECT t.id, array_remove(array_agg(tm.user_id), NULL) FROM team t
+		LEFT JOIN team_membership tm ON tm.team_id = t.id
+		GROUP BY t.id ORDER BY t.id`)
 	if err != nil {
-		return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+		return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
 	}
 	var teams []ids.UUID
 	var members [][]ids.UUID
@@ -163,25 +165,29 @@ func withheldTeams(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 		var seats []ids.UUID
 		if err := rows.Scan(&team, &seats); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+			return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
 		}
 		teams, members = append(teams, team), append(members, seats)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("compose: reading team members for the target floor: %w", err)
+		return reporting.TargetFloor{}, fmt.Errorf("compose: reading team members for the target floor: %w", err)
 	}
-	thin, err := thinGroups(ctx, tx, members)
+	var everyone []ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(u.id), '{}') FROM app_user u WHERE NOT u.is_agent`).Scan(&everyone); err != nil {
+		return reporting.TargetFloor{}, fmt.Errorf("compose: reading the members for the company target floor: %w", err)
+	}
+	thin, err := thinGroups(ctx, tx, append(members, everyone))
 	if err != nil {
-		return nil, err
+		return reporting.TargetFloor{}, err
 	}
-	var out []ids.UUID
+	floor := reporting.TargetFloor{Applies: true, Workspace: !thin[len(teams)], Teams: []ids.UUID{}}
 	for index, team := range teams {
-		if thin[index] {
-			out = append(out, team)
+		if !thin[index] {
+			floor.Teams = append(floor.Teams, team)
 		}
 	}
-	return out, nil
+	return floor, nil
 }
 
 // liveColleagues answers which of these seats are live human members.

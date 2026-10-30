@@ -346,3 +346,72 @@ func TestIndividualPerformanceOffWithholdsATwoMemberTeamsTarget(t *testing.T) {
 		t.Errorf("with the switch off a two-member team's target = %v, want not found", err)
 	}
 }
+
+// listsTarget answers whether the reader's target list holds target.
+func listsTarget(t *testing.T, service *reporting.Service, reader context.Context, target crmcontracts.ReportingTarget) bool {
+	t.Helper()
+	list, err := service.ListTargets(reader, nil, 100, reporting.TargetFilter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return slices.ContainsFunc(list.Data, func(listed crmcontracts.ReportingTarget) bool { return listed.Id == target.Id })
+}
+
+// The target floor checks archived teams as it checks live ones, and lists
+// only teams it found with enough colleagues, so a small archived team's
+// target stays withheld while the switch is off.
+func TestIndividualPerformanceOffFloorChecksArchivedTeams(t *testing.T) {
+	e := setupForecast(t)
+	reportingTeammate(t, e)
+	second := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'second@forecast.test', 'Second')`)
+	for _, member := range []ids.UUID{e.Rep1, e.Rep3, second} {
+		if _, err := e.owner.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, e.Team2, member); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE team SET archived_at = now() WHERE id = ANY($1)`, []ids.UUID{e.Team1, e.Team2}); err != nil {
+		t.Fatal(err)
+	}
+	e.showIndividualPerformance(t, false)
+	admin := reportingActor(e)
+	var floor reporting.TargetFloor
+	if err := InstallationDB(e.Pool).Tx(admin, func(tx pgx.Tx) error {
+		var err error
+		floor, err = targetFloor(admin, tx)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !floor.Applies || slices.Contains(floor.Teams, e.Team1) || !slices.Contains(floor.Teams, e.Team2) {
+		t.Errorf("floor = %+v; want the archived team of two withheld (%v) and the archived team of three shown (%v)", floor, e.Team1, e.Team2)
+	}
+}
+
+// A company of the reader and one live colleague has a target that is in
+// effect that colleague's own. It is withheld while the switch is off.
+func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	admin := reportingActor(e)
+	target, err := service.CreateTarget(admin, crmcontracts.ReportingTargetInput{
+		Metric: "meetings_held", Scope: crmcontracts.ReportingScope{Kind: "workspace"},
+		PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)},
+		Value: 40, Reason: "Month plan",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reportingTeammate(t, e)
+	e.showIndividualPerformance(t, false)
+	if !listsTarget(t, service, admin, target) {
+		t.Fatal("with the switch off a company of three members does not show its target")
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at = now()
+		WHERE NOT is_agent AND id <> ALL($1)`, []ids.UUID{e.Rep1, e.Rep3}); err != nil {
+		t.Fatal(err)
+	}
+	if listsTarget(t, service, admin, target) {
+		t.Error("with the switch off a company of the reader and one colleague still lists its target")
+	}
+}

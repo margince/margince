@@ -70,7 +70,11 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		if err := s.targetHistory(ctx, tx, &out); err != nil {
 			return err
 		}
-		return s.targetAllocation(ctx, tx, &out)
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return s.targetAllocation(ctx, tx, owners, &out)
 	})
 	return out, err
 }
@@ -87,8 +91,7 @@ type targetReach struct {
 	every  bool
 	owners MeasurableOwners
 	teams  []ids.UUID
-	// withheld are team targets no reader sees while the switch is off.
-	withheld []ids.UUID
+	floor  TargetFloor
 }
 
 func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
@@ -100,12 +103,12 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if err != nil {
 		return targetReach{}, err
 	}
-	withheld, err := s.authority.WithheldTeams(ctx, tx)
+	floor, err := s.authority.TargetFloor(ctx, tx)
 	if err != nil {
 		return targetReach{}, err
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return targetReach{every: true, owners: owners, withheld: withheld}, nil
+		return targetReach{every: true, owners: owners, floor: floor}, nil
 	}
 	// Only a seat that reaches every team and owner may set the company's
 	// target, so it reads every target it may set.
@@ -113,15 +116,20 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if every && !owners.IndividualOff {
 		owners.Every = true
 	}
-	return targetReach{every: every, owners: owners, teams: actor.TeamIDs, withheld: withheld}, err
+	return targetReach{every: every, owners: owners, teams: actor.TeamIDs, floor: floor}, err
 }
 
 func (r targetReach) clause(b *bindings) string {
 	reach := r.reachClause(b)
-	if len(r.withheld) == 0 {
+	if !r.floor.Applies {
 		return reach
 	}
-	return "(" + reach + " AND NOT (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.withheld) + ")))"
+	// An allow-list, so a scope kind or team the floor never checked is withheld.
+	shown := "t.scope_kind='owner' OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.floor.Teams) + "))"
+	if r.floor.Workspace {
+		shown += " OR t.scope_kind='workspace'"
+	}
+	return "(" + reach + " AND (" + shown + "))"
 }
 
 func (r targetReach) reachClause(b *bindings) string {
@@ -162,11 +170,12 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	limit = max(1, min(limit, 100))
 	out := crmcontracts.ReportingTargetList{Data: []crmcontracts.ReportingTarget{}}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		var b bindings
-		where, err := s.targetClause(ctx, tx, &b)
+		reach, err := s.targetReach(ctx, tx)
 		if err != nil {
 			return err
 		}
+		var b bindings
+		where := reach.clause(&b)
 		if after != nil {
 			where += " AND t.id>" + b.add(*after)
 		}
@@ -187,7 +196,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 			return err
 		}
 		for i := range out.Data {
-			if err := s.targetAllocation(ctx, tx, &out.Data[i]); err != nil {
+			if err := s.targetAllocation(ctx, tx, reach.owners, &out.Data[i]); err != nil {
 				return err
 			}
 		}

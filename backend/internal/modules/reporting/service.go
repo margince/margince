@@ -76,9 +76,9 @@ type Authority interface {
 	// MeasurableOwners answers which candidates the reader may measure one by
 	// one, the owner rule of Scope asked of many owners in one statement.
 	MeasurableOwners(context.Context, pgx.Tx, []ids.UUID) ([]ids.UUID, error)
-	// WithheldTeams are the teams whose target is a colleague's own while the
-	// installation shows no individual performance; nil while it does.
-	WithheldTeams(context.Context, pgx.Tx) ([]ids.UUID, error)
+	// TargetFloor answers which whole-scope targets stay shown while the
+	// installation shows no individual performance.
+	TargetFloor(context.Context, pgx.Tx) (TargetFloor, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
 	// AssertedScope resolves the scope a report revision records. A revision is
@@ -101,6 +101,15 @@ type MeasurableOwners struct {
 // Includes answers whether the reader may see this owner's figures.
 func (m MeasurableOwners) Includes(owner ids.UUID) bool {
 	return m.Every || slices.Contains(m.Members, owner)
+}
+
+// TargetFloor lists the team and company targets a reader sees while the
+// switch is off: those whose members were checked and hold enough colleagues.
+// Applies is false while the switch is on, and then nothing is withheld.
+type TargetFloor struct {
+	Applies   bool
+	Workspace bool
+	Teams     []ids.UUID
 }
 
 // Calendar defines the installation’s civil-time and money context.
