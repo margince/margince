@@ -14,10 +14,20 @@ import (
 // page admits, per category, to that count. The approvals count uses the
 // lane's own query. narrowToScope applies the same requested-decider rule in
 // every scope but team. The team scope judges by a roster the lane query does
-// not share, so there the count is not offered.
-func (s *Service) exactSources(day crmcontracts.Attention, scope string) map[totalKey]int {
+// not share, so there the count is not offered. A window read whole counts
+// its considered rows.
+func (s *Service) exactSources(day crmcontracts.Attention, scope string, considered []ranked) map[totalKey]int {
 	exact := make(map[totalKey]int, len(s.backlog.exact)+1)
 	maps.Copy(exact, s.backlog.exact)
+	for key := range s.backlog.whole {
+		exact[key] = 0
+	}
+	for _, row := range considered {
+		key := totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}
+		if s.backlog.whole[key] {
+			exact[key]++
+		}
+	}
 	if day.Counts.ApprovalsOpen != nil && (s.taskOwner != ids.Nil || scope != scopeTeam) {
 		approval := crmcontracts.WorklistItemSourceApproval
 		exact[totalKey{approval, crmcontracts.WorklistCountCategory(categoryOfSource(approval))}] = *day.Counts.ApprovalsOpen

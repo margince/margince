@@ -342,7 +342,7 @@ The Worklist counts items, not cards: 8 possible duplicates are one card. More r
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no share, because nobody
   knows the total. Each load checks a fixed number per category, and the list stops there. Approvals are counted in
   full in every view but Team, so Decisions can show the total. Tasks are counted in full, and the list loads all of
-  them as you move down. **All** shows no task total, because it leaves weekly plans out. A filter with no counts
+  them as you move down. **Team** shows no task total, nor does **All**, which leaves weekly plans out. A filter with no counts
   says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 

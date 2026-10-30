@@ -18,8 +18,8 @@ import (
 // TaskWindow is one window of open tasks, read under a lane's narrowing.
 type TaskWindow struct {
 	AsOf time.Time
-	// From is zero for today's window: due before Until, with the reader's due
-	// reminders. Set, it is the later window [From, Until) without them.
+	// From is zero for today's window, due before Until. Set, it is the later
+	// window [From, Until).
 	From, Until time.Time
 	Scope       TaskScope
 	Owner       ids.UUID
@@ -32,6 +32,8 @@ type TaskWindow struct {
 // cap. OPTIONAL: unbound, a cut task lane leaves its categories a floor and
 // scrolling ends at the ranked rows.
 type TaskBacklog interface {
+	// CountTasks counts a later window whole, leaving out the reader's due
+	// reminders, which are today's work.
 	CountTasks(ctx context.Context, window TaskWindow) (int, error)
 	// TasksAfter reads up to limit tasks of the window after a position, in
 	// the store's own order. next is empty at the window's end.
@@ -51,6 +53,9 @@ type backlogState struct {
 	tasks TaskBacklog
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
+	// whole names the windows read short of their cap, whose rows on the page
+	// are their total.
+	whole map[totalKey]bool
 	// until and zone are the day's end and calendar, so a task read past the
 	// cap is drawn as the lane draws it.
 	until time.Time
@@ -64,23 +69,26 @@ type totalKey struct {
 	category crmcontracts.WorklistCountCategory
 }
 
-// readingBacklog returns a copy carrying the stores' whole counts of every
-// cut source they can count. A count that fails leaves its category a floor,
-// so a failed count never fails the page.
+// readingBacklog returns a copy carrying what the stores counted of the cut
+// task lane. It counts on a first page only, because a client keeps the first
+// page's counts. A count that fails leaves its category a floor, so a failed
+// count never fails the page.
 func (s *Service) readingBacklog(
-	ctx context.Context, day crmcontracts.Attention, until time.Time, zone *time.Location,
+	ctx context.Context, day crmcontracts.Attention, until time.Time, zone *time.Location, first bool,
 ) *Service {
 	reading := *s
-	reading.backlog.exact = map[totalKey]int{}
+	reading.backlog.exact, reading.backlog.whole = map[totalKey]int{}, map[totalKey]bool{}
 	reading.backlog.until, reading.backlog.zone = until, zone
-	if s.marked.probe != nil {
+	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}
-	bounded := boundedSources(day)
-	if bounded[sourceTask] && s.backlog.tasks != nil {
-		for key, window := range s.taskWindows(day, until) {
-			reading.countInto(ctx, key, window, day)
+	todayCut, laterCut := plannedWindowsAtCap(day.Planned)
+	for key, window := range s.taskWindows(day, until) {
+		cut := laterCut
+		if window.From.IsZero() {
+			cut = todayCut
 		}
+		reading.countInto(ctx, key, window, day, cut)
 	}
 	return &reading
 }
@@ -101,10 +109,18 @@ func (s *Service) taskWindows(day crmcontracts.Attention, until time.Time) map[t
 	}
 }
 
-// countInto stores one window's count. Today's window off a non-team page is
-// the planned lane's own count, which the day already carries.
-func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention) {
-	if window.From.IsZero() && window.Team == nil {
+// countInto states one task window's total. A window read short of its cap
+// is whole on the page. Today's cut window is the planned lane's own count.
+// A team page counts nothing: the roster arm defeats the open-task index, and
+// at ten thousand tasks a seat its count outran the lane budget.
+func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention, cut bool) {
+	switch {
+	case !cut:
+		s.backlog.whole[key] = true
+		return
+	case window.Team != nil:
+		return
+	case window.From.IsZero():
 		s.backlog.exact[key] = day.Counts.Planned
 		return
 	}

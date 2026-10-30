@@ -242,19 +242,25 @@ const (
 // full and the other is not, which on a quiet day is the common case rather
 // than the edge one.
 func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
-	var today, upcoming int
+	today, upcoming := plannedWindowsAtCap(lane)
+	return today || upcoming
+}
+
+// plannedWindowsAtCap reports, for each half of the planned lane, whether its
+// read came back at its cap.
+func plannedWindowsAtCap(lane []crmcontracts.AttentionItem) (today, upcoming bool) {
+	var todays, upcomings int
 	for _, item := range lane {
-		// The reminder read is never cut, so its rows say nothing of either cap.
-		if reminded(item) {
-			continue
-		}
+		// A reminded row may also be one a window read, and spent its limit. So
+		// it counts toward its window: a false cut costs a count, a missed cut
+		// states a wrong total.
 		if isUpcoming(item.DueGroup) {
-			upcoming++
+			upcomings++
 			continue
 		}
-		today++
+		todays++
 	}
-	return today >= plannedCap || upcoming >= upcomingCap
+	return todays >= plannedCap, upcomings >= upcomingCap
 }
 
 // isUpcoming reports whether a row came from the second read. Absent means the

@@ -93,8 +93,8 @@ func totalOf(day crmcontracts.Worklist, category crmcontracts.WorklistCountCateg
 }
 
 // Each task category's exact total is the number of task rows the list holds
-// when walked to its end. That holds in every scope, and the walk reaches
-// every task.
+// when walked to its end. The walk reaches every task in every scope. A team
+// page and the all scope state no task total, and say so as a floor.
 func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 	r := setupReminders(t)
 	backlogTasks(t, r)
@@ -104,26 +104,26 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 		ctx             context.Context
 		owner           ids.UUID
 		tasks, upcoming int
-		// planless: the all scope withholds the weekly plans, whose rows are
-		// tasks too, so that category states no total there.
-		planless bool
+		// stated says which totals the page states. The all scope withholds
+		// the weekly plans, whose rows are tasks too; a team page counts nothing.
+		tasksStated, upcomingStated bool
 	}{
 		// The reminded task is today's work for its holder alone.
-		{"mine", "mine", rep1, ids.Nil, 21, 8, false},
-		{"named owner", "mine", r.e.Admin(), r.e.Rep1, 20, 9, false},
-		{"team", "team", rep1, ids.Nil, 38, 9, false},
-		{"all", "all", r.e.Admin(), ids.Nil, 43, 9, true},
+		{"mine", "mine", rep1, ids.Nil, 21, 8, true, true},
+		{"named owner", "mine", r.e.Admin(), r.e.Rep1, 20, 9, true, true},
+		{"team", "team", rep1, ids.Nil, 38, 9, false, false},
+		{"all", "all", r.e.Admin(), ids.Nil, 43, 9, false, true},
 	}
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
 			walked, first := walkedTasks(check.ctx, t, r, check.scope, "", check.owner)
 			total, stated := totalOf(first, "tasks")
-			if stated == check.planless || (stated && total != check.tasks) || walked["tasks"] != check.tasks {
+			if stated != check.tasksStated || (stated && total != check.tasks) || walked["tasks"] != check.tasks {
 				t.Errorf("tasks: total %d (stated %v), walked %d, want %d", total, stated, walked["tasks"], check.tasks)
 			}
 			later, _ := walkedTasks(check.ctx, t, r, check.scope, "upcoming", check.owner)
 			total, stated = totalOf(first, "upcoming")
-			if !stated || total != check.upcoming || later["upcoming"] != check.upcoming {
+			if stated != check.upcomingStated || (stated && total != check.upcoming) || later["upcoming"] != check.upcoming {
 				t.Errorf("upcoming: total %d (stated %v), walked %d, want %d", total, stated, later["upcoming"], check.upcoming)
 			}
 		})

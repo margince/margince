@@ -151,21 +151,15 @@ func (t attentionTasks) UpcomingForViewer(
 	return t.markReadOnly(ctx, upcoming, asOf)
 }
 
-// CountTasks counts one task window whole, under the lane's own narrowing
-// (openTasksDueBy) and the team view's seats. Today's window counts the
-// reader's due reminders with it; the later window leaves them out.
+// CountTasks counts a later task window whole, under the lane's own
+// narrowing (openTasksDueBy), without the reader's due reminders.
 func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
 	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
 	if !ok {
 		return 0, nil
 	}
-	in.TeamQueueOf = window.Team
-	mine := window.Scope == attention.TasksMine
-	if window.From.IsZero() {
-		in.OrRemindersDue = mine
-	} else {
-		in.OpenAndDueAfter, in.ExceptRemindersDue = &window.From, mine
-	}
+	in.OpenAndDueAfter = &window.From
+	in.ExceptRemindersDue = window.Scope == attention.TasksMine
 	return t.store.CountActivities(ctx, in)
 }
 

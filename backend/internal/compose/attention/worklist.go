@@ -142,7 +142,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone)
+	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
@@ -388,7 +388,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope), missing, scoped),
+		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped),
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.

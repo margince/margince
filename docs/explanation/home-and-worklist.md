@@ -116,7 +116,8 @@ the same scope, owner, view and filter as before. The list ends when every conti
 source that fails while the tail loads is named in `sources_unavailable`, and scrolling stops short of it.
 
 Today only the task source is counted and continued (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its
-today window and its upcoming window each have a count. Every other cut source leaves its category a floor, and
+today window and its upcoming window each have a count, taken on the first page only. A team page counts no task
+window, because that count outran the lane budget at 10,000 tasks a seat; its task categories stay a floor. Every other cut source leaves its category a floor, and
 scrolling ends at the ranked rows for it. [The source census](../reference/worklist-source-census.md) lists why
 each one is not counted yet.
 

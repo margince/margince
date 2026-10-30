@@ -76,7 +76,7 @@ a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, team roster in SQL (`CountTasks`) |
+| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows; none on a team page (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
@@ -94,8 +94,11 @@ a verb of their own: a task is completed, a decision is decided.
 | `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No |
 | System sources | A, C, F, G (incidents), H | Yes | No | No |
 
-The task source's admitted population is counted in SQL: steps A and C have SQL arms, including the team roster
-(`TeamQueueOf` in `modules/activities`). The other sources still run steps in Go that their count would need:
+The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
+window is the planned lane's own count; the later window is `CountTasks`. A team page counts neither: the roster arm
+(`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
+`laneBudget`. The tail still reads the team's tasks through that arm. The other sources still run steps in Go that
+their count would need:
 
 - `customer_waiting`: the machine-sender test reads a registrable domain against a baseline in Go, and the thread
   fold and the addressing rule run on the scanned rows.
