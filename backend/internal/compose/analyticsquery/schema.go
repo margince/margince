@@ -107,6 +107,9 @@ type Entity struct {
 	// answers the same population the prebuilt report does.
 	BaseWhere string
 	Fields    map[string]Field
+	// Contributor is the seat each row is credited to, "" when the entity
+	// names none. The plan counts the seats behind each group from it.
+	Contributor string
 }
 
 // Schema is the whole vocabulary, for one caller.

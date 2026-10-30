@@ -108,6 +108,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.callWhatsApp",
     "installationSettings.callTelegram",
     "installationSettings.callZalo",
+    "installationSettings.individualPerformance",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],

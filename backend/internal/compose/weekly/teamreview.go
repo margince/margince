@@ -141,6 +141,9 @@ func (e *Engine) AssembleTeamFor(
 	var review TeamReview
 	var created bool
 	err := e.withMeasurementSnapshot(ctx, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		thisWeek, err := WeekStartOf(ctx, tx, now)
 		if err != nil {
 			return err

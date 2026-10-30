@@ -119,11 +119,17 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err != nil {
 			return out, err
 		}
-		markOwnerWithheld(owners, facts)
+		facts, coverage, err = withholdColleagues(ctx, tx, frame, owners, facts, coverage)
+		if err != nil {
+			return out, err
+		}
 		out.Facts = append(out.Facts, facts...)
 		out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, facts, coverage))
 	}
 	if err := projectReportingCharts(&out); err != nil {
+		return out, err
+	}
+	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}
 	for index, chart := range out.Result.Charts {

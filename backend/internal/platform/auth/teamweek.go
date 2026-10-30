@@ -52,7 +52,20 @@ const (
 //
 // The system principal reaches every team, as it passes every object grant. A
 // buyer reaches none: Allows refuses it and it is not a human seat.
+//
+// A week names each member's figures, so it opens to nobody while the
+// installation has switched off individual performance.
 func TeamWeekReachOf(ctx context.Context) TeamWeekReach {
+	if allowed, bound := IndividualPerformanceOf(ctx); bound && !allowed {
+		return ReachesNoTeam
+	}
+	return TeamLeadReachOf(ctx)
+}
+
+// TeamLeadReachOf is TeamWeekReachOf without the individual-performance switch: which
+// teams a seat answers for. Setting a team's target or forecast is about the
+// team's total, which the switch leaves alone.
+func TeamLeadReachOf(ctx context.Context) TeamWeekReach {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Permissions.RowScope == principal.RowScopeOwn {
 		return ReachesNoTeam
