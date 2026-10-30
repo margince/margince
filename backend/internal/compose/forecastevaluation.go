@@ -21,9 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// forecastEvaluationActor is the principal a dataset read runs as. The store
-// answers this one principal and no other system pass.
-const forecastEvaluationActor = "system:forecast-evaluation"
+// forecastEvaluationActor is the principal a dataset read runs as: the one
+// principal the store answers.
+const forecastEvaluationActor = forecasting.EvaluationActor
 
 // ForecastEvaluationCohortFloor is the fewest deals behind a figure the
 // evaluation reports: the floor reporting puts under a cohort rate.

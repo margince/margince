@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // forecastOutcomeInstants are the two instants a vintage's outcome is read at:
@@ -114,6 +116,9 @@ func forecastVintageOutcome(v *forecasting.EvaluationVintage, moves forecastMove
 func readForecastDealMoves(
 	ctx context.Context, tx pgx.Tx, dealIDs []string, at forecastOutcomeInstants,
 ) (scoring, training forecastMoves, err error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, nil, err
+	}
 	scoring, training = forecastMoves{}, forecastMoves{}
 	if len(dealIDs) == 0 {
 		return scoring, training, nil
