@@ -205,8 +205,10 @@ export function WorklistBody({
             // midnight, so a task due tomorrow is absent. "Nothing is waiting on
             // you" read as "you have no work" to a rep who could see three tasks
             // on the company beside it. The page offered nothing to reconcile them.
-            <p className="t-body worklist-clear">
-              {clearSentence(
+            <EmptyView
+              view={view}
+              rows={rowProps}
+              sentence={clearSentence(
                 dayPartlyRead(day, queue),
                 filter,
                 colleague,
@@ -214,7 +216,7 @@ export function WorklistBody({
                 hasMore,
                 view,
               )}
-            </p>
+            />
           ) : (
             // The queue, and beside it what the selected row is about.
             //
@@ -320,6 +322,21 @@ export function WorklistBody({
           <HandledForYouPanel />
         </div>
       </div>
+    </>
+  );
+}
+
+// A view with no rows says so in one line. An empty Decisions view keeps its
+// domain review launcher.
+function EmptyView({
+  view,
+  rows,
+  sentence,
+}: Readonly<{ view: WorklistView; rows: RowContext; sentence: string }>) {
+  return (
+    <>
+      <p className="t-body worklist-clear">{sentence}</p>
+      {view !== "today" && <ViewPanel view={view} items={[]} rows={rows} />}
     </>
   );
 }

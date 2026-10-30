@@ -205,4 +205,15 @@ describe("Upcoming and backlog", () => {
     const box = en["bulk.selectRow"].replace("{name}", "Send the quote");
     expect(screen.getAllByRole("checkbox", { name: box })).toHaveLength(1);
   });
+
+  it("keeps the domain review launcher in an empty Decisions view", async () => {
+    stub(day({ queue: [] }));
+    globalThis.location.hash = "#/worklist?view=decisions";
+    renderWorklist();
+
+    await screen.findByText(en["worklist.clear.decisions"]);
+    expect(
+      screen.getByRole("button", { name: en["worklist.domainReview.title"] }),
+    ).toBeTruthy();
+  });
 });
