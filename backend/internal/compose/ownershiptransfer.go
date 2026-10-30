@@ -81,7 +81,7 @@ func (e *ownershipNoteError) Error() string {
 
 // FieldFault names the note.
 func (e *ownershipNoteError) FieldFault() (field, code, message string) {
-	return "note", "too_long", e.Error()
+	return bulkParamNote, "too_long", e.Error()
 }
 
 var errOwnerUnavailable = &contacts.TransferRefusal{Code: "owner_unavailable",

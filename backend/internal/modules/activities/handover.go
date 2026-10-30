@@ -192,4 +192,4 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids
 
 // recordLinkColumns are the activity_link columns that name a contact or a
 // company, keyed by the link's entity type.
-var recordLinkColumns = map[string]string{"contact": "contact_id", "company": "company_id"}
+var recordLinkColumns = map[string]string{"contact": "contact_id", linkEntityCompany: "company_id"}

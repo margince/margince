@@ -33,7 +33,7 @@ func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, 
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
 	held := fmt.Sprintf(`%s AND d.owner_id = $%d`, openDealSQL, arg(owner))
 	switch recordType {
-	case "company":
+	case linkEntityCompany:
 		return fmt.Sprintf(`d.company_id = $%d AND %s`, arg(recordID), held), predicateAlways, nil
 	case "contact":
 		edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
