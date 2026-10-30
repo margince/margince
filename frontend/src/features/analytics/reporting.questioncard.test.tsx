@@ -450,6 +450,7 @@ it("shows the calendar a sent edition's bound card kept its periods in", async (
                 },
               },
             ],
+            redacted: false,
           }}
           onEvidence={() => {}}
         />
