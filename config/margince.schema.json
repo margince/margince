@@ -1100,6 +1100,14 @@
             "type": "string"
           }
         },
+        "mcp_client_check": {
+          "description": "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": false
+        },
         "oauth_dynamic_registration": {
           "description": "AI tools may register their own OAuth client (DCR) for new sign-ins.",
           "type": [

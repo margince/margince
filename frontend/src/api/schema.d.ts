@@ -23136,6 +23136,11 @@ export interface components {
              */
             call_zalo: boolean;
             /**
+             * @description True when admins' AI tools are offered the `check_client` tool. Off by default. Change it
+             *     with `PATCH /installation/settings`, which needs `agent_client` update.
+             */
+            mcp_client_check: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -23321,6 +23326,12 @@ export interface components {
              *     Needs `agent_client` update. The deployment file can hold it off.
              */
             metadata_document_clients?: boolean;
+            /**
+             * @description Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+             *     answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+             *     update. Read from the settings answer, because it is not a way to sign in.
+             */
+            mcp_client_check?: boolean;
             /**
              * @description Directory groups that GRANT roles at corporate sign-in. Each key is a group
              *     exactly as the IdP spells it in the ID token's `groups` claim; each value is

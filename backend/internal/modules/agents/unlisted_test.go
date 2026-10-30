@@ -45,7 +45,8 @@ func TestEveryUnlistedToolIsReachedSomeOtherWay(t *testing.T) {
 	}
 	unlisted := 0
 	for _, spec := range r.Specs() {
-		if !spec.Unlisted {
+		// A gated tool is reached through the gate, which offers it to some callers.
+		if !spec.Unlisted || spec.Gated {
 			continue
 		}
 		unlisted++

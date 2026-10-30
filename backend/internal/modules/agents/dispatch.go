@@ -376,6 +376,8 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 	var p struct {
 		Name      string          `json:"name"`
 		Arguments json.RawMessage `json:"arguments"`
+		//nolint:tagliatelle // inputResponses is the protocol's own member name
+		InputResponses map[string]json.RawMessage `json:"inputResponses"`
 	}
 	if err := json.Unmarshal(params, &p); err != nil {
 		// Same reason decodeArgs masks its decoder: encoding/json describes this
@@ -401,14 +403,18 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"(it may be revoked, expired, or bound to another workspace). Nothing was changed — " +
 			"mint a new passport or contact the workspace admin.")
 	}
-	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
-	if spec, ok := s.registry.Spec(p.Name); ok && spec.Unlisted {
-		// The traffic a hidden name still carries, which decides when it can go.
-		s.log.Info("mcp: a hidden tool was called by its own name", "tool", p.Name)
+	spec, registered := s.registry.Spec(p.Name)
+	if registered && spec.ProtocolOnly {
+		callCtx = withRequestFacts(callCtx, fr.requestFacts(p.InputResponses))
 	}
+	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
+	s.noteHiddenCall(spec, registered, err)
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
+		}
+		if asked, wants := inputRequired(err); wants {
+			return s.inputRequiredAnswer(served.Tool, asked, fr)
 		}
 		refusal := toolError(s.explain(served.Tool, err))
 		if shown := shownAnswer(err); shown != nil {

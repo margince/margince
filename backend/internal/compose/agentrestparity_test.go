@@ -40,7 +40,7 @@ func TestEveryToolRunsOnARouteThatDeclaresIt(t *testing.T) {
 	extensionTools := composedToolNames()
 	sort.Slice(specs, func(i, j int) bool { return specs[i].Name < specs[j].Name })
 	for _, spec := range specs {
-		if extensionTools[spec.Name] {
+		if extensionTools[spec.Name] || spec.ProtocolOnly {
 			continue
 		}
 		// A router runs as its targets, each held to its own route in this sweep.

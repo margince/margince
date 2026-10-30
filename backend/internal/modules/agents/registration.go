@@ -101,6 +101,8 @@ func (r *Registry) Register(t mcp.Tool) {
 		panic(fmt.Sprintf("crmagents: %s declares no Version — every result carries it as schema_version, "+
 			"and an empty one tells a client the shape can never be compared", spec.Name))
 	}
+	assertGatedShape(spec)
+	assertProtocolOnlyShape(spec)
 	if err := assertNoRequiredReservedArgument(spec); err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: " + err.Error())

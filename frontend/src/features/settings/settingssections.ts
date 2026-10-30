@@ -201,6 +201,8 @@ export const SETTINGS_SECTIONS = {
     "agentClients.methods.published",
     "agentClients.methods.dynamic",
     "agentClients.methods.admin",
+    "agentClients.experiments.title",
+    "agentClients.experiments.clientCheck",
     "agentConnections.ttl.label",
   ],
   "model-calls": [],

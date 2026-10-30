@@ -31,6 +31,7 @@ function RegionalFields({
     call_whatsapp: true,
     call_telegram: true,
     call_zalo: true,
+    mcp_client_check: false,
     date_format: "dmy",
     time_format: "24h",
   });

@@ -7743,6 +7743,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
   "agentClients.methods.alwaysOn": "Immer aktiv",
   "agentClients.methods.readOnly": "Nur Admins können das ändern.",
+  "agentClients.experiments.title": "Experimente",
+  "agentClients.experiments.sub":
+    "Funktionen zum Ausprobieren, die sich ändern oder wegfallen können. Für alle aus, bis ein Admin sie hier einschaltet.",
+  "agentClients.experiments.clientCheck": "Prüfen, was ein KI-Tool unterstützt",
+  "agentClients.experiments.clientCheckHint":
+    "Fügt ein Tool check_client hinzu, nur für Admins. Wenn ein Admin sein KI-Tool bittet, es auszuführen, zeigt Margince ein kleines Formular und meldet, ob das Tool es beantworten kann. Ändert keine Daten.",
+  "agentClients.experiments.loadFailed":
+    "Der Schalter konnte nicht gelesen werden. Lade die Seite neu, um es noch einmal zu versuchen.",
+  "agentClients.experiments.about": "Über dieses Experiment",
+  "agentClients.experiments.whyTitle": "Warum",
+  "agentClients.experiments.why":
+    "Manche Aktionen warten darauf, dass jemand sie in Margince freigibt. Neuere KI-Tools können stattdessen ein kleines Formular im Chat zeigen. Diese Prüfung zeigt, welche deiner KI-Tools das können.",
+  "agentClients.experiments.howTitle": "So testest du",
+  "agentClients.experiments.step1": "Schalte dies ein.",
+  "agentClients.experiments.step2":
+    "Verbinde Margince in deinem KI-Tool neu, damit es das neue Tool lädt.",
+  "agentClients.experiments.step3": "Frage es:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Nutze das Margince-Tool check_client, um zu prüfen, ob dieses KI-Tool ein Margince-Bestätigungsformular beantworten kann.",
+  "agentClients.experiments.clientCheckQuestionLabel":
+    "Die Frage an das KI-Tool",
+  "agentClients.experiments.copy": "Frage kopieren",
+  "agentClients.experiments.copied": "Kopiert",
+  "agentClients.experiments.copyRemedy":
+    "Der Browser hat das Kopieren abgelehnt. Markiere die Frage und kopiere sie von Hand.",
+  "agentClients.experiments.step4":
+    "Wenn ein Formular dich bittet, eine Farbe zu wählen, wird es vom Tool unterstützt. Sonst nennt die Antwort das Tool, seine Version und den Grund.",
+  "agentClients.experiments.safeTitle": "Gefahrlos zu testen",
+  "agentClients.experiments.safe":
+    "Nur Admins sehen das Tool. Es liest und ändert keine Daten. Die KI-Tools anderer sehen nichts Neues. Schalte es aus, wenn du fertig bist.",
   "agentClients.title": "MCP-Clients",
   "agentClients.sub":
     "Jeder Client, über den sich ein KI-Tool anmeldet, und wie er entstanden ist.",

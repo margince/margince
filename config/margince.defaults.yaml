@@ -135,6 +135,7 @@ email:
 
 identity:
   enabled_oidc_providers: null
+  mcp_client_check: false
   oauth_dynamic_registration: true
   oauth_metadata_documents: true
   oidc_group_role_map: null

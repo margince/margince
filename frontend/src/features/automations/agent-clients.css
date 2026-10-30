@@ -38,3 +38,37 @@
 .agentclient-steps ol {
   margin: 0;
 }
+
+/* The (?) beside an experiment's description: a bare glyph in the secondary ink,
+   as the help glyph beside the webhook sections is. */
+.agent-experiment-help {
+  color: var(--textSecondary);
+  vertical-align: middle;
+  margin-inline-start: var(--space-1);
+}
+
+.agent-experiment-help:hover {
+  color: var(--textPrimary);
+}
+
+.agent-experiment-help svg {
+  width: var(--controlIcon);
+  height: var(--controlIcon);
+}
+
+/* The panel reads as short sections, with the steps numbered. */
+.agent-experiment-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.agent-experiment-panel p,
+.agent-experiment-panel ol {
+  margin: 0;
+}
+
+.agent-experiment-steps {
+  padding-inline-start: var(--space-4);
+  list-style: decimal;
+}

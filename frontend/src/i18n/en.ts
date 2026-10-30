@@ -7824,6 +7824,35 @@ export const en = {
     "Registered by hand under MCP clients. The tool must send the client secret.",
   "agentClients.methods.alwaysOn": "Always on",
   "agentClients.methods.readOnly": "Only an admin can change these.",
+  "agentClients.experiments.title": "Experiments",
+  "agentClients.experiments.sub":
+    "Test features that may change or go away. Off for everyone until an admin turns them on here.",
+  "agentClients.experiments.clientCheck": "Check what an AI tool supports",
+  "agentClients.experiments.clientCheckHint":
+    "Adds a check_client tool for admins only. When an admin asks their AI tool to run it, Margince shows a small form and reports whether the tool can answer it. Changes no data.",
+  "agentClients.experiments.loadFailed":
+    "The switch could not be read. Reload the page to try again.",
+  "agentClients.experiments.about": "About this experiment",
+  "agentClients.experiments.whyTitle": "Why",
+  "agentClients.experiments.why":
+    "Some actions wait for a colleague to approve them in Margince. Newer AI tools can show a small form in the chat instead. This check finds out which of your AI tools can do that.",
+  "agentClients.experiments.howTitle": "How to test",
+  "agentClients.experiments.step1": "Turn this on.",
+  "agentClients.experiments.step2":
+    "In your AI tool, reconnect Margince so it loads the new tool.",
+  "agentClients.experiments.step3": "Ask it:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Use the Margince check_client tool to check whether this AI tool can answer a Margince confirmation form.",
+  "agentClients.experiments.clientCheckQuestionLabel": "The question to ask",
+  "agentClients.experiments.copy": "Copy the question",
+  "agentClients.experiments.copied": "Copied",
+  "agentClients.experiments.copyRemedy":
+    "The browser refused the copy. Select the question and copy it by hand.",
+  "agentClients.experiments.step4":
+    "If a form asks you to pick a color, the tool supports it. The answer also names the tool, its version and why, if not.",
+  "agentClients.experiments.safeTitle": "Safe to try",
+  "agentClients.experiments.safe":
+    "Only admins see the tool. It reads and changes no data. No other AI tool sees anything new. Turn it off when you are done.",
   "agentClients.title": "MCP clients",
   "agentClients.sub":
     "Each client an AI tool signs in through, and how it came to exist.",

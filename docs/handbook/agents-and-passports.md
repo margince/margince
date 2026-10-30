@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agent-client-experiments.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you
@@ -74,6 +74,11 @@ Also called: MCP client, MCP server, command line, AI assistant integration.
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
 For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 Also called: kill switch, remove an agent, disconnect, delete an API key.
+
+### How do I check whether my AI tool can answer a form?
+An admin turns on **Check what an AI tool supports** under **Experiments** on **Settings → MCP**. Then reconnect Margince in your AI tool and ask it to use the Margince `check_client` tool; **(?)** next to the switch has the question to copy.
+If the tool shows a form that asks you to pick a color, it can answer a form. If it cannot, the answer says why. Only admins see the tool, and it changes no data. Turn the switch off when you are done.
+Also called: elicitation, client check.
 
 ### How do I let Margince work overnight for me?
 To let Margince prepare your Morning brief overnight, open **Settings → Connections**. On the **Overnight preparation** card, turn on **Let Margince prepare the Morning brief overnight**.

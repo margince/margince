@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // agentClientObject gates the AI tool sign-in clients and the two switches
@@ -35,6 +36,35 @@ var (
 		Doc:     "AI tools may sign in with a client ID that is the URL of their metadata document (CIMD).",
 	}, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 )
+
+// McpClientCheck turns on the admin-only check_client tool. The tool asks an AI
+// tool's user to fill in a form. Off, no tool list or call shows that it exists.
+var McpClientCheck = config.DefineStored(config.Spec[bool]{
+	Key:     "identity.mcp_client_check",
+	Env:     "MARGINCE_IDENTITY_MCP_CLIENT_CHECK",
+	Type:    config.Bool,
+	Default: config.Some(false),
+	Doc:     "Admins may run the check_client tool from an AI tool to test whether it can answer a form.",
+}, config.Store{RBACObject: agentClientObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+
+// clientCheckReadActor names a read of the switch in the audit trail: no human
+// asked for it, a settings answer or a tool list did.
+const clientCheckReadActor = "system:client_check_read"
+
+// ReadClientCheck reads the switch as the system. Every role reads the settings
+// answer and every passport a tool list. Only an admin may read agent_client, so
+// a seat's own read would refuse both.
+func ReadClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
+	return config.StoredVal(principal.SystemActing(ctx, clientCheckReadActor), cfg, McpClientCheck)
+}
+
+func (p InstallationPatch) clientCheckWrites() ([]pendingWrite, error) {
+	write, err := encodeStoredField(McpClientCheck, p.McpClientCheck)
+	if err != nil {
+		return nil, err
+	}
+	return []pendingWrite{write}, nil
+}
 
 // AdminRegistrationSwitches reads the two switches above, as the system. The
 // user a tool signs in cannot read agent_client, and must not need to.

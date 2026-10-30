@@ -78,7 +78,7 @@ func TestEveryRegisteredToolIsDeclared(t *testing.T) {
 	}
 	composed := composedToolNames()
 	for _, spec := range specs {
-		if declared[spec.Name] || composed[spec.Name] {
+		if declared[spec.Name] || composed[spec.Name] || spec.ProtocolOnly {
 			continue
 		}
 		// A router runs only as its targets, so it is granted what they are.

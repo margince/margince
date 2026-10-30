@@ -76,6 +76,7 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   call_whatsapp: true,
   call_telegram: true,
   call_zalo: true,
+  mcp_client_check: false,
 };
 
 // A fresh installation's port, read from its default.
