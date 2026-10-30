@@ -60,10 +60,22 @@ func TestAMeetingRedatedAfterItWasHeldStaysInItsHeldWeek(t *testing.T) {
 	// not strand its task before the start.
 	assignee := ids.From[ids.UserKind](e.Rep1)
 	source := ids.UUID(logged.Id)
-	if _, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
+	task, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
 		Kind: "task", Source: "manual", AssigneeID: &assignee, SourceActivityID: &source,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("recording the next step: %v", err)
+	}
+	// Postgres stamps created_at as it writes, so the row lands today while the
+	// week under test is in September. The figure counts a task recorded before
+	// the week ended, so the stamp is pinned into the week after the real write.
+	recordedAt := at.Add(time.Hour)
+	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.repCtx, `UPDATE activity SET created_at = $1 WHERE id = $2`,
+			recordedAt, ids.UUID(task.Id))
+		return err
+	}); err != nil {
+		t.Fatalf("pinning when the next step was recorded: %v", err)
 	}
 	if counted, next := heldMeetingWeekCount(t, e, heldWeek); counted != 1 || next != 1 {
 		t.Fatalf("before the edit the week reads %d held and %d with a next step, want 1 and 1", counted, next)
