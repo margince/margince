@@ -18,8 +18,8 @@ type Handlers struct {
 }
 
 // NewHandlers keeps transport parsing outside reporting calculations. It takes
-// the selection a request that names no metrics opens on, so the catalog's
-// preset is the only definition of it.
+// the selection a request that names no metrics opens on, which this package
+// reads rather than spells.
 func NewHandlers(service *Service, opening OpeningSelection) Handlers {
 	return Handlers{service: service, opening: opening}
 }
