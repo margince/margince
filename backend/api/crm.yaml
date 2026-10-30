@@ -18490,7 +18490,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -18521,6 +18521,33 @@ paths:
             already draws as cards. With no run to compare against it answers empty rather
             than everything: absent is not false, and a reader asking what changed since a
             night that never happened is owed nothing, not the whole queue.
+
+            `upcoming` is planned work due after today: the Upcoming and backlog section
+            at the end of the Today view. These rows never appear in a queue that does not
+            ask for them, and `summary` never counts them; `counts` reports them under the
+            `upcoming` category.
+
+            Every value belongs to one view. `decisions` belongs to the Decisions view,
+            `system` to the System view, `all` to every view, and the rest to Today.
+            Without `view`, `filter=decisions` and `filter=system` are read as that view.
+            A filter sent with a view it does not belong to returns
+            `422 code: filter_outside_view`, whose message names the filter's view.
+        - name: view
+          in: query
+          schema: { type: string, enum: [today, decisions, system] }
+          description: |
+            Which work view to answer. `today` is work a seller executes: every category
+            except `decisions` and `system`. `decisions` is judgements somebody owes, and
+            `system` is problems the product reports about itself. A view narrows the
+            queue before the page is cut, so paging never reaches another view's rows.
+
+            Omitted means no view: the whole day, as before views existed, except that
+            `filter=decisions` and `filter=system` open their view. `summary` counts the
+            requested view only; `counts` still reports every category, so a client can
+            label the other views without a second read.
+
+            A cursor encodes the view it was minted under, and a cursor sent with another
+            view returns `422 code: cursor_param_mismatch`.
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
@@ -66972,7 +66999,7 @@ components:
 
         | Figure | Unit | Counted over | Exact or floor |
         |---|---|---|---|
-        | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+        | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
         | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
         | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
         | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
@@ -67013,7 +67040,8 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: { $ref: '#/components/schemas/TeamWeekReach' }
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        view: { type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -67553,7 +67581,7 @@ components:
       properties:
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, upcoming]
           description: 'Which kind of work these numbers are about. The same vocabulary the filter uses.'
         considered:
           type: integer
@@ -67613,7 +67641,7 @@ components:
             nothing but at-risk deals reported "0 urgent, 0 due, 0 routine" over a page full
             of rows, which is the one thing this line promises cannot happen.
         lower_priority: { type: integer, minimum: 0, description: 'Routine work: decisions that block nothing, and data hygiene.' }
-        total: { type: integer, minimum: 0, description: 'How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.' }
+        total: { type: integer, minimum: 0, description: 'How many candidates the requested view holds. The same population as the `considered` figures of that view''s categories. Upcoming work is never counted here: none of it is due today.' }
         buckets:
           $ref: '#/components/schemas/WorklistBuckets'
         material_threshold_minor:
@@ -68204,7 +68232,7 @@ components:
             row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, upcoming]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
         urgent:
           type: boolean

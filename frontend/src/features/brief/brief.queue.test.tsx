@@ -119,7 +119,7 @@ it("restores the queue opener's keyboard focus after closing", async () => {
 // no third of its width to spend saying it twice.
 it("takes a review row in hand, and opens no column beside it", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/home?queue=1";
+  window.location.hash = "#/home?queue=1&queue_view=system";
   const review: components["schemas"]["WorklistItem"] = {
     ...taskRow("privacy", "Review the disclosure"),
     source: "notice_case",

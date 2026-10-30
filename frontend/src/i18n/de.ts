@@ -2870,6 +2870,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
   "list.loadMore": "Mehr laden",
+  "scrollSentinel.loading": "Mehr wird geladen…",
+  "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
+  "scrollSentinel.stalled": "Die Liste kommt nicht weiter. Versuch es erneut.",
+  "scrollSentinel.more": "Weitere Einträge sind verfügbar.",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
 
@@ -5475,8 +5479,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.bulk.selectAll_one": "Den {count} angezeigten Eintrag auswählen",
   "worklist.bulk.selectAll_other":
     "Alle {count} angezeigten Einträge auswählen",
-  "worklist.bulk.clear": "Auswahl aufheben",
-  "worklist.bulk.markDone": "Als erledigt markieren",
+  "worklist.bulk.select": "Auswählen",
+  "worklist.bulk.cancel": "Abbrechen",
+  "worklist.bulk.complete_one": "{count} Aufgabe abschließen",
+  "worklist.bulk.complete_other": "{count} Aufgaben abschließen",
+  "worklist.bulk.putDown_one": "{count} Eintrag von meiner Liste nehmen",
+  "worklist.bulk.putDown_other": "{count} Einträge von meiner Liste nehmen",
   "worklist.bulk.doneCount_one": "{count} Eintrag für dich erledigt.",
   "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
@@ -16627,21 +16635,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Worklist wird geladen…",
   "worklist.queue": "Heute",
-  "worklist.review": "Zu prüfen",
-  "worklist.more": "Mehr laden",
-  "worklist.more.where":
-    "Mehr vom Tag: Neue Einträge können unter „{today}“ oder „{review}“ erscheinen.",
-  "worklist.more.failed":
-    "Weitere Einträge konnten nicht geladen werden. Bitte versuche es erneut.",
-  "worklist.summary":
-    "{urgent} dringend · {due} fällig · {inPlay} in Arbeit · {lower} Routine · {total} gesamt",
-  "worklist.summary.noMiddle":
-    "{urgent} dringend · {due} fällig · {lower} Routine · {total} gesamt",
-  "worklist.summary.wholeDay": "Ganzer Tag: {sentence}",
-  "worklist.summary.split": "{today} heute · {review} zu prüfen",
-  "worklist.completeness": "{shown} von {considered} Einträgen angezeigt",
-  "worklist.completeness.floor_one": "{shown} Eintrag angezeigt",
-  "worklist.completeness.floor_other": "{shown} Einträge angezeigt",
+  "worklist.completeness": "{shown} von {considered} Einträgen geladen",
+  "worklist.completeness.floor_one": "{shown} Eintrag geladen",
+  "worklist.completeness.floor_other": "{shown} Einträge geladen",
   "worklist.completeness.cards_one": "{cards} Karte sichtbar",
   "worklist.completeness.cards_other": "{cards} Karten sichtbar",
   "worklist.completeness.bounded":
@@ -16650,21 +16646,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Kategorien können mehr Einträge haben, als diese Liste zeigt.",
   "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
   "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
-  "worklist.review.partial":
-    "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
   "worklist.emptyPage":
-    "Keine Einträge auf dieser Seite. Lade mehr, um fortzufahren.",
-  "worklist.review.more":
-    "Weitere Seiten können Einträge zur Prüfung enthalten. Lade unten mehr, um fortzufahren.",
-  "worklist.review.snapshotChanged":
-    "{loaded} von {total} Einträgen des gespeicherten Stands angezeigt. Der Tag hat sich geändert. Aktualisiere die Ansicht, um die Zahlen neu zu laden.",
-  "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
-  "worklist.review.floor":
-    "{loaded}+ angezeigt. Es kann mehr Einträge geben, als diese Liste zeigt.",
+    "In diesem Abschnitt ist noch nichts. Beim Scrollen lädt mehr.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":
-    "Keine Aufgaben heute fällig oder überfällig. Spätere Aufgaben stehen im Tab „Aufgaben“ des jeweiligen Datensatzes.",
+    "Keine Aufgaben fällig heute oder überfällig. Spätere Aufgaben stehen unter Anstehend und Rückstand.",
   "worklist.clearOfWhatWasRead": "Keine Einträge in den geladenen Quellen.",
   "worklist.partialTitle": "Worklist unvollständig",
   "worklist.partial": "{sources}.",
@@ -16890,8 +16877,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.walk.gone": "Davon seit dem Öffnen der Liste erledigt: {gone}.",
   "worklist.walk.both":
     "Seit dem Öffnen der Liste: {arrived} neu, {gone} bereits erledigt.",
-  "worklist.walk.title": "Liste geändert",
-  "worklist.walk.refresh": "Aktualisieren",
+  "worklist.walk.title": "Neue Prioritäten verfügbar",
+  "worklist.walk.refresh": "Liste aktualisieren",
   "worklist.handled.empty":
     "Heute wurden keine Aktionen in deinem Auftrag ausgeführt.",
   "worklist.handled.loading": "Aktionen werden geladen…",
@@ -17008,6 +16995,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.decisions": "Freigaben",
   "worklist.filter.relationships": "Ruhende Beziehungen",
   "worklist.filter.system": "System",
+  "worklist.filter.upcoming": "Anstehend und Rückstand",
+  "worklist.upcoming.failed": "Anstehende Arbeit wurde nicht geladen.",
+  "worklist.upcoming.end": "Alles Anstehende ist geladen.",
+  "worklist.upcoming.empty": "Nach heute ist nichts geplant.",
+  "worklist.end.system": "Alle Probleme geladen.",
+  "worklist.end.decisions": "Alle Entscheidungen geladen.",
+  "worklist.end.today": "Alles für heute ist geladen.",
+  "worklist.clear.system": "Keine ungelösten Probleme.",
+  "worklist.clear.decisions": "Keine Entscheidungen warten auf dich.",
+  "worklist.view.label": "Arbeitsansicht",
+  "worklist.view.today": "Heute",
+  "worklist.view.decisions": "Entscheidungen",
+  "worklist.view.system": "System",
+  "worklist.view.total.today_one": "{count} offener Punkt",
+  "worklist.view.total.today_other": "{count} offene Punkte",
+  "worklist.view.total.decisions_one": "{count} offene Entscheidung",
+  "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
+  "worklist.view.total.system_one": "{count} ungelöstes Problem",
+  "worklist.view.total.system_other": "{count} ungelöste Probleme",
   "worklist.filter.linked.urgent":
     "Es werden nur dringende Einträge angezeigt: Jemand wartet, oder eine Zusage droht gebrochen zu werden.",
   "worklist.filter.linked.except_decisions":

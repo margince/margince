@@ -26,7 +26,7 @@ import {
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
-import { drawerScope } from "../worklist/worklist.address";
+import { drawerQueue } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
@@ -65,10 +65,13 @@ export function BriefScreen() {
   // The queue the button opens, which keeps the drawer's scope and owner from
   // the address. It shares the drawer's query key, so the two report one total.
   const owner = params.get("owner") ?? "";
+  const drawer = drawerQueue(params);
   const queued = useWorklist(
-    drawerScope(params),
+    drawer.scope,
     "all",
     owner === "" ? undefined : owner,
+    true,
+    drawer.view,
   );
   const queuedDay = briefDay(queued.data?.pages);
   const review = useWeeklyReview(address.week, address.view === "weekly");
@@ -88,7 +91,7 @@ export function BriefScreen() {
     <PageAsideToggle
       controlled={{
         open: params.get("queue") === "1",
-        count: queuedDay ? pillCount(queuedDay, "all") : undefined,
+        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),

@@ -8,6 +8,8 @@
 // sentence and `worklist.header.tsx` owns the lane vocabulary, and this is the
 // join — the rule that says a narrowing is not always one category.
 
+import { outstandingCounts } from "../../lib/worklistcounts";
+import type { WorklistView } from "../../lib/worklistviews";
 import type { Worklist, WorklistFilter } from "./worklist.queries";
 
 /**
@@ -41,9 +43,10 @@ import type { Worklist, WorklistFilter } from "./worklist.queries";
 export function countsUnder(
   day: Worklist,
   filter: WorklistFilter,
+  view?: WorklistView,
 ): Worklist["counts"] | null {
   if (filter === "all") {
-    return day.counts;
+    return outstandingCounts(day, view);
   }
   if (
     filter === "urgent" ||
