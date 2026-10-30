@@ -63,7 +63,7 @@ func withinWaitingHorizonSQL(asOf, days string) string {
 	   AND (` + young + ` OR (` + requestOpenSQL + `)))`
 }
 
-// waitingSelectSQL draws one waiting row per message the caller's WHERE names.
+// waitingSelectSQL draws one waiting row per message the caller's clause names.
 // Every statement of the queue shares it, so a row reads alike on each.
 var waitingSelectSQL = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''),
@@ -340,10 +340,9 @@ const waitingGroupSQL = `
 	 GROUP BY a.id, a.kind, a.subject, a.occurred_at`
 
 // waitingRepliesSQL is one page of the queue, newest first. The cap is taken
-// over the messages themselves, before any link is joined, so Postgres walks
-// the newest first and stops at the cap. An ARRAY, built once, so the primary
-// key fetches the capped set; as a join or an IN, the planner joined the whole
-// table first and filtered afterwards.
+// over the messages before any link is joined, so Postgres stops at the cap.
+// An ARRAY, built once, so the primary key fetches the capped set. As a join
+// or an IN, the planner joined the whole table first and filtered afterwards.
 var waitingRepliesSQL = waitingSelectSQL + `
 	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
 	 -- NEWEST first, which is the opposite of how the rows are then shown.

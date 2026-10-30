@@ -40,8 +40,10 @@ const waitsPastTheCap = activities.WaitingScanCap + 5
 func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	t.Helper()
 	r := setupReminders(t)
-	w := waitingBacklog{r: r, contact: r.e.SeedContact(t, "Dana Buyer", nil),
-		cards: map[ids.UUID]map[string]bool{}, never: map[string]bool{}}
+	w := waitingBacklog{
+		r: r, contact: r.e.SeedContact(t, "Dana Buyer", nil),
+		cards: map[ids.UUID]map[string]bool{}, never: map[string]bool{},
+	}
 	// The plain requests are the newest, so the lane's first scan page is all
 	// cards and its read is cut. The other cases sit below them.
 	plain := func(seat ids.UUID, count int) []ids.UUID {
@@ -73,6 +75,9 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	// A sending system's mail leaves unless it asks us something.
 	w.mail(t, r.e.Rep1, "bounces@sendgrid.net", "Delivery report", "", w.older().Add(-5*time.Hour), false)
 	w.mail(t, r.e.Rep1, "notify@sendgrid.net", "Please confirm your account", "", w.older().Add(-6*time.Hour), true)
+	// Unjudged mail with one sender and subject is one card, its newest.
+	w.mail(t, r.e.Rep1, "dana@buyer.example", "Price list", "", w.older().Add(-7*time.Hour), false)
+	w.mail(t, r.e.Rep1, "dana@buyer.example", "Price list", "price-list-again", w.older().Add(-8*time.Hour), false)
 	// Past the horizon a request leaves, unless a human took it.
 	w.mail(t, r.e.Rep1, "dana@buyer.example", "An old question", "", r.now.AddDate(0, 0, -200), true)
 	taken := w.mail(t, r.e.Rep1, "dana@buyer.example", "An old request Rep1 took", "", r.now.AddDate(0, 0, -201), true)
@@ -130,10 +135,10 @@ func (w *waitingBacklog) takeRequest(t *testing.T, request ids.UUID) {
 	w.held = ids.UUID(row.Id).String()
 }
 
-// The fixture names, beside each seat's mail, what the fold drops: the
-// conversation's two earlier requests, the sending system's report and the
-// request past the horizon. Asked of the store, so a fixture that no longer
-// reaches the rule fails here rather than passing the walk below.
+// expectFold names what the queue drops of Rep1's mail. That is the two earlier
+// requests of a conversation, the older mail on one subject, the sending
+// system's report and both requests past the horizon. A fixture that stops
+// reaching a rule fails here rather than passing the walk below.
 func (w *waitingBacklog) expectFold(t *testing.T) {
 	t.Helper()
 	rep1 := w.cards[w.r.e.Rep1]
@@ -149,7 +154,8 @@ func (w *waitingBacklog) expectFold(t *testing.T) {
 		if err := json.Unmarshal([]byte(encoded), &mail); err != nil {
 			t.Fatal(err)
 		}
-		earlier := mail.Thread == "fold-thread" && mail.At.Before(w.older().Add(-90*time.Minute))
+		earlier := mail.Thread == "fold-thread" && mail.At.Before(w.older().Add(-90*time.Minute)) ||
+			mail.Thread == "price-list-again"
 		switch mail.Subject {
 		case "Delivery report", "An old question", "An old request Rep1 took":
 			earlier = true
@@ -160,8 +166,8 @@ func (w *waitingBacklog) expectFold(t *testing.T) {
 			dropped++
 		}
 	}
-	if dropped != 5 {
-		t.Fatalf("the fixture names %d mails the queue drops, want 5", dropped)
+	if dropped != 6 {
+		t.Fatalf("the fixture names %d mails the queue drops, want 6", dropped)
 	}
 }
 

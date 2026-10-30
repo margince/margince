@@ -199,16 +199,10 @@ const waitingRefillRounds = 3
 // runs out, or the round ceiling is reached. It answers what survived and
 // whether anything was left unread.
 //
-// The refill exists because the filter runs AFTER the scan cap. The store's own
-// machine rule is a coarse subset, six patterns against an address, while
-// keepWaitingCustomers reads the sender_is_machine stamp. Mail from
-// hello@sendgrid.net matches none of the six, fills a slot under the cap and
-// is dropped here, so two hundred of it would hide a waiting customer.
-//
-// `cut` still means what it meant: something was left unread. It is now true
-// only when the LAST page was also full, so a refill that reached the end of
-// the matching rows reports a complete scan rather than inheriting the first
-// page's truncation.
+// The filter runs after the scan cap: the store's machine rule is six address
+// patterns, and keepWaitingCustomers reads the sender_is_machine stamp. Two
+// hundred relay mails would fill the cap, so the refill asks for another page.
+// `cut` is true only when the last page was also full.
 func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
 	var before activities.WaitingPosition
@@ -245,8 +239,7 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narr
 // keepWaitingCustomers removes repetitive incidental mail, and shows one card
 // per conversation: a conversation's unanswered requests fold into its newest,
 // which carries how many earlier ones there are and when the first arrived.
-// The store's card count runs this fold in SQL (activities.waitingFoldSQL);
-// TestTheWaitingCardCountIsTheFoldOfTheScan holds the two to one answer.
+// The store's card count folds alike (TestTheWaitingCardCountIsTheFoldOfTheScan).
 // Folding is presentation only. Each request keeps its own identity and
 // settles on its own; a set-aside on the card reaches the earlier ones too
 // (activities.setReaderState).

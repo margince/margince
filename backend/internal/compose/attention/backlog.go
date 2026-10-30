@@ -42,7 +42,7 @@ type TaskBacklog interface {
 }
 
 // Positioned is one row a backlog read returned, with the position that
-// resumes its source after it, so a merge can stop between any two rows.
+// resumes its source after it. A merge can then stop between any two rows.
 type Positioned[T any] struct {
 	Row   T
 	After string

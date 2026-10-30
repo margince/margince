@@ -109,20 +109,40 @@ A category states an exact `total` only when every source behind it was read who
 matches what the list holds. `attention/backlog.go` holds the counts and runs them only for a source its lane cut.
 A count that fails leaves the category a floor and does not fail the page.
 
-Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on in
-its store's own order from its own keyset, skipping the rows the ranked top already holds. The tail rows go through
-the same admission, scope, Done, view and filter steps as the top. The cursor carries where each source stopped, and
-binds the same scope, owner, view and filter as before. The list ends when every source in the tail is read to its
-end. A source that fails while the tail loads is named in `sources_unavailable`, and the list stops short of it.
+Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on
+from its own keyset, skipping the rows the ranked top already holds. The tail rows go through the same admission,
+scope, Done, view and filter steps as the top. The reader's Done marks are read for the tail rows too.
+
+The cursor carries where each source stopped, and binds the same scope, owner, view and filter as before. The list ends when
+every source in the tail is read to its end. A source that fails while the tail loads is named in
+`sources_unavailable`, and the list stops short of it.
+
+The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
+a time: a task's due date, or when a waiting customer's message came in. Rows go from the earliest time to the
+latest, and an undated task goes last. A tie goes to the source's name, then to the store's own order. So the
+longest-standing work comes first, whichever source holds it.
+
+Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
+hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
+next page.
 
 The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
 when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
-Its today window and its later window each have a count, taken on the first page only. A team page counts no task
-window, because that count ran past the lane budget at 10,000 tasks a seat. Its task categories stay a floor.
+Two sources are counted and read on in the tail today:
+
+- Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
+  count, taken on the first page only. A team page counts no task window, because that count ran past the lane
+  budget at 10,000 tasks a seat. Its task categories stay a floor.
+- Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). The store counts the cards in SQL
+  (`modules/activities/waitingcards.go`), on a first page whose waiting read was cut. It folds them as the lane does:
+  a conversation of requests is one card, and other mail is one card per sender and subject.
+
+Mail a sending system wrote is left out of the waiting lane and its count, unless it asks us something. That is the
+`sender_is_machine` stamp, which capture and the activity writer set with the one Go rule. The lane and the count
+both read it.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).

@@ -22,9 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// WaitingNarrow is whose waiting mail a card read keeps, before any count or
-// cap: one seat's own, the mail a set of seats answers for, what no seat
-// answers for, or with nothing set every mail somebody answers for.
+// WaitingNarrow is whose waiting mail a read keeps before any count or cap.
+// It names one seat's own, the mail a set of seats answers for, or what no
+// seat answers for. Unset, it keeps every mail somebody answers for.
 type WaitingNarrow struct {
 	Owner   *ids.UUID
 	Team    bool
@@ -115,9 +115,9 @@ func (s *Store) WaitingCardsAfter(
 			return err
 		}
 		slots.values[waitingCapSlot] = limit
-		values := append(slots.values, newerThan(after, arg))
+		slots.values = append(slots.values, newerThan(after, arg))
 		rows, err := tx.Query(ctx,
-			slots.with+"SELECT waiting.*, "+directMailSeatsSQL(slots.identities)+" FROM ("+fmt.Sprintf(waitingCardsAfterSQL, values...)+
+			slots.with+"SELECT waiting.*, "+directMailSeatsSQL(slots.identities)+" FROM ("+fmt.Sprintf(waitingCardsAfterSQL, slots.values...)+
 				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at, waiting.id", planEachBind(args)...)
 		if err != nil {
 			return err

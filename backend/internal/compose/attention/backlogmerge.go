@@ -3,17 +3,10 @@
 
 package attention
 
-// How the backlog tail merges its sources into one order.
-//
-// The order is one every source sorts by in SQL: a timestamp per row, oldest
-// first and an undated row last, then the source's name, then the source's
-// own order. A task's timestamp is when it falls due, a waiting card's when
-// its message arrived, so the oldest obligation leads whichever source holds it.
-//
-// Each source reads a batch after its own position. A row is merged only when
-// no source with more rows could still hold an earlier one. A source moves to
-// the position after its last merged row, so what was read past that is read
-// again next time, and it ends only when it had no more and all was merged.
+// How the backlog tail merges its sources into one order. Every store can sort
+// by it in SQL. Rows go by a timestamp, earliest first and undated last. A tie
+// goes to the source's name, then to the store's own order. A task's timestamp
+// is its due date, and a waiting card's is when its message came in.
 
 import (
 	"context"
@@ -27,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// tailRow is one row a source read for the tail: the row, its timestamp in the
-// tail's order, the position after it, and whether the page's steps keep it.
+// tailRow is one row a source read for the tail. It carries its timestamp in
+// the tail's order, the position after it, and whether the page keeps it.
 type tailRow struct {
 	row   ranked
 	at    *time.Time
@@ -84,10 +77,9 @@ func tailFrontier(batches []tailBatch) (frontier tailPlace, found bool) {
 }
 
 // mergeTail takes up to need rows from one round's batches in the tail's
-// order, leaving out what the page's steps drop and what the ranked rows
-// hold, and moves each source in rest past what it merged. A source's rows
-// arrive in its own order, which the tail's order keeps, so what one source
-// merges is always a run from the start of its batch.
+// order, and moves each source in rest past what it merged. It leaves out what
+// the page drops and what the ranked rows hold. A source's own order is the
+// tail's order, so it always merges a run from the start of its batch.
 func mergeTail(batches []tailBatch, need int, above map[worklistsnap.Row]bool, rest *backlogCursor) []ranked {
 	frontier, bounded := tailFrontier(batches)
 	type candidate struct {
@@ -128,9 +120,9 @@ func mergeTail(batches []tailBatch, need int, above map[worklistsnap.Row]bool, r
 	return tail
 }
 
-// tailDone is the Done marks a tail batch is judged by: the ranked rows'
-// marks, and what the reader marked among the batch's rows that offer Done.
-// A refused read is no Done, as readingDone takes it.
+// tailDone is the Done marks a tail batch is judged by. It adds the reader's
+// marks on the batch's rows that offer Done to the ranked rows' marks. A
+// refused read is no Done, as readingDone takes it.
 func (s *Service) tailDone(ctx context.Context, rows []ranked) (doneState, error) {
 	done := s.marked
 	if done.store == nil || done.probe != nil {
