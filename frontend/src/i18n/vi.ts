@@ -1187,6 +1187,68 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_one": "Deal đang mở: {count} · tính đến {at}",
   "reporting.openPipelineBasis_other": "Deal đang mở: {count} · tính đến {at}",
   "reporting.forecastLandingBasis": "Quý tài chính này, theo dự báo deal",
+  "reporting.compare.atTarget": "Đúng bằng mục tiêu {target}",
+  "reporting.compare.colleague_withheld":
+    "Số liệu này sẽ cho thấy kết quả riêng của một đồng nghiệp",
+  "reporting.compare.colleague_withheldBody":
+    "Hiệu suất cá nhân đang tắt, và ngoài bạn chỉ có một đồng nghiệp tạo nên các số liệu này. Chọn một nhóm lớn hơn hoặc cả công ty.",
+  "reporting.compare.call_below_won":
+    "Ước tính của quản lý thấp hơn doanh số đã thắng",
+  "reporting.compare.call_below_wonBody":
+    "Ước tính cho thấy quý kết thúc thấp hơn doanh số đã thắng, nên không hiển thị khoảng cách hay mức bao phủ. Cập nhật ước tính để so sánh.",
+  "reporting.compare.apply.period": "Xem quý này",
+  "reporting.compare.apply.scope": "Xem một nhóm",
+  "reporting.compare.apply.pipeline": "Xem tất cả pipeline",
+  "reporting.compare.apply.manager_call_pipeline": "Xem tất cả pipeline",
+  "reporting.compare.title": "Quý này so với mục tiêu",
+  "reporting.compare.gap": "Khoảng cách đến mục tiêu",
+  "reporting.compare.short": "Thấp hơn mục tiêu {target}",
+  "reporting.compare.ahead": "Vượt mục tiêu {target}",
+  "reporting.compare.gapBasis": "Kết quả dự kiến {landing}, theo {basis}",
+  "reporting.compare.basis.commit_evidence": "deal cam kết có bằng chứng",
+  "reporting.compare.basis.weighted": "pipeline có trọng số",
+  "reporting.compare.basis.manager_call": "ước tính của quản lý",
+  "reporting.compare.remaining": "Còn phải thắng",
+  "reporting.compare.remainingBasis": "Đã thắng {won} trên {target}",
+  "reporting.compare.reached": "Đã đạt mục tiêu",
+  "reporting.compare.coverageAll": "Mức bao phủ, mọi deal đang mở",
+  "reporting.compare.coverageQualified": "Mức bao phủ, deal đủ điều kiện",
+  "reporting.compare.coverageBasis":
+    "{open} đang mở trong quý này, so với phần còn phải thắng",
+  "reporting.compare.qualifiedBasis":
+    "{open} trong deal đủ điều kiện, so với phần còn phải thắng",
+  "reporting.compare.ratio": "{ratio} lần",
+  "reporting.compare.qualifiedOff": "Chưa bật",
+  "reporting.compare.qualifiedOffBasis":
+    "Bật dự báo đủ điều kiện để chỉ tính các deal khách hàng vẫn ủng hộ.",
+  "reporting.compare.no_target": "Chưa có mục tiêu doanh số cho quý này",
+  "reporting.compare.no_targetBody":
+    "Đặt mục tiêu doanh số đã thắng cho phạm vi và quý này trong Mục tiêu để xem khoảng cách và mức bao phủ. Không có mục tiêu không phải là mục tiêu bằng không.",
+  "reporting.compare.fx_missing": "Một số số tiền deal chưa có tỷ giá",
+  "reporting.compare.fx_missingBody":
+    "Tổng sẽ bị thấp hơn thực tế, nên không hiển thị khoảng cách hay mức bao phủ. Thêm tỷ giá còn thiếu để xem.",
+  "reporting.compare.partial_visibility":
+    "Bạn không xem được mọi deal trong phạm vi này",
+  "reporting.compare.partial_visibilityBody":
+    "Một số deal hoặc số tiền deal trong phạm vi này bị ẩn với bạn, nên số liệu của bạn không được so với mục tiêu của cả phạm vi.",
+  "reporting.compare.incompatible.period":
+    "Chọn quý tài chính này để so với mục tiêu",
+  "reporting.compare.incompatible.periodBody":
+    "Phép so sánh chỉ áp dụng cho quý tài chính hiện tại.",
+  "reporting.compare.incompatible.scope": "Chọn một nhóm để so với mục tiêu",
+  "reporting.compare.incompatible.scopeBody":
+    "Dự báo đọc một nhóm hoặc cả công ty, không đọc nhiều nhóm cùng lúc.",
+  "reporting.compare.incompatible.pipeline":
+    "Chưa có mục tiêu cho pipeline này",
+  "reporting.compare.incompatible.pipelineBody":
+    "Mục tiêu áp dụng cho mọi pipeline và không được chia theo pipeline. Chọn Tất cả pipeline để so sánh.",
+  "reporting.compare.incompatible.manager_call_pipeline":
+    "Chọn Tất cả pipeline để so sánh ước tính của quản lý",
+  "reporting.compare.incompatible.manager_call_pipelineBody":
+    "Kết quả dự kiến là ước tính của quản lý, và ước tính áp dụng cho mọi pipeline.",
+  "reporting.compare.incompatible.currency": "Mục tiêu dùng một đồng tiền khác",
+  "reporting.compare.incompatible.currencyBody":
+    "Mục tiêu được đặt bằng một đồng tiền không còn là tiền tệ cơ sở. Đặt lại mục tiêu để so sánh.",
   "reporting.this_week": "Tuần này",
   "reporting.this_month": "Tháng này",
   "reporting.last_month": "Tháng trước",

@@ -49,9 +49,9 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	case "last_week":
 		monday := reportperiod.WeekStart(at, zone)
 		start, end = monday.AddDate(0, 0, -7), monday
-	case "this_quarter":
+	case reportingThisQuarter:
 		start = quarterStart(day, calendar.FiscalStartMonth)
-	case "custom":
+	case reportingCustom:
 		if selection.Interval == nil {
 			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
 		}

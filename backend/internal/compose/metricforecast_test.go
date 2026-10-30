@@ -135,3 +135,43 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
+	call := int64(76_000_000)
+	readings := forecasting.Readings{WonMinor: 42_000_000, EvidenceMinor: 10_000_000, OpenMinor: 136_000_000}
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := forecastOperands(forecasting.Period{}, readings, landing, nil, false)
+	if got.LandingMinor != 76_000_000 || got.WonMinor != 42_000_000 || got.Measure != "manager_call" {
+		t.Fatalf("operands %+v, want the 760k call beside the 420k won, never their sum", got)
+	}
+}
+
+func TestAMissingRateLeavesTheOpenTotalsUnknown(t *testing.T) {
+	qualified := int64(0)
+	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1}
+	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings, &qualified)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(facts) != 2 || facts[0].Money != nil || facts[0].Row.Value != nil || facts[1].Row.Value != nil {
+		t.Fatalf("open totals %+v, want both present and neither a number: a short total reads as the whole", facts)
+	}
+	if !forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, &qualified, false).FxMissing {
+		t.Fatal("the comparison was not told a rate is missing")
+	}
+}
+
+func TestACallBelowWhatIsWonIsMarkedForTheComparison(t *testing.T) {
+	call := int64(70_000_000)
+	readings := forecasting.Readings{WonMinor: 90_000_000}
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !forecastOperands(forecasting.Period{}, readings, landing, nil, false).CallBelowWon {
+		t.Fatal("a 700k call beside 900k won reached the comparison unmarked: it would read both reached and short")
+	}
+}

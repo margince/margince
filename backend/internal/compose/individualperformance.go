@@ -292,9 +292,15 @@ func withholdColleagues(
 	if !errors.As(err, new(auth.IndividualPerformanceOffError)) {
 		return facts, coverage, err
 	}
+	return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+}
+
+// loneColleagueCoverage is a figure withheld because one colleague besides the
+// reader makes it up.
+func loneColleagueCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
 	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.LoneColleague))
 	withheld.Withheld = true
-	return []reporting.Fact{}, withheld, nil
+	return withheld
 }
 
 // withoutLoneColleagueMetrics drops, from a frozen edition's facts, every

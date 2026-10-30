@@ -16,10 +16,12 @@ import type {
   ReportingChart,
   ReportingEvaluation,
   ReportingEvidenceRef,
+  ReportingSelection,
 } from "./reporting.model";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
+import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
@@ -31,6 +33,7 @@ export function ReportingCharts({
   kept,
   afterSummary,
   onEvidence,
+  onApplySelection,
   rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
@@ -41,6 +44,8 @@ export function ReportingCharts({
   // act on before reading further.
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
+  // Switches the page to a selection the server offers, where it can.
+  onApplySelection?: (selection: ReportingSelection) => void;
   // Set while the page shows the report as a role reads it.
   rolePreview?: boolean;
 }>) {
@@ -62,6 +67,10 @@ export function ReportingCharts({
         <div className="reporting-results">
           <WrittenSummary evaluation={evaluation} />
           <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+          <TargetComparison
+            evaluation={evaluation}
+            onApply={onApplySelection}
+          />
           {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
           {afterSummary}
           {sections.map((section) => (
