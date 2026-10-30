@@ -60,9 +60,19 @@ func readReportingAccepted(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 }
 
 func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
-	rows, err := tx.Query(ctx, query, b.values...)
+	facts, err := scanOutcomeFacts(ctx, tx, metric, source, query, b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	return reportingCohorts(frame, facts), crmcontracts.ReportingCoverage{Status: "ok"}, nil
+}
+
+// scanOutcomeFacts reads one outcome row per fact, before any period is
+// applied, so a caller can judge rows that fall in no period.
+func scanOutcomeFacts(ctx context.Context, tx pgx.Tx, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings) ([]reporting.Fact, error) {
+	rows, err := tx.Query(ctx, query, b.values...)
+	if err != nil {
+		return nil, err
 	}
 	facts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reporting.Fact, error) {
 		fact := reporting.Fact{Metric: metric, SourceType: source}
@@ -86,10 +96,10 @@ func readOutcomeFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 		return fact, err
 	})
 	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
+		return nil, err
 	}
 	if len(facts) > reportingFactLimit {
-		return nil, crmcontracts.ReportingCoverage{}, fmt.Errorf("narrow the reporting population: %w", apperrors.ErrInvalidArgument)
+		return nil, fmt.Errorf("narrow the reporting population: %w", apperrors.ErrInvalidArgument)
 	}
-	return reportingCohorts(frame, facts), crmcontracts.ReportingCoverage{Status: "ok"}, nil
+	return facts, nil
 }

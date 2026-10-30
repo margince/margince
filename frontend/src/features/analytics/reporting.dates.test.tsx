@@ -147,3 +147,29 @@ it("preserves the server explanation for a broken installation calendar", async 
   ).toBeVisible();
   expect(screen.queryByText(/twelve months/)).not.toBeInTheDocument();
 });
+
+it("says this week has not started yet instead of a backwards range at Monday midnight", async () => {
+  window.location.hash =
+    "#/analytics/performance?period=this_week&pipeline=all";
+  const monday = "2026-09-21T00:00:00+02:00";
+  const empty = {
+    ...reportingStoryEvaluation,
+    context: {
+      ...reportingStoryEvaluation.context,
+      period_kind: "this_week",
+      interval: { start_at: monday, end_at: monday },
+      evaluated_at: monday,
+    },
+  };
+  installFetchStub(reportingStoryRoutes(empty));
+  render(
+    <StoryProviders>
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByText(/^The period starts .*nothing has happened/),
+  ).toHaveTextContent("21/09/2026, 00:00");
+  expect(screen.getAllByText("This week")[0]).toBeVisible();
+  expect(screen.queryByText(/^Results through /)).not.toBeInTheDocument();
+});

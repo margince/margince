@@ -641,3 +641,27 @@ func TestParseBriefDropsASentenceWhoseFactsTheCitedRecordDoesNotCarry(t *testing
 		t.Errorf("kept %q, want the sentence whose date is in the row it cites", kept[0].Text)
 	}
 }
+
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"company","entity_id":"` + briefCompanyID + `"}]}`
+	}
+	promises := []string{
+		"I'll send the retrofit proposal for signature once legal completes its review.",
+		"We’ll book the follow-up call.",
+	}
+	var moves []string
+	for i := range maxRecommendations {
+		moves = append(moves, move(promises[i%len(promises)]))
+	}
+	moves = append(moves, move("Send them the retrofit proposal for signature once legal finishes its review."))
+	sections, err := ParseBriefSections(`{"sections":[{"kind":"next_step","sentences":[`+strings.Join(moves, ",")+`]}]}`,
+		briefCompanyID, inputFixture())
+	if err != nil {
+		t.Fatalf("ParseBriefSections: %v", err)
+	}
+	if len(sections) != 1 || len(sections[0].Sentences) != 1 ||
+		sections[0].Sentences[0].Text != "Send them the retrofit proposal for signature once legal finishes its review." {
+		t.Fatalf("kept %+v, want only the move addressed to the reader", sections)
+	}
+}

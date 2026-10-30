@@ -26,6 +26,7 @@ import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
+  reportingPeriodIsEmpty,
   reportingQuery,
 } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
@@ -308,7 +309,8 @@ function validDateRange(period: string, start: string, end: string): boolean {
 }
 
 // "Results through" only while the period is still running: a closed period
-// ends where it says it does, and the line would only repeat it.
+// ends where it says it does, and the line would only repeat it. A period read
+// at its first instant holds no time, which is said rather than drawn as zeros.
 function resultsThrough(
   evaluation: ReportingEvaluation | undefined,
   locale: Locale,
@@ -319,6 +321,15 @@ function resultsThrough(
     evaluation.context.interval.end_at !== evaluation.context.evaluated_at
   ) {
     return undefined;
+  }
+  if (reportingPeriodIsEmpty(evaluation.context.interval)) {
+    return t("reporting.periodNotStarted", {
+      at: formatDateTime(
+        evaluation.context.interval.start_at,
+        locale,
+        evaluation.context.timezone,
+      ),
+    });
   }
   return t("reporting.resultsThrough", {
     at: formatDateTime(

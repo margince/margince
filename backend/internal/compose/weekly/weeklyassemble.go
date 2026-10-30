@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 // dealLineCap bounds how many deal lines one week records.
@@ -49,10 +50,7 @@ func WeekStartOf(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time, erro
 	if err != nil {
 		return time.Time{}, err
 	}
-	// Go's Weekday has Sunday at 0; the offset back to Monday is 6 for Sunday
-	// and weekday-1 otherwise.
-	back := (int(day.Weekday()) + 6) % 7
-	return day.AddDate(0, 0, -back), nil
+	return reportperiod.WeekStart(day, day.Location()), nil
 }
 
 // AssembleFor measures the week that just closed for the acting rep and writes

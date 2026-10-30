@@ -1166,6 +1166,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
   "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.periodNotStarted":
+    "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
   "reporting.writtenWon": "Gewonnen im Zeitraum {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1205,6 +1207,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.openPipelineBasis_other": "Offene Deals: {count} · Stand {at}",
   "reporting.forecastLandingBasis":
     "Dieses Geschäftsquartal, berechnet aus der Deal-Prognose",
+  "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
   "reporting.last_month": "Letzter Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
