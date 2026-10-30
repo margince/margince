@@ -12,14 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The candidate read evaluates a request's evidence once for every request
-// already judged, so a whole-table read here is paid per verdict ever written.
-// The request and its answers are a handful of ids, each one a primary-key
-// lookup.
-//
-// With sequential scans priced out, a predicate no index serves still shows:
-// the planner walks the whole primary key and filters each row, an index scan
-// with no index condition.
+// The candidate read evaluates this evidence once per request already judged,
+// so a whole-table read here is paid per verdict ever written.
+// With sequential scans priced out, a predicate no index serves becomes a full
+// primary-key walk: an index scan with no index condition.
 func TestSettlementEvidenceReadsEachActivityByItsID(t *testing.T) {
 	plan := explainWithoutSeqScans(t, "",
 		`SELECT (`+settlementEvidenceSQL()+`) FROM activity a WHERE a.id = $2`,
