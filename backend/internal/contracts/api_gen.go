@@ -52977,7 +52977,7 @@ type SdrTeamHandoffs struct {
 	// Reasons The reasons given for the rejections and returns in `outcomes`, most often first.
 	Reasons []SdrHandoffReasonCount `json:"reasons"`
 
-	// Unattributed Decisions and submissions in the period that recorded no submitter. They are in no member's row, and in the team's figures only for the whole company.
+	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
 	Unattributed int              `json:"unattributed"`
 	Waiting      SdrHandoffTotals `json:"waiting"`
 }

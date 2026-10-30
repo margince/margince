@@ -93,6 +93,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	}
 	if owners.IndividualOff {
 		out.MembersWithheld = true
+		// One figure a lone colleague makes up withholds the whole review.
 		err := requireNoLoneColleague(ctx, tx, figures.contributors)
 		if errors.As(err, new(auth.IndividualPerformanceOffError)) {
 			out.Withheld = true
@@ -183,9 +184,11 @@ func readSdrTeamHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 		return out, nil, err
 	}
 	out.Outcomes, out.Unattributed, seats = outcomes, unattributed, append(seats, outcomeSeats...)
-	if out.Cohort, err = readHandoffCohort(ctx, tx, requested, window); err != nil {
+	cohort, cohortSeats, err := readHandoffCohort(ctx, tx, requested, window)
+	if err != nil {
 		return out, nil, err
 	}
+	out.Cohort, seats = cohort, append(seats, cohortSeats...)
 	if out.Waiting, err = readHandoffTotals(ctx, tx, requested, at); err != nil {
 		return out, nil, err
 	}
@@ -198,7 +201,7 @@ func readSdrTeamHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 		return out, nil, err
 	}
 	out.Reasons = reasons
-	return out, append(append(seats, waitingSeats), reasonSeats...), nil
+	return out, append(append(seats, waitingSeats...), reasonSeats...), nil
 }
 
 // readHandoffOutcomes counts the decisions and submissions made in the window,
@@ -219,7 +222,7 @@ func readHandoffOutcomes(ctx context.Context, tx pgx.Tx, requested RequestedScop
 		return "count(*) FILTER (WHERE e.to_status=" + b.add(status) + " AND " + in + ")"
 	}
 	query := `SELECT ` + count(contacts.HandoffSubmitted) + `,` + count(contacts.HandoffRejected) + `,` + count(contacts.HandoffRecycled) + `,
- count(*) FILTER (WHERE e.submitter_id_at_change IS NULL),` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRejected) + `,` + seats(contacts.HandoffRecycled) + `
+ count(*) FILTER (WHERE e.submitter_id_at_change IS NULL AND `+unattributedIn(population)+`),` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRejected) + `,` + seats(contacts.HandoffRecycled) + `
  FROM sdr_handoff_event e WHERE ` + eventWindowSQL(&b, "e.occurred_at", window)
 	var unattributed int
 	groups := make([][]ids.UUID, 4)
@@ -237,51 +240,75 @@ func readHandoffOutcomes(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	return out, groups, unattributed, err
 }
 
+// unattributedIn admits an event that names no submitter only for the whole
+// company: no team can tell whether it was its own.
+func unattributedIn(population string) string {
+	if population == "" {
+		return sqlUnnarrowed
+	}
+	return "false"
+}
+
 // readHandoffCohort follows the rounds submitted in the window to the event
 // that ended each, up to the window's end.
-func readHandoffCohort(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow) (crmcontracts.SdrHandoffCohort, error) {
+func readHandoffCohort(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow) (crmcontracts.SdrHandoffCohort, [][]ids.UUID, error) {
 	var out crmcontracts.SdrHandoffCohort
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "s.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
-		return out, err
+		return out, nil, err
 	}
-	ended := func(status string) string {
-		return "count(*) FILTER (WHERE outcome.to_status=" + b.add(status) + ")"
+	// Each figure is read with the seats behind it, so the lone-colleague
+	// floor judges every figure on its own.
+	seats := func(filter string) string {
+		return "COALESCE(array_remove(array_agg(DISTINCT s.submitter_id_at_change) FILTER (WHERE " + filter + "),NULL),'{}')"
 	}
-	query := `SELECT count(*),` + ended(contacts.HandoffAccepted) + `,` + ended(contacts.HandoffRejected) + `,` + ended(contacts.HandoffRecycled) + `,
+	ended := func(status string) (string, string) {
+		filter := "outcome.to_status=" + b.add(status)
+		return "count(*) FILTER (WHERE " + filter + ")", seats(filter)
+	}
+	accepted, acceptedSeats := ended(contacts.HandoffAccepted)
+	rejected, rejectedSeats := ended(contacts.HandoffRejected)
+	recycled, recycledSeats := ended(contacts.HandoffRecycled)
+	query := `SELECT count(*),` + accepted + `,` + rejected + `,` + recycled + `,
  count(*) FILTER (WHERE outcome.to_status IS NULL),
- percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM outcome.occurred_at-s.occurred_at)/3600) FILTER (WHERE outcome.to_status IS NOT NULL)
+ percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM outcome.occurred_at-s.occurred_at)/3600) FILTER (WHERE outcome.to_status IS NOT NULL),
+ ` + seats(sqlUnnarrowed) + `,` + acceptedSeats + `,` + rejectedSeats + `,` + recycledSeats + `,` + seats("outcome.to_status IS NULL") + `,` + seats("outcome.to_status IS NOT NULL") + `
  FROM sdr_handoff_event s
  LEFT JOIN LATERAL (SELECT n.to_status,n.occurred_at FROM sdr_handoff_event n WHERE n.handoff_id=s.handoff_id
  AND (n.occurred_at,n.id)>(s.occurred_at,s.id) AND n.occurred_at<` + b.add(window.to) + ` -- occurred_at raw: a handoff event's instant, not an activity day
  ORDER BY n.occurred_at,n.id LIMIT 1) outcome ON true
  WHERE s.to_status=` + b.add(contacts.HandoffSubmitted) + ` AND ` + orUnnarrowed(population) + ` AND ` + eventWindowSQL(&b, "s.occurred_at", window)
 	var median *float64
-	if err := tx.QueryRow(ctx, query, b.values...).Scan(&out.Rounds, &out.Accepted, &out.Rejected, &out.Recycled, &out.Waiting, &median); err != nil {
-		return out, err
+	groups := make([][]ids.UUID, 6)
+	if err := tx.QueryRow(ctx, query, b.values...).Scan(&out.Rounds, &out.Accepted, &out.Rejected, &out.Recycled, &out.Waiting, &median,
+		&groups[0], &groups[1], &groups[2], &groups[3], &groups[4], &groups[5]); err != nil {
+		return out, nil, err
 	}
 	if median != nil {
 		hours := float32(*median)
 		out.MedianDecisionHours = &hours
 	}
-	return out, nil
+	return out, groups, nil
 }
 
 // readWaitingSubmitters lists the seats behind the open handoffs
-// readHandoffTotals counts.
-func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) ([]ids.UUID, error) {
+// readHandoffTotals counts: those waiting on a decision, then those returned.
+func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) ([][]ids.UUID, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "cycle.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
 		return nil, err
 	}
-	query := `SELECT COALESCE(array_remove(array_agg(DISTINCT cycle.submitter_id_at_change),NULL),'{}')
+	seats := func(status string) string {
+		return "COALESCE(array_remove(array_agg(DISTINCT cycle.submitter_id_at_change) FILTER (WHERE h.status=" + b.add(status) + "),NULL),'{}')"
+	}
+	query := `SELECT ` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRecycled) + `
  ` + handoffCycleSQL + `
  WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population)
-	var seats []ids.UUID
-	err = tx.QueryRow(ctx, query, b.values...).Scan(&seats)
-	return seats, err
+	groups := make([][]ids.UUID, 2)
+	err = tx.QueryRow(ctx, query, b.values...).Scan(&groups[0], &groups[1])
+	return groups, err
 }
 
 // readHandoffReasons groups the window's rejections and returns by the reason

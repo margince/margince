@@ -19903,10 +19903,11 @@ export interface paths {
          *     `members` is one row per member the seat may measure one by one, read in one statement
          *     per figure for the whole team. While the installation shows no individual performance,
          *     `members_withheld` is true and no row is sent. If the team's figures would then show one
-         *     colleague's work, `withheld` is true and no figure is sent.
+         *     colleague's work (any one figure, judged by the seats behind it), `withheld` is true and no
+         *     figure is sent.
          *
-         *     An event recorded before the submitter was kept with it is counted in `unattributed` and
-         *     in no member's row.
+         *     An event recorded before the submitter was kept with it is counted in `unattributed`, for
+         *     the whole company only, and in no member's row.
          */
         get: operations["getSdrTeamReview"];
         put?: never;
@@ -40363,7 +40364,7 @@ export interface components {
             waiting: components["schemas"]["SdrHandoffTotals"];
             /** @description The reasons given for the rejections and returns in `outcomes`, most often first. */
             reasons: components["schemas"]["SdrHandoffReasonCount"][];
-            /** @description Decisions and submissions in the period that recorded no submitter. They are in no member's row, and in the team's figures only for the whole company. */
+            /** @description Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them. */
             unattributed: number;
         };
         SdrHandoffOutcomes: {

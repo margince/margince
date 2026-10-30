@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -202,8 +203,8 @@ func TestSdrTeamReviewCountsAnUnattributedEventForNoMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	team := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
-	if team.Handoffs == nil || team.Handoffs.Outcomes.Submitted != 0 || team.Handoffs.Unattributed != 1 {
-		t.Fatalf("a team cannot claim an event that names no submitter: %+v", team.Handoffs)
+	if team.Handoffs == nil || team.Handoffs.Outcomes.Submitted != 0 || team.Handoffs.Unattributed != 0 {
+		t.Fatalf("a team neither claims an event that names no submitter nor learns how many the company holds: %+v", team.Handoffs)
 	}
 	for _, row := range team.Members {
 		if row.Submitted != 0 || row.Waiting != 0 {
@@ -241,5 +242,54 @@ func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
 		if row.Accepted != want {
 			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, row.Accepted, want)
 		}
+	}
+}
+
+// Three SDRs each hand one prospect on last week. Two are accepted then, and
+// the third is decided only this week, so last week's rounds still waiting
+// are that one colleague's alone.
+func TestSdrTeamReviewJudgesEachRoundFigureByItsOwnSeats(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	third := e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'third@forecast.test', 'Third SDR')`)
+	if _, err := e.owner.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, e.Team1, third); err != nil {
+		t.Fatal(err)
+	}
+	won, store, writer := reportingWrittenClose(t, e)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	other, err := store.CreateDeal(writer, deals.CreateDealInput{Name: "A second deal", PipelineID: ids.From[ids.PipelineKind](e.pipeline), StageID: ids.From[ids.StageKind](e.stages[20]), OwnerID: &owner, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index, seat := range []ids.UUID{e.Rep1, f.second} {
+		handoff := f.submitAs(t, seat, "Accepted "+seat.String())
+		dealID := []ids.UUID{ids.UUID(won.Id), ids.UUID(other.Id)}[index]
+		f.decide(t, handoff, contacts.HandoffDecision{Status: contacts.HandoffAccepted, DealID: &dealID})
+	}
+	late := f.submitAs(t, third, "Decided this week")
+	f.at = f.now.Add(-2 * time.Hour)
+	f.decide(t, late, contacts.HandoffDecision{Status: contacts.HandoffRejected, ReasonID: f.reason(t, contacts.HandoffRejected)})
+	e.showIndividualPerformance(t, false)
+
+	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
+	if !got.Withheld || got.Handoffs != nil {
+		t.Fatalf("the rounds still waiting are one colleague's, so the review is withheld: %+v", got.Handoffs)
+	}
+}
+
+// Handoffs from before the period: one SDR's is waiting on a decision, the
+// other's was sent back to them. Each count is one colleague's.
+func TestSdrTeamReviewJudgesWaitingAndReturnedApart(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	f.at = f.at.AddDate(0, 0, -14)
+	f.submitAs(t, e.Rep1, "Waiting from before")
+	returned := f.submitAs(t, f.second, "Returned from before")
+	f.decide(t, returned, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: f.reason(t, contacts.HandoffRecycled)})
+	e.showIndividualPerformance(t, false)
+
+	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
+	if !got.Withheld || got.Handoffs != nil {
+		t.Fatalf("waiting and returned are each one colleague's count, so the review is withheld: %+v", got.Handoffs)
 	}
 }
