@@ -279,15 +279,12 @@ func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, int, bool, error
 	}
 	pending, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
 	a.stagedRead = true
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		a.stagedRefused = true
-		return nil, 0, false, nil
-	}
-	if err != nil {
+	a.stagedRefused = errors.Is(err, apperrors.ErrPermissionDenied)
+	if err != nil && !a.stagedRefused {
 		return nil, 0, false, err
 	}
 	a.staged, a.stagedTotal = pending.Approvals, pending.Total
-	return a.staged, a.stagedTotal, true, nil
+	return a.staged, a.stagedTotal, !a.stagedRefused, nil
 }
 
 func (a *assembly) readContacts() error {
