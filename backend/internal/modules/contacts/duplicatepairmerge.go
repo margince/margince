@@ -116,7 +116,7 @@ func duplicatePairFiled(ctx context.Context, tx pgx.Tx, kind string, a, b ids.UU
 		   AND (disposition = 'open' OR (disposition = 'merged' AND disposed_at = now()))
 		   AND %[1]s = LEAST(@a::uuid, @b::uuid) AND %[2]s = GREATEST(@a::uuid, @b::uuid)
 		   FOR SHARE`, side.left, side.right),
-		pgx.NamedArgs{"entity": side.entity, "a": a, "b": b}).Scan(&id)
+		pgx.NamedArgs{mergeEntityKey: side.entity, "a": a, "b": b}).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
