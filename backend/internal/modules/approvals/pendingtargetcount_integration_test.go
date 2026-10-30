@@ -7,26 +7,24 @@ package approvals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// targetCount reads the record count and the record list in one transaction,
-// as the company page does.
+// targetCount reads the record count and the record list the company page
+// reads.
 func (e *stagingEnv) targetCount(as context.Context, t *testing.T, target ids.UUID) (count, listed int) {
 	t.Helper()
 	if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-		var err error
-		if count, err = e.svc.CountPendingForTarget(as, tx, tableCompany, target); err != nil {
-			return err
-		}
-		rows, err := e.svc.PendingForTarget(as, tx, tableCompany, target, PendingScanCap)
-		listed = len(rows)
+		pending, err := e.svc.PendingForTarget(as, tx, tableCompany, target)
+		count, listed = pending.Total, len(pending.Approvals)
 		return err
 	}); err != nil {
 		t.Fatalf("reading the record's pending proposals: %v", err)
@@ -92,5 +90,20 @@ func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) 
 	}
 	if count, _ := e.targetCount(sharedSeat(e.ws, outsider), t, target); count != 0 {
 		t.Errorf("a seat that can decide none of them counted %d", count)
+	}
+}
+
+// Triage is human work, so a caller acting for nobody is refused the record's
+// proposals. An empty list would read as "none waiting".
+func TestARecordsPendingProposalsAreRefusedToACallerActingForNobody(t *testing.T) {
+	e := setupStaging(t)
+	target := e.seedCompany(t)
+	as := e.sweeping()
+	err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
+		_, err := e.svc.PendingForTarget(as, tx, tableCompany, target)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a system caller read the record's pending proposals: err=%v, want ErrPermissionDenied", err)
 	}
 }
