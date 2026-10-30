@@ -6,10 +6,10 @@
 -- can count.
 --
 -- A deal lost before this file has only its note. An administrator maps each
--- distinct note to a code; the mapping is keyed by a hash of the note, so no
--- copy of the text leaves the deal. A mapped deal says so in
--- lost_reason_basis, which keeps a reviewed guess apart from what the closer
--- chose.
+-- distinct note to a code. The mapping is keyed by the md5 of the note, so no
+-- copy of the text leaves the deal, and the deal store deletes a mapping once
+-- no deal carries its note. A mapped deal says so in lost_reason_basis, which
+-- keeps a reviewed guess apart from what the closer chose.
 SET LOCAL lock_timeout = '3s';
 
 CREATE TABLE deal_loss_reason (
@@ -45,17 +45,17 @@ CREATE TRIGGER trg_deal_loss_reason_updated
     BEFORE UPDATE ON deal_loss_reason
     FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version();
 
--- One reviewed decision per distinct legacy note: the sha256 of the note,
--- trimmed and lower-cased, and the code an administrator chose for it.
+-- One reviewed decision per legacy note: the md5 of the note, trimmed and
+-- lower-cased, and the code an administrator chose for it.
 CREATE TABLE deal_loss_reason_mapping (
     id          uuid PRIMARY KEY DEFAULT uuidv7(),
-    text_hash   bytea NOT NULL UNIQUE,
+    note_key    text NOT NULL UNIQUE,
     reason_key  text NOT NULL,
     decided_by  text NOT NULL,
     version     bigint NOT NULL DEFAULT 1,
     created_at  timestamptz NOT NULL DEFAULT now(),
     updated_at  timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT deal_loss_reason_mapping_hash_shape CHECK (length(text_hash) = 32),
+    CONSTRAINT deal_loss_reason_mapping_key_shape CHECK (note_key ~ '^[0-9a-f]{32}$'),
     CONSTRAINT deal_loss_reason_mapping_reason_fkey
         FOREIGN KEY (reason_key) REFERENCES deal_loss_reason (key)
         ON UPDATE RESTRICT ON DELETE RESTRICT,
@@ -70,9 +70,8 @@ CREATE TRIGGER trg_deal_loss_reason_mapping_updated
     FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version();
 
 ALTER TABLE deal
-    ADD COLUMN lost_reason_code       text,
-    ADD COLUMN lost_reason_basis      text,
-    ADD COLUMN lost_reason_mapping_id uuid;
+    ADD COLUMN lost_reason_code  text,
+    ADD COLUMN lost_reason_basis text;
 
 -- Added NOT VALID and validated in the next file, so the scan does not hold
 -- every deal write. The new columns are empty, so no row can fail.
@@ -80,15 +79,11 @@ ALTER TABLE deal
     ADD CONSTRAINT deal_lost_reason_code_fkey
         FOREIGN KEY (lost_reason_code) REFERENCES deal_loss_reason (key)
         ON UPDATE RESTRICT ON DELETE RESTRICT NOT VALID,
-    ADD CONSTRAINT deal_lost_reason_mapping_fkey
-        FOREIGN KEY (lost_reason_mapping_id) REFERENCES deal_loss_reason_mapping (id)
-        ON UPDATE RESTRICT ON DELETE RESTRICT NOT VALID,
     ADD CONSTRAINT deal_lost_reason_code_only_when_lost
         CHECK (lost_reason_code IS NULL OR status = 'lost') NOT VALID,
     ADD CONSTRAINT deal_lost_reason_basis_check
         CHECK ((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)
-            AND (lost_reason_basis IS NULL OR lost_reason_basis IN ('recorded', 'mapped'))
-            AND (lost_reason_mapping_id IS NOT NULL) = (lost_reason_basis IS NOT DISTINCT FROM 'mapped')) NOT VALID;
+            AND (lost_reason_basis IS NULL OR lost_reason_basis IN ('recorded', 'mapped'))) NOT VALID;
 
 -- A loss now needs a code or a note. A client that sends only the note keeps
 -- working, and a closer who picks a code need not also write one. Every row
@@ -99,8 +94,10 @@ ALTER TABLE deal ADD CONSTRAINT deal_lost_reason
 
 CREATE INDEX idx_deal_lost_reason_code ON deal (lost_reason_code)
     WHERE lost_reason_code IS NOT NULL;
-CREATE INDEX idx_deal_lost_reason_mapping ON deal (lost_reason_mapping_id)
-    WHERE lost_reason_mapping_id IS NOT NULL;
+-- The key a mapping is found by, so applying one and asking whether any deal
+-- still carries its note read an index rather than every lost deal.
+CREATE INDEX idx_deal_lost_reason_note_key ON deal ((md5(lower(btrim(lost_reason)))))
+    WHERE lost_reason IS NOT NULL;
 
 -- The loss keeps its code in the history row of the move, so a reopen and a
 -- second loss leave both answers behind.

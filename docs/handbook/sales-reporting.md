@@ -83,7 +83,7 @@ Ask a question about won and lost deals, and group it by **Loss reason from the 
 - **Mapped from a note**: an administrator matched the deal's older note to a reason.
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 
-Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background. Each note stays as it was written, and a reason picked at close is never replaced.
+Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
 
 ## How do I save or share a report?
 

@@ -46,19 +46,25 @@ const REASONS = {
 const LEGACY = {
   data: [
     {
-      text_hash: "a".repeat(64),
+      text_hash: "a".repeat(32),
       text: "Their quote was cheaper",
       deal_count: 9,
+      pending_count: 4,
       mapping: {
         id: "mapping-1",
-        text_hash: "a".repeat(64),
+        text_hash: "a".repeat(32),
         reason_key: "price",
         decided_by: "human:1",
         decided_at: "2026-10-02T08:00:00Z",
         version: 1,
       },
     },
-    { text_hash: "b".repeat(64), text: "The champion left", deal_count: 4 },
+    {
+      text_hash: "b".repeat(32),
+      text: "The champion left",
+      deal_count: 4,
+      pending_count: 0,
+    },
   ],
   distinct_total: 14,
 };

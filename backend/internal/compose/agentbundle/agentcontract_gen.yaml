@@ -13962,10 +13962,10 @@ components:
           description: The stage to move to. Its semantic decides whether the move is confirm-first.
         lost_reason:
           type: string
-          description: 'A free note on the loss. A lost stage needs this, `lost_reason_code`, or both.'
+          description: 'A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.'
         lost_reason_code:
           type: string
-          description: An active key from `/loss-reasons`, when the stage closes the deal as lost.
+          description: 'An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.'
         won_without_contract_reason:
           type: string
           enum: [imported, purchase_order, verbal, renewal_by_email, other]
@@ -14638,11 +14638,11 @@ components:
       properties:
         to_stage_id: {type: string, format: uuid, description: Target stage (must belong to the deal's pipeline).}
         status: {type: string, enum: [open, won, lost], description: Set when advancing into a terminal stage.}
-        lost_reason: {type: [string, 'null'], description: 'The free note on a loss. A move to a lost stage needs this, `lost_reason_code`, or both.'}
+        lost_reason: {type: [string, 'null'], description: 'A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.'}
         lost_reason_code:
           type: [string, 'null']
           description: >-
-            An active key from `/loss-reasons`, on a move to a lost stage. Refused on any other move. A client that sends only `lost_reason` still closes the deal; the loss then counts as unmapped until an administrator maps its note.
+            An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]

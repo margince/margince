@@ -291,7 +291,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 }
 
 // announceStageAdvance writes the move's audit row and the event that carries
-// it, linked to each other.
+// it, linked to each other. It also releases the note the move took off.
 //
 // The §5.3 payload carries the amount snapshot so as-of-date pipeline reports
 // and the overnight stalled/forecast sweep react without a read-back;
@@ -300,6 +300,9 @@ func announceStageAdvance(
 	ctx context.Context, tx pgx.Tx, id ids.DealID, in AdvanceDealInput,
 	current crmcontracts.Deal, p *storekit.Patch, status string, winProbability int,
 ) error {
+	if err := releaseLossNote(ctx, tx, p, current); err != nil {
+		return err
+	}
 	var evidence map[string]any
 	if in.ApprovalID != nil {
 		evidence = map[string]any{StageApprovalEvidenceKey: in.ApprovalID.String()}
@@ -415,9 +418,7 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	}
 	// Written when this advance lands on lost, and cleared on every other
 	// landing: a reason describing a previous close is worse than none.
-	if err := setLossReason(ctx, tx, p, current, loss); err != nil {
-		return nil, "", err
-	}
+	setLossReason(p, current, loss)
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.
 	if DealStatus(status) == DealWon {

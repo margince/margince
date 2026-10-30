@@ -22,15 +22,19 @@ import (
 )
 
 const (
-	lossMappingTaskID        = "core/1793359670_loss_reason_mappings"
+	lossMappingTaskID        = "core/1793365074_loss_reason_mappings"
 	lossMappingStep          = "mapped_losses"
 	lossMappingReviewVersion = "1"
-	// maxReviewedLossMappings is the most decisions one run applies, and
-	// maxReviewedLossDeals the most deals it changes: the engine bounds a
-	// reviewed run at 1000 records. The next apply takes the rest.
-	maxReviewedLossMappings = 1000
-	maxReviewedLossDeals    = 1000
+	// maxReviewedLossMappings is the most decisions one apply names: the
+	// contract's page of them.
+	maxReviewedLossMappings = 200
 )
+
+// maxReviewedLossDeals is the most deals one run changes, as the engine bounds
+// a reviewed run at 1000 records. Applied deals drop out of the pending set, so
+// the next apply of the same decisions takes the rest. A var so a test can make
+// the page small enough to need two.
+var maxReviewedLossDeals = 1000
 
 // lossMappingScope is the reviewed plan: each decided mapping at the version
 // the administrator applied.
@@ -46,7 +50,7 @@ func lossMappingDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
 		ID: lossMappingTaskID, Version: 1, Title: "Applying reviewed loss reasons",
 		Manual: true, ReviewVersion: lossMappingReviewVersion, Review: validateLossMappingReviewTx,
-		Requires: []string{"core/1793359670"},
+		Requires: []string{"core/1793365074"},
 		Steps: []datatask.Step{{
 			Name: lossMappingStep, Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -110,29 +114,54 @@ type lossMappingPlan struct {
 	deals    int
 }
 
-// lossMappingReview is the plan an apply activates: every decision as it
-// stands now, sealed by its digest.
-func lossMappingReview(ctx context.Context, tx pgx.Tx, asOf time.Time) (lossMappingPlan, error) {
-	mappings, err := deals.ReviewedLossMappingsTx(ctx, tx, maxReviewedLossMappings)
-	if err != nil {
+// lossMappingReview seals the decisions the operator reviewed and no others,
+// each at the version they saw. A decision that moved or went since is refused, so a
+// run never applies one nobody looked at.
+func lossMappingReview(ctx context.Context, tx pgx.Tx, seen []deals.ReviewedLossMapping, asOf time.Time) (lossMappingPlan, error) {
+	if len(seen) == 0 || len(seen) > maxReviewedLossMappings {
+		return lossMappingPlan{}, apperrors.ErrInvalidArgument
+	}
+	if err := ensureLossMappingsStand(ctx, tx, seen); err != nil {
 		return lossMappingPlan{}, err
 	}
-	reviewed := make([]ids.UUID, 0, len(mappings))
-	for _, mapping := range mappings {
+	reviewed := make([]ids.UUID, 0, len(seen))
+	for _, mapping := range seen {
 		reviewed = append(reviewed, mapping.ID)
 	}
-	pending, err := deals.CountLossMappingCandidates(ctx, tx, maxReviewedLossDeals, reviewed)
+	pending, err := deals.CountLossMappingCandidates(ctx, tx, int64(maxReviewedLossDeals), reviewed)
 	if err != nil {
 		return lossMappingPlan{}, err
 	}
-	plan := lossMappingPlan{mappings: len(mappings), deals: int(min(pending, maxReviewedLossDeals))}
-	encoded, err := json.Marshal(lossMappingScope{Mappings: mappings})
+	plan := lossMappingPlan{mappings: len(seen), deals: int(min(pending, int64(maxReviewedLossDeals)))}
+	encoded, err := json.Marshal(lossMappingScope{Mappings: seen})
 	if err != nil {
 		return lossMappingPlan{}, err
 	}
 	plan.review = datatask.ReviewRequest{Scope: encoded, RuleVersion: lossMappingReviewVersion, Limit: max(plan.deals, 1), AsOf: asOf}
 	plan.review.Digest, err = reviewDigest[lossMappingScope](plan.review)
 	return plan, err
+}
+
+// ensureLossMappingsStand refuses a review naming a decision twice, or one
+// whose stored version is no longer the one reviewed.
+func ensureLossMappingsStand(ctx context.Context, tx pgx.Tx, seen []deals.ReviewedLossMapping) error {
+	named := make([]ids.UUID, 0, len(seen))
+	for _, mapping := range seen {
+		named = append(named, mapping.ID)
+	}
+	versions, err := deals.LossMappingVersionsTx(ctx, tx, named)
+	if err != nil {
+		return err
+	}
+	if len(versions) != len(seen) {
+		return apperrors.ErrConflict
+	}
+	for _, mapping := range seen {
+		if versions[mapping.ID] != mapping.Version {
+			return apperrors.ErrConflict
+		}
+	}
+	return nil
 }
 
 // validateLossMappingReviewTx rechecks the plan on the activating
@@ -142,18 +171,8 @@ func validateLossMappingReviewTx(ctx context.Context, tx pgx.Tx, review datatask
 	if err := json.Unmarshal(review.Scope, &scope); err != nil || len(scope.Mappings) > maxReviewedLossMappings {
 		return "", apperrors.ErrInvalidArgument
 	}
-	current, err := deals.ReviewedLossMappingsTx(ctx, tx, maxReviewedLossMappings)
-	if err != nil {
+	if err := ensureLossMappingsStand(ctx, tx, scope.Mappings); err != nil {
 		return "", err
-	}
-	versions := make(map[ids.UUID]int64, len(current))
-	for _, mapping := range current {
-		versions[mapping.ID] = mapping.Version
-	}
-	for _, mapping := range scope.Mappings {
-		if version, ok := versions[mapping.ID]; !ok || version != mapping.Version {
-			return "", apperrors.ErrConflict
-		}
 	}
 	return reviewDigest[lossMappingScope](review)
 }

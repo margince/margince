@@ -5302,6 +5302,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lossReasons.legacyTitle": "Ältere Verlustnotizen",
   "lossReasons.legacySub":
     "Deals, die vor dieser Liste verloren gingen, haben nur eine Notiz. Wähle für jede Notiz den Grund, als der sie zählt, und wende ihn an. Die Notizen bleiben, wie sie geschrieben wurden.",
+  "lossReasons.colPending": "Noch zu ändern",
   "lossReasons.colNote": "Notiz",
   "lossReasons.colMapTo": "Zählt als",
   "lossReasons.mapFor": "Grund für „{note}“",

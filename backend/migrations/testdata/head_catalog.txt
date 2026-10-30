@@ -3675,10 +3675,9 @@ public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) O
 public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))
-public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded'::text, 'mapped'::text]))) AND ((lost_reason_mapping_id IS NOT NULL) = (NOT (lost_reason_basis IS DISTINCT FROM 'mapped'::text)))))
+public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded'::text, 'mapped'::text])))))
 public.deal.deal_lost_reason_code_fkey FOREIGN KEY (lost_reason_code) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_lost_reason_code_only_when_lost CHECK (((lost_reason_code IS NULL) OR (status = 'lost'::text)))
-public.deal.deal_lost_reason_mapping_fkey FOREIGN KEY (lost_reason_mapping_id) REFERENCES deal_loss_reason_mapping(id) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text)))
 public.deal.deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))
 public.deal.deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -3713,7 +3712,6 @@ public.deal.legal_hold boolean NOT NULL gen=- def=false
 public.deal.lost_reason text gen=- def=-
 public.deal.lost_reason_basis text gen=- def=-
 public.deal.lost_reason_code text gen=- def=-
-public.deal.lost_reason_mapping_id uuid gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
@@ -3844,20 +3842,20 @@ public.deal_loss_reason.version bigint NOT NULL gen=- def=1
 public.deal_loss_reason_key_key CREATE UNIQUE INDEX deal_loss_reason_key_key ON public.deal_loss_reason USING btree (key)
 public.deal_loss_reason_mapping acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_loss_reason_mapping.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_loss_reason_mapping.deal_loss_reason_mapping_hash_shape CHECK ((length(text_hash) = 32))
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_key_shape CHECK ((note_key ~ '^[0-9a-f]{32}$'::text))
+public.deal_loss_reason_mapping.deal_loss_reason_mapping_note_key_key UNIQUE (note_key)
 public.deal_loss_reason_mapping.deal_loss_reason_mapping_pkey PRIMARY KEY (id)
 public.deal_loss_reason_mapping.deal_loss_reason_mapping_reason_fkey FOREIGN KEY (reason_key) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
-public.deal_loss_reason_mapping.deal_loss_reason_mapping_text_hash_key UNIQUE (text_hash)
 public.deal_loss_reason_mapping.deal_loss_reason_mapping_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_loss_reason_mapping.decided_by text NOT NULL gen=- def=-
 public.deal_loss_reason_mapping.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_loss_reason_mapping.note_key text NOT NULL gen=- def=-
 public.deal_loss_reason_mapping.reason_key text NOT NULL gen=- def=-
-public.deal_loss_reason_mapping.text_hash bytea NOT NULL gen=- def=-
 public.deal_loss_reason_mapping.trg_deal_loss_reason_mapping_updated CREATE TRIGGER trg_deal_loss_reason_mapping_updated BEFORE UPDATE ON public.deal_loss_reason_mapping FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_loss_reason_mapping.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_loss_reason_mapping.version bigint NOT NULL gen=- def=1
+public.deal_loss_reason_mapping_note_key_key CREATE UNIQUE INDEX deal_loss_reason_mapping_note_key_key ON public.deal_loss_reason_mapping USING btree (note_key)
 public.deal_loss_reason_mapping_pkey CREATE UNIQUE INDEX deal_loss_reason_mapping_pkey ON public.deal_loss_reason_mapping USING btree (id)
-public.deal_loss_reason_mapping_text_hash_key CREATE UNIQUE INDEX deal_loss_reason_mapping_text_hash_key ON public.deal_loss_reason_mapping USING btree (text_hash)
 public.deal_loss_reason_pkey CREATE UNIQUE INDEX deal_loss_reason_pkey ON public.deal_loss_reason USING btree (id)
 public.deal_move_dismissal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_move_dismissal.deal_id uuid NOT NULL gen=- def=-
@@ -4887,7 +4885,7 @@ public.idx_deal_correction_deal CREATE INDEX idx_deal_correction_deal ON public.
 public.idx_deal_document_hide_attachment CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id)
 public.idx_deal_loss_reason_mapping_reason CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key)
 public.idx_deal_lost_reason_code CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)
-public.idx_deal_lost_reason_mapping CREATE INDEX idx_deal_lost_reason_mapping ON public.deal USING btree (lost_reason_mapping_id) WHERE (lost_reason_mapping_id IS NOT NULL)
+public.idx_deal_lost_reason_note_key CREATE INDEX idx_deal_lost_reason_note_key ON public.deal USING btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)
 public.idx_deal_name_trgm CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)
 public.idx_deal_owner CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_deal_partner CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))

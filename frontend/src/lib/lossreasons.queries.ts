@@ -117,9 +117,17 @@ export function useDecideLegacyLossReason() {
 export function useApplyLegacyLossReasons() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    // The decisions the reader saw, at the versions shown: the server applies
+    // those and refuses one that has moved since.
+    mutationFn: async (shown: readonly LegacyLossReason[]) => {
+      const mappings = shown.flatMap((row) =>
+        row.mapping
+          ? [{ id: row.mapping.id, version: row.mapping.version }]
+          : [],
+      );
       const { data, error, response } = await api.POST(
         "/loss-reasons/legacy/apply",
+        { body: { mappings } },
       );
       if (error || !response.ok) {
         throwProblem(error);
@@ -128,4 +136,31 @@ export function useApplyLegacyLossReasons() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: LOSS_REASONS_KEY }),
   });
+}
+
+/** The rows an apply would change: decided, with deals still to change. */
+export function pendingDecisions(
+  rows: readonly LegacyLossReason[],
+): LegacyLossReason[] {
+  return rows.filter((row) => row.mapping && row.pending_count > 0);
+}
+
+/**
+ * How a lost deal says why: the label of its reason, retired ones included,
+ * and its note when it has one. A code the list no longer holds reads as the
+ * code. Undefined when the deal says nothing.
+ */
+export function lostReasonWords(
+  deal: Readonly<{
+    lost_reason?: string | null;
+    lost_reason_code?: string | null;
+  }>,
+  reasons: readonly LossReason[] | undefined,
+): string | undefined {
+  const code = deal.lost_reason_code ?? undefined;
+  const label = code
+    ? (reasons?.find((reason) => reason.key === code)?.label ?? code)
+    : undefined;
+  const words = [label, deal.lost_reason?.trim() || undefined].filter(Boolean);
+  return words.length > 0 ? words.join(" — ") : undefined;
 }

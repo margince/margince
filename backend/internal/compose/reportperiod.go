@@ -339,6 +339,10 @@ func winLossSpec() reportSpec {
 		baseWhere: "t.archived_at IS NULL AND t.status IN ('won','lost')",
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
+		notes: "a lost deal counts once, under the period and loss_reason of its latest loss; " +
+			"a deal reopened and lost again leaves its earlier loss, and that loss's code, in its stage history " +
+			"and not in this report. loss_reason_state says whether the code was picked at the close (recorded), " +
+			"mapped later from an older note (mapped), or is missing because only an unmapped note exists (unmapped)",
 		// The installation's, not the caller's: a question about how the
 		// business closes. Naming one owner, by filter or by grouping, goes
 		// through the owner gate (reportownergate.go).

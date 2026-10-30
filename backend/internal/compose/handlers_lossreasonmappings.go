@@ -10,11 +10,13 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -31,7 +33,15 @@ func (h dataTaskHandlers) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.
 		httperr.Write(w, r, err)
 		return
 	}
-	plan, err := h.activateLossMappings(ctx)
+	var req crmcontracts.ApplyLegacyLossReasonsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	seen := make([]deals.ReviewedLossMapping, 0, len(req.Mappings))
+	for _, mapping := range req.Mappings {
+		seen = append(seen, deals.ReviewedLossMapping{ID: ids.UUID(mapping.Id), Version: mapping.Version})
+	}
+	plan, err := h.activateLossMappings(ctx, seen)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -41,7 +51,7 @@ func (h dataTaskHandlers) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.
 
 // activateLossMappings starts the run a plan describes. A plan that changes
 // no deal starts nothing.
-func (h dataTaskHandlers) activateLossMappings(ctx context.Context) (lossMappingPlan, error) {
+func (h dataTaskHandlers) activateLossMappings(ctx context.Context, seen []deals.ReviewedLossMapping) (lossMappingPlan, error) {
 	engine, err := newDataTaskEngine(h.pool, buildinfo.ReleaseVersion, h.now)
 	if err != nil {
 		return lossMappingPlan{}, err
@@ -53,7 +63,7 @@ func (h dataTaskHandlers) activateLossMappings(ctx context.Context) (lossMapping
 	var plan lossMappingPlan
 	err = InstallationDB(h.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		plan, err = lossMappingReview(ctx, tx, h.now())
+		plan, err = lossMappingReview(ctx, tx, seen, h.now())
 		return err
 	})
 	if err != nil || plan.deals == 0 {

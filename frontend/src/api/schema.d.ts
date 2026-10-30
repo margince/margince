@@ -8227,10 +8227,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the distinct notes of lost deals that have no loss reason code yet.
-         * @description For the administrator who maps old notes to codes. One row per distinct note, trimmed
-         *     and compared without case, with how many lost deals carry it and the code already
-         *     decided for it, if any. Most frequent first. Only deals the caller may read count.
+         * List the notes of lost deals that a mapping speaks for.
+         * @description For the administrator who maps old notes to codes. One row per note, trimmed and
+         *     compared without case, over the lost deals with no code or a mapped one. Each row says
+         *     how many deals carry the note, the decision taken for it, and how many deals that
+         *     decision would still change. Undecided notes come first, then the most frequent. Only
+         *     deals the caller may read count.
          */
         get: operations["listLegacyLossReasons"];
         put?: never;
@@ -8277,11 +8279,12 @@ export interface paths {
         put?: never;
         /**
          * Apply the reviewed legacy mappings to the lost deals they match.
-         * @description Starts the background correction that writes each decided code onto the lost deals
-         *     whose note matches it, with an audit entry and an event per deal. A deal whose closer
-         *     chose a code is left as it is, and a second run changes nothing the first one wrote.
-         *     409 while an earlier run is still working. Progress shows in System health.
-         *     Requires data_task:update as well as the right to decide the mappings.
+         * @description Starts the background correction that writes each named decision onto the lost deals
+         *     whose note matches it, with an audit entry and an event per deal. Only the decisions
+         *     named, at the versions named, are applied: 409 when one has since changed or gone. A
+         *     deal whose closer chose a code is left as it is, and a second run changes nothing the
+         *     first one wrote. 409 while an earlier run is still working. Progress shows in System
+         *     health. Requires data_task:update as well as the right to decide the mappings.
          */
         post: operations["applyLegacyLossReasons"];
         delete?: never;
@@ -33332,9 +33335,9 @@ export interface components {
              * @description The stage to move to. Its semantic decides whether the move is confirm-first.
              */
             to_stage_id: string;
-            /** @description A free note on the loss. A lost stage needs this, `lost_reason_code`, or both. */
+            /** @description A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both. */
             lost_reason?: string;
-            /** @description An active key from `/loss-reasons`, when the stage closes the deal as lost. */
+            /** @description An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped. */
             lost_reason_code?: string;
             /**
              * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
@@ -34580,9 +34583,9 @@ export interface components {
              * @enum {string}
              */
             status?: "open" | "won" | "lost";
-            /** @description The free note on a loss. A move to a lost stage needs this, `lost_reason_code`, or both. */
+            /** @description A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both. */
             lost_reason?: string | null;
-            /** @description An active key from `/loss-reasons`, on a move to a lost stage. Refused on any other move. A client that sends only `lost_reason` still closes the deal; the loss then counts as unmapped until an administrator maps its note. */
+            /** @description An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note. */
             lost_reason_code?: string | null;
             /**
              * @description Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.
@@ -38937,7 +38940,7 @@ export interface components {
         LossReasonMapping: {
             /** Format: uuid */
             id: string;
-            /** @description The sha256 of the note, trimmed and lower-cased, in hex. */
+            /** @description The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note. */
             text_hash: string;
             /** @description The key from `/loss-reasons`. */
             reason_key: string;
@@ -38948,24 +38951,35 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
-        /** @description One distinct note of lost deals with no loss reason code. */
+        /** @description One note of lost deals a mapping speaks for. */
         LegacyLossReason: {
             /** @description The key to decide this note under. */
             text_hash: string;
             /** @description The note as one of its deals carries it. */
             text: string;
-            /** @description Lost deals the caller may read that carry it. */
+            /** @description Lost deals the caller may read that carry it with no code or a mapped one. */
             deal_count: number;
+            /** @description Of those, how many the decision would change if applied now. Zero with no decision. */
+            pending_count: number;
             mapping?: components["schemas"]["LossReasonMapping"];
         };
         LegacyLossReasonListResponse: {
             data: components["schemas"]["LegacyLossReason"][];
-            /** @description How many distinct notes are still unmapped, of which `data` is the most frequent. */
+            /** @description How many notes the list holds, of which `data` is the first page. */
             distinct_total: number;
         };
         DecideLegacyLossReasonRequest: {
             /** @description An active key from `/loss-reasons`. */
             reason_key: string;
+        };
+        ApplyLegacyLossReasonsRequest: {
+            /** @description The decisions the administrator reviewed, each at the version shown. */
+            mappings: {
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                version: number;
+            }[];
         };
         ApplyLegacyLossReasonsResponse: {
             /** @description How many reviewed mappings the correction applies. */
@@ -66856,7 +66870,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyLegacyLossReasonsRequest"];
+            };
+        };
         responses: {
             /** @description The correction was started. */
             202: {
@@ -66869,6 +66887,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listRecordRoles: {
@@ -83673,7 +83692,7 @@ export interface operations {
             content: {
                 "application/json": {
                     lost_reason: string;
-                    /** @description An active key from `/loss-reasons`. */
+                    /** @description An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped. */
                     lost_reason_code?: string;
                 };
             };

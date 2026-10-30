@@ -4,18 +4,15 @@
 package deals
 
 // The reviewed mapping of legacy loss notes to codes. An administrator decides
-// one distinct note at a time; a data task then writes the decided code onto
-// the lost deals carrying that note. The note itself is never rewritten, and a
-// code the closer chose is never replaced.
+// one note at a time; a data task then writes the decided code onto the lost
+// deals carrying that note. The note itself is never rewritten, and a code the
+// closer chose is never replaced.
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"maps"
 	"regexp"
-	"slices"
 	"strings"
 	"time"
 
@@ -41,33 +38,27 @@ const (
 	MaxLegacyLossReasons = 200
 )
 
-var lossReasonKeyShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+var (
+	lossReasonKeyShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+	noteKeyShape       = regexp.MustCompile(`^[0-9a-f]{32}$`)
+)
 
-// legacyNoteHashSQL is a note's mapping key. The list a human decides from and
-// the task that applies the decision both call it, so they key notes alike.
-func legacyNoteHashSQL(column string) string {
-	return `sha256(convert_to(lower(btrim(` + column + `)), 'UTF8'))`
+// legacyNoteKeySQL is a note's mapping key, the expression
+// idx_deal_lost_reason_note_key indexes. The list a human decides from, the
+// task that applies the decision and the cleanup that drops it all call it.
+func legacyNoteKeySQL(column string) string {
+	return `md5(lower(btrim(` + column + `)))`
 }
 
-// unmappedLossSQL is a lost deal whose note nobody has given a code yet.
-const unmappedLossSQL = `d.status = 'lost' AND d.lost_reason IS NOT NULL AND d.lost_reason_code IS NULL`
+// mappableNoteSQL is a live lost deal a mapping may speak for: one with no
+// code, or one an earlier mapping coded. A code the closer recorded is not one.
+const mappableNoteSQL = `d.archived_at IS NULL AND d.status = 'lost' AND d.lost_reason IS NOT NULL
+	AND (d.lost_reason_code IS NULL OR d.lost_reason_basis = 'mapped')`
 
-// pendingMappingFrom is the live lost deals a decided mapping would change.
-// That is one with no code, or one an earlier decision on the note set to a
-// code the decision no longer names. A code the closer recorded is never one.
-// A deal holding its mapped code drops out, so a rerun finds nothing it did.
-// $1 limits it to the reviewed mappings, or NULL for all. pendingMappingsOf
-// adds the caller's deal row scope.
-var pendingMappingFrom = `FROM deal d
-	JOIN deal_loss_reason_mapping m ON m.text_hash = ` + legacyNoteHashSQL("d.lost_reason") + `
-	WHERE d.archived_at IS NULL AND d.status = 'lost' AND d.lost_reason IS NOT NULL
-	  AND ($1::uuid[] IS NULL OR m.id = ANY($1::uuid[]))
-	  AND (d.lost_reason_code IS NULL
-	       OR (d.lost_reason_mapping_id = m.id AND d.lost_reason_code <> m.reason_key))`
-
-// ListLegacyLossReasons answers the most frequent notes of the lost deals the
-// caller may read that have no code. Each carries its decision, if taken. Only
-// a seat that may decide one may list them.
+// ListLegacyLossReasons answers the notes of the lost deals the caller may
+// read that a mapping speaks for, undecided ones first. Each says how many
+// deals its decision would still change. Only a seat that
+// may decide a mapping may list them.
 func (s *Store) ListLegacyLossReasons(ctx context.Context, limit int) (crmcontracts.LegacyLossReasonListResponse, error) {
 	out := crmcontracts.LegacyLossReasonListResponse{Data: []crmcontracts.LegacyLossReason{}}
 	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionUpdate); err != nil {
@@ -90,15 +81,15 @@ func (s *Store) ListLegacyLossReasons(ctx context.Context, limit int) (crmcontra
 	}
 	limitAt := arg(limit)
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, storekit.SQLf(`WITH notes AS (
-			SELECT `+legacyNoteHashSQL("d.lost_reason")+` AS hash, min(d.lost_reason) AS sample, count(*) AS deals
+		rows, err := tx.Query(ctx, storekit.SQLf(`SELECT `+legacyNoteKeySQL("d.lost_reason")+` AS note_key,
+			       min(d.lost_reason), count(*)::int, (count(*) FILTER (WHERE m.id IS NOT NULL
+			         AND (d.lost_reason_code IS NULL OR d.lost_reason_code <> m.reason_key)))::int,
+			       (count(*) OVER ())::int, m.id, m.reason_key, m.decided_by, m.updated_at, m.version
 			  FROM deal d
-			 WHERE d.archived_at IS NULL AND `+unmappedLossSQL+` AND (`+scope+`)
-			 GROUP BY 1)
-			SELECT encode(n.hash, 'hex'), n.sample, n.deals::int, (count(*) OVER ())::int,
-			       m.id, m.reason_key, m.decided_by, m.updated_at, m.version
-			  FROM notes n LEFT JOIN deal_loss_reason_mapping m ON m.text_hash = n.hash
-			 ORDER BY n.deals DESC, n.hash LIMIT $%d`, limitAt), args...)
+			  LEFT JOIN deal_loss_reason_mapping m ON m.note_key = `+legacyNoteKeySQL("d.lost_reason")+`
+			 WHERE `+mappableNoteSQL+` AND (`+scope+`)
+			 GROUP BY 1, m.id
+			 ORDER BY m.id IS NULL DESC, count(*) DESC, 1 LIMIT $%d`, limitAt), args...)
 		if err != nil {
 			return fmt.Errorf("list legacy loss notes: %w", err)
 		}
@@ -123,7 +114,7 @@ func scanLegacyLossReason(rows pgx.Rows) (crmcontracts.LegacyLossReason, int, er
 	var reasonKey, decidedBy *string
 	var decidedAt *time.Time
 	var version *int64
-	if err := rows.Scan(&row.TextHash, &row.Text, &row.DealCount, &total,
+	if err := rows.Scan(&row.TextHash, &row.Text, &row.DealCount, &row.PendingCount, &total,
 		&mappingID, &reasonKey, &decidedBy, &decidedAt, &version); err != nil {
 		return row, 0, fmt.Errorf("scan legacy loss note: %w", err)
 	}
@@ -138,14 +129,13 @@ func scanLegacyLossReason(rows pgx.Rows) (crmcontracts.LegacyLossReason, int, er
 
 // DecideLegacyLossReason records which code one legacy note counts under, and
 // who decided it. No deal changes here: ApplyLossReasonMappingsTx carries the
-// decision to the deals once an administrator applies the reviewed mappings.
-func (s *Store) DecideLegacyLossReason(ctx context.Context, textHash, reasonKey string) (crmcontracts.LossReasonMapping, error) {
+// decision to the deals once an administrator applies the mappings they saw.
+func (s *Store) DecideLegacyLossReason(ctx context.Context, noteKey, reasonKey string) (crmcontracts.LossReasonMapping, error) {
 	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.LossReasonMapping{}, err
 	}
-	hash, err := hex.DecodeString(textHash)
-	if err != nil || len(hash) != 32 || textHash != strings.ToLower(textHash) {
-		return crmcontracts.LossReasonMapping{}, &values.ParseError{Field: "text_hash", Code: "invalid_hash", Message: "text_hash must be 64 lowercase hex digits"}
+	if !noteKeyShape.MatchString(noteKey) {
+		return crmcontracts.LossReasonMapping{}, &values.ParseError{Field: "text_hash", Code: "invalid_hash", Message: "text_hash must be 32 lowercase hex digits"}
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
@@ -157,7 +147,7 @@ func (s *Store) DecideLegacyLossReason(ctx context.Context, textHash, reasonKey 
 		if err := ensureChoosableLossReason(ctx, tx, reasonKeyField, key); err != nil {
 			return err
 		}
-		before, found, err := readLossMappingByHash(ctx, tx, hash)
+		before, found, err := readLossMappingByKey(ctx, tx, noteKey)
 		if err != nil {
 			return err
 		}
@@ -165,10 +155,10 @@ func (s *Store) DecideLegacyLossReason(ctx context.Context, textHash, reasonKey 
 			out = before
 			return nil
 		}
-		if err := writeLossMapping(ctx, tx, hash, key, by, before, found); err != nil {
+		if err := writeLossMapping(ctx, tx, noteKey, key, by, before, found); err != nil {
 			return err
 		}
-		out, _, err = readLossMappingByHash(ctx, tx, hash)
+		out, _, err = readLossMappingByKey(ctx, tx, noteKey)
 		return err
 	})
 	return out, err
@@ -177,14 +167,14 @@ func (s *Store) DecideLegacyLossReason(ctx context.Context, textHash, reasonKey 
 // writeLossMapping stores a decision with its audit row and event. A second
 // decision on one note replaces the first; the audit row keeps the first.
 func writeLossMapping(
-	ctx context.Context, tx pgx.Tx, hash []byte, key, by string,
+	ctx context.Context, tx pgx.Tx, noteKey, key, by string,
 	before crmcontracts.LossReasonMapping, found bool,
 ) error {
 	after := map[string]any{reasonKeyField: key, decidedByField: by}
 	if !found {
 		id := ids.NewV7()
-		_, err := tx.Exec(ctx, `INSERT INTO deal_loss_reason_mapping (id, text_hash, reason_key, decided_by)
-			VALUES ($1, $2, $3, $4)`, id, hash, key, by)
+		_, err := tx.Exec(ctx, `INSERT INTO deal_loss_reason_mapping (id, note_key, reason_key, decided_by)
+			VALUES ($1, $2, $3, $4)`, id, noteKey, key, by)
 		if storekit.IsUniqueViolation(err) {
 			return apperrors.ErrConflict
 		}
@@ -214,11 +204,11 @@ func writeLossMapping(
 	return announceLossReasonChange(ctx, tx, auditID, lossMappingTable, "update", id)
 }
 
-func readLossMappingByHash(ctx context.Context, tx pgx.Tx, hash []byte) (crmcontracts.LossReasonMapping, bool, error) {
+func readLossMappingByKey(ctx context.Context, tx pgx.Tx, noteKey string) (crmcontracts.LossReasonMapping, bool, error) {
 	var out crmcontracts.LossReasonMapping
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id, encode(text_hash, 'hex'), reason_key, decided_by, updated_at, version
-		FROM deal_loss_reason_mapping WHERE text_hash = $1 FOR UPDATE`, hash).
+	err := tx.QueryRow(ctx, `SELECT id, note_key, reason_key, decided_by, updated_at, version
+		FROM deal_loss_reason_mapping WHERE note_key = $1 FOR UPDATE`, noteKey).
 		Scan(&id, &out.TextHash, &out.ReasonKey, &out.DecidedBy, &out.DecidedAt, &out.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, false, nil
@@ -230,161 +220,41 @@ func readLossMappingByHash(ctx context.Context, tx pgx.Tx, hash []byte) (crmcont
 	return out, true, nil
 }
 
-// ReviewedLossMapping is one decision an administrator saw when they applied
-// the mappings, at the version they saw.
-type ReviewedLossMapping struct {
-	ID      ids.UUID `json:"id"`
-	Version int64    `json:"version"`
-}
-
-// ReviewedLossMappingsTx answers every decided mapping at its current version,
-// in id order, up to limit.
-func ReviewedLossMappingsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ReviewedLossMapping, error) {
-	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionRead); err != nil {
-		return nil, err
+// dropOrphanedLossMapping deletes the decision on a note once no deal carries
+// that note any more, with its audit row and event. A mapping is derived from
+// a free-text note, so it must not outlive every deal that wrote it.
+func dropOrphanedLossMapping(ctx context.Context, tx pgx.Tx, note *string) error {
+	if note == nil {
+		return nil
 	}
-	rows, err := tx.Query(ctx, `SELECT id, version FROM deal_loss_reason_mapping ORDER BY id LIMIT $1`, limit)
+	rows, err := tx.Query(ctx, `DELETE FROM deal_loss_reason_mapping m
+		WHERE m.note_key = `+legacyNoteKeySQL("$1::text")+`
+		  AND NOT EXISTS (SELECT 1 FROM deal d WHERE d.lost_reason IS NOT NULL
+		                  AND `+legacyNoteKeySQL("d.lost_reason")+` = m.note_key)
+		RETURNING m.id, m.reason_key, m.decided_by`, *note)
 	if err != nil {
-		return nil, fmt.Errorf("read loss reason mappings: %w", err)
+		return fmt.Errorf("drop an orphaned loss mapping: %w", err)
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[ReviewedLossMapping])
-}
-
-// lossMappingCandidate is one lost deal the apply step inspects, with the
-// mapping its note matches, if any.
-type lossMappingCandidate struct {
-	id             ids.UUID
-	version        int64
-	code, basis    *string
-	currentMapping *ids.UUID
-	mapping        ids.UUID
-	mappedKey      string
-	mappingVersion int64
-}
-
-// ApplyLossReasonMappingsTx writes the reviewed mappings onto one page of the
-// lost deals they would change, after the cursor. A mapping whose version
-// moved since the review is left for the next one.
-func ApplyLossReasonMappingsTx(
-	ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, reviewed map[ids.UUID]int64,
-) (scanned []ids.UUID, changed int, err error) {
-	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
-		return nil, 0, err
+	type dropped struct {
+		id             ids.UUID
+		key, decidedBy string
 	}
-	if len(reviewed) == 0 {
-		return nil, 0, nil
-	}
-	page, err := lossMappingCandidates(ctx, tx, after, limit, slices.Collect(maps.Keys(reviewed)))
+	gone, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (dropped, error) {
+		var d dropped
+		return d, row.Scan(&d.id, &d.key, &d.decidedBy)
+	})
 	if err != nil {
-		return nil, 0, err
+		return err
 	}
-	for _, row := range page {
-		scanned = append(scanned, row.id)
-		if !row.mapsAnew(reviewed) {
-			continue
-		}
-		wrote, err := writeMappedLossReason(ctx, tx, row)
+	for _, d := range gone {
+		auditID, err := storekit.Audit(ctx, tx, "delete", "deal_loss_reason_mapping", d.id,
+			map[string]any{reasonKeyField: d.key, decidedByField: d.decidedBy}, nil)
 		if err != nil {
-			return nil, 0, err
+			return err
 		}
-		if wrote {
-			changed++
+		if err := announceLossReasonChange(ctx, tx, auditID, lossMappingTable, "delete", d.id); err != nil {
+			return err
 		}
 	}
-	return scanned, changed, nil
-}
-
-func (row lossMappingCandidate) mapsAnew(reviewed map[ids.UUID]int64) bool {
-	version, ok := reviewed[row.mapping]
-	return ok && version == row.mappingVersion
-}
-
-// pendingMappingsOf is pendingMappingFrom narrowed to the deals the caller
-// may see, with its arguments: neither a count nor the apply reaches beyond
-// them. It asks the deal read gate first, since a scope clause is no gate.
-func pendingMappingsOf(ctx context.Context, mappings []ids.UUID) (string, []any, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return "", nil, err
-	}
-	args := []any{mappings}
-	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		return "", nil, err
-	}
-	if scope == "" {
-		scope = predicateAlways
-	}
-	return pendingMappingFrom + ` AND (` + scope + `)`, args, nil
-}
-
-func lossMappingCandidates(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, mappings []ids.UUID) ([]lossMappingCandidate, error) {
-	from, args, err := pendingMappingsOf(ctx, mappings)
-	if err != nil {
-		return nil, err
-	}
-	args = append(args, after, limit)
-	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT d.id, d.version, d.lost_reason_code, d.lost_reason_basis, d.lost_reason_mapping_id,
-			m.id, m.reason_key, m.version
-		  `+from+` AND d.id > $%d
-		 ORDER BY d.id LIMIT $%d FOR UPDATE OF d`, len(args)-1, len(args)), args...)
-	if err != nil {
-		return nil, fmt.Errorf("read lost deals to map: %w", err)
-	}
-	defer rows.Close()
-	var page []lossMappingCandidate
-	for rows.Next() {
-		var row lossMappingCandidate
-		if err := rows.Scan(&row.id, &row.version, &row.code, &row.basis, &row.currentMapping,
-			&row.mapping, &row.mappedKey, &row.mappingVersion); err != nil {
-			return nil, err
-		}
-		page = append(page, row)
-	}
-	return page, rows.Err()
-}
-
-// writeMappedLossReason is the mapped half of the deal write shape: the row,
-// its audit entry and its deal.updated event, in the caller's transaction. A
-// deal the operator may not write is left as it is.
-func writeMappedLossReason(ctx context.Context, tx pgx.Tx, row lossMappingCandidate) (bool, error) {
-	err := auth.EnsureWritable(ctx, tx, dealTable, row.id)
-	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	tag, err := tx.Exec(ctx, `UPDATE deal SET lost_reason_code = $2, lost_reason_basis = 'mapped',
-		lost_reason_mapping_id = $3 WHERE id = $1 AND version = $4 AND archived_at IS NULL`,
-		row.id, row.mappedKey, row.mapping, row.version)
-	if err != nil {
-		return false, fmt.Errorf("map a lost deal's reason: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return false, nil
-	}
-	before := map[string]any{lossReasonCodeField: row.code, lossBasisField: row.basis, lossMappingField: row.currentMapping}
-	after := map[string]any{lossReasonCodeField: row.mappedKey, lossBasisField: lossBasisMapped, lossMappingField: row.mapping.String()}
-	auditID, err := storekit.Audit(ctx, tx, "update", "deal", row.id, before, after)
-	if err != nil {
-		return false, err
-	}
-	return true, storekit.EmitEvent(ctx, tx, auditID, row.id, crmcontracts.PublicEventDealUpdated{ChangedFields: after})
-}
-
-// CountLossMappingCandidates counts, up to limit+1, the lost deals the caller
-// may see that the given mappings would change; nil counts every decision.
-func CountLossMappingCandidates(ctx context.Context, q interface {
-	QueryRow(context.Context, string, ...any) pgx.Row
-}, limit int64, mappings []ids.UUID,
-) (int64, error) {
-	from, args, err := pendingMappingsOf(ctx, mappings)
-	if err != nil {
-		return 0, err
-	}
-	args = append(args, limit+1)
-	var count int64
-	err = q.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM (SELECT 1 `+from+` LIMIT $%d) pending`, len(args)),
-		args...).Scan(&count)
-	return count, err
+	return nil
 }

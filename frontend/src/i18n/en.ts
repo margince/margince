@@ -5297,6 +5297,7 @@ export const en = {
   "lossReasons.legacyTitle": "Older loss notes",
   "lossReasons.legacySub":
     "Deals lost before this list existed have only a note. Pick the reason each note counts as, then apply. The notes stay as they were written.",
+  "lossReasons.colPending": "To change",
   "lossReasons.colNote": "Note",
   "lossReasons.colMapTo": "Counts as",
   "lossReasons.mapFor": "Reason for “{note}”",

@@ -29,7 +29,6 @@ const (
 	lossReasonTable     = "deal_loss_reason"
 	lossReasonCodeField = "lost_reason_code"
 	lossBasisField      = "lost_reason_basis"
-	lossMappingField    = "lost_reason_mapping_id"
 	lossReasonColumns   = `id, key, label, label_key, sort_order, active, system, version, created_at, updated_at`
 
 	// The two bases a lost_reason_code carries, as deal_lost_reason_basis_check
@@ -86,6 +85,8 @@ type LossReasonOutcome struct {
 // ResolveLossReasonTx validates what a loss says. Every door that loses a deal
 // reaches it through the stage advance: HTTP, MCP, an approval, an import and
 // a review answer. A loss needs a code or a note, and a code must be active.
+// A note alone is the legacy path: no code, counted as unmapped until an
+// administrator maps the note. The app's own dialogs always send a code.
 func ResolveLossReasonTx(ctx context.Context, tx pgx.Tx, note, code *string) (LossReasonOutcome, error) {
 	var out LossReasonOutcome
 	if note != nil {

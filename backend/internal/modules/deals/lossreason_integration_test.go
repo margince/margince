@@ -213,7 +213,7 @@ func TestEveryLossDoorRefusesWhatTheOneCheckRefuses(t *testing.T) {
 	for _, c := range cases {
 		deal := p.deal(t, e, c.name)
 		if c.in.ToStageID == p.open {
-			if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("set up")}); err != nil {
+			if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReasonCode: new("other")}); err != nil {
 				t.Fatalf("%s: losing first: %v", c.name, err)
 			}
 		}
@@ -222,6 +222,8 @@ func TestEveryLossDoorRefusesWhatTheOneCheckRefuses(t *testing.T) {
 		}
 	}
 
+	// A caller that sends only the note keeps working: the legacy path, with
+	// no code, which counts as unmapped until an administrator maps the note.
 	legacy := p.deal(t, e, "Old client")
 	got, err := e.store.AdvanceDeal(ctx, legacy, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Went with the incumbent")})
 	if err != nil {
@@ -333,9 +335,15 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 		t.Errorf("a second run changed %d deals, want none", changed)
 	}
 
+	if applied := legacyNote(t, e, "far too expensive"); applied.Mapping == nil || applied.PendingCount != 0 || applied.DealCount != 2 {
+		t.Errorf("an applied decision lists as %+v, want it kept with nothing pending", applied)
+	}
 	corrected, err := e.store.DecideLegacyLossReason(ctx, note.TextHash, "no_budget")
 	if err != nil {
 		t.Fatalf("correcting the decision: %v", err)
+	}
+	if listed := legacyNote(t, e, "far too expensive"); listed.PendingCount != 2 {
+		t.Errorf("a corrected decision lists %d deals pending, want the 2 it mapped", listed.PendingCount)
 	}
 	if changed := applyMappings(t, e, corrected); changed != 2 {
 		t.Errorf("a corrected decision moved %d deals, want the 2 it mapped", changed)
@@ -439,5 +447,95 @@ func TestTheApplyCountsWhatTheOperatorMayReadAndMapsOnlyWhatItMayWrite(t *testin
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a seat with no deal read was answered a count: %v", err)
+	}
+}
+
+func mappingRows(t *testing.T, e *configEnv, noteKey string) int {
+	t.Helper()
+	var n int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM deal_loss_reason_mapping WHERE note_key = $1`, noteKey).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// A mapping is derived from a free-text note, so it goes once no deal carries
+// that note. Here that is when the last such deal is reopened.
+func TestAMappingGoesWithTheLastDealThatCarriesItsNote(t *testing.T) {
+	e := setupConfigEnv(t)
+	p := seedLossPipeline(t, e)
+	ctx := e.asLossAdmin()
+	var carriers []ids.DealID
+	for _, name := range []string{"First carrier", "Second carrier"} {
+		deal := p.deal(t, e, name)
+		if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Budget went to the parent company")}); err != nil {
+			t.Fatal(err)
+		}
+		carriers = append(carriers, deal)
+	}
+	key := legacyNote(t, e, "budget went to the parent company").TextHash
+	decided, err := e.store.DecideLegacyLossReason(ctx, key, "no_budget")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.AdvanceDeal(ctx, carriers[0], AdvanceDealInput{ToStageID: p.open}); err != nil {
+		t.Fatal(err)
+	}
+	if mappingRows(t, e, key) != 1 {
+		t.Fatal("the mapping went while a deal still carries its note")
+	}
+	if _, err := e.store.AdvanceDeal(ctx, carriers[1], AdvanceDealInput{ToStageID: p.open}); err != nil {
+		t.Fatal(err)
+	}
+	if mappingRows(t, e, key) != 0 {
+		t.Fatal("the mapping outlived every deal that carried its note")
+	}
+	var audited int
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log
+		WHERE entity_id = $1 AND action = 'delete'`, ids.UUID(decided.Id)).Scan(&audited); err != nil {
+		t.Fatal(err)
+	}
+	if audited != 1 {
+		t.Errorf("the dropped mapping has %d delete audit rows, want 1", audited)
+	}
+}
+
+// The apply holds the decision it applies FOR SHARE, so a re-decision cannot
+// commit between the read and the write. It waits, and here it times out.
+func TestARedecisionWaitsForTheApplyThatReadsIt(t *testing.T) {
+	e := setupConfigEnv(t)
+	p := seedLossPipeline(t, e)
+	ctx := e.asLossAdmin()
+	deal := p.deal(t, e, "Raced")
+	if _, err := e.store.AdvanceDeal(ctx, deal, AdvanceDealInput{ToStageID: p.lost, LostReason: new("Lost the race to a rival")}); err != nil {
+		t.Fatal(err)
+	}
+	decided, err := e.store.DecideLegacyLossReason(ctx, legacyNote(t, e, "lost the race to a rival").TextHash, "competitor")
+	if err != nil {
+		t.Fatal(err)
+	}
+	applying, err := e.pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := applying.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the apply: %v", err)
+		}
+	}()
+	if _, _, err := ApplyLossReasonMappingsTx(ctx, applying, ids.Nil, 10,
+		map[ids.UUID]int64{ids.UUID(decided.Id): decided.Version}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `SET lock_timeout = '200ms'`); err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.owner.Exec(context.Background(), `UPDATE deal_loss_reason_mapping SET reason_key = 'price' WHERE id = $1`, ids.UUID(decided.Id))
+	if err == nil {
+		t.Fatal("a re-decision committed under an apply that holds the decision")
+	}
+	if _, err := e.owner.Exec(context.Background(), `SET lock_timeout = 0`); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -12377,11 +12377,13 @@ paths:
       operationId: listLegacyLossReasons
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
-      summary: List the distinct notes of lost deals that have no loss reason code yet.
+      summary: List the notes of lost deals that a mapping speaks for.
       description: |
-        For the administrator who maps old notes to codes. One row per distinct note, trimmed
-        and compared without case, with how many lost deals carry it and the code already
-        decided for it, if any. Most frequent first. Only deals the caller may read count.
+        For the administrator who maps old notes to codes. One row per note, trimmed and
+        compared without case, over the lost deals with no code or a mapped one. Each row says
+        how many deals carry the note, the decision taken for it, and how many deals that
+        decision would still change. Undecided notes come first, then the most frequent. Only
+        deals the caller may read count.
       parameters:
         - name: limit
           in: query
@@ -12401,7 +12403,7 @@ paths:
         in: path
         required: true
         description: The `text_hash` a legacy list row names.
-        schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+        schema: { type: string, pattern: '^[0-9a-f]{32}$' }
     put:
       tags: [Deals]
       operationId: decideLegacyLossReason
@@ -12437,11 +12439,17 @@ paths:
       x-agent-access: human-only
       summary: Apply the reviewed legacy mappings to the lost deals they match.
       description: |
-        Starts the background correction that writes each decided code onto the lost deals
-        whose note matches it, with an audit entry and an event per deal. A deal whose closer
-        chose a code is left as it is, and a second run changes nothing the first one wrote.
-        409 while an earlier run is still working. Progress shows in System health.
-        Requires data_task:update as well as the right to decide the mappings.
+        Starts the background correction that writes each named decision onto the lost deals
+        whose note matches it, with an audit entry and an event per deal. Only the decisions
+        named, at the versions named, are applied: 409 when one has since changed or gone. A
+        deal whose closer chose a code is left as it is, and a second run changes nothing the
+        first one wrote. 409 while an earlier run is still working. Progress shows in System
+        health. Requires data_task:update as well as the right to decide the mappings.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplyLegacyLossReasonsRequest' }
       responses:
         '202':
           description: The correction was started.
@@ -12450,6 +12458,7 @@ paths:
               schema: { $ref: '#/components/schemas/ApplyLegacyLossReasonsResponse' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /record-roles:
     get:
@@ -29067,7 +29076,7 @@ paths:
               required: [lost_reason]
               properties:
                 lost_reason: { type: string, minLength: 1 }
-                lost_reason_code: { type: string, description: 'An active key from `/loss-reasons`.' }
+                lost_reason_code: { type: string, description: 'An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.' }
               additionalProperties: false
       responses:
         '204':
@@ -46968,10 +46977,10 @@ components:
           description: The stage to move to. Its semantic decides whether the move is confirm-first.
         lost_reason:
           type: string
-          description: 'A free note on the loss. A lost stage needs this, `lost_reason_code`, or both.'
+          description: 'A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.'
         lost_reason_code:
           type: string
-          description: An active key from `/loss-reasons`, when the stage closes the deal as lost.
+          description: 'An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.'
         won_without_contract_reason:
           type: string
           enum: [imported, purchase_order, verbal, renewal_by_email, other]
@@ -48346,13 +48355,13 @@ components:
       properties:
         to_stage_id: { type: string, format: uuid, description: Target stage (must belong to the deal's pipeline). }
         status: { type: string, enum: [open, won, lost], description: Set when advancing into a terminal stage. }
-        lost_reason: { type: [string, 'null'], description: 'The free note on a loss. A move to a lost stage needs this, `lost_reason_code`, or both.' }
+        lost_reason: { type: [string, 'null'], description: 'A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.' }
         lost_reason_code:
           type: [string, 'null']
           description: >-
-            An active key from `/loss-reasons`, on a move to a lost stage. Refused on any other
-            move. A client that sends only `lost_reason` still closes the deal; the loss then
-            counts as unmapped until an administrator maps its note.
+            An active key from `/loss-reasons`, expected on a move to a lost stage and refused
+            on any other move. A loss with only `lost_reason` is accepted and recorded with no
+            code: it counts as unmapped until an administrator maps its note.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
@@ -53369,7 +53378,7 @@ components:
       required: [id, text_hash, reason_key, decided_by, decided_at, version]
       properties:
         id: { type: string, format: uuid }
-        text_hash: { type: string, description: 'The sha256 of the note, trimmed and lower-cased, in hex.' }
+        text_hash: { type: string, description: 'The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note.' }
         reason_key: { type: string, description: The key from `/loss-reasons`. }
         decided_by: { type: string, description: 'Who took the decision, in the `captured_by` form.' }
         decided_at: { type: string, format: date-time }
@@ -53377,12 +53386,13 @@ components:
 
     LegacyLossReason:
       type: object
-      description: One distinct note of lost deals with no loss reason code.
-      required: [text_hash, text, deal_count]
+      description: One note of lost deals a mapping speaks for.
+      required: [text_hash, text, deal_count, pending_count]
       properties:
         text_hash: { type: string, description: The key to decide this note under. }
         text: { type: string, description: The note as one of its deals carries it. }
-        deal_count: { type: integer, minimum: 1, description: Lost deals the caller may read that carry it. }
+        deal_count: { type: integer, minimum: 1, description: Lost deals the caller may read that carry it with no code or a mapped one. }
+        pending_count: { type: integer, minimum: 0, description: 'Of those, how many the decision would change if applied now. Zero with no decision.' }
         mapping: { $ref: '#/components/schemas/LossReasonMapping' }
 
     LegacyLossReasonListResponse:
@@ -53390,7 +53400,7 @@ components:
       required: [data, distinct_total]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/LegacyLossReason' } }
-        distinct_total: { type: integer, minimum: 0, description: 'How many distinct notes are still unmapped, of which `data` is the most frequent.' }
+        distinct_total: { type: integer, minimum: 0, description: 'How many notes the list holds, of which `data` is the first page.' }
 
     DecideLegacyLossReasonRequest:
       type: object
@@ -53398,6 +53408,24 @@ components:
       additionalProperties: false
       properties:
         reason_key: { type: string, description: An active key from `/loss-reasons`. }
+
+    ApplyLegacyLossReasonsRequest:
+      type: object
+      required: [mappings]
+      additionalProperties: false
+      properties:
+        mappings:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: The decisions the administrator reviewed, each at the version shown.
+          items:
+            type: object
+            required: [id, version]
+            additionalProperties: false
+            properties:
+              id: { type: string, format: uuid }
+              version: { type: integer, format: int64, minimum: 1 }
 
     ApplyLegacyLossReasonsResponse:
       type: object

@@ -26,13 +26,13 @@ func lossOfMove(ctx context.Context, tx pgx.Tx, in AdvanceDealInput, semantic st
 }
 
 // setLossReason writes a loss's note and code, or clears them on any other
-// landing. A deal re-decided from lost must not carry the old explanation:
-// that loss keeps it in its stage history row and in the audit log.
+// landing. A deal re-decided from lost must not carry the old explanation.
+// That loss keeps its code in its history row and its note in the audit log.
 //
 // A clear is set only where there is something to clear. Set records an
 // assignment unconditionally, so clearing a NULL column would put it into the
 // UPDATE and the audit diff of every ordinary open-to-open advance.
-func setLossReason(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Deal, loss LossReasonOutcome) error {
+func setLossReason(p *storekit.Patch, current crmcontracts.Deal, loss LossReasonOutcome) {
 	lost := loss.Note != nil || loss.Code != nil
 	if lost || current.LostReason != nil {
 		p.Set("lost_reason", current.LostReason, loss.Note)
@@ -41,15 +41,17 @@ func setLossReason(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current cr
 		p.Set(lossReasonCodeField, current.LostReasonCode, loss.Code)
 		p.Set(lossBasisField, current.LostReasonBasis, loss.Basis)
 	}
-	if current.LostReasonBasis == nil || string(*current.LostReasonBasis) != lossBasisMapped {
+}
+
+// releaseLossNote drops the mapping decided for the note a move took off the
+// deal, once no deal carries that note. It runs after the move is written.
+func releaseLossNote(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Deal) error {
+	if _, moved := p.After()["lost_reason"]; !moved {
 		return nil
 	}
-	var mapping *string
-	if err := tx.QueryRow(ctx, `SELECT lost_reason_mapping_id::text FROM deal WHERE id = $1`, current.Id).
-		Scan(&mapping); err != nil {
-		return fmt.Errorf("read the deal's loss mapping: %w", err)
+	if err := dropOrphanedLossMapping(ctx, tx, current.LostReason); err != nil {
+		return fmt.Errorf("release the loss note: %w", err)
 	}
-	p.Set(lossMappingField, mapping, nil)
 	return nil
 }
 

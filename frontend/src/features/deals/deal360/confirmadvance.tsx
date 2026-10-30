@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import type { components } from "../../../api/schema";
+import { LostReasonFields } from "../../../components/lostreasonfields";
 import { Field, TextInput } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { Select } from "../../../design-system/select";
@@ -7,7 +8,6 @@ import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
 import {
   choosableLossReasons,
-  type LossReason,
   useLossReasons,
 } from "../../../lib/lossreasons.queries";
 import { problemFieldErrorsOf } from "../../../lib/problem";
@@ -361,51 +361,6 @@ function WonReasonFields({
           )}
         </Field>
       )}
-    </>
-  );
-}
-
-// Why a deal was lost: a reason from the administered list, which a report
-// counts, and an optional note that explains this one deal.
-function LostReasonFields({
-  reasons,
-  code,
-  note,
-  onCode,
-  onNote,
-}: Readonly<{
-  reasons: readonly LossReason[];
-  code: string;
-  note: string;
-  onCode: (value: string) => void;
-  onNote: (value: string) => void;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Field label={t("deals.lostReasonCode")}>
-        {(control) => (
-          <Select
-            {...control}
-            placeholder={t("deals.lostReasonPick")}
-            value={code}
-            onChange={onCode}
-            options={reasons.map((reason) => ({
-              value: reason.key,
-              label: reason.label,
-            }))}
-          />
-        )}
-      </Field>
-      <Field label={t("deals.lostReasonNote")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={note}
-            onChange={(event) => onNote(event.target.value)}
-          />
-        )}
-      </Field>
     </>
   );
 }

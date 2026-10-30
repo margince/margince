@@ -26,6 +26,7 @@ import {
   choosableLossReasons,
   type LegacyLossReason,
   type LossReason,
+  pendingDecisions,
   useApplyLegacyLossReasons,
   useCreateLossReason,
   useDecideLegacyLossReason,
@@ -262,7 +263,7 @@ export function LegacyLossReasonsCard() {
     return null;
   }
   const rows = legacy.data?.data ?? [];
-  const decided = rows.some((row) => row.mapping);
+  const pending = pendingDecisions(rows);
   const columns: DataTableColumn<LegacyLossReason>[] = [
     {
       key: "note",
@@ -275,6 +276,12 @@ export function LegacyLossReasonsCard() {
       header: t("lossReasons.colDeals"),
       align: "end",
       render: (row) => formatNumber(row.deal_count, locale),
+    },
+    {
+      key: "pending",
+      header: t("lossReasons.colPending"),
+      align: "end",
+      render: (row) => formatNumber(row.pending_count, locale),
     },
     {
       key: "reason",
@@ -302,8 +309,8 @@ export function LegacyLossReasonsCard() {
       titleAction={
         canApply && (
           <Button
-            disabled={!decided || apply.isPending}
-            onClick={() => apply.mutate()}
+            disabled={pending.length === 0 || apply.isPending}
+            onClick={() => apply.mutate(pending)}
           >
             {t("lossReasons.apply")}
           </Button>

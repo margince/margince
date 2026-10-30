@@ -34,7 +34,7 @@ function reason(key: string, label: string, active = true) {
   };
 }
 
-const HASH = "a".repeat(64);
+const HASH = "a".repeat(32);
 
 type Call = { method: string; url: string; body: unknown };
 
@@ -60,6 +60,7 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
             text_hash: HASH,
             text: "Their quote was cheaper",
             deal_count: 7,
+            pending_count: 7,
             mapping: {
               id: "m-1",
               text_hash: HASH,
@@ -70,9 +71,10 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
             },
           },
           {
-            text_hash: "b".repeat(64),
+            text_hash: "b".repeat(32),
             text: "The champion left",
             deal_count: 2,
+            pending_count: 0,
           },
         ],
         distinct_total: 9,
@@ -81,7 +83,7 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
     if (url.pathname.includes("/loss-reasons/legacy/")) {
       return jsonResponse({
         id: "m-2",
-        text_hash: "b".repeat(64),
+        text_hash: "b".repeat(32),
         reason_key: "no_decision",
         decided_by: "human:x",
         decided_at: "2026-10-02T08:00:00Z",
@@ -151,7 +153,7 @@ it("maps a legacy note to an active reason and applies the decisions", async () 
   await pickOption(user, pick, "No decision");
   await waitFor(() =>
     expect(
-      wrote(calls, "PUT", `/loss-reasons/legacy/${"b".repeat(64)}`, {
+      wrote(calls, "PUT", `/loss-reasons/legacy/${"b".repeat(32)}`, {
         reason_key: "no_decision",
       }),
     ).toBe(true),
@@ -163,6 +165,13 @@ it("maps a legacy note to an active reason and applies the decisions", async () 
   expect(
     await screen.findByText("7 deals will be updated in the background."),
   ).toBeInTheDocument();
+  // The apply names the decisions shown, at the versions shown, and only
+  // those that still have deals to change.
+  expect(
+    wrote(calls, "POST", "/loss-reasons/legacy/apply", {
+      mappings: [{ id: "m-1", version: 1 }],
+    }),
+  ).toBe(true);
 });
 
 it("offers the decisions but not the apply to a seat that may not run a correction", async () => {

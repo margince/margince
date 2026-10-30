@@ -8,7 +8,6 @@
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason_code_fkey;
-ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason_mapping_fkey;
 ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason_code_only_when_lost;
 ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason_basis_check;
 ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason;

@@ -5165,6 +5165,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lossReasons.legacyTitle": "Ghi chú thua trước đây",
   "lossReasons.legacySub":
     "Các deal bị thua trước khi có danh sách này chỉ có ghi chú. Hãy chọn lý do cho từng ghi chú rồi áp dụng. Ghi chú vẫn giữ nguyên như đã viết.",
+  "lossReasons.colPending": "Còn cần đổi",
   "lossReasons.colNote": "Ghi chú",
   "lossReasons.colMapTo": "Tính là",
   "lossReasons.mapFor": "Lý do cho “{note}”",

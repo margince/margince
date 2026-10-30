@@ -13,7 +13,6 @@ ALTER TABLE deal ADD CONSTRAINT deal_lost_reason
 ALTER TABLE deal VALIDATE CONSTRAINT deal_lost_reason;
 
 ALTER TABLE deal
-    DROP COLUMN lost_reason_mapping_id,
     DROP COLUMN lost_reason_basis,
     DROP COLUMN lost_reason_code;
 

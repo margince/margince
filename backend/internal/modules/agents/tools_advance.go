@@ -29,7 +29,7 @@ type advanceDealArgs struct {
 	DealID     ids.UUID `json:"deal_id"`
 	ToStageID  ids.UUID `json:"to_stage_id"`
 	LostReason *string  `json:"lost_reason"`
-	// LostReasonCode is a key from /loss-reasons; the note alone still closes.
+	// LostReasonCode is a key from /loss-reasons; a note alone records unmapped.
 	LostReasonCode *string `json:"lost_reason_code"`
 	IfVersion      *int64  `json:"if_version"`
 	WinEvidenceArgs
@@ -88,8 +88,8 @@ func (t advanceDeal) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{
 			"deal_id":{"type":"string","format":"uuid"},
 			"to_stage_id":{"type":"string","format":"uuid"` + stageIDNote + `},
-			"lost_reason":{"type":"string","description":"A free note on the loss. A lost stage needs this, lost_reason_code, or both"},
-			"lost_reason_code":{"type":"string","description":"An active loss reason key, when the target stage closes the deal as lost"}` + winEvidenceProperties + `,
+			"lost_reason":{"type":"string","description":"A free note explaining a loss"},
+			"lost_reason_code":{"type":"string","description":"An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped"}` + winEvidenceProperties + `,
 			"if_version":{"type":"integer"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved a won/lost move"}},
 			"additionalProperties":false}`),

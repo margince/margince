@@ -72,7 +72,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-47 columns · primary key `(id)` · referenced by 27 foreign keys
+46 columns · primary key `(id)` · referenced by 27 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -97,7 +97,6 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `lost_reason` | `text` |  | The free note on a lost deal. |
 | `lost_reason_basis` | `text` |  | How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. |
 | `lost_reason_code` | `text` |  | The key from `/loss-reasons` this loss counts under. |
-| `lost_reason_mapping_id` | `uuid` |  | Points at `deal_loss_reason_mapping.id`. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `partner_attribution` | `text` |  | What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). |
@@ -132,7 +131,6 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `id, arr_source_offer_id` | `offer` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `lost_reason_code` | `deal_loss_reason` | the parent cannot be deleted while this row points at it |
-| `lost_reason_mapping_id` | `deal_loss_reason_mapping` | the parent cannot be deleted while this row points at it |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `partner_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `pipeline_id` | `pipeline` | the parent cannot be deleted while this row points at it |
@@ -152,7 +150,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_expected_arr_nonnegative`: `CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))`
 - `deal_forecast_category_check`: `CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit', 'best_case', 'pipeline', 'omitted']))))`
 - `deal_lost_reason`: `CHECK (((status <> 'lost') OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))`
-- `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped']))) AND ((lost_reason_mapping_id IS NOT NULL) = (NOT (lost_reason_basis IS DISTINCT FROM 'mapped')))))`
+- `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped'])))))`
 - `deal_lost_reason_code_only_when_lost`: `CHECK (((lost_reason_code IS NULL) OR (status = 'lost')))`
 - `deal_lost_reason_only_when_lost`: `CHECK (((lost_reason IS NULL) OR (status = 'lost')))`
 - `deal_money_currency_pair`: `CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL)))`
@@ -178,7 +176,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `idx_deal_commercial_motion`: `btree (commercial_motion) WHERE ((archived_at IS NULL) AND (commercial_motion IS NOT NULL))`
 - `idx_deal_company`: `btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_deal_lost_reason_code`: `btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL)`
-- `idx_deal_lost_reason_mapping`: `btree (lost_reason_mapping_id) WHERE (lost_reason_mapping_id IS NOT NULL)`
+- `idx_deal_lost_reason_note_key`: `btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL)`
 - `idx_deal_name_trgm`: `gin (f_fold_apostrophes(lower(name)) gin_trgm_ops)`
 - `idx_deal_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_deal_partner`: `btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL))`
@@ -338,14 +336,14 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_loss_reason_mapping
 
-7 columns · primary key `(id)` · referenced by 1 foreign key
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `decided_by` | `text` | yes |  |
+| `note_key` | `text` | yes |  |
 | `reason_key` | `text` | yes | Points at `deal_loss_reason.key`. |
-| `text_hash` | `bytea` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -358,14 +356,14 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
-- `deal_loss_reason_mapping_hash_shape`: `CHECK ((length(text_hash) = 32))`
-- `deal_loss_reason_mapping_text_hash_key`: `UNIQUE (text_hash)`
+- `deal_loss_reason_mapping_key_shape`: `CHECK ((note_key ~ '^[0-9a-f]{32}$'))`
+- `deal_loss_reason_mapping_note_key_key`: `UNIQUE (note_key)`
 - `deal_loss_reason_mapping_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
+- `deal_loss_reason_mapping_note_key_key`: `unique, btree (note_key)`
 - `deal_loss_reason_mapping_pkey`: `unique, btree (id)`
-- `deal_loss_reason_mapping_text_hash_key`: `unique, btree (text_hash)`
 - `idx_deal_loss_reason_mapping_reason`: `btree (reason_key)`
 
 **Triggers**

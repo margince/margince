@@ -27168,10 +27168,10 @@ type AddressCountryMismatch struct {
 
 // AdvanceDealRequest defines model for AdvanceDealRequest.
 type AdvanceDealRequest struct {
-	// LostReason The free note on a loss. A move to a lost stage needs this, `lost_reason_code`, or both.
+	// LostReason A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
 
-	// LostReasonCode An active key from `/loss-reasons`, on a move to a lost stage. Refused on any other move. A client that sends only `lost_reason` still closes the deal; the loss then counts as unmapped until an administrator maps its note.
+	// LostReasonCode An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note.
 	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// Status Set when advancing into a terminal stage.
@@ -29336,6 +29336,15 @@ type AppliedUndo struct {
 
 	// Version The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
 	Version int64 `json:"version"`
+}
+
+// ApplyLegacyLossReasonsRequest defines model for ApplyLegacyLossReasonsRequest.
+type ApplyLegacyLossReasonsRequest struct {
+	// Mappings The decisions the administrator reviewed, each at the version shown.
+	Mappings []struct {
+		Id      openapi_types.UUID `json:"id"`
+		Version int64              `json:"version"`
+	} `json:"mappings"`
 }
 
 // ApplyLegacyLossReasonsResponse defines model for ApplyLegacyLossReasonsResponse.
@@ -45635,13 +45644,16 @@ type LeadSourceListResponse struct {
 	Discovered []DiscoveredLeadSource `json:"discovered"`
 }
 
-// LegacyLossReason One distinct note of lost deals with no loss reason code.
+// LegacyLossReason One note of lost deals a mapping speaks for.
 type LegacyLossReason struct {
-	// DealCount Lost deals the caller may read that carry it.
+	// DealCount Lost deals the caller may read that carry it with no code or a mapped one.
 	DealCount int `json:"deal_count"`
 
 	// Mapping An administrator's decision that one legacy note counts under one loss reason.
 	Mapping *LossReasonMapping `json:"mapping,omitempty"`
+
+	// PendingCount Of those, how many the decision would change if applied now. Zero with no decision.
+	PendingCount int `json:"pending_count"`
 
 	// Text The note as one of its deals carries it.
 	Text string `json:"text"`
@@ -45654,7 +45666,7 @@ type LegacyLossReason struct {
 type LegacyLossReasonListResponse struct {
 	Data []LegacyLossReason `json:"data"`
 
-	// DistinctTotal How many distinct notes are still unmapped, of which `data` is the most frequent.
+	// DistinctTotal How many notes the list holds, of which `data` is the first page.
 	DistinctTotal int `json:"distinct_total"`
 }
 
@@ -46576,7 +46588,7 @@ type LossReasonMapping struct {
 	// ReasonKey The key from `/loss-reasons`.
 	ReasonKey string `json:"reason_key"`
 
-	// TextHash The sha256 of the note, trimmed and lower-cased, in hex.
+	// TextHash The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note.
 	TextHash string `json:"text_hash"`
 	Version  int64  `json:"version"`
 }
@@ -49364,10 +49376,10 @@ type ProgressDealRequest struct {
 	// IfVersion The deal's version the move was decided on. A deal that has changed since is refused.
 	IfVersion *int `json:"if_version,omitempty"`
 
-	// LostReason A free note on the loss. A lost stage needs this, `lost_reason_code`, or both.
+	// LostReason A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
 
-	// LostReasonCode An active key from `/loss-reasons`, when the stage closes the deal as lost.
+	// LostReasonCode An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.
 	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// Note Logged as a note on the deal's timeline after the move.
@@ -64204,7 +64216,7 @@ type ListInputChecksParamsScopeKind string
 type CloseLostInputCheckJSONBody struct {
 	LostReason string `json:"lost_reason"`
 
-	// LostReasonCode An active key from `/loss-reasons`.
+	// LostReasonCode An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.
 	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 }
 
@@ -68595,6 +68607,9 @@ type RestoreListMemberJSONRequestBody = RemovalUndo
 
 // CreateLossReasonJSONRequestBody defines body for CreateLossReason for application/json ContentType.
 type CreateLossReasonJSONRequestBody = CreateLossReasonRequest
+
+// ApplyLegacyLossReasonsJSONRequestBody defines body for ApplyLegacyLossReasons for application/json ContentType.
+type ApplyLegacyLossReasonsJSONRequestBody = ApplyLegacyLossReasonsRequest
 
 // DecideLegacyLossReasonJSONRequestBody defines body for DecideLegacyLossReason for application/json ContentType.
 type DecideLegacyLossReasonJSONRequestBody = DecideLegacyLossReasonRequest
@@ -82093,7 +82108,7 @@ type ServerInterface interface {
 	// Add a loss reason.
 	// (POST /loss-reasons)
 	CreateLossReason(w http.ResponseWriter, r *http.Request, params CreateLossReasonParams)
-	// List the distinct notes of lost deals that have no loss reason code yet.
+	// List the notes of lost deals that a mapping speaks for.
 	// (GET /loss-reasons/legacy)
 	ListLegacyLossReasons(w http.ResponseWriter, r *http.Request, params ListLegacyLossReasonsParams)
 	// Apply the reviewed legacy mappings to the lost deals they match.
@@ -86887,7 +86902,7 @@ func (_ Unimplemented) CreateLossReason(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the distinct notes of lost deals that have no loss reason code yet.
+// List the notes of lost deals that a mapping speaks for.
 // (GET /loss-reasons/legacy)
 func (_ Unimplemented) ListLegacyLossReasons(w http.ResponseWriter, r *http.Request, params ListLegacyLossReasonsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
