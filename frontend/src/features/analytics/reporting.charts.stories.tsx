@@ -7,7 +7,10 @@ import {
 } from "../../testing/story-utils";
 import { ANSWER } from "./analytics.questions.testkit";
 import { ReportingCharts } from "./reporting.charts";
-import { reportingStoryEvaluation } from "./reporting.story-fixtures";
+import {
+  reportingCatalogClient,
+  reportingStoryEvaluation,
+} from "./reporting.story-fixtures";
 
 const meta: Meta = {
   title: "Records/Reports/Analytics/Graph layout",
@@ -18,7 +21,7 @@ type Story = StoryObj;
 function Preview() {
   const [reference, select] = useState("");
   return (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={reportingStoryEvaluation}
         onEvidence={(reference) => select(JSON.stringify(reference))}
@@ -31,7 +34,7 @@ export const FourQuestions: Story = { render: () => <Preview /> };
 
 export const PartialHistory: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={{
           ...reportingStoryEvaluation,
@@ -53,7 +56,7 @@ export const PartialHistory: Story = {
 
 export const LongStageNames: Story = {
   render: () => (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={{
           ...reportingStoryEvaluation,
@@ -124,7 +127,7 @@ function BoundCard({ restricted }: Readonly<{ restricted: boolean }>) {
       ),
   });
   return (
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ReportingCharts
         evaluation={boundEvaluation}
         report={{ id: "report" }}
