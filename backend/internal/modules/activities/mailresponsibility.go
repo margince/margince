@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,14 +20,15 @@ import (
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
 // A named seat's read starts from the mail its To line names, which holds
-// every mail the seat answers for. The scan then judges that share only.
-func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int) string {
+// every mail the seat answers for. The scan then judges that share only, and
+// keep (see DirectMailActivitiesSQL) drops what the scan would refuse anyway.
+func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, keep string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
 	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
-		storekit.DirectMailActivitiesSQL(identities, seat), soleDirectSeatSQL(identities), seat)
+		storekit.DirectMailActivitiesSQL(identities, seat, keep), soleDirectSeatSQL(identities), seat)
 }
 
 // mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
@@ -42,15 +44,25 @@ type mailSeats struct {
 }
 
 // responsibilitySQL keeps a set's share of the unnarrowed read. Mail that no
-// seat or several seats answer for is nobody's, so no set reaches it.
-func (m mailSeats) responsibilitySQL(identities string, arg func(any) int) string {
+// seat or several seats answer for is nobody's, so no set reaches it. keep is
+// personalMailResponsibilitySQL's.
+func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, keep string) string {
 	if m.unowned {
 		return "(a.kind <> 'email')"
 	}
 	if m.owner != nil || !m.bySeats {
-		return personalMailResponsibilitySQL(m.owner, identities, arg)
+		return personalMailResponsibilitySQL(m.owner, identities, arg, keep)
 	}
 	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
+}
+
+// waitingMailKeptSQL is the mail, aliased `mail`, that the waiting horizon can
+// still admit: arrived inside it, or kept by a held request. It mirrors the
+// `young OR held` half of withinWaitingHorizonSQL; the raw instant bound is the
+// first conjunct of occurredday.FromSQL, so no young mail falls outside it.
+func waitingMailKeptSQL(asOf, days string) string {
+	return "(mail.occurred_at >= " + asOf + " - make_interval(days => " + days + ") OR " +
+		strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`
