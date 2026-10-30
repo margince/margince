@@ -5,8 +5,8 @@
 .webform-message {
   display: block;
   padding: var(--space-3) var(--space-4);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--r-sm);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
   background: var(--bgWell);
   color: var(--textPrimary);
   font: var(--fontBodyLarge);
