@@ -2831,6 +2831,10 @@ export const en = {
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
+  "scrollSentinel.loading": "Loading more…",
+  "scrollSentinel.failed": "Could not load more.",
+  "scrollSentinel.stalled": "The list stopped moving forward. Retry to continue.",
+  "scrollSentinel.more": "More items are available.",
   "list.viewAll": "All",
   "list.viewHot": "Hot",
 

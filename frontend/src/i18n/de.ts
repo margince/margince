@@ -2870,6 +2870,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
   "list.loadMore": "Mehr laden",
+  "scrollSentinel.loading": "Mehr wird geladen…",
+  "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
+  "scrollSentinel.stalled": "Die Liste kommt nicht weiter. Versuch es erneut.",
+  "scrollSentinel.more": "Weitere Einträge sind verfügbar.",
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
 
