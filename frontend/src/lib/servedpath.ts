@@ -1,3 +1,5 @@
+import { namesARecordAddress } from "./recordaddress";
+
 /**
  * Whether the address bar names a PATH this build does not serve.
  *
@@ -10,7 +12,10 @@
 export function addressedAPathWeDoNotServe(): boolean {
   const base = import.meta.env.BASE_URL || "/";
   const { pathname } = globalThis.location;
+  // A record address is served: publishRecordAddress writes it so a preview
+  // fetcher can see which record a page is about.
   return (
+    !namesARecordAddress(pathname) &&
     pathname !== base &&
     `${pathname}/` !== base &&
     pathname !== `${base}index.html`
