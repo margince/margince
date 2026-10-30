@@ -10,7 +10,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { WrittenBy } from "../../../components/citations.list";
 import { AiPending } from "../../../design-system/aipending";
-import { AiReveal, useArrivalCue } from "../../../design-system/aireveal";
+import { AiReveal } from "../../../design-system/aireveal";
 import { Badge } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { useT } from "../../../i18n";
@@ -53,7 +53,6 @@ export function useRoomBrief(roomId: string) {
 export function RoomBrief({ roomId }: Readonly<{ roomId: string }>) {
   const t = useT();
   const brief = useRoomBrief(roomId);
-  const arrival = useArrivalCue(brief.isPending);
   const sentences = brief.data?.sentences ?? [];
   if (brief.isError || (brief.isSuccess && sentences.length === 0)) {
     return null;
@@ -67,11 +66,7 @@ export function RoomBrief({ roomId }: Readonly<{ roomId: string }>) {
     >
       <PanelBody>
         {brief.data ? (
-          <BriefSentences
-            roomId={roomId}
-            brief={brief.data}
-            arrival={arrival}
-          />
+          <BriefSentences roomId={roomId} brief={brief.data} />
         ) : (
           <AiPending label={t("roomtab.brief.pending")} lines={2} />
         )}
@@ -83,23 +78,18 @@ export function RoomBrief({ roomId }: Readonly<{ roomId: string }>) {
 function BriefSentences({
   roomId,
   brief,
-  arrival,
-}: Readonly<{
-  roomId: string;
-  brief: DealRoomBrief;
-  /** Set when the brief itself was waited for on screen. */
-  arrival: number | null;
-}>) {
+}: Readonly<{ roomId: string; brief: DealRoomBrief }>) {
   const t = useT();
   const { settled, nameOf } = useEvidenceNames(roomId);
-  const named = useArrivalCue(!settled);
   // A sentence never shows without the line that says where it came from, so
   // the brief waits for the reads that name its sources.
   if (!settled) {
     return <AiPending label={t("roomtab.brief.pending")} lines={2} />;
   }
   return (
-    <AiReveal cue={arrival ?? named}>
+    <AiReveal
+      text={brief.sentences.map((sentence) => sentence.text).join("\n")}
+    >
       <ul className="roombrief">
         {brief.sentences.map((sentence) => {
           const sources = sentence.evidence.map(

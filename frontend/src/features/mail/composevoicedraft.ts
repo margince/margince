@@ -137,9 +137,9 @@ export function useVoiceDraft({
     });
   };
 
-  // Counts the drafts that reached the body, so each one arrives on screen as a
-  // model's words do; a draft the rep's own words held back does not.
-  const [drafted, setDrafted] = useState<number | null>(null);
+  // The last draft that reached the body, so it arrives on screen as a model's
+  // words do; a draft the rep's own words held back never shows.
+  const [drafted, setDrafted] = useState<string | null>(null);
 
   const draft = useDraftMutation({
     entityId,
@@ -162,7 +162,7 @@ export function useVoiceDraft({
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);
       if (written) {
-        setDrafted((count) => (count ?? 0) + 1);
+        setDrafted(result.draft.body);
       }
       revealDraftedBody();
     },

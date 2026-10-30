@@ -55,7 +55,6 @@ export const PINNED_RUNGS = [
 // A host with a layer under its panes: a ring, a glow, the waves, a gradient.
 // Level 1's paint is see-through in dark, so a pane on it paints its ground.
 export const UNDERLAY_HOSTS = [
-  ".aipending-sheen",
   ".arhit",
   ".arphead",
   ".avatar-mesh",
@@ -72,6 +71,7 @@ export const UNDERLAY_HOSTS = [
   ".rail .arhit",
   ".standing-sheet > .standing-sheet-pane",
   ":has(> .ambient-waves)",
+  '[data-ai-reveal="run"]',
 ] as const;
 
 type Rung = Readonly<{

@@ -69,7 +69,7 @@ export function RichText({
   id,
   disabled = false,
   footIn,
-  revealCue,
+  revealText,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -140,17 +140,17 @@ export function RichText({
    */
   footIn?: Element | null;
   /**
-   * Moves when a model has just written the text, which then arrives the way
-   * every machine-written answer does (`AiReveal`). Unset for text a reader
-   * typed or reopened.
+   * The text a model just wrote into the surface. It arrives the way every
+   * machine-written answer does (`AiReveal`): once, the first time it is on
+   * screen. Unset for text a reader typed.
    */
-  revealCue?: number | null;
+  revealText?: string | null;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
-  useAiReveal(editor, revealCue);
+  useAiReveal(editor, revealText);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
   // own keystroke.

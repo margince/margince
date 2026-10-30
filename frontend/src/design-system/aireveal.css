@@ -28,6 +28,10 @@
     aireveal-wipe 0.9s var(--ease-out) both,
     aireveal-color 1.9s linear both;
 }
+/* Waiting to be on screen: the words stay out of sight until they play. */
+[data-ai-reveal="wait"] {
+  opacity: 0;
+}
 /* A control inside the words (a citation, a link) keeps its own ink: on its
    own fill, text painted from the parent's layer would be invisible. */
 [data-ai-reveal="run"] :where(a, button, [role="button"]) {

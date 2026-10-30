@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useEffect, useState } from "react";
 import { AiPending } from "./aipending";
-import { AiReveal, useArrivalCue } from "./aireveal";
+import { AiReveal } from "./aireveal";
 import { Button } from "./button";
 import { Panel, PanelBody } from "./panel";
 
@@ -24,17 +24,28 @@ export default meta;
 
 type Story = StoryObj<typeof AiReveal>;
 
-const BRIEF = [
-  "Lena has the redlines, and nothing in them moves the €48k price.",
-  "The open question is timing: the depot goes offline on the 14th, and she wants to sign before then.",
-  "The next step is yours: send the phase plan by Friday.",
+// Three readings of one deal, so each "Ask again" brings words not yet seen.
+const BRIEFS = [
+  [
+    "Lena has the redlines, and nothing in them moves the €48k price.",
+    "The open question is timing: the depot goes offline on the 14th, and she wants to sign before then.",
+    "The next step is yours: send the phase plan by Friday.",
+  ],
+  [
+    "Procurement wants the depot downtime in writing before the 14th.",
+    "Two of five buyers have opened the proposal; finance has not.",
+  ],
+  [
+    "Marco asked what Bremen would cost on the same terms.",
+    "A second site would double the first phase.",
+  ],
 ];
 
 // The whole arc a reader sees: the speck rows while the model works, then the
-// words arriving. Ask again to replay it.
+// words arriving the first time they are on screen.
 function Arc() {
+  const [asked, setAsked] = useState(0);
   const [asking, setAsking] = useState(true);
-  const cue = useArrivalCue(asking);
   useEffect(() => {
     if (!asking) {
       return;
@@ -42,18 +53,28 @@ function Arc() {
     const answered = setTimeout(() => setAsking(false), 1800);
     return () => clearTimeout(answered);
   }, [asking]);
+  const brief = BRIEFS[asked % BRIEFS.length];
   return (
     <Panel
       title="This week on the deal"
       tone="ai"
-      titleAction={<Button onClick={() => setAsking(true)}>Ask again</Button>}
+      titleAction={
+        <Button
+          onClick={() => {
+            setAsked((n) => n + 1);
+            setAsking(true);
+          }}
+        >
+          Ask again
+        </Button>
+      }
     >
       <PanelBody>
         {asking ? (
           <AiPending label="Reading the deal room." lines={3} />
         ) : (
-          <AiReveal cue={cue}>
-            {BRIEF.map((sentence) => (
+          <AiReveal text={brief.join("\n")}>
+            {brief.map((sentence) => (
               <p key={sentence}>{sentence}</p>
             ))}
           </AiReveal>
@@ -64,11 +85,3 @@ function Arc() {
 }
 
 export const WaitThenArrive: Story = { render: () => <Arc /> };
-
-// An answer that was there before the surface opened has no cue, and stands still.
-export const AlreadyThere: Story = {
-  args: {
-    cue: null,
-    children: BRIEF.map((sentence) => <p key={sentence}>{sentence}</p>),
-  },
-};

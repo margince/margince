@@ -1456,7 +1456,8 @@
     .ob-stage-light,
     .rail .arhit,
     .standing-sheet > .standing-sheet-pane,
-    :has(> .ambient-waves)
+    :has(> .ambient-waves),
+    [data-ai-reveal="run"]
   )
   :where(
     .panel,

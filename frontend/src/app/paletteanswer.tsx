@@ -4,7 +4,7 @@
 import { Settings } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AiPending } from "../design-system/aipending";
-import { AiReveal, useArrivalCue } from "../design-system/aireveal";
+import { AiReveal } from "../design-system/aireveal";
 import { EmptyState } from "../design-system/atoms";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
@@ -84,7 +84,6 @@ export function PaletteAnswer({
   onLeave: () => void;
 }>) {
   const t = useT();
-  const arrival = useArrivalCue(pending);
   if (pending) {
     return (
       <div className="palette-answer">
@@ -113,20 +112,13 @@ export function PaletteAnswer({
   if (!result) {
     return null;
   }
-  return (
-    <AnsweredQuestion result={result} onLeave={onLeave} arrival={arrival} />
-  );
+  return <AnsweredQuestion result={result} onLeave={onLeave} />;
 }
 
 function AnsweredQuestion({
   result,
   onLeave,
-  arrival,
-}: Readonly<{
-  result: HandbookAnswer;
-  onLeave: () => void;
-  arrival: number | null;
-}>) {
+}: Readonly<{ result: HandbookAnswer; onLeave: () => void }>) {
   const t = useT();
   const { answer, asked } = result;
   const [openCite, setOpenCite] = useState<number | null>(null);
@@ -142,7 +134,7 @@ function AnsweredQuestion({
           ? t("palette.answerAfterHandbook", { name: answer.corpus.name })
           : t("palette.answerFrom", { name: answer.corpus.name })}
       </Eyebrow>
-      <AiReveal cue={arrival}>
+      <AiReveal text={answer.summary}>
         <AnswerView
           answer={answer}
           openCite={openCite}
