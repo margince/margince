@@ -102,6 +102,13 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // Fingerprints of machine-written text this browser has played in, so each
+  // arrives with the reveal once. Seat: the next seat to sign in starts afresh.
+  aiRevealSeen: {
+    name: "margince.aiReveal.seen",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
