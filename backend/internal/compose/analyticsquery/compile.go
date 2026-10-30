@@ -327,6 +327,14 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 		if !ok {
 			return nil, unknownFilterField(entity, f.Field)
 		}
+		if f.Basis != nil && field.Period != nil && !valuelessOps[f.Op] {
+			clause, err := periodClause(*field.Period, f, arg)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, clause)
+			continue
+		}
 		form := filterSQL[f.Op]
 		if valuelessOps[f.Op] {
 			out = append(out, fmt.Sprintf("%s %s", field.Expr, form))

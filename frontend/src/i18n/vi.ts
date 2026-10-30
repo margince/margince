@@ -1073,8 +1073,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Báo cáo đã gửi giữ các số liệu và câu trả lời trong {count} ngày, sau đó quy tắc lưu giữ sẽ xóa chúng.",
   "reporting.questionNotPreviewed":
     "Không hiển thị trong bản xem trước theo vai trò. Quyền truy cập của mỗi tài khoản đọc sẽ trả lời câu hỏi này khi mở báo cáo.",
-  "reporting.questionFiltered":
-    "Báo cáo tùy chỉnh này có bộ lọc, thẻ báo cáo không thể giữ bộ lọc. Lưu một bản sao không có bộ lọc; phạm vi của báo cáo sẽ thu hẹp thẻ.",
+  "reporting.questionBrowse": "Chọn từ các câu hỏi bạn đã lưu",
+  "reporting.questionPopulation": "Câu hỏi đã lưu về",
+  "reporting.questionPopulationAll": "Mọi tập dữ liệu",
+  "reporting.questionPickEmpty": "Chưa có câu hỏi đã lưu nào ở đây",
+  "reporting.questionPickFiltered": "có bộ lọc",
+  "reporting.questionBoundUnsaved":
+    "Lưu báo cáo để xem câu trả lời của câu hỏi này. Báo cáo giữ các bộ lọc của nó.",
+  "reporting.questionRestricted":
+    "Bạn không xem được mọi thứ mà câu hỏi này lọc theo, nên câu trả lời không được hiển thị.",
+  "reporting.questionBoundFiltered":
+    "Câu hỏi này có bộ lọc. Báo cáo giữ các bộ lọc đó, và mỗi tài khoản chỉ thấy phần thuộc quyền truy cập của chính tài khoản đó.",
+  "reporting.questionBoundPeriod":
+    "Câu hỏi này có bộ lọc. Các kỳ của nó giữ nguyên ngày như lúc được đặt vào: năm tài chính bắt đầu vào {month}, theo {zone}.",
+  "reporting.fiscalQuarterNote":
+    "Quý này theo năm tài chính bắt đầu vào {month}.",
   "reporting.previewChart": "Xem trước",
   "reporting.previewLoading": "Đang tải bản xem trước…",
   "reporting.previewEmpty":
@@ -12866,7 +12879,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tên IANA, ví dụ Europe/Berlin. Kỳ báo cáo và ngày của hồ sơ dùng múi giờ này cho cả nhóm; mỗi người dùng vẫn giữ múi giờ hiển thị riêng.",
   "installationSettings.fiscalYearStart": "Năm tài chính bắt đầu",
   "installationSettings.fiscalYearStartHint":
-    "Báo cáo được tổng hợp theo năm và quý này. Thay đổi sẽ đổi nhãn mọi báo cáo và dời các tháng mà bộ lọc kỳ đã lưu bao gồm.",
+    "Báo cáo được tổng hợp theo năm và quý này. Thay đổi sẽ đổi nhãn mọi báo cáo. Một kỳ đã lưu như 2026 giữ nguyên các tháng của nó.",
+  "installationSettings.fiscalImpactTitle": "Thay đổi này ảnh hưởng gì",
+  "installationSettings.fiscalImpactQuestions_one":
+    "{count} câu hỏi đã lưu lọc theo một kỳ. Các câu hỏi giữ nguyên ngày như lúc được lưu.",
+  "installationSettings.fiscalImpactQuestions_other":
+    "{count} câu hỏi đã lưu lọc theo một kỳ. Các câu hỏi giữ nguyên ngày như lúc được lưu.",
+  "installationSettings.fiscalImpactKept_one":
+    "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
+  "installationSettings.fiscalImpactKept_other":
+    "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
+  "installationSettings.fiscalImpactRelative_one":
+    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+  "installationSettings.fiscalImpactRelative_other":
+    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+  "installationSettings.fiscalImpactLoading":
+    "Đang đếm các phần đã lưu mà thay đổi này liên quan…",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",
   "installationSettings.forwardMeasureHint":
     "Những deal đang mở mà số dự kiến cộng vào doanh số đã chốt.",

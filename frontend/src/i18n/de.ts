@@ -1094,8 +1094,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gesendete Berichte behalten ihre Werte und Antworten {count} Tage lang, danach löscht die Aufbewahrungsregel sie.",
   "reporting.questionNotPreviewed":
     "In der Rollenvorschau nicht angezeigt. Diese Frage beantwortet beim Öffnen des Berichts der Zugriff des jeweiligen Kontos.",
-  "reporting.questionFiltered":
-    "Dieser eigene Bericht hat Filter, die eine Berichtskarte nicht behalten kann. Eine Kopie ohne Filter speichern; der Umfang des Berichts grenzt die Karte ein.",
+  "reporting.questionBrowse": "Aus deinen gespeicherten Fragen wählen",
+  "reporting.questionPopulation": "Gespeicherte Fragen über",
+  "reporting.questionPopulationAll": "Alle Bestände",
+  "reporting.questionPickEmpty": "Hier gibt es keine gespeicherten Fragen",
+  "reporting.questionPickFiltered": "gefiltert",
+  "reporting.questionBoundUnsaved":
+    "Speichere den Bericht, um die Antwort auf diese Frage zu sehen. Der Bericht behält ihre Filter.",
+  "reporting.questionRestricted":
+    "Du kannst nicht alles sehen, wonach diese Frage filtert. Deshalb wird ihre Antwort nicht gezeigt.",
+  "reporting.questionBoundFiltered":
+    "Diese Frage hat Filter. Der Bericht behält sie, und alle sehen nur, was ihr eigener Zugriff abdeckt.",
+  "reporting.questionBoundPeriod":
+    "Diese Frage hat Filter. Die Zeiträume darin behalten die Daten vom Zeitpunkt des Platzierens: ein Geschäftsjahr ab {month}, in {zone}.",
+  "reporting.fiscalQuarterNote":
+    "Dieses Quartal folgt dem Geschäftsjahr, das im {month} beginnt.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -13212,7 +13225,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben gelten damit für das ganze Team. Jedes Nutzerkonto behält seine eigene Anzeigezeitzone.",
   "installationSettings.fiscalYearStart": "Beginn des Geschäftsjahres",
   "installationSettings.fiscalYearStartHint":
-    "Berichte gruppieren nach diesem Jahr und Quartal. Eine Änderung benennt jeden Bericht neu und verschiebt die Monate gespeicherter Zeitraumfilter.",
+    "Berichte gruppieren nach diesem Jahr und Quartal. Eine Änderung benennt jeden Bericht neu. Ein gespeicherter Zeitraum wie 2026 behält seine Monate.",
+  "installationSettings.fiscalImpactTitle": "Was diese Änderung bewirkt",
+  "installationSettings.fiscalImpactQuestions_one":
+    "{count} gespeicherte Frage filtert nach einem Zeitraum und behält die Daten, mit denen sie gespeichert wurde.",
+  "installationSettings.fiscalImpactQuestions_other":
+    "{count} gespeicherte Fragen filtern nach einem Zeitraum und behalten die Daten, mit denen sie gespeichert wurden.",
+  "installationSettings.fiscalImpactKept_one":
+    "{count} Bericht hat eine Karte, die nach einem Zeitraum filtert, und behält seine Daten.",
+  "installationSettings.fiscalImpactKept_other":
+    "{count} Berichte haben eine Karte, die nach einem Zeitraum filtert, und behalten ihre Daten.",
+  "installationSettings.fiscalImpactRelative_one":
+    "{count} Bericht liest dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
+  "installationSettings.fiscalImpactRelative_other":
+    "{count} Berichte lesen dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
+  "installationSettings.fiscalImpactLoading":
+    "Gespeicherte Arbeit, die diese Änderung betrifft, wird gezählt…",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",
   "installationSettings.forwardMeasureHint":
     "Welche offenen Deals die Hochrechnung zum gewonnenen Umsatz addiert.",

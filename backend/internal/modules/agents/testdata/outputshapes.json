@@ -4851,6 +4851,9 @@
                           "question": {
                             "type": "object",
                             "properties": {
+                              "binding": {
+                                "type": "string"
+                              },
                               "entity": {
                                 "type": "string"
                               },
@@ -4882,6 +4885,10 @@
                                     "fn"
                                   ]
                                 }
+                              },
+                              "saved_question_id": {
+                                "type": "string",
+                                "format": "uuid"
                               }
                             },
                             "required": [

@@ -19,7 +19,11 @@ import type {
   ReportingSelection,
 } from "./reporting.model";
 import { useMetricNames, useReportingCatalog } from "./reporting.queries";
-import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
+import {
+  type KeptQuestions,
+  QuestionCard,
+  type ReportRevision,
+} from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
 import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
@@ -29,6 +33,7 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
 export function ReportingCharts({
   evaluation,
+  report,
   editionId,
   kept,
   afterSummary,
@@ -37,6 +42,9 @@ export function ReportingCharts({
   rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  // The saved report and revision this evaluation reads, which a bound
+  // question card asks the server about.
+  report?: ReportRevision;
   editionId?: string;
   // What a sent edition kept of its question cards.
   kept?: KeptQuestions;
@@ -79,6 +87,7 @@ export function ReportingCharts({
               key={section.items[0] ? itemKey(section.items[0]) : "empty"}
               section={section}
               evaluation={evaluation}
+              report={report}
               editionId={editionId}
               onEvidence={onEvidence}
               questions={questionMode(editionId, rolePreview)}
@@ -122,6 +131,7 @@ export function pageCharts(evaluation: ReportingEvaluation): ReportingChart[] {
 function ChartSection({
   section,
   evaluation,
+  report,
   editionId,
   onEvidence,
   questions,
@@ -129,6 +139,7 @@ function ChartSection({
 }: Readonly<{
   section: LaidOutSection;
   evaluation: ReportingEvaluation;
+  report?: ReportRevision;
   editionId?: string;
   onEvidence: EvidenceAction;
   questions: "live" | "frozen" | "preview";
@@ -164,6 +175,7 @@ function ChartSection({
               card={item.question}
               wide={wide[index] === true}
               evaluation={evaluation}
+              report={report}
               mode={questions}
               kept={kept}
             />

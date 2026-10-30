@@ -178,6 +178,9 @@ type InstallationSettingsStore struct {
 	config *config.Config
 	// onCountryChange runs inside the transaction that changes the country.
 	onCountryChange CountryChange
+	// onCalendarChange runs inside the transaction that moves the reporting
+	// zone or the fiscal start, before either is written.
+	onCalendarChange CalendarChange
 	// now dates a window change, which takes over at the next reset after it.
 	now func() time.Time
 }
@@ -438,6 +441,9 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 			if err := refuseZoneTheDatabaseLacksTx(ctx, tx, *in.Timezone); err != nil {
 				return err
 			}
+		}
+		if err := s.changeCalendarTx(ctx, tx, in.Timezone, in.FiscalYearStartMonth); err != nil {
+			return err
 		}
 		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
 			return err

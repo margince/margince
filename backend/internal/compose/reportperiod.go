@@ -16,6 +16,7 @@ package compose
 import (
 	"maps"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -225,6 +226,41 @@ func periodDimensions(anchor string) map[string]string {
 		fieldPeriodYear:    fiscalYearLabel(anchor),
 		fieldPeriodQuarter: fiscalQuarterLabel(anchor),
 		fieldPeriodMonth:   periodBucketExpr(anchor, patternMonth),
+	}
+}
+
+// periodAnchors are the instants a report cuts period buckets from. A period
+// field over one of them can keep the dates it named when it was saved.
+var periodAnchors = []string{colClosedAt}
+
+// periodGrains names each period field's grain.
+var periodGrains = map[string]analyticsquery.PeriodGrain{
+	fieldPeriodYear:    analyticsquery.GrainYear,
+	fieldPeriodQuarter: analyticsquery.GrainQuarter,
+	fieldPeriodMonth:   analyticsquery.GrainMonth,
+}
+
+// periodFieldOf says which anchor and grain a field's expression cuts, or nil
+// when it is no period bucket.
+func periodFieldOf(name, expr string) *analyticsquery.PeriodField {
+	grain, named := periodGrains[name]
+	if !named {
+		return nil
+	}
+	for _, anchor := range periodAnchors {
+		if periodDimensions(anchor)[name] == expr {
+			return &analyticsquery.PeriodField{Anchor: anchor, Grain: grain}
+		}
+	}
+	return nil
+}
+
+// isPeriodField says whether a population's field is a period bucket, read
+// from the report specs rather than from one caller's vocabulary.
+func isPeriodField(entity string) func(field string) bool {
+	spec, known := prebuiltReports[entity]
+	return func(field string) bool {
+		return known && periodFieldOf(field, spec.dimensions[field]) != nil
 	}
 }
 

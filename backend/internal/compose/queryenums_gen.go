@@ -285,6 +285,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/analytics/reports/{id}/executions": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/analytics/reports/{id}/questions/{card_id}/answer": {
+		{Name: "revision", Minimum: 1},
+	},
 	"GET /v1/analytics/reports/{id}/reader-preview": {
 		{Name: "revision", Minimum: 1},
 	},
@@ -498,5 +501,8 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/worklist/response": {
 		{Name: "days", Minimum: 1},
+	},
+	"POST /v1/analytics/reports/{id}/questions/{card_id}/explain": {
+		{Name: "revision", Minimum: 1},
 	},
 }
