@@ -18,28 +18,28 @@ func suggestionItems(count int, source crmcontracts.AttentionItemSource) []crmco
 	return rows
 }
 
-// A suggestion lane cut at the read depth states the store's open count as
-// the decisions total, in each scope that reads suggestions.
-func TestTheDecisionsTotalIsTheExactSuggestionCountPastTheReadDepth(t *testing.T) {
-	for _, scope := range []string{scopeAll, scopeUnassigned} {
-		t.Run(scope, func(t *testing.T) {
-			day := crmcontracts.Attention{
-				AsOf: rankInstant,
-				NeedsYou: append(suggestionItems(batchScanDepth/2, sourceDealSuggestion),
-					suggestionItems(batchScanDepth/2, sourceTagSuggestion)...),
-			}
+// Scrolling ends at the ranked rows for suggestions, so a cut suggestion lane
+// leaves the decisions category a floor, though the store counted every one.
+func TestACutSuggestionLaneLeavesTheDecisionsAFloor(t *testing.T) {
+	for _, source := range []crmcontracts.AttentionItemSource{sourceDealSuggestion, sourceTagSuggestion} {
+		t.Run(string(source), func(t *testing.T) {
+			day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: suggestionItems(batchScanDepth, source)}
 			day.Counts.ApprovalsOpen = new(0)
-			day.Counts.DealSuggestionsOpen = new(batchScanDepth/2 + 30)
-			day.Counts.TagSuggestionsOpen = new(batchScanDepth/2 + 7)
+			open := batchScanDepth + 30
+			if source == sourceDealSuggestion {
+				day.Counts.DealSuggestionsOpen = &open
+			} else {
+				day.Counts.TagSuggestionsOpen = &open
+			}
 
-			got := (&Service{}).worklistFrom(t.Context(), day, scope, "", 25, waitingRead{}, worklistCursor{}, nil)
+			got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 
 			count := countFor(t, got, "decisions")
-			if want := batchScanDepth + 37; count.Total == nil || *count.Total != want {
-				t.Fatalf("decisions total = %v, want both stores' exact %d", count.Total, want)
+			if count.Total != nil {
+				t.Errorf("decisions total = %d, but the walk reaches only %d suggestions", *count.Total, batchScanDepth)
 			}
 			if !count.MoreAvailable {
-				t.Error("the page read part of each suggestion source and claimed it considered them all")
+				t.Error("the page read part of the suggestions and claimed it considered them all")
 			}
 		})
 	}

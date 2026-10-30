@@ -28,8 +28,8 @@ The page counts two populations. `considered` is the rows left after step F, bef
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, deal and tag suggestions, and
-the task source's two windows (`backlog.go`).
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
+windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
 (`backlogmerge.go`). Today those are the task, `customer_waiting` and `deal_at_risk` sources.
@@ -87,8 +87,8 @@ a verb of their own: a task is completed, a decision is decided.
 | `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
 | `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
 | `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
-| `deal_suggestion` | A, C, H | Yes | Yes | Yes, `CountOpenSuggestions`, in every scope that reads it |
-| `tag_suggestion` | A, C, H | Yes | No | Yes, `CountOpenTagSuggestions`, in every scope that reads it |
+| `deal_suggestion` | A, C, H | Yes | Yes | `CountOpenSuggestions` exists; no total until the source joins the tail (see below) |
+| `tag_suggestion` | A, C, H | Yes | No | `CountOpenTagSuggestions` exists; no total until the source joins the tail (see below) |
 | `relationship_decay` | A, C, D, H | Candidates only | No | No; step D and the lane's cut rank candidates in Go |
 | `introduction_request` | A, C, F, H | Yes | No | No; step F |
 | `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No; step F |
@@ -150,10 +150,11 @@ deal; real mail on deals makes it cost more, up to the waiting count's own 850 m
 5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
 every deal.
 
-The deal and tag suggestion sources are counted by their stores' own list predicates, `CountOpenSuggestions` and
-`CountOpenTagSuggestions`. Their rows name no owner and offer no Done, so steps A and C keep every row in each scope
-that reads them (`unassigned`, `team` and `all`), and step F does not apply. Step G folds them after `considered` is
-taken, so it changes no count. The counts already ran on every page for `needs_you`, so stating them costs nothing.
+The deal and tag suggestion sources stay a floor until they join the tail. Their stores count them under the list's
+own predicate (`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. Their rows
+name no owner, offer no Done and are never folded (`batchKeyOf` groups neither), so the count matches every row a
+scope keeps. But the decision lane stops at `batchScanDepth` rows, and scrolling ends there. A total past that would
+name suggestions the list cannot reach.
 
 The other sources run steps in Go that a count would need:
 
