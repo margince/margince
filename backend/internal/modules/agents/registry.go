@@ -186,7 +186,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 
-	if spec.Gated && !r.offersGated(ctx, spec) {
+	if spec.Gated && !r.offersGated(ctx) {
 		return nil, 0, &UnknownToolError{Name: name}
 	}
 

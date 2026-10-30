@@ -21,8 +21,8 @@ func WithToolGate(gate ToolGate) RegistryOption {
 	return func(r *Registry) { r.toolGate = gate }
 }
 
-func (r *Registry) offersGated(ctx context.Context, spec mcp.ToolSpec) bool {
-	return spec.Gated && r.toolGate != nil && r.toolGate(ctx)
+func (r *Registry) offersGated(ctx context.Context) bool {
+	return r.toolGate != nil && r.toolGate(ctx)
 }
 
 // gatedFor lists the Gated tools the gate offers this caller. Runnable skips
@@ -30,7 +30,7 @@ func (r *Registry) offersGated(ctx context.Context, spec mcp.ToolSpec) bool {
 func (r *Registry) gatedFor(ctx context.Context, all []mcp.ToolSpec) []mcp.ToolSpec {
 	var out []mcp.ToolSpec
 	for _, spec := range all {
-		if invocableByCaller(ctx, spec) && r.offersGated(ctx, spec) {
+		if spec.Gated && invocableByCaller(ctx, spec) && r.offersGated(ctx) {
 			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}

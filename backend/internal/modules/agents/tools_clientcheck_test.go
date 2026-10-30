@@ -191,22 +191,39 @@ func TestAWithheldToolIsNotListedAndAnOfferedOneIs(t *testing.T) {
 }
 
 func TestARunNeverHoldsAGatedToolEvenWhenTheGateOffersIt(t *testing.T) {
-	for _, spec := range checkClientDispatcher(true).registry.Runnable(scopedAgentCtx(principal.ScopeRead)) {
-		if spec.Name == clientCheckTool {
-			t.Fatal("Runnable offers a Gated tool to a scheduled run")
-		}
+	registry := checkClientDispatcher(true).registry
+	registry.Register(factsProbe{})
+	var names []string
+	for _, spec := range registry.Runnable(scopedAgentCtx(principal.ScopeRead)) {
+		names = append(names, spec.Name)
+	}
+	if !slices.Contains(names, "probe_facts") {
+		t.Fatalf("Runnable leaves out an ordinary tool: %v", names)
+	}
+	if slices.Contains(names, clientCheckTool) {
+		t.Errorf("Runnable offers a Gated tool to a scheduled run: %v", names)
 	}
 }
 
-func TestAGatedToolThatIsListedIsRefused(t *testing.T) {
-	spec := checkClient{}.Spec()
-	spec.Unlisted, spec.ProtocolOnly = false, false
+// listedCheck is check_client registered as if every caller could see it.
+type listedCheck struct{ checkClient }
+
+func (c listedCheck) Spec() mcp.ToolSpec {
+	spec := c.checkClient.Spec()
+	spec.Unlisted = false
+	return spec
+}
+
+func TestRegisterRefusesAGatedToolThatIsListed(t *testing.T) {
+	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	registry.Register(checkClient{})
 	defer func() {
-		if recover() == nil {
-			t.Error("a Gated tool that every caller would see was registered")
+		refusal, _ := recover().(string)
+		if !strings.Contains(refusal, "Gated but listed") {
+			t.Errorf("a Gated tool that every caller would see was registered (recovered %q)", refusal)
 		}
 	}()
-	assertGatedShape(spec)
+	NewRegistry(nil, auth.NewGate(fullSeatAuthority{})).Register(listedCheck{})
 }
 
 // ProtocolOnly skips both REST parity gates, so Register refuses it on a tool

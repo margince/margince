@@ -36,9 +36,8 @@ func setClientCheck(t *testing.T, e *apptest.AppEnv, on bool) {
 }
 
 // Every role reads the settings answer, and the switch lives under agent_client,
-// which only an admin reads. So the answer must carry the switch to a rep too,
-// and only an admin may move it.
-func TestTheClientCheckSwitchIsOffByDefaultReadByEveryRoleAndMovedOnlyByAnAdmin(t *testing.T) {
+// which only an admin reads. So the answer must carry the switch to a rep too.
+func TestTheClientCheckSwitchIsOffByDefaultAndReadByEveryRole(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
