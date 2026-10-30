@@ -34,7 +34,7 @@ Margince also reads common names such as `name`, `your-email` or `Firma`. Every 
 Also called: field names, map fields, custom fields, my own form, Contact Form 7.
 
 ### What happens when someone sends the form?
-Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline. Open the note to see each field under its own label, the page it was sent from as a link, and the consent as a badge with its policy version. If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note.
+Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline. Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version. If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note.
 
 A line outside the quote was written by Margince, so a prospect cannot type one.
 
