@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Lock } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import {
@@ -14,14 +16,26 @@ import {
 } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { identifierNumber } from "../../format/format";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
-import { bandLabel, VoiceSamples } from "./voice-samples";
+import { SharpenStrip, VOICE_SECTIONS, VoiceHero } from "./voice-hero";
 import {
-  ActiveVoiceInsights,
+  DraftShowcase,
+  parseVoiceInsights,
+  useNextBestLine,
+  VoiceFigures,
+  type VoiceInsightsData,
+  VoiceTraits,
+} from "./voice-insights";
+import { useVoiceSources, VoiceSamples } from "./voice-samples";
+import {
+  CandidateBanner,
+  loadedVersions,
+  useVoiceLearning,
+  useVoiceVersions,
   VoiceChangeLog,
   VoiceHistory,
 } from "./voice-versions";
@@ -52,7 +66,7 @@ export function VoiceDnaCard() {
           // sample drafts) stayed unreachable. There is no empty-state box
           // above it: the card's one job here is to take the first sample,
           // and a box saying there is nothing yet only pushes that job down.
-          <Panel title={t("settings.voice.title")}>
+          <Panel tone="ai" title={t("settings.voice.title")}>
             <PanelBody>
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
@@ -77,12 +91,75 @@ export function VoiceDnaCard() {
   );
 }
 
-// A profile that exists answers three questions, so it is three cards: what
-// the voice IS (its state, what the last build learned, the preferences that
-// steer it), what it is BUILT FROM, and what its builds have DONE. Five cards
-// stood here before, one per component; the row language is what let the
-// preferences editor and the derived text rejoin the subject they belong to
-// instead of each needing a header band to be findable.
+function hasTraits(insights: VoiceInsightsData): boolean {
+  return (
+    insights.moves.length > 0 ||
+    insights.obsessions.length > 0 ||
+    insights.avoid.length > 0
+  );
+}
+
+// The jump bar names only the sections the page draws: a voice with nothing
+// learned yet has no moves or drafts to jump to.
+function jumpTargets(
+  t: Translator,
+  insights: VoiceInsightsData | null,
+): JumpTarget[] {
+  const targets: JumpTarget[] = [
+    { id: VOICE_SECTIONS.voice, label: t("settings.voice.jump.voice") },
+  ];
+  if (insights && hasTraits(insights)) {
+    targets.push({
+      id: VOICE_SECTIONS.moves,
+      label: t("settings.voice.jump.moves"),
+    });
+  }
+  if (insights && insights.sampleDrafts.length > 0) {
+    targets.push({
+      id: VOICE_SECTIONS.drafts,
+      label: t("settings.voice.jump.drafts"),
+    });
+  }
+  targets.push(
+    { id: VOICE_SECTIONS.sharpen, label: t("settings.voice.jump.sharpen") },
+    { id: VOICE_SECTIONS.rules, label: t("settings.voice.jump.rules") },
+    { id: VOICE_SECTIONS.builds, label: t("settings.voice.jump.builds") },
+  );
+  return targets;
+}
+
+// What the build learned, proven: the moves in the writer's own words, then
+// the drafts it writes with them.
+function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
+  const t = useT();
+  return (
+    <>
+      {hasTraits(insights) && (
+        <VoiceSection id={VOICE_SECTIONS.moves}>
+          <Panel tone="ai" title={t("settings.voice.movesTitle")}>
+            <PanelBody>
+              <PanelIntro>{t("settings.voice.movesIntro")}</PanelIntro>
+              <VoiceTraits data={insights} />
+            </PanelBody>
+          </Panel>
+        </VoiceSection>
+      )}
+      {insights.sampleDrafts.length > 0 && (
+        <VoiceSection id={VOICE_SECTIONS.drafts}>
+          <Panel tone="ai" title={t("settings.voice.draftsTitle")}>
+            <PanelBody>
+              <PanelIntro>{t("settings.voice.draftsIntro")}</PanelIntro>
+              <DraftShowcase drafts={insights.sampleDrafts} />
+            </PanelBody>
+          </Panel>
+        </VoiceSection>
+      )}
+    </>
+  );
+}
+
+// A profile that exists is one long page about the voice. It runs from who the
+// writer is to the builds behind it, and the jump bar reaches each section.
 function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
@@ -93,6 +170,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   // Intake lives in one card and the build button in another, so the fact that
   // a sample is still arriving has to be held by the parent they share.
   const [intakeBusy, setIntakeBusy] = useState(false);
+  const [deltasAsked, setDeltasAsked] = useState(false);
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["voice-profile"] });
     qc.invalidateQueries({ queryKey: ["voice-sources", profile.id] });
@@ -100,112 +178,175 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
     qc.invalidateQueries({ queryKey: ["voice-deltas", profile.id] });
     qc.invalidateQueries({ queryKey: ["voice-learning", profile.id] });
   };
+  const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
+  const active = versions.find((version) => version.status === "active");
+  const candidate = versions.find((version) => version.status === "candidate");
+  const insights = active ? parseVoiceInsights(active) : null;
+  const summary = useVoiceSources(profile.id).data?.summary;
+  const learning = useVoiceLearning(profile.id).data;
+  const next = useNextBestLine(insights);
+  const hasDrafts = Boolean(insights && insights.sampleDrafts.length > 0);
+  const targets = jumpTargets(t, insights);
   return (
-    <>
-      <Panel title={t("settings.voice.title")}>
-        <PanelBody>
-          <PanelIntro>{t("settings.voice.privacy")}</PanelIntro>
-          {/* Said once for the whole surface, not beside each control a denial
-              disables: the README's withheld write, not a withheld surface. */}
-          {!canEdit && (
-            <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
-          )}
-          <div className="vdna-status">
-            {/* Ready is the normal reading, so only a profile that wants
-                something carries a badge. */}
-            {profile.status !== "ready" && (
-              <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
-            )}
-            {profile.quality_band && (
-              <span className="t-caption">
-                {bandLabel(t, profile.quality_band)}
-              </span>
-            )}
-            <span className="t-caption vdna-version">
-              {t("settings.voice.version", {
-                n: identifierNumber(profile.profile_version ?? 0),
-              })}
-            </span>
-          </div>
+    <div className="vdna-page">
+      <JumpBar
+        label={t("settings.voice.jumpLabel")}
+        targets={targets}
+        action={<VoiceStanding profile={profile} />}
+      />
+      <p className="t-caption vdna-privacy">
+        <Lock aria-hidden /> {t("settings.voice.privacy")}
+      </p>
+      {/* Said once for the whole surface, not beside each control a denial
+          disables: the README's withheld write, not a withheld surface. */}
+      {!canEdit && (
+        <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
+      )}
+      {/* First when it is there: a review waiting on a human is the most
+          actionable thing on the page, in every profile state. */}
+      {candidate && (
+        <CandidateBanner
+          profileId={profile.id}
+          candidate={candidate}
+          canEdit={canEdit}
+          onChanged={invalidate}
+        />
+      )}
+      <VoiceHero
+        profile={profile}
+        insights={insights}
+        profileVersion={active?.profile_version ?? 0}
+        summary={summary}
+        hasDrafts={hasDrafts}
+      />
+      {summary && (
+        <SharpenStrip summary={summary} next={next} canEdit={canEdit} />
+      )}
+      {insights && <VoiceFigures data={insights} learning={learning} />}
 
-          {/* Above the rows, and deliberately not inside one: it also carries
-              the candidate-review banner, which is the most actionable thing on
-              this page, and a review waiting on a human does not belong under
-              two settings rows. It renders for EVERY profile state — a
-              review-required first build must be actionable while the profile
-              is still collecting. */}
-          <ActiveVoiceInsights
+      {insights && <VoiceProof insights={insights} />}
+
+      <VoiceSection id={VOICE_SECTIONS.sharpen}>
+        <Panel tone="ai" title={t("settings.voice.sharpenTitle")}>
+          <PanelBody>
+            <PanelIntro>{t("settings.voice.sharpenIntro")}</PanelIntro>
+          </PanelBody>
+          {/* The samples are the card's subject, so they stand in it as a
+              table rather than behind a modal that would hide what a reader
+              audits. */}
+          <VoiceSamples
             profileId={profile.id}
             canEdit={canEdit}
             onChanged={invalidate}
           />
-        </PanelBody>
-        <SettingList bleed="settings">
-          {/* Stacked: the preferences are the longest text in settings. */}
-          <SettingRow
-            label={t("settings.voice.personalityLabel")}
-            layout="stack"
-            control={(control) => (
-              <PersonalityEditor
-                control={control}
+          {canEdit && (
+            <SettingList bleed="settings">
+              <VoiceCorpusIntake
+                profileId={profile.id}
+                onChanged={invalidate}
+                onBusyChange={setIntakeBusy}
+              />
+            </SettingList>
+          )}
+        </Panel>
+      </VoiceSection>
+
+      <div className="vdna-split">
+        <VoiceSection id={VOICE_SECTIONS.rules}>
+          <Panel tone="ai" title={t("settings.voice.rulesTitle")}>
+            <PanelBody>
+              <PanelIntro>{t("settings.voice.rulesIntro")}</PanelIntro>
+            </PanelBody>
+            <SettingList bleed="settings">
+              {/* Stacked: the preferences are the longest text in settings. */}
+              <SettingRow
+                label={t("settings.voice.personalityLabel")}
+                layout="stack"
+                control={(control) => (
+                  <PersonalityEditor
+                    control={control}
+                    profile={profile}
+                    canEdit={canEdit}
+                    onSaved={invalidate}
+                  />
+                )}
+              />
+              {/* Once a build is active the hero quotes this text, so showing
+                  it too would say it twice. */}
+              {!insights && (
+                <Disclosure summary={t("settings.voice.derivedLabel")}>
+                  <DerivedVoice profile={profile} />
+                </Disclosure>
+              )}
+            </SettingList>
+          </Panel>
+        </VoiceSection>
+
+        <VoiceSection id={VOICE_SECTIONS.builds}>
+          <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
+            <SettingList bleed="settings">
+              {/* A build started while a sample is still arriving would
+                  describe a corpus that no longer exists by the time it
+                  finishes. */}
+              <BuildControls
                 profile={profile}
                 canEdit={canEdit}
-                onSaved={invalidate}
+                onBuilt={invalidate}
+                intakeBusy={intakeBusy}
               />
-            )}
-          />
-          {/* Once ready, the insights above quote this text, so showing it too
-              would say it twice. */}
-          {profile.status !== "ready" && (
-            <Disclosure summary={t("settings.voice.derivedLabel")}>
-              <DerivedVoice profile={profile} />
-            </Disclosure>
-          )}
-        </SettingList>
-      </Panel>
-
-      <Panel title={t("settings.voice.corpusLabel")}>
-        {/* The samples are the card's subject, so they stand in it as a table
-            rather than behind a modal that would hide what a reader audits. */}
-        <VoiceSamples
-          profileId={profile.id}
-          canEdit={canEdit}
-          onChanged={invalidate}
-        />
-        {canEdit && (
-          <SettingList bleed="settings">
-            <VoiceCorpusIntake
+            </SettingList>
+            <VoiceHistory
               profileId={profile.id}
+              canEdit={canEdit}
               onChanged={invalidate}
-              onBusyChange={setIntakeBusy}
             />
-          </SettingList>
-        )}
-      </Panel>
+            {/* Diagnostic: the deltas answer "why did it change", which a
+                reader asks occasionally and never on arrival, so they are read
+                on the first opening rather than with the page. */}
+            <Disclosure
+              summary={t("voice.history.deltasLabel")}
+              onToggle={(open) => open && setDeltasAsked(true)}
+            >
+              {deltasAsked && <VoiceChangeLog profileId={profile.id} />}
+            </Disclosure>
+          </Panel>
+        </VoiceSection>
+      </div>
+    </div>
+  );
+}
 
-      <Panel title={t("settings.voice.buildsTitle")}>
-        <SettingList bleed="settings">
-          {/* A build started while a sample is still arriving would describe
-              a corpus that no longer exists by the time it finishes. */}
-          <BuildControls
-            profile={profile}
-            canEdit={canEdit}
-            onBuilt={invalidate}
-            intakeBusy={intakeBusy}
-          />
-        </SettingList>
-        <VoiceHistory
-          profileId={profile.id}
-          canEdit={canEdit}
-          onChanged={invalidate}
-        />
-        {/* Diagnostic: the deltas answer "why did it change", which a reader
-            asks occasionally and never on arrival. */}
-        <Disclosure summary={t("voice.history.deltasLabel")}>
-          <VoiceChangeLog profileId={profile.id} />
-        </Disclosure>
-      </Panel>
-    </>
+// A section the jump bar lands on: focusable by script only, so focus can
+// follow the jump without adding a tab stop.
+function VoiceSection({
+  id,
+  children,
+}: Readonly<{ id: string; children: ReactNode }>) {
+  return (
+    <div id={id} tabIndex={-1} className="vdna-section">
+      {children}
+    </div>
+  );
+}
+
+// The profile's standing at the end of the jump bar. A state shows only when
+// it wants something, since ready is normal. The version follows.
+function VoiceStanding({ profile }: Readonly<{ profile: VoiceProfile }>) {
+  const t = useT();
+  return (
+    <span className="vdna-status">
+      {profile.status !== "ready" && (
+        <Badge>{t(`settings.voice.status.${profile.status}`)}</Badge>
+      )}
+      {/* Version 0 is a profile no build has written yet: nothing to name. */}
+      {Boolean(profile.profile_version) && (
+        <span className="t-caption">
+          {t("settings.voice.version", {
+            n: identifierNumber(profile.profile_version ?? 0),
+          })}
+        </span>
+      )}
+    </span>
   );
 }
 

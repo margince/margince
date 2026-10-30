@@ -2292,6 +2292,9 @@ span.error-line {
 .stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--info);
 }
+.stat-card-meter-ai .stat-card-meter-fill {
+  background: var(--ai);
+}
 /* An empty segment is the track, whatever the tone. It matches the tone rules'
    weight and comes after them, so no fill colour reaches it. */
 .stat-card-meter .stat-card-meter-fill.stat-card-meter-empty {

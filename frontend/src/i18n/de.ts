@@ -10368,6 +10368,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.browse": "Dateien auswählen",
   "ob.conv.voice.pasteInstead": "Stattdessen Text einfügen",
   "ob.conv.voice.sourcesTitle": "Quellen",
+  "ob.conv.voice.printLabel": "Dein Stimmabdruck",
+  "ob.conv.voice.kindsLabel": "Was am besten passt",
+  "ob.conv.voice.kindBest": "Bester Start",
+  "ob.conv.voice.kindMail": "Gesendete E-Mails",
+  "ob.conv.voice.kindMailBody":
+    "Ein paar Verläufe, die du selbst geschrieben hast",
+  "ob.conv.voice.kindCall": "Gesprächstranskripte",
+  "ob.conv.voice.kindCallBody": "Nur deine eigenen Beiträge bleiben",
+  "ob.conv.voice.kindDoc": "Angebote und Beiträge",
+  "ob.conv.voice.kindDocBody": "Jeder Text, den du selbst geschrieben hast",
   "ob.conv.voice.meterLabel": "Fortschritt zum Minimum von {min} Wörtern",
   "ob.conv.voice.meterProgress": "{words} von {min} Wörtern",
   "ob.conv.voice.meterReady":
@@ -10392,8 +10402,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.hearsBand": "bisher einen Korpus der Qualität {band}",
   "ob.conv.voice.hearsRegister": "{words} Wörter im Register {register}",
   "ob.conv.voice.sampleEyebrow": "Beispiel, nicht gesendet",
-  "ob.conv.voice.sampleAnother": "Anderes Szenario",
-  "ob.conv.voice.sampleSubjectLabel": "Betreff",
   "ob.conv.voice.sampleWhyTag": "Warum",
   "ob.conv.voice.dimensionsTitle": "Gemessene Dimensionen",
   "ob.conv.voice.dimensionsCount": "Gemessen: {count}",
@@ -12106,7 +12114,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.bandDrop":
     "Ohne diese Probe sinkt das Stilprofil von {from} auf {to}.",
   "voice.insights.avoidLabel": "Was dein Schreibstil vermeidet",
-  "voice.insights.voiceScore": "Stilübereinstimmung {pct} %",
+  "voice.insights.voiceScore": "Stilübereinstimmung {pct}",
   "voice.insights.next.addTranscript":
     "Füge ein Gesprächs- oder Termintranskript hinzu. Gesprochene Worte sind die stärkste Quelle.",
   "voice.insights.next.addEmail":
@@ -12130,7 +12138,47 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
   "voice.insights.statSources": "Quellen: {count}",
-  "voice.insights.statSentence": "Etwa {count} Wörter pro Satz",
+  "settings.voice.jumpLabel": "Auf dieser Seite",
+  "settings.voice.jump.voice": "Dein Schreibstil",
+  "settings.voice.jump.moves": "Typische Züge",
+  "settings.voice.jump.drafts": "Probeentwürfe",
+  "settings.voice.jump.sharpen": "Schärfen",
+  "settings.voice.jump.rules": "Deine Regeln",
+  "settings.voice.jump.builds": "Versionen",
+  "settings.voice.editRules": "Regeln bearbeiten",
+  "settings.voice.addWriting": "Texte hinzufügen",
+  "settings.voice.seeSamples": "Alle Schreibproben",
+  "settings.voice.heroLabel": "Deine Voice DNA",
+  "settings.voice.heroPending": "Margince kennt deinen Schreibstil noch nicht",
+  "settings.voice.heroPendingBody":
+    "Füge eigene Texte hinzu und erstelle das Profil. Danach klingt jeder Entwurf nach dir.",
+  "settings.voice.strength": "Stärke: {band}",
+  "settings.voice.toSharp_one": "Noch {count} Wort bis zum präzisen Profil",
+  "settings.voice.toSharp_other": "Noch {count} Wörter bis zum präzisen Profil",
+  "settings.voice.atSharp":
+    "Dein Profil ist präzise. Neue Texte halten es aktuell.",
+  "settings.voice.movesTitle": "Deine typischen Züge",
+  "settings.voice.movesIntro":
+    "Sätze aus deinen eigenen Texten, und was jeder davon bewirkt.",
+  "settings.voice.draftsTitle": "So schreibt es wie du",
+  "settings.voice.draftsIntro":
+    "Probeentwürfe aus der letzten Version. Von hier wird nie etwas gesendet.",
+  "settings.voice.sharpenTitle": "Schärfen",
+  "settings.voice.sharpenIntro":
+    "Je mehr eigene Texte es liest, desto näher kommt es dir.",
+  "settings.voice.rulesTitle": "Deine Regeln",
+  "settings.voice.rulesIntro":
+    "Margince überschreibt diese Regeln nie, und jeder Entwurf folgt ihnen.",
+  "voice.insights.themesLabel": "Darauf kommst du immer wieder",
+  "voice.insights.figKept": "Behaltene Entwürfe",
+  "voice.insights.figKeptValue": "{kept} von {drafted}",
+  "voice.insights.figKeptDetail":
+    "{accepted} unverändert gesendet, {edited} vorher bearbeitet",
+  "voice.insights.draftUntitled": "Entwurf {n}",
+  "voice.insights.matchCaption": "Stil-Treffer",
+  "voice.insights.figWords": "Gelesene Wörter",
+  "voice.insights.figSources": "Beispiele",
+  "voice.insights.figSentence": "Wörter pro Satz",
   "voice.insights.thinkingLabel": "Wie du denkst",
   "voice.insights.movesLabel": "Deine typischen Formulierungen",
   "voice.insights.samplesLabel": "Beispielentwürfe in deinem Schreibstil",

@@ -11,6 +11,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { candidateVersion } from "../../testing/voice-candidate";
 import { VoiceDnaCard } from "./voice-dna";
 
 // The Settings Voice DNA card off canned profile/corpus reads — never a live
@@ -81,6 +82,15 @@ const SOURCE: VoiceCorpusSource = {
   archived_at: null,
 };
 
+const SPOKEN_SOURCE: VoiceCorpusSource = {
+  ...SOURCE,
+  id: "vs-3",
+  kind: "transcript",
+  register: "spoken",
+  source_label: "Discovery call, Nordwerk",
+  word_count: 3000,
+};
+
 // A profile that exists but has not built a derived voice yet: status isn't
 // "ready", so the card falls back to DerivedVoice's empty placeholder instead
 // of quoting a voice_profile_md nobody has produced.
@@ -132,10 +142,56 @@ const LEARNING = {
   transformations: [],
 };
 
+// The version a finished build left active: what it learned, quoted from the
+// owner's own corpus. The settings page leads with this, so a story without it
+// draws a voice page that has nothing to say about the voice.
+const ACTIVE_VERSION = {
+  ...candidateVersion([]),
+  id: "vv-3",
+  profile_id: "vp-1",
+  profile_version: 3,
+  status: "active",
+  model_name: "claude-haiku-4.5",
+  profile_json: {
+    inference: {
+      identity_summary:
+        "Plain, specific and quick to the ask. Writes like someone who has already read the contract.",
+      thinking_pattern:
+        "Leads with the constraint, then the offer, then one question.",
+      observed_obsessions: ["delivery dates", "who signs", "next step"],
+      signature_moves: [
+        {
+          move: "Names the blocker before the ask",
+          quote: "Depot's offline the 14th, can we sign before then?",
+        },
+        { move: "Closes on one question", quote: "Does Thursday work?" },
+        {
+          move: "Puts the number in the first line",
+          quote: "€48k, two phases, first one live in May.",
+        },
+      ],
+      avoid: ["exclamation marks", "hedging", "corporate filler"],
+    },
+    sample_drafts: [
+      {
+        subject: "Retrofit timeline",
+        body: "Lars, the depot window moved to the 14th. Can you confirm the quote before then? Does Thursday work for a ten-minute call?",
+        voice_score: 0.86,
+      },
+    ],
+    guidance: { next_best_key: "add_transcript" },
+  },
+  stats_json: { word_count: 12400, mean_sentence_words: 11.5, sample_count: 2 },
+};
+
 // The card's whole subtree reads the profile, its corpus, its version history
 // and its learning aggregate; a story serves all four so no panel renders an
 // error state it did not mean to capture.
-function voiceStory(routes: RouteMap, seat: "full" | "read" = "full") {
+function voiceStory(
+  routes: RouteMap,
+  seat: "full" | "read" = "full",
+  versions: readonly unknown[] = [],
+) {
   return () => {
     installFetchStub({
       // Every control here mutates, so the card asks useCanWrite — grant AND
@@ -149,7 +205,8 @@ function voiceStory(routes: RouteMap, seat: "full" | "read" = "full") {
         },
         { seat },
       ),
-      "GET /voice-profiles/vp-1/versions": () => jsonResponse(emptyPage),
+      "GET /voice-profiles/vp-1/versions": () =>
+        jsonResponse({ data: versions, page: emptyPage.page }),
       "GET /voice-profiles/vp-1/deltas": () => jsonResponse(emptyPage),
       "GET /voice-profiles/vp-1/learning": () => jsonResponse(LEARNING),
       ...routes,
@@ -191,6 +248,21 @@ export const Ready: Story = {
   }),
 };
 
+// A built voice: what the active build learned leads the page, ahead of the
+// preferences, the corpus and the builds that feed it.
+export const Built: Story = {
+  render: voiceStory(
+    {
+      "GET /voice-profiles": () =>
+        jsonResponse({ data: [PROFILE], page: emptyPage.page }),
+      "GET /voice-profiles/vp-1/sources": () =>
+        jsonResponse({ data: [SOURCE, SPOKEN_SOURCE], summary: SUMMARY }),
+    },
+    "full",
+    [ACTIVE_VERSION],
+  ),
+};
+
 // A profile that exists but hasn't built a voice yet: the derived-voice panel
 // falls back to its empty placeholder (voice_profile_md is "" pre-build)
 // instead of quoting text nobody produced, while the corpus/build controls
@@ -207,13 +279,8 @@ export const Collecting: Story = {
   }),
 };
 
-// The one dark story the voice tree needs, and it is this state rather than
-// `Ready`: below the 800-word floor the card draws a FloorMeter, and a FloorMeter
-// is a bare `<progress>` element. voice-dna.css gives it a flex basis and nothing
-// else, and no sheet in this app declares `color-scheme`, so the browser paints
-// that widget in its own light-mode colours no matter what `data-theme` says —
-// every other pixel on the page re-resolves through a token and this one cannot.
-// The thin quality band and the register mix beside it are the rest of the frame.
+// Dark below the 800-word floor. The corpus meter and the floor meter stand
+// together here, both drawn from tokens, beside the thin band.
 export const CollectingDark: Story = {
   globals: { theme: "dark" },
   render: voiceStory({
