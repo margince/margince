@@ -172,6 +172,26 @@ describe("ticking Worklist rows in selection mode", () => {
     expect(result.current.rows).toHaveLength(0);
   });
 
+  it("keeps Select all to the rows it saw when the next batch arrives", () => {
+    const later = row({
+      id: "01a05500-0000-7000-8000-0000000000b1",
+      source: "task",
+      title: "Arrived with the next batch",
+      actions: ["complete"],
+      version: 1,
+    });
+    const { result, rerender } = renderHook(
+      ({ queue }) => useWorklistPicks(queue, "mine/all/"),
+      { initialProps: { queue: [aTask, aWaitingMessage, aPromise] } },
+    );
+    act(() => result.current.selectAll());
+    expect(result.current.rows).toEqual([aTask, aPromise]);
+
+    rerender({ queue: [aTask, aWaitingMessage, aPromise, later] });
+    expect(result.current.eligible).toContain(later);
+    expect(result.current.rows).toEqual([aTask, aPromise]);
+  });
+
   it("selects every shown task and promise and previews them as one change", async () => {
     const previewed: unknown[] = [];
     stub(theDay());
