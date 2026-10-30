@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 137.1 KB |
+| Tool catalog | 137.2 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36181 |
+| Approx. wire tokens | 36223 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 33.6 KB | 24% | Yes, every step |
-| Input schemas | 64.3 KB | 46% | Yes, every step |
+| Input schemas | 64.5 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
-| **Description + input schema** | **97.9 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **98.1 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -68,7 +68,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1270 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -2208,6 +2208,14 @@ passport scope "write".)
         "active_referring",
         "dormant",
         "no_fit"
+      ],
+      "type": "string"
+    },
+    "settle": {
+      "description": "move_deal only: What becomes of the deal's open tasks when this move closes it. Omitted keeps them",
+      "enum": [
+        "complete",
+        "keep"
       ],
       "type": "string"
     },

@@ -9710,6 +9710,36 @@
           "note_activity_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "open_tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "due_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subject": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "subject"
+              ]
+            }
+          },
+          "settled_task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
