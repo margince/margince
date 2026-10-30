@@ -65,9 +65,8 @@ const (
 // silently rename the other.
 const handoffStatusKey = "status"
 
-// HandoffObject is the object every handoff read or write gates on. The handoff
-// is a sales record about a prospect, so it answers to the same object the lead
-// and the contact do rather than minting a permission of its own.
+// HandoffObject is the object every handoff read or write gates on. A handoff is
+// a sales record about a prospect. It answers to the lead's object, not one of its own.
 const HandoffObject = "lead"
 
 var (

@@ -288,10 +288,9 @@ func requireCall(node ast.Node, inIdentity bool) (*ast.CallExpr, int, bool) {
 	return call, 1, true
 }
 
-// objectName resolves the object argument: a string literal, an identifier
-// naming a string constant declared in the same package, or `pkg.Name` naming
-// one in a backend package this file imports. Anything else is a runtime value
-// and is reported unresolved rather than guessed at.
+// objectName resolves the object argument. It reads a string literal, a string
+// constant of the same package, or `pkg.Name` for one in an imported backend
+// package. Anything else is a runtime value, reported unresolved, never guessed.
 func objectName(arg ast.Expr, constants map[string]string, imported map[string]map[string]string) (string, bool) {
 	if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 		name, err := strconv.Unquote(lit.Value)
