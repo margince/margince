@@ -99,7 +99,7 @@ func companyRollupToWire(result CompanyRollupResult) crmcontracts.CompanyHierarc
 		RootId:           openapi_types.UUID(result.RootID),
 		Scope:            crmcontracts.CompanyHierarchyRollupScope(result.Scope),
 		WeightedPipeline: companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
-		PipelineStateAt:  result.ComputedAt,
+		PipelineStateAt:  result.PipelineStateAt,
 		ClosedWon:        crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
 		ClosedWonPeriod: crmcontracts.CompanyRollupWonPeriod{
 			Grain: crmcontracts.CompanyRollupWonPeriodGrain(won.Grain), Label: won.Label,

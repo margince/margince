@@ -80,7 +80,7 @@ func TestCompanyRollupToWireStatesEachMeasuresDate(t *testing.T) {
 	read := time.Date(2026, time.October, 30, 9, 0, 0, 0, time.UTC)
 	next := "2026-Q3"
 	result := CompanyRollupResult{
-		RootID: ids.NewV7(), Scope: companyRollupScopeTree, BaseCurrency: "EUR", ComputedAt: read,
+		RootID: ids.NewV7(), Scope: companyRollupScopeTree, BaseCurrency: "EUR", ComputedAt: read, PipelineStateAt: read,
 		ActivityWindowStart: read.AddDate(0, 0, -30),
 		ClosedWonPeriod: RollupWonPeriod{
 			Grain: "quarter", Label: "2026-Q2", Chosen: true, Previous: "2026-Q1", Next: &next,

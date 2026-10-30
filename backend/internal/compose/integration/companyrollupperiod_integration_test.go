@@ -75,6 +75,41 @@ func TestTheRollupSumsTheNamedPeriodOverTheReadableTree(t *testing.T) {
 	}
 }
 
+// The won total is whole or absent. One won deal with no base value makes it
+// null rather than the priced part. A win dated after the read is not yet a
+// win of the period under way.
+func TestTheRollupsWonTotalIsWholeAndStopsAtTheRead(t *testing.T) {
+	e := Setup(t)
+	st := seedRollupStages(t, e)
+	now := clocktest.Now(t)
+	root := seedRollupCompany(t, e, "Whole Root", nil, nil)
+	read := func() compose.CompanyRollupResult {
+		t.Helper()
+		res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", compose.CompanyRollupPeriod{}, fixedClock(now))
+		if err != nil {
+			t.Fatalf("rollup: %v", err)
+		}
+		return res
+	}
+	period := read().ClosedWonPeriod
+	seedRollupWonDeal(t, e, st, root, 1_000, "EUR", "1.0", period.Start)
+	seedRollupWonDeal(t, e, st, root, 5_000, "EUR", "1.0", now.Add(period.End.Sub(now)/2))
+	if got := read(); got.ClosedWonMinor == nil || *got.ClosedWonMinor != 1_000 {
+		t.Fatalf("won = %v, want 1000: the win dated after the read is not counted", got.ClosedWonMinor)
+	}
+	if !read().PipelineStateAt.After(time.Time{}) {
+		t.Error("pipeline_state_at was not read from the database")
+	}
+
+	unpriced := ids.NewV7()
+	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, company_id, status, closed_at, source, captured_by)
+		VALUES ($1, 'Legacy Win', 700, 'GBP', '1.0', $2, $3, $4, 'won', $5, 'manual', 'human:test')`,
+		unpriced, st.pipeline, st.won, root, period.Start)
+	if got := read(); got.ClosedWonMinor != nil {
+		t.Errorf("won = %d with one unpriced win, want null rather than the priced part", *got.ClosedWonMinor)
+	}
+}
+
 // periodRollupWire is what the rollup's two doors share about one period: the
 // read's own instants are left out, since the two reads run apart.
 type periodRollupWire struct {

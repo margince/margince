@@ -113,9 +113,9 @@ func walkPeriodEnums(node any, at []string, found map[string]bool, grains map[st
 	}
 }
 
-// A report period grain on the wire is exactly the grains reportperiod cuts.
-// A grain the kernel lacks is a bucket no label resolves, and one the wire
-// lacks is a period a caller is answered in but cannot name.
+// A report period grain on the wire is one of the grains reportperiod cuts, and
+// the wire offers them all. A grain the kernel lacks is a bucket no label
+// resolves. One the wire lacks is a period a caller cannot name.
 func TestEveryReportGrainOnTheWireIsAGrainTheKernelCuts(t *testing.T) {
 	t.Parallel()
 	found, grains := map[string]bool{}, map[string][]string{}

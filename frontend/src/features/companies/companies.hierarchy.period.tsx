@@ -58,10 +58,13 @@ export function rollupQuery(period: RollupPeriod | null) {
 export function RollupPeriodControl({
   rollup,
   period,
+  loading,
   onChange,
 }: Readonly<{
   rollup: CompanyHierarchyRollup;
   period: RollupPeriod | null;
+  /** The answer shown is for the period before the one picked. */
+  loading: boolean;
   onChange: (period: RollupPeriod | null) => void;
 }>) {
   const t = useT();
@@ -85,6 +88,7 @@ export function RollupPeriodControl({
       <IconAction
         label={t("rollup.period.show", { period: won.previous })}
         icon={<ChevronLeft aria-hidden />}
+        pending={loading}
         onClick={() => onChange({ field, label: won.previous })}
       />
       <IconAction
@@ -94,6 +98,7 @@ export function RollupPeriodControl({
             : t("rollup.period.nextNotBegun")
         }
         icon={<ChevronRight aria-hidden />}
+        pending={loading}
         reason={next ? undefined : t("rollup.period.nextNotBegun")}
         onClick={() => {
           if (next) {

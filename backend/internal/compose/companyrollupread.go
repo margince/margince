@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -47,11 +46,14 @@ type CompanyRollupResult struct {
 	RootID                ids.UUID
 	Scope                 string
 	WeightedPipelineMinor int64
-	ClosedWonMinor        *int64
-	ClosedWonPeriod       RollupWonPeriod
-	BaseCurrency          string
-	ActivityCount30d      int
-	ActivityWindowStart   time.Time
+	// PipelineStateAt is the database's time at the read's first statement,
+	// which is when its one snapshot was taken.
+	PipelineStateAt     time.Time
+	ClosedWonMinor      *int64
+	ClosedWonPeriod     RollupWonPeriod
+	BaseCurrency        string
+	ActivityCount30d    int
+	ActivityWindowStart time.Time
 	// CurrentPeriods names the year, quarter and month under way at
 	// ComputedAt, keyed by period field.
 	CurrentPeriods         map[string]string
@@ -91,7 +93,12 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 
 	asOf := now().UTC()
 	result := CompanyRollupResult{RootID: rootID, Scope: scope, RestrictedExcluded: []restrictedNode{}, ComputedAt: asOf}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	// Repeatable read, so the pipeline, the won sales and the tree all come
+	// from the one snapshot pipeline_state_at names.
+	err := InstallationDB(pool).TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT statement_timestamp()`).Scan(&result.PipelineStateAt); err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, "company", rootID); err != nil {
 			return err
 		}
@@ -381,16 +388,20 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	return total, nil
 }
 
-// closedWonMinorIn values the deals won in the period, placed by closed_at,
-// through the same valuation rule as the installation's other deal totals.
+// closedWonMinorIn values the deals won in the period by the read, placed by
+// closed_at. Win-loss sums the same deals at the same value (wonsales.go).
+// One won deal with no base value makes the total NULL. The figure is whole or
+// absent, never a priced part.
 func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, period RollupWonPeriod, asOf time.Time, baseCurrency string) (*int64, error) {
-	args := []any{included, period.Start, period.End}
+	// The cutoff has a position of its own. The valuation casts its instant to
+	// a date, and a shared position would take the date type for both uses.
+	args := []any{included, period.Start, period.End, asOf}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	// SUM over the MASKED expression rather than a filtered row set: SUM skips
 	// a NULL, so a withheld amount contributes nothing to the period. That is
 	// the answer the row itself gives the caller.
 	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
+		wonSalesValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
 	if err != nil {
 		return nil, err
 	}
@@ -398,13 +409,14 @@ func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, perio
 	if err != nil {
 		return nil, err
 	}
-	value := deals.FinalizeBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
+	value := deals.IncompleteBaseTotalSQL("sum("+amount+")", deals.UnpricedValueCountSQL(amount, nativeAmount, "TRUE"))
+	anchor := wonSalesAnchor("d")
 	var total *int64
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT %s
 		FROM deal d
-		WHERE d.company_id = ANY($1) AND d.status = 'won' AND d.archived_at IS NULL
-		  AND d.closed_at >= $2 AND d.closed_at < $3`, value),
+		WHERE d.company_id = ANY($1) AND %s AND d.status = 'won'
+		  AND %s >= $2 AND %s < $3 AND %s <= $4`, value, closedDealWhere("d"), anchor, anchor, anchor),
 		args...).Scan(&total)
 	return total, err
 }

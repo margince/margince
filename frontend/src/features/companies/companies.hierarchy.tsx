@@ -87,6 +87,7 @@ export function HierarchyRollupPanel({
         <RollupPeriodControl
           rollup={rollup}
           period={period}
+          loading={rollupQuery.isPlaceholderData}
           onChange={setPeriod}
         />
       }

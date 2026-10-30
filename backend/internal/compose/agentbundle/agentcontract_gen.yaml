@@ -755,8 +755,10 @@ paths:
         `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
         walked with one bounded indexed recursive query. A child the caller cannot read
         contributes nothing and is named in `restricted_excluded` — never silently summed.
-        All money converts to the workspace base currency; a missing stored FX rate fails
-        the whole read with `422 fx_rate_unavailable` rather than substituting a rate of 1.
+        All money converts to the workspace base currency. An open deal whose currency has no
+        stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
+        substituting a rate of 1. A won deal is valued at the base amount frozen when it was
+        won; one won deal in the period with no base value makes `closed_won` null.
         Totals are server-computed and reconcile exactly to their parts — never client-summed.
         Requires read on companies, deals, and activities; figures aggregate every deal
         and activity of each readable company — per-record row visibility within a

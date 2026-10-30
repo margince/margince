@@ -122,3 +122,44 @@ describe("HierarchyRollupPanel periods", () => {
     expect(screen.getByRole("button", { name: "Show 2026-Q2" })).toBeTruthy();
   });
 });
+
+describe("HierarchyRollupPanel while a new grain loads", () => {
+  it("holds the arrows until the answer for the picked grain arrives", async () => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const asked: URLSearchParams[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (!url.pathname.endsWith("/hierarchy-rollup")) {
+          return jsonResponse({});
+        }
+        asked.push(url.searchParams);
+        if (url.searchParams.has("period_year")) {
+          await held;
+        }
+        return jsonResponse(answerFor(url.searchParams));
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
+    await waitFor(() => expect(screen.getByText("€1,200.00")).toBeTruthy());
+
+    await user.click(
+      screen.getByRole("combobox", { name: "Period for won deals" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Year" }));
+    const back = screen.getByRole("button", { name: "Show 2026-Q1" });
+    await waitFor(() => expect(back.getAttribute("aria-busy")).toBe("true"));
+    await user.click(back);
+    expect(asked.some((params) => params.has("period_quarter"))).toBe(false);
+
+    release();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Show 2025" })).toBeTruthy(),
+    );
+  });
+});

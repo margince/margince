@@ -26,7 +26,7 @@ const (
 	// choose (REPORT-PARAM-7) — a caller who could pick it could produce two
 	// reports that disagree and both look right. It is NOT NULL for every row
 	// this report reads, guaranteed by the deal_closed_at CHECK.
-	colClosedAt = "t.closed_at"
+	colClosedAt = "t." + wonSalesAnchorColumn
 	colSource   = "t.source"
 	colOrigin   = "t.origin"
 	// The company's size band, read over win-loss's join to company. The
@@ -336,7 +336,7 @@ func winLossSpec() reportSpec {
 		// totals silently, which is the shape where a report quietly stops
 		// counting some of the business.
 		joins:     []string{"LEFT JOIN company company ON company.id = t.company_id"},
-		baseWhere: "t.archived_at IS NULL AND t.status IN ('won','lost')",
+		baseWhere: closedDealWhere("t"),
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
 		notes: "a lost deal counts once, under the period and loss_reason of its latest loss; " +
@@ -364,7 +364,7 @@ func winLossSpec() reportSpec {
 		// at the same revenue looked identical to one that was not.
 		measures: map[string]string{
 			fieldAmountMinor:     colAmountMinor,
-			fieldAmountBaseMinor: pipelineBaseValueExpr,
+			fieldAmountBaseMinor: wonSalesValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t"),
 			fieldDaysToClose:     daysToCloseExpr,
 		},
 		nativeMeasures: nativeMoney(fieldAmountMinor),
