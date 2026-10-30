@@ -108,8 +108,10 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
       name: translate("en", "deal.editDetails"),
     }),
   );
+  // The drawer's own field; the page's head renames the deal too.
+  const drawer = await screen.findByRole("dialog");
   await user.click(
-    await screen.findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: "Change Deal name" }),
   );
 }
 
