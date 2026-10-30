@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 140811,
+    "tool_catalog_bytes": 140794,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36290,
+    "approx_wire_tokens_total": 36286,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 34366,
+      "description_bytes": 34349,
       "input_schema_bytes": 66329,
       "output_schema_bytes": 30862,
-      "description_plus_input_schema_bytes": 100695
+      "description_plus_input_schema_bytes": 100678
     }
   },
   "tools": {
@@ -6536,7 +6536,7 @@
           "readOnlyHint": true,
           "title": "Read a view"
         },
-        "description": "Read what the record tools do not answer: a record's derived views (company_360, contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly what the matching REST route answers. Name the view, then the id it reads and any of its filters. A view refuses an argument it does not take and names the ones it does.",
+        "description": "Read what the record tools do not answer: a record's derived views (company_360, contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers what its REST route answers. Name the view, then the id it reads and any of its filters. A view refuses an argument it does not take and names the ones it does.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
