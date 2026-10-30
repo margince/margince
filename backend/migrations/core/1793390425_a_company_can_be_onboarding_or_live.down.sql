@@ -11,4 +11,4 @@ ALTER TABLE company DROP CONSTRAINT company_lifecycle_check;
 ALTER TABLE company
     ADD CONSTRAINT company_lifecycle_check
         CHECK (lifecycle IN ('unknown', 'target', 'prospect', 'opportunity', 'customer',
-                             'former_customer', 'disqualified'));
+                             'former_customer', 'disqualified')) NOT VALID;
