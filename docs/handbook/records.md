@@ -214,7 +214,7 @@ To archive a record in Margince, open it and choose **More actions**. Then choos
 
 Confirm the box. For contacts and companies it reads "Archive this record? You can bring it back from its history." You can archive many contacts, companies or deals at once with **Archive** in the list's bar for many records. A lead is not archived; disqualify it instead.
 
-An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only.
+An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only. Archiving needs your role's right to delete that kind of record. A User does not have it, except on a deal they own: the owner of a deal may archive it. Without the right, the archive entry is greyed out with the reason. A bulk archive of deals skips the deals you may not archive.
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?
@@ -284,9 +284,10 @@ A meeting holds a status: **booked, held, no-show, canceled.**
 **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit or delete a logged activity in the Margince app. An activity on the timeline has **Relink** and, except for email, **Change visibility**, both under **More actions** (⋯) on its row, but no Edit or Delete. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
-Also called: fix a note, remove an activity, change a task's due date, move an email to another deal.
+To take an activity off the History, choose **Archive** and confirm. You may archive a note or task you wrote yourself, including one your agent logged for you. Captured email, meetings, calls and a colleague's notes need a role that may delete activities: Team lead, Management, Ops or Admin. Anyone else sees **Archive** greyed out with the reason.
+Also called: fix a note, remove an activity, delete a note, remove a duplicate note, change a task's due date, move an email to another deal.
 
 ### Can I mention a colleague or comment on a record?
 No. Margince has no @mentions and no comments on a record. To tell a colleague something about a record, log a **Note** with **Log activity**. Or give them a task with **Add task** and pick them as **Assignee**. To ask a colleague to introduce you, use **Request introduction** on the contact.

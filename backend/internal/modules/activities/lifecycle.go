@@ -387,15 +387,12 @@ func renormalizeTranscriptPatch(current crmcontracts.Activity, in *UpdateActivit
 // archived_at), and the transaction never commits — the trigger refuses
 // every write to a held row, so there is nothing left to roll back deliberately.
 func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) error {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		held, err := lockActivityForWrite(ctx, tx, id.UUID)
+		held, err := lockActivityForArchive(ctx, tx, id.UUID)
 		if err != nil {
-			return err
-		}
-		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 			return err
 		}
 		if !held {
@@ -420,7 +417,7 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 func (s *Store) ArchiveActivity(
 	ctx context.Context, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption,
 ) (crmcontracts.Activity, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	var out crmcontracts.Activity
@@ -438,7 +435,7 @@ func (s *Store) ArchiveActivity(
 // ArchiveActivityTx is ArchiveActivity inside a caller-opened transaction, for
 // a bulk undo that retires the tasks its change filed in one commit.
 func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption) error {
-	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.ActivityArchive); err != nil {
 		return err
 	}
 	_, err := archiveActivityInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts), s.now())
@@ -448,11 +445,8 @@ func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 func archiveActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions, asOf time.Time,
 ) (crmcontracts.Activity, error) {
-	held, err := lockActivityForWrite(ctx, tx, id.UUID)
+	held, err := lockActivityForArchive(ctx, tx, id.UUID)
 	if err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := refuseIfTouched(ctx, tx, id, o); err != nil {

@@ -4347,6 +4347,11 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.archive": "Archive",
+  "activity.archiveConfirm": "Archive this entry? It leaves the History.",
+  "activity.archiveDone": "Entry archived",
+  "activity.archiveRefused":
+    "You can archive only notes and tasks you wrote yourself. Ask a manager to archive this entry.",
   "activity.notYoursToChange":
     "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
@@ -5519,6 +5524,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
+  "deal.archiveRefused":
+    "Only the deal’s owner or a manager can archive this deal.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
