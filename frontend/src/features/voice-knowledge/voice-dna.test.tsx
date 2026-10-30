@@ -236,7 +236,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     render(<VoiceDnaCard />);
     expect(
       await screen.findByRole("heading", {
-        name: "Teach Margince how you write",
+        name: "Your writing voice",
       }),
     ).toBeTruthy();
     expect(
@@ -640,5 +640,50 @@ describe("what the build button is called", () => {
     expect(
       await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
     ).toBeTruthy();
+  });
+
+  // A finished first build refetches the profile, so the hero stops offering
+  // the first build and the Builds card takes over the rebuild.
+  it("hands the build to the Builds card once the first build succeeds", async () => {
+    let profile: VoiceProfile = { ...PROFILE, maturity: "provisional" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/me") {
+          return jsonResponse(meFixture({ allow: VOICE_EDITOR }));
+        }
+        if (path === "/voice-profiles") {
+          return jsonResponse({ data: [profile], page: emptyPage.page });
+        }
+        if (path === "/voice-profiles/vp-1/sources") {
+          return jsonResponse({ data: [SOURCE], summary: SUMMARY });
+        }
+        if (
+          path === "/voice-profiles/vp-1/builds" &&
+          request.method === "POST"
+        ) {
+          return jsonResponse({ id: "vb-1", status: "queued" }, 201);
+        }
+        if (path === "/voice-profiles/vp-1/builds/vb-1") {
+          profile = { ...profile, status: "ready", profile_version: 1 };
+          return jsonResponse({ id: "vb-1", status: "succeeded" });
+        }
+        return jsonResponse(emptyPage);
+      }),
+    );
+    render(<VoiceDnaCard />);
+    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+
+    await userEvent.click(
+      await within(hero).findByRole("button", { name: /Build Voice DNA/ }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: /Rebuild Voice DNA/ }),
+    ).toBeTruthy();
+    expect(
+      within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
+    ).toBeNull();
   });
 });

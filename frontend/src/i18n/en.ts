@@ -12209,7 +12209,7 @@ export const en = {
   "settings.voice.jump.builds": "Builds",
   "settings.voice.editRules": "Edit your rules",
   "settings.voice.addMore": "Add more writing",
-  "settings.voice.start.title": "Teach Margince how you write",
+  "settings.voice.start.title": "Your writing voice",
   "settings.voice.start.body":
     "Margince learns how you sound from writing you add. Then every draft it writes sounds like you.",
   "settings.voice.start.stepsLabel": "How Margince learns your voice",

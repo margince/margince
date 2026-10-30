@@ -12185,7 +12185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.jump.builds": "Versionen",
   "settings.voice.editRules": "Regeln bearbeiten",
   "settings.voice.addMore": "Weitere Texte hinzufügen",
-  "settings.voice.start.title": "Bring Margince deinen Stil bei",
+  "settings.voice.start.title": "Dein Schreibstil",
   "settings.voice.start.body":
     "Margince lernt aus deinen Texten, wie du schreibst. Danach klingt jeder Entwurf nach dir.",
   "settings.voice.start.stepsLabel": "So lernt Margince deinen Stil",

@@ -11861,7 +11861,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.jump.builds": "Bản dựng",
   "settings.voice.editRules": "Sửa quy tắc",
   "settings.voice.addMore": "Thêm bài viết khác",
-  "settings.voice.start.title": "Dạy Margince cách bạn viết",
+  "settings.voice.start.title": "Giọng văn của bạn",
   "settings.voice.start.body":
     "Margince học cách bạn viết từ những bài bạn thêm vào. Sau đó mọi bản nháp đều giống văn bạn.",
   "settings.voice.start.stepsLabel": "Cách Margince học giọng văn của bạn",
