@@ -136,7 +136,7 @@ describe("the web tier answers a file it does not have with 404, never the app s
     );
   });
 
-  // The pdf.js worker that reads a Voice DNA PDF is a hashed .mjs asset, and a
+  // The pdf.js worker that reads a Voice DNA PDF is a hashed .mjs asset. A
   // browser runs a module worker only when it arrives typed as JavaScript.
   it("serves a hashed .mjs asset as JavaScript", () => {
     const assets = locate("/assets/pdf.worker.min-3f9a1c.mjs").body;
