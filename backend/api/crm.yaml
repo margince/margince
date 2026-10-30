@@ -48204,6 +48204,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant
+            or being the deal's owner with `deal:update`. An owner who named themselves owner
+            (an edit or a claim) needs the delete grant. Server-computed per row, per caller.
+            A UX signal, never the enforcement, exactly like `writable`; absent means NOT
+            archivable.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.' }
         lost_reason_code:
@@ -50497,6 +50506,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
+            grant, or `activity:update` on a hand-logged note or task the caller wrote (under
+            their own stamp or through an agent acting for them). Captured correspondence and a
+            colleague's note need the delete grant. Server-computed per row, per caller. A UX
+            signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
           readOnly: true
