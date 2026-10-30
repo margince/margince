@@ -202,7 +202,7 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 	}
 }
 
-// A decider who edits the offer to live still cannot set it: the effect runs as
+// A decider who edits the offer to live still cannot set it. The effect runs as
 // the system, and only a signed-in user may say the first scope is in use.
 func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
 	e := integration.Setup(t)

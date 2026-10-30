@@ -5,7 +5,7 @@ package values
 
 import "slices"
 
-// LifecycleLive is the company lifecycle only a signed-in user may set: it
+// LifecycleLive is the company lifecycle only a signed-in user may set. It
 // states that the agreed first scope is in use, which nothing in the product
 // can observe.
 const LifecycleLive = "live"

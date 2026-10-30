@@ -107,8 +107,8 @@ type StripLifecycle = NonNullable<
   Company360["state_strip"]
 >["account"]["lifecycle"];
 
-// The stages whose page leads with a money figure: every account we bill, and a
-// former customer's too, because the trailing year is a fact about invoices.
+// The stages whose page leads with a money figure are every account we bill
+// and a former customer. The trailing year is a fact about invoices.
 // This is narrower than `hasFinance` (companyfinance.tsx), a different rule.
 // That one asks whether an account could ever have been billed. It says yes
 // for an unknown or disqualified stage, so the Finance tab hides no money.

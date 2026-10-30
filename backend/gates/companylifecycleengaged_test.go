@@ -9,7 +9,7 @@ package gates
 //
 // Mail reminders, ghosted-thread nudges and the offer to move an account to
 // former customer all ask values.EngagedLifecycles. A stage the contract gains
-// and that list never judged would drop out of all three with no error, so the
+// and that list never judged would drop out of all three with no error. So the
 // judged list must equal every contract enum that spells a lifecycle. The browser's
 // picker list is a declared mirror of it, in the same wire order.
 

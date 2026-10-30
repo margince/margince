@@ -128,8 +128,8 @@ func TestAnUnansweredMessageToACustomerIsAFollowUp(t *testing.T) {
 	}
 }
 
-// An account in set-up or live is one we deliver for, so unanswered mail to it
-// is owed a follow-up; an account that is over is not.
+// An account in set-up or live is one we deliver for. Unanswered mail to it is
+// owed a follow-up, and mail to an account that is over is not.
 func TestUnansweredMailToAnAccountWeDeliverForIsAFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
@@ -141,8 +141,8 @@ func TestUnansweredMailToAnAccountWeDeliverForIsAFollowUp(t *testing.T) {
 	}
 }
 
-// Without the company arm the statement carries no lifecycle list, and a
-// reader who may not read companies still gets an answer rather than an error.
+// Without the company arm the statement carries no lifecycle list. A reader
+// who may not read companies still gets an answer rather than an error.
 func TestAReaderWhoMayNotReadCompaniesLearnsNoStageFromAFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
