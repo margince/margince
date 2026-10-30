@@ -187,11 +187,11 @@ cases:
         each is on, and only the tag's own read carries that count; the tag
         list does not.
     2:
-      name: A fold nobody has released is reported as waiting
+      name: A fold that went through is reported as done
       statement: >-
-        Folding one word into another is a human's decision, and the answer
-        names that decision rather than describing the vocabulary as already
-        tidied up.
+        Folding one word into another goes through at once for the user's own
+        agent, and the answer says the records moved rather than calling the
+        fold staged or waiting.
     3:
       name: The surviving word is given its meaning
       statement: >-
