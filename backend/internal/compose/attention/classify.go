@@ -300,6 +300,11 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		out.reminded = true
 		raiseToTop(&out)
 	}
+	// Work due after today waits in Today's Upcoming section, unless its
+	// reminder already asks for it now.
+	if isUpcoming(item.DueGroup) && !out.reminded && !out.overdue {
+		out.item.Category = categoryUpcoming
+	}
 	return out
 }
 

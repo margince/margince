@@ -21845,6 +21845,7 @@ const (
 	WorklistFilterRelationships     WorklistFilter = "relationships"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
+	WorklistFilterUpcoming          WorklistFilter = "upcoming"
 	WorklistFilterUrgent            WorklistFilter = "urgent"
 )
 
@@ -21872,6 +21873,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterSystem:
 		return true
 	case WorklistFilterTasks:
+		return true
+	case WorklistFilterUpcoming:
 		return true
 	case WorklistFilterUrgent:
 		return true
@@ -21922,6 +21925,27 @@ func (e WorklistScopeOptions) Valid() bool {
 	case WorklistScopeOptionsTeam:
 		return true
 	case WorklistScopeOptionsUnassigned:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorklistView.
+const (
+	WorklistViewDecisions WorklistView = "decisions"
+	WorklistViewSystem    WorklistView = "system"
+	WorklistViewToday     WorklistView = "today"
+)
+
+// Valid indicates whether the value is a known member of the WorklistView enum.
+func (e WorklistView) Valid() bool {
+	switch e {
+	case WorklistViewDecisions:
+		return true
+	case WorklistViewSystem:
+		return true
+	case WorklistViewToday:
 		return true
 	default:
 		return false
@@ -22037,6 +22061,7 @@ const (
 	WorklistCountCategoryRelationships   WorklistCountCategory = "relationships"
 	WorklistCountCategorySystem          WorklistCountCategory = "system"
 	WorklistCountCategoryTasks           WorklistCountCategory = "tasks"
+	WorklistCountCategoryUpcoming        WorklistCountCategory = "upcoming"
 )
 
 // Valid indicates whether the value is a known member of the WorklistCountCategory enum.
@@ -22057,6 +22082,8 @@ func (e WorklistCountCategory) Valid() bool {
 	case WorklistCountCategorySystem:
 		return true
 	case WorklistCountCategoryTasks:
+		return true
+	case WorklistCountCategoryUpcoming:
 		return true
 	default:
 		return false
@@ -22250,6 +22277,7 @@ const (
 	WorklistItemCategoryRelationships   WorklistItemCategory = "relationships"
 	WorklistItemCategorySystem          WorklistItemCategory = "system"
 	WorklistItemCategoryTasks           WorklistItemCategory = "tasks"
+	WorklistItemCategoryUpcoming        WorklistItemCategory = "upcoming"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemCategory enum.
@@ -22270,6 +22298,8 @@ func (e WorklistItemCategory) Valid() bool {
 	case WorklistItemCategorySystem:
 		return true
 	case WorklistItemCategoryTasks:
+		return true
+	case WorklistItemCategoryUpcoming:
 		return true
 	default:
 		return false
@@ -26006,6 +26036,7 @@ const (
 	GetWorklistParamsFilterRelationships     GetWorklistParamsFilter = "relationships"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
+	GetWorklistParamsFilterUpcoming          GetWorklistParamsFilter = "upcoming"
 	GetWorklistParamsFilterUrgent            GetWorklistParamsFilter = "urgent"
 )
 
@@ -26034,7 +26065,30 @@ func (e GetWorklistParamsFilter) Valid() bool {
 		return true
 	case GetWorklistParamsFilterTasks:
 		return true
+	case GetWorklistParamsFilterUpcoming:
+		return true
 	case GetWorklistParamsFilterUrgent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetWorklistParamsView.
+const (
+	GetWorklistParamsViewDecisions GetWorklistParamsView = "decisions"
+	GetWorklistParamsViewSystem    GetWorklistParamsView = "system"
+	GetWorklistParamsViewToday     GetWorklistParamsView = "today"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsView enum.
+func (e GetWorklistParamsView) Valid() bool {
+	switch e {
+	case GetWorklistParamsViewDecisions:
+		return true
+	case GetWorklistParamsViewSystem:
+		return true
+	case GetWorklistParamsViewToday:
 		return true
 	default:
 		return false
@@ -57309,7 +57363,7 @@ type WorkingHours struct {
 //
 // | Figure | Unit | Counted over | Exact or floor |
 // |---|---|---|---|
-// | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+// | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
 // | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
 // | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
 // | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
@@ -57497,6 +57551,9 @@ type Worklist struct {
 	// `none`.
 	TeamWeek *TeamWeekReach `json:"team_week,omitempty"`
 
+	// View The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
+	View *WorklistView `json:"view,omitempty"`
+
 	// Walk What has happened to this walk since it started.
 	//
 	// A walk is frozen at its first page: the rows it covers and the order they sit in
@@ -57539,6 +57596,9 @@ type WorklistScope string
 
 // WorklistScopeOptions defines model for Worklist.ScopeOptions.
 type WorklistScopeOptions string
+
+// WorklistView The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
+type WorklistView string
 
 // WorklistBand One outcome band and how much of it this page is showing — the headings a client draws,
 // in the order it draws them.
@@ -58891,7 +58951,7 @@ type WorklistSummary struct {
 	// no open deals to take a median of.
 	MaterialThresholdMinor *int64 `json:"material_threshold_minor,omitempty"`
 
-	// Total How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree.
+	// Total How many candidates the requested view holds. The same population as the `considered` figures of that view's categories. Upcoming work is never counted here: none of it is due today.
 	Total int `json:"total"`
 
 	// Urgent Items at the top two levels: somebody is waiting, or a promise is breaking.
@@ -66314,7 +66374,32 @@ type GetWorklistParams struct {
 	// already draws as cards. With no run to compare against it answers empty rather
 	// than everything: absent is not false, and a reader asking what changed since a
 	// night that never happened is owed nothing, not the whole queue.
+	//
+	// `upcoming` is planned work due after today: the Upcoming and backlog section
+	// at the end of the Today view. These rows never appear in a queue that does not
+	// ask for them, and `summary` never counts them; `counts` reports them under the
+	// `upcoming` category.
+	//
+	// Every value belongs to one view. `decisions` belongs to the Decisions view,
+	// `system` to the System view, `all` to every view, and the rest to Today.
+	// Without `view`, `filter=decisions` and `filter=system` are read as that view.
+	// A filter sent with a view it does not belong to returns
+	// `422 code: filter_outside_view`, whose message names the filter's view.
 	Filter *GetWorklistParamsFilter `form:"filter,omitempty" json:"filter,omitempty"`
+
+	// View Which work view to answer. `today` is work a seller executes: every category
+	// except `decisions` and `system`. `decisions` is judgements somebody owes, and
+	// `system` is problems the product reports about itself. A view narrows the
+	// queue before the page is cut, so paging never reaches another view's rows.
+	//
+	// Omitted means no view: the whole day, as before views existed, except that
+	// `filter=decisions` and `filter=system` open their view. `summary` counts the
+	// requested view only; `counts` still reports every category, so a client can
+	// label the other views without a second read.
+	//
+	// A cursor encodes the view it was minted under, and a cursor sent with another
+	// view returns `422 code: cursor_param_mismatch`.
+	View *GetWorklistParamsView `form:"view,omitempty" json:"view,omitempty"`
 
 	// Limit How many ranked items to return.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -66413,6 +66498,9 @@ type GetWorklistParamsScope string
 
 // GetWorklistParamsFilter defines parameters for GetWorklist.
 type GetWorklistParamsFilter string
+
+// GetWorklistParamsView defines parameters for GetWorklist.
+type GetWorklistParamsView string
 
 // GetHandledForYouParams defines parameters for GetHandledForYou.
 type GetHandledForYouParams struct {
@@ -126695,6 +126783,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "filter"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "filter", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
 		}
 		return
 	}

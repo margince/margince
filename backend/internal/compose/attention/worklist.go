@@ -39,6 +39,18 @@ const worklistMaxPage = 100
 func (s *Service) Worklist(
 	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
 ) (crmcontracts.Worklist, error) {
+	return s.WorklistView(ctx, "", scope, filter, owner, limit, token)
+}
+
+// WorklistView answers one work view of the ranked day. An empty view is the
+// whole day, except that a decisions or system filter opens its view.
+func (s *Service) WorklistView(
+	ctx context.Context, view, scope, filter string, owner ids.UUID, limit int, token string,
+) (crmcontracts.Worklist, error) {
+	view, err := resolveView(view, filter)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	// ONE snapshot around the whole page, for the two reasons assemble.go
 	// gives: the lanes cost one transaction between them, and they answer from
 	// one instant so the page cannot disagree with itself.
@@ -49,9 +61,11 @@ func (s *Service) Worklist(
 		return crmcontracts.Worklist{}, err
 	}
 	var out crmcontracts.Worklist
-	err := s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
+	viewing := *s
+	viewing.view = view
+	err = s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
 		var err error
-		out, err = s.worklistIn(ctx, scope, filter, owner, limit, token)
+		out, err = viewing.worklistIn(ctx, scope, filter, owner, limit, token)
 		return err
 	})
 	if err == nil {
@@ -87,7 +101,7 @@ func (s *Service) worklistIn(
 	// Refused BEFORE the day is read: a token minted for another question is the
 	// caller's mistake, and assembling a page to then discard it spends a dozen
 	// lane reads on an answer nobody receives.
-	cursor, err := decodeCursor(token, resolved, filter, namedOwner)
+	cursor, err := decodeCursor(token, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -99,7 +113,7 @@ func (s *Service) worklistIn(
 	//
 	// The caller re-issues without the cursor, which is the remedy a token
 	// minted under a different question already carries.
-	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, filter, namedOwner)
+	walk, walking, err := s.walkNamedBy(ctx, cursor, resolved, askedFor(s.view, filter), namedOwner)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -325,9 +339,10 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
-	if !opensTheDeck(filter) {
+	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
 		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	}
+	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
 		rows = keepFiltered(rows, crmcontracts.WorklistFilter(filter))
@@ -370,7 +385,7 @@ func (s *Service) worklistFrom(
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
-		ctx, rows, limit, cursor, scope, filter, unreadSources(missing), day.AsOf)
+		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -402,7 +417,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(considered, materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -432,6 +447,9 @@ func (s *Service) worklistFrom(
 		narrowed := crmcontracts.WorklistFilter(filter)
 		out.Filter = &narrowed
 	}
+	if s.view != "" {
+		out.View = new(crmcontracts.WorklistView(s.view))
+	}
 	// The token for the row this page stopped on, minted ONLY when there is more
 	// behind it. A cursor on a final page invites one more request that can only
 	// answer empty, and a client walking until the cursor disappears would never
@@ -446,7 +464,7 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, filter, s.taskOwner, walk.id)
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id)
 		out.NextCursor = &token
 	}
 	// What has happened to this walk since it started, where there is a walk to

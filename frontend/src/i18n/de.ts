@@ -17008,6 +17008,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.decisions": "Freigaben",
   "worklist.filter.relationships": "Ruhende Beziehungen",
   "worklist.filter.system": "System",
+  "worklist.filter.upcoming": "Anstehend und Rückstand",
   "worklist.filter.linked.urgent":
     "Es werden nur dringende Einträge angezeigt: Jemand wartet, oder eine Zusage droht gebrochen zu werden.",
   "worklist.filter.linked.except_decisions":

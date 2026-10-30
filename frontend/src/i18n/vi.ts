@@ -16580,6 +16580,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.decisions": "Phê duyệt",
   "worklist.filter.relationships": "Liên hệ đã im lặng",
   "worklist.filter.system": "Hệ thống",
+  "worklist.filter.upcoming": "Sắp tới và tồn đọng",
   "worklist.filter.linked.urgent":
     "Chỉ hiển thị việc khẩn cấp: có ai đó đang chờ, hoặc một cam kết sắp bị lỡ.",
   "worklist.filter.linked.except_decisions":
