@@ -222,6 +222,27 @@ func TestSdrWaitingHandoffWithheldProspectIsRestricted(t *testing.T) {
 	}
 }
 
+func TestSdrWaitingHandoffWithAMaskedLeadCompanyIsRestricted(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+	e := f.e
+	lead := e.seedID(t, `INSERT INTO lead(id,full_name,company_name,source,captured_by) VALUES($1,'','Masked Company Ltd','inbound','system:fixture')`)
+	if _, err := f.handoffs.SubmitHandoff(f.ctx, contacts.NewSDRHandoff{LeadID: &lead, AssignedTo: &f.ae}); err != nil {
+		t.Fatal(err)
+	}
+	// A mask binds a bounded seat; an all-rows seat is not masked at all.
+	reader := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
+	actor, _ := principal.Actor(reader)
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "lead", Field: "company_name", Condition: principal.MaskAlways}}
+	reader = principal.WithActor(reader, actor)
+	page := f.page(t, reader, e.Rep1, nil, 10)
+	if len(page.Rows) != 1 {
+		t.Fatalf("the seat's own handoff is listed: %+v", page)
+	}
+	if row := page.Rows[0]; !row.Restricted || row.Subject != nil {
+		t.Fatalf("a lead labelled by a masked company name must not show it: %+v", row.Subject)
+	}
+}
+
 func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	e := f.e

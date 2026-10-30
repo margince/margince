@@ -198,11 +198,11 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	if err != nil {
 		return nil, nil, err
 	}
-	leadVisible, err := subjectVisibleSQL(ctx, string(recordTypeLead), "l", &b)
+	leadVisible, err := subjectVisibleSQL(ctx, string(recordTypeLead), "l", leadNameFields, &b)
 	if err != nil {
 		return nil, nil, err
 	}
-	contactVisible, err := subjectVisibleSQL(ctx, tableContact, "c", &b)
+	contactVisible, err := subjectVisibleSQL(ctx, tableContact, "c", []string{fieldFullName}, &b)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -241,14 +241,18 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	return out, &next, nil
 }
 
+// leadNameFields are the columns leadNameSQL reads, so the label is built only
+// from fields whose mask was checked.
+var leadNameFields = []string{fieldFullName, companyNameField}
+
 // subjectVisibleSQL is whether the prospect under alias is one this seat may
-// read by name: its row scope and the mask on its name.
-func subjectVisibleSQL(ctx context.Context, table, alias string, b *reportingBindings) (string, error) {
+// read by name: its row scope and the mask on every column its label reads.
+func subjectVisibleSQL(ctx context.Context, table, alias string, nameFields []string, b *reportingBindings) (string, error) {
 	rowScope, err := auth.ScopeClauseFor(ctx, table, alias, b.arg)
 	if err != nil {
 		return "", err
 	}
-	fieldScope, _, err := reportingFieldScope(ctx, table, alias, []string{fieldFullName}, b)
+	fieldScope, _, err := reportingFieldScope(ctx, table, alias, nameFields, b)
 	if err != nil {
 		return "", err
 	}
