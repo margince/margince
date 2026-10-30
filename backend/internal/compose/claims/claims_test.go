@@ -235,9 +235,22 @@ func TestTheWriterAloneIsRefusedAndTheWriterWithOthersIsNot(t *testing.T) {
 		"Chúng tôi sẽ gửi hợp đồng.",
 		"Let's send the agreement.",
 		"Send the agreement.",
+		"I/O bottlenecks stall their plants; lead with that.",
 	} {
 		if OpensWithSingularWriterSubject(text) {
 			t.Errorf("OpensWithSingularWriterSubject(%q) = true, want it kept", text)
+		}
+	}
+	for lang, subjects := range writerSubjects {
+		for _, subject := range subjects.singular {
+			if !OpensWithSingularWriterSubject(subject + " send the agreement.") {
+				t.Errorf("%s singular subject %q is listed and still not refused", lang, subject)
+			}
+		}
+		for _, subject := range subjects.plural {
+			if OpensWithSingularWriterSubject(subject + " send the agreement.") {
+				t.Errorf("%s plural subject %q is refused as the writer alone", lang, subject)
+			}
 		}
 	}
 }
@@ -267,7 +280,7 @@ func TestARecommendationOpeningWithIOrWeIsAPromise(t *testing.T) {
 		"2) We'll call them.",
 		"To\u0302i se\u0303 gu\u031B\u0309i",
 		"Iʼll send it.",
-		"I.e. send the agreement.", // the splitter reads "I.e." as the words i and e
+		"I. Send the agreement.",
 	} {
 		if !OpensWithWriterSubject(text) {
 			t.Errorf("OpensWithWriterSubject(%q) = false, want the promise refused", text)
@@ -285,6 +298,8 @@ func TestAnInstructionOrAFactIsNotAPromise(t *testing.T) {
 		"I-beam supply is their bottleneck.",
 		"They asked for the agreement; I couldn't see their reply.",
 		"Schicke ihnen den Vertrag.",
+		"I.e. send the agreement.", // a "." between two letters stays inside the word
+		"I/O bottlenecks stall their plants; lead with that.",
 		"",
 	} {
 		if OpensWithWriterSubject(text) {

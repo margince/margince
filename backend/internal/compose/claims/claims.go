@@ -282,7 +282,7 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 // writerSubjects is, per shipped language, every subject that makes a
 // recommendation the writer's or the reader's own promise. Vietnamese anh, chị,
 // em and mình are absent: each also addresses the reader as "you".
-// Apart from compose's writerSubjectWords: these match an opening phrase, which can be two words.
+// Apart from compose's writerSubjectWords and selfWords: these match an opening phrase, while those scan every word and selfWords holds objects.
 var writerSubjects = map[textlang.Lang]languageSubjects{
 	textlang.English: {
 		singular: []string{"i", "i'll", "i'm", "i've", "i'd"},
@@ -345,9 +345,15 @@ var apostrophes = strings.NewReplacer("’", "'", "ʼ", "'")
 
 // leadingWords spells its words as writerSubjects does: composed, lowercase, every apostrophe as '.
 func leadingWords(text string, n int) []string {
-	normalised := strings.ToLower(apostrophes.Replace(norm.NFC.String(text)))
-	words := strings.FieldsFunc(normalised, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r) && r != '\'' && r != '-'
+	runes := []rune(strings.ToLower(apostrophes.Replace(norm.NFC.String(text))))
+	for i, r := range runes {
+		// A "." between two letters joins an abbreviation, "i.e.", and any other "." ends a word.
+		if r == '.' && (i == 0 || i == len(runes)-1 || !unicode.IsLetter(runes[i-1]) || !unicode.IsLetter(runes[i+1])) {
+			runes[i] = ' '
+		}
+	}
+	words := strings.FieldsFunc(string(runes), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r) && !strings.ContainsRune("'-/.", r)
 	})
 	out := make([]string, 0, n)
 	for _, word := range words {
@@ -355,7 +361,7 @@ func leadingWords(text string, n int) []string {
 			break
 		}
 		// An opening ' quote, a dash or a numbered bullet must not hide the word after it.
-		word = strings.Trim(word, "'-")
+		word = strings.Trim(word, "'-/.")
 		if word == "" || (len(out) == 0 && strings.TrimFunc(word, unicode.IsDigit) == "") {
 			continue
 		}

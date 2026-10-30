@@ -303,12 +303,18 @@ func ParseGrowthFit(reply string, in Input) (crmcontracts.GrowthFitBand, GrowthF
 		Whitespace:      keepNatures(parsed.Whitespace, known, observations),
 		Objections:      keepNatures(parsed.Objections, known, observations),
 	}
+	angleSpokeAsWriter := false
 	if parsed.RecommendedAngle != nil {
 		angle := keepNatures([]claims.Sentence{*parsed.RecommendedAngle}, known, suggestions)
 		// Not "we": this prompt makes "we" the reader's own company.
-		if len(angle) == 1 && !claims.OpensWithSingularWriterSubject(angle[0].Text) {
+		angleSpokeAsWriter = len(angle) == 1 && claims.OpensWithSingularWriterSubject(angle[0].Text)
+		if len(angle) == 1 && !angleSpokeAsWriter {
 			kept.RecommendedAngle = &angle[0]
 		}
+	}
+	if kept.empty() && angleSpokeAsWriter {
+		return "", GrowthFitClaims{}, errors.New(
+			`the growth-fit recommended angle spoke as the writer; write it as the move, "Lead with …"`)
 	}
 	if kept.empty() {
 		// A band with nothing checkable behind it is the shape this whole

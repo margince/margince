@@ -10,6 +10,7 @@ package companydossier
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -317,5 +318,18 @@ func TestAnAngleWrittenAsTheWritersOwnIsDroppedAndTheRestOfTheReplyKept(t *testi
 				t.Errorf("angle kept = %v, want %v", got, c.kept)
 			}
 		})
+	}
+}
+
+func TestAReplyWhoseOnlyClaimIsAnAngleWrittenAsTheWritersOwnSaysSo(t *testing.T) {
+	in := sevenOfSeven()
+	id := in.ProfileFields[0].Id.String()
+	reply := `{"band":"strong","recommended_angle":{"text":"I'd lead with their plant managers.",` +
+		`"nature":"recommendation","evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]}}`
+
+	_, _, err := ParseGrowthFit(reply, in)
+
+	if err == nil || !strings.Contains(err.Error(), "spoke as the writer") {
+		t.Errorf("err = %v, want the angle named as speaking for the writer, not the reply as citing nothing", err)
 	}
 }
