@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -162,6 +163,35 @@ func TestTheOwnerOfADealArchivesIt(t *testing.T) {
 		t.Fatalf("archiving my own deal → %v, want allowed", err)
 	}
 	archiveWroteTheShape(t, e, mine.UUID, "deal.archived")
+}
+
+func TestADealTheRepNamedThemselvesOwnerOfStaysTheManagersToArchive(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
+	me := ids.From[ids.UserKind](e.Rep1)
+	taken := ids.From[ids.DealKind](e.SeedDeal(t, "Teammate's", pipeline, open, &e.Rep2))
+	handed := ids.From[ids.DealKind](e.SeedDeal(t, "Handed over", pipeline, open, &e.Rep2))
+
+	if _, err := e.Deals.UpdateDeal(rep, taken, deals.UpdateDealInput{OwnerID: &me}); err != nil {
+		t.Fatalf("a teammate naming themselves owner: %v", err)
+	}
+	if _, err := e.Deals.UpdateDeal(e.Admin(), handed, deals.UpdateDealInput{OwnerID: &me}); err != nil {
+		t.Fatalf("an admin handing the deal over: %v", err)
+	}
+	read, err := e.Deals.GetDeal(rep, taken, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *read.Archivable {
+		t.Error("a deal the rep named themselves owner of reads as archivable")
+	}
+	if _, err := e.Deals.ArchiveDeal(rep, taken, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("archiving a deal the rep took over themselves → %v, want ErrPermissionDenied", err)
+	}
+	if _, err := e.Deals.ArchiveDeal(rep, handed, nil); err != nil {
+		t.Errorf("archiving a deal an admin handed to the rep → %v, want allowed", err)
+	}
 }
 
 func withActivityDelete(base principal.Permissions) principal.Permissions {

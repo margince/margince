@@ -381,8 +381,8 @@ Archiving a deal is different from closing it. A closed deal is a finished
 part of your business; an archived deal has left your lists.
 
 To archive a deal, open it and choose **More actions** → **Archive deal**, or
-tick several on the list and use **Archive**. The owner, a Team lead,
-Management, Ops or Admin may archive a deal; a bulk archive skips the others.
+tick several on the list and use **Archive**. The owner (unless they made
+themselves owner), a Team lead, Management, Ops or Admin may archive a deal.
 Archived deals leave every list and report. **Show archived** lets you see one,
 read-only. To bring one back (Team lead, Management, Ops or Admin), open it with
 **Show archived**, find the archive entry in its history and press **Undo**. A

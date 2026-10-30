@@ -214,7 +214,7 @@ To archive a record in Margince, open it and choose **More actions**. Then choos
 
 Confirm the box. For contacts and companies it reads "Archive this record? You can bring it back from its history." You can archive many contacts, companies or deals at once with **Archive** in the list's bar for many records. A lead is not archived; disqualify it instead.
 
-An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only. Archiving needs your role's right to delete that kind of record. A User does not have it, except on a deal they own: the owner of a deal may archive it. Without the right, the archive entry is greyed out with the reason. A bulk archive of deals skips the deals you may not archive.
+An archived record leaves the live list; turn on **Show archived** on the list to see it again. It becomes read-only. Archiving needs your role's right to delete that kind of record. A User does not have it, except on a deal they own and did not make themselves owner of. Without the right, the archive entry is greyed out with the reason. A bulk archive of deals skips the deals you may not archive.
 Also called: remove, hide, deactivate a record.
 
 ### Can I restore or unarchive an archived record?

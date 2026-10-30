@@ -14547,7 +14547,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether THIS caller may archive THIS deal: `writable`, plus the `deal:delete` grant or being the deal's owner with `deal:update`. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+            Whether THIS caller may archive THIS deal: `writable`, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         status: {type: string, enum: [open, won, lost], default: open}
         lost_reason: {type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.'}
         lost_reason_code:

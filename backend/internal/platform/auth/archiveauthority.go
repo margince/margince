@@ -29,9 +29,19 @@ var ActivityArchive = ArchiveRule{object: "activity", table: "activity", own: fu
 		alias, arg(provenance.RecordSourceManual), activityAuthorSQL(alias, me, arg))
 }}
 
-// DealArchive admits the deal's owner.
+// DealArchive admits the deal's owner, unless the owner took the deal
+// themselves. A write share lets its holder name themselves owner, so without
+// that arm the share would carry the archive the decision keeps from it.
 var DealArchive = ArchiveRule{object: tableDeal, table: tableDeal, own: func(alias string, me int, _ func(any) int) string {
-	return fmt.Sprintf(`%s.owner_id IN (%s)`, alias, memberIdentitySQL(me))
+	return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
+	   SELECT 1 FROM (SELECT made.action, made.actor_id, made.on_behalf_of FROM audit_log made
+	     WHERE made.entity_type = 'deal' AND made.entity_id = %[1]s.id
+	       AND made.before->'owner_id' IS DISTINCT FROM made.after->'owner_id' AND made.after ? 'owner_id'
+	     ORDER BY made.occurred_at DESC, made.id DESC LIMIT 1) handed
+	   WHERE handed.action <> 'create' AND (handed.on_behalf_of IN (%[2]s)
+	      OR (split_part(handed.actor_id, ':', 1) = '%[3]s'
+	          AND split_part(handed.actor_id, ':', 2) IN (SELECT taker.id::text FROM (%[2]s) taker)))))`,
+		alias, memberIdentitySQL(me), principal.PrincipalHuman)
 }}
 
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a

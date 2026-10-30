@@ -40045,7 +40045,7 @@ type Deal struct {
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
 	AmountMinor       *int64  `json:"amount_minor,omitempty"`
 
-	// Archivable Whether THIS caller may archive THIS deal: `writable`, plus the `deal:delete` grant or being the deal's owner with `deal:update`. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	// Archivable Whether THIS caller may archive THIS deal: `writable`, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
