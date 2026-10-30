@@ -99,7 +99,7 @@ window is the planned lane's own count; the later window is `CountTasks`. A team
 its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
 C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's
 window took 38 ms, against 69 ms for the count of every readable task it replaces. The later window's count took
-26 ms. The team page's first-page p50 stayed within 5% of the page without them.
+26 ms. The team page's first page grew about 3% at p50, from 1,278 ms to 1,321 ms.
 
 The `customer_waiting` source is read on below the ranked rows to its end, in every scope, by
 `WaitingCardsAfter` (`modules/activities/waitingcards.go`). Each read judges a fixed number of messages after
