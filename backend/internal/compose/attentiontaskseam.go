@@ -167,14 +167,14 @@ func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWin
 }
 
 // TasksAfter continues one task window past the lane's cap, in the store's
-// due-date order. It reads no reminder arm: the lane holds every due one.
-// next is empty once the window is read to its end.
+// due-date order, each task with the position after it. It reads no reminder
+// arm: the lane holds every due one.
 func (t attentionTasks) TasksAfter(
 	ctx context.Context, window attention.TaskWindow, after string, limit int,
-) ([]attention.Task, string, error) {
+) ([]attention.Positioned[attention.Task], bool, error) {
 	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
 	if !ok {
-		return nil, "", nil
+		return nil, false, nil
 	}
 	in.TeamQueueOf, in.Limit = window.Team, &limit
 	if !window.From.IsZero() {
@@ -183,15 +183,26 @@ func (t attentionTasks) TasksAfter(
 	if after != "" {
 		in.Cursor = &after
 	}
-	rows, page, err := t.listTaskPage(ctx, in)
+	var rows []crmcontracts.Activity
+	var positions []string
+	var page storekit.Page
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, positions, page, err = t.store.ListActivitiesPositioned(ctx, in)
+		return err
+	})
 	if err != nil {
-		return nil, "", err
+		return nil, false, err
 	}
 	tasks, err := t.asTasks(ctx, rows, window.Scope, window.AsOf)
-	if !page.HasMore {
-		return tasks, "", err
+	if err != nil {
+		return nil, false, err
 	}
-	return tasks, page.NextCursor, err
+	out := make([]attention.Positioned[attention.Task], len(tasks))
+	for i, task := range tasks {
+		out[i] = attention.Positioned[attention.Task]{Row: task, After: positions[i]}
+	}
+	return out, page.HasMore, nil
 }
 
 // RemindersForViewer reads every due reminder of the reader's through the

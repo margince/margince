@@ -63,12 +63,9 @@ func withinWaitingHorizonSQL(asOf, days string) string {
 	   AND (` + young + ` OR (` + requestOpenSQL + `)))`
 }
 
-// waitingRepliesSQL is owedSQL narrowed by the queue's own rules: horizon,
-// sales link, colleagues and the reader's set-asides. Requests survive replies and
-// closed deals until explicit resolution, and age only while a human holds them.
-// All eligibility predicates precede the cap. Every rule
-// that hides a row owed a reply has a figure in hiddenbacklog.go.
-var waitingRepliesSQL = `
+// waitingSelectSQL draws one waiting row per message the caller's WHERE names.
+// Every statement of the queue shares it, so a row reads alike on each.
+var waitingSelectSQL = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''),
 	       COALESCE((array_agg(sender.address ORDER BY sender.address)
 	                 FILTER (WHERE sender.address IS NOT NULL))[1], ''),
@@ -207,7 +204,8 @@ var waitingRepliesSQL = `
 	       -- conversation; '' for a message that belongs to none.
 	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
 	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `,
-	       ` + strangerMailSQL + `
+	       ` + strangerMailSQL + `,
+	       a.sender_is_machine
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
@@ -227,13 +225,15 @@ var waitingRepliesSQL = `
 	  LEFT JOIN LATERAL (SELECT ownerContact.id, ownerContact.owner_id, ownerContact.archived_at FROM contact ownerContact
 	                    WHERE ownerContact.id = wl.contact_id OFFSET 0) ownerContact ON true
 	  LEFT JOIN LATERAL (SELECT ownerCompany.id, ownerCompany.owner_id FROM company ownerCompany
-	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true
-	 -- The cap is taken over the messages themselves, before any link is joined.
-	 -- Every rule below reads one message, so Postgres walks the newest first
-	 -- and stops at the cap instead of judging the whole horizon. An ARRAY,
-	 -- built once, so the primary key fetches the capped set; as a join or an
-	 -- IN, the planner joined the whole table first and filtered afterwards.
-	 WHERE a.id = ANY (ARRAY(SELECT a.id FROM activity a
+	                    WHERE ownerCompany.id = wl.company_id OFFSET 0) ownerCompany ON true`
+
+// waitingEligibleSQL selects the messages the queue admits: owedSQL narrowed by
+// the queue's own rules, the horizon, sales link, colleagues and the reader's
+// set-asides. Requests survive replies and closed deals until explicit
+// resolution, and age only while a human holds them. Every rule that hides a
+// row owed a reply has a figure in hiddenbacklog.go. Each rule reads one
+// message, so a caller's cap or count runs over what it admits.
+var waitingEligibleSQL = `SELECT a.id FROM activity a
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -333,7 +333,19 @@ var waitingRepliesSQL = `
 	   -- deletes the state row. handled lifts only by undo; the customer's next
 	   -- message is a new row with no state.
 	   AND (%[20]s OR NOT ` + readerSetAsideSQL("$%[9]d", "%[15]s") + `)
-		   AND ` + filedUnderALiveContactSQL + ` %[18]s
+		   AND ` + filedUnderALiveContactSQL + ` %[18]s`
+
+// waitingGroupSQL folds the joined links back to one row per message.
+const waitingGroupSQL = `
+	 GROUP BY a.id, a.kind, a.subject, a.occurred_at`
+
+// waitingRepliesSQL is one page of the queue, newest first. The cap is taken
+// over the messages themselves, before any link is joined, so Postgres walks
+// the newest first and stops at the cap. An ARRAY, built once, so the primary
+// key fetches the capped set; as a join or an IN, the planner joined the whole
+// table first and filtered afterwards.
+var waitingRepliesSQL = waitingSelectSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
 	 -- NEWEST first, which is the opposite of how the rows are then shown.
 	 --
 	 -- The cap has to spend its budget on the rows most likely to matter, and
@@ -347,15 +359,12 @@ var waitingRepliesSQL = `
 	 -- The caller sorts oldest-first for display, so what a reader sees is
 	 -- unchanged. This decides only WHICH waits survive the bound.
 	 --
-	 -- %[18]s is the keyset continuation, empty on the first page. The machine
-	 -- rule this scan can express is a coarse subset of the real one — the full
-	 -- test reads a registrable domain against a transactional baseline, which
-	 -- is a public-suffix question rather than a LIKE — so the caller filters
-	 -- what survives and asks for another page when too much of it went. The
-	 -- cap bounds ONE page; the caller bounds how many it will ask for.
+	 -- Slot 18 is the keyset continuation, empty on the first page. The
+	 -- caller folds conversations and drops sending systems after the cap, so
+	 -- it asks for another page when too much of one went. The cap bounds ONE
+	 -- page; the caller bounds how many it will ask for.
 		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]d))
-	 GROUP BY a.id, a.kind, a.subject, a.occurred_at
+	 LIMIT %[4]d))` + waitingGroupSQL + `
 	 ORDER BY a.occurred_at DESC, a.id DESC`
 
 // planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres

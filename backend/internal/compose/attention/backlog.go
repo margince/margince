@@ -36,8 +36,36 @@ type TaskBacklog interface {
 	// reminders, which are today's work.
 	CountTasks(ctx context.Context, window TaskWindow) (int, error)
 	// TasksAfter reads up to limit tasks of the window after a position, in
-	// the store's own order. next is empty at the window's end.
-	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Task, next string, err error)
+	// the store's due order, each with the position after it. more says the
+	// window holds tasks past the batch.
+	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Positioned[Task], more bool, err error)
+}
+
+// Positioned is one row a backlog read returned, with the position that
+// resumes its source after it, so a merge can stop between any two rows.
+type Positioned[T any] struct {
+	Row   T
+	After string
+}
+
+// WaitingBacklog counts who is waiting whole and continues them past the
+// lane's scan, one card per conversation as the lane folds them. OPTIONAL:
+// unbound, a cut waiting lane leaves its category a floor.
+type WaitingBacklog interface {
+	// CountWaiting counts the cards under a narrowing at an instant.
+	CountWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor) (int, error)
+	// WaitingAfter reads up to limit cards after a position, oldest first,
+	// each with the position after it.
+	WaitingAfter(
+		ctx context.Context, asOf time.Time, narrow WaitingFor, after string, limit int,
+	) (rows []Positioned[WaitingCustomer], more bool, err error)
+}
+
+// WithWaitingBacklog binds the waiting counter, an option for the reason
+// WithWaiting is one.
+func (s *Service) WithWaitingBacklog(b WaitingBacklog) *Service {
+	s.backlog.waiting = b
+	return s
 }
 
 // WithTaskBacklog binds the task counter, an option for the reason WithWaiting
@@ -50,7 +78,8 @@ func (s *Service) WithTaskBacklog(b TaskBacklog) *Service {
 // backlogState is the backlog readers, and on one request's copy what they
 // counted.
 type backlogState struct {
-	tasks TaskBacklog
+	tasks   TaskBacklog
+	waiting WaitingBacklog
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -136,4 +165,26 @@ func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow
 		return
 	}
 	s.backlog.exact[key] = total
+}
+
+// countWaitingInto states the waiting category's exact total when the lane's
+// scan was cut, on a first page only. The store folds and narrows as the lane
+// does, so the count is the cards scrolling reaches. A failed count leaves the
+// category a floor.
+func (s *Service) countWaitingInto(ctx context.Context, waiting waitingRead, asOf time.Time, first bool) {
+	if !first || !waiting.cut || s.backlog.waiting == nil || s.backlog.exact == nil {
+		return
+	}
+	var total int
+	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+		var err error
+		total, err = s.backlog.waiting.CountWaiting(ctx, asOf, s.waitingFor(ctx))
+		return err
+	})
+	if err != nil {
+		slog.Log(ctx, laneFailureLevel(ctx), "a worklist source could not be counted; its category stays a floor",
+			"source", sourceWaiting, "error", err)
+		return
+	}
+	s.backlog.exact[totalKey{sourceWaiting, crmcontracts.WorklistCountCategory(categoryOfSource(sourceWaiting))}] = total
 }
