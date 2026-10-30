@@ -34,7 +34,12 @@ const RUN: Assurance = {
     { source: "offers", state: "checked" },
     { source: "calendar", state: "not_connected" },
   ],
-  freshness: { state: "current", changed_deals: 0, workspace_changed: false },
+  freshness: {
+    state: "current",
+    changed_deals: 0,
+    changed_signals: 0,
+    workspace_changed: false,
+  },
 };
 
 function check(over: Partial<InputCheck>): InputCheck {
@@ -163,7 +168,7 @@ export const NothingToCheck: Story = {
   },
 };
 
-// A deal changed after the run: its finding and the verdict say so, and the
+// A deal changed after the run, and its finding and the verdict say so. The
 // verdict loses its tone until the next run reads the change.
 export const OutOfDate: Story = {
   render: () => {
@@ -174,6 +179,7 @@ export const OutOfDate: Story = {
           freshness: {
             state: "out_of_date",
             changed_deals: 1,
+            changed_signals: 0,
             workspace_changed: false,
             changed_since: "2026-07-14T10:30:00Z",
           },

@@ -11,9 +11,10 @@ import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { ForecastReview } from "./analytics.forecast.review";
 
-// A reading the records moved past never reads as current: the panel names it
-// out of date, the verdict loses its tone, and the changed deal's finding says
-// so on its own row.
+// A reading the records moved past never reads as current. The panel names
+// what changed and what to do, and the verdict loses its tone. The changed
+// deal's finding says so on its own row. A reading nobody can vouch for says
+// that instead.
 
 type Assurance = components["schemas"]["ForecastAssurance"];
 type InputCheck = components["schemas"]["InputCheck"];
@@ -25,10 +26,15 @@ const RUN: Assurance = {
   readiness: "ready",
   eligible_deals: 2,
   sources: [{ source: "mail", state: "checked" }],
-  freshness: { state: "current", changed_deals: 0, workspace_changed: false },
+  freshness: {
+    state: "current",
+    changed_deals: 0,
+    changed_signals: 0,
+    workspace_changed: false,
+  },
 };
 
-function check(id: string, label: string, changed: boolean): InputCheck {
+function check(id: string, label: string, changed: boolean | null): InputCheck {
   return {
     id,
     type: "close_past",
@@ -98,6 +104,7 @@ describe("an input check the records moved past", () => {
         freshness: {
           state: "out_of_date",
           changed_deals: 1,
+          changed_signals: 0,
           workspace_changed: false,
         },
       },
@@ -106,7 +113,7 @@ describe("an input check the records moved past", () => {
 
     expect(
       await screen.findByText(
-        "1 deal changed since this check. Out of date — refreshes on the next run.",
+        "1 deal changed since this check. Choose Check again to read the changes now, or wait for the next nightly run.",
       ),
     ).toBeTruthy();
     expect(
@@ -124,6 +131,7 @@ describe("an input check the records moved past", () => {
         freshness: {
           state: "out_of_date",
           changed_deals: 0,
+          changed_signals: 0,
           workspace_changed: true,
         },
       },
@@ -132,9 +140,55 @@ describe("an input check the records moved past", () => {
 
     expect(
       await screen.findByText(
-        "A stage or forecast call changed since this check. Out of date — refreshes on the next run.",
+        "A stage or forecast call changed since this check. Choose Check again to read the changes now, or wait for the next nightly run.",
       ),
     ).toBeTruthy();
+  });
+
+  it("names a workspace change beside the deals and signals that changed", async () => {
+    show(
+      {
+        ...RUN,
+        freshness: {
+          state: "out_of_date",
+          changed_deals: 2,
+          changed_signals: 1,
+          workspace_changed: true,
+        },
+      },
+      [check("e-1", "Fleet retrofit", true)],
+    );
+
+    expect(
+      await screen.findByText(
+        "2 deals changed since this check. 1 buying signal changed since this check. A stage or forecast call changed since this check. Choose Check again to read the changes now, or wait for the next nightly run.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says when nobody knows whether the records moved, and claims no healthy verdict", async () => {
+    show(
+      {
+        ...RUN,
+        freshness: {
+          state: "unknown",
+          changed_deals: 0,
+          changed_signals: 0,
+          workspace_changed: false,
+        },
+      },
+      [check("e-1", "Fleet retrofit", null)],
+    );
+
+    expect(
+      await screen.findByText(
+        "It is not known whether the records changed since this check: no check that read every source has run since Margince started tracking changes. Choose Check again to run one.",
+      ),
+    ).toBeTruthy();
+    expect(
+      within(await rowOf("Fleet retrofit")).queryByText("Out of date"),
+    ).toBeNull();
+    expect(badgeOf("Ready")).not.toContain("badge-success");
   });
 
   it("draws a current reading as it always did", async () => {

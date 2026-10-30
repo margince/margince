@@ -43,11 +43,11 @@ var announcedBy = map[string]struct{ family, why string }{
 	"stage_exit_criterion":     {"stage", "a stage's exit criteria are announced as stage.updated"},
 }
 
-// sqlTable is a table named after FROM or JOIN. A name followed by "(" is a
-// function and one followed by "." a column, and neither is a table.
+// sqlTable is a table named after `FROM` or `JOIN`. A name followed by "(" is
+// a function and one followed by "." a column, and neither is a table.
 var sqlTable = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)\b([.(]?)`)
 
-// tablesRead is every table the statements name.
+// tablesRead lists the tables the statements name, each once.
 func tablesRead(statements ...string) []string {
 	seen := map[string]bool{}
 	for _, statement := range statements {
@@ -75,9 +75,9 @@ func checkReads() string {
 	return assuranceSubjectsQuery(at, "''", nil, arg) + assuranceSignalSubjectsQuery(at, arg)
 }
 
-// undecidedFamilies is, per table read, the catalog types of the family that
-// announces it which decided has no answer for, and the tables with neither a
-// family nor an announcedBy entry.
+// undecidedFamilies answers two lists. undecided holds the types, in a family
+// that announces a table read, that decided has no answer for. unannounced
+// holds the tables with neither a family nor an announcedBy entry.
 func undecidedFamilies(tables, catalog []string, decided func(string) bool) (undecided, unannounced []string) {
 	families := map[string]bool{}
 	for _, table := range tables {

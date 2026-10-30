@@ -16,8 +16,8 @@ const (
 	// signal, its company, or a suggestion that covers it.
 	ScopeSignal InputScope = "signal"
 	// ScopeDealActivity is a change to an activity. It reaches each open deal
-	// the activity is linked to whose viability fingerprint no longer matches
-	// the one the run stored, so an edit the check does not read marks nothing.
+	// the activity is linked to whose viability fingerprint moved since the
+	// run stored it. An edit the check does not read marks nothing.
 	ScopeDealActivity InputScope = "deal_activity"
 	// ScopeWorkspace is a change no one deal carries: a stage every deal in it
 	// is judged against, or a forecast call made on the reading. Every finding
@@ -33,15 +33,14 @@ type InputChange struct {
 	Why   string
 }
 
-// inputChanges decides, for every event on the deal stream, every forecast
-// event and every event about a table the check reads, whether it makes the
-// last reading out of date. TestEveryDealAndForecastEventHasAnInputDecision
-// and compose's TestEveryTableTheCheckReadsHasItsEventsDecided fail on a type
-// missing here, so a new event is a decision and never a silent gap.
+// inputChanges decides whether an event makes the last reading out of date.
+// It covers the deal stream, the forecast family and every table the check
+// reads. TestEveryDealAndForecastEventHasAnInputDecision and compose's
+// TestEveryTableTheCheckReadsHasItsEventsDecided fail on a missing type.
 //
-// A capture connection changing health is not here because it emits no event:
-// the next run grades the mailbox afresh, and until then the run's own source
-// coverage says how far it read.
+// A capture connection changing health emits no event, so it is not here. The
+// next run grades the mailbox afresh, and until then its coverage says how far
+// it read.
 var inputChanges = map[string]InputChange{
 	"deal.created":       {ScopeDeal, "a new open deal was never judged"},
 	"deal.updated":       {ScopeDeal, "amount, close date, category and wait are rule inputs"},
@@ -136,7 +135,7 @@ func InputChangeOf(eventType string) (InputChange, bool) {
 	return change, ok
 }
 
-// DecidedInputEvents is every event type with a decision, sorted.
+// DecidedInputEvents lists the event types with a decision, sorted.
 func DecidedInputEvents() []string {
 	out := make([]string, 0, len(inputChanges))
 	for eventType := range inputChanges {

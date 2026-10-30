@@ -283,7 +283,7 @@ it("says when a named finding is out of date", async () => {
 
   expect(
     await screen.findByText(
-      /^Riley Rep · .+ at stake · out of date — refreshes on the next run$/,
+      /^Riley Rep · .+ at stake · out of date, changed since the check$/,
     ),
   ).toBeTruthy();
   expect(screen.getAllByText(/out of date/)).toHaveLength(1);

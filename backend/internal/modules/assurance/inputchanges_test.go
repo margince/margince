@@ -11,9 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// inputEventCensus is every catalog type that can change what the input check
-// read: the deal stream, which carries deals, offers, contracts, stages and
-// rooms, and the forecast family.
+// inputEventCensus lists the deal-stream and forecast catalog types. The deal
+// stream carries deals, offers, contracts, stages and rooms.
 func inputEventCensus(t *testing.T, catalog []string, route func(string) (string, error)) []string {
 	t.Helper()
 	dealStream := routed(t, events.StreamFor, "deal.updated")

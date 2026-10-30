@@ -30,7 +30,8 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, assuranceSignalSubjectsQuery(now, arg), args...)
+	query := assuranceSignalSubjectsQuery(now, arg)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading unlinked buying signals: %w", err)
 	}

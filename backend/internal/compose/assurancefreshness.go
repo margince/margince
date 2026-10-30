@@ -8,13 +8,13 @@ package compose
 //
 // It marks and never scans. The nightly pass stays the only scan, and the next
 // complete one clears what it read (assurance/freshness.go). Which events
-// count, and how far each reaches, is assurance.InputChangeOf: this file only
+// count, and how far each reaches, is assurance.InputChangeOf. This file only
 // finds the deal or buying signal an event is about.
 //
 // Coalesced: one read of the stream is one statement, one row per distinct
 // subject, so a burst of edits to one deal writes one row. A redelivered event
-// marks its subject again, which can make it out of date but never current, so
-// events.Dedupe in front of it is a cache and not the guarantee.
+// marks its subject again, which can make it out of date but never current.
+// So events.Dedupe in front of it is a cache and not the guarantee.
 
 import (
 	"context"
@@ -33,6 +33,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// freshnessEntityContract is the entity a contract event is named for.
+const freshnessEntityContract = "contract"
+
 // assuranceFreshnessActor names this consumer as the principal of its writes.
 const assuranceFreshnessActor = "system:assurance-freshness"
 
@@ -49,7 +52,7 @@ func NewAssuranceFreshness(pool *pgxpool.Pool, ident *identity.Service) *Assuran
 	return &AssuranceFreshness{db: db, store: assurance.NewStore(db), identity: ident}
 }
 
-// HandleEvent is the single-entry path; it marks exactly what a batch would.
+// HandleEvent is the single-entry path; it marks what a batch of one would.
 func (f *AssuranceFreshness) HandleEvent(ctx context.Context, env events.Envelope) error {
 	return f.HandleBatch(ctx, []events.Envelope{env})
 }
@@ -123,8 +126,8 @@ func inputChangesOf(envs []events.Envelope) (inputChanges, error) {
 	return out, nil
 }
 
-// inputReferences is the ids an event's payload may name besides its entity: the
-// deal a contract or offer belongs to, and the record a merge kept.
+// inputReferences holds the ids a payload may name besides its entity. Those
+// are the deal of a contract or offer, and the record a merge kept.
 type inputReferences struct {
 	DealID       string `json:"deal_id"`
 	MergedIntoID string `json:"merged_into_id"`
@@ -151,15 +154,14 @@ func parseReference(env events.Envelope, field, raw string) (ids.UUID, error) {
 	return id, nil
 }
 
-// addDealOf finds the deals an envelope is about: its entity and the deal a
-// merge kept, the deal its payload names, or, for a contract, the deal the
-// contract came from.
+// addDealOf finds the deals an envelope is about. That is its entity and the
+// deal a merge kept, the deal its payload names, or a contract's deal.
 func (c *inputChanges) addDealOf(env events.Envelope) error {
 	refs, err := referencesOf(env)
 	if err != nil {
 		return err
 	}
-	if env.Entity.Type == (crmcontracts.PublicEventDealUpdated{}).EntityType() {
+	if env.Entity.Type == tableDeal {
 		c.subjects = append(c.subjects, assurance.DealChanged(env.Entity.ID))
 		if refs.MergedIntoID != "" {
 			into, err := parseReference(env, "merged_into_id", refs.MergedIntoID)
@@ -178,19 +180,19 @@ func (c *inputChanges) addDealOf(env events.Envelope) error {
 		c.subjects = append(c.subjects, assurance.DealChanged(deal))
 		return nil
 	}
-	if env.Entity.Type == (crmcontracts.PublicEventContractUpdated{}).EntityType() {
+	if env.Entity.Type == freshnessEntityContract {
 		c.contracts = append(c.contracts, env.Entity.ID)
 	}
 	return nil
 }
 
-// addSignalsOf sorts an envelope that bears on buying signals by what it names:
-// a signal, a company and the company a merge kept, or a suggestion.
+// addSignalsOf sorts an envelope that bears on buying signals by what it
+// names. That is a signal, a company and the one a merge kept, or a suggestion.
 func (c *inputChanges) addSignalsOf(env events.Envelope) error {
 	switch env.Entity.Type {
-	case (crmcontracts.PublicEventSignalUpdated{}).EntityType():
+	case tableSignal:
 		c.subjects = append(c.subjects, assurance.SignalChanged(env.Entity.ID))
-	case (crmcontracts.PublicEventCompanyUpdated{}).EntityType():
+	case tableCompany:
 		c.companies = append(c.companies, env.Entity.ID)
 		refs, err := referencesOf(env)
 		if err != nil || refs.MergedIntoID == "" {
@@ -211,7 +213,7 @@ func (c *inputChanges) addSignalsOf(env events.Envelope) error {
 	return nil
 }
 
-// resolve is every subject the batch changed, with the looked-up ones added.
+// resolve adds the looked-up subjects to the ones the batch named outright.
 func (c inputChanges) resolve(ctx context.Context, tx pgx.Tx) ([]assurance.ChangedSubject, error) {
 	out := c.subjects
 	lookups := []struct {

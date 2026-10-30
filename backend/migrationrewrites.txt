@@ -37,3 +37,4 @@
 1793175360_the_duplicate_scan_reads_facts_and_employment.down.sql | dedupe_scan_state | deletes only the watermark rows of the two streams this migration added, at most two rows
 1793159036_a_geocode_lives_beside_its_company.up.sql | * | the procedural body is a trigger function that marks the one side row of the company being updated stale; the migration adds empty columns and changes no existing row
 1793159036_a_geocode_lives_beside_its_company.down.sql | *, company | runs only on a rollback: the procedural body restores the trigger function that edits only the company row being updated, and the UPDATE returns each geocoded company's point to its own row, one row per company that has one
+1793268432_an_input_check_knows_when_its_inputs_moved.up.sql | * | the procedural body grants USAGE on the new sequence to the app role when that role exists; the migration changes no existing row

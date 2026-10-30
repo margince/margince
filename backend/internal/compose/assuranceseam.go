@@ -174,7 +174,8 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, assuranceSubjectsQuery(now, identities, only, arg), args...)
+	query := assuranceSubjectsQuery(now, identities, only, arg)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}

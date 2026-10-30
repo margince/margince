@@ -41,12 +41,11 @@ The Analytics tabs are **Performance**, **SDR outcomes**, **Leads**, **Partners*
 
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
-The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
-It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
+The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts. It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
 
 The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
 
-A check can be **Out of date**. That happens when a deal, its offers or contract, a stage, or a forecast call changed after the nightly check read them. The check's verdict and findings stay as the check left them, with the mark beside them. The forecast review says how many deals changed, and its verdict loses its color. The next nightly check reads the change and clears the mark. A check that fails leaves the mark in place.
+A check is **Out of date** when a record it read changed after it ran. It reads deals with their offers, contracts and activities, buying signals with their company, stages and forecast calls. The verdict and findings stay as the check left them, with the mark beside them, and the verdict loses its colour. **Check again** reads the changes now, and the next nightly check reads them too. A check that could not read every source, the mailbox included, clears no mark. Until a check reads every source, the review says it cannot tell whether anything changed.
 
 The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 

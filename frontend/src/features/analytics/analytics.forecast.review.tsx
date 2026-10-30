@@ -21,6 +21,7 @@ import {
   FreshnessLine,
   OutOfDateBadge,
   outOfDate,
+  verdictStands,
 } from "./analytics.forecast.freshness";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
 import { checkLabel, SubjectCell } from "./inputcheck.facts";
@@ -157,11 +158,11 @@ function ReviewPanel({
 
 // The verdict, as a word rather than a count.
 //
-// `checks_incomplete` is not a worse `needs_review`: one says the pipeline has
-// problems, the other says we could not look, and they take different tones
-// because they ask for different things. A verdict on records that changed
-// since keeps its word and loses its tone: "Ready" in green over a moved
-// pipeline is the false healthy reading the out-of-date badge beside it names.
+// `checks_incomplete` is not a worse `needs_review`. One says the pipeline has
+// problems, the other says we could not look, and they ask for different
+// things. A verdict on records that changed since, or may have, keeps its
+// word and loses its tone. "Ready" in green over a moved pipeline would be a
+// false healthy reading.
 function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
   const t = useT();
   if (!run.readiness) {
@@ -181,7 +182,7 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
     checks_incomplete: "review.checksIncomplete",
   } as const;
   return (
-    <Badge tone={outOfDate(run) ? "default" : tone[run.readiness]}>
+    <Badge tone={verdictStands(run) ? tone[run.readiness] : "default"}>
       {t(label[run.readiness])}
     </Badge>
   );

@@ -135,9 +135,9 @@ func Groups() []Group {
 		// stream, where every deal_room event rides.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
 		// Marking the input check's last reading out of date when something it
-		// read changes: a deal and its stages on the deal stream, a forecast
-		// call on the identity stream, a deal's activities, and a buying signal
-		// with its company on the capture and company streams. Its own group
+		// read changes. Deals and stages ride the deal stream, forecast calls
+		// the identity stream, and activities theirs. Buying signals ride the
+		// capture stream and their companies the company stream. Its own group
 		// because it only marks: a backlog anywhere else must not leave a
 		// changed deal reading as current.
 		{Name: "cg:assurance-freshness", Streams: forEntities(

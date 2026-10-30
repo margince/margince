@@ -5,10 +5,10 @@
 
 package compose
 
-// A change the input check reads makes its last reading out of date, and only a
+// A change the input check reads makes its last reading out of date. Only a
 // later pass that read the change makes it current again. Every change here is
-// made through the real domain writer, and the event the marker consumes is the
-// one that writer put in the outbox.
+// made through the real domain writer, and the marker consumes the event that
+// writer put in the outbox.
 
 import (
 	"context"
@@ -358,7 +358,7 @@ func TestAReadingFromBeforeTheTrackingIsUnknownUntilTheNextPass(t *testing.T) {
 }
 
 // list_input_checks reads through the same function as the endpoint, so a
-// model is told a finding is out of date exactly when a screen is.
+// model is told a finding is out of date when a screen is.
 func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
 	e := setupFreshness(t)
 	e.deliver(t, e.editDeal(t, e.faulted, 3900000))
@@ -383,8 +383,8 @@ func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
 	}
 }
 
-// A note on the deal moves what its viability read, so the deal is marked; the
-// same activity seen again after a pass read it marks nothing.
+// A note on the deal moves what its viability read, so the deal is marked.
+// The same activity seen again after a pass read it marks nothing.
 func TestAnActivityOnADealMarksItWhenTheCheckReadsIt(t *testing.T) {
 	e := setupFreshness(t)
 	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{

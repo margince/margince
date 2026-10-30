@@ -47,9 +47,9 @@ func TestADealMergeMarksBothDeals(t *testing.T) {
 	}
 }
 
-// Each record that bears on a buying signal is followed to it: a signal by its
-// own id, a company and the one a merge kept by lookup, and a suggestion,
-// whose event names no entity, by the audit row it links to.
+// Each record that bears on a buying signal is followed to it. A signal names
+// itself, and a company and the one a merge kept are looked up. A suggestion's
+// event names no entity, so it is followed by the audit row it links to.
 func TestEventsThatBearOnSignalsAreFollowedToThem(t *testing.T) {
 	signal, company, kept, audit := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	suggestion := envelopeOf(t, crmcontracts.InternalEventDealSuggestionCreated{EvidenceCount: 1}, ids.Nil)

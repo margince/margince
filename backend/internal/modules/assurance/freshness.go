@@ -5,14 +5,14 @@ package assurance
 
 // Whether the last reading still describes the records it read.
 //
-// A change bumps its subject's generation from one sequence. A run records the
-// highest generation it could see BEFORE it read the deals. A change is unread
-// when its generation is higher than every run's record. The marker commits
-// only after the domain write it reports, so any generation a run saw belongs
-// to a change that committed before that run read the deals. A change during a
-// pass, or a pass that fails, therefore leaves the change unread. A redelivered
-// event only bumps the generation again, so it can make a subject out of date
-// but never current.
+// A change bumps its subject's generation from one sequence. A complete run
+// records the highest generation it could see before it read the deals. A
+// change is unread when its generation is higher than every run's record. The
+// marker commits only after the domain write it reports. So any generation a
+// run saw belongs to a change that committed before that run read the deals.
+// A change during a pass, or a pass that did not read every source, therefore
+// leaves the change unread. A redelivered event only bumps the generation
+// again, so it can make a subject out of date but never current.
 
 import (
 	"cmp"
@@ -163,9 +163,9 @@ func readFreshness(ctx context.Context, tx pgx.Tx) (Freshness, error) {
 	return out, nil
 }
 
-// MarkOutOfDate sets InputsChanged on each finding: true when its subject, or
-// the workspace, changed after the reading, false when nothing did, and nil
-// while no run has recorded what it read. One read for the whole list.
+// MarkOutOfDate sets InputsChanged on each finding, in one read for the list.
+// It is true when its subject or the workspace changed after the reading, and
+// false when nothing did. It stays nil while no run has recorded what it read.
 //
 // It takes findings its caller already read under the caller's own scope, and
 // answers only about those, so it adds no gate of its own.

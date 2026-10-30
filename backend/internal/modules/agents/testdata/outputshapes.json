@@ -5146,6 +5146,32 @@
           "eligible_signals": {
             "type": "integer"
           },
+          "freshness": {
+            "type": "object",
+            "properties": {
+              "changed_deals": {
+                "type": "integer"
+              },
+              "changed_signals": {
+                "type": "integer"
+              },
+              "changed_since": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "workspace_changed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "changed_deals",
+              "changed_signals",
+              "state",
+              "workspace_changed"
+            ]
+          },
           "readiness": {
             "type": "string"
           },
@@ -5180,6 +5206,7 @@
         "required": [
           "as_of",
           "eligible_deals",
+          "freshness",
           "run_id",
           "sources",
           "status"
@@ -6928,6 +6955,9 @@
                 },
                 "id": {
                   "type": "string"
+                },
+                "inputs_changed": {
+                  "type": "boolean"
                 },
                 "last_seen_at": {
                   "type": "string"
