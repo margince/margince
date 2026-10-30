@@ -158,10 +158,10 @@ func forecastPopulationNarrowed(ctx context.Context, tx pgx.Tx, period forecasti
 	if len(hidden) == 0 {
 		return false, nil
 	}
+	query := "SELECT EXISTS (SELECT 1 FROM deal d WHERE " + forecastWindowSQL(period, arg) +
+		" AND " + populationClause + " AND (" + strings.Join(hidden, " OR ") + "))"
 	var narrowed bool
-	err = tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM deal d WHERE "+forecastWindowSQL(period, arg)+
-		" AND "+populationClause+" AND ("+strings.Join(hidden, " OR ")+"))", args...).Scan(&narrowed)
-	if err != nil {
+	if err = tx.QueryRow(ctx, query, args...).Scan(&narrowed); err != nil {
 		return false, fmt.Errorf("compose: reading whether the reader sees every forecast deal: %w", err)
 	}
 	return narrowed, nil
