@@ -19,7 +19,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,49 +29,6 @@ const worklistPage = 25
 // clamped rather than refused: the number is a request for how much to draw,
 // and answering the most that can be drawn is more useful than an error.
 const worklistMaxPage = 100
-
-// Worklist answers the ranked day.
-//
-// The filter narrows what is CARRIED, never what is read: a source is read,
-// classified and then dropped, so the summary's figures describe the same day
-// whichever filter is applied.
-func (s *Service) Worklist(
-	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
-) (crmcontracts.Worklist, error) {
-	return s.WorklistView(ctx, "", scope, filter, owner, limit, token)
-}
-
-// WorklistView answers one work view of the ranked day. An empty view is the
-// whole day, except that a decisions or system filter opens its view.
-func (s *Service) WorklistView(
-	ctx context.Context, view, scope, filter string, owner ids.UUID, limit int, token string,
-) (crmcontracts.Worklist, error) {
-	view, err := resolveView(view, filter)
-	if err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	// ONE snapshot around the whole page, for the two reasons assemble.go
-	// gives: the lanes cost one transaction between them, and they answer from
-	// one instant so the page cannot disagree with itself.
-	// Admission BEFORE the snapshot, not inside it: a refused caller must not
-	// cost a pooled connection, which is the posture WithWorkspaceTx's own doc
-	// states — refuse before any SQL runs.
-	if err := auth.RequireMember(ctx); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	var out crmcontracts.Worklist
-	viewing := *s
-	viewing.view = view
-	err = s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
-		var err error
-		out, err = viewing.worklistIn(ctx, scope, filter, owner, limit, token)
-		return err
-	})
-	if err == nil {
-		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
-	}
-	return out, err
-}
 
 // worklistIn is Worklist's body, reading inside the snapshot Worklist opened.
 func (s *Service) worklistIn(
@@ -443,13 +399,7 @@ func (s *Service) worklistFrom(
 		// count. A lane whose rows DID feed one would have to be named.
 		Readings: readingsOf(considered, bounded, missing),
 	}
-	if filter != "" {
-		narrowed := crmcontracts.WorklistFilter(filter)
-		out.Filter = &narrowed
-	}
-	if s.view != "" {
-		out.View = new(crmcontracts.WorklistView(s.view))
-	}
+	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more
 	// behind it. A cursor on a final page invites one more request that can only
 	// answer empty, and a client walking until the cursor disappears would never

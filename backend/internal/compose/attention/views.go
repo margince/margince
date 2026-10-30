@@ -7,10 +7,13 @@ package attention
 // A view is a fetch predicate over the row's category, applied before the cut.
 
 import (
+	"context"
 	"fmt"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
@@ -98,4 +101,50 @@ func askedFor(view, filter string) string {
 		filter = ""
 	}
 	return view + "/" + filter
+}
+
+// Worklist answers the ranked day with no view named. A filter narrows what
+// the page carries, never what is read, so the counts describe the same day.
+func (s *Service) Worklist(
+	ctx context.Context, scope, filter string, owner ids.UUID, limit int, token string,
+) (crmcontracts.Worklist, error) {
+	return s.WorklistView(ctx, "", scope, filter, owner, limit, token)
+}
+
+// WorklistView answers one work view of the ranked day. An empty view is the
+// whole day, except that a decisions or system filter opens its view.
+func (s *Service) WorklistView(
+	ctx context.Context, view, scope, filter string, owner ids.UUID, limit int, token string,
+) (crmcontracts.Worklist, error) {
+	view, err := resolveView(view, filter)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	// Refused before the snapshot, so a refused caller costs no pooled
+	// connection. One snapshot then holds every lane read at one instant.
+	if err := auth.RequireMember(ctx); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	var out crmcontracts.Worklist
+	viewing := *s
+	viewing.view = view
+	err = s.inSnapshot(ctx, ReadWorklist, func(ctx context.Context) error {
+		var err error
+		out, err = viewing.worklistIn(ctx, scope, filter, owner, limit, token)
+		return err
+	})
+	if err == nil {
+		err = ctx.Err() // a caller who left gets no page assembled from failed lanes
+	}
+	return out, err
+}
+
+// echoAsked tells the client which narrowing and which view this page answers.
+func (s *Service) echoAsked(out *crmcontracts.Worklist, filter string) {
+	if filter != "" {
+		out.Filter = new(crmcontracts.WorklistFilter(filter))
+	}
+	if s.view != "" {
+		out.View = new(crmcontracts.WorklistView(s.view))
+	}
 }

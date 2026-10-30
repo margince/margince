@@ -142,7 +142,7 @@ type Service struct {
 	// walk is the frozen walk THIS request resumes, resolved before the day is
 	// read and carried on a per-request copy. Nil on a first page.
 	walk *worklistsnap.Snapshot
-	// view is the work view THIS request answers, on a per-request copy.
+	// view is the work view this request answers, on a per-request copy.
 	// Empty on the shared service and on a read that named no view.
 	view string
 	// pinned is this request's reader's own pins, resolved once by readingPins
