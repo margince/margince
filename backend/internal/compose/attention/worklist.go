@@ -145,9 +145,8 @@ func (s *Service) worklistIn(
 	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
-	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next

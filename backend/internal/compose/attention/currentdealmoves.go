@@ -19,7 +19,9 @@ type preparedDealMoves struct {
 	moves map[ids.UUID]crmcontracts.DealStatusCardMove
 }
 
-func (s *Service) readingDealMoves(ctx context.Context, day crmcontracts.Attention) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+// readingDealMoves reads the current advice for the deal rows a page shows.
+// Only those rows carry a move, so a deal the cut left out costs no read.
+func (s *Service) readingDealMoves(ctx context.Context, rows []crmcontracts.WorklistItem) (*Service, *crmcontracts.WorklistSourceUnavailable) {
 	defer timeStage(ctx, "deal_moves")()
 	scoped := *s
 	scoped.currentDealMoves = &preparedDealMoves{}
@@ -28,17 +30,10 @@ func (s *Service) readingDealMoves(ctx context.Context, day crmcontracts.Attenti
 	}
 	seen := map[ids.UUID]bool{}
 	var wanted []ids.UUID
-	items := append([]crmcontracts.AttentionItem{}, day.ThisMorning...)
-	if day.AtRisk != nil {
-		items = append(items, *day.AtRisk...)
-	}
-	for _, item := range items {
-		if item.Subject != nil && item.Subject.Type == subjectDeal {
-			id := ids.UUID(item.Subject.Id)
-			if !seen[id] {
-				wanted = append(wanted, id)
-				seen[id] = true
-			}
+	for _, row := range rows {
+		if id, ok := needsDealMove(row); ok && !seen[id] {
+			wanted = append(wanted, id)
+			seen[id] = true
 		}
 	}
 	if len(wanted) == 0 {

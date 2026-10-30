@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // WithDegradableRead runs fn as a lane the composed read can lose without
@@ -35,41 +36,64 @@ func WithDegradableRead(ctx context.Context, budget time.Duration, fn func(conte
 	if !joined {
 		return fn(ctx)
 	}
-	var page string
-	if err := tx.QueryRow(ctx, `SELECT current_setting('statement_timeout')`).Scan(&page); err != nil {
-		return fmt.Errorf("pg: reading the page's statement timeout: %w", err)
-	}
-	// A savepoint by statement rather than tx.Begin: this opens no transaction
-	// and takes no pool connection, and transactionopeners_test.go holds
-	// runTxWith as the one function that does.
-	if _, err := tx.Exec(ctx, `SAVEPOINT degradable_read`); err != nil {
-		return fmt.Errorf("pg: opening a savepoint for a degradable read: %w", err)
-	}
-	if err := BoundStatement(ctx, tx, budget); err != nil {
-		return errors.Join(err, abandonLane(ctx, tx))
+	page, err := openLane(ctx, tx, budget)
+	if err != nil {
+		return err
 	}
 	if err := fn(ctx); err != nil {
 		return errors.Join(err, abandonLane(ctx, tx))
 	}
 	// A released savepoint keeps its SET LOCAL until the transaction ends, so
 	// the page's own ceiling is put back for the lanes that follow.
-	if _, err := tx.Exec(ctx, `SELECT set_config('statement_timeout', $1, true)`, page); err != nil {
-		return errors.Join(fmt.Errorf("pg: restoring the page's statement timeout: %w", err), abandonLane(ctx, tx))
-	}
-	if _, err := tx.Exec(ctx, `RELEASE SAVEPOINT degradable_read`); err != nil {
-		return fmt.Errorf("pg: releasing a degradable read's savepoint: %w", err)
+	closing := &pgx.Batch{}
+	closing.Queue(boundStatementSQL, page)
+	closing.Queue(`RELEASE SAVEPOINT degradable_read`)
+	if err := tx.SendBatch(ctx, closing).Close(); err != nil {
+		return errors.Join(fmt.Errorf("pg: closing a degradable read: %w", err), abandonLane(ctx, tx))
 	}
 	return nil
+}
+
+// openLane reads the page's statement timeout, opens the savepoint and sets
+// the lane's budget in one round trip, and answers the timeout to restore.
+//
+// A savepoint by statement rather than tx.Begin opens no transaction and takes
+// no pool connection. transactionopeners_test.go holds runTxWith as the one
+// function that does.
+func openLane(ctx context.Context, tx pgx.Tx, budget time.Duration) (string, error) {
+	milliseconds, err := budgetMilliseconds(budget)
+	if err != nil {
+		return "", err
+	}
+	var page string
+	opened := false
+	opening := &pgx.Batch{}
+	opening.Queue(`SELECT current_setting('statement_timeout')`).QueryRow(func(row pgx.Row) error {
+		return row.Scan(&page)
+	})
+	opening.Queue(`SAVEPOINT degradable_read`).Exec(func(pgconn.CommandTag) error {
+		opened = true
+		return nil
+	})
+	opening.Queue(boundStatementSQL, milliseconds)
+	if err := tx.SendBatch(ctx, opening).Close(); err != nil {
+		err = fmt.Errorf("pg: opening a degradable read: %w", err)
+		if opened {
+			return "", errors.Join(err, abandonLane(ctx, tx))
+		}
+		return "", err
+	}
+	return page, nil
 }
 
 // abandonLane undoes everything the lane did, including the abort a failed
 // statement leaves on the transaction, and closes the savepoint.
 func abandonLane(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, `ROLLBACK TO SAVEPOINT degradable_read`); err != nil {
+	undo := &pgx.Batch{}
+	undo.Queue(`ROLLBACK TO SAVEPOINT degradable_read`)
+	undo.Queue(`RELEASE SAVEPOINT degradable_read`)
+	if err := tx.SendBatch(ctx, undo).Close(); err != nil {
 		return fmt.Errorf("pg: rolling back a degradable read: %w", err)
-	}
-	if _, err := tx.Exec(ctx, `RELEASE SAVEPOINT degradable_read`); err != nil {
-		return fmt.Errorf("pg: closing a degradable read's savepoint: %w", err)
 	}
 	return nil
 }

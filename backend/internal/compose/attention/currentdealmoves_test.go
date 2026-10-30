@@ -9,36 +9,34 @@ import (
 	"slices"
 	"testing"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestCurrentAdviceReadsEveryCandidateOnceForQueueAndFocus(t *testing.T) {
+func TestCurrentAdviceReadsThePageDealsOnceForQueueAndFocus(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
-	item := func(id ids.UUID) crmcontracts.AttentionItem {
-		return crmcontracts.AttentionItem{Subject: &crmcontracts.AttentionSubject{Type: subjectDeal, Id: openapi_types.UUID(id)}}
-	}
-	risk := []crmcontracts.AttentionItem{item(second), item(first)}
-	day := crmcontracts.Attention{ThisMorning: []crmcontracts.AttentionItem{item(first)}, AtRisk: &risk}
 	boundary := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{
 		first: cardMove("create_task", nil), second: cardMove("open_task", map[string]any{"activity_id": ids.NewV7()}),
 	}}
 	svc := (&Service{}).WithDealMoves(boundary)
-	scoped, missing := svc.readingDealMoves(context.Background(), day)
-	if missing != nil || !slices.Equal(boundary.asked, []ids.UUID{first, second}) {
-		t.Fatalf("candidate advice = %v, missing = %+v", boundary.asked, missing)
+	page := crmcontracts.Worklist{
+		Queue: []crmcontracts.WorklistItem{riskRow(first), riskRow(second)},
+		Focus: &crmcontracts.WorklistFocus{Items: []crmcontracts.WorklistItem{riskRow(first)}},
 	}
-	for _, id := range []ids.UUID{second, first} {
-		rows := []crmcontracts.WorklistItem{riskRow(id)}
-		if err := scoped.nameTheStep(context.Background(), rows); err != nil || rows[0].Move == nil {
-			t.Fatalf("page/focus lost prepared current advice: %+v, %v", rows, err)
+	if err := svc.nameWorklistRows(context.Background(), &page, nil); err != nil {
+		t.Fatalf("naming: %v", err)
+	}
+	if boundary.calls != 1 || !slices.Equal(boundary.asked, []ids.UUID{first, second}) {
+		t.Fatalf("advice asked = %v over %d calls, want the page's two deals in one", boundary.asked, boundary.calls)
+	}
+	for _, row := range append(page.Queue, page.Focus.Items...) {
+		if row.Move == nil {
+			t.Fatalf("a page row lost its current advice: %+v", row)
 		}
 	}
-	if boundary.calls != 1 || svc.currentDealMoves != nil {
-		t.Fatalf("advice escaped its per-request batch: calls=%d", boundary.calls)
+	if len(page.SourcesUnavailable) != 0 || svc.currentDealMoves != nil {
+		t.Fatalf("advice escaped its per-request batch: %+v", page.SourcesUnavailable)
 	}
 }
 
@@ -52,25 +50,27 @@ func TestUnavailableAdviceKeepsTheRiskLaneCompletenessSeparate(t *testing.T) {
 		{"failed", errors.New("fixture database unavailable"), false},
 	} {
 		t.Run(refusal.name, func(t *testing.T) {
-			id := ids.NewV7()
-			day := crmcontracts.Attention{ThisMorning: []crmcontracts.AttentionItem{{
-				Subject: &crmcontracts.AttentionSubject{Type: subjectDeal, Id: openapi_types.UUID(id)},
-			}}}
 			svc := (&Service{}).WithDealMoves(&stubDealMoves{err: refusal.err})
-			scoped, missing := svc.readingDealMoves(context.Background(), day)
-			if missing == nil || missing.Source != sourceDealAdvice || missing.ContributesRows == nil || *missing.ContributesRows {
-				t.Fatalf("advice masquerades as a required row source: %+v", missing)
+			page := crmcontracts.Worklist{
+				Queue:              []crmcontracts.WorklistItem{riskRow(ids.NewV7())},
+				SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{{Source: sourceAtRisk, Reason: "failed"}},
 			}
-			if (missing.Reason == "withheld") != refusal.withheld {
-				t.Fatalf("advice failure lost its cause: %+v", missing)
+			page.SourcesUnavailable = svc.stampSources(page.SourcesUnavailable)
+			if err := svc.nameWorklistRows(context.Background(), &page, nil); err != nil {
+				t.Fatalf("unavailable advice failed the page: %v", err)
 			}
-			unavailable := svc.stampSources([]crmcontracts.WorklistSourceUnavailable{{Source: sourceAtRisk, Reason: "failed"}, *missing})
-			if unavailable[0].Source == unavailable[1].Source || !*unavailable[0].ContributesRows || *unavailable[1].ContributesRows {
+			if len(page.Queue) != 1 || page.Queue[0].Move != nil {
+				t.Fatalf("unavailable advice changed the underlying work: %+v", page.Queue)
+			}
+			unavailable := page.SourcesUnavailable
+			if len(unavailable) != 2 || unavailable[1].Source != sourceDealAdvice {
+				t.Fatalf("advice gap not named on the page: %+v", unavailable)
+			}
+			if (unavailable[1].Reason == "withheld") != refusal.withheld {
+				t.Fatalf("advice failure lost its cause: %+v", unavailable[1])
+			}
+			if !*unavailable[0].ContributesRows || *unavailable[1].ContributesRows {
 				t.Fatalf("side-read status changed the lane's coverage: %+v", unavailable)
-			}
-			rows := []crmcontracts.WorklistItem{riskRow(id)}
-			if err := scoped.nameTheStep(context.Background(), rows); err != nil || len(rows) != 1 || rows[0].Move != nil {
-				t.Fatalf("unavailable advice removed underlying work: %+v, %v", rows, err)
 			}
 		})
 	}

@@ -33,7 +33,13 @@ export function worklistDayOptions(
   ];
   return infiniteQueryOptions({
     queryKey,
-    ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
+    ...(!isLiveWorkRead(queryKey)
+      ? { refetchOnWindowFocus: true }
+      : {
+          refetchInterval: (query: {
+            state: { data?: { pages: Worklist[] } };
+          }) => untilNextDue(query.state.data?.pages ?? [], Date.now()),
+        }),
     initialPageParam: undefined as string | undefined,
     // React Query aborts the signal once no screen still observes this key, and
     // the server then stops assembling the day instead of answering nobody.
@@ -76,4 +82,21 @@ function withinView(page: Worklist, view: WorklistView): Worklist {
     ...page,
     queue: page.queue.filter((item) => categoryInView(item.category, view)),
   };
+}
+
+// A due row changes once its time comes: a meeting begins, a task falls
+// overdue. Those are the moments the day is read again, rather than every
+// minute, because each read re-assembles every page the reader loaded.
+const DUE_SLACK_MS = 1_000;
+
+/** How long until a loaded row comes due, or false when none still will. */
+export function untilNextDue(pages: Worklist[], now: number): number | false {
+  let next = Number.POSITIVE_INFINITY;
+  for (const page of pages) {
+    for (const item of [...page.queue, ...(page.focus?.items ?? [])]) {
+      const due = item.due_at ? Date.parse(item.due_at) : Number.NaN;
+      if (due > now && due < next) next = due;
+    }
+  }
+  return Number.isFinite(next) ? next - now + DUE_SLACK_MS : false;
 }
