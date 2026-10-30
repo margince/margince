@@ -51,19 +51,24 @@ func TestANudgeDismissalGoesFromSetAsideToStoppedAndBackToFollowing(t *testing.T
 	contact := createContact(t, e, AnyMap{"full_name": "Gone Quiet", "source": "manual"})
 	path := "/v1/contacts/" + contact.ID + "/nudge-dismissal"
 
-	setAside := func(days int) time.Time {
+	setAside := func(days int) {
 		t.Helper()
 		mustCall(t, e, "PUT", path, AnyMap{"days": days}, http.StatusNoContent, nil)
 		got := readNudgeState(t, e, contact.ID)
 		if got.State != crmcontracts.RelationshipNudgeStateStateSetAside || got.DismissedUntil == nil {
 			t.Fatalf("after %d days aside the state = %+v, want set_aside with a date", days, got)
 		}
-		return *got.DismissedUntil
+		var setAt time.Time
+		if err := e.Owner.QueryRow(context.Background(),
+			`SELECT set_at FROM relationship_nudge_dismissal WHERE contact_id = $1`, contact.ID).Scan(&setAt); err != nil {
+			t.Fatalf("reading when the dismissal was set: %v", err)
+		}
+		if want := setAt.AddDate(0, 0, days); !got.DismissedUntil.Equal(want) {
+			t.Errorf("%d days aside ends %v, want %v: %d days after it was set at %v", days, got.DismissedUntil, want, days, setAt)
+		}
 	}
-	until30, until60 := setAside(30), setAside(60)
-	if gap := until60.Sub(until30); gap < 30*24*time.Hour || gap > 30*24*time.Hour+time.Minute {
-		t.Errorf("60 days aside ends %v after 30 days aside, want 30 days", gap)
-	}
+	setAside(30)
+	setAside(60)
 
 	mustCall(t, e, "PUT", path, AnyMap{"permanent": true}, http.StatusNoContent, nil)
 	if got := readNudgeState(t, e, contact.ID); got.State != crmcontracts.RelationshipNudgeStateStateStopped || got.DismissedUntil != nil {
@@ -109,8 +114,13 @@ func TestAHiddenContactIsNotFoundThroughItsNudgePreference(t *testing.T) {
 		{"DELETE", nil, http.StatusNoContent},
 	}
 	for _, door := range doors {
-		if status := e.Call(t, door.method, "/v1/contacts/"+hidden.ID+"/nudge-dismissal", door.body, nil, nil); status != http.StatusNotFound {
+		var hiddenProblem, missingProblem AnyMap
+		if status := e.Call(t, door.method, "/v1/contacts/"+hidden.ID+"/nudge-dismissal", door.body, nil, &hiddenProblem); status != http.StatusNotFound {
 			t.Errorf("%s %v on a hidden contact → %d, want 404", door.method, door.body, status)
+		}
+		mustCall(t, e, door.method, "/v1/contacts/"+ids.NewV7().String()+"/nudge-dismissal", door.body, http.StatusNotFound, &missingProblem)
+		if hiddenProblem["code"] == nil || !reflect.DeepEqual(hiddenProblem, missingProblem) {
+			t.Errorf("%s %v: a hidden contact answers %v and a missing one %v, want the same refusal", door.method, door.body, hiddenProblem, missingProblem)
 		}
 		if n := countDismissals(t, e, hidden.ID); n != 0 {
 			t.Errorf("%s %v wrote %d dismissal rows for a contact the reader cannot see, want none", door.method, door.body, n)
@@ -121,12 +131,5 @@ func TestAHiddenContactIsNotFoundThroughItsNudgePreference(t *testing.T) {
 				t.Fatalf("%s %v on the rep's own contact left %d dismissal rows, want one: the count must see a write", door.method, door.body, n)
 			}
 		}
-	}
-
-	var hiddenProblem, missingProblem AnyMap
-	mustCall(t, e, "GET", "/v1/contacts/"+hidden.ID+"/nudge-dismissal", nil, http.StatusNotFound, &hiddenProblem)
-	mustCall(t, e, "GET", "/v1/contacts/"+ids.NewV7().String()+"/nudge-dismissal", nil, http.StatusNotFound, &missingProblem)
-	if hiddenProblem["code"] == nil || !reflect.DeepEqual(hiddenProblem, missingProblem) {
-		t.Errorf("a hidden contact answers %v and a missing one %v, want the same refusal", hiddenProblem, missingProblem)
 	}
 }
