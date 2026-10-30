@@ -258,6 +258,9 @@ type WaitingFor struct {
 	// team filter keeps. A message that is not mail answers to nobody and stays.
 	Team  bool
 	Seats []ids.UUID
+	// Unowned keeps what no seat answers for, the rows the unassigned scope
+	// keeps: every waiting mail has its one seat, so only other messages.
+	Unowned bool
 }
 
 // waitingFor narrows the scan the way narrowToScope narrows its rows, so the
@@ -270,6 +273,8 @@ func (s *Service) waitingFor(ctx context.Context) WaitingFor {
 	case TasksOwnedBy:
 		owner := s.taskOwner
 		return WaitingFor{Owner: &owner}
+	case TasksUnassigned:
+		return WaitingFor{Unowned: true}
 	}
 	if s.teamRoster != nil {
 		return WaitingFor{Team: true, Seats: s.teamRoster.seats()}

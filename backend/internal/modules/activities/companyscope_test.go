@@ -259,7 +259,7 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
-	source, err := os.ReadFile("waiting.go")
+	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
 	}
