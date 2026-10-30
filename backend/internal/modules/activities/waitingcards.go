@@ -109,8 +109,8 @@ func (s *Store) WaitingCardsAfter(
 }
 
 // waitingCandidates reads the next judge messages after a position that the
-// narrowing and the horizon could admit, oldest first. Only cheap columns are
-// tested here; the queue's own rules judge them next.
+// reader may read and the narrowing and horizon could admit, oldest first. The
+// queue's own rules judge them next.
 func (s *Store) waitingCandidates(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, after WaitingPosition, judge int,
 ) ([]WaitingPosition, bool, error) {
@@ -127,9 +127,16 @@ func (s *Store) waitingCandidates(
 	if err != nil {
 		return nil, false, err
 	}
+	// The content gate here as well. The position after the last judged message
+	// goes to the client, so a message the reader may not read is never judged.
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, false, err
+	}
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	query := `SELECT a.id, a.occurred_at FROM activity a
 		 WHERE a.kind IN ('email', 'message') AND a.direction = 'inbound' AND a.archived_at IS NULL
+		   AND ` + content + `
 		   AND ` + occurredday.BegunSQL("a", instant) + `
 		   AND (` + waitingYoungSQL(instant, fmt.Sprint(horizon)) + ` OR ` + heldRequestSQL() + `)
 		   AND (` + seats.responsibilitySQL(identities, arg) + `)` + newerThan(after, arg) +

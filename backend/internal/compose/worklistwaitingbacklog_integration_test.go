@@ -390,3 +390,63 @@ func TestTheWaitingTailIsTheFoldOfTheScan(t *testing.T) {
 		}
 	}
 }
+
+// A message the reader may not read is never judged by the tail. No position
+// the tail hands out names it, and the cards are the lane's fold of the rest.
+func TestNoTailPositionNamesAMessageTheReaderCannotRead(t *testing.T) {
+	r := setupReminders(t)
+	w := waitingBacklog{
+		r: r, contact: r.e.SeedContact(t, "Dana Buyer", nil),
+		cards: map[ids.UUID]map[string]bool{}, never: map[string]bool{},
+	}
+	var hidden ids.UUID
+	for i := range 6 {
+		id := w.mail(t, r.e.Rep2, "dana@buyer.example", fmt.Sprintf("Question %d", i), "", r.now.Add(-time.Duration(6-i)*time.Hour), true)
+		if i == 3 {
+			hidden = id
+		}
+	}
+	r.e.WsExec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, hidden)
+	var hiddenAt time.Time
+	if err := json.Unmarshal([]byte(`"`+r.e.WsScalar(t, `SELECT to_json(occurred_at)#>>'{}' FROM activity WHERE id = $1`, hidden)+`"`), &hiddenAt); err != nil {
+		t.Fatal(err)
+	}
+	ctx := r.e.As(r.e.Rep1, []ids.UUID{r.e.Team1}, integration.AdminPerms)
+	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
+	narrow := attention.WaitingFor{Team: true, Seats: []ids.UUID{r.e.Rep1, r.e.Rep2}}
+	scanned, err := seam.store.WaitingRepliesNarrowedBefore(ctx, r.now, activities.WaitingPosition{}, waitingNarrow(narrow))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tailed := 0
+	for after := ""; ; {
+		read, err := seam.WaitingAfter(ctx, r.now, narrow, after, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		positions := []string{read.Through}
+		for _, card := range read.Cards {
+			positions = append(positions, card.After)
+			tailed++
+		}
+		for _, token := range positions {
+			if token == "" {
+				continue
+			}
+			at, err := storekit.DecodeOpaque[activities.WaitingPosition](token)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if at.ID == hidden || at.At.Equal(hiddenAt) {
+				t.Fatalf("a tail position names the message the reader may not read: %+v", at)
+			}
+		}
+		if !read.More {
+			break
+		}
+		after = read.Through
+	}
+	if folded := len(keepWaitingCustomers(scanned)); tailed != folded || tailed != 5 {
+		t.Errorf("the tail drew %d cards, the lane's fold %d, want the 5 the reader may read", tailed, folded)
+	}
+}
