@@ -32,7 +32,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -131,8 +130,7 @@ type EnsureCounterpartyResult struct {
 	// sender's own, and its base — are registered to two different companies.
 	// The contact was attached to the lower id, which is the answer this path
 	// has always given; the report is what says the choice was between two.
-	// Raising it is the caller's job, for the same reason the contact
-	// conflict's is: a failure to raise must never cost the message.
+	// Its review commits with the employment; a failed write is retried with capture.
 	DomainSplit *DomainSplit
 	// NameFilled reports that this ensure completed an incumbent's split name
 	// that was previously unknown — the fill-only-if-empty path, never an
@@ -226,8 +224,8 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 		}
 		return res, nil
 	}
-	if !in.SuppressCompany && in.Domain != "" {
-		if err := s.ensureCompanyAndEmployment(ctx, tx, in, &res); err != nil {
+	if !res.ContactCreated {
+		if err := s.resolveDomainEmployer(ctx, tx, in, &res); err != nil {
 			return EnsureCounterpartyResult{}, err
 		}
 	}
@@ -344,17 +342,19 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	if acqErr != nil {
 		return acqErr
 	}
-	id, err := createContact(ctx, tx, match, ContactSpec{
-		FullName:    name,
-		FirstName:   nameColumn(parsed.First),
-		LastName:    nameColumn(parsed.Last),
-		OwnerID:     ownerFromUUID(&in.OwnerID),
-		Visibility:  visibilityFor(in.OwnerScoped),
-		Narrowing:   narrowingFor(in.OwnerScoped, in.NarrowedBecause),
-		Quarantined: quarantineSuspect(in.DisplayName, in.Domain),
-		Emails:      []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
-		Source:      in.Source,
-		CapturedBy:  in.CapturedBy,
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
+		CaptureEmployer: &in,
+		EmployerResult:  res,
+		FullName:        name,
+		FirstName:       nameColumn(parsed.First),
+		LastName:        nameColumn(parsed.Last),
+		OwnerID:         ownerFromUUID(&in.OwnerID),
+		Visibility:      visibilityFor(in.OwnerScoped),
+		Narrowing:       narrowingFor(in.OwnerScoped, in.NarrowedBecause),
+		Quarantined:     quarantineSuspect(in.DisplayName, in.Domain),
+		Emails:          []ContactEmailInput{{Email: in.Email, EmailType: emailTypeWork, IsPrimary: true}},
+		Source:          in.Source,
+		CapturedBy:      in.CapturedBy,
 
 		RelationshipMark:      in.RelationshipMark,
 		RelationshipMarkSetBy: markSetBy(in.RelationshipMark, in.CapturedBy),
@@ -386,77 +386,6 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		created: id, name: name, email: in.Email,
 		source: in.Source, by: in.CapturedBy,
 	}, res)
-}
-
-// ensureCompanyAndEmployment decides what this mail domain may create, and creates
-// only that. It runs PO-F-2 on the domain, and where the domain is not yet
-// understood it creates NOTHING and opens the question instead — the contact
-// already exists, and a company invented from a domain label is the
-// defect this ladder exists to stop.
-//
-// The order is load-bearing at every step:
-//
-//	a suppressed domain                     → no company, no question, ever
-//	a company already on this domain  → attach; a human's row always wins
-//	consumer mail                           → no company, and no question to ask
-//	a settled verdict                       → obey it
-//	anything else                           → open the question, create nothing
-func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, res *EnsureCounterpartyResult) error {
-	if err := auth.Require(ctx, entityCompany, principal.ActionCreate); err != nil {
-		return err
-	}
-	match, base, ok, err := employerMatchTx(ctx, tx, in.Domain)
-	if err != nil || !ok {
-		return err
-	}
-	res.DomainSplit = match.DomainSplit
-	if match.Decision != DecisionExactCollision {
-		// No company yet. Whether one may be created is not this path's
-		// call any more.
-		return s.deferCompanyToTriage(ctx, tx, in, base, res)
-	}
-	companyID := match.CompanyID
-	res.CompanyID = &companyID
-	// A human put a company on this domain. That overrides whatever a crawl
-	// concluded, a refusal included. The ledger records it as theirs, so the
-	// next message stops re-asking and the trail says who overruled what.
-	if err := adoptDispositionForCompany(ctx, tx, base, companyID); err != nil {
-		return err
-	}
-
-	return plantEmploymentEdge(ctx, tx, in, base, res.ContactID, companyID)
-}
-
-// employerMatchTx is the company match a sender of this domain is filed under,
-// shared by the ensure and the probe that asks about it first. ok is false
-// when the domain is no hostname or is suppressed, and nothing is attached.
-func employerMatchTx(ctx context.Context, tx pgx.Tx, domain string) (CompanyMatch, string, bool, error) {
-	// A From: header is forgeable and net/mail parses far more loosely than DNS
-	// allows, so a counterparty "domain" may be any atext string — `jane@%`
-	// parses. Nothing that is not a hostname may become a company, a crawl seed,
-	// or a key in a query: the contact still lands, with no employer.
-	base, ok := freemail.Hostname(domain)
-	if !ok {
-		return CompanyMatch{}, "", false, nil
-	}
-	// The standing refusal runs FIRST, ahead of the dedupe attach.
-	//
-	// A vendor the business merely uses — an expense tool, a ticket shop — has a
-	// real corporate website, so every evidence test the triage can run says
-	// "company". The refusal is therefore a decision about the DOMAIN, and it
-	// has to be consulted before anything can attach a contact to a company on
-	// it: consulted later, a named employee writing from that domain would find
-	// the company a previous message created and quietly re-employ
-	// everyone onto it.
-	suppressed, err := domainSuppressedTx(ctx, tx, base)
-	if err != nil || suppressed {
-		return CompanyMatch{}, "", false, err
-	}
-	match, err := DedupeCompany(ctx, tx, CompanyCandidate{Domains: []string{domain, base}})
-	if err != nil {
-		return CompanyMatch{}, "", false, err
-	}
-	return match, base, true, nil
 }
 
 // linkActivityToContact attaches the captured activity to the contact —

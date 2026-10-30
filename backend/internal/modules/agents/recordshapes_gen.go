@@ -7,7 +7,7 @@ package agents
 // REQUIRED by the contract; `?` marks one the body may omit.
 
 var createRecordShapes = map[string]string{
-	"contact":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, convert_lead_ids?: [uuid], emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, title?: string}",
+	"contact":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, company_id?: uuid, company_name?: string, convert_lead_ids?: [uuid], emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, title?: string}",
 	"company":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string}",
 	"deal":              "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, stage_id: uuid}",
 	"lead":              "{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, industry?: string, linkedin_url?: string, origin?: string, origin_detail?: string, owner_id?: uuid, phone?: string, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
@@ -45,9 +45,7 @@ var createParentFields = map[string][]string{
 
 // createWithheldFields are body fields create_record refuses although the
 // REST route takes them: the contract marks each `x-agent-withheld`.
-var createWithheldFields = map[string][]string{
-	"contact": {"company_id", "company_name"},
-}
+var createWithheldFields = map[string][]string{}
 
 // The contract's own closed vocabularies, as JSON arrays a tool's InputSchema
 // splices in place of a hand-written enum literal.

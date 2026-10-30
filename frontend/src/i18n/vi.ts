@@ -537,6 +537,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
 
+  "approval.preview.createEmployer":
+    "Tạo công ty còn thiếu và liên kết liên hệ này làm nhân viên.",
+  "approval.preview.reuseEmployer": "Liên kết liên hệ này với công ty hiện có.",
+  "approval.preview.resolveEmployer":
+    "Xác định nơi làm việc từ công ty hoặc địa chỉ công việc, dùng lại hoặc tạo công ty rồi liên kết việc làm. Tên miền chưa rõ sẽ chờ xem xét; việc bổ sung thông tin tuân theo cài đặt của công ty.",
   "approval.preview.createContact":
     "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
   "approval.preview.recordAcquisition":
@@ -8048,6 +8053,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này.",
   "import.reason.employer_not_found_dropped":
     "Không có công ty nào tên “{name}” trong CRM nên không có gì để liên kết liên hệ này. Hàng đã được nhập mà không có liên kết.",
+  "import.reason.employer_refused":
+    "Không thể xác định công ty. Hãy chọn một công ty rõ ràng mà bạn được phép liên kết.",
+  "import.reason.employer_will_create":
+    "Công ty {name} sẽ được tạo nếu chưa có khi nhập hàng này.",
   "import.reason.empty_payload": "Hàng không có trường nào.",
   "import.reason.field_inactive":
     "Không thể ghi “{value}”: trường này không còn hoạt động.",

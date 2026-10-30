@@ -48,6 +48,7 @@ func (e *dedupeEnv) asChannelConnector() context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
 				"contact":  {Create: true},
+				"company":  {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

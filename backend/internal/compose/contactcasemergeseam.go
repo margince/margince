@@ -19,7 +19,7 @@ type contactCaseMerger struct{ store *contacts.Store }
 
 //nolint:ireturn // the seam is an interface by design: agents may not import the contacts module
 func contactCaseMergerSeam(db *database.DB) agents.ContactCaseMerger {
-	return contactCaseMerger{store: withContactMergeCarriers(db, contacts.NewStore(db)).
+	return contactCaseMerger{store: withContactMergeCarriers(db, newContactsStore(db)).
 		WithFieldCatalog(customfields.NewService(db.Pool(), nil))}
 }
 

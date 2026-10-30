@@ -1008,27 +1008,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
-// A staged proposal is a judgement somebody owes, so it is on the Worklist's
-// Decisions view, drawn through the same ApprovalRow the record page uses; the
-// verb a contact presses is asserted where a contact finds it.
-test("AC-inbox: the staged decision is on the Decisions view", async ({
+test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
-  await page.goto("/#/worklist");
-  await page.getByRole("button", { name: /^Entscheidungen/ }).click();
-  // The queue shows the decision by the sentence the SERVER composed for it,
-  // not by its kind: the old lane drew "E-Mail senden" from the kind label,
-  // and a queue that has to rank things across producers names each one by
-  // what it actually is. Answering it stays the approvals surface's own job,
-  // so the verbs are asserted where they live rather than here.
-  // That the decision is ANSWERABLE here is the claim worth making, so this
-  // asserts the verb rather than the text.
-  //
-  // The verb is "Entscheiden" and not a verdict: a decision is answered in a
-  // drawer now, so the queue draws the way IN to the answer rather than the
-  // answers themselves (AC-WORKLIST-SDR-03, which walks the drawer and asserts
-  // the verdicts inside it). Asserting "Übernehmen" here would be asserting the
-  // shape the row deliberately stopped having.
+  await page.goto("/#/home?queue=1&queue_view=decisions");
   await expect(
     page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
@@ -1535,8 +1518,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-WORKLIST-SDR-03: a decision is answered in a drawer, not in the row", async ({
     page,
   }) => {
-    await page.goto("/#/worklist");
-    await page.getByRole("button", { name: /^Entscheidungen/ }).click();
+    await page.goto("/#/home?queue=1&queue_view=decisions");
     await page.waitForLoadState("networkidle");
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
@@ -1644,11 +1626,11 @@ test.describe("§3.8: 390px mobile", () => {
     test("the day's queue is workable with a thumb at 390px", async ({
       page,
     }) => {
-      await page.goto("/#/worklist");
+      await page.goto("/#/home?queue=1&queue_view=decisions");
       await page.waitForLoadState("networkidle");
       await settleAnimations(page);
       await expect(
-        page.getByText(/Send the retrofit quote to Turbinenbau/).first(),
+        page.getByText(/Send the follow-up to Anna Weber/).first(),
       ).toBeVisible();
 
       // Nothing runs off the side. The row wraps instead of pushing the page

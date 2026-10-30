@@ -115,7 +115,7 @@ func TestSearchFindsACompanyByItsDomain(t *testing.T) {
 func TestAnAddressFindsNoContactOutsideTheReadersScope(t *testing.T) {
 	e := Setup(t)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
-	private := seedContactWithEmail(owner, t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
+	private := seedContactWithEmail(e.Admin(), t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
 	visibility := "owner"
 	if _, err := e.Contacts.UpdateContact(owner, ids.From[ids.ContactKind](private),
 		contacts.UpdateContactInput{Visibility: &visibility}); err != nil {
