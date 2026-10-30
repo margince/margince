@@ -48,6 +48,21 @@ That is imported history, not today's breach; a duty that fell due while on reco
 `recoveryHorizonDays` (14, `classifyrisk.go`) makes deal recovery urgent when the expected close is past or
 inside it.
 
+A meeting that starts within `meetingHorizon` (2 hours, `rank.go`) is `levelWaiting` until the reader says
+**I’m ready** (`classifyMeeting` in `meeting.go`). Then it keeps its `meeting_soon` reason at `levelAgreed`.
+The store keeps that answer per attendee, with the start, the guests and a fingerprint of the invite's own
+description. A change to any of them asks again; a note typed into the meeting does not.
+
+## Views and later tasks
+
+`view` (`attention/views.go`) splits the ranked day into **Today**, **Decisions** and **System** by category.
+The split comes before the page is cut, so a walk never reaches another view's rows. The cursor binds the view.
+
+A task due in the `upcomingHorizonDays` (14, `feed.go`) after today takes the `upcoming` category
+(`classify.go`), unless it is late or its reminder is due. Such a row is shown only when the filter asks for
+`upcoming`, and `summary` never counts it, so later work cannot raise Today's total. The lanes read no task due
+after that window.
+
 ## Deal suggestions need current facts
 
 `admittedBriefItems` in `attention/briefadmission.go` checks each brief suggestion before counts, filters and pages.
@@ -102,7 +117,9 @@ Home, Focus, source reach and summary counts use the same scoped day.
 ## Totals and the rows below the ranked top
 
 Only the first rows are ranked. Ranking needs every candidate in hand, so each lane reads to its cap.
-The ranked rows are those candidates, frozen as a walk (`walk.go`).
+The ranked rows are those candidates, frozen as a walk (`walk.go`). Totals come on the first page, with no
+later counting pass and no background job. A source is counted in SQL when the count fits the first page's budget.
+Otherwise it stays a floor, for the measured reason the census gives.
 
 A category states an exact `total` only when every source behind it was read whole or counted by its store
 (`withTotals` in `attention/totals.go`). The count runs the source's own admission rules in SQL, so it
@@ -135,7 +152,8 @@ Three sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
-  scope keeps them, so its task totals are exact too.
+  scope keeps them. Its task totals are exact only when the roster was read whole. A roster cut at its cap, or one that
+  failed, leaves every category of the page without a total (`withTotals` in `attention/totals.go`).
 - Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
   messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
   is one card, and other mail is one card per sender and subject. The category has no count: judging every message
@@ -152,7 +170,8 @@ the activity writer stamp it on `sender_is_machine` with the one Go rule, and th
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
 Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
-still states their exact total. Deal and tag suggestions stay a floor until they join the tail.
+still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
+because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).

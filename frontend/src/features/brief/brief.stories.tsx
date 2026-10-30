@@ -69,6 +69,20 @@ type Frame = {
   extra?: RouteMap;
 };
 
+// Home judges its own completeness from the overnight receipt, so the list
+// fallback's envelope would crash every frame.
+const quietNight = {
+  as_of: "2026-09-13T08:00:00Z",
+  since: "2026-09-12T08:00:00Z",
+  done: [],
+  needs_you: [],
+  could_not_complete: [],
+  watching: [],
+  totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+  not_shown: [],
+  sources_unavailable: [],
+};
+
 function brief({
   approvals,
   digest: overnight = digest,
@@ -150,6 +164,7 @@ function brief({
           truncated: false,
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
+      "GET /magic": () => jsonResponse(quietNight),
       ...extra,
     });
     return (
@@ -471,6 +486,7 @@ export const WorkingMorning: Story = {
         "GET /brief": () =>
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
         "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
+        "GET /magic": () => jsonResponse(quietNight),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: day.as_of,
