@@ -82,10 +82,10 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 	return batch, nil
 }
 
-// dealsElsewhere are the deals the at-risk tail never serves as at risk: those
-// a waiting card names anywhere under this page's narrowing (step B), and those
-// a ranked row above reports (step E, dealsReported). The tail and the Done
-// check both ask it.
+// dealsElsewhere are the deals the at-risk tail never serves as at risk. Step
+// B leaves out a deal any waiting card names under this page's narrowing. Step
+// E leaves out a deal a ranked row above reports (dealsReported). The tail and
+// the Done check both ask it.
 func (s *Service) dealsElsewhere(
 	ctx context.Context, asOf time.Time, deals []ids.UUID, reported map[ids.UUID]bool,
 ) (map[ids.UUID]bool, error) {

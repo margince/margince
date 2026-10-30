@@ -13,21 +13,20 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The ranked sweep and the tail judge quiet at the read's own instant, not the
-// database's. A deal exactly at the threshold is not quiet, and one that
-// crosses it after that instant is not quiet yet, in both.
+// database's. A deal at the threshold is not quiet, and one that crosses it
+// after that instant is not quiet yet, in both.
 func TestTheSweepAndTheTailJudgeQuietAtOneInstant(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -74,7 +73,7 @@ func dealIDsOf(candidates []agents.SlippingDeal) []ids.UUID {
 }
 
 // A deal past the sweep whose brief row stands on the ranked page is that one
-// row, so the tail never serves it as at risk and Done on it as an at-risk row
+// row. The tail never serves it as at risk. Done on it as an at-risk row
 // answers not found.
 func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
 	e := integration.Setup(t)

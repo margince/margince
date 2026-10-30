@@ -12,10 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// AtRiskWindow is the at-risk rule, the one spelling every at-risk read
-// builds on: open deals quiet for QuietForDays at AsOf, or open deals whose
-// expected close is before CloseBefore, the workspace day of AsOf. Arm picks
-// one half, which is how the Worklist's two bounded sweeps read it.
+// AtRiskWindow is the at-risk rule that every at-risk read builds on. A deal
+// is at risk when it is open and quiet for QuietForDays at AsOf. It is also at
+// risk when it is open and its expected close is before CloseBefore, the
+// workspace day of AsOf. Arm picks one half, as the two bounded sweeps do.
 type AtRiskWindow struct {
 	QuietForDays int
 	AsOf         time.Time
