@@ -187,6 +187,40 @@
   white-space: nowrap;
 }
 
+/* The break before a date too far ahead to draw to scale: a gap in the spine
+   between two slanted strokes, the far date's month and year above it. */
+.standing-timeline-break {
+  position: absolute;
+  inset-block-start: var(--standing-timeline-spine-y);
+  inline-size: 12px;
+  block-size: 18px;
+  transform: translate(-50%, -50%);
+  background: var(--ground);
+}
+.standing-timeline-break::before,
+.standing-timeline-break::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  border-inline-start: 2px solid var(--textSecondary);
+  transform: skewX(-20deg);
+}
+.standing-timeline-break::before {
+  inset-inline-start: 1px;
+}
+.standing-timeline-break::after {
+  inset-inline-end: 1px;
+}
+.standing-timeline-break-label {
+  position: absolute;
+  inset-block-end: calc(100% + var(--space-2));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  white-space: nowrap;
+}
+
 /* The mark lane: logged items and messages as chips just above the spine, each
    on a short stem to it. The layer takes no pointer of its own, so the axis
    under it keeps its hover; a chip takes its own. */
