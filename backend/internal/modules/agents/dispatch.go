@@ -61,6 +61,7 @@ const (
 	methodResourcesRead         = "resources/read"
 	methodResourceTemplatesList = "resources/templates/list"
 	methodPromptsList           = "prompts/list"
+	methodPromptsGet            = "prompts/get"
 	// fieldName is the "name" member of both serverInfo and a tools/list
 	// entry — the same identifier in both, so it stays one spelling.
 	fieldName = "name"
@@ -125,6 +126,10 @@ type Dispatcher struct {
 	// which withdraws every `_meta.ui` rather than advertising documents that
 	// cannot be read. Every tool still answers in text.
 	viewHeld func(uri string) bool
+	// publicOrigin is the install's configured web origin, which the app is
+	// served from. Empty leaves serverInfo without a website or icons, and
+	// results without record links.
+	publicOrigin string
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -252,7 +257,13 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 	case methodResourceTemplatesList:
 		resp.Result = map[string]any{"resourceTemplates": []any{}}
 	case methodPromptsList:
-		resp.Result = map[string]any{"prompts": []any{}}
+		resp.Result = map[string]any{"prompts": s.promptList(ctx)}
+	case methodPromptsGet:
+		if result, rpcErr := s.promptGet(ctx, req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
 	case methodTasksGet, methodTasksUpdate, methodTasksCancel:
 		// Modern-only, and not through eraOwned because these need the request
 		// context: they authenticate, read and can execute. In the handshake era
@@ -325,13 +336,15 @@ func methodNotFound(req rpcRequest) rpcResponse {
 // legacy client would offer a negotiation it cannot enter — the same reason
 // ping is answered in one era only.
 //
-// listChanged is FALSE on both feature entries because this server has no way
-// to send the notification: notifications/*/list_changed travels on a stream
-// this transport does not open. Both surfaces really do change — each is
-// filtered per caller — so the claim would promise a message that can never
-// arrive.
+// listChanged is FALSE on every feature entry, because this server cannot send
+// the notification. notifications/*/list_changed travels on a stream this
+// transport does not open. Every surface really does change, since each is
+// filtered per caller, so the claim would promise a message that never arrives.
 func (s *Dispatcher) capabilities(modern bool) map[string]any {
-	capabilities := map[string]any{"tools": map[string]any{"listChanged": false}}
+	capabilities := map[string]any{
+		"tools":   map[string]any{"listChanged": false},
+		"prompts": map[string]any{"listChanged": false},
+	}
 	if s.resources != nil {
 		// subscribe is FALSE for the same reason, and separately: a
 		// per-caller document has no shared state to subscribe to.
@@ -360,12 +373,6 @@ func (s *Dispatcher) capabilities(modern bool) map[string]any {
 	return capabilities
 }
 
-// identity is the serverInfo both framings report — the handshake era in its
-// initialize result, the modern era in every result's _meta.
-func (s *Dispatcher) identity() map[string]any {
-	return map[string]any{fieldName: s.name, "version": s.version}
-}
-
 // call answers tools/call. Its return is `any` rather than a result map because
 // a confirm-first call has TWO shapes: the refusal every client understands,
 // and — for a client that declared the Tasks extension on this request — a task
@@ -391,7 +398,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		p.Arguments = json.RawMessage(`{}`)
 	}
 
-	callCtx, err := s.bind(ctx)
+	callCtx, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		// The bind failure's cause (revoked vs expired vs infrastructure)
 		// is server-side knowledge; the client only learns that its

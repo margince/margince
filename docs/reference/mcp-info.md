@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 137.3 KB |
-| Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36242 |
-| Largest tool | `preview_import` (8.5 KB) |
+| Tool catalog | 138.0 KB |
+| Resource catalog | 4.4 KB |
+| Approx. wire tokens | 36441 |
+| Largest tool | `preview_import` (8.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,10 +32,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
+| Output schemas | 30.7 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 33.6 KB | 24% | Yes, every step |
-| Input schemas | 64.6 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
+| Input schemas | 64.6 KB | 46% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.2 KB | 6% | Partly |
 | **Description + input schema** | **98.1 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
@@ -429,6 +429,9 @@ requires passport scope "write".)
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -597,6 +600,9 @@ carries their approval has answered. (Runs immediately; requires passport scope 
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -1044,6 +1050,9 @@ passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -1566,6 +1575,9 @@ and its new version from the answer. (Runs immediately; requires passport scope 
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -1800,6 +1812,9 @@ record's own fields, and create_record with record_type offer to make an offer w
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -2503,6 +2518,9 @@ Availability is checked again when reserving the time.
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -2663,6 +2681,9 @@ requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -3004,6 +3025,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -3315,6 +3339,9 @@ it runs; requires passport scope "enrich".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4044,6 +4071,9 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -4287,6 +4317,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4880,6 +4913,9 @@ make. (Runs immediately; requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -5540,6 +5576,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -5880,6 +5919,9 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -6365,6 +6407,9 @@ Keep list_id, the version for a later change, and next_cursor to read the next p
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -6597,6 +6642,9 @@ the record were unowned.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -7475,6 +7523,9 @@ view refuses an argument it does not take and names the ones it does.
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -8208,6 +8259,9 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -8349,6 +8403,9 @@ answered, where locale is absent until this contact chooses one.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },

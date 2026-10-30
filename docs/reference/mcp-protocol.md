@@ -19,7 +19,7 @@ modern version. Anything else is served as **handshake-era**. The framing decide
 back*, never what it may do. Both reach the same registry and the same admission gate.
 
 **Methods both forms answer:** `tools/list`, `tools/call`, `resources/list`, `resources/read`,
-`resources/templates/list`, `prompts/list`. **Methods each era owns:** `initialize` and `ping` in the handshake
+`resources/templates/list`, `prompts/list`, `prompts/get`. **Methods each era owns:** `initialize` and `ping` in the handshake
 framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
 answer one would tell a client it had reached the era it was looking for.
 
@@ -61,6 +61,20 @@ data to the wrong caller.
 
 The server could not audit a wrong cached answer, because it never sees one. A TTL is a hint for caches, never a permission. Every call
 signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
+
+**Starter prompts.** `prompts/list` offers the requests in `agents/prompts.go`, which a host shows as commands or a
+menu. A caller sees a prompt only when it is offered every tool the prompt names, so a read-only passport is not offered
+"Log a call". `prompts/get` fills the prompt's arguments into one user message. A missing argument or an unknown name is
+`-32602`. In the modern framing `prompts/get` needs `Mcp-Name`, like `tools/call`.
+
+**What the server says about itself.** `serverInfo` carries a `title` and a `description`. When the public origin is
+set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is
+and the tools to start with, before the rules.
+
+**Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
+`web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency` gets a
+`<name>_display` such as `72000.00 USD`, from `values.MajorUnits`. A model quotes that text, so it never works out the
+amount on its own. A result with no amount keeps its bytes as the handler wrote them.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
 right after `initialize` no matter what. A feature the server does not list that answers "method not found" reads as a

@@ -185,6 +185,12 @@ func WithResourceProvider(provider mcp.ResourceProvider) HTTPOption {
 	return func(d *Dispatcher) { d.WithResources(provider) }
 }
 
+// WithPublicOrigin names the install's web origin, so serverInfo can show its
+// website and icon and every result can link the records it rests on.
+func WithPublicOrigin(origin string) HTTPOption {
+	return func(d *Dispatcher) { d.publicOrigin = strings.TrimSuffix(origin, "/") }
+}
+
 // WithHeldViews tells the tool surface which `ui://` documents are actually
 // being served, so a tool never names one this deployment does not publish.
 func WithHeldViews(held func(uri string) bool) HTTPOption {

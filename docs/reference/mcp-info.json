@@ -10,22 +10,24 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 140621,
-    "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36242,
-    "largest_tool_bytes": 8748,
+    "tool_catalog_bytes": 141284,
+    "resource_catalog_bytes": 4481,
+    "approx_wire_tokens_total": 36441,
+    "largest_tool_bytes": 8776,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 34366,
       "input_schema_bytes": 66139,
-      "output_schema_bytes": 30862,
+      "output_schema_bytes": 31394,
       "description_plus_input_schema_bytes": 100505
     }
   },
   "tools": {
     "_meta": {
       "io.modelcontextprotocol/serverInfo": {
+        "description": "Your CRM in the conversation: deals, contacts, meetings, the forecast and what needs attention.",
         "name": "margince-crm",
+        "title": "Margince",
         "version": "published"
       }
     },
@@ -125,6 +127,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -281,6 +286,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -712,6 +720,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -1216,6 +1227,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -1439,6 +1453,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -2094,6 +2111,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -2240,6 +2260,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -2558,6 +2581,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -2831,6 +2857,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -3538,6 +3567,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -3772,6 +3804,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -4342,6 +4377,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -4990,6 +5028,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -5321,6 +5362,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -5767,6 +5811,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -5980,6 +6027,9 @@
                     "type": "string"
                   },
                   "source": {
+                    "type": "string"
+                  },
+                  "web_url": {
                     "type": "string"
                   }
                 },
@@ -6832,6 +6882,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -7513,6 +7566,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -7646,6 +7702,9 @@
                   },
                   "source": {
                     "type": "string"
+                  },
+                  "web_url": {
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -7718,7 +7777,9 @@
   "resources": {
     "_meta": {
       "io.modelcontextprotocol/serverInfo": {
+        "description": "Your CRM in the conversation: deals, contacts, meetings, the forecast and what needs attention.",
         "name": "margince-crm",
+        "title": "Margince",
         "version": "published"
       }
     },
