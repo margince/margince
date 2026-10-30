@@ -37,7 +37,7 @@ import { blocks, resolve, themes } from "./tokens-testing";
 const LEDGER_CEILING = { spellings: 78, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 81, overlays: 17 };
+const LADDER_SIZE = { surfaces: 80, overlays: 17 };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = join(here, "..", "..");
@@ -626,7 +626,7 @@ describe("a pane's ground is its depth", () => {
     ".panel",
     ".card",
     ".record-card",
-    ".record-split-sheet",
+    ".page-pane",
     '.stat-strip[data-density="plate"]',
   ];
   const sheet = ladderSheet(
@@ -744,7 +744,7 @@ describe("a pane's ground is its depth", () => {
     expect(
       groundsOf(`
         <section class="panel"><div class="lt" id="band"></div></section>
-        <section class="record-split-sheet"><div class="lt" id="box"></div></section>`),
+        <section class="page-pane"><div class="lt" id="box"></div></section>`),
     ).toEqual({ band: one, box: two });
   });
 

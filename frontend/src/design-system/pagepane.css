@@ -1,0 +1,13 @@
+/* A page pane: a level-1 surface on the page ground. RecordView's two cards
+   and PageZones' `panes` columns wear this one rule, so the pages agree. */
+.page-pane {
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  min-inline-size: 0;
+}
+/* Only the pane rests on a shadow. A panel inside one is a box in a box, and
+   its hairline alone separates it. */
+.page-pane .panel {
+  box-shadow: none;
+}

@@ -99,6 +99,17 @@ export const Single: Story = {
   },
 };
 
+// Each column on its own pane, the surface a record page's two cards stand on.
+export const Panes: Story = {
+  args: {
+    shape: "aside",
+    panes: true,
+    main: work,
+    aside: business,
+    asideLabel: "Context",
+  },
+};
+
 /**
  * Both rails at the first fold: the work column goes full width and the two
  * rails sit under it, side by side.
@@ -132,6 +143,13 @@ export const Folded: Story = {
     aside: business,
     asideLabel: "Context",
   },
+};
+
+// Folded, the panes stack and keep their chrome.
+export const PanesFolded: Story = {
+  parameters: FOLDED_VIEWPORT,
+  globals: { viewport: { value: "folded" } },
+  args: { ...Panes.args },
 };
 
 /**

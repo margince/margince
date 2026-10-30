@@ -14,8 +14,6 @@
   .panel-plate,
   .card,
   .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-  .record-split-details,
-  .record-split-sheet,
   .record-card,
   .recorddetails-note,
   .company-card,
@@ -90,7 +88,8 @@
   .ob-voice-kind,
   .ob-voice-print,
   .ob-voice-result-hero,
-  .ob-voice-building
+  .ob-voice-building,
+  .page-pane
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -112,8 +111,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -188,15 +185,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -271,7 +267,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -293,8 +290,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -369,15 +364,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -452,15 +446,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -535,7 +528,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -557,8 +551,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -633,15 +625,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -716,15 +707,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -799,15 +789,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -882,7 +871,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -957,8 +947,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1033,7 +1021,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1074,8 +1063,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1150,15 +1137,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1233,7 +1219,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1274,8 +1261,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1350,15 +1335,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1433,15 +1417,14 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   )
   :where(
     .panel,
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1516,7 +1499,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1577,8 +1561,6 @@
     .panel-plate,
     .card,
     .stat-card:not(.stat-strip[data-density="plate"] .stat-card),
-    .record-split-details,
-    .record-split-sheet,
     .record-card,
     .recorddetails-note,
     .company-card,
@@ -1653,7 +1635,8 @@
     .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
-    .ob-voice-building
+    .ob-voice-building,
+    .page-pane
   ) {
   background-color: var(--ground);
 }

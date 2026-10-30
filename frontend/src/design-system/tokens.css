@@ -522,6 +522,8 @@
    *                 above the bare card because the band makes it the wider
    *                 surface of the two
    *   --gapActions  between two buttons that sit side by side
+   *   --gapPanes    between two page panes (.page-pane)
+   *   --padPane     inside a page pane that pads itself
    * A screen is held to these in the contexts that HAVE one
    * (check-ds-spacing-roles.sh); everywhere else the raw rung is still the
    * answer, because a role nobody can name is not a role. */
@@ -529,6 +531,8 @@
   --padCard: var(--space-4);
   --padPanel: var(--space-5);
   --gapActions: var(--space-2);
+  --gapPanes: var(--space-6);
+  --padPane: var(--space-5);
 
   /* How far the agent's cell rises above the top edge of the phone bar. The bar
    * is a row of destinations and the agent is not one, so it breaks the bar's
