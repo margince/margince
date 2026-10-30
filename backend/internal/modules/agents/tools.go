@@ -54,6 +54,27 @@ type StageResolver interface {
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 }
 
+// WithDealTaskSettler injects the seam that answers a closing deal's open
+// tasks. A registry composed without one reports none and settles none.
+func WithDealTaskSettler(settler DealTaskSettler) RegistryOption {
+	return func(r *Registry) { r.closeTasks = settler }
+}
+
+// DealTaskSettler answers, and settles, the open tasks a closing deal leaves
+// behind. Closing a deal never settles them silently (#7475), so the surface
+// that closes it has to be able to ask.
+//
+// Narrow rather than on the provider port: the read is an activities concern
+// and three fakes assert that port without embedding it, so widening it would
+// put stubs for this in modules that never close a deal.
+type DealTaskSettler interface {
+	// OpenTasksOnDeal lists the deal's open tasks, newest first.
+	OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]crmcontracts.DealOpenTask, error)
+	// CompleteOpenTasksOnDeal ticks them done through the write the bulk
+	// change applies, so the audit rows match the web's "Complete all".
+	CompleteOpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]ids.UUID, error)
+}
+
 // RegisterCoreTools wires the §2.1 CRUD set over one provider: the 🟢
 // tools, `advance_deal` (🟢→🟡 dynamic), and the 🟡 confirm-first tools the
 // approval loop carries — `archive_record`, `promote_lead` and
@@ -73,7 +94,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
-	r.Register(progressDeal{p: p, stages: stages, language: r.language})
+	r.Register(progressDeal{p: p, stages: stages, language: r.language, closeTasks: r.closeTasks})
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})

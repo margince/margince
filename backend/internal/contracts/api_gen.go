@@ -15733,6 +15733,24 @@ func (e ProductBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for ProgressDealRequestSettle.
+const (
+	ProgressDealRequestSettleComplete ProgressDealRequestSettle = "complete"
+	ProgressDealRequestSettleKeep     ProgressDealRequestSettle = "keep"
+)
+
+// Valid indicates whether the value is a known member of the ProgressDealRequestSettle enum.
+func (e ProgressDealRequestSettle) Valid() bool {
+	switch e {
+	case ProgressDealRequestSettleComplete:
+		return true
+	case ProgressDealRequestSettleKeep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProgressDealRequestWonWithoutContractReason.
 const (
 	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
@@ -39828,6 +39846,16 @@ type DealNextBestActionEvidence struct {
 	Text              string            `json:"text"`
 }
 
+// DealOpenTask One task still open on a deal that just closed.
+type DealOpenTask struct {
+	// DueAt When it is due, absent on a task nobody dated.
+	DueAt *time.Time         `json:"due_at,omitempty"`
+	Id    openapi_types.UUID `json:"id"`
+
+	// Subject What the task says to do.
+	Subject string `json:"subject"`
+}
+
 // DealRoleProposalResult defines model for DealRoleProposalResult.
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
@@ -48927,6 +48955,9 @@ type ProgressDealRequest struct {
 	// Note Logged as a note on the deal's timeline after the move.
 	Note *string `json:"note,omitempty"`
 
+	// Settle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+	Settle *ProgressDealRequestSettle `json:"settle,omitempty"`
+
 	// ToStageId The stage to move to. Its semantic decides whether the move is confirm-first.
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
 
@@ -48936,6 +48967,9 @@ type ProgressDealRequest struct {
 	// WonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 	WonWithoutContractReason *ProgressDealRequestWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
 }
+
+// ProgressDealRequestSettle What becomes of the deal's open tasks when this move closes it. Omitted keeps them.
+type ProgressDealRequestSettle string
 
 // ProgressDealRequestWonWithoutContractReason Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
 type ProgressDealRequestWonWithoutContractReason string
@@ -48947,6 +48981,12 @@ type ProgressDealResult struct {
 
 	// NoteActivityId The note logged on the deal, absent when the call carried none.
 	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+
+	// OpenTasks The deal's tasks still open after a move that closed it. Absent when the move left it open, or when the call settled them.
+	OpenTasks *[]DealOpenTask `json:"open_tasks,omitempty"`
+
+	// SettledTaskIds The tasks this call completed, present only when it asked to settle them.
+	SettledTaskIds *[]openapi_types.UUID `json:"settled_task_ids,omitempty"`
 }
 
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
