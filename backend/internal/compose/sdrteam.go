@@ -223,7 +223,7 @@ func readHandoffOutcomes(ctx context.Context, tx pgx.Tx, requested RequestedScop
 		return "count(*) FILTER (WHERE e.to_status=" + b.add(status) + " AND " + in + ")"
 	}
 	query := `SELECT ` + count(contacts.HandoffSubmitted) + `,` + count(contacts.HandoffRejected) + `,` + count(contacts.HandoffRecycled) + `,
- count(*) FILTER (WHERE e.submitter_id_at_change IS NULL AND `+unattributedIn(population)+`),` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRejected) + `,` + seats(contacts.HandoffRecycled) + `
+ count(*) FILTER (WHERE e.submitter_id_at_change IS NULL AND ` + unattributedIn(population) + `),` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRejected) + `,` + seats(contacts.HandoffRecycled) + `
  FROM sdr_handoff_event e WHERE ` + eventWindowSQL(&b, "e.occurred_at", window)
 	var unattributed int
 	groups := make([][]ids.UUID, 4)

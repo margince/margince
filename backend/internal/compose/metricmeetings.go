@@ -60,7 +60,7 @@ type heldMeeting struct {
 	from, where string
 	// seats is a row source of the seats the meeting credits, as credit(id).
 	// seat is the one seat a figure grouped by colleague lists it under.
-	seats, seat string
+	seats, seat              string
 	start, precision, placed string
 	// provenance names how the row's credit and day were read; legacy is
 	// whether they come from the meeting as it is today.
