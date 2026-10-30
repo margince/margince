@@ -60,6 +60,21 @@ var noExpiry *time.Time
 // values change, and an uncapped suppression outlives the fact it rested on.
 const MaxSuppression = 90 * 24 * time.Hour
 
+// LiveRemindAtSQL is when a deferral actually comes back: the moment it named,
+// or MaxSuppression after it was given, whichever is sooner.
+//
+// Read rather than trusted, because answers written before the ceiling was
+// refused still name a moment past it. days is SQL the caller renders, so a
+// caller binds it however its own statement binds parameters.
+func LiveRemindAtSQL(answer, days string) string {
+	return "LEAST(" + answer + ".remind_at, " + answer +
+		".created_at + make_interval(days => " + days + "))"
+}
+
+// MaxSuppressionDays is MaxSuppression as the whole number of days a SQL
+// interval takes.
+func MaxSuppressionDays() int { return int(MaxSuppression / (24 * time.Hour)) }
+
 // Resolution is somebody's answer to a finding.
 type Resolution struct {
 	DealID      *ids.UUID
@@ -312,6 +327,15 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 			return nil, &values.ParseError{
 				Field: "remind_at", Code: "required",
 				Message: "a deferral names when it comes back, or it is a dismissal",
+			}
+		}
+		// Refused rather than silently shortened, as an expiry past the ceiling
+		// is. A deferral hides the finding as an expiry does, so it cannot
+		// outlive the fact it rested on either.
+		if in.RemindAt.After(now.Add(MaxSuppression)) {
+			return nil, &values.ParseError{
+				Field: "remind_at", Code: "out_of_range",
+				Message: "a finding may be deferred for at most 90 days: a value that was correct in May is a claim about May",
 			}
 		}
 		return noExpiry, nil
