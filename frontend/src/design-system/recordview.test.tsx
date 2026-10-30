@@ -111,7 +111,10 @@ describe("renaming the record", () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async (_next: string) => {});
     render(<RecordView {...record} rename={rename(onSave)} />);
-    const heading = screen.getByRole("heading", { level: 1 });
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Brandt Automotive GmbH",
+    });
     await user.click(
       within(heading).getByRole("button", { name: "Change Full name" }),
     );

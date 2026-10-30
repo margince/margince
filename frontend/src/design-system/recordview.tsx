@@ -215,14 +215,20 @@ function RecordTitle({
   children,
 }: Readonly<{ name: string; children: ReactNode }>) {
   return (
-    <Heading size="large" as="h1" className="record-split-name" title={name}>
+    <Heading
+      size="large"
+      as="h1"
+      className="record-split-name"
+      title={name}
+      aria-label={name}
+    >
       {children}
     </Heading>
   );
 }
 
-// The h1 holds the name's edit button at rest. While it is open the field
-// stands in the heading's place, in the heading's type.
+// The h1 holds the name's edit button at rest, and is named by the record, not
+// by the button's verb. While open, the field stands in the heading's place.
 function RecordName({
   name,
   rename,
