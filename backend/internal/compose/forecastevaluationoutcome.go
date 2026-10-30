@@ -91,12 +91,7 @@ func forecastVintageOutcome(v *forecasting.EvaluationVintage, moves forecastMove
 		if move.gone || (move.changedAt != nil && move.semantic == nil) {
 			return nil
 		}
-		day := time.Time{}
-		if move.changedAt != nil {
-			day = elapsed.CalendarDay(*move.changedAt, zone)
-		}
-		won := move.semantic != nil && *move.semantic == "won" &&
-			!day.Before(v.PeriodStart) && !day.After(v.PeriodEnd)
+		won := move.wonIn(v, zone)
 		if label {
 			v.OpenDeals[j].WonInHorizon = &won
 		}
@@ -158,4 +153,13 @@ func readForecastDealMoves(
 		return nil, nil, fmt.Errorf("compose: reading the evaluation's stage history: %w", err)
 	}
 	return scoring, training, nil
+}
+
+// wonIn answers whether the move is a win dated inside the vintage's period.
+func (m forecastDealMove) wonIn(v *forecasting.EvaluationVintage, zone *time.Location) bool {
+	if m.changedAt == nil || m.semantic == nil || *m.semantic != dealStatusWon {
+		return false
+	}
+	day := elapsed.CalendarDay(*m.changedAt, zone)
+	return !day.Before(v.PeriodStart) && !day.After(v.PeriodEnd)
 }
