@@ -616,9 +616,13 @@ const (
 	// of the preparation revision. The meeting itself is content-gated first.
 	// No id is returned.
 	//
-	// 149: contacts.fileLinkedInTwins finds every live contact holding the
+	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
+	// rows for the forecast evaluation, which only a system principal may run.
+	// Each id joins a deal to its outcome and is dropped from the dataset.
+	//
+	// 150: contacts.fileLinkedInTwins finds every live contact holding the
 	// LinkedIn profile a write just set. The lane searches the whole workspace
 	// by design, as the address-variant lane does. The ids become review rows
 	// inside the write, and none is returned to its caller.
-	modulesTierUnscopedCeiling = 149
+	modulesTierUnscopedCeiling = 150
 )

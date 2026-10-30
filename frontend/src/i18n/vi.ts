@@ -769,6 +769,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionExistingContact": "Liên hệ hiện có sẽ cập nhật",
   "approval.preview.promotionSetOrigin": "Liên kết liên hệ với lead này",
   "approval.preview.promotionCompanyIndustry": "Ngành của công ty",
+  "approval.preview.promotionCompanyProposed": "Công ty cần liên kết hoặc tạo",
   "approval.preview.promotionDuplicateCandidate":
     "Liên hệ có thể trùng cần xem xét",
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
@@ -792,6 +793,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
   "approval.preview.promotionFillIndustry":
     "Ghi ngành đã hiển thị vào công ty được liên kết, vì công ty chưa có ngành.",
+  "approval.preview.promotionProposeCompany":
+    "Không tạo công ty từ tên đã nhập. Liên hệ hiển thị tên này như một công ty cần liên kết hoặc tạo.",
   "approval.preview.promotionReview":
     "Tạo một liên hệ riêng và đưa cặp có thể trùng vào danh sách xem xét.",
   "approval.preview.promotionAllMarketing": "Tất cả hoạt động tiếp thị",
@@ -2000,6 +2003,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
+  "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
   "systemJob.ai_activity_reconcile": "Cập nhật bù hoạt động AI",
   "systemJob.ai_activity_retention": "Dọn dẹp hoạt động AI",
@@ -2046,6 +2050,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
+  "systemJob.forecast_evaluation": "Đánh giá dự báo",
   "systemJob.geocode": "Tra cứu địa chỉ công ty",
   "systemJob.geocode_backfill": "Tra cứu địa chỉ còn tồn đọng",
   "systemJob.address_country_check": "Kiểm tra quốc gia của địa chỉ",
@@ -4243,6 +4248,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Hoạt động này",
   "activity.followUps": "Công việc tiếp theo",
   "activity.noFollowUps": "Chưa có công việc tiếp theo",
+  "activity.archive": "Lưu trữ",
+  "activity.archiveConfirm": "Lưu trữ mục này? Mục sẽ rời khỏi Lịch sử.",
+  "activity.archiveDone": "Đã lưu trữ mục",
+  "activity.archiveRefused":
+    "Bạn chỉ có thể lưu trữ ghi chú và công việc do chính bạn viết. Hãy nhờ quản lý lưu trữ mục này.",
   "activity.notYoursToChange":
     "Bạn không có quyền sửa hoạt động này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "activity.files.empty": "Hoạt động này chưa có tệp nào.",
@@ -5015,6 +5025,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.title": "Xác nhận đủ điều kiện cho {name}",
   "lead.qualify.contact": "Liên hệ",
   "lead.qualify.alsoDeal": "Mở thêm một deal",
+  "lead.qualify.company": "Công ty",
+  "lead.qualify.companyUnresolved":
+    "Email của lead này không cho biết {company} là công ty nào, nên không có công ty nào được tự động thêm.",
+  "lead.qualify.createCompany": "Thêm {company} làm nơi làm việc",
+  "lead.qualify.createCompanyHint":
+    "Liên kết công ty có tên này, hoặc tạo mới. Nếu bỏ chọn, liên hệ sẽ hiển thị {company} như một công ty cần liên kết hoặc tạo.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Giai đoạn",
   "lead.qualify.dealName": "Tên deal",
@@ -5374,6 +5390,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
+  "deal.archiveRefused":
+    "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
@@ -7412,6 +7430,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.enforcementNotStarted": "Hãy chạy lần kiểm tra đầu tiên trước.",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
   "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
+  "review.callMovedHelp_one":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi: {count} giao dịch đã thay đổi theo cách ảnh hưởng đến dự báo.",
+  "review.callMovedHelp_other":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi: {count} giao dịch đã thay đổi theo cách ảnh hưởng đến dự báo.",
+  "review.callMovedWithheldHelp":
+    "Pipeline làm căn cứ cho dự báo này đã thay đổi, kể cả các giao dịch bạn không mở được.",
+  "review.callLimitedHelp":
+    "Nhóm, đơn vị tiền tệ gốc hoặc năm tài chính đã thay đổi kể từ dự báo này, nên không thể so sánh với pipeline hiện tại.",
+  "review.callOpenItsForecast":
+    "Mở dự báo cho nhóm và kỳ của dự báo này để chốt dự báo mới.",
+  "review.callAuthorOnly":
+    "Chỉ quản lý đã chốt dự báo này mới có thể chốt dự báo mới.",
+  "review.submitNewCall": "Chốt dự báo mới",
+  "review.forecastCallMoved": "Cần xem lại dự báo đã chốt",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",
@@ -7444,6 +7476,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cập nhật {date} · cao hơn {gap} so với đã chốt + Commit đã xác nhận",
   "forecast.currentCallDetailUnder":
     "Cập nhật {date} · thấp hơn {gap} so với đã chốt + Commit đã xác nhận",
+  "forecast.callHistoryUnavailable":
+    "Dự báo này được chốt trước khi hệ thống lưu lại pipeline làm căn cứ, nên không thể biết điều gì đã thay đổi kể từ đó.",
   "forecast.currentCallDetailEven":
     "Cập nhật {date} · bằng đã chốt + Commit đã xác nhận",
   "forecast.evidence": "Commit · ngày đã xác nhận",
@@ -8684,6 +8718,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.approval_auto_apply": "Duyệt tự động",
   "jobs.kind.assurance_run": "Kiểm tra dự báo theo yêu cầu",
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
+  "jobs.kind.assurance_deal_rescan":
+    "Kiểm tra dự báo cho một giao dịch đã thay đổi",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
@@ -15188,6 +15224,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.source.vcard_import": "vCard đã nhập",
   "contact.enriched.source.contact_research": "kết quả nghiên cứu đã chấp nhận",
   "contact.enriched.source.human_restore": "giá trị đã khôi phục",
+  "contact.enriched.source.lead_promotion": "lead đã được chuyển đổi",
   "contact.enriched.source.other": "một nguồn đã ghi nhận",
   "contact.enriched.undo": "Hoàn tác",
   "contact.enriched.replaced": "Đã thay giá trị cũ “{was}”.",

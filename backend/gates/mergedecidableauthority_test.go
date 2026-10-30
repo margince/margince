@@ -81,6 +81,31 @@ func TestTheMergeCardAsksTheSameAuthorityTheWriteAsks(t *testing.T) {
 	}
 }
 
+// mergeRuleAskers are the places that decide who may merge a pair, and in
+// which direction. The rule is contacts.MayMergePair, asked of a pair's two
+// directions by contacts.OfferMerge. Each of these must call one of them
+// rather than combine the write answers itself.
+var mergeRuleAskers = []struct{ file, function, asks string }{
+	{"internal/modules/contacts/duplicatepairmerge.go", "admitDuplicatePairMerge", "MayMergePair"},
+	{"internal/modules/contacts/duplicatepairmerge.go", "OfferMerge", "MayMergePair"},
+	{"internal/modules/contacts/contactcasedecide.go", "admitCasePair", "MayMergePair"},
+	{"internal/modules/contacts/contactcaseread.go", "mergeOffer", "OfferMerge"},
+	{"internal/modules/contacts/dedupescope.go", "pairAuthority", "OfferMerge"},
+	{"internal/compose/attention/render.go", "mergeOffer", "contacts.OfferMerge"},
+}
+
+func TestEveryMergeOfferAsksTheMergeDoorsRule(t *testing.T) {
+	t.Parallel()
+	for _, asker := range mergeRuleAskers {
+		if !callsQualified(methodBody(t, asker.file, asker.function), asker.asks) {
+			t.Errorf("%s in %s does not CALL %s.\n\n"+
+				"An offer of the merge that combines the two write answers itself drifts apart\n"+
+				"with the door: it denies the owner of one half, or offers a merge nobody may make.",
+				asker.function, asker.file, asker.asks)
+		}
+	}
+}
+
 // callsQualified reports whether the body calls the named function, spelled
 // `pkg.Name`.
 func callsQualified(body *ast.BlockStmt, want string) bool {

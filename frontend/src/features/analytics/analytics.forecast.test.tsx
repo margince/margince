@@ -180,7 +180,7 @@ describe("ForecastView", () => {
   // twenty thousand short of its evidence as "-€200.00 over evidence", which is
   // the wrong direction stated twice. Three arms, and the magnitude unsigned.
   describe("how far the call sits from the evidence", () => {
-    function withCall(amountMinor: number) {
+    function withCall(amountMinor: number, baseline?: string) {
       vi.stubGlobal(
         "fetch",
         forecastStub({
@@ -194,12 +194,23 @@ describe("ForecastView", () => {
               currency: "EUR",
               author_id: "u1",
               created_at: "2026-05-01T09:00:00Z",
+              baseline,
             },
           }),
         }),
       );
       render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     }
+
+    // A call made before calls kept their baseline says so, rather than
+    // letting the gap read as what moved since.
+    it("says a call with no baseline cannot say what moved since", async () => {
+      withCall(200_000, "unavailable");
+      const detail = await screen.findByText(/above won \+ confirmed commits/);
+      expect(detail.textContent).toContain(
+        en["forecast.callHistoryUnavailable"],
+      );
+    });
 
     it("says a forecast above won plus confirmed commits is over it", async () => {
       withCall(200_000);
@@ -209,6 +220,9 @@ describe("ForecastView", () => {
         formatMoneyCompact(40_000, "EUR", "en"),
       );
       expect(detail.textContent).not.toContain("-");
+      expect(detail.textContent).not.toContain(
+        en["forecast.callHistoryUnavailable"],
+      );
     });
 
     it("says a forecast below won plus confirmed commits is under it, not over it by a minus", async () => {

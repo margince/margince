@@ -1134,6 +1134,33 @@ func (e PartnerRelationshipStage) Valid() bool {
 	}
 }
 
+// Defines values for PrincipalAttributionActorType.
+const (
+	Agent     PrincipalAttributionActorType = "agent"
+	Buyer     PrincipalAttributionActorType = "buyer"
+	Connector PrincipalAttributionActorType = "connector"
+	Human     PrincipalAttributionActorType = "human"
+	System    PrincipalAttributionActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
+func (e PrincipalAttributionActorType) Valid() bool {
+	switch e {
+	case Agent:
+		return true
+	case Buyer:
+		return true
+	case Connector:
+		return true
+	case Human:
+		return true
+	case System:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipStrengthBucket.
 const (
 	Moderate RelationshipStrengthBucket = "moderate"
@@ -1483,6 +1510,8 @@ func (e SignalResolutionOutcome) Valid() bool {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssigneeId Task only.
@@ -1541,6 +1570,13 @@ type Activity struct {
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
+
+	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -1858,7 +1894,10 @@ type Company struct {
 	Description *string          `json:"description,omitempty"`
 	DisplayName string           `json:"display_name"`
 	Domains     *[]CompanyDomain `json:"domains,omitempty"`
-	Id          string           `json:"id"`
+
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *string `json:"email,omitempty"`
+	Id    string  `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -1910,8 +1949,11 @@ type Company struct {
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
-	Partner *Partner                `json:"partner,omitempty"`
-	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	Partner *Partner `json:"partner,omitempty"`
+
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string                 `json:"phone,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
@@ -2099,9 +2141,12 @@ type CreateActivityRequestMeetingStatus string
 // Deal A deal. Mirrors the `deal` table.
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
-	AcquisitionSource *string    `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64     `json:"amount_minor,omitempty"`
-	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *string `json:"arr_source_offer_id,omitempty"`
@@ -2501,6 +2546,35 @@ type PartnerPartnerRole string
 // PartnerRelationshipStage defines model for Partner.RelationshipStage.
 type PartnerRelationshipStage string
 
+// PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
+// wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+// renders them with the same helper.
+type PrincipalAttribution struct {
+	ActorId string `json:"actor_id"`
+
+	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
+	ActorName *string                       `json:"actor_name,omitempty"`
+	ActorType PrincipalAttributionActorType `json:"actor_type"`
+
+	// AgentClient The NAME of the tool a delegated change was typed through — "Claude",
+	// "Cursor" — resolved from the OAuth client behind the row's passport.
+	// Null when the passport was minted by hand in Settings, when the client
+	// row is gone, and for every write that was not delegated.
+	AgentClient *string `json:"agent_client,omitempty"`
+
+	// OnBehalfOf Granting human's user id for agent actions.
+	OnBehalfOf *string `json:"on_behalf_of,omitempty"`
+
+	// OnBehalfOfName Resolved display name for on_behalf_of.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
+
+	// PassportId The Agent Seat Passport the change was made under; null for a write that was not delegated.
+	PassportId *string `json:"passport_id,omitempty"`
+}
+
+// PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
+type PrincipalAttributionActorType string
+
 // ProviderRef A reference to a messaging transport registered in THIS installation
 // (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
@@ -2833,6 +2907,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -2991,6 +3073,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'created_at': %w", err)
 		}
 		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
 	}
 
 	if raw, found := object["direction"]; found {
@@ -3276,6 +3366,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -3410,6 +3507,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Direction != nil {
@@ -3902,6 +4006,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -4020,6 +4132,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["raw"]; found {
@@ -4207,6 +4327,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -4307,6 +4434,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -4932,6 +5066,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "amount_minor")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -5322,6 +5464,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 

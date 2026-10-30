@@ -2493,6 +2493,7 @@ const (
 	AttentionContactCaseMergeModeDelegated AttentionContactCaseMergeMode = "delegated"
 	AttentionContactCaseMergeModeNone      AttentionContactCaseMergeMode = "none"
 	AttentionContactCaseMergeModeOrdinary  AttentionContactCaseMergeMode = "ordinary"
+	AttentionContactCaseMergeModePair      AttentionContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the AttentionContactCaseMergeMode enum.
@@ -2503,6 +2504,8 @@ func (e AttentionContactCaseMergeMode) Valid() bool {
 	case AttentionContactCaseMergeModeNone:
 		return true
 	case AttentionContactCaseMergeModeOrdinary:
+		return true
+	case AttentionContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -7077,6 +7080,7 @@ const (
 	ContactCaseMergeModeDelegated ContactCaseMergeMode = "delegated"
 	ContactCaseMergeModeNone      ContactCaseMergeMode = "none"
 	ContactCaseMergeModeOrdinary  ContactCaseMergeMode = "ordinary"
+	ContactCaseMergeModePair      ContactCaseMergeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseMergeMode enum.
@@ -7087,6 +7091,8 @@ func (e ContactCaseMergeMode) Valid() bool {
 	case ContactCaseMergeModeNone:
 		return true
 	case ContactCaseMergeModeOrdinary:
+		return true
+	case ContactCaseMergeModePair:
 		return true
 	default:
 		return false
@@ -7154,6 +7160,7 @@ func (e ContactCaseEdgeStatus) Valid() bool {
 const (
 	ContactCaseOutcomeModeDelegated ContactCaseOutcomeMode = "delegated"
 	ContactCaseOutcomeModeOrdinary  ContactCaseOutcomeMode = "ordinary"
+	ContactCaseOutcomeModePair      ContactCaseOutcomeMode = "pair"
 )
 
 // Valid indicates whether the value is a known member of the ContactCaseOutcomeMode enum.
@@ -7162,6 +7169,8 @@ func (e ContactCaseOutcomeMode) Valid() bool {
 	case ContactCaseOutcomeModeDelegated:
 		return true
 	case ContactCaseOutcomeModeOrdinary:
+		return true
+	case ContactCaseOutcomeModePair:
 		return true
 	default:
 		return false
@@ -11242,6 +11251,24 @@ func (e ForecastAssuranceSourceState) Valid() bool {
 	}
 }
 
+// Defines values for ForecastCallBaseline.
+const (
+	ForecastCallBaselineCaptured    ForecastCallBaseline = "captured"
+	ForecastCallBaselineUnavailable ForecastCallBaseline = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ForecastCallBaseline enum.
+func (e ForecastCallBaseline) Valid() bool {
+	switch e {
+	case ForecastCallBaselineCaptured:
+		return true
+	case ForecastCallBaselineUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastCallScopeKind.
 const (
 	ForecastCallScopeKindOwner     ForecastCallScopeKind = "owner"
@@ -11368,6 +11395,51 @@ func (e ForecastMovementBucketName) Valid() bool {
 	case ForecastMovementBucketNameStageWeight:
 		return true
 	case ForecastMovementBucketNameWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementDealCauses.
+const (
+	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
+	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
+	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
+	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
+	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
+	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
+	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
+	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
+	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
+	ForecastMovementDealCausesWon                ForecastMovementDealCauses = "won"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementDealCauses enum.
+func (e ForecastMovementDealCauses) Valid() bool {
+	switch e {
+	case ForecastMovementDealCausesAmount:
+		return true
+	case ForecastMovementDealCausesCategory:
+		return true
+	case ForecastMovementDealCausesFx:
+		return true
+	case ForecastMovementDealCausesLost:
+		return true
+	case ForecastMovementDealCausesNew:
+		return true
+	case ForecastMovementDealCausesPulledIn:
+		return true
+	case ForecastMovementDealCausesPushedOut:
+		return true
+	case ForecastMovementDealCausesQualification:
+		return true
+	case ForecastMovementDealCausesReopenedOrArchived:
+		return true
+	case ForecastMovementDealCausesStageWeight:
+		return true
+	case ForecastMovementDealCausesWon:
 		return true
 	default:
 		return false
@@ -12609,10 +12681,11 @@ func (e InputCheckStatus) Valid() bool {
 
 // Defines values for InputCheckSubjectKind.
 const (
-	InputCheckSubjectKindContract InputCheckSubjectKind = "contract"
-	InputCheckSubjectKindDeal     InputCheckSubjectKind = "deal"
-	InputCheckSubjectKindOffer    InputCheckSubjectKind = "offer"
-	InputCheckSubjectKindSignal   InputCheckSubjectKind = "signal"
+	InputCheckSubjectKindContract     InputCheckSubjectKind = "contract"
+	InputCheckSubjectKindDeal         InputCheckSubjectKind = "deal"
+	InputCheckSubjectKindForecastCall InputCheckSubjectKind = "forecast_call"
+	InputCheckSubjectKindOffer        InputCheckSubjectKind = "offer"
+	InputCheckSubjectKindSignal       InputCheckSubjectKind = "signal"
 )
 
 // Valid indicates whether the value is a known member of the InputCheckSubjectKind enum.
@@ -12621,6 +12694,8 @@ func (e InputCheckSubjectKind) Valid() bool {
 	case InputCheckSubjectKindContract:
 		return true
 	case InputCheckSubjectKindDeal:
+		return true
+	case InputCheckSubjectKindForecastCall:
 		return true
 	case InputCheckSubjectKindOffer:
 		return true
@@ -26855,6 +26930,8 @@ type ActingIdentity struct {
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssigneeId Task only.
@@ -26913,6 +26990,13 @@ type Activity struct {
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
 	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
+
+	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System".
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -30884,6 +30968,9 @@ type AttentionPair struct {
 	// database rather than their own records.
 	Evidence []AttentionPairEvidence `json:"evidence"`
 
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id,omitempty"`
+
 	// Left One side of a proposed merge, named and weighed so a reader can tell which record to keep.
 	Left AttentionPairSide `json:"left"`
 
@@ -33714,10 +33801,13 @@ type Company struct {
 	CreatedAt    time.Time `json:"created_at"`
 
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-	Description *string            `json:"description,omitempty"`
-	DisplayName string             `json:"display_name"`
-	Domains     *[]CompanyDomain   `json:"domains,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
+	Description *string          `json:"description,omitempty"`
+	DisplayName string           `json:"display_name"`
+	Domains     *[]CompanyDomain `json:"domains,omitempty"`
+
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+	Id    openapi_types.UUID   `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -33769,8 +33859,11 @@ type Company struct {
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
-	Partner *Partner                `json:"partner,omitempty"`
-	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	Partner *Partner `json:"partner,omitempty"`
+
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string                 `json:"phone,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
@@ -37283,7 +37376,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37309,7 +37402,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -37341,14 +37434,18 @@ type ContactCaseEdge struct {
 	CanDismiss bool `json:"can_dismiss"`
 
 	// CanMerge Whether this caller may merge this one open pair through the pair's own decision
-	// route. True only with write access to both ends. `policy_enabled` does not widen it:
-	// the policy admits a merge of the whole case, never of a single pair.
-	CanMerge   bool               `json:"can_merge"`
-	Confidence float32            `json:"confidence"`
-	Evidence   []DedupeEvidence   `json:"evidence"`
-	LeftId     openapi_types.UUID `json:"left_id"`
-	PairId     openapi_types.UUID `json:"pair_id"`
-	RightId    openapi_types.UUID `json:"right_id"`
+	// route. True with write access to both ends, or to one end: then that end is the one
+	// merged away and `keep_id` names the end that survives. `policy_enabled` does not
+	// widen it further.
+	CanMerge   bool             `json:"can_merge"`
+	Confidence float32          `json:"confidence"`
+	Evidence   []DedupeEvidence `json:"evidence"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId  *openapi_types.UUID `json:"keep_id,omitempty"`
+	LeftId  openapi_types.UUID  `json:"left_id"`
+	PairId  openapi_types.UUID  `json:"pair_id"`
+	RightId openapi_types.UUID  `json:"right_id"`
 
 	// Status `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
 	Status ContactCaseEdgeStatus `json:"status"`
@@ -37382,10 +37479,12 @@ type ContactCaseMember struct {
 // ContactCaseOutcome What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
 type ContactCaseOutcome struct {
 	// Committed `false` for a preview: nothing was written.
-	Committed bool                   `json:"committed"`
-	MergedIds []openapi_types.UUID   `json:"merged_ids"`
-	Mode      ContactCaseOutcomeMode `json:"mode"`
-	OwnerId   openapi_types.UUID     `json:"owner_id"`
+	Committed bool                 `json:"committed"`
+	MergedIds []openapi_types.UUID `json:"merged_ids"`
+
+	// Mode The authority the merge ran under, as `merge_mode` on the case names it.
+	Mode    ContactCaseOutcomeMode `json:"mode"`
+	OwnerId openapi_types.UUID     `json:"owner_id"`
 
 	// Shares The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access.
 	Shares []ContactCaseShare `json:"shares"`
@@ -37398,7 +37497,7 @@ type ContactCaseOutcome struct {
 	SurvivorId openapi_types.UUID `json:"survivor_id"`
 }
 
-// ContactCaseOutcomeMode defines model for ContactCaseOutcome.Mode.
+// ContactCaseOutcomeMode The authority the merge ran under, as `merge_mode` on the case names it.
 type ContactCaseOutcomeMode string
 
 // ContactCaseOwner defines model for ContactCaseOwner.
@@ -38790,13 +38889,19 @@ type CreateCompanyRequest struct {
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string                       `json:"industry,omitempty"`
-	LegalName       *string                       `json:"legal_name,omitempty"`
-	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source          string                        `json:"source"`
+	Industry        *string             `json:"industry,omitempty"`
+	LegalName       *string             `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone    *string                       `json:"phone,omitempty"`
+	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source   string                        `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -39967,9 +40072,12 @@ type DeactivateUserRequest struct {
 // Deal A deal. Mirrors the `deal` table.
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
-	AcquisitionSource *string    `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64     `json:"amount_minor,omitempty"`
-	ArchivedAt        *time.Time `json:"archived_at,omitempty"`
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
 	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
@@ -40995,23 +41103,29 @@ type DeclaredExtensionSettingKind string
 
 // DedupeCandidate One DH-DDL-1 review-queue row: the canonical unordered pair, its confidence, and the detection-time evidence snapshot (DH-N-8).
 type DedupeCandidate struct {
-	// CanDecide Whether THIS caller could dispose of the pair — merge it, dismiss it,
-	// or undo a decision. Deciding needs write authority over BOTH ends:
-	// dismissing suppresses both records as duplicates for the whole
-	// workspace, and merging rewrites one into the other.
+	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
+	// That needs write authority over BOTH ends: dismissing suppresses both
+	// records as duplicates for the whole workspace. Whether the caller may
+	// merge the pair is `can_merge`.
 	//
-	// A pair whose ends have different owners is therefore undecidable by
-	// any bounded seat, and it is a common shape — capture creates the
-	// near-duplicate owned by the mailbox owner while the incumbent belongs
-	// to whoever worked it. The pair is still LISTED, because the contact
-	// who can see a duplicate is the contact best placed to notice it; this
-	// says whether the buttons will work, which the client should gate on
-	// rather than discovering through a 403 after the POST.
+	// The pair is LISTED either way, because the contact who can see a
+	// duplicate is the contact best placed to notice it; this says whether
+	// the buttons will work, which the client should gate on rather than
+	// discovering through a 403 after the POST.
 	//
 	// With `contacts.shared_merge_reviews` on, an owner of one end of a
-	// contact pair may dismiss it and undo that, though not merge it. That
-	// answer is the pair's `can_dismiss` in its contact case.
+	// contact pair may dismiss it and undo that. That answer is the pair's
+	// `can_dismiss` in its contact case.
 	CanDecide bool `json:"can_decide"`
+
+	// CanMerge Whether THIS caller could merge the pair: an open pair whose two
+	// records they can see, with write authority over both ends or over
+	// one. With write authority over one end, that end is the one merged
+	// away, and `keep_id` names the end that survives with its owner. So a
+	// caller can give their own record away but never archive a
+	// colleague's. A merge of two records nobody filed as duplicates still
+	// needs write authority over both.
+	CanMerge bool `json:"can_merge"`
 
 	// Confidence The PO-F-1/PO-F-2 fuzzy score at detection.
 	Confidence float32             `json:"confidence"`
@@ -41025,6 +41139,9 @@ type DedupeCandidate struct {
 	// Evidence Per-field agree/collide snapshot captured at detection: what the review queue renders, never re-derived against since-edited rows.
 	Evidence []DedupeEvidence   `json:"evidence"`
 	Id       openapi_types.UUID `json:"id"`
+
+	// KeepId Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+	KeepId *openapi_types.UUID `json:"keep_id"`
 
 	// LeftId Canonical ordering: left is the lower id — {A,B} and {B,A} are one row.
 	LeftId  openapi_types.UUID    `json:"left_id"`
@@ -42468,8 +42585,11 @@ type ForecastAssuranceSourceState string
 
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
-	AmountMinor int64                 `json:"amount_minor"`
-	AuthorId    openapi_types.UUID    `json:"author_id"`
+	AmountMinor int64              `json:"amount_minor"`
+	AuthorId    openapi_types.UUID `json:"author_id"`
+
+	// Baseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+	Baseline    *ForecastCallBaseline `json:"baseline,omitempty"`
 	CreatedAt   time.Time             `json:"created_at"`
 	Currency    string                `json:"currency"`
 	Id          openapi_types.UUID    `json:"id"`
@@ -42482,6 +42602,9 @@ type ForecastCall struct {
 	// SupersedesId The call this one replaces. Absent on the first call of a period, which is a different fact from replacing nothing.
 	SupersedesId *openapi_types.UUID `json:"supersedes_id,omitempty"`
 }
+
+// ForecastCallBaseline Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+type ForecastCallBaseline string
 
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
@@ -42559,12 +42682,18 @@ type ForecastMovementDeal struct {
 	// AuditId The audit row for the change, stored when the closing snapshot was taken rather than reconstructed from timestamps — which is wrong exactly when two changes land in the same second. Absent where the reference has aged out of retention, which reads as "no longer recorded" rather than as no change.
 	AuditId *openapi_types.UUID `json:"audit_id,omitempty"`
 	Bucket  string              `json:"bucket"`
-	DealId  openapi_types.UUID  `json:"deal_id"`
+
+	// Causes Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
+	Causes *[]ForecastMovementDealCauses `json:"causes,omitempty"`
+	DealId openapi_types.UUID            `json:"deal_id"`
 
 	// FromMinor Absent for a deal that was not in the opening snapshot at all.
 	FromMinor *int64 `json:"from_minor,omitempty"`
 	ToMinor   *int64 `json:"to_minor,omitempty"`
 }
+
+// ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
+type ForecastMovementDealCauses string
 
 // ForecastQualifiedReadings The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 // A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
@@ -44239,8 +44368,10 @@ type InputCheck struct {
 
 	// Subject The record this finding is about, named and addressed — the same shape the Worklist carries, so a client routes it through the one registry rather than mapping `subject_kind` onto a screen a second time.
 	// `subject_kind` and `subject_id` stay: they are the durable fields, and a client that has them and not this still draws today's label. Null when the read could not name the record. A signal finding opens its verified company while retaining the signal as its durable review subject.
-	Subject     *AttentionSubject     `json:"subject,omitempty"`
-	SubjectId   openapi_types.UUID    `json:"subject_id"`
+	Subject   *AttentionSubject  `json:"subject,omitempty"`
+	SubjectId openapi_types.UUID `json:"subject_id"`
+
+	// SubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 	SubjectKind InputCheckSubjectKind `json:"subject_kind"`
 
 	// Type Which question noticed it. The key set in `claim` and `observed` depends on this.
@@ -44253,7 +44384,7 @@ type InputCheckSeverity string
 // InputCheckStatus defines model for InputCheck.Status.
 type InputCheckStatus string
 
-// InputCheckSubjectKind defines model for InputCheck.SubjectKind.
+// InputCheckSubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 type InputCheckSubjectKind string
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
@@ -49965,6 +50096,12 @@ type PromoteLeadPreview struct {
 
 	// Outcome merge = an existing live contact matches this lead's email and promotion would fold into it; create = promotion would make a new contact.
 	Outcome PromoteLeadPreviewOutcome `json:"outcome"`
+
+	// TypedCompany The company name typed on the lead when nothing else settles it: the lead links no
+	// company and its email names no business domain. Promotion then needs the rep's
+	// choice, sent as `create_company`. Absent when the lead links a company, has a
+	// business email, or has no typed company name.
+	TypedCompany *string `json:"typed_company,omitempty"`
 }
 
 // PromoteLeadPreviewOutcome merge = an existing live contact matches this lead's email and promotion would fold into it; create = promotion would make a new contact.
@@ -49972,6 +50109,15 @@ type PromoteLeadPreviewOutcome string
 
 // PromoteLeadRequest defines model for PromoteLeadRequest.
 type PromoteLeadRequest struct {
+	// CreateCompany What happens to a company name typed on a lead that links no company and whose email
+	// names no business domain (a personal address, or none). True links the company of that
+	// name, or creates it. False leaves the contact with no employer and puts the name on it
+	// as a proposal to link or create; a company is never created from typed text alone.
+	// The promote preview's `typed_company` says when this choice applies. A lead with a
+	// business email resolves its company from the domain either way, and the typed name
+	// only spells a company that is created for it.
+	CreateCompany *bool `json:"create_company,omitempty"`
+
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
@@ -56094,6 +56240,9 @@ type UpdateCompanyRequest struct {
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
@@ -56105,6 +56254,9 @@ type UpdateCompanyRequest struct {
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string `json:"phone,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
 	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
@@ -58697,20 +58849,36 @@ type WorkingHours struct {
 // | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
 // | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
 // | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+// | `counts[].total` | items | every admitted item of the category for this scope and owner, counted in SQL on this read | exact; absent when not counted |
 // | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
 // | `batch.count` | items | the members of one card | floor when `batch.at_least` |
 // | `bands[].shown` | cards | the rows of this page under one heading | exact |
 // | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
 // | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
-// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+// | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen ranked items that left; never tail rows | exact |
 //
 // A client that has loaded several pages sums items over its loaded cards (one per
 // card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
-// a count of loaded cards with `considered` mixes the two units. A source listed in
-// `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
-// claim it holds everything, even after `next_cursor` is gone. Items past a source's
-// read limit are not reachable through `next_cursor`. They join a later read as the
-// items in front of them are handled.
+// a count of loaded cards with `considered` mixes the two units.
+//
+// **Totals.** No later read or background job finishes a count. A category states
+// `total` when each source behind it was read whole, or was cut and counted in SQL under
+// the same admission rules as the list. The task counts run on the first page of a walk
+// only, so a client keeps the totals that page gave and does not expect them on later
+// pages. Any other category whose sources were cut has no `total`, and its `considered`
+// is a floor: a client draws it as "N+" or draws no number.
+//
+// A source named in `sources_unavailable` because it failed on the first page leaves its
+// category without a `total`. A tail source that fails while a later page loads is named
+// there too, but the totals the first page stated stay as they were: they still count
+// the rows that source holds, and the list stops short of them.
+//
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
+// and deals at risk that the ranked rows left out continue as a tail, merged in one
+// order (oldest due date, arrival or expected close first) and reached through
+// `next_cursor` to their end. Items past the read limit of any other source are not
+// reachable through `next_cursor`. They join a later read as the items in front of
+// them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -58760,20 +58928,25 @@ type Worklist struct {
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
 	// parameter for what a walk does and does not guarantee.
 	//
-	// ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
-	// deliberately not minted on a final page: a cursor there invites one more request
-	// that can only answer empty, and a client walking until the cursor disappears
+	// ABSENT MEANS THE WALK IS OVER — no ranked row and no tail source is left to resume.
+	// It is deliberately not minted on a final page: a cursor there invites one more
+	// request that can only answer empty, and a client walking until the cursor disappears
 	// would never stop.
+	//
+	// Absent does not mean every row was read. A tail source that fails while a page loads
+	// is dropped from the cursor and named in `sources_unavailable`, and the rows past its
+	// position stay unread; a source cut on the first page and not continued in the tail
+	// stops at its read limit.
 	//
 	// Absent is therefore a claim, not a silence, and it is the one this field must
 	// never make wrongly. It is a claim about THIS READ of the day: work that arrives
 	// afterwards, or that overtakes rows already handed out, appears on the next read
 	// rather than extending a finished walk.
 	//
-	// `reach` and `counts` answer a different question — how deep each SOURCE was read,
-	// which is a bound on work rather than the end of a page — so a walk that has ended
-	// can still sit above sources that were cut short, and both statements are true at
-	// once.
+	// `reach` and `counts` answer a different question — how deep each SOURCE was read
+	// on the first page. A walk that has ended has read every tail source (tasks, waiting
+	// customers, deals at risk) that did not fail to its end, but can still sit above other
+	// sources that were cut short, and both statements are true at once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
@@ -59192,7 +59365,11 @@ type WorklistCount struct {
 	// MoreAvailable True when any source behind this category was read to its work bound, so items
 	// MAY exist past what was considered. A category inherits its sources' honesty:
 	// reporting "12 decisions" over a pile the read never finished counting is the
-	// failure this flag exists to prevent.
+	// failure this flag exists to prevent. When `total` is present it is the exact
+	// figure even while this is true. Only the tail categories (tasks, customers waiting,
+	// deals at risk) reach their rest through `next_cursor`; an exact category outside the
+	// tail, such as approvals in `decisions`, is counted in full but listed only to its
+	// read limit.
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the page carries, counting a folded group as its members.
@@ -60048,8 +60225,10 @@ type WorklistPromiseRecipientStatus string
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
-// saw, and no field here claims to know how many. A reader who needs the rest
-// narrows the queue or opens that source's own screen, which pages its own data.
+// saw, and no field here claims to know how many; `counts[].total` is the exact figure
+// per category where one exists. For tasks, waiting customers and deals at risk the
+// rest is reached through `next_cursor`. For any other source a reader who needs the
+// rest narrows the queue or opens that source's own screen, which pages its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -67863,7 +68042,7 @@ type GetWorklistParams struct {
 	// than everything: absent is not false, and a reader asking what changed since a
 	// night that never happened is owed nothing, not the whole queue.
 	//
-	// `upcoming` is planned work due after today: the Upcoming and backlog section
+	// `upcoming` is planned work due in the 14 days after today: the Upcoming and backlog section
 	// at the end of the Today view. These rows never appear in a queue that does not
 	// ask for them, and `summary` never counts them; `counts` reports them under the
 	// `upcoming` category.
@@ -67904,7 +68083,7 @@ type GetWorklistParams struct {
 	// ranking, and the next page re-assembles the day, ranks it the same way, and starts
 	// there.
 	//
-	// It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+	// It encodes the `scope`, `view`, `filter` and `owner` it was minted under, NORMALISED, so
 	// that two spellings of one question share a cursor: an omitted `filter` and
 	// `filter=all` weigh the same candidates, and naming yourself as `owner` is the
 	// question the default already answers. Sending a cursor alongside a genuinely
@@ -67925,15 +68104,22 @@ type GetWorklistParams struct {
 	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
 	//
 	// Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
-	// every row exactly once. The offset advances on every page and the candidate set is
-	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
-	// client paging to exhaustion loop.
+	// every row exactly once. The offset advances on every page and the ranked candidate
+	// set is bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+	// client paging to exhaustion loop. Past the ranked rows, each tail source resumes
+	// from its own position in its own order, which also only moves forward.
 	//
-	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
-	// are fixed, so paging does not race the day. `walk` on the response says what has
-	// happened since — how many of those rows have gone, and how much has arrived that is
-	// deliberately not in this walk. Membership moves one way: new work waits for a fresh
-	// read, work that was resolved or is no longer visible leaves at once.
+	// The RANKED rows of a walk are FROZEN at its first page: the rows they cover and the
+	// order they sit in are fixed, so paging does not race the day. `walk` on the response
+	// says what has happened to those ranked rows since — how many have gone, and how much
+	// has arrived that is deliberately not in this walk. Membership moves one way: new work
+	// waits for a fresh read, work that was resolved or is no longer visible leaves at once.
+	//
+	// The tail below the ranked rows is not frozen. Each page reads every tail source live,
+	// after the position the cursor holds for it, inside the time window the first page
+	// fixed (its instant, day end and time zone). A tail row handled between pages is not
+	// served; a new row that sorts after a source's position can still be. `walk` does not
+	// count tail rows.
 	//
 	// An installation that does not hold walks pages the older way instead, and there the
 	// cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
@@ -67943,9 +68129,10 @@ type GetWorklistParams struct {
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
 	// is there, not as a transaction over it. There is no way to ask for the whole day
-	// at one instant: `limit` stops at 100 and a single category can hold more than that,
-	// because the sources are read to their own bounds well past a page (the decision
-	// lane alone weighs 200). `counts` is what says how much is behind the page.
+	// at one instant: `limit` stops at 100 and a single category can hold more than that.
+	// Tasks, waiting customers and deals at risk are reached in full by walking to the end;
+	// the other sources are read to their own bounds (the decision lane alone weighs 200).
+	// `counts` is what says how much is behind the page.
 	//
 	// The alternative was a token naming the last row it handed you, which is the
 	// obvious design and is worse here. When that row is answered between pages, or
@@ -69228,6 +69415,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -69386,6 +69581,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'created_at': %w", err)
 		}
 		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
 	}
 
 	if raw, found := object["direction"]; found {
@@ -69671,6 +69874,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
 
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
 	if a.ArchivedAt != nil {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
@@ -69805,6 +70015,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Direction != nil {
@@ -70297,6 +70514,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
@@ -70415,6 +70640,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["raw"]; found {
@@ -70602,6 +70835,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
@@ -70702,6 +70942,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -72392,6 +72639,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -72422,6 +72677,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["size_band"]; found {
@@ -72517,6 +72780,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -72542,6 +72812,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -74138,6 +74415,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "amount_minor")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -74528,6 +74813,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 
@@ -78269,6 +78561,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -78315,6 +78615,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["relationship_types"]; found {
@@ -78395,6 +78703,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -78434,6 +78749,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 

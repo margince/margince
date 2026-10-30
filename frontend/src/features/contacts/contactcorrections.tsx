@@ -32,6 +32,7 @@ const SOURCE_PHRASE: Readonly<Record<string, MessageKey>> = {
   vcard_import: "contact.enriched.source.vcard_import",
   contact_research: "contact.enriched.source.contact_research",
   human_restore: "contact.enriched.source.human_restore",
+  lead_promotion: "contact.enriched.source.lead_promotion",
 };
 
 export function sourcePhrase(source: string, t: Translator): string {

@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -283,7 +284,7 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 	own := fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
 				`+noEdgeSubjectColumns+`
-			FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
+			FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 			WHERE a.entity_type = $%d AND a.entity_id = $%d%s
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $%d`, typePos, idPos, keyset, fetchPos)
@@ -295,7 +296,7 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 				`+edgeSubjectColumns+`
 			FROM edge e
 			JOIN audit_log a ON a.entity_type = '`+EdgeEntityType+`' AND a.entity_id = e.rel_id`+
-		auditActorNameJoins+agentClientNameJoin+`%s
+		auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`%s
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $%d`, edgeWhere, fetchPos)
 	return fmt.Sprintf(`

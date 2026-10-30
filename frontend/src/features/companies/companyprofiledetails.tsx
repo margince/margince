@@ -54,6 +54,8 @@ export function CompanyProfileDetails({
       ) : undefined,
     ),
     text("linkedin_url", "create.linkedinUrl"),
+    text("phone", "create.phone"),
+    text("email", "create.email", "email"),
     {
       key: "registered_address",
       term: t("co.profileField.registered_address"),

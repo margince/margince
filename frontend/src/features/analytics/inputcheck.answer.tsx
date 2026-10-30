@@ -21,6 +21,7 @@ import {
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type ReviewActions, useReviewActions } from "../../lib/reviewactions";
+import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
@@ -46,6 +47,17 @@ const reviewOutcomes = new Set([
 
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
+  if (props.check?.type === "forecast_call_moved") {
+    return (
+      <CallCheckSheet
+        check={props.check}
+        open={props.open}
+        onClose={props.onClose}
+        returnFocusTo={props.returnFocusTo}
+        closeLabel={props.labels.cancel}
+      />
+    );
+  }
   if (props.check?.type === "deal_viability") {
     return <ReviewAnswerSheet {...props} check={props.check} />;
   }

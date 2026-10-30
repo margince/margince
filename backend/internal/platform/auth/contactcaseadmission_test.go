@@ -99,3 +99,51 @@ func TestACaseAdmissionNamesWhatItAdmits(t *testing.T) {
 		t.Error("an admission with no owner hands the survivor to nobody")
 	}
 }
+
+func TestAPairAdmissionWritesOnlyItsTwoRecords(t *testing.T) {
+	left, right, other := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	ctx := principal.WithActor(context.Background(), human(principal.RowScopeOwn))
+	ctx, err := WithDuplicatePairAdmission(ctx, "company", left, right)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, end := range []ids.UUID{left, right} {
+		if err := ensureWriteAuthority(ctx, &refusingTx{}, "company", end); err != nil {
+			t.Errorf("an end of the admitted pair was refused: %v", err)
+		}
+	}
+	for _, probe := range []struct {
+		table string
+		id    ids.UUID
+	}{{"company", other}, {"contact", left}, {"lead", right}} {
+		if err := ensureWriteAuthority(ctx, &refusingTx{}, probe.table, probe.id); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s %s outside the pair = %v, want the ordinary refusal", probe.table, probe.id, err)
+		}
+	}
+	if admittedCaseGrantee(ctx, left) || admittedCaseGrantee(ctx, ids.NewV7()) {
+		t.Error("a pair admission admitted an assignee")
+	}
+}
+
+func TestAPairAdmissionNamesTwoRecordsAndNeverStacks(t *testing.T) {
+	one := ids.NewV7()
+	for name, try := range map[string]func() error{
+		"one record twice": func() error {
+			_, err := WithDuplicatePairAdmission(context.Background(), "contact", one, one)
+			return err
+		},
+		"a table no grant can name": func() error {
+			_, err := WithDuplicatePairAdmission(context.Background(), "saved_view", one, ids.NewV7())
+			return err
+		},
+		"a second admission": func() error {
+			held := caseAdmitted(t, []ids.UUID{one, ids.NewV7()}, []ids.UUID{ids.NewV7()})
+			_, err := WithDuplicatePairAdmission(held, "contact", one, ids.NewV7())
+			return err
+		},
+	} {
+		if try() == nil {
+			t.Errorf("%s was admitted", name)
+		}
+	}
+}

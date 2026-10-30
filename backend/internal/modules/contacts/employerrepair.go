@@ -95,7 +95,10 @@ func (s *Store) reconcileContactEmployerTx(ctx context.Context, tx pgx.Tx, id id
 		if err != nil {
 			return false, err
 		}
-		spec.Employer = promotionContactSpec(lead, contact.FullName, by).Employer
+		// A shipped repair keeps the rule it was released with: typed text creates.
+		if spec.Employer, _, err = s.promotionEmployer(ctx, tx, lead, true); err != nil {
+			return false, err
+		}
 	}
 	var result EnsureCounterpartyResult
 	spec.EmployerResult = &result

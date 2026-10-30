@@ -94,7 +94,15 @@ type DealDelta struct {
 	// snapshot's stored reference rather than reconstructed from timestamps.
 	AuditID    *ids.UUID
 	ApprovalID *ids.UUID
+	// Causes lists the changes the deal went through, in drawing order, with
+	// CauseQualification last. Bucket is the one its money is counted under;
+	// a deal whose amount, stage and close date all moved is still one row.
+	Causes []string
 }
+
+// CauseQualification is a deal leaving or rejoining the qualified forecast. It
+// is a cause and never a bucket: a reading's money does not move with it.
+const CauseQualification = "qualification"
 
 // snapshotSide is one end of the comparison: which reading is being explained,
 // and the rows behind it.
@@ -112,6 +120,13 @@ type snapshotSide struct {
 	Scope        Scope
 	PipelineID   *ids.UUID
 	BaseCurrency string
+	// What the reading stood on, for comparing a call with it. The two
+	// fingerprints are empty on a snapshot taken before snapshots kept them.
+	ID                    ids.UUID
+	TakenAt               time.Time
+	PopulationFingerprint string
+	InputFingerprint      string
+	QualifiedPolicy       string
 	// Withheld says the lens dropped rows: deals this caller cannot read, or that
 	// no longer exist. A consumer that draws a complete-looking chart from the
 	// remainder must say the rest is withheld.
@@ -130,6 +145,11 @@ const (
 	ReadingEvidence Reading = "evidence"
 	ReadingBestCase Reading = "best_case"
 )
+
+// everyReading lists the money answers. A call's drift is compared in each.
+//
+// Held by: TestEveryReadingIsComparedForACall (backend/internal/modules/forecasting/calldrift_test.go)
+var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence, ReadingBestCase}
 
 // Classify explains the difference between two snapshots of one reading.
 func Classify(reading Reading, from, to snapshotSide) Movement {
@@ -193,6 +213,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 		out.Deals = append(out.Deals, DealDelta{
 			DealID: dealID, Bucket: BucketArchived, AmountMinor: delta,
 			FromMinor: new(contributionOf(reading, was)), ToMinor: new(int64(0)),
+			Causes: []string{BucketArchived},
 		})
 	}
 
@@ -348,9 +369,38 @@ func dealDelta(
 		ToMinor:    new(contributionOf(reading, now)),
 		AuditID:    now.AuditID,
 		ApprovalID: now.ApprovalID,
+		Causes:     causesOf(was, existed, now),
 	}
 	if existed {
 		out.FromMinor = new(contributionOf(reading, was))
+	}
+	return out
+}
+
+// causesOf lists every change between two contributions of one deal, whatever
+// reading is drawn. A new deal has one cause: it arrived.
+func causesOf(was Contribution, existed bool, now Contribution) []string {
+	if !existed {
+		return []string{BucketNew}
+	}
+	var out []string
+	for _, cause := range []struct {
+		name string
+		when bool
+	}{
+		{BucketPulledIn, !was.InOpen && now.InOpen},
+		{BucketPushedOut, was.InOpen && !now.InOpen && !now.InWon && !now.InLost},
+		{BucketAmount, amountChanged(was, now)},
+		{BucketCategory, was.Category != now.Category},
+		{BucketStageWeight, was.StageProbability != now.StageProbability},
+		{BucketWon, now.InWon && !was.InWon},
+		{BucketLost, now.InLost && !was.InLost},
+		{BucketFx, !amountChanged(was, now) && fxChanged(was, now)},
+		{CauseQualification, was.Qualification != now.Qualification},
+	} {
+		if cause.when {
+			out = append(out, cause.name)
+		}
 	}
 	return out
 }

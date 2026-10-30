@@ -54,11 +54,7 @@ To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also
 **Qualify** is turned off until the lead has an email address and an open status.
 Also called: convert a lead, promote a lead, turn a lead into a contact or opportunity.
 
-Qualifying a lead records what started it: a reply that came in, a meeting
-booked, a meeting held, or your own call. The **Why** line in the dialog is
-filled from the captured activity when there is one. If not, it reads "Reason:
-qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when
-they engage with you; importing it or writing to it is not enough.
+Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. The **Why** line in the dialog is filled from the captured activity when there is one. If not, it reads "Reason: qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 
@@ -66,9 +62,11 @@ Then one of two things happens, in a single step:
   contact. No copy is created.
 - If not, a new contact is created.
 
-Either way the lead's history and activities come with it, and the lead is
-marked qualified and archived. You can preview which of the two
-will happen before you confirm.
+Either way the lead's history and activities come with it, and the lead is marked qualified and archived. You can preview which of the two will happen before you confirm.
+
+The contact's company comes from the lead. Without a company link, the lead's work email domain decides, as for captured mail. The company holding that domain is linked, or a new one is created under the typed company name.
+
+A personal address such as Gmail names no company. The dialog then offers **Add … as the employer**, which links or creates the company with the typed name. Left unticked, the contact gets no job link, and its page offers the typed name to link or create.
 
 Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
 A current reply or booking gives the lead's owner a task to review the lead and qualify them

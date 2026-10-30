@@ -117,6 +117,7 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_existing_contact: "approval.preview.promotionExistingContact",
   promotion_set_origin: "approval.preview.promotionSetOrigin",
   promotion_company_industry: "approval.preview.promotionCompanyIndustry",
+  promotion_company_proposed: "approval.preview.promotionCompanyProposed",
   promotion_duplicate_candidate: "approval.preview.promotionDuplicateCandidate",
   promotion_move_activity: "approval.preview.promotionMoveActivity",
   promotion_remove_duplicate_activity_link:

@@ -97,6 +97,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if plan.CompanyIndustry != nil {
 		effects = append(effects, "promote_fill_company_industry")
 	}
+	if plan.TypedCompany != "" {
+		effects = append(effects, "promote_propose_company")
+	}
 	out.Effects, out.State = &effects, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
 }
@@ -130,6 +133,9 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	details = append(details, carried...)
 	if plan.CompanyIndustry != nil {
 		details = append(details, previewDetail("promotion_company_industry", *plan.CompanyIndustry))
+	}
+	if plan.TypedCompany != "" {
+		details = append(details, previewDetail("promotion_company_proposed", plan.TypedCompany))
 	}
 	if plan.Deal != nil {
 		deal, err := r.promotionDealDetails(ctx, *plan.Deal)

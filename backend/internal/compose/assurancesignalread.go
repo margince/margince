@@ -32,6 +32,11 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 		return nil, err
 	}
 	found = append(found, signals...)
+	calls, err := assuranceCallExceptions(ctx, tx, owners, requested)
+	if err != nil {
+		return nil, err
+	}
+	found = append(found, calls...)
 	sort.SliceStable(found, func(i, j int) bool {
 		if found[i].Severity != found[j].Severity {
 			return assuranceSeverity(found[i].Severity) < assuranceSeverity(found[j].Severity)

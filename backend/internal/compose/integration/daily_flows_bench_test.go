@@ -161,12 +161,13 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
-// worklistCalls sends the scope the screen opens on, which is the reader's own
-// queue for every seat. A manager also times the team scope they pick.
+// worklistCalls sends the view and scope the screen opens on: Today, over the
+// reader's own queue. A manager also times the team scope they pick. Home's
+// read names no view, so homeCalls times that one.
 func worklistCalls(in dailyInput) []dailyCall {
-	calls := []dailyCall{{Path: "/v1/worklist?scope=mine&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
+	calls := []dailyCall{{Path: "/v1/worklist?scope=mine&filter=all&view=today"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
-		calls = append(calls, dailyCall{Name: "team", Path: "/v1/worklist?scope=team&filter=all"})
+		calls = append(calls, dailyCall{Name: "team", Path: "/v1/worklist?scope=team&filter=all&view=today"})
 	}
 	return calls
 }

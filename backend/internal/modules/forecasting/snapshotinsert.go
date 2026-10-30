@@ -22,12 +22,14 @@ func (s *Store) insertSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot, c
 		in.Readings.WeightedMinor, in.Readings.EligibleCount, in.Readings.PricedCount,
 		in.Readings.ConfirmedDateCount, in.Readings.FxMissingCount, in.CallID, capturedBy,
 		in.PipelineID, in.PopulationFingerprint,
+		nullIfEmpty(string(in.ForwardMeasure)), nullIfEmpty(in.QualifiedPolicyVersion),
+		InputFingerprint(in.Readings.Contributions),
 	}
 	query := `INSERT INTO forecast_snapshot
         (period_start,period_end,scope_kind,scope_id,taken_at,local_day,trigger,definition_version,
         base_currency,won_minor,evidence_minor,best_case_minor,open_minor,weighted_minor,
         eligible_count,priced_count,confirmed_date_count,fx_missing_count,call_id,captured_by,
-        pipeline_id,population_fingerprint) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
+        pipeline_id,population_fingerprint,forward_measure,qualified_policy_version,input_fingerprint) VALUES (` + storekit.Placeholders(arguments) + `) RETURNING id`
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, query, arguments...).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("forecasting: writing the snapshot: %w", err)
