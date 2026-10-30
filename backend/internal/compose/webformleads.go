@@ -55,9 +55,9 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	return nil
 }
 
-// lead answers the record the note belongs on. Nil with no error is a contact
-// this principal may not read. Its owner has a task about it, and nothing more
-// is written.
+// lead answers the record the note belongs on. Nil with no error means nothing
+// more is written. That is a contact this principal may not read, whose owner
+// has a task about it, or an address on the erasure list.
 func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
@@ -86,6 +86,11 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 			return nil, nil //nolint:nilnil // a contact this principal may not read has no note target, and that is no failure
 		}
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		// The visitor gets the receipt every post gets. A refusal would tell an
+		// anonymous sender that the address belongs to an erased subject.
+		return nil, nil //nolint:nilnil // an erased address has no note target, and that is no failure
 	}
 	if err != nil {
 		return nil, err
