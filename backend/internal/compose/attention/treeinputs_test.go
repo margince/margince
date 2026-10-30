@@ -11,7 +11,7 @@ import (
 )
 
 // Go's test cache never rechecks a file outside this module. Without this, a
-// replayed pass would outlive a change to the files these tests read.
+// replayed pass would outlive a change to the frontend view tables.
 func TestTheTestCacheKeysOnTheTreeOutsideThisModule(t *testing.T) {
 	if err := gatekit.DeclareInputs(os.Getenv, "../../../../frontend"); err != nil {
 		t.Fatal(err)
