@@ -44624,14 +44624,14 @@ type LastExchange struct {
 	// WhoseMove Who answers next. A mail follows its History badge's move. Any other exchange,
 	// or a mail the reader may not read, follows its direction: what we sent waits on
 	// them, and what they sent waits on us. `neither` is an exchange with no direction,
-	// such as a meeting.
+	// such as a meeting, or a mail whose badge says the thread is settled.
 	WhoseMove LastExchangeWhoseMove `json:"whose_move"`
 }
 
 // LastExchangeWhoseMove Who answers next. A mail follows its History badge's move. Any other exchange,
 // or a mail the reader may not read, follows its direction: what we sent waits on
 // them, and what they sent waits on us. `neither` is an exchange with no direction,
-// such as a meeting.
+// such as a meeting, or a mail whose badge says the thread is settled.
 type LastExchangeWhoseMove string
 
 // LatestInbound defines model for LatestInbound.

@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -22,11 +23,7 @@ import (
 // unanswered mail belongs to the Worklist's waiting lane, which ranks it.
 const JustInDays = 7
 
-const (
-	latestInboundLimit = 10
-	// A week of one record's rows: the forms and what answered them.
-	latestInboundRecentLimit = 50
-)
+const latestInboundLimit = 10
 
 // LatestInbound reads what they sent on one record in the last JustInDays that
 // nobody has answered, newest first, and the record's last exchange. Mail and
@@ -40,22 +37,29 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 	since := now.Add(-JustInDays * 24 * time.Hour)
 	var out crmcontracts.LatestInboundList
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		read := func(waiting bool, limit int) ([]crmcontracts.Activity, error) {
-			rows, _, err := s.ListActivitiesIn(ctx, tx, ListActivitiesInput{
-				EntityType: &entityType, EntityID: &entityID, OccurredAfter: &since,
-				WaitingReply: waiting, Limit: &limit, AsOf: &now, Columns: columns,
-			})
+		// An unknown record is a 404, which the timeline's own gate serves as an empty list.
+		if err := auth.EnsureVisibleExisting(ctx, tx, entityType, entityID); err != nil {
+			return err
+		}
+		read := func(in ListActivitiesInput) ([]crmcontracts.Activity, error) {
+			in.EntityType, in.EntityID, in.AsOf, in.Columns = &entityType, &entityID, &now, columns
+			rows, _, err := s.ListActivitiesIn(ctx, tx, in)
 			return rows, err
 		}
-		waiting, err := read(true, latestInboundLimit)
+		limit, one, note, form := latestInboundLimit, 1, string(crmcontracts.ActivityKindNote), provenance.WebFormSource
+		waiting, err := read(ListActivitiesInput{OccurredAfter: &since, WaitingReply: true, Limit: &limit})
 		if err != nil {
 			return err
 		}
-		recent, err := read(false, latestInboundRecentLimit)
+		forms, err := read(ListActivitiesInput{OccurredAfter: &since, Kind: &note, SourceSystem: &form, Limit: &limit})
 		if err != nil {
 			return err
 		}
-		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, recent), now); err != nil {
+		answer, err := read(ListActivitiesInput{AnswersThem: true, Limit: &one})
+		if err != nil {
+			return err
+		}
+		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answer), now); err != nil {
 			return err
 		}
 		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
@@ -65,8 +69,9 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 }
 
 // unansweredInbound merges the waiting mail and messages with the website
-// forms nothing answered yet, newest first and at most latestInboundLimit.
-func unansweredInbound(waiting, recent []crmcontracts.Activity) []crmcontracts.LatestInbound {
+// forms no later answer follows, newest first and at most latestInboundLimit.
+// newestAnswer is the record's newest row that answers them, if any.
+func unansweredInbound(waiting, forms, newestAnswer []crmcontracts.Activity) []crmcontracts.LatestInbound {
 	items := []crmcontracts.LatestInbound{}
 	for _, row := range waiting {
 		switch row.Kind {
@@ -76,8 +81,8 @@ func unansweredInbound(waiting, recent []crmcontracts.Activity) []crmcontracts.L
 			items = append(items, crmcontracts.LatestInbound{Activity: row, Kind: crmcontracts.LatestInboundKindMessage})
 		}
 	}
-	for _, row := range recent {
-		if isWebForm(row) && !answeredAfter(recent, row.OccurredAt) {
+	for _, row := range forms {
+		if len(newestAnswer) == 0 || !newestAnswer[0].OccurredAt.After(row.OccurredAt) {
 			items = append(items, crmcontracts.LatestInbound{Activity: row, Kind: crmcontracts.LatestInboundKindWebForm})
 		}
 	}
@@ -90,36 +95,10 @@ func unansweredInbound(waiting, recent []crmcontracts.Activity) []crmcontracts.L
 	return items
 }
 
-func isWebForm(row crmcontracts.Activity) bool {
-	return row.Kind == crmcontracts.ActivityKindNote && row.SourceSystem != nil &&
-		*row.SourceSystem == provenance.WebFormSource
-}
-
-// answeredAfter reports a row that answers them later than at: anything we
-// sent, or a call or meeting held with them. A note answers nobody.
-func answeredAfter(rows []crmcontracts.Activity, at time.Time) bool {
-	for _, row := range rows {
-		if row.OccurredAt.After(at) && answersThem(row) {
-			return true
-		}
-	}
-	return false
-}
-
-func answersThem(row crmcontracts.Activity) bool {
-	switch row.Kind {
-	case crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage:
-		return row.Direction != nil && *row.Direction == crmcontracts.ActivityDirectionOutbound
-	case crmcontracts.ActivityKindCall:
-		return true
-	case crmcontracts.ActivityKindMeeting:
-		status := row.MeetingStatus
-		return status == nil || (*status != crmcontracts.ActivityMeetingStatusCanceled &&
-			*status != crmcontracts.ActivityMeetingStatusNoShow)
-	default:
-		return false
-	}
-}
+// answersThemSQL keeps a row under alias a that answers them. That is anything
+// we sent, a call, or a meeting that was not canceled or a no-show. A note answers nobody.
+const answersThemSQL = `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR a.kind = 'call'
+ OR (a.kind = 'meeting' AND a.meeting_status IS DISTINCT FROM 'canceled' AND a.meeting_status IS DISTINCT FROM 'no_show'))`
 
 // markLatestInboundTasks drops an item a task already stands for, which
 // waiting_reply does for mail and a form needs here, and sets accepts_request.

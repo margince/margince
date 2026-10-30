@@ -28,16 +28,6 @@ func webFormNote(hoursAgo int) crmcontracts.Activity {
 	return row
 }
 
-func withDirection(row crmcontracts.Activity, d crmcontracts.ActivityDirection) crmcontracts.Activity {
-	row.Direction = &d
-	return row
-}
-
-func withMeeting(row crmcontracts.Activity, s crmcontracts.ActivityMeetingStatus) crmcontracts.Activity {
-	row.MeetingStatus = &s
-	return row
-}
-
 func justInKinds(items []crmcontracts.LatestInbound) []crmcontracts.LatestInboundKind {
 	kinds := make([]crmcontracts.LatestInboundKind, len(items))
 	for i, item := range items {
@@ -49,50 +39,23 @@ func justInKinds(items []crmcontracts.LatestInbound) []crmcontracts.LatestInboun
 func TestUnansweredInboundMergesWaitingMailWithOpenFormsNewestFirst(t *testing.T) {
 	mail := justInRow(crmcontracts.ActivityKindEmail, 5)
 	form := webFormNote(2)
-	got := unansweredInbound([]crmcontracts.Activity{mail}, []crmcontracts.Activity{form, mail})
+	got := unansweredInbound([]crmcontracts.Activity{mail}, []crmcontracts.Activity{form}, nil)
 	want := []crmcontracts.LatestInboundKind{crmcontracts.LatestInboundKindWebForm, crmcontracts.LatestInboundKindEmail}
 	if kinds := justInKinds(got); len(kinds) != 2 || kinds[0] != want[0] || kinds[1] != want[1] {
 		t.Fatalf("kinds = %v, want %v", kinds, want)
 	}
 }
 
-func TestUnansweredInboundDropsAFormAnsweredLater(t *testing.T) {
-	cases := map[string]crmcontracts.Activity{
-		"sent mail":    withDirection(justInRow(crmcontracts.ActivityKindEmail, 1), crmcontracts.ActivityDirectionOutbound),
-		"sent message": withDirection(justInRow(crmcontracts.ActivityKindMessage, 1), crmcontracts.ActivityDirectionOutbound),
-		"call":         justInRow(crmcontracts.ActivityKindCall, 1),
-		"held meeting": withMeeting(justInRow(crmcontracts.ActivityKindMeeting, 1), crmcontracts.ActivityMeetingStatusHeld),
-	}
-	for name, answer := range cases {
-		t.Run(name, func(t *testing.T) {
-			if got := unansweredInbound(nil, []crmcontracts.Activity{answer, webFormNote(3)}); len(got) != 0 {
-				t.Fatalf("got %v, want the form answered", justInKinds(got))
-			}
-		})
-	}
-}
-
-func TestUnansweredInboundKeepsAFormWhatFollowedDidNotAnswer(t *testing.T) {
-	cases := map[string]crmcontracts.Activity{
-		"their reply":       withDirection(justInRow(crmcontracts.ActivityKindEmail, 1), crmcontracts.ActivityDirectionInbound),
-		"our own note":      justInRow(crmcontracts.ActivityKindNote, 1),
-		"canceled meeting":  withMeeting(justInRow(crmcontracts.ActivityKindMeeting, 1), crmcontracts.ActivityMeetingStatusCanceled),
-		"no-show meeting":   withMeeting(justInRow(crmcontracts.ActivityKindMeeting, 1), crmcontracts.ActivityMeetingStatusNoShow),
-		"call before it":    justInRow(crmcontracts.ActivityKindCall, 4),
-		"sent mail earlier": withDirection(justInRow(crmcontracts.ActivityKindEmail, 6), crmcontracts.ActivityDirectionOutbound),
-	}
-	for name, other := range cases {
-		t.Run(name, func(t *testing.T) {
-			got := unansweredInbound(nil, []crmcontracts.Activity{other, webFormNote(3)})
-			if len(got) != 1 || got[0].Kind != crmcontracts.LatestInboundKindWebForm {
-				t.Fatalf("got %v, want the form still open", justInKinds(got))
-			}
-		})
+func TestUnansweredInboundKeepsOnlyTheFormsAfterTheNewestAnswer(t *testing.T) {
+	answer := []crmcontracts.Activity{justInRow(crmcontracts.ActivityKindCall, 3)}
+	got := unansweredInbound(nil, []crmcontracts.Activity{webFormNote(1), webFormNote(4)}, answer)
+	if len(got) != 1 || !got[0].Activity.OccurredAt.Equal(webFormNote(1).OccurredAt) {
+		t.Fatalf("got %+v, want only the form that came in after the call", got)
 	}
 }
 
 func TestUnansweredInboundIgnoresWaitingRowsThatAreNotMail(t *testing.T) {
-	got := unansweredInbound([]crmcontracts.Activity{justInRow(crmcontracts.ActivityKindCall, 1)}, nil)
+	got := unansweredInbound([]crmcontracts.Activity{justInRow(crmcontracts.ActivityKindCall, 1)}, nil, nil)
 	if len(got) != 0 {
 		t.Fatalf("got %v, want nothing", justInKinds(got))
 	}
@@ -106,7 +69,7 @@ func TestUnansweredInboundKeepsTheNewestTen(t *testing.T) {
 	for hours := 1; hours <= latestInboundLimit+3; hours++ {
 		waiting = append(waiting, justInRow(crmcontracts.ActivityKindEmail, hours))
 	}
-	got := unansweredInbound(waiting, nil)
+	got := unansweredInbound(waiting, nil, nil)
 	if len(got) != latestInboundLimit {
 		t.Fatalf("len = %d, want %d", len(got), latestInboundLimit)
 	}

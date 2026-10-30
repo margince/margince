@@ -36752,7 +36752,7 @@ export interface components {
              * @description Who answers next. A mail follows its History badge's move. Any other exchange,
              *     or a mail the reader may not read, follows its direction: what we sent waits on
              *     them, and what they sent waits on us. `neither` is an exchange with no direction,
-             *     such as a meeting.
+             *     such as a meeting, or a mail whose badge says the thread is settled.
              * @enum {string}
              */
             whose_move: "them" | "us" | "neither";

@@ -6,10 +6,12 @@
 package activities
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -137,5 +139,62 @@ func TestLatestInboundSaysWhoseMoveTheLastExchangeLeaves(t *testing.T) {
 	}
 	if got := exchange(); got == nil || got.WhoseMove != crmcontracts.LastExchangeWhoseMoveThem {
 		t.Fatalf("last exchange = %+v, want our call waiting on them", got)
+	}
+}
+
+func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
+	out, in := string(crmcontracts.ActivityDirectionOutbound), string(crmcontracts.ActivityDirectionInbound)
+	status := func(s crmcontracts.ActivityMeetingStatus) *string { v := string(s); return &v }
+	cases := []struct {
+		name    string
+		kind    string
+		dir     *string
+		meeting *string
+		answers bool
+	}{
+		{"a sent mail", "email", &out, nil, true},
+		{"a call", "call", nil, nil, true},
+		{"a held meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusHeld), true},
+		{"their reply", "email", &in, nil, false},
+		{"our own note", "note", nil, nil, false},
+		{"a canceled meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusCanceled), false},
+		{"a no-show", "meeting", nil, status(crmcontracts.ActivityMeetingStatusNoShow), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupLoad(t)
+			contact := e.buyer(t)
+			links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
+			store := storeKnowing(e).WithClock(func() time.Time { return justInLater })
+			subject, system, key := "Website form: Pricing", provenance.WebFormSource, ids.NewV7().String()
+			if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
+				Kind: "note", Subject: &subject, OccurredAt: &requestInstant, Links: links,
+				SourceSystem: &system, SourceID: &key, Source: provenance.WebFormSource,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			later, what := requestInstant.Add(30*time.Minute), "After the form"
+			if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{
+				Kind: c.kind, Source: "manual", Subject: &what, OccurredAt: &later,
+				Direction: c.dir, MeetingStatus: c.meeting, Links: links,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			open := false
+			for _, item := range latestOn(t, e, store, contact) {
+				open = open || item.Kind == crmcontracts.LatestInboundKindWebForm
+			}
+			if open == c.answers {
+				t.Fatalf("form open = %v after %s, want answered = %v", open, c.name, c.answers)
+			}
+		})
+	}
+}
+
+func TestLatestInboundRefusesARecordNobodyHolds(t *testing.T) {
+	e := setupLoad(t)
+	_, err := storeKnowing(e).LatestInbound(e.asSeat(e.rep), "contact", ids.NewV7())
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want not found for an id no contact holds", err)
 	}
 }
