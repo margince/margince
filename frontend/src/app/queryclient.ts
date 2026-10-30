@@ -6,7 +6,7 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import { ENTITY_NAME_KEY } from "../components/entityref";
-import { isRecordRead } from "../lib/activitykeys";
+import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
@@ -44,11 +44,17 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // so the return has to actually read.
 export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
   return (
-    (isLiveRead(query.queryKey) || isInstallationRead(query.queryKey)) &&
+    (isLiveRead(query.queryKey) ||
+      isInstallationRead(query.queryKey) ||
+      isTimelineRead(query.queryKey)) &&
     "always"
   );
 }
 
+// A timeline comes back with the reader too, and does not poll. Every row says
+// whether the reader may change it, and a grant expires while the page sits
+// there. It pages, so a cadence would refetch every page already scrolled.
+//
 // The installation read comes back with the reader, and it is one small object.
 // A policy on it decides whether figures already on screen may stay there. So a
 // session left on a tab must not go on showing them.
