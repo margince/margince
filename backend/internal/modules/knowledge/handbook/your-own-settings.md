@@ -281,7 +281,7 @@ To set up your writing voice in Margince, open Settings → **Writing voice**, a
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
+When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section.
 Also called: tone, writing style, Voice DNA, sound like me.
 
 The best samples are emails you sent, then proposals and posts, then the written
