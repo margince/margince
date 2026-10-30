@@ -11,8 +11,8 @@ import (
 )
 
 // exactSources maps each source a store counted in full, over the rows this
-// page admits, per category, to that count. The approvals count uses the
-// lane's own query. narrowToScope applies the same requested-decider rule in
+// page admits, per category, to that count. The approvals and suggestion
+// counts use their lanes' own queries. narrowToScope applies the same requested-decider rule in
 // every scope but team. The team scope judges by a roster the lane query does
 // not share, so there the count is not offered. A window read whole counts
 // its considered rows.
@@ -31,6 +31,16 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string, conside
 	if day.Counts.ApprovalsOpen != nil && (s.taskOwner != ids.Nil || scope != scopeTeam) {
 		approval := crmcontracts.WorklistItemSourceApproval
 		exact[totalKey{approval, crmcontracts.WorklistCountCategory(categoryOfSource(approval))}] = *day.Counts.ApprovalsOpen
+	}
+	// A suggestion row names no owner and offers no Done, so every scope that
+	// reads it keeps each one the store counted.
+	for source, open := range map[crmcontracts.WorklistItemSource]*int{
+		sourceDealSuggestion: day.Counts.DealSuggestionsOpen,
+		sourceTagSuggestion:  day.Counts.TagSuggestionsOpen,
+	} {
+		if open != nil {
+			exact[totalKey{source, crmcontracts.WorklistCountCategory(categoryOfSource(source))}] = *open
+		}
 	}
 	return exact
 }

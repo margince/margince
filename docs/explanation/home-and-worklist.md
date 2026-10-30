@@ -151,6 +151,10 @@ Mail a sending system wrote is left out of the waiting lane and its tail, unless
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
 The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
+Approvals and deal and tag suggestions are not read on in the tail, but their stores count them under the lane's own
+query, so a cut lane still states their exact total. A suggestion row names no owner and offers no Done, so every
+scope that reads suggestions keeps each one the store counts.
+
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
 

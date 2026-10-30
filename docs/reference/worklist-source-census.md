@@ -28,8 +28,8 @@ The page counts two populations. `considered` is the rows left after step F, bef
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
-windows (`backlog.go`).
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, deal and tag suggestions, and
+the task source's two windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
 (`backlogmerge.go`). Today those are the task, `customer_waiting` and `deal_at_risk` sources.
@@ -79,20 +79,20 @@ a verb of their own: a task is completed, a decision is decided.
 | `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
-| `brief_item` | A, C, E, H | Rank in Go | No | No |
+| `brief_item` | A, C, E, H | Rank in Go | No | No; the run ranks its items in Go, and step E merges them onto other rows |
 | `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
-| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No |
-| `weekly_commitment` | A, C, H | Go | No | No |
-| `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending` |
-| `dedupe_candidate` | A, C, G, H | Yes | Yes | Yes |
-| `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | Yes |
-| `deal_suggestion` | A, C, H | Yes | Yes | Yes |
-| `tag_suggestion` | A, C, H | Yes | No | Yes |
-| `relationship_decay` | A, C, D, H | Candidates only | No | No |
-| `introduction_request` | A, C, F, H | Yes | No | No |
-| `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No |
-| System sources | A, C, F, G (incidents), H | Yes | No | No |
+| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
+| `weekly_commitment` | A, C, H | Go | No | Not needed: the lane has no bound, so its rows are its total |
+| `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
+| `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
+| `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
+| `deal_suggestion` | A, C, H | Yes | Yes | Yes, `CountOpenSuggestions`, in every scope that reads it |
+| `tag_suggestion` | A, C, H | Yes | No | Yes, `CountOpenTagSuggestions`, in every scope that reads it |
+| `relationship_decay` | A, C, D, H | Candidates only | No | No; step D and the lane's cut rank candidates in Go |
+| `introduction_request` | A, C, F, H | Yes | No | No; step F |
+| `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No; step F |
+| System sources | A, C, F, G (incidents), H | Yes | No | No; see [System sources](#system-sources) |
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
 window is the planned lane's own count; the later window is `CountTasks`. A team page reads, counts and continues
@@ -150,11 +150,25 @@ deal; real mail on deals makes it cost more, up to the waiting count's own 850 m
 5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
 every deal.
 
-The other sources still run steps in Go that their count would need:
+The deal and tag suggestion sources are counted by their stores' own list predicates, `CountOpenSuggestions` and
+`CountOpenTagSuggestions`. Their rows name no owner and offer no Done, so steps A and C keep every row in each scope
+that reads them (`unassigned`, `team` and `all`), and step F does not apply. Step G folds them after `considered` is
+taken, so it changes no count. The counts already ran on every page for `needs_you`, so stating them costs nothing.
 
-- `customer_waiting`: the count does not fit the first page, as above.
-- `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
-- Every other source: no count query that applies its steps exists yet.
+The other sources run steps in Go that a count would need:
+
+- `customer_waiting` and `deal_at_risk`: the count does not fit the first page, as above.
+- `brief_item`: the night's run ranks its items in Go (`briefQueueTarget`), and step E merges an item onto the row
+  about the same deal.
+- `relationship_decay`: step D moves rows out of the queue, and the lane picks `decayLaneCap` of its candidates in Go.
+- `weekly_commitment`: the lane has no bound, so it is always read whole and needs no count.
+- `contact_case`, `domain_question`, `introduction_request`, `awaiting_reply`, `meeting_follow_up` and `meeting`:
+  step F reads the reader's Done marks and the came-back rule in Go. A store's count cannot leave out a Done row.
+- `dedupe_candidate`: the lane carries one open count for pairs and contact cases together (`DuplicatesOpen`), and
+  both sources are judged cut against it. A pair count alone would never be used, because `contact_case` is cut
+  whenever the pairs are, and it stays a floor for step F.
+- `approval` on a team page: the requested-decider rule there judges by the roster, which the count does not share.
+- `meeting_outcome`: `CountActivities` could count it under the lane's narrowing, but no count is wired yet.
 
 Their categories stay a floor when their lane is cut, and scrolling ends at the ranked rows for them.
 
@@ -176,6 +190,16 @@ to their assignee (`classifylegal.go`).
 | `automation_run` | `modules/automation` `TroubledRuns`: `automation` read, every run in the workspace | Every `automation` reader, on `unassigned`, `team` and `all` | An `automation` editor |
 | `bounce`, `undelivered` | `modules/comms` send lanes: the reader sent it | The sender | The sender |
 | `notice` | `modules/notices` `UnreadWorkFor`: the reader is the recipient | The recipient | The recipient |
+
+No system source states an exact total. Each one's reason:
+
+- `automation_run`, `ai_work_health`, `capture_health`, `bounce`, `undelivered`, `dsr` and `notice_case`: step F
+  drops the reader's Done marks in Go.
+- `notice`: the lane drops a notice whose approval the reader can still decide (`noticesWithoutDecisions` in
+  `noticefold.go`). The approval engine judges that per batch in Go, so no SQL count can apply it.
+- `failed_approval`: the store's predicate is the whole rule (`scanOwnDecisions` in `modules/approvals`), but no
+  count of it exists yet. The `system` category would state a total only when every other system source was read
+  whole too.
 
 `categoryOfSource` also files `domain_question`, `awaiting_reply`, `meeting_follow_up` and `batch` under `system`,
 while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `decisions` or `system`. `counts` and
