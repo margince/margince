@@ -260,12 +260,15 @@ func TestWriteKeepsWhatItGroundsAndNamesTheModel(t *testing.T) {
 
 func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
 	t.Parallel()
-	kept, err := ParseBrief(`{"sentences":[
-		{"text":"I'll send the sub-processor list once legal completes its review.","nature":"recommendation","evidence":[
-			{"entity_type":"activity","entity_id":"`+objectionID+`"}]},
-		{"text":"Send them the sub-processor list once legal finishes its review.","nature":"recommendation","evidence":[
-			{"entity_type":"activity","entity_id":"`+objectionID+`"}]}
-	]}`, briefContactID, inputFixture())
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + objectionID + `"}]}`
+	}
+	var moves []string
+	for range maxRecommendations {
+		moves = append(moves, move("I'll send the sub-processor list once legal completes its review."))
+	}
+	moves = append(moves, move("Send them the sub-processor list once legal finishes its review."))
+	kept, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}

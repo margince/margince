@@ -281,9 +281,8 @@ func keptSentence(
 		sentence.Evidence = append(sentence.Evidence,
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
-	// Grounding and refusal decide first. Counting a recommendation the reader
-	// never sees would let one malformed claim spend the volume budget and
-	// suppress the valid advice behind it.
+	// Grounding and refusal decide first: a recommendation the reader never sees
+	// must not spend the budget.
 	if !claims.Grounded(sentence, known) {
 		return Sentence{}, false
 	}

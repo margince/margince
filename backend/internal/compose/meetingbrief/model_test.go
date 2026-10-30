@@ -202,11 +202,17 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 	move := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]}`
 	}
-	sections, err := ParseBriefSections(`{"sections":[{"kind":"goal","sentences":[`+
-		move("I'll send the revised pricing once legal finishes its review.")+`,`+
-		move("We'll confirm the pilot scope.")+`,`+
-		move("Ich schicke das Angebot.")+`,`+
-		move("Send them the revised pricing once legal finishes its review.")+`]}]}`, in)
+	promises := []string{
+		"I'll send the revised pricing once legal finishes its review.",
+		"We'll confirm the pilot scope.",
+		"Ich schicke das Angebot.",
+	}
+	var moves []string
+	for i := range maxRecommendations {
+		moves = append(moves, move(promises[i%len(promises)]))
+	}
+	moves = append(moves, move("Send them the revised pricing once legal finishes its review."))
+	sections, err := ParseBriefSections(`{"sections":[{"kind":"goal","sentences":[`+strings.Join(moves, ",")+`]}]}`, in)
 	if err != nil {
 		t.Fatalf("ParseBriefSections: %v", err)
 	}

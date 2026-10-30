@@ -201,6 +201,7 @@ func keptRisk(raw *replyRisk, known map[Evidence]string) *Risk {
 	if !ok {
 		return nil
 	}
+	// Say and show are not refused for a writer subject: the rep speaks them aloud, so I and we belong.
 	response := Response{
 		Say:   strings.TrimSpace(raw.Say),
 		Show:  strings.TrimSpace(raw.Show),
@@ -288,6 +289,7 @@ func keptScenarios(raw []replyScenario, known map[Evidence]string) []Scenario {
 		if strings.TrimSpace(scenario.Label) == "" || strings.TrimSpace(scenario.Play) == "" {
 			continue
 		}
+		// A play is not refused for a writer subject: the rep speaks it aloud, so I and we belong.
 		if spellsAnID(scenario.Label, scenario.Play) {
 			continue
 		}

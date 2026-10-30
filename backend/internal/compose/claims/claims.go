@@ -25,6 +25,8 @@ import (
 	"strings"
 	"unicode"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/specifics"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -279,10 +281,26 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 // writerSubjects is, per shipped language, every subject that makes a
 // recommendation the writer's or the reader's own promise. Vietnamese anh, chị,
 // em and mình are absent: each also addresses the reader as "you".
+// Apart from compose's writerSubjectWords: these match an opening phrase, which can be two words.
 var writerSubjects = map[textlang.Lang][]string{
-	textlang.English:    {"i", "i'll", "i'm", "i've", "i'd", "we", "we'll", "we're", "we've", "we'd", "let's"},
-	textlang.German:     {"ich", "wir"},
-	textlang.Vietnamese: {"tôi", "chúng tôi"},
+	textlang.English:    {"i", "i'll", "i'm", "i've", "i'd", "we", "we'll", "we're", "we've", "we'd", "let's", "let us"},
+	textlang.German:     {"ich", "wir", "lass uns", "lasst uns"},
+	textlang.Vietnamese: {"tôi", "chúng tôi", "chúng ta", "chúng mình"},
+}
+
+var subjectPhrases, longestSubject = splitSubjects(writerSubjects)
+
+func splitSubjects(byLang map[textlang.Lang][]string) ([][]string, int) {
+	var phrases [][]string
+	longest := 0
+	for _, subjects := range byLang {
+		for _, subject := range subjects {
+			words := strings.Fields(subject)
+			phrases = append(phrases, words)
+			longest = max(longest, len(words))
+		}
+	}
+	return phrases, longest
 }
 
 // OpensWithWriterSubject reports whether text opens with an I or a we, in any
@@ -292,33 +310,34 @@ var writerSubjects = map[textlang.Lang][]string{
 // Every language is checked whatever the brief's own: a model can answer in the
 // wrong one, and the subjects do not collide across them.
 func OpensWithWriterSubject(text string) bool {
-	words := leadingWords(text, 2)
-	for _, subjects := range writerSubjects {
-		for _, subject := range subjects {
-			if opensWith(words, strings.Fields(subject)) {
-				return true
-			}
+	words := leadingWords(text, longestSubject)
+	for _, subject := range subjectPhrases {
+		if opensWith(words, subject) {
+			return true
 		}
 	}
 	return false
 }
 
-// leadingWords is text's first n words, lowercased, with quote marks and
-// punctuation around them stripped and ’ read as '.
+var apostrophes = strings.NewReplacer("’", "'", "ʼ", "'")
+
+// leadingWords spells its words as writerSubjects does: composed, lowercase, every apostrophe as '.
 func leadingWords(text string, n int) []string {
-	normalised := strings.ToLower(strings.ReplaceAll(text, "’", "'"))
+	normalised := strings.ToLower(apostrophes.Replace(norm.NFC.String(text)))
 	words := strings.FieldsFunc(normalised, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\'' && r != '-'
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r) && r != '\'' && r != '-'
 	})
 	out := make([]string, 0, n)
 	for _, word := range words {
 		if len(out) == n {
 			break
 		}
-		// Trimmed so an opening ' quote or a dash bullet cannot hide the word after it.
-		if word = strings.Trim(word, "'-"); word != "" {
-			out = append(out, word)
+		// An opening ' quote, a dash or a numbered bullet must not hide the word after it.
+		word = strings.Trim(word, "'-")
+		if word == "" || (len(out) == 0 && strings.TrimFunc(word, unicode.IsDigit) == "") {
+			continue
 		}
+		out = append(out, word)
 	}
 	return out
 }

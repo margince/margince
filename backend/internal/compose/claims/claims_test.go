@@ -223,6 +223,16 @@ func TestARecommendationOpeningWithIOrWeIsAPromise(t *testing.T) {
 		"Tôi sẽ gửi hợp đồng.",
 		"Chúng tôi sẽ gửi hợp đồng.",
 		"chúng   tôi sẽ gửi hợp đồng.",
+		"Let us send the agreement.",
+		"Lass uns den Vertrag schicken.",
+		"Lasst uns den Vertrag schicken.",
+		"Chúng ta sẽ gửi hợp đồng.",
+		"Chúng mình sẽ gửi hợp đồng.",
+		"1. I'll send it.",
+		"2) We'll call them.",
+		"To\u0302i se\u0303 gu\u031B\u0309i",
+		"Iʼll send it.",
+		"I.e. send the agreement.", // the splitter reads "I.e." as the words i and e
 	} {
 		if !OpensWithWriterSubject(text) {
 			t.Errorf("OpensWithWriterSubject(%q) = false, want the promise refused", text)

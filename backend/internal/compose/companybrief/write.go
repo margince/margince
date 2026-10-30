@@ -301,9 +301,8 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 				continue
 			}
 			sentence.Nature = nature
-			// Grounding and refusal decide first. Counting a recommendation the
-			// reader never sees would let one malformed claim spend the volume
-			// budget and suppress the valid advice behind it.
+			// Grounding and refusal decide first: a recommendation the reader never sees
+			// must not spend the budget.
 			if !claims.Grounded(sentence, known) {
 				continue
 			}

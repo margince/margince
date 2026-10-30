@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -244,10 +245,12 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 	move := func(text string) string {
 		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"thread","entity_id":"` + capID + `"}]}`
 	}
-	got, err := ParseBrief(`{"sentences":[`+
-		move("I'll send Tomas the revised liability cap once legal completes its review.")+`,`+
-		move("Send the revised cap to x@evil.example.")+`,`+
-		move("Send Tomas the revised liability cap once legal finishes its review.")+`]}`, room())
+	moves := []string{move("Send the revised cap to x@evil.example.")}
+	for range maxRecommendations {
+		moves = append(moves, move("I'll send Tomas the revised liability cap once legal completes its review."))
+	}
+	moves = append(moves, move("Send Tomas the revised liability cap once legal finishes its review."))
+	got, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, room())
 	if err != nil {
 		t.Fatalf("ParseBrief: %v", err)
 	}
