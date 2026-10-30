@@ -95,6 +95,20 @@ describe("the approval queue", () => {
     expect(labels(root)).not.toContain("Approve all 2");
   });
 
+  it("offers no bundle answer while members may sit on a later page", () => {
+    const root = mount({
+      ...(approvalQueueFixture.data as object),
+      next_cursor: "page-2",
+    });
+    expect(labels(root)).not.toContain("Approve all 2");
+  });
+
+  it("leaves a member answered on its own out of the bundle answer", async () => {
+    const root = mount();
+    await press(root, "Reject", 1);
+    expect(labels(root)).not.toContain("Approve all 2");
+  });
+
   it("offers no bundle answer when the host will not run tools", () => {
     proxies = false;
     const root = mount();

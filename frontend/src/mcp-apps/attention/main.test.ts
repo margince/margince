@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { expectReadable } from "../readable.testkit";
+import { compactMoney } from "../values";
 import { atRiskFixture, commitmentsFixture, slippingFixture } from "./fixture";
 
 const asked: string[] = [];
@@ -38,13 +39,13 @@ describe("the attention card for slipping deals", () => {
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe("Slipping this week");
     expect(names(root)).toEqual(["Acme renewal", "Nordwind rollout"]);
-    expect(lead(root)).toMatch(/97K\s*at stake$/);
+    expect(lead(root)).toBe(`${compactMoney(9_700_000, "EUR")}at stake`);
     expect(root.querySelector(".view-hero-sentence")?.textContent).toBe(
       "2 deals are slipping. 1 has gone quiet.",
     );
     expect(legend(root)).toEqual([
-      expect.stringMatching(/^Acme renewal.*72K$/),
-      expect.stringMatching(/^Nordwind rollout.*25K$/),
+      `Acme renewal${compactMoney(7_200_000, "EUR")}`,
+      `Nordwind rollout${compactMoney(2_500_000, "EUR")}`,
     ]);
     expect(
       [...root.querySelectorAll(".attention-reason")].map((r) => r.textContent),
@@ -53,6 +54,12 @@ describe("the attention card for slipping deals", () => {
       "no open next step",
       "expected to close on 2026-09-30",
     ]);
+  });
+
+  it("states no total while a deal has no amount", () => {
+    const [first, second] = (slippingFixture.data as { deals: object[] }).deals;
+    const root = mount({ deals: [first, { ...second, amount_minor: null }] });
+    expect(lead(root)).toBe("2deals slipping");
   });
 
   it("totals no value across currencies", () => {
@@ -100,6 +107,9 @@ describe("the attention card for relationships at risk", () => {
     expect(root.querySelector(".readings-floor")?.textContent).toContain(
       "stopped after 42 deals",
     );
+    expect(root.querySelector(".view-hero-sentence")?.textContent).toBe(
+      "None of the deals checked rests on one contact or has gone quiet.",
+    );
   });
 });
 
@@ -117,6 +127,17 @@ describe("the attention card for open promises", () => {
     expect(root.textContent).toContain("6 days late");
     expect(root.textContent).toContain("Nobody owns this");
     expect(root.textContent).toContain("For Acme GmbH");
+  });
+
+  it("names the record a promise lives on in its catch-up question", () => {
+    const root = mount(commitmentsFixture.data);
+    for (const button of root.querySelectorAll<HTMLButtonElement>(
+      ".attention-row button",
+    )) {
+      button.click();
+    }
+    expect(asked[0]).toContain("claim_id 0195c3a0-0000-7000-8000-0000000000f1");
+    expect(asked[1]).toContain("task_id 0195c3a0-0000-7000-8000-0000000000f2");
   });
 
   it("calls a promise hours late late, not due", () => {

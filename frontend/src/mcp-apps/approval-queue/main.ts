@@ -70,11 +70,16 @@ function draw(
   }
   body.appendChild(lead(open, waiting, now));
   const again = () => render(root, data, warnings, call);
+  // A bundle_id answer reaches every waiting member. So it is offered only
+  // when the page holds them all, and none was answered here one by one.
+  const complete = asText(page.next_cursor) === "";
   const list = el("ol", "decision-list");
   for (const group of byBundle(proposals)) {
     const item = el("li");
-    const together = group.filter((p) => isOpen(p, now));
-    if (together.length > 1 && canCallTools()) {
+    const together = group.filter(
+      (p) => isOpen(p, now) && outcomes.get(p.id)?.kind !== "decided",
+    );
+    if (complete && together.length > 1 && canCallTools()) {
       item.appendChild(
         bundleLine(together, outcomes, () =>
           decide(

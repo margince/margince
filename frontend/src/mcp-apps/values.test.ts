@@ -22,6 +22,17 @@ function inCurrency(major: number, currency: string): string {
 
 const euros = (major: number) => inCurrency(major, "EUR");
 
+/** compact renders a headline expectation in the machine's own locale, so a
+ *  test checks the scale and not the locale's suffix. */
+function compact(major: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumSignificantDigits: 3,
+  }).format(major);
+}
+
 describe("money is scaled by the currency's own minor units", () => {
   it("scales a two-decimal currency by a hundred", () => {
     // 24_000_000 minor EUR is 240,000 euros, not 24,000,000.
@@ -71,8 +82,8 @@ describe("day renders the calendar day the server judged in", () => {
 
 describe("compactMoney states an amount as a headline does", () => {
   it("scales by the currency's own minor units", () => {
-    expect(compactMoney(11_500_000, "EUR")).toMatch(/^€115K$/);
-    expect(compactMoney(11_500_000, "JPY")).toMatch(/11\.5M/);
+    expect(compactMoney(11_500_000, "EUR")).toBe(compact(115_000, "EUR"));
+    expect(compactMoney(11_500_000, "JPY")).toBe(compact(11_500_000, "JPY"));
   });
 
   it("renders an amount it cannot read as an em dash", () => {

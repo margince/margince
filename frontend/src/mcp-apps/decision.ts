@@ -141,12 +141,13 @@ export function decide(
 }
 
 /** handBack asks the assistant to run the calls it was waiting to have
- *  approved. A colleague's or an automation's proposal runs on approval. */
+ *  approved. A colleague's or an automation's proposal runs on approval. The
+ *  message names only the kind and id: a summary can carry outside text. */
 function handBack(proposals: Proposal[]): void {
   const own = proposals.filter((p) => p.byAssistant);
   if (own.length === 0) return;
   const named = own
-    .map((p) => `"${p.summary || inWords(p.kind)}" (approval_id ${p.id})`)
+    .map((p) => `${inWords(p.kind)} (approval_id ${p.id})`)
     .join(", ");
   askAssistant(
     `I approved ${named}. Run the approved call again with its approval_id now.`,

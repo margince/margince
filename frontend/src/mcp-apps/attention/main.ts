@@ -11,7 +11,7 @@ import { askAssistant } from "../actions";
 import { badge } from "../badge";
 import { el } from "../bridge";
 import { hero, type Part, ring, segments, share } from "../hero";
-import { avatar, panel, panelBody, viewRenderer } from "../parts";
+import { arrowAction, avatar, panel, panelBody, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asFiniteNumber,
@@ -86,12 +86,12 @@ function row(r: Row): HTMLElement {
     end.appendChild(el("span", "figure attention-figure", r.figure));
   }
   if (r.bar !== undefined) end.appendChild(r.bar);
-  const ask = el("button", "attention-ask");
-  ask.setAttribute("type", "button");
-  ask.setAttribute("aria-label", `Catch me up on ${r.name}`);
-  ask.title = "Catch me up";
-  ask.addEventListener("click", () => askAssistant(r.question));
-  item.append(r.marker, text, end, ask);
+  item.append(
+    r.marker,
+    text,
+    end,
+    arrowAction(`Catch me up on ${r.name}`, () => askAssistant(r.question)),
+  );
   return item;
 }
 
@@ -163,8 +163,8 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
   return card;
 }
 
-/** What is at stake: one total, and each deal's part of it, when every amount
- *  is in one currency. Across currencies there is no total to state. */
+/** What is at stake: one total, and each deal's part of it, when every deal
+ *  has an amount in one currency. Otherwise there is no total to state. */
 function atStake(deals: Record<string, unknown>[]): {
   figure: string;
   total: number | null;
@@ -175,7 +175,11 @@ function atStake(deals: Record<string, unknown>[]): {
   );
   const currencies = new Set(priced.map((d) => asText(d.currency)));
   const [only] = [...currencies];
-  if (currencies.size !== 1 || only === undefined) {
+  if (
+    priced.length !== deals.length ||
+    currencies.size !== 1 ||
+    only === undefined
+  ) {
     return { figure: String(deals.length), total: null, parts: [] };
   }
   const total = priced.reduce(
@@ -207,7 +211,9 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
       caption: `of ${plural(scanned, "deal", "deals")} at risk`,
       sentence:
         deals.length === 0
-          ? "No open deal rests on one relationship or has gone quiet."
+          ? floor === undefined
+            ? "No open deal rests on one contact or has gone quiet."
+            : "None of the deals checked rests on one contact or has gone quiet."
           : "These rest on one contact, or the contacts on them have gone quiet.",
       picture: segments([
         { label: "At risk", value: deals.length, tone: "warning" },
@@ -255,9 +261,7 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
   const unowned = promises.filter((p) => asText(p.assignee_name) === "").length;
   const { card, body } = frame("Open promises", promises.length);
   if (promises.length === 0) {
-    body.appendChild(
-      el("p", "intro", "Every promise made to a customer is kept."),
-    );
+    body.appendChild(el("p", "intro", "No open promises to customers."));
     return card;
   }
   const parts: Part[] = [
@@ -302,8 +306,17 @@ function promiseRow(promise: Record<string, unknown>): HTMLElement {
     name: subject,
     reasons,
     urgent: asText(promise.state) === "overdue",
-    question: `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""}: where does it stand, and what should happen next?`,
+    question: `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""} (${promiseRef(promise)}): where does it stand, and what should happen next?`,
   });
+}
+
+/** promiseRef names the record a promise lives on, so two promises worded
+ *  alike still reach the assistant as two. */
+function promiseRef(promise: Record<string, unknown>): string {
+  const task = asText(promise.task_id);
+  return task !== ""
+    ? `task_id ${task}`
+    : `claim_id ${asText(promise.claim_id)}`;
 }
 
 function dueBadge(promise: Record<string, unknown>): HTMLElement {

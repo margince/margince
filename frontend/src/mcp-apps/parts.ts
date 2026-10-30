@@ -128,14 +128,31 @@ export function keepFocus(root: HTMLElement, draw: () => void): void {
   const active = document.activeElement;
   const label =
     active instanceof HTMLButtonElement && root.contains(active)
-      ? active.textContent
+      ? nameOf(active)
       : null;
   draw();
   if (label === null) return;
   const same = [...root.querySelectorAll("button")].find(
-    (b) => b.textContent === label,
+    (b) => nameOf(b) === label,
   );
   same?.focus();
+}
+
+/** nameOf is a button's accessible name: its label, or its words. */
+function nameOf(button: HTMLButtonElement): string {
+  return button.getAttribute("aria-label") ?? button.textContent;
+}
+
+/**
+ * arrowAction is a row's way on, drawn as a round arrow. Its label names the
+ * row, so each arrow has a name of its own for assistive technology and focus.
+ */
+export function arrowAction(label: string, onPress: () => void): HTMLElement {
+  const action = el("button", "attention-ask");
+  action.setAttribute("type", "button");
+  action.setAttribute("aria-label", label);
+  action.addEventListener("click", onPress);
+  return action;
 }
 
 /** A view's draw: the card for one result, rebuilt under root. */
