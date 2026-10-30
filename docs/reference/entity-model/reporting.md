@@ -10,7 +10,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `audience` | `text` | yes | One of `private`, `team`, `workspace`. |
 | `audience_team_id` | `uuid` |  | Points at `team.id`. |
 | `description` | `text` |  |  |
@@ -85,7 +85,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone` | yes |  |
 | `execution_id` | `uuid` | yes | Points at `report_execution.id`. |
 | `expired_at` | `timestamp with time zone` |  |  |
@@ -199,7 +199,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `attempt` | `bigint`, default `0` | yes |  |
 | `edition_id` | `uuid` |  |  |
 | `execution_key` | `text` | yes |  |
@@ -248,7 +248,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `definition` | `jsonb` | yes |  |
 | `enabled` | `boolean` | yes |  |
 | `last_status` | `text` |  |  |
@@ -334,7 +334,7 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `metric` | `text` | yes |  |
 | `period_end` | `timestamp with time zone` | yes |  |
 | `period_kind` | `text` | yes | One of `month`, `fiscal_quarter`. |
