@@ -25,9 +25,9 @@ const countedLeadSQL = "l.merged_into_id IS NULL AND (l.archived_at IS NULL OR l
 
 const leadOwnerColumn = "l.owner_id"
 
-// leadLabelSQL labels a lead's row by its name, else by its company when the
-// seat may read that column, else by the fallback bound at that position. A
-// reader's field scope already withholds a lead whose name is masked.
+// leadLabelSQL labels a lead's row by its name or else its company. The company
+// is used only where the seat may read it; otherwise the bound fallback is.
+// A reader's field scope already withholds a lead whose name is masked.
 func leadLabelSQL(ctx context.Context, b *reportingBindings, fallback string) (string, error) {
 	company := "NULLIF(l.company_name,'')"
 	visible, masked, err := auth.MaskExcludedClause(ctx, string(recordTypeLead), companyNameField, "l", b.arg)
@@ -199,8 +199,8 @@ func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcon
 }
 
 // readReportingLeadsAwaitingResponse counts the leads of the same arrival
-// cohort that still owe a first reply when the reading is taken: an email
-// came in from them, nobody has answered it, and the lead is still open.
+// cohort that still owe a first reply when the reading is taken. Each wrote
+// in by email, nobody has answered it, and the lead is still open.
 func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil

@@ -4,8 +4,7 @@
 package compose
 
 // What an SDR is waiting on: handoffs that somebody else must decide, the ones
-// sent back to them, and the meetings they have booked. The results themselves
-// (held meetings, accepted handoffs, qualified leads, first replies) are
+// sent back to them, and the meetings they have booked. The results are
 // reporting metrics in the sdr preset, so this reads only what no metric does.
 
 import (
@@ -36,8 +35,8 @@ const (
 
 // handoffCycleSQL joins each handoff to the event that began its current
 // state, under the alias cycle. A resubmission writes a new submitted event,
-// so a handoff sent back and submitted again waits from that event, and is
-// credited to whoever the event names as the submitter.
+// so a handoff sent back and submitted again waits from that event. It is
+// credited to whoever that event names as the submitter.
 const handoffCycleSQL = `FROM sdr_handoff h
  JOIN LATERAL (SELECT e.occurred_at,e.submitter_id_at_change FROM sdr_handoff_event e
  WHERE e.handoff_id=h.id AND e.to_status=h.status ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) cycle ON true
@@ -249,8 +248,8 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 // from fields whose mask was checked.
 var leadNameFields = []string{fieldFullName, companyNameField}
 
-// subjectVisibleSQL is whether the prospect under alias is one this seat may
-// read by name: its row scope and the mask on every column its label reads.
+// subjectVisibleSQL is whether this seat may read the prospect under alias by
+// name. It checks the row scope and the mask on each column the label reads.
 func subjectVisibleSQL(ctx context.Context, table, alias string, nameFields []string, b *reportingBindings) (string, error) {
 	rowScope, err := auth.ScopeClauseFor(ctx, table, alias, b.arg)
 	if err != nil {

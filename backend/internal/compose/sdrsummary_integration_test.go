@@ -65,9 +65,12 @@ func (f *sdrFixture) summary(t *testing.T, ctx context.Context, owner ids.UUID) 
 	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
 	id := openapi_types.UUID(owner)
 	var out crmcontracts.SdrSummary
-	sdrServe(t, f.e, ctx, &out, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+	body := sdrServe(t, f.e, ctx, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
 		h.GetSdrSummary(w, r, crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id})
 	}, f.at)
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatal(err)
+	}
 	return out
 }
 
@@ -76,13 +79,16 @@ func (f *sdrFixture) page(t *testing.T, ctx context.Context, owner ids.UUID, cur
 	kind := crmcontracts.ListSdrWaitingHandoffsParamsScopeKindOwner
 	id := openapi_types.UUID(owner)
 	var out crmcontracts.SdrWaitingHandoffPage
-	sdrServe(t, f.e, ctx, &out, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+	body := sdrServe(t, f.e, ctx, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
 		h.ListSdrWaitingHandoffs(w, r, crmcontracts.ListSdrWaitingHandoffsParams{ScopeKind: &kind, ScopeId: &id, Cursor: cursor, Limit: &limit})
 	}, f.at)
+	if err := json.Unmarshal(body, &out); err != nil {
+		t.Fatal(err)
+	}
 	return out
 }
 
-func sdrServe(t *testing.T, e *forecastEnv, ctx context.Context, out any, call func(sdrSummaryHandlers, http.ResponseWriter, *http.Request), at time.Time) {
+func sdrServe(t *testing.T, e *forecastEnv, ctx context.Context, call func(sdrSummaryHandlers, http.ResponseWriter, *http.Request), at time.Time) []byte {
 	t.Helper()
 	h := newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return at })
 	w := httptest.NewRecorder()
@@ -90,9 +96,7 @@ func sdrServe(t *testing.T, e *forecastEnv, ctx context.Context, out any, call f
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d: %s", w.Code, w.Body.String())
 	}
-	if err := json.Unmarshal(w.Body.Bytes(), out); err != nil {
-		t.Fatal(err)
-	}
+	return w.Body.Bytes()
 }
 
 func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *testing.T) {
