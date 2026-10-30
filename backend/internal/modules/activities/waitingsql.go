@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -58,9 +57,14 @@ const filedUnderALiveContactSQL = `(NOT EXISTS (SELECT 1 FROM activity_link wl
 // `young OR (held AND open)`. The first half has no per-message subquery, so
 // Postgres tests it first and old mail never reaches the settlement subqueries.
 func withinWaitingHorizonSQL(asOf, days string) string {
-	young := occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`)
+	young := waitingYoungSQL(asOf, days)
 	return `((` + young + ` OR ` + heldRequestSQL() + `)
 	   AND (` + young + ` OR (` + requestOpenSQL + `)))`
+}
+
+// waitingYoungSQL is whether message a arrived inside the horizon.
+func waitingYoungSQL(asOf, days string) string {
+	return occurredday.FromSQL("a", asOf+` - make_interval(days => `+days+`)`)
 }
 
 // waitingSelectSQL draws one waiting row per message the caller's clause names.
@@ -233,7 +237,11 @@ var waitingSelectSQL = `
 // resolution, and age only while a human holds them. Every rule that hides a
 // row owed a reply has a figure in hiddenbacklog.go. Each rule reads one
 // message, so a caller's cap or count runs over what it admits.
-var waitingEligibleSQL = `SELECT a.id FROM activity a
+var waitingEligibleSQL = `SELECT a.id ` + waitingEligibleFromSQL
+
+// waitingEligibleFromSQL is waitingEligibleSQL past its select list, so a
+// caller can draw other columns of the same messages.
+var waitingEligibleFromSQL = `FROM activity a
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -438,62 +446,4 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 		ELSE false
 	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf),
 		correspondence.ThreadSQL("back", "a"))
-}
-
-// bookedMeetingSQL is when the soonest booked meeting with this message's
-// sender starts, or NULL — the fact that turns a waiting card into "meeting
-// booked" instead of a count of waiting days.
-//
-// Booked means three things. The sender's contact is on the meeting, linked or
-// attending (the walks the answer arms use). It is not over, by the rule the
-// snooze disposition applies: canceled and no-show count as over, and over
-// means ENDED (occurredday.EndSQL). And it was booked or moved since the
-// message arrived. That last fact is read from the write shape. A meeting
-// created after the ask counts, and so does an audited change to its start
-// after it, which both move writers leave behind. A meeting that merely predates the ask
-// untouched does not answer it.
-//
-// Workspace-audience and unrestricted, as every off-thread answer arm is —
-// and additionally fenced by the READER's own discover clause, rendered for
-// the `booked` alias. The answer arms only flip a row's eligibility; this
-// prints a date, and a date off a meeting the reader may not discover would
-// be the disclosure itself.
-//
-// asOf is the caller's own placeholder; OFFSET 0 keeps the planner walking
-// from the sender to their meetings, for touchAnswerArm's reason. The audit
-// probe rides idx_audit_entity_narrow.
-func bookedMeetingSQL(asOf, discover string) string {
-	return `(SELECT min(booked.occurred_at)
-	   FROM activity_participant booked_asker
-	  CROSS JOIN LATERAL (
-	        SELECT booked_link.activity_id FROM activity_link booked_link
-	         WHERE booked_link.contact_id = booked_asker.contact_id
-	        UNION
-	        SELECT booked_att.activity_id FROM activity_participant booked_att
-	         WHERE booked_att.contact_id = booked_asker.contact_id
-	        OFFSET 0) booked_walk
-	  CROSS JOIN LATERAL (
-	        SELECT booked.occurred_at FROM activity booked
-	         WHERE booked.id = booked_walk.activity_id
-	           AND booked.kind = '` + KindMeeting + `'
-	           AND booked.archived_at IS NULL
-	           AND booked.restricted_at IS NULL` + auth.AudienceWorkspaceOnly("booked") + `
-	           AND (` + discover + `)
-	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')
-	           AND ` + occurredday.EndSQL("booked") + ` > ` + asOf + `
-	           AND (booked.created_at > a.occurred_at -- occurred_at raw: booked after the ask, an ordering of rows
-	             OR EXISTS (SELECT 1 FROM audit_log booked_move
-	                 WHERE booked_move.entity_type = 'activity'
-	                   AND booked_move.entity_id = booked.id
-	                   AND booked_move.after ? 'occurred_at'
-	                   -- The START moved, not merely a field beside it: the
-	                   -- move writer images occurred_at on every change, a
-	                   -- length-only edit included.
-	                   AND (booked_move.before ->> 'occurred_at')
-	                       IS DISTINCT FROM (booked_move.after ->> 'occurred_at')
-	                   AND booked_move.occurred_at > a.occurred_at -- occurred_at raw: moved after the ask, an ordering of rows
-	                   AND booked_move.occurred_at <= ` + asOf + `))
-	        OFFSET 0) booked
-	  WHERE booked_asker.activity_id = a.id AND booked_asker.role = 'from'
-	    AND booked_asker.contact_id IS NOT NULL)`
 }

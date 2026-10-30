@@ -29,7 +29,7 @@ crowding; `summary`, `readings` and the considered half of `counts` and `reach` 
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
 category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
-windows and the waiting cards (`backlog.go`).
+windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
 (`backlogmerge.go`). Today those are the task and `customer_waiting` sources.
@@ -81,7 +81,7 @@ a verb of their own: a task is completed, a decision is decided.
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
 | `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes | Cursor exists, unused | No |
-| `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The count runs the drop and the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | Yes, `CountWaitingCards` |
+| `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
 | `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No |
 | `weekly_commitment` | A, C, H | Go | No | No |
 | `approval` | A, C, G, H | Yes | Yes | Yes, `CountPending` |
@@ -99,25 +99,34 @@ window is the planned lane's own count; the later window is `CountTasks`. A team
 (`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
 `laneBudget`. The tail still reads the team's tasks through that arm.
 
-The `customer_waiting` source is counted on a first page whose waiting read was cut, in every scope. Its Go steps are
-in the count:
+The `customer_waiting` source is read on below the ranked rows to its end, in every scope, by
+`WaitingCardsAfter` (`modules/activities/waitingcards.go`). Each read judges a fixed number of messages after
+its position, oldest first, so its cost does not grow with the queue. The lane's Go steps hold in the tail:
 
-- The machine-sender test is the `sender_is_machine` stamp. Capture and the create door write it with
-  `mailidentity.InboundFromSendingSystem`, and a data task stamps older mail. The lane's fold reads the same stamp,
-  so the rule stays one Go capability.
 - The fold keeps the newest mail of each conversation of requests, and of each sender and subject for other mail
-  (`waitingFoldSQL`). The page's scan reads newest first, so its cards are the same cards.
+  (`waitingFoldSQL`). A message is a card when no newer message of its fold is waiting. The page's scan reads
+  newest first, so its cards are the same cards.
+- The machine-sender rule stays one Go capability, `mailidentity.InboundFromSendingSystem`. Capture and the
+  activity writer stamp its verdict on `sender_is_machine`, and a data task stamps older mail. The tail drops
+  stamped mail before its fold. The lane and the tail also ask the rule itself of every row, so mail from before
+  the stamp, and chat, are judged as before.
 - "Addressed to more than one seat" needs no rule of its own: every scope's responsibility clause keeps only mail
   with one sole seat.
 - Steps A, C and F keep every row the SQL returns. Its narrowing is the scope's, and a waiting row's Done is the
   reader's own state on the message, which the SQL reads.
 
-Step B drops only `deal_at_risk` rows, so it changes no waiting count. A card read in the tail carries no count of
-the requests folded into it.
+A card read in the tail carries no count of the requests folded into it.
+
+The category states no exact total. The queue's rules cost about 0.2 to 0.8 ms for each message they judge.
+With 2,476 cards a seat in `make bench-worklist-backlog`, a count took 850 ms on its own. A count capped at
+500 messages still took 420 ms, against a first page that must stay within 750 ms. The page reads run in one
+snapshot transaction, so the count cannot run beside them. The category stays a floor when the lane's scan is
+cut, and scrolling reaches every card.
 
 The other sources still run steps in Go that their count would need:
 
 - `deal_at_risk`: step B needs the whole waiting population, and step F's came-back rule reads the row's own dates.
+- `customer_waiting`: the count does not fit the first page, as above.
 - `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
 - Every other source: no count query that applies its steps exists yet.
 

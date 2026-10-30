@@ -143,7 +143,6 @@ func (s *Service) worklistIn(
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
-	withPins.countWaitingInto(ctx, waiting, day.AsOf, token == "" && withPins.marked.probe == nil)
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	withPins, adviceErr := withPins.readingDealMoves(ctx, day)

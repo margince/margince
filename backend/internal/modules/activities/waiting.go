@@ -219,10 +219,10 @@ func liveRecord(predicate, alias string) string {
 // Paged because the caller folds conversations and drops sending systems
 // after this cap. The next page is how a customer comes back.
 //
-// The machine-sender rule stays one Go capability: capture, the activity
-// writer and a data task stamp its verdict on sender_is_machine. The caller's
-// fold and the card count (waitingcards.go) both read the stamp. The rule
-// walks public suffixes and local-part shapes, which no SQL list restates.
+// The machine-sender rule stays one Go capability. Capture and the activity
+// writer stamp its verdict on sender_is_machine, and a data task stamps older
+// mail. The card tail (waitingcards.go) drops stamped mail before its fold;
+// the caller asks the rule itself of every row, so unstamped mail is judged too.
 func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingReply, error) {
 	return s.WaitingRepliesBefore(ctx, asOf, WaitingPosition{})
 }
@@ -251,32 +251,56 @@ func (s *Store) WaitingRepliesAnsweredByBefore(ctx context.Context, asOf time.Ti
 }
 
 func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before WaitingPosition, seats mailSeats) ([]WaitingReply, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
-	}
 	var waiting []WaitingReply
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		slots, err := s.waitingQueueSlots(ctx, tx, asOf, seats, waitingShape{drawsRows: true}, arg)
-		if err != nil {
+	err := s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			slots.values[waitingKeysetSlot] = olderThan(before, arg)
+			return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
+				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC"
+		},
+		func(rows pgx.Rows) (err error) {
+			waiting, err = collectWaiting(rows, seats.owner)
 			return err
-		}
-		slots.values[waitingKeysetSlot] = olderThan(before, arg)
-		rows, err := tx.Query(ctx,
-			"SELECT waiting.*, "+directMailSeatsSQL(slots.identities)+" FROM ("+fmt.Sprintf(waitingRepliesSQL, slots.values...)+
-				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC", planEachBind(args)...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		waiting, err = collectWaiting(rows, seats.owner)
-		return err
-	})
+		})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
 	}
 	return waiting, nil
+}
+
+// readWaitingQueue sends one statement over the waiting queue in its own
+// transaction.
+func (s *Store) readWaitingQueue(
+	ctx context.Context, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return s.queryWaitingQueue(ctx, tx, asOf, seats, shape, statement, read)
+	})
+}
+
+// queryWaitingQueue sends one statement over the waiting queue: the page or a
+// card tail read. Each gates every row it judges, so the statement stops at
+// its own LIMIT instead of judging the whole horizon first.
+func (s *Store) queryWaitingQueue(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, shape waitingShape,
+	statement func(waitingSlots, func(any) int) string, read func(pgx.Rows) error,
+) error {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	slots, err := s.waitingQueueSlots(ctx, tx, asOf, seats, shape, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	return read(rows)
 }
 
 // OwnDomains reports the email domains this installation's own contacts write

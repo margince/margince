@@ -30,11 +30,25 @@ type tailRow struct {
 }
 
 // tailBatch is one read of one source, in the source's own order. more says
-// the source holds rows past it.
+// the source holds rows past it. through, when set, is the position after
+// everything the read looked at, rows or not, and throughAt its place.
 type tailBatch struct {
-	source crmcontracts.WorklistItemSource
-	rows   []tailRow
-	more   bool
+	source    crmcontracts.WorklistItemSource
+	rows      []tailRow
+	more      bool
+	through   string
+	throughAt *time.Time
+}
+
+// reach is the last place the read looked at: through when set, else its last row.
+func (b tailBatch) reach() (tailPlace, bool) {
+	if b.through != "" {
+		return tailPlace{b.throughAt, b.source}, true
+	}
+	if len(b.rows) == 0 {
+		return tailPlace{}, false
+	}
+	return tailPlace{b.rows[len(b.rows)-1].at, b.source}, true
 }
 
 // tailPlace is a row's place in the tail's order, short of its source's own
@@ -60,17 +74,17 @@ func (p tailPlace) before(q tailPlace) bool {
 	return p.source < q.source
 }
 
-// tailFrontier is the earliest last row among the batches with more rows past
-// them. A row after it may come behind a row no read has reached yet. found is
+// tailFrontier is the earliest place a batch with more rows past it looked
+// at. A row after it may come behind a row no read has reached yet. found is
 // false when every batch was read to its source's end.
 func tailFrontier(batches []tailBatch) (frontier tailPlace, found bool) {
 	for _, batch := range batches {
-		if !batch.more || len(batch.rows) == 0 {
+		reach, read := batch.reach()
+		if !batch.more || !read {
 			continue
 		}
-		last := tailPlace{batch.rows[len(batch.rows)-1].at, batch.source}
-		if !found || last.before(frontier) {
-			frontier, found = last, true
+		if !found || reach.before(frontier) {
+			frontier, found = reach, true
 		}
 	}
 	return frontier, found
@@ -110,14 +124,23 @@ func mergeTail(batches []tailBatch, need int, above map[worklistsnap.Row]bool, r
 		}
 	}
 	for b, batch := range batches {
-		switch {
-		case taken[b] == len(batch.rows) && (!batch.more || len(batch.rows) == 0):
-			delete(rest.At, string(batch.source))
-		case taken[b] > 0:
-			rest.At[string(batch.source)] = batch.rows[taken[b]-1].after
-		}
+		batch.advance(rest, taken[b])
 	}
 	return tail
+}
+
+// advance moves a source past the taken rows of its batch. It ends the source
+// once the whole read was taken and nothing lies past it.
+func (b tailBatch) advance(rest *backlogCursor, taken int) {
+	_, read := b.reach()
+	switch {
+	case taken == len(b.rows) && (!b.more || !read):
+		delete(rest.At, string(b.source))
+	case taken == len(b.rows) && b.through != "":
+		rest.At[string(b.source)] = b.through
+	case taken > 0:
+		rest.At[string(b.source)] = b.rows[taken-1].after
+	}
 }
 
 // tailDone is the Done marks a tail batch is judged by. It adds the reader's

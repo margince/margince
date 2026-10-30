@@ -241,17 +241,25 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 // moreWaiting reads the next cards of who is waiting, as of the walk's own
 // instant. A card's place in the tail is when its message arrived.
 func (s *Service) moreWaiting(ctx context.Context, _ tailPage, walk tailWindow, after string, limit int) (tailBatch, error) {
-	read, more, err := s.backlog.waiting.WaitingAfter(ctx, walk.AsOf, s.waitingFor(ctx), after, limit)
+	read, err := s.backlog.waiting.WaitingAfter(ctx, walk.AsOf, s.waitingFor(ctx), after, waitingJudged(limit))
 	if err != nil {
 		return tailBatch{}, err
 	}
-	batch := tailBatch{more: more, rows: make([]tailRow, len(read))}
-	for i, card := range read {
+	batch := tailBatch{more: read.More, through: read.Through, rows: make([]tailRow, len(read.Cards))}
+	if read.Through != "" {
+		batch.throughAt = &read.ThroughAt
+	}
+	for i, card := range read.Cards {
 		since := card.Row.Since
 		batch.rows[i] = tailRow{row: classifyWaiting(card.Row, walk.AsOf), at: &since, after: card.After}
 	}
 	return batch, nil
 }
+
+// waitingJudged is how many messages one waiting read judges for a batch of
+// limit rows. Some judged messages fold or fall to the queue's rules, so it
+// judges more than it shows; the cost per read stays fixed.
+func waitingJudged(limit int) int { return max(2*limit, 20) }
 
 // taskStream is the task window below the ranked rows: today's work, or the
 // later window when the page asks for upcoming work.

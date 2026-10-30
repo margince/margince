@@ -48,21 +48,27 @@ type Positioned[T any] struct {
 	After string
 }
 
-// WaitingBacklog counts who is waiting whole and continues them past the
-// lane's scan, one card per conversation as the lane folds them. OPTIONAL:
-// unbound, a cut waiting lane leaves its category a floor.
+// WaitingBacklog continues who is waiting past the lane's scan, one card per
+// conversation as the lane folds them. OPTIONAL: unbound, scrolling ends at
+// the ranked rows for the waiting source.
 type WaitingBacklog interface {
-	// CountWaiting counts the cards under a narrowing at an instant.
-	CountWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor) (int, error)
-	// WaitingAfter reads up to limit cards after a position, oldest first,
-	// each with the position after it.
-	WaitingAfter(
-		ctx context.Context, asOf time.Time, narrow WaitingFor, after string, limit int,
-	) (rows []Positioned[WaitingCustomer], more bool, err error)
+	// WaitingAfter judges up to judge messages after a position, oldest
+	// first, and answers the cards among them.
+	WaitingAfter(ctx context.Context, asOf time.Time, narrow WaitingFor, after string, judge int) (WaitingTail, error)
 }
 
-// WithWaitingBacklog binds the waiting counter, an option for the reason
-// WithWaiting is one.
+// WaitingTail is one read of the waiting backlog. Through is the position
+// after the last message judged, and ThroughAt is when it came in. A read can
+// judge messages that make no card, and the tail must not judge them again.
+type WaitingTail struct {
+	Cards     []Positioned[WaitingCustomer]
+	Through   string
+	ThroughAt time.Time
+	More      bool
+}
+
+// WithWaitingBacklog binds the waiting continuation, an option for the
+// reason WithWaiting is one.
 func (s *Service) WithWaitingBacklog(b WaitingBacklog) *Service {
 	s.backlog.waiting = b
 	return s
@@ -165,26 +171,4 @@ func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow
 		return
 	}
 	s.backlog.exact[key] = total
-}
-
-// countWaitingInto states the waiting category's exact total when the lane's
-// scan was cut, on a first page only. The store folds and narrows as the lane
-// does, so the count is the cards scrolling reaches. A failed count leaves the
-// category a floor.
-func (s *Service) countWaitingInto(ctx context.Context, waiting waitingRead, asOf time.Time, first bool) {
-	if !first || !waiting.cut || s.backlog.waiting == nil || s.backlog.exact == nil {
-		return
-	}
-	var total int
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
-		var err error
-		total, err = s.backlog.waiting.CountWaiting(ctx, asOf, s.waitingFor(ctx))
-		return err
-	})
-	if err != nil {
-		slog.Log(ctx, laneFailureLevel(ctx), "a worklist source could not be counted; its category stays a floor",
-			"source", sourceWaiting, "error", err)
-		return
-	}
-	s.backlog.exact[totalKey{sourceWaiting, crmcontracts.WorklistCountCategory(categoryOfSource(sourceWaiting))}] = total
 }

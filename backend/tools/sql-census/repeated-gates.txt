@@ -23,6 +23,6 @@ backend/internal/compose/export.go compose.readMember repeats the gate; awaits i
 backend/internal/compose/derivationfetch.go compose.(*reportEngine).fetchDerivation.func1 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/derivationfetch.go compose.derivationRows the drill-through rows half of fetchDerivation, same statement; awaits its own rewrite and bench measurement
 backend/internal/modules/search/queryexec.go search.(*QueryExecutor).answerRows.func1 repeats the gate; awaits its own rewrite and bench measurement
-backend/internal/modules/activities/waiting.go activities.(*Store).scanWaitingReplies.func1 gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower
+backend/internal/modules/activities/waiting.go activities.(*Store).queryWaitingQueue gated once, the set holds every candidate and loses the early stop of the page and the card tail; bench-daily measured it slower
 backend/internal/modules/activities/hiddenbacklog.go activities.(*Store).countWaiting gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower
 backend/internal/modules/activities/hiddenbacklogrows.go activities.(*Store).HiddenWaitingRows.func1 gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower

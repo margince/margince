@@ -3,22 +3,23 @@
 
 package activities
 
-// The waiting queue as cards: counted whole, and read on past the page the
-// Worklist ranks.
+// The waiting queue as cards, read on past the page the Worklist ranks.
 //
 // The Worklist draws one card per conversation from the rows it scanned
-// (keepWaitingCustomers in compose). This file runs the same fold in SQL over
-// every eligible message, so the count is what scrolling to the end draws.
+// (keepWaitingCustomers in compose). This file runs the same fold in SQL, so
+// scrolling to the end draws the same cards.
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -56,91 +57,147 @@ const waitingFoldSQL = `CASE
 	             a.subject::text]
 	  ELSE ARRAY['message', a.id::text] END`
 
-// waitingCardsSQL is each card's message and when it arrived. A message a
-// sending system wrote leaves first, unless it asks us something, and then
-// only the newest message of each fold stays. Newest is (occurred_at, id), the
-// order the page's scan reads, so the page's cards are cards here too.
-var waitingCardsSQL = `SELECT card.id, card.occurred_at FROM (
-	SELECT a.id, a.occurred_at,
-	       row_number() OVER (PARTITION BY ` + waitingFoldSQL + ` ORDER BY a.occurred_at DESC, a.id DESC) AS place
-	  FROM activity a
-	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `))
-	   AND NOT (a.sender_is_machine AND coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `')) card
-	 WHERE card.place = 1`
+// waitingNotMachineSQL leaves out a message a sending system wrote, unless it
+// asks us something. It reads the stamp the one Go rule wrote.
+const waitingNotMachineSQL = ` AND NOT (a.sender_is_machine AND coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `')`
 
-// waitingCardsAfterSQL is the next cards oldest first, after slot 23's keyset,
-// capped at slot 4.
-var waitingCardsAfterSQL = waitingSelectSQL + `
-	 WHERE a.id = ANY (ARRAY(SELECT cards.id FROM (` + waitingCardsSQL + `) cards
-	   WHERE TRUE %[23]s ORDER BY cards.occurred_at, cards.id LIMIT %[4]d))` + waitingGroupSQL
-
-// CountWaitingCards counts the cards the queue holds under a narrowing, as
-// many as reading it to its end draws.
-func (s *Store) CountWaitingCards(ctx context.Context, asOf time.Time, narrow WaitingNarrow) (int, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return 0, err
-	}
-	var count int
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		slots, err := s.waitingQueueSlots(ctx, tx, asOf, narrow.mailSeats(), waitingShape{whole: true}, arg)
-		if err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, slots.with+"SELECT count(*) FROM ("+fmt.Sprintf(waitingCardsSQL, slots.values...)+") cards",
-			planEachBind(args)...).Scan(&count)
-	})
-	if err != nil {
-		return 0, fmt.Errorf("activities: counting who is waiting for a reply: %w", err)
-	}
-	return count, nil
+// WaitingTail is one read of the queue past the page. It holds the cards among
+// the messages it judged, oldest first, and the last message it judged. More
+// says messages lie past that one.
+type WaitingTail struct {
+	Cards   []WaitingReply
+	Through WaitingPosition
+	More    bool
 }
 
-// WaitingCardsAfter reads up to limit cards after a position, oldest first.
-// A card read here carries no folded requests: its fold is in the count.
+// WaitingCardsAfter judges up to judge messages after a position, oldest
+// first, and answers the cards among them. A message is a card when no newer
+// message of its fold is waiting too. A read judges a fixed number of
+// messages, so its cost does not grow with the queue. A card read here
+// carries no count of the requests folded into it.
 func (s *Store) WaitingCardsAfter(
-	ctx context.Context, asOf time.Time, narrow WaitingNarrow, after WaitingPosition, limit int,
-) ([]WaitingReply, error) {
+	ctx context.Context, asOf time.Time, narrow WaitingNarrow, after WaitingPosition, judge int,
+) (WaitingTail, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, err
+		return WaitingTail{}, err
 	}
 	seats := narrow.mailSeats()
-	var waiting []WaitingReply
+	var tail WaitingTail
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{}
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		slots, err := s.waitingQueueSlots(ctx, tx, asOf, seats, waitingShape{drawsRows: true, whole: true}, arg)
-		if err != nil {
+		judged, more, err := s.waitingCandidates(ctx, tx, asOf, seats, after, judge)
+		if err != nil || len(judged) == 0 {
 			return err
 		}
-		slots.values[waitingCapSlot] = limit
-		slots.values = append(slots.values, newerThan(after, arg))
-		rows, err := tx.Query(ctx,
-			slots.with+"SELECT waiting.*, "+directMailSeatsSQL(slots.identities)+" FROM ("+fmt.Sprintf(waitingCardsAfterSQL, slots.values...)+
-				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at, waiting.id", planEachBind(args)...)
-		if err != nil {
-			return err
+		tail.Through, tail.More = judged[len(judged)-1], more
+		messages := make([]ids.UUID, len(judged))
+		for i, message := range judged {
+			messages[i] = message.ID
 		}
-		defer rows.Close()
-		waiting, err = collectWaiting(rows, seats.owner)
-		return err
+		return s.queryWaitingQueue(ctx, tx, asOf, seats, waitingShape{drawsRows: true},
+			func(slots waitingSlots, arg func(any) int) string {
+				return waitingCardsStatement(slots, arg, messages)
+			},
+			func(rows pgx.Rows) (err error) {
+				tail.Cards, err = collectWaiting(rows, seats.owner)
+				return err
+			})
 	})
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading who is waiting past the page: %w", err)
+		return WaitingTail{}, fmt.Errorf("activities: reading who is waiting past the page: %w", err)
 	}
-	return waiting, nil
+	return tail, nil
 }
 
-// waitingCapSlot is the index of the template's cap, %[4]d, in the values
-// waitingQueueSlots answers.
-const waitingCapSlot = 3
+// waitingCandidates reads the next judge messages after a position that the
+// narrowing and the horizon could admit, oldest first. Only cheap columns are
+// tested here; the queue's own rules judge them next.
+func (s *Store) waitingCandidates(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, after WaitingPosition, judge int,
+) ([]WaitingPosition, bool, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	identities := ""
+	if !seats.unowned {
+		var err error
+		if identities, err = s.mailSeatIdentitiesSQL(ctx, tx, arg); err != nil {
+			return nil, false, err
+		}
+	}
+	horizon, err := s.waitingHorizonFor(ctx, tx)
+	if err != nil {
+		return nil, false, err
+	}
+	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	query := `SELECT a.id, a.occurred_at FROM activity a
+		 WHERE a.kind IN ('email', 'message') AND a.direction = 'inbound' AND a.archived_at IS NULL
+		   AND ` + occurredday.BegunSQL("a", instant) + `
+		   AND (` + waitingYoungSQL(instant, fmt.Sprint(horizon)) + ` OR ` + heldRequestSQL() + `)
+		   AND (` + seats.responsibilitySQL(identities, arg) + `)` + newerThan(after, arg) +
+		fmt.Sprintf(" ORDER BY a.occurred_at, a.id LIMIT %d", judge+1)
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, false, err
+	}
+	judged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (WaitingPosition, error) {
+		var at WaitingPosition
+		return at, row.Scan(&at.ID, &at.At)
+	})
+	if err != nil || len(judged) <= judge {
+		return judged, false, err
+	}
+	return judged[:judge], true, nil
+}
 
-// newerThan continues the cards oldest first, after a position. The zero
+// waitingCardsStatement draws the cards among the judged messages, oldest
+// first. The newer-member read formats the same template, so a member is
+// waiting by the same rules as the card it would fold into.
+func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.UUID) string {
+	newer := slices.Clone(slots.values)
+	newer[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND %s", newer[waitingResponsibilitySlot], waitingSameFoldNewerSQL)
+	newer[waitingKeysetSlot] = waitingNotMachineSQL
+	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY ($%d::uuid[])",
+		slots.values[waitingResponsibilitySlot], arg(judged))
+	slots.values[waitingCapSlot] = len(judged)
+	slots.values[waitingKeysetSlot] = waitingNotMachineSQL +
+		" AND NOT EXISTS (SELECT 1 FROM " + waitingCardOfSQL + " CROSS JOIN LATERAL (" +
+		fmt.Sprintf(waitingEligibleSQL, newer...) + " LIMIT 1) newer)"
+	return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" +
+		fmt.Sprintf(waitingCardsAfterSQL, slots.values...) +
+		") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at, waiting.id"
+}
+
+// waitingCardOfSQL holds the message under judgement as `card`, for the
+// newer-member read whose own rows take the alias `a`.
+const waitingCardOfSQL = `(SELECT a.id AS card_id, a.occurred_at AS card_at, a.thread_key AS card_thread,
+	        a.subject AS card_subject, ` + waitingFoldSQL + ` AS card_fold) card`
+
+// waitingSameFoldNewerSQL is a newer message of the card's fold. The thread
+// or subject test comes first, so a row of another fold costs one compare.
+const waitingSameFoldNewerSQL = `CASE card.card_fold[1]
+	  WHEN 'conversation' THEN a.thread_key = card.card_thread
+	  WHEN 'subject' THEN a.subject = card.card_subject
+	  ELSE FALSE END
+	AND ` + waitingFoldSQL + ` = card.card_fold
+	AND (a.occurred_at, a.id) > (card.card_at, card.card_id)`
+
+// waitingCardsAfterSQL draws the cards slot 18 keeps, oldest first, capped at
+// slot 4.
+var waitingCardsAfterSQL = waitingSelectSQL + `
+	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
+	   ORDER BY a.occurred_at, a.id LIMIT %[4]d))` + waitingGroupSQL
+
+// Slot indexes in the values waitingQueueSlots answers: the cap %[4]d and the
+// responsibility clause %[10]s.
+const (
+	waitingCapSlot            = 3
+	waitingResponsibilitySlot = 9
+)
+
+// newerThan continues the messages oldest first, after a position. The zero
 // position is the beginning.
 func newerThan(after WaitingPosition, arg func(any) int) string {
 	if after.At.IsZero() {
 		return ""
 	}
-	return fmt.Sprintf(" AND (cards.occurred_at, cards.id) > ($%d, $%d)", arg(after.At), arg(after.ID))
+	return fmt.Sprintf(" AND (a.occurred_at, a.id) > ($%d, $%d)", arg(after.At), arg(after.ID))
 }

@@ -78,6 +78,9 @@ func seedWaitingBacklog(t *testing.T) waitingBacklog {
 	// Unjudged mail with one sender and subject is one card, its newest.
 	w.mail(t, r.e.Rep1, "dana@buyer.example", "Price list", "", w.older().Add(-7*time.Hour), false)
 	w.mail(t, r.e.Rep1, "dana@buyer.example", "Price list", "price-list-again", w.older().Add(-8*time.Hour), false)
+	// Mail captured before the stamp existed carries none; the rule still drops it.
+	legacy := w.mail(t, r.e.Rep1, "alerts@sendgrid.net", "Weekly digest", "", w.older().Add(-9*time.Hour), false)
+	r.e.WsExec(t, `UPDATE activity SET sender_is_machine = false WHERE id = $1`, legacy)
 	// Past the horizon a request leaves, unless a human took it.
 	w.mail(t, r.e.Rep1, "dana@buyer.example", "An old question", "", r.now.AddDate(0, 0, -200), true)
 	taken := w.mail(t, r.e.Rep1, "dana@buyer.example", "An old request Rep1 took", "", r.now.AddDate(0, 0, -201), true)
@@ -136,8 +139,8 @@ func (w *waitingBacklog) takeRequest(t *testing.T, request ids.UUID) {
 }
 
 // expectFold names what the queue drops of Rep1's mail. That is the two earlier
-// requests of a conversation, the older mail on one subject, the sending
-// system's report and both requests past the horizon. A fixture that stops
+// requests of a conversation, the older mail on one subject, two sending
+// systems' mails and both requests past the horizon. A fixture that stops
 // reaching a rule fails here rather than passing the walk below.
 func (w *waitingBacklog) expectFold(t *testing.T) {
 	t.Helper()
@@ -157,7 +160,7 @@ func (w *waitingBacklog) expectFold(t *testing.T) {
 		earlier := mail.Thread == "fold-thread" && mail.At.Before(w.older().Add(-90*time.Minute)) ||
 			mail.Thread == "price-list-again"
 		switch mail.Subject {
-		case "Delivery report", "An old question", "An old request Rep1 took":
+		case "Delivery report", "Weekly digest", "An old question", "An old request Rep1 took":
 			earlier = true
 		}
 		if earlier {
@@ -166,8 +169,8 @@ func (w *waitingBacklog) expectFold(t *testing.T) {
 			dropped++
 		}
 	}
-	if dropped != 6 {
-		t.Fatalf("the fixture names %d mails the queue drops, want 6", dropped)
+	if dropped != 7 {
+		t.Fatalf("the fixture names %d mails the queue drops, want 7", dropped)
 	}
 }
 
@@ -297,8 +300,10 @@ func TestTheWaitingTotalMatchesTheMergedWalk(t *testing.T) {
 					t.Errorf("waiting card %s was never reached", id)
 				}
 			}
-			if total, stated := totalOf(first, "customer_waiting"); !stated || total != waited || waited != len(check.cards) {
-				t.Errorf("customer_waiting: total %d (stated %v), walked %d, want %d", total, stated, waited, len(check.cards))
+			// The lane's scan was cut and no count fits the first page. The
+			// category is a floor, and scrolling reaches every card.
+			if total, stated := totalOf(first, "customer_waiting"); stated || waited != len(check.cards) {
+				t.Errorf("customer_waiting: total %d (stated %v), walked %d, want a floor and %d", total, stated, waited, len(check.cards))
 			}
 			if check.scope == "mine" && !seen[w.held] {
 				t.Error("the task Rep1 took for an old request was never reached")
@@ -334,9 +339,9 @@ func assertTailOrder(t *testing.T, served []servedRow, frozen map[string]bool) {
 	}
 }
 
-// The card count is the lane's own fold over every row the scan reads: one
-// answer to "how many are waiting", whichever side asks.
-func TestTheWaitingCardCountIsTheFoldOfTheScan(t *testing.T) {
+// The tail's cards are the lane's own fold over every row the scan reads: one
+// answer to "who is waiting", whichever side draws it.
+func TestTheWaitingTailIsTheFoldOfTheScan(t *testing.T) {
 	w := seedWaitingBacklog(t)
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
@@ -357,12 +362,31 @@ func TestTheWaitingCardCountIsTheFoldOfTheScan(t *testing.T) {
 		last := rows[len(rows)-1]
 		before = activities.WaitingPosition{At: last.OccurredAt, ID: last.ActivityID}
 	}
-	count, err := seam.CountWaiting(ctx, r.now, narrow)
-	if err != nil {
-		t.Fatal(err)
+	folded := map[ids.UUID]bool{}
+	for _, row := range keepWaitingCustomers(scanned) {
+		folded[row.ActivityID] = true
 	}
-	if folded := len(keepWaitingCustomers(scanned)); count != folded || count != len(w.cards[r.e.Rep1]) {
-		t.Errorf("the store counts %d cards, the lane's fold of the whole scan draws %d, the fixture names %d",
-			count, folded, len(w.cards[r.e.Rep1]))
+	tailed := map[ids.UUID]bool{}
+	for after := ""; ; {
+		read, err := seam.WaitingAfter(ctx, r.now, narrow, after, 7)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, card := range read.Cards {
+			tailed[card.Row.ActivityID] = true
+		}
+		if !read.More {
+			break
+		}
+		after = read.Through
+	}
+	if len(tailed) != len(folded) || len(tailed) != len(w.cards[r.e.Rep1]) {
+		t.Fatalf("the tail draws %d cards, the lane's fold of the whole scan %d, the fixture names %d",
+			len(tailed), len(folded), len(w.cards[r.e.Rep1]))
+	}
+	for id := range folded {
+		if !tailed[id] {
+			t.Errorf("the lane's card %s is not one the tail draws", id)
+		}
 	}
 }

@@ -124,3 +124,22 @@ func TestTheTailReadsDoneMarksForItsOwnRows(t *testing.T) {
 		t.Errorf("kept %d rows, want only the task: the waiting row was marked done", len(kept))
 	}
 }
+
+// A read that judged messages making no card still moves its source past
+// them. It also bounds what the other sources may give, since a card may lie
+// just past what it looked at.
+func TestAReadThatGaveNothingStillMovesAndBoundsTheMerge(t *testing.T) {
+	tasks := tailBatchOf(sourceTask, false, 1, 5)
+	judged := rankInstant.Add(4 * time.Hour)
+	waits := tailBatch{source: sourceWaiting, more: true, through: "through-4", throughAt: &judged}
+	rest := cursorOver(tasks, waits)
+
+	got := mergeTail([]tailBatch{tasks, waits}, 10, nil, rest)
+
+	if len(got) != 1 || got[0].item.Id != tasks.rows[0].row.item.Id {
+		t.Fatalf("merged %d rows, want only the task before the judged messages", len(got))
+	}
+	if rest.At[string(sourceWaiting)] != "through-4" || rest.At[string(sourceTask)] != tasks.rows[0].after {
+		t.Errorf("positions %v, want waiting past what it judged and the task after its first row", rest.At)
+	}
+}

@@ -131,18 +131,19 @@ when its own read finds nothing more, so completing tasks above never ends it. T
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Two sources are counted and read on in the tail today:
+Two sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page counts no task window, because that count ran past the lane
   budget at 10,000 tasks a seat. Its task categories stay a floor.
-- Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). The store counts the cards in SQL
-  (`modules/activities/waitingcards.go`), on a first page whose waiting read was cut. It folds them as the lane does:
-  a conversation of requests is one card, and other mail is one card per sender and subject.
+- Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
+  messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
+  is one card, and other mail is one card per sender and subject. The category has no count: judging every message
+  costs more than the first page may spend.
 
-Mail a sending system wrote is left out of the waiting lane and its count, unless it asks us something. That is the
-`sender_is_machine` stamp, which capture and the activity writer set with the one Go rule. The lane and the count
-both read it.
+Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
+the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
+The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
 
 Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
 The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).

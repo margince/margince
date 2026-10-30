@@ -23,15 +23,14 @@ const waitingKeysetSlot = 17
 
 // waitingShape is what one statement over the queue does with it. drawsRows
 // selects whole rows; a count binds nothing only the row columns read, since
-// Postgres cannot type a parameter no clause names. whole reads past any cap.
-type waitingShape struct{ drawsRows, whole bool }
+// Postgres cannot type a parameter no clause names.
+type waitingShape struct{ drawsRows bool }
 
 // waitingSlots are the queue template's values for one reader and narrowing.
-// identities is the seat map the caller's own columns read, and with the
-// clause a whole read opens with.
+// identities is the seat map the caller's own columns read.
 type waitingSlots struct {
-	values           []any
-	identities, with string
+	values     []any
+	identities string
 }
 
 // waitingQueueSlots renders the queue's template values, binding what they
@@ -41,7 +40,14 @@ func (s *Store) waitingQueueSlots(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, seats mailSeats, shape waitingShape, arg func(any) int,
 ) (out waitingSlots, err error) {
 	instant := arg(asOf)
-	content, backContent, with, err := waitingContentGates(ctx, shape.whole, arg)
+	// The CONTENT gate, not the discover one: everything this read answers is
+	// derived from thread membership. A message the reader may not read makes
+	// no row, and a reply they may not read lifts no snooze.
+	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return waitingSlots{}, err
+	}
+	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}
@@ -105,27 +111,5 @@ func (s *Store) waitingQueueSlots(
 		noKeyset, bookedDiscover,
 		neverRelaxed, neverRelaxed, requestTaskDiscover,
 	}
-	return waitingSlots{identities: identities, with: with, values: values}, nil
-}
-
-// waitingContentGates is the content gate for the message and for the reply
-// that may lift its snooze. A whole read gates every inbound message once and
-// tests membership. A capped page gates per row, so its scan still stops at
-// the cap. Either way a message this reader may not read produces no row.
-func waitingContentGates(ctx context.Context, once bool, arg func(any) int) (message, reply, with string, err error) {
-	if !once {
-		if message, err = auth.ActivityContentClause(ctx, "a", arg); err != nil {
-			return "", "", "", err
-		}
-		reply, err = auth.ActivityContentClause(ctx, "back", arg)
-		return message, reply, "", err
-	}
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT inbound.id FROM activity inbound
-		 WHERE inbound.kind IN ('email', 'message') AND inbound.direction = 'inbound'`, arg)
-	if err != nil {
-		return "", "", "", err
-	}
-	return "a.id IN (SELECT readable_inbound.id FROM readable_inbound)",
-		"back.id IN (SELECT readable_inbound.id FROM readable_inbound)",
-		"WITH readable_inbound AS MATERIALIZED (" + readable + ") ", nil
+	return waitingSlots{identities: identities, values: values}, nil
 }
