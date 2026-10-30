@@ -881,6 +881,7 @@ describe("the meetings tab", () => {
     expect(screen.getByText("Upcoming")).toBeTruthy();
     expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
+    expect(draft.classList.contains("btn-ai")).toBe(true);
     await userEvent.setup().click(draft);
     expect(acted).toEqual([draftAgenda]);
   });

@@ -155,6 +155,25 @@ describe("a related record opened from a record that came from the Worklist", ()
     expect(window.location.hash).toBe("#/deals/d-1?filter=tasks&from=worklist");
   });
 
+  it("opens the composer drafting when the moment names the composer", () => {
+    const openComposer = vi.fn();
+    runContactMomentAction(
+      {
+        kind: "draft_reply",
+        label: "Draft a follow-up",
+        state: "available",
+        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+      },
+      t,
+      { ...handlers, openComposer },
+    );
+
+    expect(openComposer).toHaveBeenCalledWith(
+      translate("en", "contact.composer.intentFollowUp"),
+      true,
+    );
+  });
+
   it("opens the deal bare when the contact came from anywhere else", () => {
     window.location.hash = "#/contacts/c-1";
     runContactMomentAction(openDeal, t, handlers);
