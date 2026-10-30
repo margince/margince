@@ -68,8 +68,8 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 		  AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
 		                   WHERE r.exception_id = assurance_exception.id
 		                     AND r.outcome = $5
-		                     AND r.remind_at > now())`,
-		ExceptionConditionCleared, subjects, types, seen, OutcomeRemindLater)
+		                     AND `+LiveRemindAtSQL("r", "$6")+` > now())`,
+		ExceptionConditionCleared, subjects, types, seen, OutcomeRemindLater, MaxSuppressionDays())
 	if err != nil {
 		return 0, fmt.Errorf("assurance: closing cleared findings: %w", err)
 	}
