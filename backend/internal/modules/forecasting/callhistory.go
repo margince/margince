@@ -50,7 +50,7 @@ func (s *Store) callHistoryTx(ctx context.Context, tx pgx.Tx, period Period, sco
 	// it holds.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT id, period_start, period_end, scope_kind, scope_id,
-		       amount_minor, currency, note, author_id, supersedes_id, created_at
+		       amount_minor, currency, note, author_id, supersedes_id, created_at, `+callBaselineSQL+`
 		FROM forecast_call
 		WHERE period_start = $1 AND period_end = $2
 		  AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
@@ -71,7 +71,7 @@ func (s *Store) callHistoryTx(ctx context.Context, tx pgx.Tx, period Period, sco
 		var note *string
 		if err := rows.Scan(&call.ID, &call.PeriodStart, &call.PeriodEnd,
 			&call.Scope.Kind, &call.Scope.ID, &call.AmountMinor, &call.Currency,
-			&note, &call.AuthorID, &call.SupersedesID, &call.CreatedAt); err != nil {
+			&note, &call.AuthorID, &call.SupersedesID, &call.CreatedAt, &call.HasBaseline); err != nil {
 			return nil, fmt.Errorf("forecasting: reading a call: %w", err)
 		}
 		if note != nil {

@@ -782,6 +782,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionExistingContact": "Zu ergänzender Kontakt",
   "approval.preview.promotionSetOrigin": "Kontakt mit diesem Lead verknüpfen",
   "approval.preview.promotionCompanyIndustry": "Branche des Unternehmens",
+  "approval.preview.promotionCompanyProposed":
+    "Unternehmen zum Verknüpfen oder Anlegen",
   "approval.preview.promotionDuplicateCandidate":
     "Mögliche Dublette zur Prüfung",
   "approval.preview.promotionMoveActivity":
@@ -810,6 +812,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionFillIndustry":
     "Trägt die angezeigte Branche beim verknüpften Unternehmen ein, das noch keine hat.",
+  "approval.preview.promotionProposeCompany":
+    "Legt aus dem eingetippten Namen kein Unternehmen an. Der Kontakt zeigt den Namen als Unternehmen zum Verknüpfen oder Anlegen.",
   "approval.preview.promotionReview":
     "Erstellt einen separaten Kontakt und stellt die mögliche Dublette zur Prüfung bereit.",
   "approval.preview.promotionAllMarketing": "Gesamtes Marketing",
@@ -919,6 +923,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.createdOn": "Erstellt am",
   "reporting.movedOn": "Status geändert am",
   "reporting.arrivedOn": "Eingegangen am",
+  "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
@@ -1351,6 +1356,39 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.metric_reading": "Kennzahlendetails",
   "reporting.breakdown": "Aufteilung nach Gruppe",
   "reporting.breakdownTitle": "{metric} nach Gruppe",
+  "reporting.conversion": "Weiterkommen pro Phase",
+  "reporting.stage_cohort": "Weiterkommen pro Phase",
+  "reporting.lead_cohort": "Was aus neuen Leads wurde",
+  "reporting.cohortStage": "Phase",
+  "reporting.cohortEntered": "Eingetreten",
+  "reporting.cohortArrived": "Eingegangen",
+  "reporting.cohortRate": "Weitergekommen",
+  "reporting.cohortNoRate": "Weniger als 5 mit Ergebnis",
+  "reporting.cohortMedianDays": "Median {days} T.",
+  "reporting.cohortEmpty":
+    "In diesem Zeitraum ist nichts in eine Phase gekommen.",
+  "reporting.cohortNoArrivals":
+    "In diesem Zeitraum sind keine Leads eingegangen.",
+  "reporting.cohortOutcome.advanced": "Spätere Phase",
+  "reporting.cohortOutcome.won": "Gewonnen",
+  "reporting.cohortOutcome.lost": "Verloren",
+  "reporting.cohortOutcome.regressed": "Zurückgegangen",
+  "reporting.cohortOutcome.left_pipeline": "Andere Pipeline",
+  "reporting.cohortOutcome.unresolved": "Noch offen",
+  "reporting.cohortOutcome.history_partial": "Vor oder zurück unbekannt",
+  "reporting.cohortOutcome.accepted": "Übergabe angenommen",
+  "reporting.cohortOutcome.qualified": "Qualifiziert",
+  "reporting.cohortOutcome.disqualified": "Disqualifiziert",
+  "reporting.cohortEntry.repeat": "Erneut in dieser Phase",
+  "reporting.cohortEntry.reopened": "Nach Abschluss wieder geöffnet",
+  "reporting.cohortStillOpenNote":
+    "Noch offen heißt: beim Abruf dieser Zahlen gab es noch kein Ergebnis. Diese zählen nicht als verloren und fließen nicht in die Quote ein.",
+  "reporting.cohortPartialNote":
+    "Vor oder zurück unbekannt heißt: Der Deal hat die Phase verlassen, bevor Margince bei jedem Wechsel die Reihenfolge der Phasen gespeichert hat. Diese fließen nicht in die Quote ein.",
+  "reporting.cohortStageDaysNote":
+    "Die Tage neben einem Ergebnis sind die mittlere Zeit, die ein Deal davor in der Phase war. Die Tage neben Noch offen sind die mittlere Zeit in der Phase bis jetzt.",
+  "reporting.cohortLeadDaysNote":
+    "Die Tage neben einem Ergebnis sind die mittlere Zeit vom Eingang bis dahin. Die Tage neben Noch offen sind die mittlere Zeit seit dem Eingang bis jetzt.",
   "reporting.actual": "Ist",
   "reporting.previous": "Vorheriger Zeitraum",
   "reporting.target": "Ziel",
@@ -2023,6 +2061,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
+  "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
   "systemJob.ai_activity_reconcile": "Abgleich der KI-Aktivität",
   "systemJob.ai_activity_retention": "Bereinigung der KI-Aktivität",
@@ -2072,6 +2111,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
+  "systemJob.forecast_evaluation": "Prognose-Auswertung",
   "systemJob.geocode": "Adresssuche für Unternehmen",
   "systemJob.geocode_backfill": "Nachholen der Adresssuche",
   "systemJob.address_country_check": "Abgleich des Adresslands",
@@ -2761,7 +2801,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tab.rollup": "Gesamtsumme",
   "tab.history": "Verlauf",
 
-  "rollup.weightedPipeline": "Gewichteter Deal-Wert",
+  "rollup.weightedPipeline": "Gewichteter Deal-Wert heute",
   "rollup.closedWon": "In diesem Quartal gewonnen",
   "rollup.activity30d": "Aktivität, 30 Tage",
   "rollup.accounts": "Einbezogene Unternehmen",
@@ -2770,6 +2810,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rollup.fxUnavailable":
     "Die Summe kann nicht berechnet werden, da ein Wechselkurs fehlt.",
   "rollup.computedAt": "Berechnet am {when}",
+  "rollup.wonIn": "Gewonnen in {period}",
+  "rollup.periodNote":
+    "Gewonnene Deals zählen in {period} nach dem Tag, an dem sie gewonnen wurden. Der gewichtete Deal-Wert zeigt die offenen Deals von heute.",
+  "rollup.period.label": "Zeitraum für gewonnene Deals",
+  "rollup.period.quarterUnderWay": "Dieses Quartal",
+  "rollup.period.year": "Jahr",
+  "rollup.period.quarter": "Quartal",
+  "rollup.period.month": "Monat",
+  "rollup.period.show": "{period} anzeigen",
+  "rollup.period.nextNotBegun": "Der nächste Zeitraum hat noch nicht begonnen",
 
   "nav.partners": "Partner",
   "deal.partnerAttribution": "Partner-Attribution",
@@ -4318,6 +4368,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.none": "Diese Aktivität",
   "activity.followUps": "Folgeaufgaben",
   "activity.noFollowUps": "Keine Folgeaufgaben",
+  "activity.archive": "Archivieren",
+  "activity.archiveConfirm":
+    "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
+  "activity.archiveDone": "Eintrag archiviert",
+  "activity.archiveRefused":
+    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
@@ -5107,6 +5163,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.title": "{name} qualifizieren",
   "lead.qualify.contact": "Kontakt",
   "lead.qualify.alsoDeal": "Auch einen Deal erstellen",
+  "lead.qualify.company": "Unternehmen",
+  "lead.qualify.companyUnresolved":
+    "Die E-Mail dieses Leads zeigt nicht, welches Unternehmen {company} ist. Darum wird kein Unternehmen von selbst hinzugefügt.",
+  "lead.qualify.createCompany": "{company} als Arbeitgeber hinzufügen",
+  "lead.qualify.createCompanyHint":
+    "Verknüpft das Unternehmen mit diesem Namen oder legt es an. Ohne Haken zeigt der Kontakt {company} als Unternehmen zum Verknüpfen oder Anlegen.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Phase",
   "lead.qualify.dealName": "Deal-Name",
@@ -5145,7 +5207,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirmTerminal":
     "Damit wird der Deal als {status} abgeschlossen. Bis du bestätigst, ändert sich nichts.",
   "deals.lostReason": "Verlustgrund",
-  "deals.lostReasonNeeded": "Gib an, warum der Deal verloren ging.",
+  "deals.lostReasonNeeded": "Wähle, warum der Deal verloren ging.",
+  "deals.lostReasonCode": "Warum verloren?",
+  "deals.lostReasonPick": "Grund wählen",
+  "deals.lostReasonNote": "Notiz (optional)",
   "deals.winReasonNeeded": "Wähle aus, wie der Deal gewonnen wurde.",
   "deals.winDetailNeeded": "Beschreibe, wie der Deal gewonnen wurde.",
   "deals.closeTasks.legend_one":
@@ -5272,6 +5337,45 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
   "legalEntities.countryHint": "Zwei Buchstaben, zum Beispiel AT.",
+  "lossReasons.title": "Verlustgründe",
+  "lossReasons.sub":
+    "Die Gründe, aus denen du wählst, wenn ein Deal verloren geht. Berichte zählen verlorene Deals danach.",
+  "lossReasons.builtin.price": "Preis",
+  "lossReasons.builtin.competitor": "Für Wettbewerber entschieden",
+  "lossReasons.builtin.no_budget": "Kein Budget",
+  "lossReasons.builtin.no_decision": "Keine Entscheidung",
+  "lossReasons.builtin.timing": "Falscher Zeitpunkt",
+  "lossReasons.builtin.product_fit": "Produkt passte nicht",
+  "lossReasons.builtin.went_silent": "Keine Rückmeldung mehr",
+  "lossReasons.builtin.other": "Sonstiges",
+  "lossReasons.loading": "Gründe werden geladen…",
+  "lossReasons.addOpen": "Neuer Grund",
+  "lossReasons.addTitle": "Neuer Verlustgrund",
+  "lossReasons.addConfirm": "Grund hinzufügen",
+  "lossReasons.renameTitle": "Grund umbenennen",
+  "lossReasons.activeFor":
+    "{label} kann gewählt werden, wenn ein Deal verloren geht",
+  "lossReasons.colReason": "Grund",
+  "lossReasons.colDeals": "Deals",
+  "lossReasons.deals_one": "{count} Deal",
+  "lossReasons.deals_other": "{count} Deals",
+  "lossReasons.duplicate":
+    "Einen Grund mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
+  "lossReasons.legacyTitle": "Ältere Verlustnotizen",
+  "lossReasons.legacySub":
+    "Deals, die vor dieser Liste verloren gingen, haben nur eine Notiz. Wähle für jede Notiz den Grund, als der sie zählt, und wende ihn an. Die Notizen bleiben, wie sie geschrieben wurden.",
+  "lossReasons.colPending": "Noch zu ändern",
+  "lossReasons.colNote": "Notiz",
+  "lossReasons.colMapTo": "Zählt als",
+  "lossReasons.mapFor": "Grund für „{note}“",
+  "lossReasons.pick": "Grund wählen",
+  "lossReasons.apply": "Auf Deals anwenden",
+  "lossReasons.applied_one": "{count} Deal wird im Hintergrund aktualisiert.",
+  "lossReasons.applied_other":
+    "{count} Deals werden im Hintergrund aktualisiert.",
+  "lossReasons.remaining_one": "Die {shown} häufigsten von {count} Notiz.",
+  "lossReasons.remaining_other": "Die {shown} häufigsten von {count} Notizen.",
+  "lossReasons.legacyEmpty": "Jeder verlorene Deal hat einen Grund.",
   "acqSources.title": "Quellenliste",
   "acqSources.builtin.inbound": "Eingehend",
   "acqSources.builtin.outbound": "Ausgehend",
@@ -5431,6 +5535,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
+  "deal.archiveRefused":
+    "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
@@ -7131,6 +7237,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
   "analytics.field.lost_reason": "Verlustgrund",
+  "analytics.field.loss_reason": "Verlustgrund aus der Liste",
+  "analytics.field.loss_reason_state": "Wie der Verlustgrund gesetzt wurde",
+  "analytics.lossState.recorded": "Beim Abschluss gewählt",
+  "analytics.lossState.mapped": "Aus einer Notiz zugeordnet",
+  "analytics.lossState.unmapped": "Notiz nicht zugeordnet",
+  "analytics.lossState.missing": "Kein Grund",
   "analytics.field.meeting_status": "Terminstatus",
   "analytics.field.open_commitments": "Offene Aufgaben",
   "analytics.field.open_deal_value_minor": "Offener Deal-Wert",
@@ -7201,6 +7313,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.filters": "Filter",
   "analytics.q.groupBy": "Gruppieren nach",
   "analytics.q.companyField": "{label} (Unternehmen)",
+  "analytics.q.groupOptionCoverage_one": "{label} · {held} von {count} Deal",
+  "analytics.q.groupOptionCoverage_other": "{label} · {held} von {count} Deals",
   "analytics.q.fieldCoverage_one":
     "{label} hat einen Wert bei {held} von {count} lesbaren Deal.",
   "analytics.q.fieldCoverage_other":
@@ -7513,6 +7627,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.enforcementNotStarted": "Starte zuerst die erste Prüfung.",
   "review.commitUnpriced": "Commit ohne Betrag",
   "review.stageExitUnmet": "Austrittskriterien der Phase nicht erfüllt",
+  "review.callMovedHelp_one":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert: {count} Deal hat sich so bewegt, dass es die Prognose betrifft.",
+  "review.callMovedHelp_other":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert: {count} Deals haben sich so bewegt, dass es die Prognose betrifft.",
+  "review.callMovedWithheldHelp":
+    "Die Pipeline, auf der diese Prognose beruht, hat sich seitdem geändert, auch bei Deals, die du nicht öffnen kannst.",
+  "review.callLimitedHelp":
+    "Team, Basiswährung oder Geschäftsjahr haben sich seit dieser Prognose geändert, daher lässt sich die Prognose nicht mehr mit der heutigen Pipeline vergleichen.",
+  "review.callOpenItsForecast":
+    "Öffne die Prognose für Team und Zeitraum dieser Abgabe, um eine neue Prognose abzugeben.",
+  "review.callAuthorOnly":
+    "Nur die Führungskraft, die diese Prognose abgegeben hat, kann eine neue abgeben.",
+  "review.submitNewCall": "Neue Prognose abgeben",
+  "review.forecastCallMoved": "Abgegebene Prognose prüfen",
   "review.unknownCheck": "Unbenannte Prüfung",
   "review.sheetTitle": "Prüfung beantworten",
   "review.outcomeLegend": "Antworttyp",
@@ -7545,6 +7673,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktualisiert {date} · {gap} über gewonnenen + bestätigten Commit-Deals",
   "forecast.currentCallDetailUnder":
     "Aktualisiert {date} · {gap} unter gewonnenen + bestätigten Commit-Deals",
+  "forecast.callHistoryUnavailable":
+    "Diese Prognose wurde abgegeben, bevor Prognosen die zugrunde liegende Pipeline gespeichert haben. Was sich seitdem bewegt hat, lässt sich nicht sagen.",
   "forecast.currentCallDetailEven":
     "Aktualisiert {date} · entspricht gewonnenen + bestätigten Commit-Deals",
   "forecast.evidence": "Commit · bestätigtes Datum",
@@ -8836,6 +8966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.approval_auto_apply": "Automatische Freigabe",
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
+  "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",
@@ -11767,6 +11898,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Phasen, die ein Deal durchläuft, für das ganze Unternehmen.",
   "settings.page.acquisition.sub":
     "Vertriebskanäle, denen ein Deal zugeordnet werden kann.",
+  "settings.page.lossreasons.sub":
+    "Warum Deals verloren gehen, und als welcher Grund ältere Notizen zählen.",
   "settings.page.recordroles.sub":
     "Bezeichnungen dafür, worum sich ein Teammitglied oder Team bei einem Datensatz kümmert, etwa die Kundenbetreuung. Eine Zuständigkeit gewährt keinen Zugriff; wer bearbeiten darf, hängt von der Verantwortung und vom Teilen ab.",
   "settings.page.leads.sub":
@@ -11831,6 +11964,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tab.stageautomation": "Phasensteuerung",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Akquisitionsquellen",
+  "settings.tab.lossreasons": "Verlustgründe",
   "settings.tab.recordroles": "Zuständigkeiten",
   "settings.tab.leads": "Lead-Bearbeitung",
   "settings.tab.fields": "Felder",
@@ -15497,6 +15631,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.source.vcard_import": "einer importierten vCard",
   "contact.enriched.source.contact_research": "einer übernommenen Recherche",
   "contact.enriched.source.human_restore": "einem wiederhergestellten Wert",
+  "contact.enriched.source.lead_promotion": "dem qualifizierten Lead",
   "contact.enriched.source.other": "einer erfassten Quelle",
   "contact.enriched.undo": "Rückgängig",
   "contact.enriched.replaced": "Bisheriger Wert „{was}“ ersetzt",

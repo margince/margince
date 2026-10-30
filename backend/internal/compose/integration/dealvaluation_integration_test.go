@@ -255,7 +255,7 @@ func TestLegacyUnpriceableWinsStayUnknownAcrossProjectAndCompanyTotals(t *testin
 	if err != nil || page.Deals == nil || page.Deals.WonLifetime.AmountMinor != nil {
 		t.Fatalf("unpriced company = %+v, %v", page.Deals, err)
 	}
-	tree, err := compose.CompanyHierarchyRollup(f.e.Admin(), f.e.Pool, f.company.UUID, "self", fixedClock(valuationDate.Add(time.Hour)))
+	tree, err := compose.CompanyHierarchyRollup(f.e.Admin(), f.e.Pool, f.company.UUID, "self", compose.CompanyRollupPeriod{}, fixedClock(valuationDate.Add(time.Hour)))
 	if err != nil || tree.ClosedWonMinor != nil {
 		t.Fatalf("unpriced company hierarchy = %+v, %v", tree, err)
 	}

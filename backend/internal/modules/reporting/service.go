@@ -42,6 +42,10 @@ type Fact struct {
 	// PlacedAt is where a day row falls in a period: its date's start in the
 	// installation zone. The row keeps the stored anchor a reader draws a date from.
 	PlacedAt *time.Time `json:"placed_at,omitempty"`
+	// Entry says how a stage cohort member entered its stage: first or repeat.
+	// Reopened marks an entry made straight from a won or lost close.
+	Entry    string `json:"entry,omitempty"`
+	Reopened bool   `json:"reopened,omitempty"`
 }
 
 // At is the moment that places the fact in a period or bucket.
@@ -67,6 +71,8 @@ type Evaluator interface {
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
 	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)
+	// MetricVersions is each named metric's current definition version.
+	MetricVersions([]crmcontracts.ReportingMetricID) MetricVersions
 }
 
 // Authority injects live identity and source visibility without sibling imports.

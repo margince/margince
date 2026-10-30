@@ -28,6 +28,8 @@ export const reportingMetricNames: Record<
   partner_won: "Partner sales won",
   partner_commission: "Partner commission",
   partner_activity: "Active partners",
+  stage_conversion: "Stage conversion",
+  lead_cohort_outcomes: "What became of new leads",
 };
 
 export const reportingStoryScope = {

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -93,6 +94,9 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 // closes the queue in one statement. Naming the condition — not live, or no
 // longer open — says what is meant and is true of a partial pass too.
 //
+// A deal erased from the table is no live open deal either, so its findings
+// close here as departed.
+//
 // The join is a READ of another module's table, which table ownership permits;
 // what this module writes is still only its own.
 //
@@ -103,19 +107,27 @@ func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, sub
 //
 // No resolution row, for CloseCleared's reason: assurance_resolution attributes
 // an answer to a contact, and no contact answered this.
-func (s *Store) CloseDeparted(ctx context.Context, tx pgx.Tx) (int64, error) {
+//
+// only bounds it to one deal, for a pass that walked one; nil is every deal.
+// walked are the deals the pass just read as open, which have not departed.
+func (s *Store) CloseDeparted(ctx context.Context, tx pgx.Tx, only *ids.UUID, walked []string) (int64, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
 		return 0, err
+	}
+	if walked == nil {
+		walked = []string{}
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE assurance_exception
 		SET status = $1, updated_at = now()
 		WHERE status = 'open'
 		  AND subject_kind = 'deal'
-		  AND EXISTS (SELECT 1 FROM deal d
-		               WHERE d.id = assurance_exception.subject_id
-		                 AND (d.archived_at IS NOT NULL OR d.status <> 'open'))`,
-		ExceptionSubjectDeparted)
+		  AND ($2::uuid IS NULL OR subject_id = $2)
+		  AND NOT (subject_id = ANY($3::uuid[]))
+		  AND NOT EXISTS (SELECT 1 FROM deal d
+		                   WHERE d.id = assurance_exception.subject_id
+		                     AND d.archived_at IS NULL AND d.status = 'open')`,
+		ExceptionSubjectDeparted, only, walked)
 	if err != nil {
 		return 0, fmt.Errorf("assurance: closing findings whose subject departed: %w", err)
 	}

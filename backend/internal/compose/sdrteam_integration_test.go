@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
@@ -166,10 +167,10 @@ func TestSdrTeamReviewSeparatesOutcomesFromRoundsAndCountsSharedWorkOnce(t *test
 	if len(got.Members) != 2 || got.MembersWithheld || got.MembersTruncated {
 		t.Fatalf("members = %+v, want one row per SDR", got.Members)
 	}
-	if first.MeetingsHeld != 1 || first.Submitted != 3 || first.Accepted != 1 || first.Rejected != 1 || first.Recycled != 1 || first.Waiting != 0 {
+	if first.MeetingsHeld == nil || *first.MeetingsHeld != 1 || first.Submitted != 3 || first.Accepted != 1 || first.Rejected != 1 || first.Recycled != 1 || first.Waiting != 0 {
 		t.Errorf("Rep1's row = %+v", first)
 	}
-	if second.MeetingsHeld != 1 || second.Submitted != 1 || second.Accepted != 0 || second.Waiting != 1 || second.OldestWaitingSince == nil {
+	if second.MeetingsHeld == nil || *second.MeetingsHeld != 1 || second.Submitted != 1 || second.Accepted != 0 || second.Waiting != 1 || second.OldestWaitingSince == nil {
 		t.Errorf("the second SDR's row = %+v; a meeting both attended is in each row", second)
 	}
 }
@@ -386,5 +387,27 @@ func TestSdrTeamReviewReadsMyTeamsAsTheDefault(t *testing.T) {
 	}
 	if mine.Scope.Kind != fallback.Scope.Kind || mine.Scope.Label != fallback.Scope.Label {
 		t.Fatalf("My teams is the default: %+v, want %+v", mine.Scope, fallback.Scope)
+	}
+}
+
+// A seat that may not read activities learns no meeting count: not the
+// team's, and not one member's.
+func TestSdrTeamReviewGivesNoMeetingsToASeatThatMayNotReadActivities(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	f.submitAs(t, f.e.Rep1, "Handed on")
+	f.at = f.at.Add(time.Hour)
+	f.holdMeeting(t)
+	reader := f.as(f.manager)
+	actor, _ := principal.Actor(reader)
+	actor.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	delete(actor.Permissions.Objects, "activity")
+	got := f.review(principal.WithActor(reader, actor), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &f.e.Team1)
+	if got.Meetings != nil || len(got.Members) == 0 {
+		t.Fatalf("no team meeting count, and member rows still listed: %+v", got)
+	}
+	for _, row := range got.Members {
+		if row.MeetingsHeld != nil {
+			t.Fatalf("%s's meetings reach a seat that may not read activities: %d", row.Label, *row.MeetingsHeld)
+		}
 	}
 }

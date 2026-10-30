@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals
@@ -34,12 +34,12 @@ To mark a deal as won in Margince, move it to a stage whose **Stage type** is **
 Also called: close won, close a deal as won, win an opportunity.
 
 ### How do I mark a deal as lost?
-When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and give a **Lost reason**. There is no separate Lost button.
+When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
 1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
-2. Type the **Lost reason**. You must give one: **Confirm** stays off until the box says something.
+2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. **Confirm** stays off until you pick a reason.
 3. Press **Confirm**.
 
-The reason is kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you typed.
+The reason and the note are kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you picked and typed.
 Also called: close lost, lose a deal, mark an opportunity lost, the customer said no.
 Also called: the client declined, we lost the deal, the prospect said no.
 
@@ -147,9 +147,9 @@ If the deal has open tasks, the dialog lists them, and **Confirm** waits until y
 
 ### Losing
 
-**A lost deal needs a reason.** The **Lost reason** box must say something
-before **Confirm** works. If you cancel (or press Escape, or click outside),
-anything you typed is cleared.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator
+keeps under **Settings → Loss reasons**. The **Note** is optional. Reopening
+clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 
@@ -381,11 +381,12 @@ Archiving a deal is different from closing it. A closed deal is a finished
 part of your business; an archived deal has left your lists.
 
 To archive a deal, open it and choose **More actions** → **Archive deal**, or
-tick several on the list and use **Archive**. Archived deals leave every list and
-report. **Show archived** lets you see one, read-only. To bring one back, open
-it with **Show archived**, find the archive entry in its history and press
-**Undo**. A closed or archived deal has no box to tick for acting on many at
-once. You cannot merge two deals.
+tick several on the list and use **Archive**. A Team lead, Management, Ops or
+Admin may archive a deal, and so may its owner if they created it or were given it.
+Archived deals leave every list and report. **Show archived** lets you see one,
+read-only. To bring one back (Team lead, Management, Ops or Admin), open it with
+**Show archived**, find the archive entry in its history and press **Undo**. A
+closed or archived deal has no box to tick for acting on many at once.
 
 ### Can I merge two duplicate deals?
 No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.

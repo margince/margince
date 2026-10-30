@@ -336,6 +336,7 @@ const sendContextProperties = `,
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendEmailCopy.render(),
 		Instead:       sendEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,
@@ -424,6 +425,7 @@ type sendMessageTool struct {
 func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendMessageCopy.render(),
 		Instead:       sendMessageCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,

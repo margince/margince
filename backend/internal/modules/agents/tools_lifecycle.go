@@ -247,6 +247,7 @@ type disqualifyLead struct {
 func (t disqualifyLead) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "disqualify_lead", Title: "Disqualify a lead", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   disqualifyLeadCopy.render(),
 		Instead:       disqualifyLeadCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,

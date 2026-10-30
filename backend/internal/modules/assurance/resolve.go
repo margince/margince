@@ -206,6 +206,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr == nil {
 		kinds = append(kinds, subjectKindSignal)
 	}
+	if callErr := auth.Require(ctx, "forecast", principal.ActionCreate); callErr == nil {
+		kinds = append(kinds, SubjectKindForecastCall)
+	}
 	if len(kinds) == 0 {
 		return dealErr
 	}
@@ -225,6 +228,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	if kind == subjectKindSignal {
 		return ensureSignalAnswerable(ctx, tx, subjectID)
 	}
+	if kind == SubjectKindForecastCall {
+		return ensureCallAnswerable(ctx, tx, subjectID)
+	}
 	if kind != subjectKindDeal {
 		return apperrors.ErrNotFound
 	}
@@ -234,6 +240,24 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	// Not the live probe: an answer puts nothing on the deal, and CloseDeparted
 	// closes the findings of a deal that was archived.
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
+}
+
+// ensureCallAnswerable admits the call's own author: an answer about a call
+// is the author saying the number still stands, or that they called again.
+func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	var authored bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM forecast_call WHERE id = $1 AND author_id = $2)`,
+		callID, actor.UserID).Scan(&authored); err != nil {
+		return fmt.Errorf("assurance: reading who made the call: %w", err)
+	}
+	if !authored {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // ReviewOutcomes are the four answers a viability review takes. Revived is

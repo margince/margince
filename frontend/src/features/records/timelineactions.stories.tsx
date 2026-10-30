@@ -178,3 +178,51 @@ export const CompletedTaskDark: Story = {
   ...CompletedTask,
   globals: { theme: "dark" },
 };
+
+// A hand-logged note, with the server's per-row archive answer.
+const NOTE: Activity = {
+  ...BASE,
+  id: "44444444-4444-4444-8444-444444444444",
+  kind: "note",
+  direction: undefined,
+  subject: "Spoke on LinkedIn",
+  archivable: true,
+};
+
+async function openArchive(canvasElement: HTMLElement, confirm: boolean) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: "More actions for Spoke on LinkedIn",
+    }),
+  );
+  const archive = await screen.findByRole("button", { name: "Archive" });
+  if (confirm) await userEvent.click(archive);
+}
+
+/** The author's own note: Archive is offered in the menu. */
+export const ArchiveOffered: Story = {
+  args: { activity: NOTE },
+  play: ({ canvasElement }) => openArchive(canvasElement, false),
+};
+/** A note the reader did not write: Archive is disabled with the reason. */
+export const ArchiveRefused: Story = {
+  args: { activity: { ...NOTE, archivable: false } },
+  play: ({ canvasElement }) => openArchive(canvasElement, false),
+};
+/** The confirm step before anything leaves the History. */
+export const ArchiveConfirm: Story = {
+  args: { activity: NOTE },
+  play: ({ canvasElement }) => openArchive(canvasElement, true),
+};
+export const ArchiveOfferedDark: Story = {
+  ...ArchiveOffered,
+  globals: { theme: "dark" },
+};
+export const ArchiveRefusedDark: Story = {
+  ...ArchiveRefused,
+  globals: { theme: "dark" },
+};
+export const ArchiveConfirmDark: Story = {
+  ...ArchiveConfirm,
+  globals: { theme: "dark" },
+};

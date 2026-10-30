@@ -52,14 +52,21 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "qualified_deal_id")
 	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
+	case reportingLeadCohortOutcomes:
+		fields = append(fields, "routed_at")
 	}
 	return fields
 }
 
 // leadMetricScope is what every lead reader narrows by: the picked scope, the
-// leads this reader may see, and none whose read columns are withheld.
+// leads this reader may see, and none whose read columns are withheld. The lead
+// cohort narrows the scope by the owner a lead arrived with.
 func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (string, bool, error) {
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), leadOwnerColumn, b.arg, unownedIsExcluded)
+	owner := leadOwnerColumn
+	if metric == reportingLeadCohortOutcomes {
+		owner = leadArrivalOwnerColumn
+	}
+	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
 	if err != nil {
 		return "", false, err
 	}
@@ -167,7 +174,12 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 // leadArrivedSQL is the arrival cohort both response readings count from: a
 // counted lead no import wrote, which arrived in the window ending at `at`.
 func leadArrivedSQL(frame crmcontracts.ReportingContext, b *reportingBindings, at string) string {
-	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + b.add(reportingEarliest(frame)) + " AND " + leadArrivalSQL + "<" + at
+	return leadArrivedBetweenSQL(b.add(reportingEarliest(frame)), at)
+}
+
+// leadArrivedBetweenSQL is that cohort for the half-open window [start, end).
+func leadArrivedBetweenSQL(start, end string) string {
+	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + start + " AND " + leadArrivalSQL + "<" + end
 }
 
 // leadArrivalSQL is when a lead arrived: the instant the response target runs from.

@@ -2245,16 +2245,34 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
+         * Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count.
          * @description `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
          *     walked with one bounded indexed recursive query. A child the caller cannot read
          *     contributes nothing and is named in `restricted_excluded` — never silently summed.
-         *     All money converts to the workspace base currency; a missing stored FX rate fails
-         *     the whole read with `422 fx_rate_unavailable` rather than substituting a rate of 1.
+         *     All money converts to the workspace base currency. An open deal whose currency has no
+         *     stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
+         *     substituting a rate of 1. A won deal is valued at the base amount frozen when it was
+         *     won; one won deal in the period with no base value makes `closed_won` null.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
          *     Requires read on companies, deals, and activities; figures aggregate every deal
          *     and activity of each readable company — per-record row visibility within a
          *     readable account is deliberately not consulted, so account totals stay whole.
+         *     That company-scope total is not record evidence: it does not admit the caller to
+         *     any deal or activity behind it, and drill-through goes through the ordinary record reads.
+         *
+         *     Each measure has its own date. `closed_won` is the deals won in `closed_won_period`,
+         *     placed by the day they were won (`closed_at`) in the installation's reporting zone and
+         *     fiscal calendar, valued at the base amount frozen when each was won. Name at most one
+         *     of `period_year`, `period_quarter` or `period_month`, spelled the way the period reports
+         *     spell their buckets (`2026`, `2026-Q1`, `2026-03`; an installation whose year begins in
+         *     another month spells its years and quarters `FY2025/26` and `FY2025/26-Q4`). With none,
+         *     the period is the fiscal quarter under way, as before. `weighted_pipeline` is always the
+         *     open deals as they stand at `pipeline_state_at`, whatever period is named: no past
+         *     period's pipeline is reconstructed. `activity_count_30d` counts the 30 days in
+         *     `activity_window` and takes no period.
+         *
+         *     A label in another spelling, two period parameters at once, or a period that has not
+         *     begun is refused with 422 naming the parameter.
          */
         get: operations["getCompanyHierarchyRollup"];
         put?: never;
@@ -8169,6 +8187,128 @@ export interface paths {
          *     stay comparable across the rename.
          */
         patch: operations["updateAcquisitionSource"];
+        trace?: never;
+    };
+    "/loss-reasons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the reasons a deal can be lost for, active and retired, in display order.
+         * @description The administered list a closer picks from when a deal is lost. Retired entries are
+         *     returned so a deal still carrying one renders its label and a report can still group
+         *     by it; they cannot be newly chosen.
+         */
+        get: operations["listLossReasons"];
+        put?: never;
+        /** Add a loss reason. */
+        post: operations["createLossReason"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Relabel, reorder or retire a loss reason.
+         * @description Retirement is `active: false`, and there is no delete: a key a lost deal carries must
+         *     stay resolvable. Relabelling never rewrites the stored key, so a report keyed on it
+         *     stays comparable across the rename.
+         */
+        patch: operations["updateLossReason"];
+        trace?: never;
+    };
+    "/loss-reasons/legacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the notes of lost deals that a mapping speaks for.
+         * @description For the administrator who maps old notes to codes. One row per note, trimmed and
+         *     compared without case, over the lost deals with no code or a mapped one. Each row says
+         *     how many deals carry the note, the decision taken for it, and how many deals that
+         *     decision would still change. Undecided notes come first, then the most frequent. Only
+         *     deals the caller may read count.
+         */
+        get: operations["listLegacyLossReasons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/legacy/{text_hash}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `text_hash` a legacy list row names. */
+                text_hash: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Decide which loss reason one legacy note counts under.
+         * @description Records the decision and who took it. No deal changes here: the mapping reaches the
+         *     deals when an administrator applies the reviewed mappings. A deal whose closer chose
+         *     a code keeps it.
+         */
+        put: operations["decideLegacyLossReason"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/loss-reasons/legacy/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply the reviewed legacy mappings to the lost deals they match.
+         * @description Starts the background correction that writes each named decision onto the lost deals
+         *     whose note matches it, with an audit entry and an event per deal. Only the decisions
+         *     named, at the versions named, are applied: 409 when one has since changed or gone. A
+         *     deal whose closer chose a code is left as it is, and a second run changes nothing the
+         *     first one wrote. 409 while an earlier run is still working. Progress shows in System
+         *     health. Requires data_task:update as well as the right to decide the mappings.
+         */
+        post: operations["applyLegacyLossReasons"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/record-roles": {
@@ -26539,24 +26679,36 @@ export interface components {
             /** @enum {string} */
             status: "open" | "merged" | "not_a_duplicate";
             /**
-             * @description Whether THIS caller could dispose of the pair — merge it, dismiss it,
-             *     or undo a decision. Deciding needs write authority over BOTH ends:
-             *     dismissing suppresses both records as duplicates for the whole
-             *     workspace, and merging rewrites one into the other.
+             * @description Whether THIS caller could dismiss the pair or undo a decision on it.
+             *     That needs write authority over BOTH ends: dismissing suppresses both
+             *     records as duplicates for the whole workspace. Whether the caller may
+             *     merge the pair is `can_merge`.
              *
-             *     A pair whose ends have different owners is therefore undecidable by
-             *     any bounded seat, and it is a common shape — capture creates the
-             *     near-duplicate owned by the mailbox owner while the incumbent belongs
-             *     to whoever worked it. The pair is still LISTED, because the contact
-             *     who can see a duplicate is the contact best placed to notice it; this
-             *     says whether the buttons will work, which the client should gate on
-             *     rather than discovering through a 403 after the POST.
+             *     The pair is LISTED either way, because the contact who can see a
+             *     duplicate is the contact best placed to notice it; this says whether
+             *     the buttons will work, which the client should gate on rather than
+             *     discovering through a 403 after the POST.
              *
              *     With `contacts.shared_merge_reviews` on, an owner of one end of a
-             *     contact pair may dismiss it and undo that, though not merge it. That
-             *     answer is the pair's `can_dismiss` in its contact case.
+             *     contact pair may dismiss it and undo that. That answer is the pair's
+             *     `can_dismiss` in its contact case.
              */
             can_decide: boolean;
+            /**
+             * @description Whether THIS caller could merge the pair: an open pair whose two
+             *     records they can see, with write authority over both ends or over
+             *     one. With write authority over one end, that end is the one merged
+             *     away, and `keep_id` names the end that survives with its owner. So a
+             *     caller can give their own record away but never archive a
+             *     colleague's. A merge of two records nobody filed as duplicates still
+             *     needs write authority over both.
+             */
+            can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id: string | null;
             /** Format: uuid */
             disposed_by?: string | null;
             /** Format: date-time */
@@ -26619,10 +26771,10 @@ export interface components {
             /** @description Whether this caller may merge at least two members of this case. */
             can_merge: boolean;
             /**
-             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `none`: neither.
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
              * @enum {string}
              */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             /**
              * @description Why `can_merge` is false.
              * @enum {string|null}
@@ -26674,10 +26826,16 @@ export interface components {
             can_dismiss: boolean;
             /**
              * @description Whether this caller may merge this one open pair through the pair's own decision
-             *     route. True only with write access to both ends. `policy_enabled` does not widen it:
-             *     the policy admits a merge of the whole case, never of a single pair.
+             *     route. True with write access to both ends, or to one end: then that end is the one
+             *     merged away and `keep_id` names the end that survives. `policy_enabled` does not
+             *     widen it further.
              */
             can_merge: boolean;
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
         };
         ContactCaseOwner: {
             /** Format: uuid */
@@ -26725,8 +26883,11 @@ export interface components {
             merged_ids: string[];
             /** Format: uuid */
             owner_id: string;
-            /** @enum {string} */
-            mode: "ordinary" | "delegated";
+            /**
+             * @description The authority the merge ran under, as `merge_mode` on the case names it.
+             * @enum {string}
+             */
+            mode: "ordinary" | "delegated" | "pair";
             /** @description The colleagues who keep access to the remaining contact, and at which level. A read seat keeps read access. */
             shares: components["schemas"]["ContactCaseShare"][];
             /** @description Owners who get no new grant, and why. */
@@ -29510,6 +29671,13 @@ export interface components {
          * @description The account-tree roll-up over company.parent_company_id. A server read only,
          *     never client-summed. Money is base-currency converted — never a raw
          *     cross-currency sum.
+         *
+         *     `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
+         *     weighted by its stage's win probability, and never a past period's pipeline.
+         *     `closed_won` is the deals won in `closed_won_period`; a null amount means at least
+         *     one of them has no base value on file, so the total is incomplete rather than
+         *     smaller. `activity_count_30d` counts the activities that reached a counted account
+         *     in `activity_window`, the 30 days before the read, which no period parameter moves.
          */
         CompanyHierarchyRollup: {
             /** Format: uuid */
@@ -29517,8 +29685,16 @@ export interface components {
             /** @enum {string} */
             scope: "tree" | "self";
             weighted_pipeline: components["schemas"]["Money"];
+            /**
+             * Format: date-time
+             * @description The instant the pipeline is read at. It is the moment of the read, whatever period is named.
+             */
+            pipeline_state_at: string;
             closed_won: components["schemas"]["Money"];
+            closed_won_period: components["schemas"]["CompanyRollupWonPeriod"];
             activity_count_30d: number;
+            activity_window: components["schemas"]["ReportingWindow"];
+            current_periods: components["schemas"]["CompanyRollupPeriodLabels"];
             /** @description Count of accounts (nodes) included in the roll-up. */
             aggregated_account_count: number;
             /** @description Nodes excluded because the viewer cannot read them — disclosed, never a silent drop. */
@@ -29529,6 +29705,44 @@ export interface components {
             }[];
             /** Format: date-time */
             computed_at: string;
+        };
+        /**
+         * @description The period `closed_won` sums: one bucket of the period reports, cut in the
+         *     installation's reporting zone and fiscal calendar. A period still under way holds
+         *     the deals won by the moment of the read.
+         */
+        CompanyRollupWonPeriod: {
+            /** @enum {string} */
+            grain: "year" | "quarter" | "month";
+            /** @description The bucket's label, spelled as the period reports spell it. */
+            label: string;
+            /**
+             * Format: date-time
+             * @description The first instant of the period.
+             */
+            start_at: string;
+            /**
+             * Format: date-time
+             * @description The first instant after the period.
+             */
+            end_at: string;
+            /**
+             * @description The date that places a won deal in the period, the day it was won.
+             * @enum {string}
+             */
+            anchor: "closed_at";
+            /** @description True when the caller named the period; false for the default, the fiscal quarter under way. */
+            chosen: boolean;
+            /** @description The label of the period just before, at the same grain. */
+            previous: string;
+            /** @description The label of the period just after, or null when that period has not begun. */
+            next: string | null;
+        };
+        /** @description The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself. */
+        CompanyRollupPeriodLabels: {
+            period_year: string;
+            period_quarter: string;
+            period_month: string;
         };
         /**
          * @description Relationship strength for an ACCOUNT: the §4 score of its strongest current
@@ -33213,8 +33427,10 @@ export interface components {
              * @description The stage to move to. Its semantic decides whether the move is confirm-first.
              */
             to_stage_id: string;
-            /** @description Required when the stage closes the deal as lost. */
+            /** @description A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both. */
             lost_reason?: string;
+            /** @description An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped. */
+            lost_reason_code?: string;
             /**
              * @description Why a win has no contract behind it. Omit it when the deal has a signed contract with its paper attached.
              * @enum {string}
@@ -34233,13 +34449,22 @@ export interface components {
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /**
              * @default open
              * @enum {string}
              */
             status: "open" | "won" | "lost";
-            /** @description Required when status=lost. */
+            /** @description The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both. */
             lost_reason?: string | null;
+            /** @description The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet. */
+            readonly lost_reason_code?: string | null;
+            /**
+             * @description How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+             * @enum {string|null}
+             */
+            readonly lost_reason_basis?: "recorded" | "mapped" | null;
             /**
              * @description Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
              * @enum {string|null}
@@ -34452,8 +34677,10 @@ export interface components {
              * @enum {string}
              */
             status?: "open" | "won" | "lost";
-            /** @description Required if status=lost. */
+            /** @description A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both. */
             lost_reason?: string | null;
+            /** @description An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note. */
+            lost_reason_code?: string | null;
             /**
              * @description Why this win has no agreement behind it (ADR-0109 §6). Omit when the deal has a signed contract with its paper attached — the server looks for one, and refuses a win that offers neither. Both answers are legitimate; recording which is what makes the gap countable.
              * @enum {string|null}
@@ -36379,6 +36606,8 @@ export interface components {
         Activity: {
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
+            readonly archivable?: boolean;
             /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
             /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
@@ -36523,6 +36752,14 @@ export interface components {
              *     It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
              */
             readonly author?: components["schemas"]["SourceAuthor"] | null;
+            /**
+             * @description Who recorded the activity, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System".
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
             readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
             raw?: {
@@ -38516,6 +38753,17 @@ export interface components {
                 note?: string | null;
             };
             deal?: components["schemas"]["QualifyDealRequest"];
+            /**
+             * @description What happens to a company name typed on a lead that links no company and whose email
+             *     names no business domain (a personal address, or none). True links the company of that
+             *     name, or creates it. False leaves the contact with no employer and puts the name on it
+             *     as a proposal to link or create; a company is never created from typed text alone.
+             *     The promote preview's `typed_company` says when this choice applies. A lead with a
+             *     business email resolves its company from the domain either way, and the typed name
+             *     only spells a company that is created for it.
+             * @default false
+             */
+            create_company: boolean;
         };
         /**
          * @description Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -38580,6 +38828,13 @@ export interface components {
              * @default false
              */
             contact_withheld: boolean;
+            /**
+             * @description The company name typed on the lead when nothing else settles it: the lead links no
+             *     company and its email names no business domain. Promotion then needs the rep's
+             *     choice, sent as `create_company`. Absent when the lead links a company, has a
+             *     business email, or has no typed company name.
+             */
+            typed_company?: string | null;
         };
         DemoteLeadRequest: {
             /** @description Why the promotion is being reversed. Required and recorded in audit — an undo nobody explained is indistinguishable later from a mistake. */
@@ -38763,6 +39018,96 @@ export interface components {
             label?: string;
             sort_order?: number;
             active?: boolean;
+        };
+        /** @description One administered reason a deal can be lost for. */
+        LossReason: {
+            /** Format: uuid */
+            id: string;
+            /** @description The stable identifier stored on the deal. Lowercase, never changes once created, so a report keyed on it survives a rename. */
+            key: string;
+            /** @description What readers see. */
+            label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
+            /** @description Display order in pickers and settings. */
+            sort_order: number;
+            /** @description False is retired. Deals keep it and reports group by it, but no new loss can choose it. */
+            active: boolean;
+            /** @description Seeded with the installation. Fully editable; it cannot be removed. */
+            readonly system: boolean;
+            /** @description Live lost deals carrying this key that the caller may see. Absent when the caller may not read deals. Set on the list read; absent on the record a write answers. */
+            readonly deal_count?: number;
+            /** Format: int64 */
+            readonly version: number;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        LossReasonListResponse: {
+            data: components["schemas"]["LossReason"][];
+        };
+        CreateLossReasonRequest: {
+            /** @description Derived from the label when omitted. */
+            key?: string;
+            label: string;
+            sort_order?: number;
+        };
+        /** @description Every field optional; an omitted one is left alone. */
+        UpdateLossReasonRequest: {
+            label?: string;
+            sort_order?: number;
+            active?: boolean;
+        };
+        /** @description An administrator's decision that one legacy note counts under one loss reason. */
+        LossReasonMapping: {
+            /** Format: uuid */
+            id: string;
+            /** @description The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note. */
+            text_hash: string;
+            /** @description The key from `/loss-reasons`. */
+            reason_key: string;
+            /** @description Who took the decision, in the `captured_by` form. */
+            decided_by: string;
+            /** Format: date-time */
+            decided_at: string;
+            /** Format: int64 */
+            version: number;
+        };
+        /** @description One note of lost deals a mapping speaks for. */
+        LegacyLossReason: {
+            /** @description The key to decide this note under. */
+            text_hash: string;
+            /** @description The note as one of its deals carries it. */
+            text: string;
+            /** @description Lost deals the caller may read that carry it with no code or a mapped one. */
+            deal_count: number;
+            /** @description Of those, how many the decision would change if applied now. Zero with no decision. */
+            pending_count: number;
+            mapping?: components["schemas"]["LossReasonMapping"];
+        };
+        LegacyLossReasonListResponse: {
+            data: components["schemas"]["LegacyLossReason"][];
+            /** @description How many notes the list holds, of which `data` is the first page. */
+            distinct_total: number;
+        };
+        DecideLegacyLossReasonRequest: {
+            /** @description An active key from `/loss-reasons`. */
+            reason_key: string;
+        };
+        ApplyLegacyLossReasonsRequest: {
+            /** @description The decisions the administrator reviewed, each at the version shown. */
+            mappings: {
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                version: number;
+            }[];
+        };
+        ApplyLegacyLossReasonsResponse: {
+            /** @description How many reviewed mappings the correction applies. */
+            mappings: number;
+            /** @description How many lost deals this run changes. One run changes at most 1000; apply again for the rest. Zero starts no run. */
+            deals: number;
         };
         /** @description One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own. */
         RecordRole: {
@@ -40235,14 +40580,21 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
          *     the deal, or whether a partner is active.
+         *
+         *     `stage_cohort` follows the deals that entered each open stage in the
+         *     interval to the evaluation instant: one point per stage, its `outcomes`
+         *     saying how each entry left the stage or that it has not left yet.
+         *     `lead_cohort` follows the leads that arrived in the interval the same
+         *     way: one point, its `outcomes` saying whether each lead was accepted,
+         *     qualified, disqualified or is still open.
          * @enum {string}
          */
-        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown";
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort";
         /**
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
@@ -40403,8 +40755,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
-            /** @description Held meetings credited to this member. A meeting several members attended counts for each. */
-            meetings_held: number;
+            /** @description Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is. */
+            meetings_held?: number;
             submitted: number;
             accepted: number;
             rejected: number;
@@ -40470,7 +40822,7 @@ export interface components {
          * @description A chart kind, or `question`, a custom analytics question the card asks for each reader.
          * @enum {string}
          */
-        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "question";
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "question";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
          *     `question`. Every reader of the report receives it, so it carries no filters (a filter
@@ -40601,6 +40953,42 @@ export interface components {
             at?: string;
             evidence?: components["schemas"]["ReportingEvidenceRef"];
             status: components["schemas"]["ReportingStatus"];
+            /**
+             * @description On a cohort point, what became of its members by the evaluation
+             *     instant. Every member is in exactly one outcome, so the counts add
+             *     up to `observations`. `unresolved` members have not reached an
+             *     outcome yet and are never counted as lost; `history_partial`
+             *     members have a move recorded before Margince kept the stage order,
+             *     so the direction of that move is unknown.
+             */
+            outcomes?: components["schemas"]["ReportingCohortCount"][];
+            /**
+             * @description On a `stage_cohort` point, how its members entered the stage:
+             *     `first` had never been in the stage before, `repeat` had, and
+             *     `reopened` entered it straight from a won or lost close. `reopened`
+             *     is also `first` or `repeat`, so only `first` and `repeat` add up to
+             *     `observations`.
+             */
+            entries?: components["schemas"]["ReportingCohortCount"][];
+        };
+        ReportingCohortCount: {
+            key: string;
+            label: string;
+            /** Format: int64 */
+            count: number;
+            /**
+             * Format: double
+             * @description The median of `duration_basis` over these members. Null below the sample floor.
+             */
+            median_days?: number | null;
+            /**
+             * @description `completed` is the time from entry to the outcome: for a stage, the
+             *     time the deal spent in the stage. `current_age` is the time from
+             *     entry to the evaluation instant, for members with no outcome yet.
+             * @enum {string}
+             */
+            duration_basis?: "completed" | "current_age";
+            evidence?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingCaptureStatus: {
             /** Format: date-time */
@@ -41687,8 +42075,11 @@ export interface components {
             id: string;
             /** @description Which question noticed it. The key set in `claim` and `observed` depends on this. */
             type: string;
-            /** @enum {string} */
-            subject_kind: "deal" | "signal" | "offer" | "contract";
+            /**
+             * @description What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
+             * @enum {string}
+             */
+            subject_kind: "deal" | "signal" | "offer" | "contract" | "forecast_call";
             /** Format: uuid */
             subject_id: string;
             /**
@@ -41898,6 +42289,8 @@ export interface components {
             audit_id?: string;
             /** Format: uuid */
             approval_id?: string;
+            /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading. */
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
         };
         NewForecastCall: {
             /**
@@ -41947,6 +42340,11 @@ export interface components {
             supersedes_id?: string;
             /** Format: date-time */
             created_at: string;
+            /**
+             * @description Whether the reading this call was made against was kept with it. A call is compared with that reading to say whether its pipeline moved since. `unavailable` is a call recorded before calls kept one: what moved since it cannot be said, and no baseline is rebuilt from today's records.
+             * @enum {string}
+             */
+            baseline?: "captured" | "unavailable";
         };
         /** @description A request to issue a share link. */
         NewForecastShare: {
@@ -50162,6 +50560,11 @@ export interface components {
          *     item the reader may not fully see is not offered as a decision at all.
          */
         AttentionPair: {
+            /**
+             * Format: uuid
+             * @description Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.
+             */
+            keep_id?: string | null;
             left: components["schemas"]["AttentionPairSide"];
             right: components["schemas"]["AttentionPairSide"];
             /**
@@ -50323,7 +50726,7 @@ export interface components {
             owners: string[];
             can_merge: boolean;
             /** @enum {string} */
-            merge_mode: "ordinary" | "delegated" | "none";
+            merge_mode: "ordinary" | "delegated" | "pair" | "none";
             too_large?: boolean;
         };
         /** @description One side of a proposed merge, named and weighed so a reader can tell which record to keep. */
@@ -50395,20 +50798,36 @@ export interface components {
          *     | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
          *     | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
          *     | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+         *     | `counts[].total` | items | every admitted item of the category for this scope and owner, counted in SQL on this read | exact; absent when not counted |
          *     | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
          *     | `batch.count` | items | the members of one card | floor when `batch.at_least` |
          *     | `bands[].shown` | cards | the rows of this page under one heading | exact |
          *     | `focus.total` | cards | eligible focus cards before the six-card cut; a group counts once | exact |
          *     | `focus.urgent_remaining` | items | urgent items no focus card names | exact |
-         *     | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen items that left | exact |
+         *     | `walk.new_available`, `walk.changed_since_snapshot` | items | arrivals since the walk froze, and frozen ranked items that left; never tail rows | exact |
          *
          *     A client that has loaded several pages sums items over its loaded cards (one per
          *     card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
-         *     a count of loaded cards with `considered` mixes the two units. A source listed in
-         *     `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
-         *     claim it holds everything, even after `next_cursor` is gone. Items past a source's
-         *     read limit are not reachable through `next_cursor`. They join a later read as the
-         *     items in front of them are handled.
+         *     a count of loaded cards with `considered` mixes the two units.
+         *
+         *     **Totals.** No later read or background job finishes a count. A category states
+         *     `total` when each source behind it was read whole, or was cut and counted in SQL under
+         *     the same admission rules as the list. The task counts run on the first page of a walk
+         *     only, so a client keeps the totals that page gave and does not expect them on later
+         *     pages. Any other category whose sources were cut has no `total`, and its `considered`
+         *     is a floor: a client draws it as "N+" or draws no number.
+         *
+         *     A source named in `sources_unavailable` because it failed on the first page leaves its
+         *     category without a `total`. A tail source that fails while a later page loads is named
+         *     there too, but the totals the first page stated stay as they were: they still count
+         *     the rows that source holds, and the list stops short of them.
+         *
+         *     **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
+         *     and deals at risk that the ranked rows left out continue as a tail, merged in one
+         *     order (oldest due date, arrival or expected close first) and reached through
+         *     `next_cursor` to their end. Items past the read limit of any other source are not
+         *     reachable through `next_cursor`. They join a later read as the items in front of
+         *     them are handled.
          */
         Worklist: {
             /**
@@ -50466,20 +50885,25 @@ export interface components {
              * @description Send this back as `cursor` to continue past the last row of this page. See that
              *     parameter for what a walk does and does not guarantee.
              *
-             *     ABSENT MEANS THE WALK IS OVER — nothing was left behind this page. It is
-             *     deliberately not minted on a final page: a cursor there invites one more request
-             *     that can only answer empty, and a client walking until the cursor disappears
+             *     ABSENT MEANS THE WALK IS OVER — no ranked row and no tail source is left to resume.
+             *     It is deliberately not minted on a final page: a cursor there invites one more
+             *     request that can only answer empty, and a client walking until the cursor disappears
              *     would never stop.
+             *
+             *     Absent does not mean every row was read. A tail source that fails while a page loads
+             *     is dropped from the cursor and named in `sources_unavailable`, and the rows past its
+             *     position stay unread; a source cut on the first page and not continued in the tail
+             *     stops at its read limit.
              *
              *     Absent is therefore a claim, not a silence, and it is the one this field must
              *     never make wrongly. It is a claim about THIS READ of the day: work that arrives
              *     afterwards, or that overtakes rows already handed out, appears on the next read
              *     rather than extending a finished walk.
              *
-             *     `reach` and `counts` answer a different question — how deep each SOURCE was read,
-             *     which is a bound on work rather than the end of a page — so a walk that has ended
-             *     can still sit above sources that were cut short, and both statements are true at
-             *     once.
+             *     `reach` and `counts` answer a different question — how deep each SOURCE was read
+             *     on the first page. A walk that has ended has read every tail source (tasks, waiting
+             *     customers, deals at risk) that did not fail to its end, but can still sit above other
+             *     sources that were cut short, and both statements are true at once.
              */
             next_cursor?: string;
             /**
@@ -50581,8 +51005,10 @@ export interface components {
          *
          *     `considered` is how many candidates were read and ranked. It is NOT a total: when
          *     `more_available` is true there are candidates past the bound that this read never
-         *     saw, and no field here claims to know how many. A reader who needs the rest
-         *     narrows the queue or opens that source's own screen, which pages its own data.
+         *     saw, and no field here claims to know how many; `counts[].total` is the exact figure
+         *     per category where one exists. For tasks, waiting customers and deals at risk the
+         *     rest is reached through `next_cursor`. For any other source a reader who needs the
+         *     rest narrows the queue or opens that source's own screen, which pages its own data.
          *
          *     `shown` is how many of those candidates survived filtering and the page cut, so
          *     `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -50939,7 +51365,11 @@ export interface components {
              * @description True when any source behind this category was read to its work bound, so items
              *     MAY exist past what was considered. A category inherits its sources' honesty:
              *     reporting "12 decisions" over a pile the read never finished counting is the
-             *     failure this flag exists to prevent.
+             *     failure this flag exists to prevent. When `total` is present it is the exact
+             *     figure even while this is true. Only the tail categories (tasks, customers waiting,
+             *     deals at risk) reach their rest through `next_cursor`; an exact category outside the
+             *     tail, such as approvals in `decisions`, is counted in full but listed only to its
+             *     read limit.
              */
             more_available: boolean;
             /**
@@ -56481,6 +56911,12 @@ export interface operations {
             query?: {
                 /** @description tree (default): aggregate the whole subtree. self: the root's own figures alone. */
                 scope?: "tree" | "self";
+                /** @description The year whose won deals `closed_won` sums, such as `2026` or `FY2025/26`. */
+                period_year?: string;
+                /** @description The quarter whose won deals `closed_won` sums, such as `2026-Q1` or `FY2025/26-Q4`. */
+                period_quarter?: string;
+                /** @description The month whose won deals `closed_won` sums, such as `2026-03`. */
+                period_month?: string;
             };
             header?: never;
             path: {
@@ -66438,6 +66874,236 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listLossReasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The loss reason list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReasonListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    createLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created loss reason. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReason"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updateLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated loss reason. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReason"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLegacyLossReasons: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notes still to map, and the decisions already taken for them. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegacyLossReasonListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    decideLegacyLossReason: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description The `text_hash` a legacy list row names. */
+                text_hash: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideLegacyLossReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description The decision as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LossReasonMapping"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    applyLegacyLossReasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyLegacyLossReasonsRequest"];
+            };
+        };
+        responses: {
+            /** @description The correction was started. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyLegacyLossReasonsResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listRecordRoles: {
         parameters: {
             query?: never;
@@ -72844,7 +73510,7 @@ export interface operations {
                  *     than everything: absent is not false, and a reader asking what changed since a
                  *     night that never happened is owed nothing, not the whole queue.
                  *
-                 *     `upcoming` is planned work due after today: the Upcoming and backlog section
+                 *     `upcoming` is planned work due in the 14 days after today: the Upcoming and backlog section
                  *     at the end of the Today view. These rows never appear in a queue that does not
                  *     ask for them, and `summary` never counts them; `counts` reports them under the
                  *     `upcoming` category.
@@ -72886,7 +73552,7 @@ export interface operations {
                  *     ranking, and the next page re-assembles the day, ranks it the same way, and starts
                  *     there.
                  *
-                 *     It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+                 *     It encodes the `scope`, `view`, `filter` and `owner` it was minted under, NORMALISED, so
                  *     that two spellings of one question share a cursor: an omitted `filter` and
                  *     `filter=all` weigh the same candidates, and naming yourself as `owner` is the
                  *     question the default already answers. Sending a cursor alongside a genuinely
@@ -72907,15 +73573,22 @@ export interface operations {
                  *     between pages: a rep answers a message, a deal closes, a colleague takes a task.
                  *
                  *     Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
-                 *     every row exactly once. The offset advances on every page and the candidate set is
-                 *     bounded, so no arrangement of arrivals, answers and reprioritisations makes a
-                 *     client paging to exhaustion loop.
+                 *     every row exactly once. The offset advances on every page and the ranked candidate
+                 *     set is bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+                 *     client paging to exhaustion loop. Past the ranked rows, each tail source resumes
+                 *     from its own position in its own order, which also only moves forward.
                  *
-                 *     A walk is FROZEN at its first page: the rows it covers and the order they sit in
-                 *     are fixed, so paging does not race the day. `walk` on the response says what has
-                 *     happened since — how many of those rows have gone, and how much has arrived that is
-                 *     deliberately not in this walk. Membership moves one way: new work waits for a fresh
-                 *     read, work that was resolved or is no longer visible leaves at once.
+                 *     The RANKED rows of a walk are FROZEN at its first page: the rows they cover and the
+                 *     order they sit in are fixed, so paging does not race the day. `walk` on the response
+                 *     says what has happened to those ranked rows since — how many have gone, and how much
+                 *     has arrived that is deliberately not in this walk. Membership moves one way: new work
+                 *     waits for a fresh read, work that was resolved or is no longer visible leaves at once.
+                 *
+                 *     The tail below the ranked rows is not frozen. Each page reads every tail source live,
+                 *     after the position the cursor holds for it, inside the time window the first page
+                 *     fixed (its instant, day end and time zone). A tail row handled between pages is not
+                 *     served; a new row that sorts after a source's position can still be. `walk` does not
+                 *     count tail rows.
                  *
                  *     An installation that does not hold walks pages the older way instead, and there the
                  *     cost is real and worth stating: A ROW THAT CROSSES THE PAGE BOUNDARY BETWEEN TWO
@@ -72925,9 +73598,10 @@ export interface operations {
                  *     Such a row is not lost from the product — the next read of the queue ranks it
                  *     afresh and shows it — so treat a walk as a way to reach a backlog you already know
                  *     is there, not as a transaction over it. There is no way to ask for the whole day
-                 *     at one instant: `limit` stops at 100 and a single category can hold more than that,
-                 *     because the sources are read to their own bounds well past a page (the decision
-                 *     lane alone weighs 200). `counts` is what says how much is behind the page.
+                 *     at one instant: `limit` stops at 100 and a single category can hold more than that.
+                 *     Tasks, waiting customers and deals at risk are reached in full by walking to the end;
+                 *     the other sources are read to their own bounds (the decision lane alone weighs 200).
+                 *     `counts` is what says how much is behind the page.
                  *
                  *     The alternative was a token naming the last row it handed you, which is the
                  *     obvious design and is worse here. When that row is answered between pages, or
@@ -83240,6 +83914,8 @@ export interface operations {
             content: {
                 "application/json": {
                     lost_reason: string;
+                    /** @description An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped. */
+                    lost_reason_code?: string;
                 };
             };
         };

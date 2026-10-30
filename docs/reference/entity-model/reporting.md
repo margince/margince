@@ -49,12 +49,13 @@ The 12 tables owned by `reporting`, as the migrations build them. [Back to the e
 
 ## report_definition_revision
 
-7 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
+8 columns · primary key `(report_id, revision)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
 | `framework_revision` | `bigint` | yes |  |
+| `metric_versions` | `jsonb` |  |  |
 | `question_bindings` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `report_id` | `uuid` | yes | Points at `report_definition.id`. |
 | `revision` | `bigint` | yes |  |

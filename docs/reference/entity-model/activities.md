@@ -534,7 +534,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `confidence` | `numeric` | yes |  |
+| `confidence` | `numeric(4,3)` | yes |  |
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decided_by` | `text` | yes |  |
 | `due_at` | `timestamp with time zone` |  |  |

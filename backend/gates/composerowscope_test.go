@@ -87,6 +87,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose/momentaction:DoneSetAsidesTx": "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
 	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
 	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
 	// --- The module tier, one package at a time (censusedModules). ---
 	//
@@ -152,7 +153,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
 	// the query joins no deal, and the review is already the acting rep's own.
-	//
 	// The scope is applied on the WRITE side instead, which is where it can
 	// still mean something: compose/weeklyforecastseam.go's dealLabels takes
 	// auth.ScopeClauseFor for "deal" when it chooses which deals to freeze, so a
@@ -190,7 +190,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
 	"internal/compose/network:readDealFacts": "the coverage view's deal row: the company id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
-
 	// The reply consumer's sender lookup. Scoping it would be the defect, not
 	// the fix: an introduction is between two colleagues, and the contact who
 	// answers it is very often owned by neither of them. A row scope here would
@@ -202,7 +201,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// Nothing escapes: the id chooses which asks to test and never leaves the
 	// consumer. Who may READ the resulting ask is decided on the read side, by
 	// introductions' own requester-or-introducer predicate.
-	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/compose:inboundSenders":              "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/modules/forecasting:attachOpenDeals": "the forecast evaluation's read of frozen contribution rows, which EvaluationVintagesTx refuses to any principal but a system one: each deal id joins a frozen deal to its outcome inside compose.ForecastEvaluationDataset, and the dataset's JSON drops it, so no id reaches a reader",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.

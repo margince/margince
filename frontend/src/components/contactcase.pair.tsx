@@ -113,27 +113,31 @@ export function PairActions({
       <div className="contactcase-section">
         <p className="t-caption">{t("contactCase.preview.final")}</p>
         <ActionRow>
-          {[left, right].map((side) => (
-            <Button
-              key={side?.id}
-              variant="danger"
-              pending={decide.isPending}
-              aria-label={keepLabel(side, side === left ? right : left, t)}
-              onClick={() =>
-                decide.mutate(
-                  {
-                    id: edge.pair_id,
-                    disposition: "merge",
-                    winnerId: side?.id,
-                    contactIds: [edge.left_id, edge.right_id],
-                  },
-                  { onError, onSuccess: onMerged },
-                )
-              }
-            >
-              {t("contactCase.pair.keep", { name: side?.name ?? "" })}
-            </Button>
-          ))}
+          {/* With write access to one end only, the server names the end that
+              survives, and only that one may be kept. */}
+          {[left, right]
+            .filter((side) => !edge.keep_id || side?.id === edge.keep_id)
+            .map((side) => (
+              <Button
+                key={side?.id}
+                variant="danger"
+                pending={decide.isPending}
+                aria-label={keepLabel(side, side === left ? right : left, t)}
+                onClick={() =>
+                  decide.mutate(
+                    {
+                      id: edge.pair_id,
+                      disposition: "merge",
+                      winnerId: side?.id,
+                      contactIds: [edge.left_id, edge.right_id],
+                    },
+                    { onError, onSuccess: onMerged },
+                  )
+                }
+              >
+                {t("contactCase.pair.keep", { name: side?.name ?? "" })}
+              </Button>
+            ))}
           <Button disabled={pending} onClick={() => setChoosing(false)}>
             {t("create.cancel")}
           </Button>

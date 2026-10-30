@@ -614,5 +614,9 @@ const (
 	// participant contact ids only to hash them into the guest-list fingerprint
 	// of the preparation revision. The meeting itself is content-gated first.
 	// No id is returned.
-	modulesTierUnscopedCeiling = 148
+	//
+	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
+	// rows for the forecast evaluation, which only a system principal may run.
+	// Each id joins a deal to its outcome and is dropped from the dataset.
+	modulesTierUnscopedCeiling = 149
 )

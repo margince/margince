@@ -138,6 +138,7 @@
     "GET /v1/lists/{id}/history": "read_lists",
     "GET /v1/lists/{id}/members": "read_view",
     "GET /v1/lists/{id}/members/{recordId}/why": "read_lists",
+    "GET /v1/loss-reasons": "read_view",
     "GET /v1/meeting-prep": "prep_for_meeting",
     "GET /v1/offer-templates": "list_records",
     "GET /v1/offer-templates/{id}": "read_record",

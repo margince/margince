@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,7 +86,7 @@ const actionAnonymize = "anonymize"
 // an over-age activity's subject line — and, through redactDeliveries, in the
 // subject line of the delivery that transmitted it. One spelling, because the
 // two rows describe one message and must never read differently about it.
-const erasedActivitySubject = "Erased"
+const erasedActivitySubject = storekit.ErasedActivitySubject
 
 // retentionBatch bounds how many rows one policy acts on per pass — a
 // first run against years of backlog drains over successive nights

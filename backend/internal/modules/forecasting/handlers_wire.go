@@ -75,6 +75,11 @@ func callToWire(in Call) crmcontracts.ForecastCall {
 		id := openapi_types.UUID(*in.SupersedesID)
 		out.SupersedesId = &id
 	}
+	baseline := crmcontracts.ForecastCallBaselineUnavailable
+	if in.HasBaseline {
+		baseline = crmcontracts.ForecastCallBaselineCaptured
+	}
+	out.Baseline = &baseline
 	return out
 }
 
@@ -138,6 +143,11 @@ func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement 
 			id := openapi_types.UUID(*d.ApprovalID)
 			wire.ApprovalId = &id
 		}
+		causes := make([]crmcontracts.ForecastMovementDealCauses, 0, len(d.Causes))
+		for _, cause := range d.Causes {
+			causes = append(causes, crmcontracts.ForecastMovementDealCauses(cause))
+		}
+		wire.Causes = &causes
 		out.Deals = append(out.Deals, wire)
 	}
 	return out

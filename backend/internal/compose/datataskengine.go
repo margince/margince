@@ -60,5 +60,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		addressDomainFoldDataTask(),
 		geocodePointsDataTask(),
 		signaturePhonesDataTask(),
+		lossMappingDataTask(pool),
 	}
 }

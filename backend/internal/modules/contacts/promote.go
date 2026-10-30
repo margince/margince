@@ -68,6 +68,9 @@ type PromoteLeadInput struct {
 	// Nil attaches no precondition, so a REST caller and an agent whose
 	// approval carried no version spell the call the same way.
 	IfVersion *int64
+	// CreateCompany links or creates the company a typed name names when
+	// nothing else backs it; see promotionEmployer.
+	CreateCompany bool
 	// intoCandidate merges the lead into the contact the caller locked, even
 	// when that contact shares only a LinkedIn profile with it. Unexported: only
 	// a door converting the lead it was refused over sets it.
@@ -312,7 +315,7 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // other contact answers promoteTargetMovedError, because locking it now would
 // take the lead's lock before the contact's. intoLocked merges into locked when
 // the ladder names no contact, for a lead that shares only a LinkedIn profile.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, employer EmployerChoice, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
@@ -352,7 +355,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		return locked, mergeFields, merr
 	}
 
-	spec := promotionContactSpec(lead, name, by)
+	spec := promotionContactSpec(lead, employer, name, by)
 	if spec.Acquisition, err = promotionAcquisition(ctx, tx, lead); err != nil {
 		return ids.ContactID{}, nil, err
 	}

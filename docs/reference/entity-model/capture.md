@@ -489,7 +489,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `backfill_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `claimed_by` | `uuid` |  |  |
 | `claimed_until` | `timestamp with time zone` |  |  |
-| `confidence` | `numeric` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `display_name` | `text` |  |  |
 | `disposition_reason` | `text` |  |  |
 | `domain` | `text` |  |  |
@@ -666,7 +666,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `attempts` | `integer`, default `0` | yes |  |
 | `claimed_by` | `uuid` |  |  |
 | `claimed_until` | `timestamp with time zone` |  |  |
-| `confidence` | `numeric` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `disposition_reason` | `text` |  |  |
 | `first_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `kind` | `text` |  |  |
@@ -688,6 +688,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_thread_verdict_confidence_range`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
 - `capture_thread_verdict_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'cleared', 'held', 'unsure', 'shared_by_owner', 'held_by_owner'])))`
 - `capture_thread_verdict_thread_user_key`: `UNIQUE (thread_key, user_id)`
 

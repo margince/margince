@@ -82,6 +82,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
+- [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
+  a new forecast model is tested against, before it is scored.
 - [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
   review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
@@ -101,6 +103,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
+- [add-an-mcp-e2e-case.md](how-to/add-an-mcp-e2e-case.md): add a test case for the MCP tools and run it
+  on Claude and Codex.
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
@@ -180,6 +184,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
 - [performance-budgets.md](reference/performance-budgets.md): each speed limit and its last
   score. Generated.
+- [forecast-model-evaluation.md](reference/forecast-model-evaluation.md): the command that scores past
+  forecasts, and the values to set before a new model is tested.
 - [benchmark.md](reference/benchmark.md): the daily-use speed test, in short form, for a user
   with no time to read the scores. Generated.
 - [supply-chain.md](reference/supply-chain.md): what goes into a build, and how we sign it.

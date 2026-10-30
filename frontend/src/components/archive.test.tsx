@@ -73,6 +73,56 @@ describe("ArchiveAction", () => {
     );
   });
 
+  it("takes the row's own answer over the grant when the record carries one", async () => {
+    answerMe({ deal: ["read", "update"] });
+    const archiveDeal = (archivable?: boolean) => (
+      <ArchiveAction
+        label="Archive deal"
+        confirmText="It leaves the open deals."
+        archive={() => Promise.resolve({ id: "d-1" })}
+        invalidate="deals"
+        recordKey="deal"
+        archivedMessage="Deal archived."
+        onArchived={() => undefined}
+        requires={{ object: "deal", action: "delete" }}
+        archivable={archivable}
+      />
+    );
+    render(
+      <>
+        {archiveDeal(true)}
+        {archiveDeal()}
+      </>,
+    );
+    // The grant-only twin's refusal proves /me has answered.
+    await screen.findByText(en["record.actionRefused"]);
+    const [owned, granted] = screen.getAllByTestId("archive-record");
+    expect(owned?.hasAttribute("disabled")).toBe(false);
+    expect(granted?.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("refuses a row the server says is not archivable, with the caller's reason", async () => {
+    answerMe({ deal: ["read", "update", "delete"] });
+    render(
+      <ArchiveAction
+        label="Archive deal"
+        confirmText="It leaves the open deals."
+        archive={() => Promise.resolve({ id: "d-1" })}
+        invalidate="deals"
+        recordKey="deal"
+        archivedMessage="Deal archived."
+        onArchived={() => undefined}
+        requires={{ object: "deal", action: "delete" }}
+        archivable={false}
+        refusedReason="Only the owner archives this."
+      />,
+    );
+    await screen.findByText("Only the owner archives this.");
+    expect(screen.getByTestId("archive-record").hasAttribute("disabled")).toBe(
+      true,
+    );
+  });
+
   it("shows a permission refusal that carries no detail in the dialog", async () => {
     const user = userEvent.setup();
     answerMe({ contact: ["read", "delete"] });

@@ -83,6 +83,9 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err

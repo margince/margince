@@ -58,20 +58,10 @@ type stageEntries struct {
 // teamFunnelSQL counts, per owner and stage, the deals that entered the stage
 // in the window and how many of them later moved on. "Moved on" is a later move
 // to a won stage, or to a later stage of the same pipeline. Stage order is read
-// as configured now, because positions are not kept in the history.
-const teamFunnelSQL = `
-	WITH entries AS (
-	  SELECT DISTINCT ON (h.deal_id, h.to_stage_id)
-	         h.id, h.deal_id, h.to_stage_id AS stage_id, h.pipeline_id_at_change AS pipeline_id,
-	         h.owner_id_at_change AS owner_id, h.changed_at
-	    FROM deal_stage_history h
-	    JOIN deal d ON d.id = h.deal_id
-	   WHERE h.changed_at >= $%[1]d AND h.changed_at < $%[2]d
-	     AND h.owner_id_at_change = ANY($%[3]d)
-	     AND h.pipeline_id_at_change IS NOT NULL
-	     AND h.semantic_at_change = 'open'
-	     AND (%[4]s)
-	   ORDER BY h.deal_id, h.to_stage_id, h.changed_at, h.id)
+// as configured now: that is the weekly funnel's published meaning, which the
+// Analytics stage cohort does not share.
+var teamFunnelSQL = `
+	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
 	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,
 	       coalesce((SELECT n.name FROM stage n
 	                  WHERE n.pipeline_id = s.pipeline_id AND n."position" > s."position"

@@ -16,6 +16,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { BulkUndoProvider } from "../../../components/bulkchange";
+import { pickOption } from "../../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../../design-system/toast";
 import { LocaleProvider } from "../../../i18n";
 import { ConfirmAdvanceModal } from "./confirmadvance";
@@ -83,6 +84,28 @@ function previewOf(body: BulkBody) {
 
 // The deal's task list (two open, one done, one note by default) and the bulk
 // calls, each execute answering as a batch of its own.
+// The one reason the close picker offers here.
+const LOST_TO_A_RIVAL = {
+  id: "reason-competitor",
+  key: "competitor",
+  label: "Chose a competitor",
+  active: true,
+  sort_order: 10,
+  system: true,
+  version: 1,
+  created_at: "2026-10-01T08:00:00Z",
+  updated_at: "2026-10-01T08:00:00Z",
+};
+
+// Gives the loss its reason, the one answer a lost close always needs.
+async function giveReason(user: ReturnType<typeof userEvent.setup>) {
+  await pickOption(
+    user,
+    screen.getByRole("combobox", { name: "Why was it lost?" }),
+    "Chose a competitor",
+  );
+}
+
 function stubServer(server: Server = {}) {
   const sent: Sent[] = [];
   vi.stubGlobal(
@@ -94,6 +117,9 @@ function stubServer(server: Server = {}) {
       const body = text === "" ? undefined : JSON.parse(text);
       if (input.method === "POST") {
         sent.push({ path: url.pathname, body });
+      }
+      if (url.pathname === "/v1/loss-reasons") {
+        return json({ data: [LOST_TO_A_RIVAL] });
       }
       if (url.pathname === "/v1/activities") {
         return (
@@ -145,7 +171,7 @@ async function answer(
   choice: string,
 ) {
   const dialog = within(screen.getByRole("dialog"));
-  await user.type(dialog.getByLabelText("Lost reason"), "Went with a rival");
+  await giveReason(user);
   await user.click(dialog.getByRole("radio", { name: new RegExp(choice) }));
   await user.click(dialog.getByRole("button", { name: "Confirm" }));
 }
@@ -171,7 +197,7 @@ it("lists the deal's open tasks and asks before it closes", async () => {
 
   // A reason alone does not close it: the tasks still need an answer.
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Lost reason"), "Went with a rival");
+  await giveReason(user);
   expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
 });
 
@@ -243,7 +269,7 @@ it("holds Confirm while the deal's tasks are still loading", async () => {
   });
   const user = userEvent.setup();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  await user.type(screen.getByLabelText("Lost reason"), "Went with a rival");
+  await giveReason(user);
   const confirm = screen.getByRole("button", { name: "Confirm" });
   expect(confirm).toBeDisabled();
   expect(
@@ -270,7 +296,7 @@ it("lets the deal close after a failed read and keeps every task", async () => {
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(screen.queryByRole("radio")).toBeNull();
 
-  await user.type(screen.getByLabelText("Lost reason"), "Went with a rival");
+  await giveReason(user);
   await user.click(screen.getByRole("button", { name: "Confirm" }));
   await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
   expect(sent).toEqual([]);

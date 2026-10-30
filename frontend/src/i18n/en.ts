@@ -746,6 +746,7 @@ export const en = {
   "approval.preview.promotionExistingContact": "Existing contact to update",
   "approval.preview.promotionSetOrigin": "Link contact back to this lead",
   "approval.preview.promotionCompanyIndustry": "Company industry",
+  "approval.preview.promotionCompanyProposed": "Company to link or create",
   "approval.preview.promotionDuplicateCandidate":
     "Possible duplicate to review",
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
@@ -771,6 +772,8 @@ export const en = {
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
   "approval.preview.promotionFillIndustry":
     "Sets the displayed industry on the linked company, which has none yet.",
+  "approval.preview.promotionProposeCompany":
+    "Creates no company from the typed name. The contact shows the name as a company to link or create.",
   "approval.preview.promotionReview":
     "Creates a separate contact and queues the possible duplicate for review.",
   "approval.preview.promotionAllMarketing": "All marketing",
@@ -873,6 +876,7 @@ export const en = {
   "reporting.createdOn": "Created on",
   "reporting.movedOn": "Status changed on",
   "reporting.arrivedOn": "Arrived on",
+  "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
@@ -1295,6 +1299,37 @@ export const en = {
   "reporting.metric_reading": "Metric details",
   "reporting.breakdown": "Breakdown by group",
   "reporting.breakdownTitle": "{metric} by group",
+  "reporting.conversion": "Stage conversion",
+  "reporting.stage_cohort": "Stage conversion",
+  "reporting.lead_cohort": "What became of new leads",
+  "reporting.cohortStage": "Stage",
+  "reporting.cohortEntered": "Entered",
+  "reporting.cohortArrived": "Arrived",
+  "reporting.cohortRate": "Moved on",
+  "reporting.cohortNoRate": "Fewer than 5 with an outcome",
+  "reporting.cohortMedianDays": "median {days} d",
+  "reporting.cohortEmpty": "Nothing entered a stage in this period.",
+  "reporting.cohortNoArrivals": "No leads arrived in this period.",
+  "reporting.cohortOutcome.advanced": "Later stage",
+  "reporting.cohortOutcome.won": "Won",
+  "reporting.cohortOutcome.lost": "Lost",
+  "reporting.cohortOutcome.regressed": "Moved back",
+  "reporting.cohortOutcome.left_pipeline": "Other pipeline",
+  "reporting.cohortOutcome.unresolved": "Still open",
+  "reporting.cohortOutcome.history_partial": "Forward or back unknown",
+  "reporting.cohortOutcome.accepted": "Handoff accepted",
+  "reporting.cohortOutcome.qualified": "Qualified",
+  "reporting.cohortOutcome.disqualified": "Disqualified",
+  "reporting.cohortEntry.repeat": "Back in this stage",
+  "reporting.cohortEntry.reopened": "Reopened after a close",
+  "reporting.cohortStillOpenNote":
+    "Still open means no outcome yet when these figures were read. These are not counted as lost and stay out of the rate.",
+  "reporting.cohortPartialNote":
+    "Forward or back unknown means the deal left the stage before Margince kept the stage order with each move. These stay out of the rate.",
+  "reporting.cohortStageDaysNote":
+    "Days beside an outcome are the median time a deal spent in the stage before it. Days beside Still open are the median time in the stage so far.",
+  "reporting.cohortLeadDaysNote":
+    "Days beside an outcome are the median time from arrival to it. Days beside Still open are the median time since arrival so far.",
   "reporting.actual": "Actual",
   "reporting.previous": "Previous period",
   "reporting.target": "Target",
@@ -1950,6 +1985,7 @@ export const en = {
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
   "systemJob.assurance_freshness": "Forecast check freshness",
+  "systemJob.forecast_call_baseline": "Forecast call baseline",
   "systemJob.ai_activity": "AI activity record",
   "systemJob.ai_activity_reconcile": "AI activity catch-up",
   "systemJob.ai_activity_retention": "AI activity cleanup",
@@ -1996,6 +2032,7 @@ export const en = {
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
+  "systemJob.forecast_evaluation": "Forecast evaluation",
   "systemJob.geocode": "Company address lookup",
   "systemJob.geocode_backfill": "Address lookup backlog",
   "systemJob.address_country_check": "Address country check",
@@ -2684,7 +2721,7 @@ export const en = {
   "tab.rollup": "Roll-up",
   "tab.history": "History",
 
-  "rollup.weightedPipeline": "Weighted deal value",
+  "rollup.weightedPipeline": "Weighted deal value today",
   "rollup.closedWon": "Won this quarter",
   "rollup.activity30d": "Activity, 30 days",
   "rollup.accounts": "Companies included",
@@ -2693,6 +2730,16 @@ export const en = {
   "rollup.fxUnavailable":
     "An exchange rate is missing, so the total cannot be calculated.",
   "rollup.computedAt": "Computed at {when}",
+  "rollup.wonIn": "Won in {period}",
+  "rollup.periodNote":
+    "Won deals count in {period} by the day they were won. The weighted deal value is the open deals today.",
+  "rollup.period.label": "Period for won deals",
+  "rollup.period.quarterUnderWay": "This quarter",
+  "rollup.period.year": "Year",
+  "rollup.period.quarter": "Quarter",
+  "rollup.period.month": "Month",
+  "rollup.period.show": "Show {period}",
+  "rollup.period.nextNotBegun": "The next period has not begun",
 
   "nav.partners": "Partners",
   "deal.partnerAttribution": "Partner attribution",
@@ -4300,6 +4347,11 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.archive": "Archive",
+  "activity.archiveConfirm": "Archive this entry? It leaves the History.",
+  "activity.archiveDone": "Entry archived",
+  "activity.archiveRefused":
+    "You can archive only notes and tasks you wrote yourself. Ask a manager to archive this entry.",
   "activity.notYoursToChange":
     "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
@@ -5072,6 +5124,12 @@ export const en = {
   "lead.qualify.title": "Qualify {name}",
   "lead.qualify.contact": "Contact",
   "lead.qualify.alsoDeal": "Also open a deal",
+  "lead.qualify.company": "Company",
+  "lead.qualify.companyUnresolved":
+    "This lead’s email does not show which company {company} is, so no company is added on its own.",
+  "lead.qualify.createCompany": "Add {company} as the employer",
+  "lead.qualify.createCompanyHint":
+    "Links the company with this name, or creates it. Unticked, the contact shows {company} as a company to link or create.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Stage",
   "lead.qualify.dealName": "Deal name",
@@ -5108,7 +5166,10 @@ export const en = {
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
   "deals.lostReason": "Lost reason",
-  "deals.lostReasonNeeded": "Enter why the deal was lost.",
+  "deals.lostReasonNeeded": "Pick why the deal was lost.",
+  "deals.lostReasonCode": "Why was it lost?",
+  "deals.lostReasonPick": "Pick a reason",
+  "deals.lostReasonNote": "Note (optional)",
   "deals.winReasonNeeded": "Pick how the deal was won.",
   "deals.winDetailNeeded": "Describe how the deal was won.",
   "deals.closeTasks.legend_one":
@@ -5268,6 +5329,46 @@ export const en = {
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
   "legalEntities.countryHint": "Two letters, for example AT.",
+  "lossReasons.title": "Loss reasons",
+  "lossReasons.sub":
+    "The reasons to pick from when a deal is lost. Reports count lost deals by them.",
+  "lossReasons.builtin.price": "Price",
+  "lossReasons.builtin.competitor": "Chose a competitor",
+  "lossReasons.builtin.no_budget": "No budget",
+  "lossReasons.builtin.no_decision": "No decision",
+  "lossReasons.builtin.timing": "Bad timing",
+  "lossReasons.builtin.product_fit": "Product did not fit",
+  "lossReasons.builtin.went_silent": "Stopped responding",
+  "lossReasons.builtin.other": "Other",
+  "lossReasons.loading": "Loading reasons…",
+  "lossReasons.addOpen": "New reason",
+  "lossReasons.addTitle": "New loss reason",
+  "lossReasons.addConfirm": "Add reason",
+  "lossReasons.renameTitle": "Rename reason",
+  "lossReasons.activeFor": "{label} can be picked when a deal is lost",
+  "lossReasons.colReason": "Reason",
+  "lossReasons.colDeals": "Deals",
+  "lossReasons.deals_one": "{count} deal",
+  "lossReasons.deals_other": "{count} deals",
+  "lossReasons.duplicate":
+    "A reason with this name or key already exists. Choose another name.",
+  "lossReasons.legacyTitle": "Older loss notes",
+  "lossReasons.legacySub":
+    "Deals lost before this list existed have only a note. Pick the reason each note counts as, then apply. The notes stay as they were written.",
+  "lossReasons.colPending": "To change",
+  "lossReasons.colNote": "Note",
+  "lossReasons.colMapTo": "Counts as",
+  "lossReasons.mapFor": "Reason for “{note}”",
+  "lossReasons.pick": "Pick a reason",
+  "lossReasons.apply": "Apply to deals",
+  "lossReasons.applied_one": "{count} deal will be updated in the background.",
+  "lossReasons.applied_other":
+    "{count} deals will be updated in the background.",
+  "lossReasons.remaining_one":
+    "Showing the {shown} most common of {count} note.",
+  "lossReasons.remaining_other":
+    "Showing the {shown} most common of {count} notes.",
+  "lossReasons.legacyEmpty": "Every lost deal has a reason.",
   "acqSources.title": "Source list",
   "acqSources.builtin.inbound": "Inbound",
   "acqSources.builtin.outbound": "Outbound",
@@ -5423,6 +5524,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
+  "deal.archiveRefused":
+    "Only the deal’s owner or a manager can archive this deal.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
@@ -7153,6 +7256,12 @@ export const en = {
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
   "analytics.field.lost_reason": "Lost reason",
+  "analytics.field.loss_reason": "Loss reason from the list",
+  "analytics.field.loss_reason_state": "How the loss reason was set",
+  "analytics.lossState.recorded": "Picked at close",
+  "analytics.lossState.mapped": "Mapped from a note",
+  "analytics.lossState.unmapped": "Note not mapped",
+  "analytics.lossState.missing": "No reason",
   "analytics.field.meeting_status": "Meeting status",
   "analytics.field.open_commitments": "Open tasks",
   "analytics.field.open_deal_value_minor": "Open deal value",
@@ -7222,6 +7331,8 @@ export const en = {
   "analytics.q.filters": "Filters",
   "analytics.q.groupBy": "Group by",
   "analytics.q.companyField": "{label} (company)",
+  "analytics.q.groupOptionCoverage_one": "{label} · {held} of {count} deal",
+  "analytics.q.groupOptionCoverage_other": "{label} · {held} of {count} deals",
   "analytics.q.fieldCoverage_one":
     "{label} has a value on {held} of {count} deal you can read.",
   "analytics.q.fieldCoverage_other":
@@ -7528,6 +7639,20 @@ export const en = {
     "Run the first check before you turn this on.",
   "review.commitUnpriced": "Committed with no amount",
   "review.stageExitUnmet": "Stage exit criteria not met",
+  "review.callMovedHelp_one":
+    "The pipeline this call was made against has changed since: {count} deal moved in a way the forecast counts.",
+  "review.callMovedHelp_other":
+    "The pipeline this call was made against has changed since: {count} deals moved in a way the forecast counts.",
+  "review.callMovedWithheldHelp":
+    "The pipeline this call was made against has changed since, including deals you cannot open.",
+  "review.callLimitedHelp":
+    "The team, base currency or financial year changed since this call, so it can no longer be compared with today’s pipeline.",
+  "review.callOpenItsForecast":
+    "Open the forecast for this call’s team and period to submit a new call.",
+  "review.callAuthorOnly":
+    "Only the manager who made this call can submit a new one.",
+  "review.submitNewCall": "Submit a new call",
+  "review.forecastCallMoved": "Forecast call needs review",
   "review.unknownCheck": "Unnamed check",
   "review.sheetTitle": "Answer check",
   "review.outcomeLegend": "Answer type",
@@ -7560,6 +7685,8 @@ export const en = {
     "Updated {date} · {gap} above won + confirmed commits",
   "forecast.currentCallDetailUnder":
     "Updated {date} · {gap} below won + confirmed commits",
+  "forecast.callHistoryUnavailable":
+    "This call was made before calls kept the pipeline they were made against, so what moved since cannot be said.",
   "forecast.currentCallDetailEven":
     "Updated {date} · matches won + confirmed commits",
   "forecast.evidence": "Committed · confirmed dates",
@@ -8879,6 +9006,7 @@ export const en = {
   "jobs.kind.approval_auto_apply": "Automatic approval",
   "jobs.kind.assurance_run": "Forecast check on request",
   "jobs.kind.assurance_sweep": "Forecast check",
+  "jobs.kind.assurance_deal_rescan": "Forecast check of a changed deal",
   "jobs.kind.brief_generate": "Morning brief",
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
@@ -11798,6 +11926,8 @@ export const en = {
     "Stages a deal moves through, for the whole company.",
   "settings.page.acquisition.sub":
     "Business channels a deal can be attributed to.",
+  "settings.page.lossreasons.sub":
+    "Why deals are lost, and which reason older notes count as.",
   "settings.page.recordroles.sub":
     "Labels for what a colleague or team looks after on a record, such as account manager. A role grants no access; the owner and sharing decide who can edit.",
   "settings.page.leads.sub":
@@ -11858,6 +11988,7 @@ export const en = {
   "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Acquisition sources",
+  "settings.tab.lossreasons": "Loss reasons",
   "settings.tab.recordroles": "Responsibility roles",
   "settings.tab.leads": "Lead handling",
   "settings.tab.fields": "Fields",
@@ -15398,6 +15529,7 @@ export const en = {
   "contact.enriched.source.vcard_import": "an imported vCard",
   "contact.enriched.source.contact_research": "accepted research",
   "contact.enriched.source.human_restore": "a restored earlier value",
+  "contact.enriched.source.lead_promotion": "the qualified lead",
   "contact.enriched.source.other": "a captured source",
   "contact.enriched.undo": "Undo",
   "contact.enriched.replaced": "Replaced the older value “{was}”.",

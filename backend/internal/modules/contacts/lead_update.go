@@ -443,7 +443,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		// outside the record of the change that caused it. The two agree on the
 		// condition: no owner yet, and no clock yet.
 		if current.RoutedAt == nil && current.OwnerId == nil {
-			p.Set("routed_at", nil, leadSLAClock().UTC())
+			stampArrival(p, *in.OwnerID, leadSLAClock().UTC())
 		}
 	}
 	return p, resumeRecompute, nil

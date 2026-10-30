@@ -47,7 +47,10 @@ import { buildColumns } from "./deals.columns";
  */
 function closingFields(input: AdvanceInput) {
   if (input.toStage.semantic === "lost") {
-    return { lost_reason: input.lostReason };
+    return {
+      lost_reason: input.lostReason,
+      lost_reason_code: input.lostReasonCode,
+    };
   }
   if (input.toStage.semantic === "won" && input.wonWithoutContractReason) {
     return {

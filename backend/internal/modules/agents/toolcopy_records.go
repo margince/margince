@@ -34,11 +34,10 @@ var listRecordsCopy = toolCopy{
 
 var readViewCopy = toolCopy{
 	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
-		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
-		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
-		"Each view answers exactly what the matching REST route answers.",
-	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
-		"it does not take and names the ones it does.",
+		"company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each " +
+		"view answers what its REST route answers.",
+	Limits: "Name the view, its id and any of its filters. A view refuses an argument it does not " +
+		"take and names the ones it does.",
 }
 
 var changeRecordPartsCopy = toolCopy{
@@ -179,8 +178,8 @@ var relinkThreadCopy = toolCopy{
 
 var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
-	Limits: "Each id must be visible and writable to you. A project destination, or any move the " +
-		"installation's policy raises, is staged for confirmation and the retry moves exactly " +
+	Limits: "Each id must be visible and writable to you. Where the installation's policy " +
+		"holds a move for approval, the reply carries an approval id and the retry moves exactly " +
 		"these ids; once the user says yes, relay it with decide_approvals. A filing under a " +
 		"project can be undone by a member from the activity.",
 	Instead: "relink_activity moves one message.",
@@ -233,27 +232,33 @@ var mergeRecordsCopy = toolCopy{
 var advanceDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
-		"carries only its current stage. Moving onto or off a won/lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
+		"the deal, which is the user's decision: unless they named this deal and stage, name " +
+		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
+		"reasons view. A lost_reason note explains it; a note alone is recorded as an unmapped " +
+		"loss. Read the target " +
 		"stage's semantic rather than guessing from its name.",
 	Instead: "Use progress_deal when the move should also leave a note explaining it, which is " +
 		"almost always what a human means by moving a deal on.",
-	Retain: "Send if_version with the version you read of the deal, and keep the staged approval " +
-		"id when a closing move comes back for approval.",
+	Retain: "Send if_version with the version you read of the deal. When the answer is staged, " +
+		"keep its approval id, and do not report the move until the retry has answered.",
 }
 
 var progressDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
 		"timeline saying why, in one call.",
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
-		"carries only its current stage. Moving onto or off a won or lost stage is a human's " +
-		"decision: staged for approval, with a lost_reason for a losing stage. Read the target " +
+		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
+		"the deal, which is the user's decision: unless they named this deal and stage, name " +
+		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
+		"reasons view. A lost_reason note explains it; a note alone is recorded as an unmapped " +
+		"loss. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +
 		"note follows it, so a note that fails to write does not put the deal back — the answer " +
 		"says so, and the note is then log_activity's to retry.",
 	Instead: "Use log_activity when something happened but the deal did not move.",
-	Retain: "Send if_version with the version you read of the deal; keep the staged approval id " +
-		"if a closing move is sent for approval.",
+	Retain: "Send if_version with the version you read of the deal. When the answer is staged, " +
+		"keep its approval id, and do not report the move until the retry has answered.",
 }
 
 var qualifyLeadCopy = toolCopy{
@@ -329,8 +334,8 @@ var listPipelinesCopy = toolCopy{
 	Limits: "It is where the id of a stage a deal could move TO comes from, so a deal cannot be " +
 		"created, or moved anywhere new, without calling this first — a deal you have already " +
 		"read carries only the stage it is in. Each stage carries a semantic — open, won or lost " +
-		"— and that, not its name, is what decides whether moving onto it needs a human's " +
-		"approval; a stage called \"Closed\" may be either.",
+		"— and that, not its name, is what decides whether moving onto it closes the deal " +
+		"or reopens it, which is the user's call; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
 		"deal requires both, and progress_deal takes that stage_id as its " +
 		"to_stage_id.",

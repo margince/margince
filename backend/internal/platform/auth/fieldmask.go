@@ -118,6 +118,13 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 	if !p.Permissions.Allows(table, principal.ActionUpdate) && p.Type != principal.PrincipalSystem {
 		return out, nil
 	}
+	return rowWriteSubset(ctx, tx, p, table, rowIDs)
+}
+
+// rowWriteSubset is WritableSubset's row half without the update grant: the
+// archive asks it for a delete holder, who may hold no update verb.
+func rowWriteSubset(ctx context.Context, tx pgx.Tx, p principal.Principal, table string, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	out := make(map[ids.UUID]bool, len(rowIDs))
 	if UnboundedFor(p, table) && Unbounded(p) {
 		for _, id := range rowIDs {
 			out[id] = true

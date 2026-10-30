@@ -37,7 +37,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /companies/{id}` | updateCompany | Update a company (partial). | Change records | at once |
 | `DELETE /companies/{id}` | archiveCompany | Archive (soft-delete) a company. | Change records | at once |
 | `POST /companies/{id}/merge` | mergeCompany | Merge this company into a target (non-lossy). | Change records | at once |
-| `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count. | Read records | at once |
+| `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count. | Read records | at once |
 | `GET /companies/{id}/360` | getCompany360 | The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps. | Read records | at once |
 | `GET /companies/{id}/intro-paths` | listIntroPaths | The colleagues who could introduce you at this company, warmest first. | Read records | at once |
 | `GET /companies/{id}/graph` | getCompanyGraph | The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies. | Read records | at once |
@@ -89,6 +89,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | Read records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
+| `GET /loss-reasons` | listLossReasons | List the reasons a deal can be lost for, active and retired, in display order. | Read records | at once |
 | `GET /deal-rooms` | listDealRooms | List Deal Rooms (live by default; cursor-paginated). | Read records | at once |
 | `POST /deal-rooms` | createDealRoom | Open a Deal Room on a deal. | Change records | at once |
 | `GET /deal-rooms/{id}` | getDealRoom | Get a Deal Room by id. | Read records | at once |

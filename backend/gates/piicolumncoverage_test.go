@@ -67,8 +67,9 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition": {"publication_audience"},
 	// A revision's selection is the report's public structure: metrics, period,
 	// scope and card shapes. Filters stay in question_bindings, which the
-	// redaction rewrites, so no subject value reaches the selection.
-	"report_definition_revision": {"selection"},
+	// redaction rewrites, so no subject value reaches the selection. The metric
+	// versions map metric ids to definition version numbers.
+	"report_definition_revision": {"selection", "metric_versions"},
 	// The evidence ledger's closed vocabularies: source kind, author side,
 	// commitment and writer. The snippet is the column that quotes the subject,
 	// and the redaction clears it.

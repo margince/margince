@@ -276,7 +276,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `category` | `text` | yes | One of `company`, `offering`, `market`, `signal`. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_snippet` | `text` |  |  |
 | `field` | `text` | yes |  |
 | `retrieved_at` | `timestamp with time zone` |  | When the source was last read. |
@@ -301,7 +301,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `company_fact_category_check`: `CHECK ((category = ANY (ARRAY['company', 'offering', 'market', 'signal'])))`
-- `company_fact_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `company_fact_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `company_fact_field_vocab`: `CHECK ((((category = 'company') AND (field = ANY (ARRAY['founded_year', 'employee_range', 'phone', 'contact_email', 'location']))) OR ((category = 'offering') AND (field = ANY (ARRAY['service', 'product', 'capability']))) OR ((category = 'market') AND (field = ANY (ARRAY['served_industry', 'company_size', 'geography', 'language']))) OR ((category = 'signal') AND (field = ANY (ARRAY['certification', 'partner', 'named_customer', 'technology', 'quantified_outcome', 'mail_provider', 'email_security', 'hosting_provider', 'operated_service'])))))`
 - `company_fact_site_evidence`: `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
 - `company_fact_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration', 'technical_lookup'])))`
@@ -414,7 +414,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `id` | `uuid`, default `uuidv7()` | yes | The stored row, so a dossier sentence written from this field can cite something the reader can open. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_snippet` | `text` |  |  |
 | `field` | `text` | yes | One of `display_name`, `offer_summary`, `icp`, `value_proposition`, `usp`, `customer_pains` and 13 more. |
 | `retrieved_at` | `timestamp with time zone` |  | When the source was last read. |
@@ -435,7 +435,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `company_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['display_name', 'offer_summary', 'icp', 'value_proposition', 'usp', 'customer_pains', 'desired_outcomes', 'buying_center', 'buying_intents', 'common_objections', 'sales_motion', 'legal_name', 'registered_address', 'register_vat', 'industry', 'history', 'legal_form', 'register_court', 'register_number'])))`
 - `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration'])))`
 - `company_profile_field_verified_pair`: `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
@@ -894,7 +894,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `claim_key` | `text` | yes | One of `professional_emails`, `personal_emails`, `mobile_phones`, `linkedin_profile`, `current_employment`, `job_history` and 3 more. |
-| `confidence` | `numeric(5,4)` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `employment_processed_at` | `timestamp with time zone` |  |  |
 | `employment_processing_error` | `text` |  |  |
@@ -1191,11 +1191,12 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-43 columns · primary key `(id)` · referenced by 18 foreign keys
+44 columns · primary key `(id)` · referenced by 18 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `arrival_owner_id` | `uuid` |  |  |
 | `candidate_company_key` | `text` |  | Loose key for ABM routing without creating a company. |
 | `company_id` | `uuid` |  | The company a human confirmed this lead belongs to, through `POST /leads/{id}/link-company`. |
 | `company_name` | `text` |  | Free text, as captured or typed. |

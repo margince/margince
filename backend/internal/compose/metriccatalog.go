@@ -48,6 +48,8 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerWon, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerWon].En}, string(recordTypeDeal), readReportingPartnerWon},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerCommission, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerCommission].En}, objectCommission, readReportingPartnerCommission},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingStageConversion, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingStageConversion].En}, string(recordTypeDeal), readReportingStageConversion},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadCohortOutcomes, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingLeadCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadCohortOutcomes].En}, string(recordTypeLead), readReportingLeadCohort},
 }
 
 // reportingPresets are the selections the Analytics screen opens on. A preset
@@ -111,6 +113,16 @@ type metricEvaluator struct {
 
 // forecastCapture holds the forecast reading of one evaluation.
 type forecastCapture struct{ operands *reporting.ForecastOperands }
+
+func (metricEvaluator) MetricVersions(metrics []crmcontracts.ReportingMetricID) reporting.MetricVersions {
+	out := reporting.MetricVersions{}
+	for _, spec := range reportingMetrics {
+		if slices.Contains(metrics, spec.definition.Id) {
+			out[spec.definition.Id] = spec.definition.Version
+		}
+	}
+	return out
+}
 
 func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crmcontracts.ReportingCatalog, error) {
 	out := crmcontracts.ReportingCatalog{Metrics: []crmcontracts.ReportingMetricDefinition{}}

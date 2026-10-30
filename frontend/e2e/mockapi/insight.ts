@@ -184,6 +184,26 @@ export const hierarchyRollup = {
   aggregated_account_count: 1,
   restricted_excluded: [],
   computed_at: "2026-07-13T00:00:00Z",
+  pipeline_state_at: "2026-07-13T00:00:00Z",
+  closed_won_period: {
+    grain: "quarter",
+    label: "2026-Q3",
+    start_at: "2026-07-01T00:00:00Z",
+    end_at: "2026-10-01T00:00:00Z",
+    anchor: "closed_at",
+    chosen: false,
+    previous: "2026-Q2",
+    next: null,
+  },
+  activity_window: {
+    start_at: "2026-07-13T00:00:00Z",
+    end_at: "2026-07-13T00:00:00Z",
+  },
+  current_periods: {
+    period_year: "2026",
+    period_quarter: "2026-Q3",
+    period_month: "2026-07",
+  },
 };
 
 // The Brief digest card destructures a MorningDigest.

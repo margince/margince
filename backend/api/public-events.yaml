@@ -1004,6 +1004,11 @@ components:
         win_probability:
           type: integer
           description: The target stage's win probability, frozen at the moment of the move.
+        lost_reason_code:
+          type: string
+          description: >-
+            The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when
+            the loss names only a free note.
         partner_company_id:
           type: string
           format: uuid
@@ -2443,6 +2448,13 @@ components:
             How many deals the run considered. A consumer comparing this against the
             previous run's count sees a pass that covered less of the pipeline.
         eligible_signals: { type: integer }
+        deal_id:
+          type: string
+          format: uuid
+          description: >-
+            Set on a pass over this one deal, queued because the deal changed.
+            Its counts describe that deal alone and never the pipeline. Absent
+            on a pass over every deal.
       additionalProperties: false
     PublicEventForecastExceptionResolved:
       type: object
