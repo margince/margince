@@ -100,6 +100,9 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 	spec.ActionField = field
 	spec.InputSchema = routedSchema(spec.Name, field, choices, spec.InputSchema, targets)
 	spec.OutputSchema = nil
+	if spec.UI != nil {
+		spec.OutputSchema = targetsOutput(spec.Name, targets)
+	}
 	return spec
 }
 

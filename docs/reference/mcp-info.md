@@ -14,10 +14,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | | |
 |---|---:|
 | Tools | 38 |
-| Resources | 9 |
-| Tool catalog | 134.4 KB |
-| Resource catalog | 3.5 KB |
-| Approx. wire tokens | 35292 |
+| Resources | 11 |
+| Tool catalog | 137.1 KB |
+| Resource catalog | 4.2 KB |
+| Approx. wire tokens | 36181 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,18 +32,18 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 27.6 KB | 20% | **No**: a result's shape, never listed to a model |
+| Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 33.6 KB | 24% | Yes, every step |
-| Input schemas | 64.3 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.9 KB | 6% | Partly |
-| **Description + input schema** | **97.9 KB** | **72%** | **the recurring cost** |
+| Input schemas | 64.3 KB | 46% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
+| **Description + input schema** | **97.9 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (9)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -53,6 +53,8 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
+- [`ui://margince/approval-queue.html`](#approval_queue_view): Waiting for your decision
+- [`ui://margince/attention.html`](#attention_view): What needs attention
 - [`ui://margince/update.html`](#update_view): What changed
 
 ### Tools (38)
@@ -75,12 +77,12 @@ descriptions and input schemas are what each step pays for.
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 1791 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
@@ -213,6 +215,64 @@ duplicate to merge or keep apart, and a tag word offered for it.
 
 ```text
 A change an assistant proposed, what it would do, and the choice to approve or reject it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### approval_queue_view
+
+`ui://margince/approval-queue.html` · text/html;profile=mcp-app
+
+**Waiting for your decision**
+
+```text
+Every proposal waiting for a human, what each would change and when it runs out, with Approve and
+Reject on each.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### attention_view
+
+`ui://margince/attention.html` · text/html;profile=mcp-app
+
+**What needs attention**
+
+```text
+Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for
+each and a way to ask about it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -3715,6 +3775,8 @@ itself. read_approval opens one and shows what it holds; decide_approvals answer
 staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
 
+Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -5543,6 +5605,8 @@ made to customers that are still open. Each view covers only what you may see, a
 item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.
 ```
 
+Renders its result in [`ui://margince/attention.html`](#attention_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -5583,6 +5647,287 @@ item is on it. Use read_context to dig into one item. Keep each item's record id
   },
   "required": [
     "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "commitments": {
+          "items": {
+            "properties": {
+              "about": {
+                "items": {
+                  "properties": {
+                    "entity_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "entity_id",
+                    "entity_type"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "assignee_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "assignee_name": {
+                "type": "string"
+              },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "days_overdue": {
+                "type": "integer"
+              },
+              "due_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "task_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "about",
+              "source",
+              "state",
+              "subject"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "coverage_withheld": {
+          "type": "boolean"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deal_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "snippet",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rank": {
+                "type": "integer"
+              },
+              "risks": {
+                "items": {
+                  "properties": {
+                    "contact_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "contacts": {
+                      "items": {
+                        "properties": {
+                          "contact_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "contact_id",
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "days_since_touch": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "deal_id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "deals_scanned": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }

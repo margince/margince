@@ -3,7 +3,10 @@
 
 package agents
 
-import "github.com/margince/margince/backend/internal/shared/ports/mcp"
+import (
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+)
 
 // The routers below each front one family of verbs under one listed name. A
 // call runs as the verb its action names, at that verb's tier and scope.
@@ -55,6 +58,7 @@ func (readAttention) Spec() mcp.ToolSpec {
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.AttentionURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
