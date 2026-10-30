@@ -1,16 +1,16 @@
 /* DockedWindow — work beside the page, docked to the bottom end corner.
  *
- * Fixed rather than portalled into the overlay layer: nothing behind it is
- * dimmed, and it sits under every overlay (the modal scrim at 50, popovers at
- * 70), so a dialog or a menu it opens still lands on top of it. It sits over
- * the phone layout's bottom rail (30) and the overflow menus (35) of the
- * page it shares. */
+ * Nothing behind it is dimmed. It is portalled to the body at the modal
+ * scrim's own level (50), so document order stacks it: above a dialog it was
+ * opened from, such as the Worklist drawer, and under a dialog opened after
+ * it. Popovers (70) still land on top of it. It sits over the phone layout's
+ * bottom rail (30) and the overflow menus (35) of the page it shares. */
 
 .docked {
   position: fixed;
   inset-block-end: 0;
   inset-inline-end: var(--space-5);
-  z-index: 40;
+  z-index: 50;
   display: flex;
   flex-direction: column;
   inline-size: min(var(--dockWidth), calc(100vw - var(--space-5) * 2));
@@ -118,7 +118,7 @@
   position: fixed;
   inset-block-end: 0;
   inset-inline-end: var(--space-5);
-  z-index: 40;
+  z-index: 50;
   display: flex;
   align-items: center;
   gap: var(--space-2);
