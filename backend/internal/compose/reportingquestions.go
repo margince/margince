@@ -64,10 +64,18 @@ func unanswerable(err error) bool {
 	return errors.As(err, &refusal) || errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound)
 }
 
-// Capture implements reporting.Questions.
-func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
-	out := reporting.CapturedQuestion{Entity: question.Entity}
-	query := questionQuery(question, scope)
+// Capture implements reporting.Questions. A sender who may not see what a
+// bound card filters on keeps no answer, as for a question they cannot ask.
+func (q reportingQuestions) Capture(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope) (reporting.CapturedQuestion, error) {
+	out := reporting.CapturedQuestion{Entity: card.Question.Entity}
+	query, restricted, err := resolveCard(ctx, tx, card, scope)
+	if restricted || unanswerable(err) {
+		out.Reason = crmcontracts.ReportingEditionQuestionReasonUnanswered
+		return out, nil
+	}
+	if err != nil {
+		return out, err
+	}
 	other, err := countsOtherRecords(ctx, tx, query)
 	if err != nil {
 		return out, err
@@ -149,8 +157,14 @@ func shownGroups(query analyticsquery.Query, rows []map[string]any) analyticsque
 // served row must also still be in their population and in that row's group.
 // Anything less withholds the whole answer: a part of it, read beside the
 // floor's complements, could describe the rows left out.
-func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
-	query := questionQuery(question, scope)
+func (q reportingQuestions) Reveal(ctx context.Context, tx pgx.Tx, card reporting.QuestionCard, scope crmcontracts.ReportingScope, kept reporting.KeptQuestion) (crmcontracts.AnalyticsAnswer, bool, error) {
+	query, restricted, err := resolveCard(ctx, tx, card, scope)
+	if restricted || unanswerable(err) {
+		return crmcontracts.AnalyticsAnswer{}, false, nil
+	}
+	if err != nil {
+		return crmcontracts.AnalyticsAnswer{}, false, err
+	}
 	only := []string{}
 	for _, records := range kept.Sources {
 		for _, record := range records {

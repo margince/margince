@@ -85,6 +85,13 @@ func SaveReportRun(
 		return ids.UUID{}, err
 	}
 
+	// A period filter keeps the calendar it was asked in, so the saved `2026`
+	// names the same twelve months after the fiscal start moves.
+	frame, err := readReportFrame(ctx, tx)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	q.Filters = analyticsquery.StampBasis(q.Filters, isPeriodField(q.Entity), calendarBasisOf(frame))
 	queryJSON, err := json.Marshal(q)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: encoding a report run's question: %w", err)
@@ -249,10 +256,11 @@ type ReportRunSummary struct {
 	AskedAt time.Time
 }
 
-// ListReportRuns pages the caller's own saved questions, newest first. The
-// page boundary is (created_at, id), since two runs can share a timestamp.
+// ListReportRuns pages the caller's own saved questions, newest first, about
+// one population when entity names it. The page boundary is (created_at, id),
+// since two runs can share a timestamp.
 func ListReportRuns(
-	ctx context.Context, tx pgx.Tx, after *storekit.Cursor, limit int,
+	ctx context.Context, tx pgx.Tx, after *storekit.Cursor, limit int, entity *string,
 ) ([]ReportRunSummary, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -267,8 +275,9 @@ func ListReportRuns(
 		SELECT id, query, created_at FROM report_run
 		WHERE asked_by = $1
 		  AND ($2::timestamptz IS NULL OR (created_at, id) < ($2, $3::uuid))
+		  AND ($5::text IS NULL OR query->>'Entity' = $5)
 		ORDER BY created_at DESC, id DESC
-		LIMIT $4`, actor.UserID, afterAt, afterID, limit+1)
+		LIMIT $4`, actor.UserID, afterAt, afterID, limit+1, entity)
 	if err != nil {
 		return nil, false, fmt.Errorf("compose: listing saved questions: %w", err)
 	}

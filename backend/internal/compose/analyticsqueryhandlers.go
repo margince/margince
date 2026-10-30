@@ -139,7 +139,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
 			return err
 		}
-		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit))
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit), params.Entity)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)

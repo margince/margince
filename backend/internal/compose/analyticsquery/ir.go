@@ -114,6 +114,9 @@ type Filter struct {
 	Op FilterOp
 	// Value becomes a bind parameter. Never rendered into the statement.
 	Value any
+	// Basis is set on a period filter that keeps the dates its bucket named
+	// when it was saved. Nil follows the current calendar.
+	Basis *CalendarBasis `json:",omitempty"`
 }
 
 // FilterOp is a comparison this compiler renders. Closed, for the same reason

@@ -82,10 +82,12 @@ func compiledInCodes() []string {
 }
 
 // NewInstallationSettingsFor is the installation-settings store with the
-// jurisdiction change wired to the floor carry, the one way the surface and its
-// tests build it.
+// jurisdiction change wired to the floor carry and a calendar move to the
+// saved periods it keeps, the one way the surface and its tests build it.
 func NewInstallationSettingsFor(pool *pgxpool.Pool) *identity.InstallationSettingsStore {
-	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool)).WithCountryChange(carryFloorOnCountryChange)
+	return identity.NewInstallationSettings(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool)).
+		WithCountryChange(carryFloorOnCountryChange).
+		WithCalendarChange(keepSavedPeriodsOnCalendarChange)
 }
 
 // carryFloorOnCountryChange is the hook a jurisdiction change runs: privacy

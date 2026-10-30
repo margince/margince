@@ -15,16 +15,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Questions answers a report's question cards for a sent edition, and later
-// judges what of a kept answer one reader may see. A seam because the
-// analytics engine lives in compose.
+// Questions binds a card to a saved question, answers a report's question
+// cards for a sent edition, and later judges what of a kept answer one reader
+// may see. A seam because the analytics engine lives in compose.
 type Questions interface {
-	// Capture asks the question as the edition's sender.
-	Capture(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope) (CapturedQuestion, error)
+	// BindSavedQuestion reads a saved question whole as the caller may ask it now.
+	BindSavedQuestion(ctx context.Context, tx pgx.Tx, savedQuestion ids.UUID) (Binding, error)
+	// Capture asks the card's question as the edition's sender.
+	Capture(ctx context.Context, tx pgx.Tx, card QuestionCard, scope crmcontracts.ReportingScope) (CapturedQuestion, error)
 	// Reveal answers ok=false when the reader may not ask the question now.
 	// Otherwise it returns the kept answer with every row withheld whose
 	// records the reader may not all read.
-	Reveal(ctx context.Context, tx pgx.Tx, question crmcontracts.ReportingCardQuestion, scope crmcontracts.ReportingScope, kept KeptQuestion) (answer crmcontracts.AnalyticsAnswer, ok bool, err error)
+	Reveal(ctx context.Context, tx pgx.Tx, card QuestionCard, scope crmcontracts.ReportingScope, kept KeptQuestion) (answer crmcontracts.AnalyticsAnswer, ok bool, err error)
 }
 
 // CapturedQuestion is one question card's answer at capture.
@@ -71,28 +73,33 @@ func QuestionCards(selection crmcontracts.ReportingSelection) []crmcontracts.Rep
 	return cards
 }
 
-// captureQuestions answers every question card as the sender. An edition keeps
-// an answer only under a retention policy, which also erases it.
-func (s *Service) captureQuestions(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection) (map[string]CapturedQuestion, error) {
-	cards := QuestionCards(selection)
-	out := make(map[string]CapturedQuestion, len(cards))
-	if len(cards) == 0 || s.questions == nil {
-		return out, nil
+// captureQuestions answers every question card of a revision as the sender.
+// An edition keeps an answer only under a retention policy, which also erases
+// it.
+func (s *Service) captureQuestions(ctx context.Context, tx pgx.Tx, report ids.UUID, revision int64, selection crmcontracts.ReportingSelection) (map[string]CapturedQuestion, error) {
+	if len(QuestionCards(selection)) == 0 || s.questions == nil {
+		return map[string]CapturedQuestion{}, nil
 	}
+	kept, err := revisionBindings(ctx, tx, report, revision)
+	if err != nil {
+		return nil, err
+	}
+	cards := questionCards(selection, kept)
+	out := make(map[string]CapturedQuestion, len(cards))
 	ready, err := scheduleReady(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
 	for _, card := range cards {
 		if !ready {
-			out[card.Id] = CapturedQuestion{Entity: card.Question.Entity, Reason: crmcontracts.ReportingEditionQuestionReasonRetentionUnconfigured}
+			out[card.ID] = CapturedQuestion{Entity: card.Question.Entity, Reason: crmcontracts.ReportingEditionQuestionReasonRetentionUnconfigured}
 			continue
 		}
-		captured, err := s.questions.Capture(ctx, tx, *card.Question, selection.Scope)
+		captured, err := s.questions.Capture(ctx, tx, card, selection.Scope)
 		if err != nil {
 			return nil, err
 		}
-		out[card.Id] = captured
+		out[card.ID] = captured
 	}
 	return out, nil
 }
@@ -169,9 +176,13 @@ func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmc
 	if err != nil || len(stored) == 0 {
 		return err
 	}
-	cards := map[string]crmcontracts.ReportingCard{}
-	for _, card := range QuestionCards(edition.Evaluation.Selection) {
-		cards[card.Id] = card
+	kept, err := revisionBindings(ctx, tx, ids.UUID(edition.ReportId), edition.ReportRevision)
+	if err != nil {
+		return err
+	}
+	cards := map[string]QuestionCard{}
+	for _, card := range questionCards(edition.Evaluation.Selection, kept) {
+		cards[card.ID] = card
 	}
 	out := []crmcontracts.ReportingEditionQuestion{}
 	for _, q := range stored {
@@ -189,7 +200,7 @@ func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmc
 	return nil
 }
 
-func (s *Service) revealQuestion(ctx context.Context, tx pgx.Tx, edition *crmcontracts.ReportingEdition, card crmcontracts.ReportingCard, q storedQuestion) (crmcontracts.ReportingEditionQuestion, error) {
+func (s *Service) revealQuestion(ctx context.Context, tx pgx.Tx, edition *crmcontracts.ReportingEdition, card QuestionCard, q storedQuestion) (crmcontracts.ReportingEditionQuestion, error) {
 	out := crmcontracts.ReportingEditionQuestion{CardId: q.cardID, Status: crmcontracts.ReportingEditionQuestionStatusWithheld}
 	if q.reason != nil {
 		reason := crmcontracts.ReportingEditionQuestionReason(*q.reason)
@@ -208,7 +219,7 @@ func (s *Service) revealQuestion(ctx context.Context, tx pgx.Tx, edition *crmcon
 		return out, err
 	}
 	kept.Sources = sources
-	answer, ok, err := s.questions.Reveal(ctx, tx, *card.Question, edition.Evaluation.Selection.Scope, kept)
+	answer, ok, err := s.questions.Reveal(ctx, tx, card, edition.Evaluation.Selection.Scope, kept)
 	if err != nil || !ok {
 		return out, err
 	}
