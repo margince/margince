@@ -117,6 +117,8 @@ The Company profile page in Settings (group **Company**) holds your own company'
 
 The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
 
+The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
+
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate usually starts today or later. A past date works in two cases: the currency has no rate yet, or the date is before its first rate. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
@@ -281,9 +283,7 @@ The Knowledge page in Settings (group **Data**) holds your company's **Document 
 
 The **Margince handbook** is always one of them. It is filed with every installation and updated with each release. **Data import** is its own page in the same group.
 
-To ask a document set a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**.
-
-See [Documents and files](documents-and-files.md#document-sets--asking-your-documents-questions).
+To ask a document set a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**. See [Documents and files](documents-and-files.md#document-sets--asking-your-documents-questions).
 
 ## Privacy and retention
 
@@ -303,9 +303,7 @@ Between them they hold:
   whether they have been told yet.
 - **Audit log**: every action, and who did it.
 
-Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked.
-
-All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked. All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
 ## System health, Data import, and Reset
 

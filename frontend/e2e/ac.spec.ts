@@ -3511,13 +3511,13 @@ test.describe("calling a contact", () => {
       return { opener, dialog };
     }
 
-    test("a task from a call offers Call, Email and Open contact, in tab order", async ({
+    test("a task from a call offers Call, Draft email and Open contact, in tab order", async ({
       page,
     }) => {
       const { opener, dialog } = await openTask(page, taskFromCall.subject);
       const call = callVerb(dialog);
       const email = dialog.getByRole("button", {
-        name: de["record.verb.email"],
+        name: de["task.next.draftEmail"],
         exact: true,
       });
       const open = dialog.getByRole("link", {
@@ -3551,7 +3551,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Email and Open contact but no Call", async ({
+    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3560,7 +3560,7 @@ test.describe("calling a contact", () => {
       ).toBeVisible();
       await expect(
         dialog.getByRole("button", {
-          name: de["record.verb.email"],
+          name: de["task.next.draftEmail"],
           exact: true,
         }),
       ).toBeVisible();

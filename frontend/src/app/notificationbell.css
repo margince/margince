@@ -37,6 +37,8 @@
      "Mark all read" off the bottom of the window. */
   max-height: min(560px, calc(100vh - var(--topbarH) - var(--space-8)));
   overflow-y: auto;
+  /* The panel's corner, so the overlay ground and its shadow follow it. */
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
 }
 

@@ -54,7 +54,7 @@ func errUnsupportedCloseWindow() error {
 	return fmt.Errorf("choose a supported expected-close window, all_open or fiscal_quarter: %w", apperrors.ErrInvalidArgument)
 }
 
-func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, owners measurableOwners, at time.Time) (crmcontracts.ReportingContext, error) {
+func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, owners reporting.MeasurableOwners, at time.Time) (crmcontracts.ReportingContext, error) {
 	out := crmcontracts.ReportingContext{EvaluatedAt: at, StateAt: at, FrameworkRevision: framework.Revision, DefinitionVersion: "1", PeriodKind: string(selection.Period), PipelineId: selection.PipelineId}
 	calendar, err := reportingCalendar(ctx, tx)
 	if err != nil {
@@ -143,13 +143,13 @@ func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Se
 
 // measurableMemberIDs narrows a scope's members to the owners the reader may
 // measure one by one, so owner targets and owner lists name no one else.
-func measurableMemberIDs(owners measurableOwners, scopeMembers []openapi_types.UUID) []openapi_types.UUID {
-	if owners.every {
+func measurableMemberIDs(owners reporting.MeasurableOwners, scopeMembers []openapi_types.UUID) []openapi_types.UUID {
+	if owners.Every {
 		return scopeMembers
 	}
 	out := make([]openapi_types.UUID, 0, len(scopeMembers))
 	for _, id := range scopeMembers {
-		if owners.admits(ids.UUID(id)) {
+		if owners.Includes(ids.UUID(id)) {
 			out = append(out, id)
 		}
 	}

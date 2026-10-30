@@ -2709,6 +2709,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên.",
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
+  "common.individualPerformanceOff":
+    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn và các tổng có ít nhất hai thành viên khác đóng góp.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -5986,6 +5988,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "today.quiet": "Hiện chưa có gì cần chú ý.",
   "task.untitled": "Việc cần làm chưa có tiêu đề",
   "task.next.openContact": "Mở liên hệ",
+  "task.next.draftEmail": "Soạn email",
+  "task.next.draftIntent": "viết về nhiệm vụ này",
   "task.next.noAddress": "Liên hệ này chưa có địa chỉ email.",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
@@ -6312,6 +6316,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
+  "compose.draftingBody": "Đang viết bản nháp.",
   "compose.askAgain": "Đổi yêu cầu",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
@@ -12785,6 +12790,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callWhatsApp": "Trò chuyện WhatsApp",
   "installationSettings.callTelegram": "Trò chuyện Telegram",
   "installationSettings.callZalo": "Trò chuyện Zalo",
+  "installationSettings.individualTitle": "Hiệu suất của từng thành viên",
+  "installationSettings.individualPerformance":
+    "Hiển thị hiệu suất của từng thành viên",
+  "installationSettings.individualHint":
+    "Nếu hội đồng lao động không cho phép đánh giá từng nhân viên, hãy tắt mục này. Mỗi thành viên vẫn thấy số liệu của chính họ. Trang hướng dẫn về tuân thủ liệt kê những gì công tắc này chưa áp dụng.",
+  "installationSettings.individualOn":
+    "Báo cáo, dự báo và đánh giá tuần của nhóm có thể hiển thị số liệu của từng đồng nghiệp cho những ai được phép đo lường.",
+  "installationSettings.individualOff":
+    "Báo cáo, dự báo và tuần của nhóm không hiển thị số liệu của đồng nghiệp, và tổng chỉ có một thành viên khác đóng góp sẽ bị ẩn. Chưa áp dụng cho: bảng Nhóm, gợi ý huấn luyện, chế độ xem danh sách việc của một thành viên, phần nhóm trong thư buổi sáng và kế hoạch tuần của nhóm.",
   "installationSettings.callingHint":
     "Khi công tắc đang bật, liên kết cạnh mỗi số điện thoại có mã quốc gia sẽ mở cuộc trò chuyện trong ứng dụng đó. Ứng dụng nhận được số điện thoại.",
   "installationSettings.editField": "Sửa {field}",

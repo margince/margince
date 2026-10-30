@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Mail } from "lucide-react";
+import { Mail, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import { mailbox } from "../format/contacturi";
 import { useT } from "../i18n";
@@ -77,6 +77,10 @@ type ContactVerb = {
   label: string;
   record: WriteToRecord;
   readOnly?: boolean;
+  // The AI verb in place of the plain one: the composer drafts on arrival.
+  // Without a composer the reader's own client gets the plain `label`, since
+  // nothing would draft there.
+  draft?: Readonly<{ label: string; intent: string }>;
 };
 
 type Contact = Readonly<ContactValue | ContactVerb>;
@@ -91,6 +95,20 @@ export function ContactLink(props: Contact) {
     const glyph = <Mail aria-hidden="true" />;
     if (!writeTo) {
       return linkVerb(`mailto:${address}`, glyph, props.label);
+    }
+    const { draft } = props;
+    if (draft) {
+      return (
+        <Button
+          variant="ai"
+          onClick={() =>
+            writeTo({ ...props.record, address, draftIntent: draft.intent })
+          }
+        >
+          <Sparkles aria-hidden="true" />
+          {draft.label}
+        </Button>
+      );
     }
     return (
       <Button

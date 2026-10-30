@@ -43843,6 +43843,16 @@ type InstallationSettings struct {
 	// `commit_evidence` and says so in the landing's `caveat`.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
+	// IndividualPerformance Show individual performance. On by default. Off, reports, analytics questions,
+	// forecasts and forecast shares, targets, evidence, editions and their exports, and
+	// team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
+	// by owner or meeting host are refused, a colleague's scope is refused, and a figure
+	// that any colleague contributes to is refused unless at least two live colleagues
+	// besides the reader do. Each reader keeps their own figures. The Team board, coaching
+	// moves, a lead's view of a named member's queue, the morning mail's team section and
+	// team weekly plans are not covered yet.
+	IndividualPerformance bool `json:"individual_performance"`
+
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
@@ -55557,6 +55567,9 @@ type UpdateInstallationSettingsRequest struct {
 
 	// GraphWatchScanIntervalSeconds Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.
 	GraphWatchScanIntervalSeconds *int `json:"graph_watch_scan_interval_seconds,omitempty"`
+
+	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
+	IndividualPerformance *bool `json:"individual_performance,omitempty"`
 
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.
