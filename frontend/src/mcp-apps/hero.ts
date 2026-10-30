@@ -8,14 +8,11 @@
 import { el } from "./bridge";
 import { eyebrow } from "./parts";
 
-/** The tones a lead can be washed in, each a status family of the tokens. */
-export type HeroTone = "accent" | "success" | "warning" | "danger" | "ai";
-
-/** One part of a whole, drawn as a slice or a segment. */
+/** One part of a whole, drawn as a slice or a segment in a status tone. */
 export type Part = Readonly<{
   label: string;
   value: number;
-  tone: HeroTone | "neutral";
+  tone: "accent" | "success" | "warning" | "danger" | "neutral";
   shown?: string;
 }>;
 
@@ -26,13 +23,11 @@ export function hero(
     figure: string;
     caption: string;
     sentence: string;
-    tone: HeroTone;
     picture?: HTMLElement;
     beside?: HTMLElement;
   }>,
 ): HTMLElement {
   const lead = el("section", "view-hero");
-  lead.dataset.tone = opts.tone;
   const words = el("div", "view-hero-words");
   const figure = el("p", "view-hero-figure");
   figure.append(

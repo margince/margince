@@ -8,7 +8,6 @@
 import {
   decisionExpiryMs,
   decisionLapsed,
-  decisionUrgency,
   decisionUrgencyTone,
 } from "../design-system/decisiondeadline";
 import { askAssistant, callServerTool, canCallTools } from "./actions";
@@ -205,10 +204,6 @@ export function decisionCard(
   card.dataset.layout = opts.layout;
   card.dataset.approval = p.id;
   const open = isOpen(p, opts.now);
-  const at = decisionExpiryMs({ status: p.status, expires_at: p.expiresAt });
-  if (!open) card.dataset.lapsed = "";
-  else if (at !== null && !Number.isNaN(at) && opts.outcome?.kind !== "decided")
-    card.dataset.urgency = decisionUrgency(at - opts.now);
   const meta = el("div", "dcard-meta");
   meta.appendChild(eyebrow(inWords(p.kind)));
   for (const chip of [

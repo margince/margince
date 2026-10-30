@@ -192,9 +192,7 @@ function statusPanel(
 ): HTMLElement {
   const card = panel(
     title,
-    action === undefined
-      ? { level: "h1" }
-      : { level: "h1", action, tone: "success" },
+    action === undefined ? { level: "h1" } : { level: "h1", action },
   );
   const body = panelBody();
   body.append(...lines);

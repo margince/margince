@@ -49,17 +49,12 @@ function draw(
   }
 }
 
-/** The card's frame: a tinted head with the count, and a body for the lead. */
+/** The card's frame: a head with the count, and a body for the lead. */
 function frame(
   title: string,
   count: number,
-  tone: "warning" | "danger" | "success",
 ): { card: HTMLElement; body: HTMLElement } {
-  const card = panel(title, {
-    level: "h1",
-    tone,
-    action: badge(String(count), count > 0 ? tone : "success"),
-  });
+  const card = panel(title, { level: "h1", action: badge(String(count)) });
   const body = panelBody();
   card.appendChild(body);
   return { card, body };
@@ -71,14 +66,14 @@ type Row = Readonly<{
   reasons: HTMLElement[];
   figure?: string;
   bar?: HTMLElement;
-  tone: "warning" | "danger" | "neutral";
+  urgent?: boolean;
   question: string;
 }>;
 
 /** A ranked row: the marker, what it is and why, its figure, and the door. */
 function row(r: Row): HTMLElement {
   const item = el("li", "attention-row");
-  item.dataset.tone = r.tone;
+  if (r.urgent === true) item.dataset.urgent = "";
   const text = el("div", "attention-text");
   const why = el("div", "attention-reasons");
   why.append(...r.reasons);
@@ -115,11 +110,7 @@ function plural(n: number, one: string, many: string): string {
 
 function slippingCard(answer: Record<string, unknown>): HTMLElement {
   const deals = asList(answer.deals).map(asRecord);
-  const { card, body } = frame(
-    "Slipping this week",
-    deals.length,
-    deals.length > 0 ? "warning" : "success",
-  );
+  const { card, body } = frame("Slipping this week", deals.length);
   if (deals.length === 0) {
     body.appendChild(el("p", "intro", "No deal is slipping this week."));
     return card;
@@ -138,7 +129,6 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
       figure: stake.figure,
       caption: stake.total === null ? "deals slipping" : "at stake",
       sentence: `${plural(deals.length, "deal is", "deals are")} slipping. ${plural(quiet, "has", "have")} gone quiet.`,
-      tone: "warning",
       ...(stake.parts.length > 1 ? { picture: segments(stake.parts) } : {}),
     }),
   );
@@ -159,8 +149,8 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
           : { figure: money(deal.amount_minor, deal.currency) }),
         ...(amount === null || stake.total === null || stake.total <= 0
           ? {}
-          : { bar: share(amount / stake.total, "warning") }),
-        tone: rank === 1 ? "danger" : "warning",
+          : { bar: share(amount / stake.total, "flat") }),
+        urgent: rank === 1,
         question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): what happened and what should I do next?`,
       }),
     );
@@ -192,7 +182,7 @@ function atStake(deals: Record<string, unknown>[]): {
     label: asText(d.name) || "Unnamed deal",
     value: asFiniteNumber(d.amount_minor) ?? 0,
     shown: compactMoney(d.amount_minor, only),
-    tone: i === 0 ? "danger" : "warning",
+    tone: i === 0 ? "warning" : "neutral",
   }));
   return { figure: compactMoney(total, only), total, parts };
 }
@@ -200,11 +190,7 @@ function atStake(deals: Record<string, unknown>[]): {
 function atRiskCard(answer: Record<string, unknown>): HTMLElement {
   const deals = asList(answer.deals).map(asRecord);
   const scanned = asFiniteNumber(answer.deals_scanned) ?? 0;
-  const { card, body } = frame(
-    "Relationships at risk",
-    deals.length,
-    deals.length > 0 ? "warning" : "success",
-  );
+  const { card, body } = frame("Relationships at risk", deals.length);
   const floor =
     answer.truncated === true
       ? `The check stopped after ${scanned} deals, so there may be more.`
@@ -220,13 +206,12 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
         deals.length === 0
           ? "No open deal rests on one relationship or has gone quiet."
           : "These rest on one relationship, or the people on them have gone quiet.",
-      tone: deals.length > 0 ? "warning" : "success",
       picture: segments([
         { label: "At risk", value: deals.length, tone: "warning" },
         {
           label: "Covered",
           value: Math.max(0, scanned - deals.length),
-          tone: "success",
+          tone: "neutral",
         },
       ]),
     }),
@@ -241,7 +226,6 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
         marker: rankMarker(index + 1),
         name,
         reasons: asList(deal.risks).map(asRecord).map(riskLine),
-        tone: "warning",
         question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): who do we know there, and how do we widen it?`,
       }),
     );
@@ -266,11 +250,7 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
     promises.filter((p) => asText(p.state) === s).length;
   const overdue = count("overdue");
   const unowned = promises.filter((p) => asText(p.assignee_name) === "").length;
-  const { card, body } = frame(
-    "Open promises",
-    promises.length,
-    overdue > 0 ? "danger" : promises.length > 0 ? "warning" : "success",
-  );
+  const { card, body } = frame("Open promises", promises.length);
   if (promises.length === 0) {
     body.appendChild(
       el("p", "intro", "Every promise made to a customer is kept."),
@@ -291,7 +271,6 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
         unowned === 0
           ? "Every promise has an owner."
           : `${plural(unowned, "promise has", "promises have")} nobody to keep it.`,
-      tone: overdue > 0 ? "danger" : "accent",
       beside: ring(parts, String(promises.length), "open"),
     }),
   );
@@ -320,7 +299,7 @@ function promiseRow(promise: Record<string, unknown>): HTMLElement {
     marker: avatar(owner === "" ? "?" : owner, asText(promise.assignee_id)),
     name: subject,
     reasons,
-    tone: asText(promise.state) === "overdue" ? "danger" : "neutral",
+    urgent: asText(promise.state) === "overdue",
     question: `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""}: where does it stand, and what should happen next?`,
   });
 }

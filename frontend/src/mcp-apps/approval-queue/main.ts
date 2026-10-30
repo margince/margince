@@ -128,7 +128,6 @@ function lead(open: Proposal[], waiting: Proposal[], now: number): HTMLElement {
     figure: String(waiting.length),
     caption: waiting.length === 1 ? "decision waiting" : "decisions waiting",
     sentence,
-    tone: waiting.length === 0 ? "success" : "ai",
     picture: segments([
       {
         label: "Answered here",
@@ -136,7 +135,7 @@ function lead(open: Proposal[], waiting: Proposal[], now: number): HTMLElement {
         tone: "success",
       },
       { label: "Running out soon", value: soon, tone: "warning" },
-      { label: "Waiting", value: waiting.length - soon, tone: "ai" },
+      { label: "Waiting", value: waiting.length - soon, tone: "neutral" },
     ]),
   });
 }
