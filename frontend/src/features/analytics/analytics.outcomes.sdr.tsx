@@ -53,6 +53,7 @@ export function MySdrWork({
   self,
   locale,
 }: Readonly<{ self: string; locale: Locale }>) {
+  const t = useT();
   const readsLeads = useCan("lead", "read");
   const summary = useQuery({
     queryKey: ["sdr-summary", self],
@@ -69,6 +70,22 @@ export function MySdrWork({
     <>
       {readsLeads && (
         <MyLeads self={self} locale={locale} summary={summary.data} />
+      )}
+      {/* Which workflow applies is the summary's answer, so a failed read
+          says so instead of reading as a workspace with no handoffs. */}
+      {summary.isError && (
+        <Panel title={t("analytics.sdrWaiting")}>
+          <PanelBody>
+            <SurfaceState
+              state="failed"
+              emptyLabel={t("common.empty")}
+              loadingLabel={t("analytics.sdrWaiting")}
+              detail={{ onRetry: () => void summary.refetch() }}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        </Panel>
       )}
       {summary.data?.handoffs && (
         <WaitingOnOthers

@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
@@ -77,7 +77,7 @@ const secondPage: Page = {
 
 function show(
   over: Readonly<{
-    summary?: SdrSummary;
+    summary?: SdrSummary | "failed";
     worklist?: () => Response;
   }> = {},
 ) {
@@ -91,7 +91,9 @@ function show(
     "GET /analytics/evaluate": () =>
       jsonResponse({ title: "Unavailable", status: 503 }, 503),
     "GET /analytics/sdr-summary": () =>
-      jsonResponse(over.summary ?? handoffSummary),
+      over.summary === "failed"
+        ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+        : jsonResponse(over.summary ?? handoffSummary),
     "GET /analytics/sdr-summary/handoffs": () => jsonResponse(firstPage),
     "GET /worklist": over.worklist ?? (() => jsonResponse(day())),
   });
@@ -160,6 +162,19 @@ describe("MySdrWork", () => {
     expect(
       asked.some((url) => url.pathname.endsWith("/sdr-summary/handoffs")),
     ).toBe(false);
+  });
+
+  it("shows a failed summary as failed, never as a workspace without handoffs", async () => {
+    show({ summary: "failed" });
+    expect(await screen.findByText(en["analytics.sdrWaiting"])).toBeVisible();
+    const panel = screen
+      .getByText(en["analytics.sdrWaiting"])
+      .closest("section");
+    expect(panel).not.toBeNull();
+    expect(
+      await within(panel as HTMLElement).findByText(en["state.failed"]),
+    ).toBeVisible();
+    expect(screen.queryByText(en["analytics.sdrUpcomingMeetings"])).toBeNull();
   });
 
   it("never says nothing needs you while a source failed", async () => {
