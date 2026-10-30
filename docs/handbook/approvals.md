@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx backend/internal/compose/ownershiptransfer.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to
@@ -106,6 +106,17 @@ To keep such a promise yourself, press **I’ll take this** beside it on the con
 
 The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
 Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
+
+### How do I ask a colleague to hand over a contact or company?
+To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
+The request waits as an approval on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
+
+If the owner accepts, the record is yours. The open deals linked to it and the open tasks on it that the owner held move with it. Closed deals, done tasks and work other colleagues hold stay where they are.
+
+A notice tells you when the owner accepts or declines, when the request runs out, and when the record goes to someone else first. After a decline you can ask again. To take the request back, press **Withdraw request** in the same place.
+
+You can ask only for a record you can see but not change, on a seat that can edit records. A record nobody owns is claimed instead. If the owner has left, ask an administrator to hand it over.
+Also called: request ownership, take over an account, ask for a contact, ownership transfer.
 
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.

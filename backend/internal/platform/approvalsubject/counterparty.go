@@ -30,18 +30,22 @@ type Counterparty struct {
 // PayloadOwnedKinds is the census of kinds whose persisted payload names their
 // responsible member. Consumers derive their staging/read parity checks here.
 func PayloadOwnedKinds() []string {
-	return []string{KindCounterparty, KindCommitmentTask, KindContactShare}
+	return []string{KindCounterparty, KindCommitmentTask, KindContactShare, KindOwnershipTransfer}
 }
 
 // PayloadOwned distinguishes payload ownership from on_behalf_of ownership.
 func PayloadOwned(kind string) bool { return slices.Contains(PayloadOwnedKinds(), kind) }
 
 // Owner returns zero for absent or malformed ownership, which admits no reader.
-// Every kind but a commitment names its owner under `owner_id`.
+// A commitment and a transfer name theirs by their own rule; every other kind
+// names its owner under `owner_id`.
 func Owner(kind string, body json.RawMessage) ids.UUID {
-	if kind == KindCommitmentTask {
+	switch kind {
+	case KindCommitmentTask:
 		owner, _ := CommitmentAskedOf(body)
 		return owner
+	case KindOwnershipTransfer:
+		return OwnershipTransferDecider(body)
 	}
 	var proposal Counterparty
 	if err := json.Unmarshal(body, &proposal); err != nil {
@@ -54,8 +58,11 @@ func Owner(kind string, body json.RawMessage) ids.UUID {
 // staging statements that match one member's proposals in SQL. A commitment
 // names its owner as CommitmentAskedOf reads it: the seat, else the promiser.
 func OwnerSQL(kind string) string {
-	if kind == KindCommitmentTask {
+	switch kind {
+	case KindCommitmentTask:
 		return "COALESCE(proposed_change->>'seat_id', proposed_change->>'promiser_seat_id')"
+	case KindOwnershipTransfer:
+		return "proposed_change->>'decider_id'"
 	}
 	return "proposed_change->>'owner_id'"
 }

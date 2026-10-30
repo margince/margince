@@ -2627,7 +2627,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",
   "record.notYoursToChange":
-    "Bạn không có quyền sửa công ty này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "record.logActivityRefused":
@@ -3889,6 +3889,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
+  "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
@@ -6461,6 +6462,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "recordAccess.option.ownerNeeded": "Giao người chịu trách nhiệm trước.",
   "recordAccess.option.workspace": "Mọi thành viên trong công ty",
   "recordAccess.manage": "Quản lý quyền truy cập",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "Đề nghị {owner} chuyển giao",
+  "handover.requested":
+    "Bạn đã đề nghị {owner} chuyển giao. Đề nghị còn hiệu lực đến {date}.",
+  "handover.withdraw": "Rút lại đề nghị",
+  "handover.sent": "Đã gửi đề nghị tới {owner}",
+  "handover.withdrawn": "Đã rút lại đề nghị",
   "whoCanSee.title": "Ai có thể xem hồ sơ này",
   "whoCanSee.group.owner": "Người chịu trách nhiệm",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",
@@ -15498,7 +15506,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Liên hệ này đang trong kho lưu trữ nên không thể thay đổi.",
   "contact.notYoursToChange":
-    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chia sẻ, hoặc liên hệ quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
   "contact.rail.employmentTitle": "Công ty",

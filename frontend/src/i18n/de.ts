@@ -2710,7 +2710,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
-    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "record.logActivityRefused":
@@ -3993,6 +3993,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
+  "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -6622,6 +6623,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Lege zuerst ein verantwortliches Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
   "recordAccess.manage": "Zugriff verwalten",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "{owner} um Übergabe bitten",
+  "handover.requested":
+    "Du hast {owner} um die Übergabe gebeten. Die Anfrage bleibt bis {date} offen.",
+  "handover.withdraw": "Anfrage zurückziehen",
+  "handover.sent": "Anfrage an {owner} gesendet",
+  "handover.withdrawn": "Anfrage zurückgezogen",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",
   "whoCanSee.group.owner": "Verantwortlich",
   "whoCanSee.group.shared": "Direkt geteilt",
@@ -15926,7 +15934,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert und lässt keine Änderungen zu.",
   "contact.notYoursToChange":
-    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",

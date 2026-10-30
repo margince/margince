@@ -3175,6 +3175,18 @@ func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordTyp
 	httperr.NotImplemented(w, r, "ClaimRecord")
 }
 
+func (stubs) WithdrawOwnershipRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawOwnershipRequest")
+}
+
+func (stubs) GetOwnershipRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOwnershipRequest")
+}
+
+func (stubs) RequestOwnershipTransfer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.RequestOwnershipTransferParams) {
+	httperr.NotImplemented(w, r, "RequestOwnershipTransfer")
+}
+
 func (stubs) ListRecordAssignments(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.AssignmentRecordType, recordId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "ListRecordAssignments")
 }

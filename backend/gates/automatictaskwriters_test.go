@@ -114,6 +114,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:teamQueueClause":                  "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/handover.go:openTasksAssignedTo":                  "a handover moves every open task the departed member holds, current or not, so none stays on the seat",
+	"modules/activities/handover.go:CountRecordTasksHeldByTx":             "counts the open tasks a record's handover would move, current or not; it assigns none",
 	"modules/activities/homerepair.go:pristineRepairTaskSQL":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/homerepair.go:readHomeRepairTasksTx":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",

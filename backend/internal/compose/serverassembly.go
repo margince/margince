@@ -387,6 +387,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom
