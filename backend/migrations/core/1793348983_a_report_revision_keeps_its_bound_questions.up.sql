@@ -8,4 +8,4 @@ ALTER TABLE report_definition_revision
   ADD COLUMN question_bindings jsonb NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE report_definition_revision
   ADD CONSTRAINT report_definition_revision_question_bindings_is_an_object
-  CHECK (jsonb_typeof(question_bindings) = 'object');
+  CHECK (jsonb_typeof(question_bindings) = 'object') NOT VALID;
