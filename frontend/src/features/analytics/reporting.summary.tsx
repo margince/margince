@@ -45,6 +45,7 @@ const HEADLINE_METRICS = [
   "leads_created",
   "leads_promoted",
   "lead_first_response",
+  "leads_awaiting_response",
   "partner_pipeline",
   "partner_won",
   "partner_commission",

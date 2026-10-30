@@ -45,6 +45,7 @@ const metricDateHeading: Partial<
   leads_promoted: "reporting.createdOn",
   lead_status_moves: "reporting.movedOn",
   lead_first_response: "reporting.arrivedOn",
+  leads_awaiting_response: "reporting.arrivedOn",
   partner_pipeline: "reporting.createdOn",
   partner_won: "reporting.closedOn",
   partner_commission: "reporting.accruedOn",

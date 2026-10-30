@@ -26,6 +26,7 @@ var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	reportingLeadStatusMoves:          {En: "Lead status changes", De: "Statuswechsel von Leads", Vi: "Lượt đổi trạng thái lead"},
 	reportingLeadsPromoted:            {En: "Leads qualified", De: "Qualifizierte Leads", Vi: "Lead đủ điều kiện"},
 	reportingLeadFirstResponse:        {En: "First response time", De: "Zeit bis zur ersten Antwort", Vi: "Thời gian phản hồi đầu tiên"},
+	reportingLeadsAwaitingResponse:    {En: "Leads still waiting for a reply", De: "Leads, die noch auf eine Antwort warten", Vi: "Lead vẫn đang chờ phản hồi"},
 	reportingPartnerPipeline:          {En: "Partner pipeline", De: "Pipeline über Partnerunternehmen", Vi: "Pipeline từ đối tác"},
 	reportingPartnerWon:               {En: "Partner sales won", De: "Umsatz über Partnerunternehmen", Vi: "Doanh số chốt từ đối tác"},
 	reportingPartnerCommission:        {En: "Partner commission", De: "Provision für Partnerunternehmen", Vi: "Hoa hồng đối tác"},

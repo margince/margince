@@ -7146,6 +7146,40 @@ export const en = {
   "analytics.covPermissionLimited": "Access needs renewal",
   "analytics.covNotConnected": "Not connected",
   "analytics.myPipeline": "My open deals",
+  "analytics.sdrLeads": "My leads this month",
+  "analytics.sdrReading.leads_promoted": "Leads qualified",
+  "analytics.sdrReading.lead_first_response":
+    "First reply time, answered leads",
+  "analytics.sdrReading.leads_awaiting_response":
+    "Leads still waiting for a first reply",
+  "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
+  "analytics.sdrUpcomingMeetings": "Meetings coming up",
+  "analytics.sdrUpcomingMeetingsDetail":
+    "Booked and not yet held, today’s count.",
+  "analytics.sdrWaiting": "Handoffs waiting on others",
+  "analytics.sdrWaitingIntro":
+    "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
+  "analytics.sdrWaitingCount": "Waiting",
+  "analytics.sdrLongestWait": "Longest wait: {age}",
+  "analytics.sdrBlocked": "Recipient can no longer act",
+  "analytics.sdrBlockedDetail":
+    "Nobody will decide these until a manager reassigns them.",
+  "analytics.sdrQueued": "In the shared queue",
+  "analytics.sdrReturned": "Returned to you",
+  "analytics.sdrReturnedDetail": "These wait on you to submit them again.",
+  "analytics.sdrShowMore": "Show more",
+  "analytics.sdrRecipientInactive": "{name} can no longer act",
+  "analytics.sdrSharedQueue": "Shared queue",
+  "analytics.sdrWaitingFor": "Waiting {age}",
+  "analytics.sdrWaitingSinceResubmit":
+    "Waiting {age} since you submitted it again",
+  "analytics.sdrRestrictedProspect": "A prospect you cannot open",
+  "analytics.sdrNeedsYou": "Waiting on you",
+  "analytics.sdrOpenWorklist": "Open Worklist",
+  "analytics.sdrNothingNeedsYou": "Nothing needs you right now",
+  "analytics.sdrWorkCount": "Items to do: {total}. Urgent: {urgent}.",
+  "analytics.sdrWorkIncomplete":
+    "Some of your work could not be read, so this list may be missing items.",
   "analytics.myMeetings": "My meetings",
   "analytics.myTargets": "My targets",
   "analytics.targetOf": "{actual} of {target}",

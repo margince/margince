@@ -19737,6 +19737,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/sdr-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An SDR's handoffs waiting on somebody else, and their upcoming meetings.
+         * @description `workflow` says whether this workspace hands prospects on. A reporting framework set up
+         *     for SDR teams (`template: sdr`) does, and `handoffs` is then present. Any other setup
+         *     answers `qualification` and leaves `handoffs` out. A zero is never read as the setup:
+         *     a team that hands on nothing this week still has a handoff workflow.
+         *
+         *     A handoff waits from the start of its current submission. One returned and resubmitted
+         *     starts a new wait. Each handoff is credited to whoever submitted that round. No handoff
+         *     target time is configured anywhere, so only the age is given.
+         *
+         *     `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
+         *     that have not happened by `as_of`, credited by the
+         *     meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
+         *     read activities.
+         *
+         *     Both counts are one statement each over the scope, never a read per row. The scope is
+         *     checked as every analytics read checks it: an owner or team the seat may not measure
+         *     is 404, so the answer does not say that they exist.
+         */
+        get: operations["getSdrSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sdr-summary/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The handoffs waiting on somebody else, oldest wait first, one page at a time.
+         * @description The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
+         *     current wait began and then by id. A prospect the seat may not read is listed as
+         *     `restricted` with no name and no id. A handoff carries no deal while it waits, so no
+         *     deal field is ever part of a row.
+         */
+        get: operations["listSdrWaitingHandoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/schema": {
         parameters: {
             query?: never;
@@ -40056,7 +40115,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -40071,6 +40130,78 @@ export interface components {
          * @enum {string}
          */
         ReportingStatus: "ok" | "no_data" | "not_configured" | "insufficient_sample" | "partial" | "unsupported" | "unavailable" | "failed";
+        SdrSummary: {
+            /**
+             * Format: date-time
+             * @description The instant both counts were read at.
+             */
+            as_of: string;
+            scope: components["schemas"]["AnalyticsScope"];
+            /**
+             * @description `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
+             * @enum {string}
+             */
+            workflow: "handoff" | "qualification";
+            handoffs?: components["schemas"]["SdrHandoffTotals"];
+            /** @description Booked meetings that start after `as_of`, credited to the scope. */
+            upcoming_meetings?: number;
+        };
+        SdrHandoffTotals: {
+            /** @description Handoffs submitted and not yet decided. */
+            waiting: number;
+            /** @description Waiting handoffs offered to nobody in particular. */
+            unassigned: number;
+            /** @description Waiting handoffs whose named recipient can no longer act, so nobody will decide them until someone reassigns them. */
+            blocked: number;
+            /** @description Handoffs sent back to the submitter to try again. These wait on the submitter. */
+            returned: number;
+            /**
+             * Format: date-time
+             * @description When the longest current wait began. Absent with nothing waiting.
+             */
+            oldest_waiting_since?: string;
+        };
+        SdrWaitingHandoff: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description The start of the current submission.
+             */
+            waiting_since: string;
+            /** @description Whether this handoff was returned and submitted again. */
+            resubmitted: boolean;
+            /** @description The seat may not read the prospect, so `subject` is absent. */
+            restricted: boolean;
+            subject?: components["schemas"]["SdrHandoffSubject"];
+            /**
+             * Format: uuid
+             * @description Who submitted the current round.
+             */
+            submitter_id?: string;
+            recipient?: components["schemas"]["SdrHandoffRecipient"];
+        };
+        SdrHandoffSubject: {
+            /** @enum {string} */
+            type: "lead" | "contact";
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SdrHandoffRecipient: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /** @description False when the recipient was suspended, deactivated or removed. The handoff is then blocked. */
+            active: boolean;
+        };
+        SdrWaitingHandoffPage: {
+            /** Format: date-time */
+            as_of: string;
+            rows: components["schemas"]["SdrWaitingHandoff"][];
+            /** @description Absent on the last page. */
+            next_cursor?: string;
+        };
         ReportingScope: {
             /** @enum {string} */
             kind: "owner" | "team" | "workspace" | "managed_teams";
@@ -83010,6 +83141,67 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getSdrSummary: {
+        parameters: {
+            query?: {
+                /** @description Whose work to count. Omitted means the seat's own default population. */
+                scope_kind?: "owner" | "team" | "workspace";
+                /** @description The owner or team named by `scope_kind`. */
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSdrWaitingHandoffs: {
+        parameters: {
+            query?: {
+                /** @description Whose handoffs to list. Omitted means the seat's own default population. */
+                scope_kind?: "owner" | "team" | "workspace";
+                /** @description The owner or team named by `scope_kind`. */
+                scope_id?: string;
+                /** @description Opaque position from a previous page's `next_cursor`. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of waiting handoffs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrWaitingHandoffPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getAnalyticsSchema: {
