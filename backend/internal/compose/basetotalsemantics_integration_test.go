@@ -54,8 +54,8 @@ func TestASumSaysWhatItCouldPriceAndAStrictTotalSaysNothing(t *testing.T) {
 		t.Errorf("the coverage count answered %q, want the two it could not price", got)
 	}
 
-	// An average has no zero to fall back on, so a group holding an unpriced
-	// amount has no average rather than the average of the rest.
+	// An average has no zero to fall back on. A group holding an unpriced
+	// amount has no average, rather than the average of the rest.
 	if got := totalOver(t, e, deals.StrictBaseTotalSQL("avg(v.base)", unpriced)); got != "" {
 		t.Errorf("the average answered %q, want nothing — 200 is the average of the "+
 			"three it could price, read as the average of five", got)
