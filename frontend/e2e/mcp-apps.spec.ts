@@ -368,7 +368,7 @@ const PLAIN_CALLS = [
         warnings: [],
       },
     },
-    heading: 'Updated lead "Jane Doe"',
+    heading: "Updated a lead",
   },
   {
     name: "a refused create",
