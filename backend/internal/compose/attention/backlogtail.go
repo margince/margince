@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // backlogCursor is the tail a walk carries: which sources it continues, where
@@ -47,6 +48,7 @@ type tailWindow struct {
 var tailSources = map[string][]crmcontracts.WorklistItemCategory{
 	string(sourceTask):    taskCategories,
 	string(sourceWaiting): {categoryOfSource(sourceWaiting)},
+	string(sourceAtRisk):  {categoryOfSource(sourceAtRisk)},
 }
 
 // valid says whether a client-held tail is one this binary could have minted.
@@ -120,6 +122,7 @@ func (s *Service) withTail(
 			above[at] = true
 		}
 	}
+	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
 	return append(shown, tail...), rest, failed
 }
@@ -173,9 +176,11 @@ func (s *Service) readTail(
 		return tailBatch{}, err
 	}
 	batch.source = source
-	rows := make([]ranked, len(batch.rows))
-	for i, row := range batch.rows {
-		rows[i] = row.row
+	rows := make([]ranked, 0, len(batch.rows))
+	for _, row := range batch.rows {
+		if !row.elsewhere {
+			rows = append(rows, row.row)
+		}
 	}
 	admitted, err := s.admitTail(ctx, page, rest.Window.AsOf, rows)
 	if err != nil {
@@ -200,6 +205,8 @@ func (s *Service) tailReader(source crmcontracts.WorklistItemSource) func(
 		return s.moreTasks
 	case source == sourceWaiting && s.backlog.waiting != nil:
 		return s.moreWaiting
+	case source == sourceAtRisk && s.backlog.risk != nil:
+		return s.moreRisk
 	}
 	return nil
 }
@@ -211,6 +218,8 @@ type tailPage struct {
 	day           crmcontracts.Attention
 	bounded       map[crmcontracts.WorklistItemSource]bool
 	first         bool
+	// dealsAbove are the deals a ranked row already reports. A deal is one row.
+	dealsAbove map[ids.UUID]bool
 }
 
 // moreTasks reads the next batch of the task window this page's filter shows,

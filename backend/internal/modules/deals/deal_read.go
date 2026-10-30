@@ -133,6 +133,10 @@ type ListDealsInput struct {
 	QuietForDays *int
 	// CloseBefore filters calendar dates before the bound, before pagination.
 	CloseBefore *time.Time
+	// AtRisk narrows to the at-risk candidates, quiet or past their close.
+	AtRisk *AtRiskWindow
+	// positions, set by ListDealsPositioned, receives each row's resume cursor.
+	positions *[]string
 	// RangeFilters are the close-day, value, currency and country dials.
 	RangeFilters
 	IncludeArchived bool
@@ -279,7 +283,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	if err != nil {
 		return nil, nil, err
 	}
-	return pre, where, nil
+	return pre, in.atRiskTerms(pre, where), nil
 }
 
 // scanDealPage drains one list query's rows: each deal plus, under a

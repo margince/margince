@@ -39,9 +39,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceFailedApproval, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceDsr, day.Dsr, asOf, classifyLegalDeadline)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceNoticeCase, day.NoticeCases, asOf, classifyLegalDeadline)
-	rows = appendLane(rows, crmcontracts.WorklistItemSourceDealAtRisk, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
-		return classifyRisk(item, at, bar, money)
-	})
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceDealAtRisk, day.AtRisk, asOf, riskClassifier(bar, money))
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceTask, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceBounce, day.Bounces, asOf, classifyBounce)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceUndelivered, day.Undelivered, asOf, classifyUndelivered)

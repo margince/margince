@@ -55,6 +55,9 @@ type WaitingBacklog interface {
 	// WaitingAfter judges up to judge messages after a position, oldest
 	// first, and answers the cards among them.
 	WaitingAfter(ctx context.Context, asOf time.Time, narrow WaitingFor, after string, judge int) (WaitingTail, error)
+	// DealsWaiting names which of these deals a waiting card names, by the
+	// lane's own rules under its narrowing.
+	DealsWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor, deals []ids.UUID) (map[ids.UUID]bool, error)
 }
 
 // WaitingTail is one read of the waiting backlog. Through is the position
@@ -86,6 +89,7 @@ func (s *Service) WithTaskBacklog(b TaskBacklog) *Service {
 type backlogState struct {
 	tasks   TaskBacklog
 	waiting WaitingBacklog
+	risk    RiskBacklog
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page

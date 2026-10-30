@@ -65,6 +65,9 @@ type doneState struct {
 	at    map[RowRef]time.Time
 	zone  *time.Location
 	probe func([]ranked)
+	// asked are the at-risk deals a Done check looks for. The at-risk tail
+	// may hold them below the ranked rows.
+	asked []ids.UUID
 }
 
 // offersDone is whether a source's rows offer Done. dispositionsFor answers
@@ -146,6 +149,12 @@ func (s *Service) ReopenRows(ctx context.Context, rows []RowRef) error {
 // scope, its group members included, with nothing hidden as done.
 func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRef]bool) error {
 	probe := *s
+	probe.marked.asked = nil
+	for row := range missing {
+		if deal, err := ids.Parse(row.RowID); err == nil && row.Source == string(sourceAtRisk) {
+			probe.marked.asked = append(probe.marked.asked, deal)
+		}
+	}
 	probe.marked.probe = func(candidates []ranked) {
 		for _, row := range candidates {
 			if !domainMaintenanceBatch(row) {
