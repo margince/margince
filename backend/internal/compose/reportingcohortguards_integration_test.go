@@ -43,8 +43,9 @@ func TestStageCohortWithoutAPipelineIsRefusedBeforeAnyEntryIsRead(t *testing.T) 
 	}
 }
 
-// The cohort serves a deal's name and reads the rest from its history. A mask
-// on the deal's amount or close date leaves every member in it.
+// The cohort serves a deal's name, owner, stage, pipeline and outcome, and
+// reads no amount or date. A mask on the amount or close date keeps every
+// member; a mask on the owner withholds them.
 func TestStageCohortKeepsADealWhoseAmountTheReaderMayNotSee(t *testing.T) {
 	f := newStageCohortFixture(t)
 	start := f.at
@@ -54,19 +55,25 @@ func TestStageCohortKeepsADealWhoseAmountTheReaderMayNotSee(t *testing.T) {
 	at := f.at.Add(time.Hour)
 	service := newReportingService(f.env.Pool, func() time.Time { return at })
 	selection := f.selection(crmcontracts.ReportingScope{Kind: "workspace"}, crmcontracts.ReportingWindow{StartAt: start, EndAt: f.at})
-	masked := reportingActor(f.env)
-	actor, _ := principal.Actor(masked)
-	// A reader whose rows are bounded, since an unbounded one reads every field.
-	actor.Permissions.RowScope = principal.RowScopeTeam
-	for _, field := range []string{"amount_minor", "expected_close_date", "currency"} {
-		actor.Permissions.FieldMasks = append(actor.Permissions.FieldMasks, principal.FieldMask{Object: "deal", Field: field, Condition: principal.MaskAlways})
+	maskedOn := func(fields ...string) context.Context {
+		ctx := reportingActor(f.env)
+		actor, _ := principal.Actor(ctx)
+		// A reader whose rows are bounded, since an unbounded one reads every field.
+		actor.Permissions.RowScope = principal.RowScopeTeam
+		for _, field := range fields {
+			actor.Permissions.FieldMasks = append(actor.Permissions.FieldMasks, principal.FieldMask{Object: "deal", Field: field, Condition: principal.MaskAlways})
+		}
+		return principal.WithActor(ctx, actor)
 	}
-	masked = principal.WithActor(masked, actor)
 
-	seen := cohortRows(t, f.evaluateAs(masked, t, service, selection))[f.stage(0).String()]
+	kept := cohortRows(t, f.evaluateAs(maskedOn("amount_minor", "expected_close_date", "currency"), t, service, selection))[f.stage(0).String()]
+	withheld := f.evaluateAs(maskedOn("owner_id"), t, service, selection)
 
-	if seen.observations != 5 || seen.outcomes[cohortAdvanced] != 5 {
-		t.Fatalf("with the amount masked the first stage reads %+v, want all 5 deals advanced", seen)
+	if kept.observations != 5 || kept.outcomes[cohortAdvanced] != 5 {
+		t.Fatalf("with the amount masked the first stage reads %+v, want all 5 deals advanced", kept)
+	}
+	if rows := cohortRows(t, withheld); len(rows) != 0 || !withheld.Metrics[0].Coverage.Withheld {
+		t.Fatalf("with the owner masked the cohort reads %+v (withheld %v), want no member", rows, withheld.Metrics[0].Coverage.Withheld)
 	}
 }
 

@@ -12,11 +12,6 @@ import (
 )
 
 func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
-	// The stage cohort reads owner, pipeline and stage from the history; the
-	// deal's name is the only deal column it serves.
-	if metric == reportingStageConversion {
-		return []string{reportingName}
-	}
 	fields := []string{reportingName, fieldOwnerID, "pipeline_id", "stage_id", reportingStatusField}
 	switch metric {
 	case reportingBookingsWon:
@@ -27,6 +22,9 @@ func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "amount_minor", reportingCurrency)
 	case reportingStageAge:
 		fields = append(fields, "created_at", "expected_close_date")
+	case reportingStageConversion:
+		// The cohort serves and groups by the fields above and reads no
+		// amount, currency or date of the deal.
 	case reportingPartnerPipeline:
 		fields = append(fields, fieldCreatedAt, reportingAmountField, reportingCurrency, reportingPartnerField, "partner_attribution")
 	case reportingPartnerWon:
