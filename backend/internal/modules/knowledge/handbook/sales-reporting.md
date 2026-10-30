@@ -14,7 +14,11 @@ The row of figures at the top shows sales won and open pipeline, with the number
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
-“This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts. The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
+“This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
+
+A week starts on Monday at 00:00. At that exact moment the week holds nothing yet, and Analytics says so instead of showing zeros. With “This week”, a monthly target still counts the whole month up to the cutoff.
+
+The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
 
 Targets use the month or fiscal quarter that holds the real cutoff, even when the custom end date you asked for is later. A saved edition keeps its own cutoff.
 
@@ -30,7 +34,9 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
   are held back. These numbers describe the whole group; they do not warn you that one deal has stopped moving.
 - **SDR outcomes:** meetings held and accepted opportunities for each week, counted
-  apart. A held meeting keeps the host that was recorded when it was held. An older meeting with no such record, or only part of one, is given to its host of today. The details for the number say when this happens. An accepted opportunity stays with
+  apart. A held meeting keeps the host that was recorded when it was held, and the day it was held on. A meeting entered with only a date stays on that date when it is moved later. An older meeting with no such record, or only part of one, is given to its host of today.
+
+  Some older meetings were saved before Margince kept whether a start had a time. One of those that starts at 12:00 UTC may count on the day next to it. The details for the number say when either happens. An accepted opportunity stays with
   the SDR who created it after the deal gets a new owner. These two lines do not
   show a rate of turning one into the other.
 - **Leads:** new leads by origin and lead status changes by the new status. Leads qualified into a deal show out of all that came in. First response time is the middle wait. Lead figures take no pipeline.

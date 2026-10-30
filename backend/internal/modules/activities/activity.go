@@ -399,12 +399,12 @@ func writeActivitySatellites(
 	// arrives `booked` far more often than not, and that booking is the fact
 	// every "how many did we book this period" question counts.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:     in.recordedAt,
-		ActivityID:     id,
-		Status:         meetingStatusOrNone(in.MeetingStatus),
-		ScheduledStart: &occurredAt,
-		SourceSystem:   in.SourceSystem,
-		SourceID:       in.SourceID,
+		RecordedAt:   in.recordedAt,
+		ActivityID:   id,
+		Status:       meetingStatusOrNone(in.MeetingStatus),
+		Scheduled:    scheduledAs(occurredAt, storedPrecision(in.OccurredPrecision)),
+		SourceSystem: in.SourceSystem,
+		SourceID:     in.SourceID,
 	}); err != nil {
 		return err
 	}

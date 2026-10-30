@@ -128,10 +128,11 @@ func RestoreMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) (bool,
 
 // restoreMeetingHistoryStartTx moves the start on the meeting's history rows.
 // The outcome save also recorded the noon start there, and the held-meetings
-// report prefers it over the activity's own start.
+// report prefers it over the activity's own start. The restored start is an
+// instant, as the selection proved, so the rows say so.
 func restoreMeetingHistoryStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting) error {
-	if _, err := tx.Exec(ctx, `UPDATE activity_meeting_history SET scheduled_start = $2
-		WHERE activity_id = $1 AND scheduled_start = $3`, m.ID, m.Original, m.Noon); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE activity_meeting_history SET scheduled_start = $2, scheduled_precision = $4
+		WHERE activity_id = $1 AND scheduled_start = $3`, m.ID, m.Original, m.Noon, PrecisionInstant); err != nil {
 		return fmt.Errorf("activities: restoring a meeting's history start: %w", err)
 	}
 	return nil
@@ -180,6 +181,6 @@ func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting
 		return false, err
 	}
 	return true, recordMeetingTransition(ctx, tx, meetingTransition{
-		ActivityID: ids.From[ids.ActivityKind](m.ID), Status: meetingStatusOrNone(status), ScheduledStart: &m.Original,
+		ActivityID: ids.From[ids.ActivityKind](m.ID), Status: meetingStatusOrNone(status), Scheduled: scheduledAs(m.Original, PrecisionInstant),
 	})
 }

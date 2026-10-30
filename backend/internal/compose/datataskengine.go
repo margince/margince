@@ -50,7 +50,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		unaskedCommitmentsDataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyIndustryDataTask(), contactEmployersDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
 		membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
-		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
+		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
 		signalDayCountsDataTask(),
