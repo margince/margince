@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -293,21 +294,25 @@ func readHandoffCohort(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 }
 
 // readWaitingSubmitters lists the seats behind the open handoffs
-// readHandoffTotals counts: those waiting on a decision, then those returned.
+// readHandoffTotals counts: waiting on a decision, then returned, unassigned
+// and blocked. The oldest wait is one of the waiting group's.
 func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) ([][]ids.UUID, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "cycle.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
 		return nil, err
 	}
-	seats := func(status string) string {
-		return "COALESCE(array_remove(array_agg(DISTINCT cycle.submitter_id_at_change) FILTER (WHERE h.status=" + b.add(status) + "),NULL),'{}')"
+	seats := func(filter string) string {
+		return "COALESCE(array_remove(array_agg(DISTINCT cycle.submitter_id_at_change) FILTER (WHERE " + filter + "),NULL),'{}')"
 	}
-	query := `SELECT ` + seats(contacts.HandoffSubmitted) + `,` + seats(contacts.HandoffRecycled) + `
+	waiting := "h.status=" + b.add(contacts.HandoffSubmitted)
+	query := `SELECT ` + seats(waiting) + `,` + seats("h.status="+b.add(contacts.HandoffRecycled)) + `,
+ ` + seats(waiting+" AND h.assigned_to IS NULL") + `,
+ ` + seats(waiting+" AND h.assigned_to IS NOT NULL AND NOT ("+identity.LiveMemberSQL("r")+")") + `
  ` + handoffCycleSQL + `
  WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population)
-	groups := make([][]ids.UUID, 2)
-	err = tx.QueryRow(ctx, query, b.values...).Scan(&groups[0], &groups[1])
+	groups := make([][]ids.UUID, 4)
+	err = tx.QueryRow(ctx, query, b.values...).Scan(&groups[0], &groups[1], &groups[2], &groups[3])
 	return groups, err
 }
 

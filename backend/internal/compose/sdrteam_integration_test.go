@@ -53,8 +53,14 @@ func (f *sdrTeamFixture) as(user ids.UUID) context.Context {
 
 func (f *sdrTeamFixture) submitAs(t *testing.T, user ids.UUID, name string) ids.UUID {
 	t.Helper()
+	return f.submitTo(t, user, name, &f.ae)
+}
+
+// submitTo hands a prospect on to recipient, or to the shared queue for nil.
+func (f *sdrTeamFixture) submitTo(t *testing.T, user ids.UUID, name string, recipient *ids.UUID) ids.UUID {
+	t.Helper()
 	contact := f.e.seedID(t, `INSERT INTO contact(id,full_name,source,captured_by) VALUES($1,$2,'manual','system:fixture')`, name)
-	id, err := f.handoffs.SubmitHandoff(f.as(user), contacts.NewSDRHandoff{ContactID: &contact, AssignedTo: &f.ae})
+	id, err := f.handoffs.SubmitHandoff(f.as(user), contacts.NewSDRHandoff{ContactID: &contact, AssignedTo: recipient})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,5 +297,34 @@ func TestSdrTeamReviewJudgesWaitingAndReturnedApart(t *testing.T) {
 	got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
 	if !got.Withheld || got.Handoffs != nil {
 		t.Fatalf("waiting and returned are each one colleague's count, so the review is withheld: %+v", got.Handoffs)
+	}
+}
+
+// Two SDRs' handoffs from before the period still wait, so the waiting count
+// has two seats behind it. Only one SDR's is in the shared queue, and only
+// one SDR's recipient can no longer act.
+func TestSdrTeamReviewJudgesUnassignedAndBlockedApart(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		second func(f *sdrTeamFixture) *ids.UUID
+	}{
+		{"unassigned", func(*sdrTeamFixture) *ids.UUID { return nil }},
+		{"blocked", func(f *sdrTeamFixture) *ids.UUID { return &f.e.Rep3 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newSdrTeamFixture(t)
+			e := f.e
+			f.at = f.at.AddDate(0, 0, -14)
+			f.submitAs(t, e.Rep1, "Waiting on the AE")
+			f.submitTo(t, f.second, "Waiting elsewhere", tc.second(f))
+			if _, err := e.Pool.Exec(context.Background(), `UPDATE app_user SET status='suspended' WHERE id=$1`, e.Rep3); err != nil {
+				t.Fatal(err)
+			}
+			e.showIndividualPerformance(t, false)
+			got := f.review(f.as(f.manager), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
+			if !got.Withheld || got.Handoffs != nil {
+				t.Fatalf("the %s count is one colleague's, so the review is withheld: %+v", tc.name, got.Handoffs)
+			}
+		})
 	}
 }
