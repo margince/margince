@@ -120,6 +120,7 @@ describe("a stored value", () => {
       "margince.setup.reminderHidden",
       "margince.taskReminders.shown",
       "margince.aiReveal.seen",
+      "margince.analytics.overviewView",
     ]);
   });
 });

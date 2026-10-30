@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
@@ -12,7 +10,7 @@ import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { problemCodeOf, unwrap } from "../../lib/problem";
+import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -27,9 +25,11 @@ import {
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingPeriodIsEmpty,
-  reportingQuery,
 } from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import {
+  useReportingCatalog,
+  useReportingEvaluation,
+} from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 import { type ReportingView, VIEW_SHAPE, viewRequest } from "./reporting.views";
 
@@ -54,29 +54,41 @@ export function ReportingOverview({
 }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = usePipelines();
+  // Only deal figures take a pipeline, so the other views never wait on one.
+  const dealFilters = VIEW_SHAPE[view].dealFilters;
+  const pipelines = usePipelines(dealFilters);
+  const body = (
+    catalog: Catalog,
+    pipelines: readonly components["schemas"]["Pipeline"][],
+  ) => (
+    <OverviewBody
+      view={view}
+      scope={scope}
+      scopeControl={scopeControl}
+      emptyNotice={emptyNotice}
+      catalog={catalog}
+      pipelines={pipelines}
+    />
+  );
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.performance")}>
-      {(catalog) => (
-        <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
-          {(pipelines) => (
-            <OverviewBody
-              view={view}
-              scope={scope}
-              scopeControl={scopeControl}
-              emptyNotice={emptyNotice}
-              catalog={catalog}
-              pipelines={pipelines}
-            />
-          )}
-        </QueryGate>
-      )}
+      {(catalog) =>
+        dealFilters ? (
+          <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
+            {(pipelines) => body(catalog, pipelines)}
+          </QueryGate>
+        ) : (
+          body(catalog, [])
+        )
+      }
     </QueryGate>
   );
 }
 
-function useOverviewFilters(
+/** The page's dials, read from the address; `defaultPeriod` is the view's own. */
+export function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
+  defaultPeriod: ReportingSelection["period"] = "this_month",
 ) {
   const [params] = useUrlParams();
   const from = params.get("from") ?? "";
@@ -87,7 +99,7 @@ function useOverviewFilters(
   const setEnd = (value: string) => replaceDial("through", value);
   const period =
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
-    "this_month";
+    defaultPeriod;
   const setPeriod = (value: string) => replaceDial("period", value);
   const defaultPipeline =
     pipelines.find((pipeline) => pipeline.is_default)?.id ??
@@ -174,17 +186,7 @@ function OverviewBody({
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
   const validPeriod = validDates && metrics.length > 0;
-  const query = useQuery({
-    enabled: validPeriod,
-    queryKey: ["reporting-evaluation", selection],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/analytics/evaluate", {
-          params: { query: reportingQuery(selection) },
-        }),
-      );
-    },
-  });
+  const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
   const invalidSelection =
     problemCodeOf(query.error) === "reporting_interval_invalid";
@@ -301,7 +303,7 @@ function OverviewBody({
   );
 }
 
-function customInterval(
+export function customInterval(
   period: string,
   start: ISODate | "",
   end: ISODate | "",
@@ -314,14 +316,18 @@ function customInterval(
   };
 }
 
-function validDateRange(period: string, start: string, end: string): boolean {
+export function validDateRange(
+  period: string,
+  start: string,
+  end: string,
+): boolean {
   return period !== "custom" || !!(start && end);
 }
 
 // "Results through" only while the period is still running: a closed period
 // ends where it says it does, and the line would only repeat it. A period read
 // at its first instant holds no time, which is said rather than drawn as zeros.
-function resultsThrough(
+export function resultsThrough(
   evaluation: ReportingEvaluation | undefined,
   locale: Locale,
   t: Translator,

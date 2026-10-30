@@ -20,7 +20,6 @@ afterEach(() => {
 });
 
 it.each([
-  "#/analytics",
   "#/analytics/performance",
   "#/analytics/win-loss",
   "#/analytics/stage-age",

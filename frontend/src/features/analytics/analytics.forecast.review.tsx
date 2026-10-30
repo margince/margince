@@ -96,10 +96,12 @@ export function useInputChecks(enabled = true, scope?: AnalyticsScope) {
   return useQuery({
     enabled,
     queryKey: ["input-checks", query],
-    queryFn: async () => {
+    // The signal stops the read of a scope the reader has already left.
+    queryFn: async ({ signal }) => {
       const data = unwrap(
         await api.GET("/forecast/assurance/exceptions", {
           params: { query },
+          signal,
         }),
       );
       return data.data;
