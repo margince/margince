@@ -124,7 +124,6 @@ function lead(open: Proposal[], waiting: Proposal[], now: number): HTMLElement {
         ? `${soon} ${soon === 1 ? "runs" : "run"} out within 6 hours. ${byAssistant} proposed by an assistant.`
         : `${byAssistant} proposed by an assistant. Nothing runs out within 6 hours.`;
   return hero({
-    kicker: "Approvals",
     figure: String(waiting.length),
     caption: waiting.length === 1 ? "decision waiting" : "decisions waiting",
     sentence,

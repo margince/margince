@@ -6,11 +6,12 @@
 // Each row's "Catch me up" puts the follow-up question in the chat. The card
 // calls no tool itself, so it declares no actions.
 
+import { monogramOf } from "../../design-system/avatarmesh";
 import { askAssistant } from "../actions";
 import { badge } from "../badge";
 import { el } from "../bridge";
 import { hero, type Part, ring, segments, share } from "../hero";
-import { avatar, panel, panelBody, rowAction, viewRenderer } from "../parts";
+import { avatar, panel, panelBody, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asFiniteNumber,
@@ -77,29 +78,35 @@ function row(r: Row): HTMLElement {
   const text = el("div", "attention-text");
   const why = el("div", "attention-reasons");
   why.append(...r.reasons);
-  text.append(el("p", "name attention-name", r.name), why);
+  const name = el("p", "name attention-name");
+  name.append(el("span", "attention-mark"), r.name);
+  text.append(name, why);
   const end = el("div", "attention-end");
   if (r.figure !== undefined) {
     end.appendChild(el("span", "figure attention-figure", r.figure));
   }
   if (r.bar !== undefined) end.appendChild(r.bar);
-  end.appendChild(rowAction("Catch me up", () => askAssistant(r.question)));
-  item.append(r.marker, text, end);
+  const ask = el("button", "attention-ask");
+  ask.setAttribute("type", "button");
+  ask.setAttribute("aria-label", `Catch me up on ${r.name}`);
+  ask.title = "Catch me up";
+  ask.addEventListener("click", () => askAssistant(r.question));
+  item.append(r.marker, text, end, ask);
   return item;
 }
 
-function rankMarker(rank: number): HTMLElement {
-  const node = el("span", "attention-rank figure", rank);
-  node.setAttribute("aria-label", `Rank ${rank}`);
+/** A deal's tile: its monogram on a quiet square, as a list of companies
+ *  reads in the app. */
+function dealTile(name: string): HTMLElement {
+  const node = el("span", "attention-tile", monogramOf(name));
+  node.setAttribute("aria-hidden", "true");
   return node;
 }
 
 /** reasonLine is one reason an item is on the card, in the server's words,
  *  which are written in the workspace's own language. */
 function reasonLine(words: string): HTMLElement {
-  const line = el("p", "meta attention-reason");
-  line.append(el("span", "attention-mark"), words);
-  return line;
+  return el("span", "meta attention-reason", words);
 }
 
 function plural(n: number, one: string, many: string): string {
@@ -123,7 +130,6 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
   ).length;
   body.appendChild(
     hero({
-      kicker: "Pipeline at risk",
       figure: stake.figure,
       caption: stake.total === null ? "deals slipping" : "at stake",
       sentence: `${plural(deals.length, "deal is", "deals are")} slipping. ${plural(quiet, "has", "have")} gone quiet.`,
@@ -137,7 +143,7 @@ function slippingCard(answer: Record<string, unknown>): HTMLElement {
     const rank = asFiniteNumber(deal.rank) ?? index + 1;
     list.appendChild(
       row({
-        marker: rankMarker(rank),
+        marker: dealTile(name),
         name,
         reasons: asList(deal.evidence)
           .map(asRecord)
@@ -197,7 +203,6 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
         : undefined;
   body.appendChild(
     hero({
-      kicker: "Relationship coverage",
       figure: String(deals.length),
       caption: `of ${plural(scanned, "deal", "deals")} at risk`,
       sentence:
@@ -217,11 +222,11 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
   if (floor !== undefined) body.appendChild(el("p", "readings-floor", floor));
   if (deals.length === 0) return card;
   const list = el("ol", "attention-list");
-  deals.forEach((deal, index) => {
+  deals.forEach((deal) => {
     const name = asText(deal.name) || "Unnamed deal";
     list.appendChild(
       row({
-        marker: rankMarker(index + 1),
+        marker: dealTile(name),
         name,
         reasons: asList(deal.risks).map(asRecord).map(riskLine),
         question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): who do we know there, and how do we widen it?`,
@@ -262,7 +267,6 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
   ];
   body.appendChild(
     hero({
-      kicker: "Promises to customers",
       figure: String(overdue),
       caption: "overdue",
       sentence:
@@ -281,7 +285,7 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
 function promiseRow(promise: Record<string, unknown>): HTMLElement {
   const subject = asText(promise.subject) || "A promise";
   const owner = asText(promise.assignee_name);
-  const status = el("p", "meta attention-status");
+  const status = el("span", "meta attention-status");
   status.append(dueBadge(promise), " ");
   status.append(owner === "" ? badge("Nobody owns this", "warning") : owner);
   const reasons = [status];
@@ -289,7 +293,7 @@ function promiseRow(promise: Record<string, unknown>): HTMLElement {
     .map((a) => asText(asRecord(a).name))
     .filter((n) => n !== "");
   if (about.length > 0) {
-    reasons.push(el("p", "meta", `For ${about.join(", ")}`));
+    reasons.push(reasonLine(`For ${about.join(", ")}`));
   }
   const quote = asText(promise.quote);
   if (quote !== "") reasons.push(el("p", "attention-quote", quote));

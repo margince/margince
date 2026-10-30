@@ -243,6 +243,52 @@ ol {
   background: var(--ground);
 }
 
+.dcard[data-layout="deck"] > .dcard-meta {
+  background: none;
+  border-bottom-color: var(--borderSubtle);
+}
+
+.dcard[data-layout="deck"] .dcard-verbs {
+  border-top-color: var(--borderSubtle);
+}
+
+.dcard-meta .t-eyebrow {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+/* A row in a queue reads as a line of a list: what it would do, then where
+   and when, with its verbs at the far end of the line rather than under it. */
+.decision-list .dcard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+}
+
+.decision-list .dcard > * {
+  grid-column: 1;
+}
+
+.decision-list .dcard > .approval-headline {
+  grid-row: 1;
+  font-weight: var(--fontWeightMedium);
+}
+
+.decision-list .dcard > .dcard-meta {
+  grid-row: 2;
+}
+
+.decision-list .dcard > .meta {
+  grid-row: 3;
+}
+
+.decision-list .dcard > .dcard-verbs {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  margin: 0;
+}
+
 .bundle-line {
   justify-content: space-between;
   padding-top: var(--space-4);
@@ -277,13 +323,12 @@ ol {
   outline-offset: 2px;
 }
 
-/* The lead of a card: the figure it is about, read before the rows. It sits
-   on the card's own ground, and colour is left to the picture of its parts. */
+/* The lead of a card: the figure it is about, read before the rows, with
+   colour left to the picture of its parts. */
 .view-hero {
   display: grid;
-  gap: var(--space-4);
-  padding-block-end: var(--space-5);
-  border-block-end: 1px solid var(--borderSubtle);
+  gap: var(--space-5);
+  padding-block-end: var(--space-2);
 }
 
 /* With a picture beside the words, the two share a row while there is room
@@ -299,59 +344,49 @@ ol {
   }
 }
 
-.view-hero .t-eyebrow {
-  font: var(--fontHeadingXXSmall);
-  color: var(--textSecondary);
-}
-
 .view-hero-figure {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
+  gap: var(--space-2) var(--space-3);
 }
 
 .view-hero-number {
   font: var(--fontDisplayLarge);
   font-family: system-ui, sans-serif;
-  font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
 }
 
 .view-hero-caption {
-  font: var(--fontHeadingSmall);
+  font: var(--fontBodyLarge);
   font-family: system-ui, sans-serif;
   color: var(--textSecondary);
 }
 
 .view-hero-sentence {
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
   color: var(--textSecondary);
 }
 
-/* Parts of one total on one track, then the legend that names them. The
-   colours are the status families, so a part reads as what it is. */
+/* Parts of one total as a run of rounded segments, then a row of stats that
+   name them. The colours are the status families, so a part reads as what it is. */
 .view-segments {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .view-segments-track {
   display: flex;
-  gap: 2px;
+  gap: var(--space-1);
   block-size: var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  overflow: hidden;
-  background: var(--bgChip);
-  color: var(--textPrimary);
 }
 
 .view-segment {
   flex-basis: 0;
-  min-inline-size: 6px;
+  min-inline-size: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 
 [data-tone="danger"].view-segment,
@@ -380,23 +415,37 @@ ol {
 }
 
 .view-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: var(--space-3) var(--space-5);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.view-legend-item {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.view-legend-key {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
   font: var(--fontBodySmall);
   color: var(--textSecondary);
 }
 
-.view-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+.view-legend-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .view-swatch {
+  flex: none;
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--r-full);
@@ -404,8 +453,9 @@ ol {
 }
 
 .view-legend-value {
+  font: var(--fontHeadingSmall);
+  font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  font-weight: var(--fontWeightMedium);
   color: var(--textPrimary);
 }
 
@@ -418,19 +468,31 @@ ol {
   --ring-neutral: var(--borderStrong);
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .view-ring-wrap .view-legend {
-  flex-direction: column;
+  grid-template-columns: auto;
+  gap: var(--space-2);
+}
+
+.view-ring-wrap .view-legend-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.view-ring-wrap .view-legend-value {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
 }
 
 .view-ring {
   display: grid;
   place-items: center;
   flex: none;
-  inline-size: 112px;
-  block-size: 112px;
+  inline-size: 104px;
+  block-size: 104px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--ring-fill);
@@ -439,8 +501,9 @@ ol {
 .view-ring-middle {
   display: grid;
   place-items: center;
-  inline-size: 92px;
-  block-size: 92px;
+  align-content: center;
+  inline-size: 88px;
+  block-size: 88px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--ground);
@@ -449,7 +512,6 @@ ol {
 .view-ring-count {
   font: var(--fontHeadingLarge);
   font-family: system-ui, sans-serif;
-  font-weight: var(--fontWeightBold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -458,89 +520,154 @@ ol {
   color: var(--textSecondary);
 }
 
-/* The ranked list under a lead: flat rows divided by a hairline. */
+/* The ranked list under a lead. Rows sit flush in the card with a hairline
+   between them, and a row lights up under the pointer as one target. */
 .attention-list {
-  padding: 0 var(--space-4) var(--space-2);
+  display: grid;
+  padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
 .attention-row {
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-4);
-  align-items: start;
-  padding-block: var(--space-4);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  padding: var(--space-3);
+  border-radius: var(--r-md);
 }
 
-.attention-row + .attention-row {
-  border-top: 1px solid var(--borderSubtle);
+.attention-row + .attention-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 var(--space-3) auto;
+  block-size: 1px;
+  background: var(--borderSubtle);
 }
 
-.attention-name {
-  font-weight: var(--fontWeightMedium);
+.attention-row:hover {
+  background: color-mix(in srgb, var(--textPrimary) 4%, transparent);
 }
 
-.attention-rank {
-  min-inline-size: var(--space-4);
-  font-variant-numeric: tabular-nums;
+.attention-row:hover::before,
+.attention-row:hover + .attention-row::before {
+  background: none;
+}
+
+.attention-tile {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+  font: var(--fontHeadingXXSmall);
+  font-family: system-ui, sans-serif;
   color: var(--textSecondary);
 }
 
+.attention-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--fontWeightMedium);
+}
+
 .attention-reasons {
-  display: grid;
-  gap: var(--space-1);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin-top: var(--space-1);
+}
+
+.attention-reason + .attention-reason::before {
+  content: "·" / "";
+  margin-inline-end: var(--space-2);
 }
 
 .attention-end {
   display: grid;
   justify-items: end;
   gap: var(--space-2);
-  min-inline-size: 8rem;
 }
 
 .attention-figure {
   font: var(--fontHeadingXSmall);
+  font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .view-share {
-  inline-size: 100%;
+  inline-size: 72px;
+}
+
+/* A row's way on: a round arrow at the far end that reads as the whole row's
+   target, so the row carries no labelled button competing with its figure. */
+.attention-ask {
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--controlHeight);
+  block-size: var(--controlHeight);
+  padding: 0;
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+}
+
+.attention-ask::after {
+  content: "→" / "";
+}
+
+/* The whole row presses the arrow, so the target is the row and not a dot. */
+.attention-ask::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.attention-row:hover .attention-ask {
+  border-color: var(--borderStrong);
+  color: var(--textPrimary);
+}
+
+.attention-ask:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* The sentence a promise was made in, quoted as the customer heard it. */
 .attention-quote {
-  margin-top: var(--space-1);
+  flex-basis: 100%;
   font: var(--fontBodySmall);
   font-style: italic;
   color: var(--textSecondary);
 }
 
 .attention-status {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
-/* One reason an item is on the card, led by a dot. Only an urgent row's dot
-   is coloured, so the one that needs a reader first stands out alone. */
-.attention-reason {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
+/* Only an urgent row carries a mark, so the one that needs a reader first
+   stands out alone. */
 .attention-mark {
+  display: none;
   flex: none;
   inline-size: var(--space-2);
   block-size: var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--borderStrong);
+  background: var(--danger);
 }
 
 .attention-row[data-urgent] .attention-mark {
-  background: var(--danger);
+  display: inline-block;
 }
 
 /* The record a write landed on: its chip, its name and its kind on one line. */
@@ -551,8 +678,8 @@ ol {
   gap: var(--space-2);
 }
 
-/* A change as it was and as it is: the old value receding, the new one set
-   on a chip in the accent, so the eye lands on what the call made true. */
+/* A change as it was and as it is: the old value receding and the new one in
+   full ink, so the eye lands on what the call made true. */
 .value-was {
   color: var(--textSecondary);
   text-decoration: line-through;
@@ -564,10 +691,6 @@ ol {
 }
 
 .value-now {
-  padding: 1px var(--space-2);
-  border-radius: var(--r-sm);
-  background: var(--accentLight);
-  color: var(--accentText);
   font-weight: var(--fontWeightMedium);
 }
 

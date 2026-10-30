@@ -6,7 +6,6 @@
 // namespace is an absolute URL, which the admission check refuses).
 
 import { el } from "./bridge";
-import { eyebrow } from "./parts";
 
 /** One part of a whole, drawn as a slice or a segment in a status tone. */
 export type Part = Readonly<{
@@ -16,10 +15,9 @@ export type Part = Readonly<{
   shown?: string;
 }>;
 
-/** hero builds the lead: a kicker, the figure, the sentence and a picture. */
+/** hero builds the lead: the figure, the sentence and a picture. */
 export function hero(
   opts: Readonly<{
-    kicker: string;
     figure: string;
     caption: string;
     sentence: string;
@@ -34,11 +32,7 @@ export function hero(
     el("span", "view-hero-number", opts.figure),
     el("span", "view-hero-caption", opts.caption),
   );
-  words.append(
-    eyebrow(opts.kicker),
-    figure,
-    el("p", "view-hero-sentence", opts.sentence),
-  );
+  words.append(figure, el("p", "view-hero-sentence", opts.sentence));
   lead.appendChild(words);
   if (opts.beside !== undefined) {
     lead.classList.add("view-hero-split");
@@ -112,9 +106,10 @@ function legend(parts: readonly Part[]): HTMLElement {
     const item = el("li", "view-legend-item");
     const swatch = el("span", "view-swatch");
     swatch.dataset.tone = part.tone;
+    const key = el("span", "view-legend-key");
+    key.append(swatch, el("span", "view-legend-label", part.label));
     item.append(
-      swatch,
-      el("span", "view-legend-label", part.label),
+      key,
       el("span", "view-legend-value", part.shown ?? String(part.value)),
     );
     list.appendChild(item);

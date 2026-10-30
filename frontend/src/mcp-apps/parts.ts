@@ -45,7 +45,7 @@ export function panel(
   );
   const id = `panel-title-${nextTitleID++}`;
   section.setAttribute("aria-labelledby", id);
-  const head = el("header", "panel-head");
+  const head = el("header", "panel-head panel-head-flat");
   const name = heading("medium", title, {
     as: opts?.level ?? "h2",
     className: "panel-title",
