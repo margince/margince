@@ -4373,7 +4373,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Eintrag archivieren? Er verschwindet aus dem Verlauf.",
   "activity.archiveDone": "Eintrag archiviert",
   "activity.archiveRefused":
-    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Bitte eine Führungskraft, diesen Eintrag zu archivieren.",
+    "Du kannst nur Notizen und Aufgaben archivieren, die du selbst geschrieben hast. Eine Führungskraft kann diesen Eintrag für dich archivieren.",
   "activity.notYoursToChange":
     "Du kannst diese Aktivität nicht ändern. Frage einen Admin nach Bearbeitungsrechten.",
   "activity.files.empty": "Noch keine Dateien an dieser Aktivität.",
@@ -5536,7 +5536,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.waitUntil": "Warten bis",
   "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
-    "Nur der Inhaber des Deals oder eine Führungskraft kann diesen Deal archivieren.",
+    "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "deal.archive": "Deal archivieren",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",

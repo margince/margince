@@ -5391,7 +5391,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.waitUntil": "Chờ đến",
   "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
   "deal.archiveRefused":
-    "Chỉ người phụ trách deal hoặc quản lý mới có thể lưu trữ deal này.",
+    "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
