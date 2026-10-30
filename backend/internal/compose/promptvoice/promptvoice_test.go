@@ -76,8 +76,9 @@ func TestTheMoveHandsTheReaderTheMove(t *testing.T) {
 		"bans a promise in its voice":  "I'll send",
 		"bans the reader's own quotes": "quoted words",
 	}
+	move := promptvoice.Move
 	for what, instruction := range required {
-		if !strings.Contains(promptvoice.Move, instruction) {
+		if !strings.Contains(move, instruction) {
 			t.Errorf("the move rule no longer %s: %q is gone from promptvoice.Move", what, instruction)
 		}
 	}
