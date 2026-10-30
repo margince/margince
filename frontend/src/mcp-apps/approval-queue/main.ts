@@ -3,6 +3,7 @@
 // can also be answered together. A page that has more after it says so and asks
 // the assistant for the next one, because a view cannot page on its own.
 
+import { decisionUrgency } from "../../design-system/decisiondeadline";
 import { askAssistant, canCallTools, declareActions } from "../actions";
 import actions from "../actions.json";
 import { badge } from "../badge";
@@ -29,8 +30,6 @@ import {
 import "../view.css";
 
 declareActions(actions["approval-queue"]);
-
-const SIX_HOURS_MS = 6 * 3_600_000;
 
 /** render draws the queue, keeping the reader's place across a redraw. */
 export const render = viewRenderer(draw);
@@ -119,7 +118,7 @@ function draw(
 function lead(open: Proposal[], waiting: Proposal[], now: number): HTMLElement {
   const soon = waiting.filter((p) => {
     const at = Date.parse(p.expiresAt);
-    return !Number.isNaN(at) && at - now < SIX_HOURS_MS;
+    return !Number.isNaN(at) && decisionUrgency(at - now) !== "calm";
   }).length;
   const byAssistant = waiting.filter((p) => p.byAssistant).length;
   const sentence =
