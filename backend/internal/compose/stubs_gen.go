@@ -2563,6 +2563,30 @@ func (stubs) VisitList(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontr
 	httperr.NotImplemented(w, r, "VisitList")
 }
 
+func (stubs) ListLossReasons(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListLossReasons")
+}
+
+func (stubs) CreateLossReason(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLossReasonParams) {
+	httperr.NotImplemented(w, r, "CreateLossReason")
+}
+
+func (stubs) ListLegacyLossReasons(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLegacyLossReasonsParams) {
+	httperr.NotImplemented(w, r, "ListLegacyLossReasons")
+}
+
+func (stubs) ApplyLegacyLossReasons(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ApplyLegacyLossReasons")
+}
+
+func (stubs) DecideLegacyLossReason(w nethttp.ResponseWriter, r *nethttp.Request, textHash string, params crmcontracts.DecideLegacyLossReasonParams) {
+	httperr.NotImplemented(w, r, "DecideLegacyLossReason")
+}
+
+func (stubs) UpdateLossReason(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLossReasonParams) {
+	httperr.NotImplemented(w, r, "UpdateLossReason")
+}
+
 func (stubs) GetMagic(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMagicParams) {
 	httperr.NotImplemented(w, r, "GetMagic")
 }

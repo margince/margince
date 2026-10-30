@@ -11,7 +11,6 @@ package deals
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -32,7 +31,10 @@ type AdvanceDealInput struct {
 	// card leaves it false.
 	ReferencesFromRequest bool
 	LostReason            *string
-	IfVersion             *int64
+	// LostReasonCode is a key from deal_loss_reason, on a move to a lost stage.
+	// Nil is the legacy path: the note alone, counted as unmapped.
+	LostReasonCode *string
+	IfVersion      *int64
 	// WonWithoutContractReason says why this win has no agreement behind it
 	// (ADR-0109 §6). Absent means the deal claims one, and the store looks for
 	// it — a win that claims nothing and offers no reason is what gets refused.
@@ -231,7 +233,7 @@ func (s *Store) advanceOnTx(
 			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
 			Amount: current.AmountMinor, Currency: current.Currency,
 			Probability: &winProbability, ApprovalID: in.ApprovalID,
-			ReversalOf: in.ReversalOf, Semantic: &semantic,
+			ReversalOf: in.ReversalOf, Semantic: &semantic, LostReasonCode: lostReasonCodeFromPatch(p),
 		}); err != nil {
 			return err
 		}
@@ -307,6 +309,7 @@ func announceStageAdvance(
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
 	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	payload.LostReasonCode = lostReasonCodeFromPatch(p)
 	payload.Imported, payload.ImportRunId = storekit.ImportMark(ctx)
 	args := []any{current.StageId, in.ToStageID}
 	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
@@ -389,7 +392,6 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 ) (*storekit.Patch, string, error) {
 	status := string(StageSemantic(semantic).Status())
 	var closedAt *time.Time
-	var lostReason string
 	switch semantic {
 	case "won", "lost":
 		now := s.clock().UTC()
@@ -397,12 +399,10 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 			now = in.closedAt.UTC()
 		}
 		closedAt = &now
-		if in.LostReason != nil {
-			lostReason = strings.TrimSpace(*in.LostReason)
-		}
-		if StageSemantic(semantic) == SemanticLost && lostReason == "" {
-			return nil, "", &LostReasonRequiredError{}
-		}
+	}
+	loss, err := lossOfMove(ctx, tx, in, semantic)
+	if err != nil {
+		return nil, "", err
 	}
 
 	p := storekit.NewPatch()
@@ -414,17 +414,9 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("closed_at", current.ClosedAt, *closedAt)
 	}
 	// Written when this advance lands on lost, and cleared on every other
-	// landing. A reason describing a previous close is worse than none: it
-	// answers the report with a fact about a different outcome — so a deal
-	// re-decided from lost to won must not carry the loss explanation with it.
-	// The clear is conditional on there being something to clear: Set records
-	// an assignment unconditionally, so clearing a column that is already NULL
-	// would put lost_reason into the UPDATE and the audit diff of every
-	// ordinary open-to-open advance.
-	if DealStatus(status) == DealLost {
-		p.Set("lost_reason", current.LostReason, lostReason)
-	} else if DealStatus(status) != DealLost && current.LostReason != nil {
-		p.Set("lost_reason", current.LostReason, nil)
+	// landing: a reason describing a previous close is worse than none.
+	if err := setLossReason(ctx, tx, p, current, loss); err != nil {
+		return nil, "", err
 	}
 	// The won-without-contract reason is written only on a win, and cleared on
 	// every other landing, for the same reason.

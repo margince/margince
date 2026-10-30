@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/deals:ListLegacyLossReasons":          "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
 	"internal/modules/contacts:attachToSettledVerdict":      "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
 	"internal/modules/contacts:employerDomainsForAddressTx": "filters read-only work-domain evidence; no company mutation occurs before the shared employer resolver",
 	"internal/modules/contacts:previewDomainEmployerTx":     "read-only employer planning checks visibility; writes still pass the resolver and their mutation authority gates",

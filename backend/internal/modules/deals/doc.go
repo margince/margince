@@ -22,6 +22,10 @@
 // attributed to: the opportunity's origin, distinct from the lead
 // vocabulary's record provenance.
 //
+// deal_loss_reason is the administered list a lost deal names its reason
+// from. deal_loss_reason_mapping is an administrator's reviewed code for one
+// legacy note, keyed by the note's hash.
+//
 // deal_risk_day and deal_risk_verdict are each day's first risk pass and the
 // deals it judged material and at risk. compose's hourly pass writes them,
 // because the judgement cannot be recomputed afterwards.

@@ -46,6 +46,8 @@ const (
 	fieldPeriodYear    = "period_year"
 	fieldPeriodQuarter = "period_quarter"
 	fieldPeriodMonth   = "period_month"
+	fieldLossReason    = "loss_reason"
+	fieldLossState     = "loss_reason_state"
 
 	// The three grains' to_char patterns (REPORT-PARAM-5). Q is Postgres's
 	// quarter-of-year; the "-Q" is a quoted literal inside the pattern, not a
@@ -264,6 +266,16 @@ func isPeriodField(entity string) func(field string) bool {
 	}
 }
 
+// lossReasonStateExpr says how a lost deal's reason is known: chosen at the
+// close, mapped later from its note, or a note nobody has mapped yet. A won
+// deal is NULL, as under lost_reason. "missing" is a lost deal with neither
+// code nor note. deal_lost_reason refuses one, so a count there is a broken row.
+const lossReasonStateExpr = `(CASE WHEN t.status <> 'lost' THEN NULL
+	WHEN t.lost_reason_basis = 'mapped' THEN 'mapped'
+	WHEN t.lost_reason_code IS NOT NULL THEN 'recorded'
+	WHEN t.lost_reason IS NOT NULL THEN 'unmapped'
+	ELSE 'missing' END)`
+
 // withProjectFilter adds the project_id filter a deal-based report carries:
 // every deal report answers "for this project" the same way.
 func withProjectFilter(filters map[string]string) map[string]string {
@@ -298,6 +310,10 @@ func winLossSpec() reportSpec {
 		// not a gap in it. A caller asking why we lose filters status='lost'
 		// first, exactly as the meeting_status dimension expects a kind filter.
 		fieldLostReason: colLostReason,
+		// The administered code, which a report can count; lost_reason above
+		// stays for the notes a team wrote before the list existed.
+		fieldLossReason: "t.lost_reason_code",
+		fieldLossState:  lossReasonStateExpr,
 		// How big the company was, so "who do we actually win against" is one
 		// question rather than a company-by-company read.
 		//

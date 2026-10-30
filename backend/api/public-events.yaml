@@ -1004,6 +1004,11 @@ components:
         win_probability:
           type: integer
           description: The target stage's win probability, frozen at the moment of the move.
+        lost_reason_code:
+          type: string
+          description: >-
+            The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when
+            the loss names only a free note.
         partner_company_id:
           type: string
           format: uuid

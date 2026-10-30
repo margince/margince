@@ -424,6 +424,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/lists/{id}/members": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/loss-reasons/legacy": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/magic": {
 		{Name: "limit", Minimum: 1},
 	},
