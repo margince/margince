@@ -101,6 +101,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [test-the-rest-surface-end-to-end.md](how-to/test-the-rest-surface-end-to-end.md): test the REST API
 - [test-the-mcp-surface-end-to-end.md](how-to/test-the-mcp-surface-end-to-end.md): test the MCP tools
   with a real model (`make e2e-llm`).
+- [add-an-mcp-e2e-case.md](how-to/add-an-mcp-e2e-case.md): add a test case for the MCP tools and run it
+  on Claude and Codex.
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.

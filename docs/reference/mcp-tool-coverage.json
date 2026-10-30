@@ -18,9 +18,9 @@
       "cases_with_a_committed_run": 35,
       "cases_that_reached_their_bar": 35,
       "cases_below_their_bar": 0,
-      "runs": 75,
-      "passed": 72,
-      "reliability": 0.96,
+      "runs": 76,
+      "passed": 73,
+      "reliability": 0.9605263157894737,
       "cases_below_their_bar_named": [],
       "route": "Claude Code CLI"
     },
@@ -29,9 +29,9 @@
       "cases_with_a_committed_run": 35,
       "cases_that_reached_their_bar": 35,
       "cases_below_their_bar": 0,
-      "runs": 75,
-      "passed": 72,
-      "reliability": 0.96,
+      "runs": 76,
+      "passed": 73,
+      "reliability": 0.9605263157894737,
       "cases_below_their_bar_named": [],
       "route": "Codex CLI"
     }
@@ -474,8 +474,8 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "claude:cli",
@@ -483,8 +483,8 @@
         },
         {
           "model": "gpt-5.6-sol@codex-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 3,
+          "passed": 3,
           "pass_at": 2,
           "held": true,
           "driver": "gpt:cli",
@@ -2017,7 +2017,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 1460,
+      "tokens": 1467,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2065,15 +2065,15 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 8,
-          "passed": 8,
+          "runs": 9,
+          "passed": 9,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 9,
-          "passed": 8,
-          "reliability": 0.8888888888888888,
+          "runs": 10,
+          "passed": 9,
+          "reliability": 0.9,
           "cases_below_their_bar": []
         }
       }

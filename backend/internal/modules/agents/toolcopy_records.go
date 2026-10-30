@@ -179,8 +179,8 @@ var relinkThreadCopy = toolCopy{
 
 var relinkActivitiesCopy = toolCopy{
 	Purpose: "Move up to 500 named activities onto one record, all or nothing.",
-	Limits: "Each id must be visible and writable to you. A project destination, or any move the " +
-		"installation's policy raises, is staged for confirmation and the retry moves exactly " +
+	Limits: "Each id must be visible and writable to you. Where the installation's policy " +
+		"holds a move for approval, the reply carries an approval id and the retry moves exactly " +
 		"these ids; once the user says yes, relay it with decide_approvals. A filing under a " +
 		"project can be undone by a member from the activity.",
 	Instead: "relink_activity moves one message.",
@@ -331,8 +331,8 @@ var listPipelinesCopy = toolCopy{
 	Limits: "It is where the id of a stage a deal could move TO comes from, so a deal cannot be " +
 		"created, or moved anywhere new, without calling this first — a deal you have already " +
 		"read carries only the stage it is in. Each stage carries a semantic — open, won or lost " +
-		"— and that, not its name, is what decides whether moving onto it needs a human's " +
-		"approval; a stage called \"Closed\" may be either.",
+		"— and that, not its name, is what decides whether moving onto it closes the deal " +
+		"or reopens it, which is the user's call; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
 		"deal requires both, and progress_deal takes that stage_id as its " +
 		"to_stage_id.",

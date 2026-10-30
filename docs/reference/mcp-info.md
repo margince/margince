@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 11 |
 | Tool catalog | 138.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36570 |
+| Approx. wire tokens | 36559 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,7 +33,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.1 KB | 25% | Yes, every step |
+| Descriptions (incl. governance clause) | 35.0 KB | 25% | Yes, every step |
 | Input schemas | 64.3 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
 | **Description + input schema** | **99.4 KB** | **71%** | **the recurring cost** |
@@ -64,7 +64,7 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1460 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
@@ -510,9 +510,9 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; it cannot be undone, so tell the user
-exactly what the call will change and get their yes before calling, unless they already asked for
-exactly this; requires passport scope "write".)
+carries their approval has answered. (Runs immediately; it cannot be undone, so tell the user what
+the call will change and get their yes before calling, unless they asked for this call themselves;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -684,8 +684,8 @@ batch_id to undo_preview, show the user the answer, and call undo after they agr
 undone once, and records changed since are left alone. update_record and archive_record change one
 record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
 once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; it cannot be
-undone, so tell the user exactly what the call will change and get their yes before calling, unless
-they already asked for exactly this; requires passport scope "write".)
+undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1124,13 +1124,13 @@ they already asked for exactly this; requires passport scope "write".)
 Log, plan and file activities. log records an email, call, meeting, note or message that already
 happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
 moves one activity to another record; relink_many moves a named set. ready says the user is ready
-for a meeting they attend; unready takes it back. relink and relink_many wait for a human when they
-file under a project, and run at once anywhere else. attach checks the record first; read
-list_documents before attaching the same file again. Use schedule_meeting to book a meeting still to
-come, and change_state with move_deal when the same event moves a deal, so move and note are one
-change. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry
-carries. (Governance: runs immediately for attach, log, ready, task, unready; decided per call from
-its arguments for relink, relink_many; requires passport scope "write".)
+for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user
+before you file under a project, which only a member can undo from the activity. attach checks the
+record first; read list_documents before attaching the same file again. Use schedule_meeting to book
+a meeting still to come, and change_state with move_deal when the same event moves a deal, so move
+and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is
+what the retry carries. (Governance: runs immediately for attach, log, ready, task, unready; decided
+per call from its arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2104,8 +2104,8 @@ its website. A promotion answers with the new contact's id. A staged answer's ap
 the retry carries; do not report the change until the retry has answered. (Governance: runs
 immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
 merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the
-actions disqualify, promote cannot be undone, so tell the user exactly what the call will change and
-get their yes before calling, unless they already asked for exactly this; requires passport scope
+actions disqualify, promote cannot be undone, so tell the user what the call will change and get
+their yes before calling, unless they asked for this call themselves; requires passport scope
 "write".)
 ```
 
@@ -2294,8 +2294,8 @@ tag grants an ordinary seat lacks. update sends no version, so read the tag righ
 changes what a word is called, never what carries it. Removing a tag that is not there succeeds.
 archive retires a word for every record; the records keep it. (Governance: runs immediately for
 apply, archive, create, remove, update; a human approves first for merge; the action archive cannot
-be undone, so tell the user exactly what the call will change and get their yes before calling,
-unless they already asked for exactly this; requires passport scope "write".)
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2585,8 +2585,8 @@ been through these rows, show the counts and the mapping and wait for their go-a
 read_import for the report first: numbers nobody read are not a check. The write goes on after this
 answers. Read read_import's report until its state is complete or failed, then report what landed:
 the counts and the mapping the run used, each column by the field it went to. (Runs immediately; it
-cannot be undone, so tell the user exactly what the call will change and get their yes before
-calling, unless they already asked for exactly this; requires passport scope "write".)
+cannot be undone, so tell the user what the call will change and get their yes before calling,
+unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3090,8 +3090,8 @@ is written; each bundle member is answered and reported on its own, and a bundle
 theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
 where both ids come from. If the proposal is your OWN refused call, approving does not perform it
 — re-issue that same call with approval_id set. (Runs immediately; the actions bundle, one cannot
-be undone, so tell the user exactly what the call will change and get their yes before calling,
-unless they already asked for exactly this; requires passport scope "write".)
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7631,8 +7631,8 @@ writes nothing. A merge archives the source and redirects it to the target; it c
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
 survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-the action merge cannot be undone, so tell the user exactly what the call will change and get their
-yes before calling, unless they already asked for exactly this; requires passport scope "write".)
+the action merge cannot be undone, so tell the user what the call will change and get their yes
+before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7728,8 +7728,8 @@ invite sends the invitation to its attendees. invite reaches attendees outside t
 name them and the time and get the user's yes first. Read check_availability before booking a time.
 Use change_activities with log to record a meeting that already happened. Keep the meeting's id to
 send its invitation. (Governance: runs immediately for book; a human approves first for invite; the
-action book cannot be undone, so tell the user exactly what the call will change and get their yes
-before calling, unless they already asked for exactly this; requires passport scope "send".)
+action book cannot be undone, so tell the user what the call will change and get their yes before
+calling, unless they asked for this call themselves; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7852,9 +7852,9 @@ the message does not exist yet, and change_activities with action=log to record 
 said rather than say it. Send the subject, body and activity_id or links the draft produced, and
 keep the staged approval id: the approval binds that exact message, so changed text needs a new one.
 email_new answers with the new conversation's activity_id. (Runs immediately; the actions
-chat_reply, email_new, email_reply cannot be undone, so tell the user exactly what the call will
-change and get their yes before calling, unless they already asked for exactly this; requires
-passport scope "send".)
+chat_reply, email_new, email_reply cannot be undone, so tell the user what the call will change and
+get their yes before calling, unless they asked for this call themselves; requires passport scope
+"send".)
 ```
 
 <details><summary>Input schema</summary>

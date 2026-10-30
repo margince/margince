@@ -122,8 +122,8 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 // with no human approval and cannot be undone. A call a human approves already
 // gets that yes, so it is never named here.
 func askUserFirst(spec mcp.ToolSpec) string {
-	const ask = "; %s cannot be undone, so tell the user exactly what the call will change and " +
-		"get their yes before calling, unless they already asked for exactly this"
+	const ask = "; %s cannot be undone, so tell the user what the call will change and " +
+		"get their yes before calling, unless they asked for this call themselves"
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""

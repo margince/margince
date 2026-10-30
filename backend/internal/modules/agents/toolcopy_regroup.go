@@ -68,8 +68,8 @@ var changeActivitiesCopy = toolCopy{
 		"attaches a file to a record. relink moves one activity to another record; relink_many " +
 		"moves a named set. ready says the user is ready for a meeting they attend; unready " +
 		"takes it back.",
-	Limits: "relink and relink_many wait for a human when they file under a project, and run at " +
-		"once anywhere else. attach checks the record first; read list_documents before " +
+	Limits: "relink and relink_many run at once. Tell the user before you file under a project, " +
+		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
 		"attaching the same file again.",
 	Instead: "Use schedule_meeting to book a meeting still to come, and change_state with " +
 		"move_deal when the same event moves a deal, so move and note are one change.",

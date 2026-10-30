@@ -14,18 +14,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A tool that archives, merges or sends, and offers no restore to take it back,
-// cannot be undone from the conversation. So its listing must tell the client
-// to get the user's yes first. Derived from the contract's operations and the
-// send scope, so a new verb of either kind is held by being declared.
-func TestEveryArchiveMergeOrSendToolAsksTheUserFirst(t *testing.T) {
+// A tool that archives, merges, sends, decides or disqualifies, and offers no
+// restore to take it back, cannot be undone from the conversation. So its
+// listing must tell the client to get the user's yes first. Derived from the
+// contract's operations and the send scope, so a new verb of any kind is held
+// by being declared.
+func TestEveryIrreversibleToolAsksTheUserFirst(t *testing.T) {
 	irreversible, restores := map[string]bool{}, map[string]bool{}
 	for _, pol := range agentPolicies {
 		if pol.Access != accessTool {
 			continue
 		}
 		switch {
-		case strings.HasPrefix(pol.Op, "archive"), strings.HasPrefix(pol.Op, "merge"):
+		case hasAnyPrefix(pol.Op, irreversibleOpPrefixes):
 			irreversible[pol.Tool] = true
 		case strings.HasPrefix(pol.Op, "restore"):
 			restores[pol.Tool] = true
@@ -59,16 +60,8 @@ func TestEveryArchiveMergeOrSendToolAsksTheUserFirst(t *testing.T) {
 			continue // TestEveryDeclaredToolVerbIsRegistered reports it.
 		}
 		checked++
-		// A router's listing reads the flag off its actions, never its own.
-		if _, isRouter := registry.RouteTargets(tool); isRouter {
-			if !slices.ContainsFunc(spec.Actions, func(a mcp.ToolAction) bool { return a.AskUserFirst }) {
-				t.Errorf("router %s is declared for an archive or merge and offers no restore, but no "+
-					"target it fronts sets AskUserFirst. Set it on the target verb that archives or merges", tool)
-			}
-			continue
-		}
 		if !spec.AskUserFirst {
-			t.Errorf("%s archives, merges or sends and offers no restore, but its spec leaves "+
+			t.Errorf("%s cannot be undone from the conversation, but its spec leaves "+
 				"AskUserFirst unset, so a client is never told to ask the user before it runs", tool)
 		}
 	}
@@ -77,9 +70,21 @@ func TestEveryArchiveMergeOrSendToolAsksTheUserFirst(t *testing.T) {
 	}
 }
 
+// irreversibleOpPrefixes are the contract verbs that act on a record or a
+// queue in a way the conversation has no verb to take back.
+var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject", "executeBulkChange"}
+
+func hasAnyPrefix(op string, prefixes []string) bool {
+	return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(op, p) })
+}
+
 // promisesApproval is written guidance that tells a caller a human will
 // approve the call. A publish step a human takes later is not that promise.
-var promisesApproval = regexp.MustCompile(`(?i)waits for a human(?: to)?\b|staged for approval|a human approves`)
+var promisesApproval = regexp.MustCompile(`(?i)waits? for (?:a human|approval)|staged for (?:approval|confirmation)|needs? (?:a )?human'?s? (?:approval|decision)|a human approves`)
+
+// publishStep is the one promise that stays true for an agent acting as its
+// user. The draft is the agent's, and publishing is a later human act.
+var publishStep = regexp.MustCompile(`(?i)waits for a human to publish`)
 
 // A passport acting as its own user is admitted at auto-execute unless a tool
 // sets WaitsEvenForItsUser (auth.TierFor). Written guidance promising such a
@@ -98,8 +103,9 @@ func TestNoToolPromisesAnApprovalItsUserSkips(t *testing.T) {
 			continue
 		}
 		checked++
-		for _, sentence := range strings.SplitAfter(spec.Description, ". ") {
-			if !promisesApproval.MatchString(sentence) || strings.Contains(sentence, " to publish") ||
+		// The input schema is client-facing guidance too.
+		for _, sentence := range strings.SplitAfter(spec.Description+". "+string(spec.InputSchema), ". ") {
+			if !promisesApproval.MatchString(publishStep.ReplaceAllString(sentence, "")) ||
 				namesAToolThatWaits(sentence, spec, waits) {
 				continue
 			}
