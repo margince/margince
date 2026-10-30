@@ -141,23 +141,7 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 		}
 		selection.Interval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
 	}
-	if q.Has("metrics") {
-		selection.Metrics = nil
-		for _, value := range queryItems(q["metrics"]) {
-			selection.Metrics = append(selection.Metrics, crmcontracts.ReportingMetricID(value))
-		}
-		// The default charts belong to the default metrics; paired with metrics
-		// the caller chose they fail the "charts belong to the metrics" rule.
-		if !q.Has("blocks") {
-			selection.Blocks = []crmcontracts.ReportingBlockKind{}
-		}
-	}
-	if q.Has("blocks") {
-		selection.Blocks = nil
-		for _, value := range queryItems(q["blocks"]) {
-			selection.Blocks = append(selection.Blocks, crmcontracts.ReportingBlockKind(value))
-		}
-	}
+	chooseMembers(q, &selection)
 	return selection, nil
 }
 
@@ -175,4 +159,28 @@ func queryItems(values []string) []string {
 		out = append(out, strings.Split(value, ",")...)
 	}
 	return out
+}
+
+// chooseMembers replaces the opening selection's metrics and charts with the
+// ones the query names.
+//
+// Metrics named alone carry no charts. The opening's charts belong to the
+// opening's metrics, so drawing them over metrics the caller chose fails the
+// rule that a chart belongs to the metrics it draws.
+func chooseMembers(q url.Values, selection *crmcontracts.ReportingSelection) {
+	if q.Has("metrics") {
+		selection.Metrics = nil
+		for _, value := range queryItems(q["metrics"]) {
+			selection.Metrics = append(selection.Metrics, crmcontracts.ReportingMetricID(value))
+		}
+		if !q.Has("blocks") {
+			selection.Blocks = []crmcontracts.ReportingBlockKind{}
+		}
+	}
+	if q.Has("blocks") {
+		selection.Blocks = nil
+		for _, value := range queryItems(q["blocks"]) {
+			selection.Blocks = append(selection.Blocks, crmcontracts.ReportingBlockKind(value))
+		}
+	}
 }
