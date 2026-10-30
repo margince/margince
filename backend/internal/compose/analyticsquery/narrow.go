@@ -52,8 +52,8 @@ func intersectScope(report, question Scope) (Scope, error) {
 	}
 	return Scope{}, &RefusalError{
 		Kind:    RefusalInvalid,
-		Message: "this question measures a different team or person than the report does",
-		Suggest: "pick a question saved for the whole company or for the report's own team or person",
+		Message: "this question measures a different team or member than the report does",
+		Suggest: "pick a question saved for the whole company or for the report's own team or member",
 	}
 }
 

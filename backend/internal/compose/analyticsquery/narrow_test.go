@@ -43,7 +43,7 @@ func TestDisjointPopulationsAreRefusedNotWidened(t *testing.T) {
 	_, err := Narrow(periodSchema().Entities["deals"], Scope{Kind: "team", ID: "t-1"},
 		Query{Entity: "deals", ScopeKind: "owner", ScopeID: "u-1"})
 	var refusal *RefusalError
-	if !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "different team or person") {
+	if !errors.As(err, &refusal) || !strings.Contains(refusal.Message, "different team or member") {
 		t.Fatalf("a team report asking one owner's question answered %v, want an explained refusal", err)
 	}
 }

@@ -246,7 +246,7 @@ func TestAReaderDeniedAFilteredRecordLearnsNothingOfIt(t *testing.T) {
 	}
 }
 
-// A question for one person inside a report for a team cannot hold. The floor
+// A question for one member inside a report for a team cannot hold. The floor
 // and its complementary withholding apply to a bound card as to any question.
 func TestABoundQuestionThatCannotHoldIsRefusedWithItsReason(t *testing.T) {
 	b := seedBoundBook(t)
@@ -255,8 +255,8 @@ func TestABoundQuestionThatCannotHoldIsRefusedWithItsReason(t *testing.T) {
 	team := crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(b.e.Team2)}
 	report := b.report(b.rep3(), t, b.save(b.rep3(), t, mine), team)
 	code, body := b.ask(b.rep3(), t, report, analyticsquery.Floor(1))
-	if code != http.StatusBadRequest || !strings.Contains(body, "different team or person") {
-		t.Fatalf("a question for one person inside a team report answered %d %s, want the reason it cannot hold", code, body)
+	if code != http.StatusBadRequest || !strings.Contains(body, "different team or member") {
+		t.Fatalf("a question for one member inside a team report answered %d %s, want the reason it cannot hold", code, body)
 	}
 
 	floored := b.report(b.rep3(), t, b.save(b.rep3(), t, dealsAt(b.open)), workspaceScope)
