@@ -4622,10 +4622,12 @@ public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
+public.forecast_snapshot.forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
@@ -4633,6 +4635,7 @@ public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (
 public.forecast_snapshot.forecast_snapshot_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forward_measure text gen=- def=-
 public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
@@ -4642,6 +4645,7 @@ public.forecast_snapshot.period_start date NOT NULL gen=- def=-
 public.forecast_snapshot.pipeline_id uuid gen=- def=-
 public.forecast_snapshot.population_fingerprint text NOT NULL gen=- def=''::text
 public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.qualified_policy_version text gen=- def=-
 public.forecast_snapshot.scope_id uuid gen=- def=-
 public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-
 public.forecast_snapshot.taken_at timestamp with time zone NOT NULL gen=- def=now()

@@ -358,10 +358,14 @@ func (w *WeeklyForecast) freezeClosing(
 		return ids.Nil, closingReadings{}, "", err
 	}
 
-	id, err := w.store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+	snapshot := forecasting.NewSnapshot{
 		Period: period, Scope: scope, Trigger: forecasting.TriggerPeriodClose,
 		Readings: readings, BaseCurrency: baseCurrency, TakenAt: at,
-	})
+	}
+	if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
+		return ids.Nil, closingReadings{}, "", err
+	}
+	id, err := w.store.TakeSnapshot(ctx, tx, snapshot)
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}

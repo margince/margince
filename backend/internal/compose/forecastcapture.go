@@ -109,11 +109,15 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 		if err != nil {
 			return err
 		}
-		_, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+		snapshot := forecasting.NewSnapshot{
 			Period: period, Scope: resolved,
 			Trigger: forecasting.TriggerDaily, BaseCurrency: currency, Readings: readings, TakenAt: at,
 			PipelineID: (*ids.UUID)(capture.PipelineId), PopulationFingerprint: fingerprint,
-		})
+		}
+		if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
+			return err
+		}
+		_, err = store.TakeSnapshot(ctx, tx, snapshot)
 		return err
 	})
 }
@@ -135,4 +139,20 @@ func reportingCaptureAttempts(ctx context.Context, store *forecasting.Store, con
 		return nil, err
 	}
 	return attempts, nil
+}
+
+// stampForecastBasis records on a snapshot the two settings that shaped what
+// its reader saw. Both snapshot writers call it, so a vintage cannot be
+// stamped one way by the daily pass and another way by the week's close.
+func stampForecastBasis(ctx context.Context, tx pgx.Tx, snapshot *forecasting.NewSnapshot) error {
+	measure, err := ForecastForwardMeasure(ctx, tx)
+	if err != nil {
+		return err
+	}
+	policy, err := forecastQualifiedPolicy(ctx, tx)
+	if err != nil {
+		return err
+	}
+	snapshot.ForwardMeasure, snapshot.QualifiedPolicyVersion = measure, policy
+	return nil
 }
