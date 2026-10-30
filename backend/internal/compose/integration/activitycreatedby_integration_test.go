@@ -6,10 +6,11 @@
 package integration
 
 // captured_by on a note an agent logged names only the passport. Every read of
-// the note names the colleague the agent worked for, from its create audit row.
-// It must say what the record History says about that same row.
+// the note names the colleague the agent worked for, and the tool, from its
+// create audit row. It must say what the record History says about that row.
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -23,15 +24,7 @@ import (
 func TestEveryReadOfAnAgentLoggedNoteNamesTheColleagueItWorkedFor(t *testing.T) {
 	s := setupStanding(t)
 	link := s.contactAt(t, "Anna Weber", "")
-	body := "Asked for the renewal terms."
-	agent := s.AgentFor(t, s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
-	logged, _, err := s.Activities.LogActivity(agent, activities.LogActivityInput{
-		Kind: "note", Body: &body, Links: []activities.ActivityLinkInput{link},
-	})
-	if err != nil {
-		t.Fatalf("the agent's note: %v", err)
-	}
-	note := ids.UUID(logged.Id)
+	note := s.agentNote(t, link)
 
 	recorded, err := privacy.ListRecordHistory(s.Admin(), s.DB(), privacy.RecordHistoryFilter{EntityType: "activity", EntityID: note})
 	if err != nil {
@@ -47,7 +40,7 @@ func TestEveryReadOfAnAgentLoggedNoteNamesTheColleagueItWorkedFor(t *testing.T) 
 		t.Fatal("the record history names no colleague behind the note's create")
 	}
 
-	for read, row := range s.everyReadOf(t, link.EntityID, note) {
+	for read, row := range s.everyReadOf(s.reader(), t, link.EntityID, note) {
 		who := row.CreatedBy
 		if who == nil {
 			t.Errorf("%s: created_by is absent for a note whose create row exists", read)
@@ -59,14 +52,62 @@ func TestEveryReadOfAnAgentLoggedNoteNamesTheColleagueItWorkedFor(t *testing.T) 
 		if who.OnBehalfOfName == nil || *who.OnBehalfOfName != *history {
 			t.Errorf("%s: created_by names %v, the record history names %q", read, who.OnBehalfOfName, *history)
 		}
+		if who.AgentClient == nil || *who.AgentClient != "Claude" {
+			t.Errorf("%s: created_by.agent_client = %v, want the passport's client Claude", read, who.AgentClient)
+		}
 	}
+}
+
+// Whose agent wrote a private note, and through which tool, is content: a
+// reader outside the note's audience gets the withheld row and no creator.
+func TestAWithheldAgentNoteNamesNoCreator(t *testing.T) {
+	s := setupStanding(t)
+	link := s.contactAt(t, "Anna Weber", "")
+	note := s.agentNote(t, link)
+	author := s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
+	if _, err := s.Activities.SetAudience(author, ids.From[ids.ActivityKind](note), activities.SetAudienceInput{
+		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: s.Rep1}},
+	}); err != nil {
+		t.Fatalf("limiting the note: %v", err)
+	}
+
+	for read, row := range s.everyReadOf(s.reader(), t, link.EntityID, note) {
+		if row.CreatedBy == nil {
+			t.Errorf("%s: the author's own read lost created_by", read)
+		}
+	}
+	outsider := s.As(s.Rep3, []ids.UUID{s.Team2}, roomPerms)
+	for read, row := range s.everyReadOf(outsider, t, link.EntityID, note) {
+		if row.ContentState == nil || *row.ContentState != crmcontracts.ActivityContentStateWithheld {
+			t.Fatalf("%s: the outsider's read is not withheld; the case tests nothing", read)
+		}
+		if row.CreatedBy != nil {
+			t.Errorf("%s: a withheld row names its creator %+v", read, *row.CreatedBy)
+		}
+	}
+}
+
+// agentNote is a note Rep1's agent logged on link, through a passport granted
+// to the Claude client.
+func (s *standingEnv) agentNote(t *testing.T, link activities.ActivityLinkInput) ids.UUID {
+	t.Helper()
+	passport := seedGrantedPassport(t, s.Env, s.Rep1, "Claude")
+	agent := s.AgentOnPassport(t, s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms, ids.From[ids.PassportKind](passport))
+	body := "Asked for the renewal terms."
+	logged, _, err := s.Activities.LogActivity(agent, activities.LogActivityInput{
+		Kind: "note", Body: &body, Links: []activities.ActivityLinkInput{link},
+	})
+	if err != nil {
+		t.Fatalf("the agent's note: %v", err)
+	}
+	return ids.UUID(logged.Id)
 }
 
 // everyReadOf is the note as the activity list, the single read and the
 // contact page each answer it.
-func (s *standingEnv) everyReadOf(t *testing.T, contact, note ids.UUID) map[string]crmcontracts.Activity {
+func (s *standingEnv) everyReadOf(ctx context.Context, t *testing.T, contact, note ids.UUID) map[string]crmcontracts.Activity {
 	t.Helper()
-	ctx, h := s.reader(), s.replyHandlers()
+	h := s.replyHandlers()
 	out := map[string]crmcontracts.Activity{}
 	code, body := serve(ctx, t, func(w http.ResponseWriter, r *http.Request) {
 		h.ListActivities(w, r, crmcontracts.ListActivitiesParams{})
