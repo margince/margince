@@ -99,6 +99,34 @@ Cases count into the open duplicates total, and they come first in each round of
 The final scope cut still checks the owner. It cannot add candidates a source has already left out.
 Home, Focus, source reach and summary counts use the same scoped day.
 
+## Totals and the rows below the ranked top
+
+Only the first rows are ranked. Ranking needs every candidate in hand, so each lane reads to its cap.
+The ranked rows are those candidates, frozen as a walk (`walk.go`).
+
+A category states an exact `total` only when every source behind it was read whole or counted by its store
+(`withTotals` in `attention/totals.go`). The count runs the source's own admission rules in SQL, so it
+matches what the list holds. `attention/backlog.go` holds the counts and runs them only for a source its lane cut.
+A count that fails leaves the category a floor and does not fail the page.
+
+Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on in
+its store's own order from its own keyset, skipping the rows the ranked top already holds. The tail rows go through
+the same admission, scope, Done, view and filter steps as the top. The cursor carries where each source stopped, and
+binds the same scope, owner, view and filter as before. The list ends when every source in the tail is read to its
+end. A source that fails while the tail loads is named in `sources_unavailable`, and the list stops short of it.
+
+The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
+when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
+time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
+names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
+
+Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
+Its today window and its later window each have a count, taken on the first page only. A team page counts no task
+window, because that count ran past the lane budget at 10,000 tasks a seat. Its task categories stay a floor.
+
+Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
+The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
+
 ## Personal work needs its own owner
 
 The mail request writer and waiting read share the direct-recipient rule in

@@ -28,7 +28,11 @@ The page counts two populations. `considered` is the rows left after step F, bef
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact approvals count (`exactSources` in `totals.go`).
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, and the task source's two
+windows (`backlog.go`).
+
+Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset. Today that is the
+task source only.
 
 ## Sources: store, bound and scope
 
@@ -72,7 +76,7 @@ a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes, list cursor | `CountActivities`, today's window only |
+| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows; none on a team page (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
@@ -90,8 +94,19 @@ a verb of their own: a task is completed, a decision is decided.
 | `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No |
 | System sources | A, C, F, G (incidents), H | Yes | No | No |
 
-No source's admitted population can be counted in SQL alone today: steps A to G run in Go, and the team roster is
-applied after the caps of every source that reads `team` unnarrowed.
+The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
+window is the planned lane's own count; the later window is `CountTasks`. A team page counts neither: the roster arm
+(`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
+`laneBudget`. The tail still reads the team's tasks through that arm. The other sources still run steps in Go that
+their count would need:
+
+- `customer_waiting`: the machine-sender test reads a registrable domain against a baseline in Go, and the thread
+  fold and the addressing rule run on the scanned rows.
+- `deal_at_risk`: step B needs the whole waiting population, and step F's came-back rule reads the row's own dates.
+- `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
+- Every other source: no count query that applies its steps exists yet.
+
+Their categories stay a floor when their lane is cut, and scrolling ends at the ranked rows for them.
 
 ## System sources
 
@@ -154,3 +169,4 @@ answers 422 for a filter from another view. The cursor binds the view through `a
 | Waiting horizon | `DefaultWaitingHorizonDays` = 30 and `WaitingHorizonStaleAfter` = 24 hours in `backend/internal/platform/database/storekit/waitinghorizon.go`; the learned value in `backend/internal/modules/activities/waitinghorizon.go` | A request older than the horizon leaves the waiting source, unless it is an open request a human took |
 | Per-statement time | `laneBudget` = 4 seconds in `snapshot.go` | Each optional lane's statement times out and the lane is named as failed; it does not bound the whole lane |
 | Page size | `worklistPage` = 25 and `worklistMaxPage` = 100 in `worklist.go` | Rows per page |
+| Tail reads per page | `backlogRounds` = 4 in `backlogtail.go` | Store reads one page spends on one continued source; the cursor carries on after them |

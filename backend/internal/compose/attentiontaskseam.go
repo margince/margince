@@ -102,12 +102,20 @@ func (t attentionTasks) OpenForViewer(
 	if err != nil {
 		return nil, err
 	}
-	open := make([]attention.Task, 0, len(rows))
+	return t.asTasks(ctx, rows, scope, asOf)
+}
+
+// asTasks carries a window's rows across as tasks. Each carries the reminder
+// its scope may show, and a flag where the reader may not change it.
+func (t attentionTasks) asTasks(
+	ctx context.Context, rows []crmcontracts.Activity, scope attention.TaskScope, asOf time.Time,
+) ([]attention.Task, error) {
+	tasks := make([]attention.Task, 0, len(rows))
 	reader := reminderReaderFor(ctx, scope)
 	for _, row := range rows {
-		open = append(open, taskFromActivity(row, reader, asOf))
+		tasks = append(tasks, taskFromActivity(row, reader, asOf))
 	}
-	return t.markReadOnly(ctx, open, asOf)
+	return t.markReadOnly(ctx, tasks, asOf)
 }
 
 // listOpenTasks reads one window of open tasks with each statement's generic
@@ -143,12 +151,47 @@ func (t attentionTasks) UpcomingForViewer(
 	if err != nil {
 		return nil, err
 	}
-	upcoming := make([]attention.Task, 0, len(rows))
-	reader := reminderReaderFor(ctx, scope)
-	for _, row := range rows {
-		upcoming = append(upcoming, taskFromActivity(row, reader, asOf))
+	return t.asTasks(ctx, rows, scope, asOf)
+}
+
+// CountTasks counts a later task window whole, under the lane's own
+// narrowing (openTasksDueBy), without the reader's due reminders.
+func (t attentionTasks) CountTasks(ctx context.Context, window attention.TaskWindow) (int, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	if !ok {
+		return 0, nil
 	}
-	return t.markReadOnly(ctx, upcoming, asOf)
+	in.OpenAndDueAfter = &window.From
+	in.ExceptRemindersDue = window.Scope == attention.TasksMine
+	return t.store.CountActivities(ctx, in)
+}
+
+// TasksAfter continues one task window past the lane's cap, in the store's
+// due-date order. It reads no reminder arm: the lane holds every due one.
+// next is empty once the window is read to its end.
+func (t attentionTasks) TasksAfter(
+	ctx context.Context, window attention.TaskWindow, after string, limit int,
+) ([]attention.Task, string, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner)
+	if !ok {
+		return nil, "", nil
+	}
+	in.TeamQueueOf, in.Limit = window.Team, &limit
+	if !window.From.IsZero() {
+		in.OpenAndDueAfter = &window.From
+	}
+	if after != "" {
+		in.Cursor = &after
+	}
+	rows, page, err := t.listTaskPage(ctx, in)
+	if err != nil {
+		return nil, "", err
+	}
+	tasks, err := t.asTasks(ctx, rows, window.Scope, window.AsOf)
+	if !page.HasMore {
+		return tasks, "", err
+	}
+	return tasks, page.NextCursor, err
 }
 
 // RemindersForViewer reads every due reminder of the reader's through the
@@ -163,7 +206,7 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	page := reminderPage
 	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
 	for {
-		rows, next, err := t.listReminders(ctx, in)
+		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
@@ -177,9 +220,9 @@ func (t attentionTasks) RemindersForViewer(ctx context.Context, asOf time.Time) 
 	}
 }
 
-// listReminders reads one page of due reminders reusing its generic plan, as
-// listOpenTasks does. The page spells its kind as a literal and binds the reader.
-func (t attentionTasks) listReminders(
+// listTaskPage reads one page of tasks reusing its generic plan, as
+// listOpenTasks does, and answers where the next page starts.
+func (t attentionTasks) listTaskPage(
 	ctx context.Context, in activities.ListActivitiesInput,
 ) ([]crmcontracts.Activity, storekit.Page, error) {
 	var rows []crmcontracts.Activity

@@ -125,16 +125,17 @@ func TestTheTeamScopeStatesNoApprovalTotal(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant}
 	day.Counts.ApprovalsOpen = new(260)
 
-	team := (&Service{}).exactSources(day, scopeTeam)
-	if _, stated := team[crmcontracts.WorklistItemSourceApproval]; stated {
+	team := (&Service{}).exactSources(day, scopeTeam, nil)
+	approvals := totalKey{crmcontracts.WorklistItemSourceApproval, "decisions"}
+	if _, stated := team[approvals]; stated {
 		t.Error("the team scope offered the lane's approval count, and its narrowing admits a different population")
 	}
 	for _, scope := range []string{scopeAll, scopeMine, scopeUnassigned} {
-		if got := (&Service{}).exactSources(day, scope); got[crmcontracts.WorklistItemSourceApproval] != 260 {
+		if got := (&Service{}).exactSources(day, scope, nil); got[approvals] != 260 {
 			t.Errorf("scope %s dropped the approval count its narrowing matches: %v", scope, got)
 		}
 	}
-	if owned := (&Service{taskOwner: ids.NewV7()}).exactSources(day, scopeTeam); len(owned) != 1 {
+	if owned := (&Service{taskOwner: ids.NewV7()}).exactSources(day, scopeTeam, nil); len(owned) != 1 {
 		t.Errorf("a named owner under the team word lost the owner's count: %v", owned)
 	}
 }

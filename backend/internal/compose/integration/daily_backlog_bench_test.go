@@ -112,21 +112,43 @@ type backlogAnswer struct {
 		MoreAvailable bool   `json:"more_available"`
 	} `json:"reach"`
 	SourcesUnavailable []json.RawMessage `json:"sources_unavailable"`
+	Counts             []struct {
+		Category      string `json:"category"`
+		Considered    int    `json:"considered"`
+		MoreAvailable bool   `json:"more_available"`
+		Total         *int   `json:"total"`
+	} `json:"counts"`
 }
 
 func measureBacklog(t *testing.T, e *apptest.AppEnv, size int, b backlogSubject) {
 	t.Helper()
 	first := backlogPage(t, e, b.seat, b.path())
-	pages, reached, walked := walkBacklog(t, e, b)
-	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s seeded=%d total=%d unavailable=%d reach=%s walk pages=%d rows=%d in %s",
-		size, b.scope, b.mix, b.seeded, first.Summary.Total, len(first.SourcesUnavailable), reachLine(first),
-		pages, reached, walked.Round(time.Millisecond))
+	walk := walkBacklog(t, e, b)
+	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s seeded=%d total=%d unavailable=%d reach=%s totals=%s walk pages=%d rows=%d in %s",
+		size, b.scope, b.mix, b.seeded, first.Summary.Total, len(first.SourcesUnavailable), reachLine(first), totalsLine(first),
+		walk.pages, walk.rows, walk.took.Round(time.Millisecond))
 	if !backlogCountsOnly() {
 		timeFirstPage(t, e, size, b)
 	}
 	probe := probeBacklog(t, e, b, size)
 	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s enumerate tasks=%d waiting=%d quiet_deals=%d statements=%d p50=%s p95=%s samples=%d",
 		size, b.scope, b.mix, probe.tasks, probe.waiting, probe.deals, probe.pages, probe.p50, probe.p95, probe.samples)
+	t.Logf("perfbench [backlog]: size=%d scope=%s mix=%s walk reached tasks=%d/%d waiting=%d/%d at_risk=%d/%d complete=%v",
+		size, b.scope, b.mix, walk.by["task"], probe.tasks, walk.by["customer_waiting"], probe.waiting,
+		walk.by["deal_at_risk"], probe.deals, walk.reaches(probe))
+}
+
+// backlogWalk is what scrolling to the end served, by source.
+type backlogWalk struct {
+	pages, rows int
+	took        time.Duration
+	by          map[string]int
+}
+
+// reaches says whether the walk served every seeded row the stores enumerate.
+// It compares each source's walked rows with the probe's count.
+func (w backlogWalk) reaches(probe backlogProbe) bool {
+	return w.by["task"] >= probe.tasks && w.by["customer_waiting"] >= probe.waiting && w.by["deal_at_risk"] >= probe.deals
 }
 
 func timeFirstPage(t *testing.T, e *apptest.AppEnv, size int, b backlogSubject) {
@@ -178,18 +200,47 @@ func reachLine(a backlogAnswer) string {
 }
 
 // walkBacklog follows next_cursor at the largest page until the queue ends,
-// which is how far scrolling reaches today.
-func walkBacklog(t *testing.T, e *apptest.AppEnv, b backlogSubject) (pages, rows int, elapsed time.Duration) {
+// which is how far scrolling reaches.
+func walkBacklog(t *testing.T, e *apptest.AppEnv, b backlogSubject) backlogWalk {
 	t.Helper()
+	walk := backlogWalk{by: map[string]int{}}
 	start, path := time.Now(), b.path()+"&limit=100"
 	for {
 		answer := backlogPage(t, e, b.seat, path)
-		pages, rows = pages+1, rows+len(answer.Queue)
+		walk.pages, walk.rows = walk.pages+1, walk.rows+len(answer.Queue)
+		for _, raw := range answer.Queue {
+			var row struct {
+				Source string `json:"source"`
+			}
+			if err := json.Unmarshal(raw, &row); err != nil {
+				t.Fatalf("reading a walked row: %v", err)
+			}
+			walk.by[row.Source]++
+		}
 		if answer.NextCursor == nil {
-			return pages, rows, time.Since(start)
+			walk.took = time.Since(start)
+			return walk
 		}
 		path = b.path() + "&limit=100&cursor=" + url.QueryEscape(*answer.NextCursor)
 	}
+}
+
+// totalsLine names each category with its exact total, or its considered
+// count and a + where it is a floor.
+func totalsLine(a backlogAnswer) string {
+	parts := make([]string, 0, len(a.Counts))
+	for _, c := range a.Counts {
+		if c.Total != nil {
+			parts = append(parts, fmt.Sprintf("%s:%d", c.Category, *c.Total))
+			continue
+		}
+		mark := ""
+		if c.MoreAvailable {
+			mark = "+"
+		}
+		parts = append(parts, fmt.Sprintf("%s:%d%s", c.Category, c.Considered, mark))
+	}
+	return strings.Join(parts, ",")
 }
 
 // allocatedBy is the heap the whole process allocated while read ran. The
@@ -343,6 +394,9 @@ func enumerateBacklog(ctx context.Context, activityStore *activities.Store, deal
 	if scope == "mine" {
 		own := ids.From[ids.UserKind](owners[0])
 		in.OwnQueueOf = &own
+	} else {
+		// The team view keeps the roster's tasks and nobody's, as the walk does.
+		in.TeamQueueOf = owners
 	}
 	for {
 		rows, next, err := activityStore.ListActivities(ctx, in)
