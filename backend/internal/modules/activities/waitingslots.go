@@ -54,7 +54,7 @@ func (s *Store) waitingQueueSlots(
 	// The links come back only where the reader may see what they point at.
 	// Aliased `wl`, not `l`: the discover gate renders its own correlated
 	// subquery over activity_link as `l`, and a second `l` would shadow it.
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}
