@@ -191,7 +191,7 @@ func TestTerminateSentence(t *testing.T) {
 
 func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
 	for _, lang := range textlang.Shipped {
-		if len(writerSubjects[lang]) == 0 {
+		if len(writerSubjects[lang].all()) == 0 {
 			t.Errorf("%q ships with no writer subjects, so a recommendation written as a promise in it is shown", lang)
 		}
 	}
@@ -199,9 +199,57 @@ func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
 
 func TestEveryListedWriterSubjectIsRefused(t *testing.T) {
 	for lang, subjects := range writerSubjects {
-		for _, subject := range subjects {
+		for _, subject := range subjects.all() {
 			if !OpensWithWriterSubject(subject + " send the agreement.") {
 				t.Errorf("%s subject %q is listed and still not refused", lang, subject)
+			}
+		}
+	}
+}
+
+func TestEveryShippedLanguageNamesTheWriterAlone(t *testing.T) {
+	for _, lang := range textlang.Shipped {
+		if len(writerSubjects[lang].singular) == 0 {
+			t.Errorf("%q ships with no singular writer subject, so an advice line written as the writer's own in it is shown", lang)
+		}
+	}
+}
+
+func TestTheWriterAloneIsRefusedAndTheWriterWithOthersIsNot(t *testing.T) {
+	for _, text := range []string{
+		"I think we should lead with their plant managers.",
+		"I'd lead with their plant managers.",
+		"I'll send the agreement.",
+		"Ich würde mit den Werksleitern beginnen.",
+		"Tôi sẽ gửi hợp đồng.",
+		"To\u0302i se\u0303 gu\u031B\u0309i",
+		"- I'd lead with their plant managers.",
+	} {
+		if !OpensWithSingularWriterSubject(text) {
+			t.Errorf("OpensWithSingularWriterSubject(%q) = false, want the writer alone refused", text)
+		}
+	}
+	for _, text := range []string{
+		"We should lead with their plant managers.",
+		"Wir sollten mit den Werksleitern beginnen.",
+		"Chúng tôi sẽ gửi hợp đồng.",
+		"Let's send the agreement.",
+		"Send the agreement.",
+		"I/O bottlenecks stall their plants; lead with that.",
+	} {
+		if OpensWithSingularWriterSubject(text) {
+			t.Errorf("OpensWithSingularWriterSubject(%q) = true, want it kept", text)
+		}
+	}
+	for lang, subjects := range writerSubjects {
+		for _, subject := range subjects.singular {
+			if !OpensWithSingularWriterSubject(subject + " send the agreement.") {
+				t.Errorf("%s singular subject %q is listed and still not refused", lang, subject)
+			}
+		}
+		for _, subject := range subjects.plural {
+			if OpensWithSingularWriterSubject(subject + " send the agreement.") {
+				t.Errorf("%s plural subject %q is refused as the writer alone", lang, subject)
 			}
 		}
 	}
@@ -232,7 +280,7 @@ func TestARecommendationOpeningWithIOrWeIsAPromise(t *testing.T) {
 		"2) We'll call them.",
 		"To\u0302i se\u0303 gu\u031B\u0309i",
 		"Iʼll send it.",
-		"I.e. send the agreement.", // the splitter reads "I.e." as the words i and e
+		"I. Send the agreement.",
 	} {
 		if !OpensWithWriterSubject(text) {
 			t.Errorf("OpensWithWriterSubject(%q) = false, want the promise refused", text)
@@ -250,6 +298,8 @@ func TestAnInstructionOrAFactIsNotAPromise(t *testing.T) {
 		"I-beam supply is their bottleneck.",
 		"They asked for the agreement; I couldn't see their reply.",
 		"Schicke ihnen den Vertrag.",
+		"I.e. send the agreement.", // a "." between two letters stays inside the word
+		"I/O bottlenecks stall their plants; lead with that.",
 		"",
 	} {
 		if OpensWithWriterSubject(text) {

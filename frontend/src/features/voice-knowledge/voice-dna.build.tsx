@@ -176,7 +176,7 @@ export function BuildControls({
         canEdit ? (
           <div className="vdna-buildcell">
             <Button
-              variant="primary"
+              variant="ai"
               // A refusal the reader can act on, attached to the control rather
               // than left in a `title` no screen reader announces on a disabled
               // button. It points at the description this row already draws.

@@ -13,7 +13,8 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { PanelBody } from "../../design-system/panel";
 import { useLastSubject } from "../../design-system/presence";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDate, formatNumber } from "../../format/format";
+import { Meter } from "../../design-system/readings";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import {
   type Locale,
   type PluralTranslator,
@@ -46,17 +47,26 @@ export function useVoiceSources(profileId: string) {
 
 // Mirrors the server's quality bands so a removal can name the drop before it
 // happens; the server remains the authority.
+// Each band from the corpus size it starts at. The meter reads the same floors,
+// so the marks under the bar and the removal warning cannot disagree.
+const BAND_FLOORS: readonly {
+  band: VoiceCorpusSummary["quality_band"];
+  from: number;
+}[] = [
+  { band: "thin", from: 0 },
+  { band: "good", from: 8000 },
+  { band: "rich", from: 20000 },
+  { band: "sharp", from: 30000 },
+];
+
 function bandFor(totalWords: number): VoiceCorpusSummary["quality_band"] {
-  if (totalWords < 8000) {
-    return "thin";
+  let reached: VoiceCorpusSummary["quality_band"] = "thin";
+  for (const floor of BAND_FLOORS) {
+    if (totalWords >= floor.from) {
+      reached = floor.band;
+    }
   }
-  if (totalWords < 20000) {
-    return "good";
-  }
-  if (totalWords < 30000) {
-    return "rich";
-  }
-  return "sharp";
+  return reached;
 }
 
 const BAND_LABEL: Record<VoiceCorpusSummary["quality_band"], MessageKey> = {
@@ -130,6 +140,7 @@ function ExclusionReason({ reason }: Readonly<{ reason: string | null }>) {
 // Where the corpus words come from; spoken samples are the gap worth naming.
 function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
   const t = useT();
+  const { locale } = useLocale();
   const entries = Object.entries(summary.register_words).filter(
     ([, words]) => words > 0,
   );
@@ -137,27 +148,71 @@ function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
     return null;
   }
   return (
-    <p className="t-caption vdna-regmix">
-      {entries
-        .map(
-          ([register, words]) =>
-            `${registerLabel(t, register)} ${Math.round((words / summary.total_words) * 100)}%`,
-        )
-        .join(" · ")}
-    </p>
+    <div className="vdna-chips vdna-regmix">
+      {entries.map(([register, words]) => (
+        <Badge key={register}>
+          {`${registerLabel(t, register)} ${formatPercent(words / summary.total_words, locale)}`}
+        </Badge>
+      ))}
+    </div>
   );
 }
 
-// Below the first-build floor, the distance to it is what the reader asks.
+// How far the corpus has come toward a sharp voice. The band floors sit under
+// the bar, so a reader sees what the next sample buys.
+function CorpusMeter({
+  summary,
+  captionId,
+}: Readonly<{ summary: VoiceCorpusSummary; captionId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const sentence = t("settings.voice.meter", {
+    count: formatNumber(summary.total_words, locale),
+    target: formatNumber(summary.target_words, locale),
+  });
+  const scale = Math.max(summary.target_words, 1);
+  return (
+    <div className="vdna-meter">
+      <p className="vdna-meter-figure" id={captionId} tabIndex={-1}>
+        {sentence}
+      </p>
+      <Meter
+        tone="ai"
+        value={summary.total_words}
+        max={scale}
+        label={sentence}
+      />
+      <ol className="vdna-bands" aria-hidden>
+        {BAND_FLOORS.map((floor) => (
+          <li
+            key={floor.band}
+            className="t-caption"
+            data-current={floor.band === summary.quality_band || undefined}
+            style={{
+              insetInlineStart: `${Math.min(100, (floor.from / scale) * 100)}%`,
+            }}
+          >
+            {bandLabel(t, floor.band)}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+// Below the first-build floor, the distance to it is what the reader asks. A
+// native <progress> would paint in light colours whatever the theme.
 function FloorMeter({ words }: Readonly<{ words: number }>) {
   const t = useT();
   const { locale } = useLocale();
   return (
-    <p className="t-caption vdna-floor">
-      <progress
+    <div className="t-caption vdna-floor">
+      <Meter
+        dense
+        tone="ai"
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
-        aria-label={t("settings.voice.floorLabel", {
+        label={t("settings.voice.floorLabel", {
           min: formatNumber(VOICE_MIN_WORDS, locale),
         })}
       />
@@ -167,7 +222,7 @@ function FloorMeter({ words }: Readonly<{ words: number }>) {
           min: formatNumber(VOICE_MIN_WORDS, locale),
         })}
       </span>
-    </p>
+    </div>
   );
 }
 
@@ -320,12 +375,7 @@ export function VoiceSamples({
         return (
           <>
             <PanelBody>
-              <p className="t-caption" id={meterId} tabIndex={-1}>
-                {t("settings.voice.meter", {
-                  count: formatNumber(summary.total_words, locale),
-                  target: formatNumber(summary.target_words, locale),
-                })}
-              </p>
+              <CorpusMeter summary={summary} captionId={meterId} />
               {summary.total_words < VOICE_MIN_WORDS && (
                 <FloorMeter words={summary.total_words} />
               )}

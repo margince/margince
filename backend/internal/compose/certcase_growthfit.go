@@ -294,6 +294,7 @@ func (c *growthFitCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 
 // selfWords are the words a writer uses of itself alone. "We" and
 // "our" are absent: in a fit they name the reader's own company.
+// Not claims' singular writerSubjects: those match only an opening subject, and this grade reads every word.
 var selfWords = map[string]bool{
 	"I": true, "I'm": true, "I'd": true, "I'll": true, "I've": true,
 	"me": true, "Me": true, "my": true, "My": true, "myself": true, "Myself": true,

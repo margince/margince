@@ -98,6 +98,25 @@ func TestASectionKindTheContractDoesNotDeclareIsDropped(t *testing.T) {
 	}
 }
 
+// The dossier states what the records say; advice is the growth fit's job.
+func TestADossierSentenceLabelledARecommendationIsDropped(t *testing.T) {
+	in := fourOfSeven()
+	id := in.ProfileFields[0].Id.String()
+	cite := `"evidence":[{"entity_type":"profile_field","entity_id":"` + id + `"}]`
+	reply := `{"sections":[{"kind":"summary","sentences":[
+		{"text":"They build load-shifting software.","nature":"fact",` + cite + `},
+		{"text":"Pitch them load-shifting software.","nature":"recommendation",` + cite + `}]}]}`
+
+	got, err := ParseDossier(reply, in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	if len(got) != 1 || len(got[0].Sentences) != 1 || got[0].Sentences[0].Text != "They build load-shifting software." {
+		t.Errorf("sections = %+v, want the fact kept and the recommendation dropped", got)
+	}
+}
+
 func sectionEntry(kind, text string, in Input) string {
 	id := in.ProfileFields[0].Id.String()
 	return `{"kind":"` + kind + `","sentences":[
