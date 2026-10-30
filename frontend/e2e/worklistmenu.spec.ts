@@ -90,8 +90,9 @@ for (const { name, wide } of WIDTHS) {
     await openQueue(page, wide);
     const drawer = page.getByRole("dialog");
     const menus = drawer.getByRole("button", { name: /Weitere Aktionen für/ });
-    await expect(menus).toHaveCount(3);
-    for (let row = 0; row < 3; row++) {
+    // The waiting mail and the task; the fixture's decision is on Decisions.
+    await expect(menus).toHaveCount(2);
+    for (let row = 0; row < 2; row++) {
       await menus.nth(row).click();
       const panel = page.locator(".overflow-menu-items:not([hidden])");
       await expect(panel).toHaveCount(1);
