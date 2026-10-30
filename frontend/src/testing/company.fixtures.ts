@@ -208,6 +208,9 @@ export function backstopAnswer(
   if (pathname.endsWith("/connectors")) {
     return jsonResponse(options?.connectors ?? { data: [] });
   }
+  if (pathname.endsWith("/activities/latest-inbound")) {
+    return jsonResponse({ data: [] });
+  }
   // The account scan the page asks for on open: `never`, echoing the 360's
   // rows, unless a suite hands in one, so a page test is not also a scan test.
   if (pathname.endsWith("/scan")) {

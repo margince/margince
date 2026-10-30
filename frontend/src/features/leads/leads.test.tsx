@@ -395,7 +395,11 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         if (new URL(url).pathname.endsWith("/me")) {
           return jsonResponse(meFixture({ allow: LEAD_GRANTS }));
         }
-        if (method === "GET" && url.endsWith("/v1/connectors")) {
+        if (
+          method === "GET" &&
+          (url.endsWith("/v1/connectors") ||
+            new URL(url).pathname.endsWith("/activities/latest-inbound"))
+        ) {
           return jsonResponse({ data: [] });
         }
         return jsonResponse(lead);

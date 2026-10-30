@@ -59,7 +59,7 @@ func TestTheFrontendCategoryViewsMatchTheServer(t *testing.T) {
 	for category, view := range mirrorTable(t, "CATEGORY_VIEW") {
 		row := ranked{item: crmcontracts.WorklistItem{Category: crmcontracts.WorklistItemCategory(category)}}
 		for _, candidate := range views {
-			if inView(row, candidate) != (candidate == view) {
+			if inView(row.item.Category, candidate) != (candidate == view) {
 				t.Errorf("category %q: the frontend puts it in view %q, the server disagrees about %q", category, view, candidate)
 			}
 		}

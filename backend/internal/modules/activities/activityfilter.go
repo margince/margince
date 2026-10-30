@@ -174,11 +174,20 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}
+	if in.SourceSystem != nil {
+		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
+	}
+	if in.AnswersThem {
+		where = append(where, answersThemSQL)
+	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
 	}
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
+	}
+	if in.TeamQueueOf != nil {
+		where = append(where, teamQueueClause(in.TeamQueueOf, arg))
 	}
 	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
 		where = append(where, clause)
@@ -203,7 +212,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 // add, since the content gate is discover and audience. Repeating the full gate
 // doubled the statement Postgres plans.
 func dueRemindersArm(ctx context.Context, in ListActivitiesInput, gated bool, arg func(any) int) (string, error) {
-	if !in.RemindersDue && !in.OrRemindersDue {
+	if !in.RemindersDue && !in.OrRemindersDue && !in.ExceptRemindersDue {
 		return "", nil
 	}
 	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)

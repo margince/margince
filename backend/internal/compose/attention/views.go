@@ -57,15 +57,15 @@ func resolveView(view, filter string) (string, error) {
 	return view, nil
 }
 
-// inView says whether a row belongs to a view. No view keeps every row.
-func inView(row ranked, view string) bool {
+// inView says whether a category belongs to a view. No view keeps every one.
+func inView(category crmcontracts.WorklistItemCategory, view string) bool {
 	switch view {
 	case viewDecisions:
-		return row.item.Category == categoryDecisions
+		return category == categoryDecisions
 	case viewSystem:
-		return row.item.Category == categorySystem
+		return category == categorySystem
 	case viewToday:
-		return row.item.Category != categoryDecisions && row.item.Category != categorySystem
+		return category != categoryDecisions && category != categorySystem
 	default:
 		return true
 	}
@@ -74,14 +74,18 @@ func inView(row ranked, view string) bool {
 // keepInView narrows rows to a view, and drops upcoming work unless the filter
 // asks for it. Upcoming work is a section of its own and never a due row.
 func keepInView(rows []ranked, view, filter string) []ranked {
-	wantUpcoming := filter == string(categoryUpcoming)
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if inView(row, view) && (row.item.Category == categoryUpcoming) == wantUpcoming {
+		if shownIn(row.item.Category, view, filter) {
 			kept = append(kept, row)
 		}
 	}
 	return kept
+}
+
+// shownIn is keepInView's test for one category.
+func shownIn(category crmcontracts.WorklistItemCategory, view, filter string) bool {
+	return inView(category, view) && (category == categoryUpcoming) == (filter == string(categoryUpcoming))
 }
 
 // outstanding is the population the summary counts: the view's rows that are

@@ -1,8 +1,5 @@
 import { type ReactNode, useState } from "react";
-import {
-  LatestInboundPanel,
-  useLatestInbound,
-} from "../../components/latestinbound";
+import { JustInScope, useLatestInbound } from "../../components/latestinbound";
 import { RecordStory } from "../../design-system/recordstory";
 import {
   type ActivityKind,
@@ -169,16 +166,19 @@ function useProjectChronology(
 }
 
 /**
- * The newest unanswered thing anyone on the project sent, leading the page
- * with the verbs its timeline row has.
+ * The newest unanswered thing anyone on the project sent, for the Next bar in
+ * `children`, with the verbs its timeline row has.
  */
 export function ProjectLatestInbound({
   projectId,
-}: Readonly<{ projectId: string }>) {
+  children,
+}: Readonly<{ projectId: string; children: ReactNode }>) {
   const latest = useLatestInbound("project", projectId);
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="project"
+      entityId={projectId}
       actions={(activity) => (
         <RowAnswerActions
           activity={activity}
@@ -186,6 +186,8 @@ export function ProjectLatestInbound({
           entityId={projectId}
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }

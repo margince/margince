@@ -184,12 +184,12 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 				t.Fatalf("target inbox = %d, %v, want %d", len(rows), err, tc.count)
 			}
 			err = e.DB().Tx(tc.ctx, func(tx pgx.Tx) error {
-				pending, err := svc.PendingForTarget(tc.ctx, tx, "activity", activity, 100)
+				pending, err := svc.PendingForTarget(tc.ctx, tx, "activity", activity)
 				if err != nil {
 					return err
 				}
-				if len(pending) != tc.count {
-					return fmt.Errorf("target pending = %d, want %d", len(pending), tc.count)
+				if len(pending.Approvals) != tc.count {
+					return fmt.Errorf("target pending = %d, want %d", len(pending.Approvals), tc.count)
 				}
 				return nil
 			})

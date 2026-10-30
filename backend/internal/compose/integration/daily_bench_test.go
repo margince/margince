@@ -80,19 +80,19 @@ func TestDailyUseBudgets(t *testing.T) {
 	})
 
 	step("latency", func(t *testing.T) {
-		stagesBefore := worklistStagesSoFar()
 		rep := seats.Reps[slices.IndexFunc(seats.Reps, func(s Seat) bool { return s.UserID == corpus.MedianRepID })]
 		for _, seat := range []Seat{rep, seats.Managers[0]} {
+			stagesBefore := worklistStagesSoFar()
 			in := newDailyInput(t, e, seat, seats.Teams[0], corpus)
 			in.EvaluateArgs = dailyEvaluateArgs(t, e, seat)
 			for _, f := range dailyFlows {
 				rows = append(rows, runDailyFlow(t, e, f, in)...)
 			}
+			logWorklistStages(t, seat.Role, stagesBefore)
 		}
 		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
 		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
 		assertDailyReviewFocus(t, rows)
-		logWorklistStages(t, stagesBefore)
 	})
 
 	step("load", func(t *testing.T) {

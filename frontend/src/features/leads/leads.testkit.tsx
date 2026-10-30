@@ -128,6 +128,10 @@ export function stubFetch(
     if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
       return jsonResponse({ data: [] });
     }
+    // What the lead sent and nobody answered: nothing, unless a test says so.
+    if (new URL(request.url).pathname.endsWith("/activities/latest-inbound")) {
+      return jsonResponse({ data: [] });
+    }
     if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
       return jsonResponse(SIGNAL_CATALOG);
     }
@@ -227,6 +231,11 @@ export function stubFetchWithMe(
           anchor: { type: "lead", id: "l-1" },
           sections: [],
         });
+      }
+      if (
+        new URL(request.url).pathname.endsWith("/activities/latest-inbound")
+      ) {
+        return jsonResponse({ data: [] });
       }
       if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
         return jsonResponse(SIGNAL_CATALOG);

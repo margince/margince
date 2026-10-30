@@ -2,16 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { StoryProviders } from "../testing/story-utils";
-import { LatestInboundLine, LatestInboundPanel } from "./latestinbound";
+import {
+  type JustIn,
+  JustInScope,
+  LatestInboundLine,
+  RecordNextBar,
+} from "./latestinbound";
 
 type Activity = components["schemas"]["Activity"];
 
-// The newest unanswered thing on a record, as the panel leading its Overview
-// and as the line in its head on every other tab. The times are an hour or so
-// before now, so the label reads the way it does on a live record.
+// The newest unanswered thing on a record, in each place it shows. The times
+// are an hour or so before now, so the label reads as on a live record.
 const hoursAgo = (hours: number) =>
   new Date(Date.now() - hours * 3_600_000).toISOString();
 
@@ -70,65 +75,104 @@ const chat = activity("chat", {
 // Stands in for the record's own row verbs, which each page hands in.
 const verbs = () => <Button variant="primary">Reply</Button>;
 
-const meta: Meta<typeof LatestInboundPanel> = {
+const notice = () => undefined;
+const MAIL: JustIn = {
+  activity: mail,
+  kind: "email",
+  accepts_request: true,
+  notice,
+};
+
+function OnRecord({
+  latest,
+  children,
+}: Readonly<{ latest: JustIn; children: ReactNode }>) {
+  return (
+    <StoryProviders>
+      <div style={{ maxWidth: 720 }}>
+        <JustInScope
+          latest={latest}
+          entityType="contact"
+          entityId="story-contact"
+          actions={verbs}
+        >
+          {children}
+        </JustInScope>
+      </div>
+    </StoryProviders>
+  );
+}
+
+const meta: Meta<typeof RecordNextBar> = {
   title: "Records/Just in",
-  component: LatestInboundPanel,
+  component: RecordNextBar,
 };
 export default meta;
-type Story = StoryObj<typeof LatestInboundPanel>;
+type Story = StoryObj<typeof RecordNextBar>;
 
 export const Email: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: mail, kind: "email", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord latest={MAIL}>
+      <RecordNextBar />
+    </OnRecord>
+  ),
+};
+
+export const UrgentNext: Story = {
+  name: "Under something more urgent",
+  render: () => (
+    <OnRecord latest={MAIL}>
+      <RecordNextBar
+        title="Send the pilot results"
+        sub="Promised for Monday"
+        late={{ label: "3 days late", tone: "danger" }}
+      />
+    </OnRecord>
   ),
 };
 
 export const WebForm: Story = {
   name: "Web form",
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: form, kind: "web_form", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: form,
+        kind: "web_form",
+        accepts_request: false,
+        notice,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
 };
 
 export const Message: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: chat, kind: "message", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: chat,
+        kind: "message",
+        accepts_request: false,
+        notice,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
 };
 
 export const Withheld: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{
-            activity: { ...mail, content_state: "withheld" },
-            kind: "email",
-          }}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: { ...mail, content_state: "withheld" },
+        kind: "email",
+        accepts_request: false,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
 };
 
@@ -137,10 +181,7 @@ export const HeadLine: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 300 }}>
-        <LatestInboundLine
-          latest={{ activity: mail, kind: "email", notice: () => undefined }}
-          onOpen={() => {}}
-        />
+        <LatestInboundLine latest={MAIL} onOpen={() => {}} />
       </div>
     </StoryProviders>
   ),

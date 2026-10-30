@@ -142,6 +142,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
@@ -342,6 +343,7 @@ func (s *Service) worklistFrom(
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == ""}, shown, more, limit, cursor.Rest, rows)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk
@@ -386,7 +388,7 @@ func (s *Service) worklistFrom(
 		// The same accounting per kind of work. Both read the same two
 		// snapshots, so the per-source and per-category figures are two views of
 		// one answer rather than two answers.
-		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope), missing, scoped),
+		Counts: withTotals(countsOf(considered, shown, bounded), considered, bounded, s.exactSources(day, scope, considered), missing, scoped),
 		// The outcome figures beside the per-kind tallies, over the same
 		// snapshot: what the day's work is worth rather than how much of it
 		// there is.
@@ -413,10 +415,11 @@ func (s *Service) worklistFrom(
 	// cut landed, not a running total of rows handed out. The two differ the
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
-	if more && len(shown) > 0 {
-		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id)
+	if (more && len(shown) > 0) || (!more && rest != nil) {
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id, rest)
 		out.NextCursor = &token
 	}
+	out.SourcesUnavailable = append(out.SourcesUnavailable, s.stampSources(tailFailed)...)
 	// What has happened to this walk since it started, where there is a walk to
 	// say it about. A first page that froze nothing states nothing: the fields
 	// would be a claim about a walk that does not exist.

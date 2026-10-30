@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 9,
-    "tool_catalog_bytes": 137610,
+    "tool_catalog_bytes": 137627,
     "resource_catalog_bytes": 3541,
-    "approx_wire_tokens_total": 35287,
+    "approx_wire_tokens_total": 35292,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 34366,
-      "input_schema_bytes": 65876,
+      "input_schema_bytes": 65893,
       "output_schema_bytes": 28225,
-      "description_plus_input_schema_bytes": 100242
+      "description_plus_input_schema_bytes": 100259
     }
   },
   "tools": {
@@ -6460,6 +6460,7 @@
                 "follow_up_settings",
                 "forecast_calls",
                 "import_run",
+                "latest_inbound",
                 "latest_site_read",
                 "latest_technical_enrich",
                 "latest_transcript_read",
