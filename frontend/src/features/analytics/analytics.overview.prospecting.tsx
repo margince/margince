@@ -448,7 +448,7 @@ function Waiting({
 
 // Without SDR handoffs the page says why it counts qualified leads, and shows
 // the one who can change that where the setting is.
-function QualificationNote() {
+export function QualificationNote() {
   const t = useT();
   const canEdit = useCanWrite("reporting_framework", "update");
   return (

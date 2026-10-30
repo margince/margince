@@ -6,30 +6,38 @@
 
 import type { components } from "../../api/schema";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import type { ReportingView } from "./reporting.views";
 
 type Catalog = Pick<components["schemas"]["ReportingCatalog"], "presets">;
+type PresetID = components["schemas"]["ReportingPreset"]["id"];
 type ScopeKind =
   components["schemas"]["AnalyticsContext"]["default_scope"]["kind"];
 
-export const OVERVIEW_VIEWS = ["sales", "prospecting"] as const;
+export const OVERVIEW_VIEWS = ["sales", "prospecting", "team"] as const;
 export type OverviewView = (typeof OVERVIEW_VIEWS)[number];
 
 // The address dial that names the view, so a link opens the view it was sent from.
 export const OVERVIEW_DIAL = "overview";
 
 // The server preset each view reads.
-export const OVERVIEW_PRESET: Readonly<
-  Record<OverviewView, Extract<ReportingView, "sales" | "sdr">>
-> = {
+export const OVERVIEW_PRESET: Readonly<Record<OverviewView, PresetID>> = {
   sales: "sales",
   prospecting: "sdr",
+  team: "team",
 };
 
-/** The views this catalog can answer, in the order the switch offers them. */
-export function overviewViews(catalog: Catalog): OverviewView[] {
-  return OVERVIEW_VIEWS.filter((view) =>
-    catalog.presets.some((preset) => preset.id === OVERVIEW_PRESET[view]),
+/**
+ * The views this catalog can answer, in the order the switch offers them.
+ * Team prospecting is for a reader whose own lens covers colleagues: an SDR
+ * reviewing their own work has My prospecting for it.
+ */
+export function overviewViews(
+  catalog: Catalog,
+  teamLens = false,
+): OverviewView[] {
+  return OVERVIEW_VIEWS.filter(
+    (view) =>
+      (view !== "team" || teamLens) &&
+      catalog.presets.some((preset) => preset.id === OVERVIEW_PRESET[view]),
   );
 }
 
