@@ -4116,6 +4116,7 @@ public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal
 public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))))
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_win_probability_at_change_check CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))
+public.deal_stage_history.from_position_at_change integer gen=- def=-
 public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.fx_date_at_change date gen=- def=-
 public.deal_stage_history.fx_rate_at_change numeric gen=- def=-
@@ -4125,6 +4126,7 @@ public.deal_stage_history.owner_id_at_change uuid gen=- def=-
 public.deal_stage_history.pipeline_id_at_change uuid gen=- def=-
 public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.semantic_at_change text gen=- def=-
+public.deal_stage_history.to_position_at_change integer gen=- def=-
 public.deal_stage_history.to_stage_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.valuation_provenance text gen=- def=-
 public.deal_stage_history.win_probability_at_change smallint gen=- def=-
@@ -5387,6 +5389,7 @@ public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid
 
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-
+public.lead.arrival_owner_id uuid gen=- def=-
 public.lead.candidate_company_key text gen=- def=-
 public.lead.captured_by text NOT NULL gen=- def=-
 public.lead.company_id uuid gen=- def=-
