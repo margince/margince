@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics frontend/src/features/settings/lossreasons.tsx backend/internal/modules/deals/lossreasonmapping.go backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
+<!-- describes: frontend/src/features/analytics frontend/src/features/settings/lossreasons.tsx backend/internal/modules/deals/lossreasonmapping.go backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly backend/internal/compose/reportingstagecohort.go backend/internal/compose/reportingleadcohort.go -->
 # Performance and saved sales reports
 
 ## Where do I start my sales review?
@@ -84,6 +84,18 @@ Ask a question about won and lost deals, and group it by **Loss reason from the 
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 
 Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
+
+## Where do deals and leads stop moving?
+
+Open **Analytics → Stage conversion** and choose one pipeline. Each row is a stage. It counts the deals that entered that stage in your time span, each deal once. It says what each did next: a later stage, won, lost, back to an earlier stage, or another pipeline. A deal that left a stage back to it again shows under **Back in this stage**. A deal that came back from a won or lost close shows under **Reopened after a close**.
+
+**Still open** deals have not left the stage yet. They never count as lost, and the rate leaves them out. **Moved on** is the share of deals that went to a later stage or were won, out of those that left the stage. A stage shows no rate until 5 deals have left it.
+
+Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Forward or back unknown**, and the rate leaves them out too.
+
+Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
+
+On **Analytics → Leads**, **What became of new leads** does the same for the leads that came in during your time span. It counts how many had a handoff accepted, were qualified or disqualified, or are still open. Each lead counts for the team member who owned it when it came in. Leads that came in before Margince kept that owner count for the whole workspace, but for no team member or team.
 
 ## How do I save or share a report?
 
