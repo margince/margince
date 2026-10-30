@@ -5,18 +5,13 @@ package compose
 
 // The open tasks a closing deal leaves behind, for the surface that closes it.
 //
-// Closing a deal never settles its tasks silently (#7475): a task on a closed
-// deal can still be real work, so the close asks. The web asked by fetching the
-// deal's activities and judging "open" in the client, which left the tool
-// surface unable to ask at all.
+// A task on a closed deal can still be real work, so the close asks. The web
+// asked by judging "open" in the client, which left the tool unable to ask.
 //
-// This seam is that judgement, once and server-side. The settle write is
-// activities.SetTaskDoneTx, which is what the bulk change applies per row, so a
-// tool that completes through here leaves the audit rows the web leaves.
+// The settle write is activities.SetTaskDoneTx, what the bulk change applies
+// per row, so completing here leaves the audit rows the web leaves.
 //
-// It reads the tasks AFTER the move, which is what a tool result can report.
-// The web needs them BEFORE, to fill its dialog, so the two shapes differ by
-// when they ask rather than by what they mean.
+// This reads after the move; the web reads before, to fill its dialog.
 
 import (
 	"context"
@@ -40,8 +35,8 @@ func newDealCloseTasks(tasks *activities.Store, db *database.DB) dealCloseTasks 
 	return dealCloseTasks{tasks: tasks, db: db}
 }
 
-// openTasksOf lists the deal's open tasks through the activities reader, so the
-// caller's row scope and field masks are the reader's own.
+// openTasksOf lists the deal's open tasks through the activities reader. The
+// caller's row scope and field masks are then the reader's own.
 func (d dealCloseTasks) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crmcontracts.Activity, error) {
 	kind, entity := "task", "deal"
 	rows, _, err := d.tasks.ListActivities(ctx, activities.ListActivitiesInput{
@@ -52,9 +47,8 @@ func (d dealCloseTasks) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crm
 	}
 	open := make([]crmcontracts.Activity, 0, len(rows))
 	for _, row := range rows {
-		// A task with no is_done is not an open task: the column is the
-		// record's own answer, and its absence means the row is not a task
-		// this seam may settle.
+		// A task with no is_done is not an open task. The column is the
+		// record's own answer. Its absence means the row is not one to settle.
 		if row.IsDone != nil && !*row.IsDone {
 			open = append(open, row)
 		}
@@ -82,9 +76,9 @@ func (d dealCloseTasks) OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([
 // CompleteOpenTasksOnDeal ticks the deal's open tasks done and answers the ones
 // it settled.
 //
-// One transaction, so a caller that asked to settle does not learn it half
-// happened. A task whose version moved between the read and the write is left
-// alone rather than forced, the same answer the bulk change gives it.
+// One transaction, so a caller never learns a settle half happened. A task
+// whose version moved between the read and the write is left alone rather than
+// forced, the answer the bulk change gives it.
 func (d dealCloseTasks) CompleteOpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]ids.UUID, error) {
 	var settled []ids.UUID
 	err := d.db.Tx(ctx, func(tx pgx.Tx) error {

@@ -64,9 +64,9 @@ func WithDealTaskSettler(settler DealTaskSettler) RegistryOption {
 // behind. Closing a deal never settles them silently (#7475), so the surface
 // that closes it has to be able to ask.
 //
-// Narrow rather than on the provider port: the read is an activities concern
-// and three fakes assert that port without embedding it, so widening it would
-// put stubs for this in modules that never close a deal.
+// Narrow rather than on the provider port. The read is an activities concern,
+// and three fakes assert that port without embedding it. Widening it would put
+// stubs for this in modules that never close a deal.
 type DealTaskSettler interface {
 	// OpenTasksOnDeal lists the deal's open tasks, newest first.
 	OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]crmcontracts.DealOpenTask, error)
