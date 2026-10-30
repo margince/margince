@@ -43,6 +43,10 @@ const subjectKindDeal = "deal"
 // distinct from one that is missing or out of range.
 const codeInvalid = "invalid"
 
+// codeOutOfRange refuses a moment past the ceiling, for an expiry and a
+// deferral alike.
+const codeOutOfRange = "out_of_range"
+
 // slotOutcome names the answer kind, in the one place it is spelled.
 const slotOutcome = "outcome"
 
@@ -334,7 +338,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 		// outlive the fact it rested on either.
 		if in.RemindAt.After(now.Add(MaxSuppression)) {
 			return nil, &values.ParseError{
-				Field: "remind_at", Code: "out_of_range",
+				Field: "remind_at", Code: codeOutOfRange,
 				Message: "a finding may be deferred for at most 90 days: a value that was correct in May is a claim about May",
 			}
 		}
@@ -359,7 +363,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	}
 	if !in.ExpiresAt.After(now) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "an expiry in the past suppresses nothing",
 		}
 	}
@@ -368,7 +372,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	// believe the finding stays hidden through the next two quarters.
 	if in.ExpiresAt.After(ceiling) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "a finding may be hidden for at most 90 days: a value that was correct in May is a claim about May",
 		}
 	}
