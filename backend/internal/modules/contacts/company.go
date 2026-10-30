@@ -34,7 +34,11 @@ type CreateCompanyInput struct {
 	// LinkedInURL is the company's LinkedIn page; stored in its canonical
 	// spelling, and unique among live companies.
 	LinkedInURL *string
-	Source      string
+	// Phone and Email are the company's main number and general address. A
+	// blank one is no value; a set one is stored in its parsed spelling.
+	Phone  *string
+	Email  *string
+	Source string
 	// SourceSystem names the system an import took this company from; nil
 	// for one created here, which is what makes it unattributable.
 	SourceSystem *string
@@ -148,6 +152,9 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) 
 		}
 		in.LinkedInURL = &normalized
 	}
+	if in.Phone, in.Email, err = parseCompanyPhoneAndEmail(in.Phone, in.Email); err != nil {
+		return "", err
+	}
 	// Both write paths, not just the patch: a vocabulary checked on update and
 	// not on create is a value the database refuses at birth and the transport
 	// cannot name.
@@ -185,6 +192,8 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		Address:         in.Address,
 		Domains:         in.Domains,
 		LinkedInURL:     in.LinkedInURL,
+		Phone:           in.Phone,
+		Email:           in.Email,
 		Source:          in.Source,
 		SourceSystem:    in.SourceSystem,
 		SourceID:        in.SourceID,

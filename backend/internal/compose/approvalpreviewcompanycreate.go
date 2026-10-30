@@ -49,7 +49,7 @@ func (r approvalPreviewReader) companyCreationDetails(ctx context.Context, plan 
 	fields := map[string]any{
 		"display_name": in.DisplayName, fieldLegalName: in.LegalName, descriptionField: description,
 		fieldIndustry: industry, fieldSizeBand: in.SizeBand, bulkParamOwner: in.OwnerID, refColParentCompany: in.ParentCompanyID,
-		fieldLinkedIn: in.LinkedInURL, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
+		fieldLinkedIn: in.LinkedInURL, fieldPhone: in.Phone, fieldEmail: in.Email, fieldSource: in.Source, previewFieldSourceSystem: in.SourceSystem,
 		previewFieldSourceAuthorName: in.Author.AuthorName, previewFieldSourceAuthorID: in.Author.AuthorID,
 		previewLifecycle: previewLifecycleUnknown,
 	}

@@ -29465,6 +29465,13 @@ export interface components {
              */
             readonly is_anchor?: boolean;
             legal_name?: string | null;
+            /** @description The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose). */
             description?: string | null;
             /**
@@ -29568,6 +29575,13 @@ export interface components {
         CreateCompanyRequest: {
             display_name: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
@@ -29600,6 +29614,13 @@ export interface components {
             linkedin_url?: string | null;
             display_name?: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
