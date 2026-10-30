@@ -29554,7 +29554,7 @@ export interface components {
         CreateCompanyRequest: {
             display_name: string;
             legal_name?: string | null;
-            /** @description The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number. */
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
             phone?: string | null;
             /**
              * Format: email
@@ -29593,7 +29593,7 @@ export interface components {
             linkedin_url?: string | null;
             display_name?: string;
             legal_name?: string | null;
-            /** @description The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number. */
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
             phone?: string | null;
             /**
              * Format: email

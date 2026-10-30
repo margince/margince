@@ -38805,7 +38805,7 @@ type CreateCompanyRequest struct {
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
-	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone    *string                       `json:"phone,omitempty"`
 	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
 	Source   string                        `json:"source"`
@@ -56121,7 +56121,7 @@ type UpdateCompanyRequest struct {
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
-	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
 	Phone *string `json:"phone,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.

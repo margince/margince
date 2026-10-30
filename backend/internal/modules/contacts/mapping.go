@@ -479,10 +479,7 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)
