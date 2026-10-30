@@ -11,6 +11,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { webUrl } from "../../format/weburl";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import "./webformsubmission.css";
 import type { WriteToRecord } from "../../lib/writeto";
 
 type Submission = components["schemas"]["WebFormSubmission"];
@@ -35,9 +36,7 @@ export function WebFormSubmission({
           {
             key: "message",
             term: t("activity.webForm.message"),
-            value: (
-              <span style={{ whiteSpace: "pre-wrap" }}>{sent.message}</span>
-            ),
+            value: <span className="webform-message">{sent.message}</span>,
             block: true,
           },
         ]

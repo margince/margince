@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The visitor's own words, set apart from the fields so they read at a glance. */
+.webform-message {
+  display: block;
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--bgWell);
+  color: var(--textPrimary);
+  font: var(--fontBodyLarge);
+  white-space: pre-wrap;
+}
