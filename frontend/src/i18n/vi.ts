@@ -2046,6 +2046,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
+  "systemJob.forecast_evaluation": "Đánh giá dự báo",
   "systemJob.geocode": "Tra cứu địa chỉ công ty",
   "systemJob.geocode_backfill": "Tra cứu địa chỉ còn tồn đọng",
   "systemJob.address_country_check": "Kiểm tra quốc gia của địa chỉ",

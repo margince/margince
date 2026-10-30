@@ -2028,6 +2028,7 @@ export const en = {
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
+  "systemJob.forecast_evaluation": "Forecast evaluation",
   "systemJob.geocode": "Company address lookup",
   "systemJob.geocode_backfill": "Address lookup backlog",
   "systemJob.address_country_check": "Address country check",

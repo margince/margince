@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,6 +66,12 @@ type NewSnapshot struct {
 	TakenAt time.Time
 	// CallID ties a call-triggered snapshot to the call that caused it.
 	CallID *ids.UUID
+	// ForwardMeasure is the measure the installation was set to build its
+	// landing from when this was taken. Empty stores NULL: not recorded.
+	ForwardMeasure ForwardMeasure
+	// QualifiedPolicyVersion is the viability policy the qualified readings
+	// applied, empty while qualification was off.
+	QualifiedPolicyVersion string
 }
 
 // TakeSnapshot freezes one set of readings, with the rows they were summed
@@ -227,6 +234,12 @@ func checkSnapshot(in NewSnapshot) error {
 		return &values.ParseError{
 			Field: "base_currency", Code: codeInvalid,
 			Message: "a snapshot names the currency its money is counted in",
+		}
+	}
+	if in.ForwardMeasure != "" && !slices.Contains(ForwardMeasures(), in.ForwardMeasure) {
+		return &values.ParseError{
+			Field: "forward_measure", Code: codeInvalid,
+			Message: "a snapshot names a forward measure this build knows, or none",
 		}
 	}
 	return nil

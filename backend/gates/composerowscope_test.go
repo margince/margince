@@ -190,7 +190,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
 	"internal/compose/network:readDealFacts": "the coverage view's deal row: the company id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
-
 	// The reply consumer's sender lookup. Scoping it would be the defect, not
 	// the fix: an introduction is between two colleagues, and the contact who
 	// answers it is very often owned by neither of them. A row scope here would
@@ -202,7 +201,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// Nothing escapes: the id chooses which asks to test and never leaves the
 	// consumer. Who may READ the resulting ask is decided on the read side, by
 	// introductions' own requester-or-introducer predicate.
-	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/compose:inboundSenders":              "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/modules/forecasting:attachOpenDeals": "the forecast evaluation's read of frozen contribution rows, which EvaluationVintagesTx refuses to any principal but a system one: each deal id joins a frozen deal to its outcome inside compose.ForecastEvaluationDataset, and the dataset's JSON drops it, so no id reaches a reader",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.

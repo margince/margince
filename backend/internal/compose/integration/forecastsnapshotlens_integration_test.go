@@ -146,8 +146,11 @@ func TestForecastMovementShowsACallerOnlyWhatTheLiveForecastWould(t *testing.T) 
 	})
 
 	t.Run("a pipeline's snapshot needs the pipeline grant", func(t *testing.T) {
-		e.WsExec(t, `UPDATE forecast_snapshot SET pipeline_id = $2 WHERE id = ANY($1)`,
-			[]ids.UUID{opening, closing}, pipeline)
+		pipelineID := pipeline.UUID
+		opening := freezeScopeIn(admin, t, e, at.Add(4*time.Hour), owner, &pipelineID,
+			[]forecasting.Contribution{frozenDeal(mine, e.Rep1, 100_000)})
+		closing := freezeScopeIn(admin, t, e, at.Add(5*time.Hour), owner, &pipelineID,
+			[]forecasting.Contribution{frozenDeal(mine, e.Rep1, 140_000)})
 		noPipeline := ownSeat(false)
 		noPipeline.Objects = map[string]principal.ObjectGrant{
 			"forecast": {Read: true}, "deal": {Read: true}, "installation_settings": {Read: true},
