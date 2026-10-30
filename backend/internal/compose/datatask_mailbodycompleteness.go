@@ -18,10 +18,11 @@ import (
 )
 
 // mailBodyCompletenessDataTask first restores mail bodies an older parser or
-// the older cap left short, from their stored originals. It then assesses the
-// rest of the mail stored before completeness was recorded. Both go through
-// the parser capture uses today. Mail without its stored original is never
-// guessed at: it stays unassessed, and automatic work does not read it.
+// the older cap left short, from their stored originals. It then rewrites text
+// a parser wrote without reading the message's charset, and assesses the rest
+// of the mail stored before completeness was recorded. All three go through the
+// parser capture uses today. Mail without its stored original is never guessed
+// at: it stays unassessed, and automatic work does not read it.
 func mailBodyCompletenessDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792776165_mail_body_completeness", Version: 1,
@@ -30,6 +31,13 @@ func mailBodyCompletenessDataTask() datatask.Task {
 			Name: "restore_stored_mail_bodies", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimateRecoverableMailBodies, Batch: restoreMailBodiesBatch,
+		}, {
+			// Before the assessment, which stamps completeness from the text:
+			// re-decoding afterwards would leave that reading of text this
+			// step had already replaced.
+			Name: "redecode_stored_mail_text", Limit: 50, MinLimit: 1,
+			Audit:    datatask.AuditPolicy{PerRecord: true},
+			Estimate: estimateRedecodableMailText, Batch: redecodeMailTextBatch,
 		}, {
 			Name: "assess_stored_mail_bodies", Limit: 50, MinLimit: 1,
 			EmptyWhenDone: true,
