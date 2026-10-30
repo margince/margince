@@ -57,6 +57,27 @@ export function useRecordOwnerOptions(enabled = true): UserOptions {
   return { options, roster };
 }
 
+/**
+ * The colleagues the reader may offer a record they own: an active human seat
+ * that can write. The reader's own write scope does not bound it, because the
+ * colleague agrees to take the record. The roster answers it per row
+ * (`receives_handover`); the reader is left out.
+ */
+export function useHandOverRecipientOptions(
+  viewerId: string | undefined,
+  enabled = true,
+): UserOptions {
+  const roster = useRoster("user", enabled);
+  const options = (roster.data ?? []).flatMap((entry) =>
+    "display_name" in entry &&
+    entry.receives_handover === true &&
+    entry.id !== viewerId
+      ? [{ value: entry.id, label: entry.display_name }]
+      : [],
+  );
+  return { options, roster };
+}
+
 const STATUS_SUFFIX: Partial<
   Record<
     MemberStatus,

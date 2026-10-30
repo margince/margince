@@ -3,8 +3,8 @@
 
 package compose
 
-// Moving a contact or company between two colleagues who both agree. One asks,
-// the other answers in their approvals inbox. contacts says who may ask,
+// Moving a contact or company between two colleagues who both agree. One asks
+// for it or offers it, the other answers in their approvals inbox. contacts says who may ask,
 // approvals holds the request, and contacts, deals and activities each write
 // their own rows when it is accepted. No module imports another, so they meet
 // here.
@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 const (
@@ -39,11 +40,11 @@ const (
 	// ownershipTransferWindow keeps a request open across a week's absence.
 	ownershipTransferWindow = 7 * 24 * time.Hour
 	ownershipNoteMaxRunes   = 500
-	ownershipWithdrawn      = "the colleague who asked withdrew the request"
+	ownershipWithdrawn      = "the colleague who filed it withdrew it"
 )
 
-// ownershipTransfers is the one engine behind the request routes and the
-// decision effects.
+// ownershipTransfers is the one engine behind the request and offer routes and
+// the decision effects.
 type ownershipTransfers struct {
 	db *database.DB
 	// staging files requests; the decisions run on the service the effects
@@ -52,16 +53,20 @@ type ownershipTransfers struct {
 	contacts *contacts.Store
 	deals    *deals.Store
 	tasks    *activities.Store
+	// authority resolves a member's own grants: the receiver an offer is put
+	// to, and the giver an accepted offer moves the record as.
+	authority authz.Resolver
 }
 
 func newOwnershipTransfers(pool *pgxpool.Pool) ownershipTransfers {
 	db := InstallationDB(pool)
 	return ownershipTransfers{
-		db:       db,
-		staging:  NewApprovalsService(db),
-		contacts: newContactsStore(db).WithShareRequests(contactShareRequests(pool)),
-		deals:    deals.NewStore(db, DealsInstallation()),
-		tasks:    activities.NewStore(db),
+		db:        db,
+		staging:   NewApprovalsService(db),
+		contacts:  newContactsStore(db).WithShareRequests(contactShareRequests(pool)),
+		deals:     deals.NewStore(db, DealsInstallation()),
+		tasks:     activities.NewStore(db),
+		authority: identity.NewServiceFor(db),
 	}
 }
 
@@ -102,23 +107,26 @@ func (t ownershipTransfers) Request(ctx context.Context, recordType string, id i
 		if err != nil {
 			return err
 		}
-		if out, err = ownRequestTx(ctx, tx, recordType, id); err == nil {
+		if out, err = ownRequestTx(ctx, tx, recordType, id, transferAsked); err == nil {
 			return nil
 		} else if !errors.Is(err, apperrors.ErrNotFound) {
 			return err
 		}
-		if err := t.stageTx(ctx, tx, recordType, id, record.OwnerID, note); err != nil {
+		if err := refuseBesideOffer(ctx, tx, recordType, id); err != nil {
+			return err
+		}
+		if err := t.stageRequestTx(ctx, tx, recordType, id, record.OwnerID, note); err != nil {
 			return err
 		}
 		created = true
-		out, err = ownRequestTx(ctx, tx, recordType, id)
+		out, err = ownRequestTx(ctx, tx, recordType, id, transferAsked)
 		return err
 	})
 	return out, created, err
 }
 
-// stageTx files the request in the owner's inbox.
-func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, recordType string, id, owner ids.UUID, note string) error {
+// stageRequestTx files the caller's request in the owner's inbox.
+func (t ownershipTransfers) stageRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id, owner ids.UUID, note string) error {
 	asker, ok := principal.Actor(ctx)
 	if !ok {
 		return errors.New("compose: a handover request without a caller")
@@ -130,15 +138,24 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, recordType s
 	if !askable {
 		return errOwnerUnavailable
 	}
-	transfer := approvalsubject.OwnershipTransfer{
+	err = t.stageTx(ctx, tx, approvalsubject.OwnershipTransfer{
 		RecordType: recordType, RecordID: id, FromID: owner, ToID: asker.UserID,
 		RequestedBy: asker.UserID, DeciderID: owner, Note: note,
+	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return errOwnerUnavailable
 	}
+	return err
+}
+
+// stageTx files a transfer in its decider's inbox. A second press by the same
+// colleague for the same receiver joins the open one.
+func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) error {
 	body, err := json.Marshal(transfer)
 	if err != nil {
 		return fmt.Errorf("compose: encoding the handover request: %w", err)
 	}
-	identityKey, err := json.Marshal(map[string]ids.UUID{"requested_by": asker.UserID, "to_id": asker.UserID})
+	identityKey, err := json.Marshal(map[string]ids.UUID{"requested_by": transfer.RequestedBy, "to_id": transfer.ToID})
 	if err != nil {
 		return fmt.Errorf("compose: encoding the handover request's identity: %w", err)
 	}
@@ -152,21 +169,18 @@ func (t ownershipTransfers) stageTx(ctx context.Context, tx pgx.Tx, recordType s
 		Kind:           ownershipTransferKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     recordType,
-		TargetID:       id,
+		TargetType:     transfer.RecordType,
+		TargetID:       transfer.RecordID,
 		Summary:        summary,
 		JoinPending:    true,
 		Identity:       identityKey,
 		TTL:            &window,
 	})
-	if errors.Is(err, approvals.ErrNoDecider) {
-		return errOwnerUnavailable
-	}
 	return err
 }
 
-// askedSummary is the card's sentence: who asks, and what moves with the
-// record. The counts are the giver's, read when the request is filed through
+// askedSummary is the card's sentence: who staged it, and what moves with the
+// record. The counts are the giver's, read when the transfer is filed through
 // the selectors the move itself uses.
 func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (string, error) {
 	asker, err := colleagueName(ctx, tx, transfer.RequestedBy)
@@ -183,10 +197,7 @@ func (t ownershipTransfers) askedSummary(ctx context.Context, tx pgx.Tx, transfe
 	if err != nil {
 		return "", err
 	}
-	phrase := ownershipTransferWords.AskedContact
-	if transfer.RecordType == string(recordTypeCompany) {
-		phrase = ownershipTransferWords.AskedCompany
-	}
+	phrase := cardPhrase(transfer)
 	return fmt.Sprintf(phrase.In(identity.BaseLanguageForRecord(ctx, tx)), asker, dealCount.Moved, taskCount.Moved), nil
 }
 
@@ -199,20 +210,33 @@ func countOrNone[T any](n T, err error) (T, error) {
 	return n, err
 }
 
-// Own answers the caller's open request on the record.
-func (t ownershipTransfers) Own(ctx context.Context, recordType string, id ids.UUID) (ownershipRequestView, error) {
+// transferDirection is which party staged a transfer: the receiver asking, or
+// the giver offering.
+type transferDirection bool
+
+const (
+	transferAsked   transferDirection = false
+	transferOffered transferDirection = true
+)
+
+// Own answers the caller's open transfer of one direction on the record.
+func (t ownershipTransfers) Own(ctx context.Context, recordType string, id ids.UUID, direction transferDirection) (ownershipRequestView, error) {
 	var out ownershipRequestView
 	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = ownRequestTx(ctx, tx, recordType, id)
+		out, err = ownRequestTx(ctx, tx, recordType, id, direction)
 		return err
 	})
 	return out, err
 }
 
-// Withdraw takes the caller's open request back out of the owner's inbox.
-func (t ownershipTransfers) Withdraw(ctx context.Context, recordType string, id ids.UUID) error {
+// Withdraw takes the caller's open transfer of one direction back out of the
+// other party's inbox.
+func (t ownershipTransfers) Withdraw(ctx context.Context, recordType string, id ids.UUID, direction transferDirection) error {
 	return t.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := ownRequestTx(ctx, tx, recordType, id, direction); err != nil {
+			return err
+		}
 		withdrawn, err := approvals.WithdrawOwnRequestTx(ctx, tx, ownershipTransferKind, recordType, id, ownershipWithdrawn)
 		if err != nil {
 			return err
@@ -221,7 +245,9 @@ func (t ownershipTransfers) Withdraw(ctx context.Context, recordType string, id 
 	})
 }
 
-func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID) (ownershipRequestView, error) {
+// ownRequestTx answers the caller's open transfer on the record when it runs
+// in direction, else apperrors.ErrNotFound.
+func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, direction transferDirection) (ownershipRequestView, error) {
 	own, err := approvals.OwnRequestForTargetTx(ctx, tx, ownershipTransferKind, recordType, id)
 	if err != nil {
 		return ownershipRequestView{}, err
@@ -229,6 +255,9 @@ func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID
 	out := ownershipRequestView{ApprovalID: own.ID, ExpiresAt: own.ExpiresAt}
 	if err := json.Unmarshal(own.ProposedChange, &out.Transfer); err != nil {
 		return ownershipRequestView{}, fmt.Errorf("compose: decoding a handover request: %w", err)
+	}
+	if transferDirection(out.Transfer.Offered()) != direction {
+		return ownershipRequestView{}, apperrors.ErrNotFound
 	}
 	return out, nil
 }

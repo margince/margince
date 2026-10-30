@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // errTransferOwnerMoved refuses an accept the record has already left: the
@@ -46,26 +48,58 @@ type transferHandOver struct {
 }
 
 // ownershipTransferAcceptEffect moves the record, and with it the giver's open
-// deals and open tasks on it, to the receiver. It acts as the giver, who is the
-// decider of a request.
+// deals and open tasks on it, to the receiver. The move runs as the giver: the
+// decider of a request, or the colleague who offered it.
 func ownershipTransferAcceptEffect(svc *approvals.Service, t ownershipTransfers) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		transfer, err := decodeTransfer(proposedChange)
 		if err != nil {
 			return err
 		}
-		giver, ok := principal.Actor(ctx)
-		if !ok || giver.UserID != transfer.FromID {
-			return fmt.Errorf("a record is handed over by the colleague who holds it: %w", apperrors.ErrPermissionDenied)
+		decider, ok := principal.Actor(ctx)
+		if !ok || decider.UserID.IsZero() || decider.UserID != approvalsubject.OwnershipTransferDecider(proposedChange) {
+			return fmt.Errorf("a handover is accepted by the colleague it is put to: %w", apperrors.ErrPermissionDenied)
+		}
+		giverCtx, err := t.asGiver(ctx, transfer)
+		if err != nil {
+			return err
 		}
 		return svc.RedeemAndApply(ctx, approvalID, ownershipTransferKind, diffHash, func(tx pgx.Tx) error {
-			moved, err := t.handOverTx(ctx, tx, transfer)
+			moved, err := t.handOverTx(giverCtx, tx, transfer)
 			if err != nil {
 				return err
 			}
 			return tellAccepted(ctx, tx, approvalID, transfer, moved)
 		})
 	}
+}
+
+// errOfferGiverGone refuses an accept once the colleague who offered the
+// record can no longer act: suspended, removed or left.
+var errOfferGiverGone = &contacts.TransferRefusal{
+	Code:    "owner_unavailable",
+	Message: "The colleague who offered this record can no longer hand it over. Decline the offer, or ask an administrator.",
+}
+
+// asGiver binds the giver's own authority for the move. In a request the
+// giver is the decider already. In an offer the receiver decided, so the
+// giver's live grants and seat are read again for the move.
+func (t ownershipTransfers) asGiver(ctx context.Context, transfer approvalsubject.OwnershipTransfer) (context.Context, error) {
+	if !transfer.Offered() {
+		return ctx, nil
+	}
+	workspace, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return nil, errors.New("compose: a handover outside a workspace")
+	}
+	giver, err := authz.MemberPrincipal(ctx, t.authority, workspace, transfer.FromID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil, errOfferGiverGone
+	}
+	if err != nil {
+		return nil, err
+	}
+	return principal.WithActor(ctx, giver), nil
 }
 
 // handOverTx re-reads the owner and the giver's write authority under the
@@ -106,7 +140,7 @@ func (t ownershipTransfers) handOverTx(ctx context.Context, tx pgx.Tx, transfer 
 	return out, err
 }
 
-// declineTransferEffect tells the colleague who asked; the record does not change.
+// declineTransferEffect tells the colleague who staged it; the record does not change.
 func declineTransferEffect() approvals.DeclinedEffect {
 	return func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error {
 		transfer, err := decodeTransfer(proposedChange)
@@ -117,7 +151,7 @@ func declineTransferEffect() approvals.DeclinedEffect {
 	}
 }
 
-// expireTransferEffect tells the colleague who asked that nobody answered.
+// expireTransferEffect tells the colleague who staged it that nobody answered.
 func expireTransferEffect() approvals.ExpiredEffect {
 	return func(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, proposedChange json.RawMessage) error {
 		transfer, err := decodeTransfer(proposedChange)

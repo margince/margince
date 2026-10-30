@@ -6478,6 +6478,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Rút lại đề nghị",
   "handover.sent": "Đã gửi đề nghị tới {owner}",
   "handover.withdrawn": "Đã rút lại đề nghị",
+  // The owner offering a record to a colleague, from the access panel.
+  "handover.offer": "Chuyển giao cho…",
+  "handover.offerTo": "Giao cho",
+  "handover.offerPick": "Chọn một đồng nghiệp",
+  "handover.offerNote": "Ghi chú (không bắt buộc)",
+  "handover.offerSend": "Gửi đề nghị",
+  "handover.offerCancel": "Hủy",
+  "handover.offerSent": "Đã đề nghị chuyển cho {name}",
+  "handover.offered":
+    "Đã đề nghị chuyển cho {name}. Đề nghị còn mở đến {date}.",
+  "handover.withdrawOffer": "Rút lại đề nghị",
+  "handover.offerWithdrawn": "Đã rút lại đề nghị",
   "whoCanSee.title": "Ai có thể xem hồ sơ này",
   "whoCanSee.group.owner": "Người chịu trách nhiệm",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",
