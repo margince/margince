@@ -312,7 +312,8 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// forecast calls, activities, buying signals and their companies.
 		"cg:assurance-freshness": {
 			"gw:events:crm:activity", "gw:events:crm:capture", "gw:events:crm:company",
-			"gw:events:crm:deal", "gw:events:crm:identity"},
+			"gw:events:crm:deal", "gw:events:crm:identity",
+		},
 		"cg:commitment-settle": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to

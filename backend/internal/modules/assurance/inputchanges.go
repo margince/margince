@@ -41,6 +41,8 @@ type InputChange struct {
 // A capture connection changing health emits no event, so it is not here. The
 // next run grades the mailbox afresh, and until then its coverage says how far
 // it read.
+//
+//nolint:goconst // each row states its own reason; two events sharing one wording are still two decisions
 var inputChanges = map[string]InputChange{
 	"deal.created":       {ScopeDeal, "a new open deal was never judged"},
 	"deal.updated":       {ScopeDeal, "amount, close date, category and wait are rule inputs"},
@@ -70,11 +72,14 @@ var inputChanges = map[string]InputChange{
 	"deal_room.closed":            {ScopeNone, "a room's lifecycle is not a rule input"},
 	"deal_room.archived":          {ScopeNone, "a room's lifecycle is not a rule input"},
 	"deal_room.participant_invited": {
-		ScopeNone, "who may read a room is not a rule input"},
+		ScopeNone, "who may read a room is not a rule input",
+	},
 	"deal_room.participant_revoked": {
-		ScopeNone, "who may read a room is not a rule input"},
+		ScopeNone, "who may read a room is not a rule input",
+	},
 	"deal_room.participant_credential_reissued": {
-		ScopeNone, "who may read a room is not a rule input"},
+		ScopeNone, "who may read a room is not a rule input",
+	},
 	"deal_room.comment_posted":  {ScopeNone, "the room's conversation is not a rule input"},
 	"deal_room.thread_resolved": {ScopeNone, "the room's conversation is not a rule input"},
 
@@ -104,7 +109,8 @@ var inputChanges = map[string]InputChange{
 	"activity.updated":  {ScopeDealActivity, "a deal's activities decide its viability and next step"},
 	"activity.archived": {ScopeDealActivity, "an archived activity no longer counts for its deal"},
 	"activity.disposition_recorded": {
-		ScopeDealActivity, "a reply's verdict decides whether the customer refused"},
+		ScopeDealActivity, "a reply's verdict decides whether the customer refused",
+	},
 	"activity.marked_handled":     {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
 	"activity.readiness_recorded": {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
 
@@ -121,7 +127,8 @@ var inputChanges = map[string]InputChange{
 
 	"forecast.created": {ScopeWorkspace, "a call submitted after the reading was not judged against it"},
 	"forecast.exception_resolved": {
-		ScopeNone, "an answer changes the finding itself, and the list shows that at once"},
+		ScopeNone, "an answer changes the finding itself, and the list shows that at once",
+	},
 	"forecast.assurance_created": {ScopeNone, "this is the reading itself"},
 	"forecast.snapshot_created":  {ScopeNone, "a snapshot records the forecast and changes no input"},
 	"forecast.share_issued":      {ScopeNone, "who may read the forecast is not a rule input"},
