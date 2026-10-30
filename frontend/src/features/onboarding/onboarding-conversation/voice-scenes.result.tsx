@@ -1,11 +1,15 @@
-import { Lightbulb } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { Voiceprint } from "../../../components/voiceprint";
 import { Button } from "../../../design-system/atoms";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, useT } from "../../../i18n";
 import type { VoiceInsightsData } from "../../voice-knowledge/voice-insights";
-import { parseVoiceInsights } from "../../voice-knowledge/voice-insights";
+import {
+  DraftShowcase,
+  parseVoiceInsights,
+  VoicePortrait,
+  VoiceTraits,
+} from "../../voice-knowledge/voice-insights";
 import type { VoiceProfileVersion } from "./voice-scenes";
 import { WayOnward } from "./way-onward";
 
@@ -39,8 +43,10 @@ export function VoiceScene({
 }
 
 /**
- * The result scene: what a succeeded build learned, as a two-column board. The
- * sample it would send is on the left, the reading behind it on the right. The
+ * The result scene: what a succeeded build learned. The portrait leads, then a
+ * two-column board: the sample it would send on the left, the reading behind it
+ * on the right. The settings page draws the same parts, so a reader meets the
+ * voice here exactly as they will find it there. The
  * two answers sit on the pinned rail of every scene's primary action. "That is
  * me" confirms. To disagree, the reader adds more writing and builds again: the
  * one correction the product can act on, unlike a tone word it cannot apply.
@@ -73,7 +79,12 @@ export function VoiceResultScene({
           {t("ob.conv.voice.resultEmpty")}
         </p>
       )}
-      {data !== null && <VoiceResultBoard data={data} />}
+      {data !== null && version !== null && (
+        <VoiceResultBoard
+          data={data}
+          profileVersion={version.profile_version}
+        />
+      )}
       <WayOnward
         label={t("ob.conv.voice.resultContinue")}
         stillNeeded={(why) => why.join(" ")}
@@ -94,10 +105,9 @@ export function VoiceResultScene({
   );
 }
 
-// The sample: a real draft in a card of its own. `drafts` is every sample
-// the build kept. "Another scenario" cycles them locally, since all are in
-// hand, and hides when only one is left. The header shows only Subject:
-// `VoiceSampleDraft` has no To/From.
+// The sample: the build's drafts as the settings page shows them, with the
+// moves they borrowed named under them. The eyebrow is the scene's own pointer
+// to the sample, so it exists only when there is a sample to point at.
 function VoiceSampleCard({
   drafts,
   why,
@@ -106,40 +116,19 @@ function VoiceSampleCard({
   why: string;
 }>) {
   const t = useT();
-  const [index, setIndex] = useState(0);
-  const sample = drafts[index % drafts.length];
-  if (sample === undefined) {
-    return null;
-  }
   return (
-    <div className="ob-voice-result-card">
-      <div className="ob-voice-sample-head">
-        <p className="ob-voice-result-label t-eyebrow">
-          {t("ob.conv.voice.sampleEyebrow")}
-        </p>
-        {drafts.length > 1 && (
-          <Button
-            variant="ghost"
-            onClick={() => setIndex((prev) => (prev + 1) % drafts.length)}
-          >
-            {t("ob.conv.voice.sampleAnother")}
-          </Button>
-        )}
-      </div>
-      <p className="ob-voice-sample-subject">
-        <span className="ob-voice-sample-field t-eyebrow">
-          {t("ob.conv.voice.sampleSubjectLabel")}
-        </span>
-        <b>{sample.subject}</b>
+    <section className="ob-voice-result-card">
+      <p className="ob-voice-result-label t-eyebrow">
+        {t("ob.conv.voice.sampleEyebrow")}
       </p>
-      <p className="ob-voice-sample-body">{sample.body}</p>
+      <DraftShowcase drafts={drafts} />
       <p className="ob-voice-sample-why t-sub">
         <span className="ob-voice-sample-why-tag t-eyebrow">
           {t("ob.conv.voice.sampleWhyTag")}
         </span>
         {why}
       </p>
-    </div>
+    </section>
   );
 }
 
@@ -280,120 +269,70 @@ function VoiceDimensionsCard({
   );
 }
 
-// The reading: the identity summary as the lead line, the thinking pattern
-// underneath where the build found one.
-function VoiceThinkingCard({
-  thinking,
-  identity,
-}: Readonly<{ thinking: string | null; identity: string | null }>) {
-  const t = useT();
-  return (
-    <div className="ob-voice-result-card">
-      {identity !== null && (
-        <p className="ob-voice-result-identity">{identity}</p>
-      )}
-      {thinking !== null && (
-        <>
-          <p className="ob-voice-result-label t-eyebrow">
-            <Lightbulb aria-hidden /> {t("voice.insights.thinkingLabel")}
-          </p>
-          <p>{thinking}</p>
-        </>
-      )}
-    </div>
-  );
-}
-
-function VoiceMovesCard({
-  moves,
-}: Readonly<{ moves: VoiceInsightsData["moves"] }>) {
-  const t = useT();
-  return (
-    <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label t-eyebrow">
-        {t("voice.insights.movesLabel")}
-      </p>
-      <ul className="ob-voice-moves">
-        {moves.map((move) => (
-          <li key={move.move}>
-            <b>{move.move}</b>
-            <blockquote>{move.quote}</blockquote>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function VoiceAvoidCard({ avoid }: Readonly<{ avoid: readonly string[] }>) {
-  const t = useT();
-  return (
-    <div className="ob-voice-result-card">
-      <p className="ob-voice-result-label t-eyebrow">
-        {t("voice.insights.avoidLabel")}
-      </p>
-      <ul className="ob-voice-avoid">
-        {avoid.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 /**
- * What a succeeded build learned, as the two-column board: the sample on the
- * left, everything measured or observed on the right. Every fact comes from
- * `parseVoiceInsights`; this renders that data and never parses it again. A
- * section with nothing to show renders nothing. A skipped stage gets no empty
- * card, and a dimension this shape lacks gets no invented marker.
+ * What a succeeded build learned: the portrait beside a full voiceprint, then
+ * the board with the sample on the left and everything measured or observed on
+ * the right. Every fact comes from `parseVoiceInsights`; this renders that data
+ * and never parses it again. A section with nothing to show renders nothing,
+ * and a dimension this shape lacks gets no invented marker.
  */
-function VoiceResultBoard({ data }: Readonly<{ data: VoiceInsightsData }>) {
+function VoiceResultBoard({
+  data,
+  profileVersion,
+}: Readonly<{ data: VoiceInsightsData; profileVersion: number }>) {
   const t = useT();
   const { locale } = useLocale();
-  const hasThinking = data.thinking !== null || data.identity !== null;
   const dimensions = measuredDimensions(data, t, locale);
   // The sample's "why" line is a short joined phrase of the signature-move
-  // names the moves card lists in full. The identity summary leads the
-  // thinking card and is not repeated here.
+  // names the traits show with their quotes.
   const why =
     data.moves.length > 0
       ? data.moves.map((move) => move.move).join(", ")
       : t("voice.insights.draftOnly");
   const hasSample = data.sampleDrafts.length > 0;
+  const hasTraits =
+    data.moves.length > 0 ||
+    data.obsessions.length > 0 ||
+    data.avoid.length > 0;
   return (
-    <div
-      className={
-        hasSample ? "ob-voice-board" : "ob-voice-board ob-voice-board-single"
-      }
-    >
-      {hasSample && (
+    <>
+      <section className="ob-voice-result-hero">
+        <VoicePortrait data={data} profileVersion={profileVersion} />
+        <Voiceprint size="medium" fraction={1} />
+      </section>
+      <div
+        className={
+          hasSample ? "ob-voice-board" : "ob-voice-board ob-voice-board-single"
+        }
+      >
+        {hasSample && (
+          <div className="ob-voice-board-col">
+            <VoiceSampleCard drafts={data.sampleDrafts} why={why} />
+          </div>
+        )}
         <div className="ob-voice-board-col">
-          <VoiceSampleCard drafts={data.sampleDrafts} why={why} />
+          {dimensions.length > 0 && (
+            <VoiceDimensionsCard
+              dimensions={dimensions}
+              words={data.words}
+              sources={data.sources}
+            />
+          )}
+          {hasTraits && (
+            <section className="ob-voice-result-card">
+              <p className="ob-voice-result-label t-eyebrow">
+                {t("voice.insights.movesLabel")}
+              </p>
+              <VoiceTraits data={data} />
+            </section>
+          )}
+          {data.nextBest !== null && (
+            <p className="ob-voice-result-next">
+              <b>{t("voice.insights.nextBestLabel")}</b> {data.nextBest}
+            </p>
+          )}
         </div>
-      )}
-      <div className="ob-voice-board-col">
-        {dimensions.length > 0 && (
-          <VoiceDimensionsCard
-            dimensions={dimensions}
-            words={data.words}
-            sources={data.sources}
-          />
-        )}
-        {hasThinking && (
-          <VoiceThinkingCard
-            thinking={data.thinking}
-            identity={data.identity}
-          />
-        )}
-        {data.moves.length > 0 && <VoiceMovesCard moves={data.moves} />}
-        {data.avoid.length > 0 && <VoiceAvoidCard avoid={data.avoid} />}
-        {data.nextBest !== null && (
-          <p className="ob-voice-result-next">
-            <b>{t("voice.insights.nextBestLabel")}</b> {data.nextBest}
-          </p>
-        )}
       </div>
-    </div>
+    </>
   );
 }

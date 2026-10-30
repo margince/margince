@@ -1,9 +1,12 @@
-import { Check } from "lucide-react";
+import { Check, FileText, Mail, Mic } from "lucide-react";
 import type { ChangeEvent, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
-import { Button, Disclosure, Radio } from "../../../design-system/atoms";
+import { Voiceprint } from "../../../components/voiceprint";
+import { Badge, Button, Disclosure, Radio } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
+import { Eyebrow } from "../../../design-system/eyebrow";
+import { Meter } from "../../../design-system/readings";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
@@ -76,14 +79,11 @@ function useFloorReachedAnnouncement(ready: boolean, words: number): string {
 }
 
 /**
- * The floor meter: a real `<progress>` plus the numbers behind it, reading
- * the same corpus total the sources list and the build gate already read —
- * never a second count, and never a size estimate. The bar caps at the
- * floor rather than growing past it: more words keep helping the build, but
- * the floor itself has nothing further to fill toward, so a full bar past
- * that point would misreport progress that does not exist. `ready` decides
- * only the WORDING (still short of the floor vs. cleared it); it is never
- * presented as a finished task, because more material still sharpens it.
+ * The floor meter: the design system's Meter plus the numbers behind it,
+ * reading the same corpus total the sources list and the build gate already
+ * read, never a second count or a size estimate. The bar caps at the floor:
+ * more words keep helping the build, but the floor has nothing further to
+ * fill toward. `ready` decides only the wording, never a finished task.
  */
 function VoiceCorpusFloorMeter({
   words,
@@ -96,11 +96,12 @@ function VoiceCorpusFloorMeter({
   const floor = formatNumber(VOICE_MIN_WORDS, locale);
   return (
     <div className="ob-voice-meter">
-      <progress
-        className="ob-voice-meter-bar"
+      <Meter
+        dense
+        flat
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
-        aria-label={t("ob.conv.voice.meterLabel", { min: floor })}
+        label={t("ob.conv.voice.meterLabel", { min: floor })}
       />
       <p className="ob-voice-meter-line t-sub">
         {ready
@@ -114,6 +115,74 @@ function VoiceCorpusFloorMeter({
         {announcement}
       </p>
     </div>
+  );
+}
+
+// The voiceprint fills toward the build floor as writing lands: the ring is the
+// share of the floor, and the waveform rises with it from a murmur. The meter
+// under it says the same count in words, so the drawing stays decoration.
+const PRINT_MIN_AMPLITUDE = 0.25;
+
+function VoicePrintCard({
+  words,
+  ready,
+}: Readonly<{ words: number; ready: boolean }>) {
+  const t = useT();
+  const fraction = Math.min(words, VOICE_MIN_WORDS) / VOICE_MIN_WORDS;
+  return (
+    <section className="ob-voice-print">
+      <Eyebrow>{t("ob.conv.voice.printLabel")}</Eyebrow>
+      <Voiceprint
+        size="medium"
+        fraction={fraction}
+        amplitude={PRINT_MIN_AMPLITUDE + (1 - PRINT_MIN_AMPLITUDE) * fraction}
+      />
+      <VoiceCorpusFloorMeter words={words} ready={ready} />
+    </section>
+  );
+}
+
+// What to bring, before the drop target asks for it. A guide, not three more
+// buttons: every kind arrives through the same browse, paste or drop below.
+const VOICE_KINDS = [
+  {
+    key: "mail",
+    icon: Mail,
+    title: "ob.conv.voice.kindMail",
+    body: "ob.conv.voice.kindMailBody",
+    best: true,
+  },
+  {
+    key: "call",
+    icon: Mic,
+    title: "ob.conv.voice.kindCall",
+    body: "ob.conv.voice.kindCallBody",
+    best: false,
+  },
+  {
+    key: "doc",
+    icon: FileText,
+    title: "ob.conv.voice.kindDoc",
+    body: "ob.conv.voice.kindDocBody",
+    best: false,
+  },
+] as const;
+
+function VoiceKinds() {
+  const t = useT();
+  return (
+    <ul className="ob-voice-kinds" aria-label={t("ob.conv.voice.kindsLabel")}>
+      {VOICE_KINDS.map(({ key, icon: Icon, title, body, best }) => (
+        <li key={key} className="ob-voice-kind">
+          <span className="ob-voice-kind-icon">
+            <Icon aria-hidden />
+          </span>
+          <b>{t(title)}</b>
+          <span className="t-caption">{t(body)}</span>
+          {best && <Badge tone="accent">{t("ob.conv.voice.kindBest")}</Badge>}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -163,6 +232,7 @@ export function VoiceCollectScene({
       <VoiceHeroBand />
       <div className="ob-voice-collect">
         <div className="ob-voice-collect-main">
+          <VoiceKinds />
           <div className="ob-voice-drop">
             <input
               ref={fileRef}
@@ -227,8 +297,6 @@ export function VoiceCollectScene({
             )}
           </div>
 
-          <VoiceCorpusFloorMeter words={words} ready={floorCleared} />
-
           {manifest.length > 0 && (
             <section className="ob-voice-sources">
               <p className="ob-voice-sources-head t-eyebrow">
@@ -259,7 +327,10 @@ export function VoiceCollectScene({
 
           <ErrorLine>{startError}</ErrorLine>
         </div>
-        <VoiceDistillPanel manifest={manifest} summary={summary} />
+        <div className="ob-voice-collect-side">
+          <VoicePrintCard words={words} ready={floorCleared} />
+          <VoiceDistillPanel manifest={manifest} summary={summary} />
+        </div>
       </div>
 
       <div className="ob-scene-foot">

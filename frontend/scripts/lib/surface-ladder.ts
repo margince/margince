@@ -71,6 +71,7 @@ export const UNDERLAY_HOSTS = [
   ".ob-stage-light",
   ".rail .arhit",
   ".standing-sheet > .standing-sheet-pane",
+  ".voiceprint-bars span",
   ":has(> .ambient-waves)",
 ] as const;
 

@@ -1,7 +1,7 @@
 /* Voice DNA settings card — a few structural helpers; colour inherits so the
    design-token purity gate stays satisfied. */
 .vdna-label {
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
 }
 
 /* The status row: state, quality band, and the profile version pushed to the
@@ -12,10 +12,6 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
-}
-
-.vdna-version {
-  margin-left: auto;
 }
 
 /* The derived voice as the build wrote it: markdown-shaped prose, so its own
@@ -65,7 +61,7 @@
   gap: var(--space-2);
 }
 
-.vdna-floor progress {
+.vdna-floor > [role="meter"] {
   flex: 0 0 8rem;
 }
 
@@ -153,13 +149,217 @@
   margin-top: var(--space-2);
 }
 
-/* The impress surface: what the build learned, quoted from the user's own
-   corpus. Structure only; colour inherits (token-purity gate). */
-.vdna-insights {
-  margin-top: var(--space-3);
+/* The page: one column of sections under the jump bar, the rules and the
+   builds side by side once there is room for both. */
+.vdna-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+.vdna-section {
+  scroll-margin-top: calc(var(--controlHeight) + var(--space-6));
+}
+
+.vdna-section:focus {
+  outline: none;
+}
+
+.vdna-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+
+.vdna-privacy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.vdna-privacy svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The hero: a pane with the AI family's edge, the portrait beside the
+   voiceprint. Indigo stays on the edge and the marks; the ground is the
+   pane's, so the page keeps one surface colour. */
+.vdna-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-10);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-lg);
+  background-image: radial-gradient(
+    circle at 85% 50%,
+    var(--aiLight),
+    transparent 45%
+  );
+  scroll-margin-top: calc(var(--controlHeight) + var(--space-6));
+}
+
+.vdna-hero:focus {
+  outline: none;
+}
+
+.vdna-hero-text {
+  flex: 999 1 26rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.vdna-hero-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+.vdna-print {
+  flex: 1 1 14rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.vdna-print-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.vdna-print-band {
+  font: var(--fontHeadingSmall);
+}
+
+.vdna-ladder {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vdna-ladder li {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+
+.vdna-ladder li[data-current] {
+  border-color: var(--ai);
+  background: var(--ai);
+  color: var(--textOnAccent);
+  font-weight: var(--fontWeightMedium);
+}
+
+.vdna-portrait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vdna-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.vdna-identity {
+  margin: 0;
+  max-width: 44rem;
+  font: var(--fontHeadingXLarge);
+  text-wrap: balance;
+}
+
+/* On a phone the display line would take five lines for one sentence. */
+@media (max-width: 40rem) {
+  .vdna-hero {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .vdna-identity {
+    font: var(--fontHeadingMedium);
+  }
+}
+
+.vdna-thinking,
+.vdna-next {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  max-width: 40rem;
+  color: var(--textSecondary);
+}
+
+.vdna-thinking b,
+.vdna-next b {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+
+.vdna-thinking svg,
+.vdna-next svg {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: 0.15em;
+  color: var(--aiText);
+}
+
+/* The one move that sharpens the voice, kept under the hero. */
+.vdna-sharpen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+}
+
+.vdna-sharpen-text {
+  flex: 1 1 16rem;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.vdna-sharpen-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
+
+/* The impress surface in one column: the candidate review draws it whole. */
+.vdna-insights {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.vdna-traits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 .vdna-chips {
@@ -168,54 +368,125 @@
   flex-wrap: wrap;
 }
 
-.vdna-moves ul,
-.vdna-avoid ul {
+/* Up to three phrases side by side, each a quote with the move it shows under
+   it; they fold to one column where three would leave a few words a line. */
+.vdna-moves {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-3);
 }
 
-.vdna-moves li,
-.vdna-avoid li {
-  margin-top: var(--space-1);
-}
-
-/* The two lists the build produces read as one pair, so the "what it avoids"
-   half is spaced off the signature moves above it rather than butting against
-   them. Before this the class was on the element and declared nowhere, so the
-   list kept the browser's bullets and indent while the list beside it did
-   not — two lists of the same kind, drawn two ways. */
-.vdna-avoid,
-.vdna-samples {
-  margin-top: var(--space-2);
+.vdna-move {
+  height: 100%;
+  margin: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--aiLight);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .vdna-quote {
+  margin: 0;
+  font: var(--fontHeadingMedium);
+}
+
+.vdna-quote::before {
+  content: "\201C";
   display: block;
-  font-style: italic;
+  height: 0.6em;
+  color: var(--ai);
+  font: var(--fontHeadingXLarge);
 }
 
-/* The card surface itself comes from `Card as="div" inset`; what is left here
-   is where the sample sits relative to the one above it. */
-.vdna-sample {
-  margin-top: var(--space-2);
+.vdna-move figcaption {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--aiText);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
 }
 
-.vdna-sample-head {
+.vdna-move figcaption svg {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.vdna-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
+}
+
+/* A draft as the email it would be, its voice match as a ring beside it. */
+.vdna-drafts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.vdna-draft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-4);
+}
+
+.vdna-letter {
+  flex: 999 1 24rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.vdna-letter-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
   flex-wrap: wrap;
 }
 
-.vdna-sample-head b {
+.vdna-letter-head svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--textSecondary);
+}
+
+.vdna-letter-head b {
   overflow-wrap: anywhere;
 }
 
-.vdna-sample p {
+.vdna-letter-body {
+  margin: 0;
+  max-width: 44rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.vdna-match {
+  flex: 1 1 10rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-md);
+  background: var(--aiLight);
+}
+
+.vdna-match-pct {
+  font: var(--fontHeadingLarge);
 }
 
 .vdna-disclosure {
@@ -246,5 +517,43 @@
 }
 
 .vdna-regmix {
-  margin-bottom: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+/* The corpus meter: the sentence, the bar, and each band's floor marked under
+   the bar at its own share of the target. */
+.vdna-meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 36rem;
+}
+
+.vdna-meter-figure {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+}
+
+.vdna-bands {
+  position: relative;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  height: 1.25rem;
+}
+
+.vdna-bands li {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+/* The last floor sits at the bar's end, so its word hangs left of it. */
+.vdna-bands li:last-child {
+  transform: translateX(-100%);
+}
+
+.vdna-bands li[data-current] {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
