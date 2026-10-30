@@ -208,7 +208,7 @@ function atRiskCard(answer: Record<string, unknown>): HTMLElement {
       sentence:
         deals.length === 0
           ? "No open deal rests on one relationship or has gone quiet."
-          : "These rest on one relationship, or the people on them have gone quiet.",
+          : "These rest on one contact, or the contacts on them have gone quiet.",
       picture: segments([
         { label: "At risk", value: deals.length, tone: "warning" },
         {
