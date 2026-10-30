@@ -35,7 +35,11 @@ func TestMeetingPreparationClaimsRequireKnownEvidence(t *testing.T) {
 	}{
 		{false, false, "", "none"}, {true, false, "prepared", "none"}, {true, true, "unprepared", "meeting_unprepared"},
 	} {
-		row := classifyMeeting(meetingItem(Meeting{PrepKnown: tc.known, NeedsPrep: tc.needs, StartsAt: rankInstant.Add(time.Hour)}), rankInstant).item
+		meeting := Meeting{StartsAt: rankInstant.Add(time.Hour)}
+		if tc.known {
+			meeting.Preparation = ownPreparation(!tc.needs)
+		}
+		row := classifyMeeting(meetingItem(meeting), rankInstant).item
 		if row.Consequence != tc.consequence {
 			t.Errorf("known=%v needs=%v: consequence=%s", tc.known, tc.needs, row.Consequence)
 		}

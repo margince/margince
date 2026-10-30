@@ -74,7 +74,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
           },
         }),
       );
-      await page.goto("/#/analytics");
+      await page.goto("/#/analytics/performance");
       const graph = page.getByRole("figure", {
         name: "Sales won over time",
       });

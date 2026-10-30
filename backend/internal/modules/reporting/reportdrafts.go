@@ -112,13 +112,13 @@ func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int6
 		draft := before.Revision + 1
 		staged := before
 		staged.Revision, staged.Selection = draft, in.Selection
-		if err := s.saveReportRevision(ctx, tx, staged); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &staged); err != nil {
 			return err
 		}
 		out = before
 		out.DraftRevision = &draft
 		out.Version++
-		return s.writeDraftState(ctx, tx, reportImage{before, replaced}, reportImage{out, &in.Selection}, "update")
+		return s.writeDraftState(ctx, tx, reportImage{before, replaced}, reportImage{out, &staged.Selection}, "update")
 	})
 	return out, err
 }
@@ -216,7 +216,7 @@ func (s *Service) RestoreReportRevision(ctx context.Context, id ids.UUID, versio
 		out.Revision++
 		out.Selection = selection
 		out.Version++
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return s.writeDraftState(ctx, tx, reportImage{before, nil}, reportImage{out, nil}, "restore")
@@ -239,7 +239,8 @@ func (s *Service) ListReportRevisions(ctx context.Context, id ids.UUID) (crmcont
 			return err
 		}
 		var b bindings
-		rows, err := tx.Query(ctx, "SELECT revision,created_at,created_by,selection FROM report_definition_revision WHERE report_id="+b.add(id)+" ORDER BY revision DESC", b.values...)
+		query := "SELECT revision,created_at,created_by,selection FROM report_definition_revision WHERE report_id=" + b.add(id) + " ORDER BY revision DESC"
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -302,13 +303,15 @@ func (s *Service) rewriteDraftSelection(ctx context.Context, tx pgx.Tx, id ids.U
 		return err
 	}
 	var b bindings
-	_, err = tx.Exec(ctx, "UPDATE report_definition_revision SET selection="+b.add(encoded)+" WHERE report_id="+b.add(id)+" AND revision="+b.add(revision), b.values...)
+	query := "UPDATE report_definition_revision SET selection=" + b.add(encoded) + " WHERE report_id=" + b.add(id) + " AND revision=" + b.add(revision)
+	_, err = tx.Exec(ctx, query, b.values...)
 	return err
 }
 
 func (s *Service) dropRevision(ctx context.Context, tx pgx.Tx, id ids.UUID, revision int64) error {
 	var b bindings
-	_, err := tx.Exec(ctx, "DELETE FROM report_definition_revision WHERE report_id="+b.add(id)+" AND revision="+b.add(revision), b.values...)
+	query := "DELETE FROM report_definition_revision WHERE report_id=" + b.add(id) + " AND revision=" + b.add(revision)
+	_, err := tx.Exec(ctx, query, b.values...)
 	return err
 }
 
@@ -327,6 +330,7 @@ func (s *Service) revisionSelection(ctx context.Context, tx pgx.Tx, id ids.UUID,
 	var selection crmcontracts.ReportingSelection
 	var framework int64
 	var b bindings
-	err := tx.QueryRow(ctx, "SELECT selection,framework_revision FROM report_definition_revision WHERE report_id="+b.add(id)+" AND revision="+b.add(revision), b.values...).Scan(&selection, &framework)
+	query := "SELECT selection,framework_revision FROM report_definition_revision WHERE report_id=" + b.add(id) + " AND revision=" + b.add(revision)
+	err := tx.QueryRow(ctx, query, b.values...).Scan(&selection, &framework)
 	return selection, framework, storedError(err)
 }

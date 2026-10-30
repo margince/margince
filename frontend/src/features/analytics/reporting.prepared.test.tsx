@@ -124,3 +124,75 @@ it("offers personal outcomes only to a reader whose lens is their own records", 
   draw(true);
   expect(await screen.findByText("Personal outcomes")).toBeInTheDocument();
 });
+
+// The prospecting template asks what the catalog's sdr preset asks, whatever
+// that preset holds today.
+it("asks the prospecting template from the catalog's sdr preset", () => {
+  const prospecting = PREPARED_REPORTS.find(
+    (report) => report.id === "my-prospecting-progress",
+  );
+  if (prospecting?.kind !== "question") throw new Error("it is a question");
+  const meetingsOnly = {
+    ...reportingStoryCatalog,
+    presets: reportingStoryCatalog.presets.map((preset) =>
+      preset.id === "sdr"
+        ? {
+            ...preset,
+            metrics: ["meetings_held" as const],
+            blocks: ["sdr_outcomes" as const],
+          }
+        : preset,
+    ),
+  };
+  const selection = preparedSelection(
+    prospecting,
+    meetingsOnly,
+    reportingStoryScope,
+    "p-1",
+  );
+  expect(selection?.metrics).toEqual(["meetings_held"]);
+  expect(selection?.blocks).toEqual(["sdr_outcomes"]);
+  expect(selection?.period).toBe("this_week");
+  expect(
+    preparedSelection(
+      prospecting,
+      { ...meetingsOnly, presets: [] },
+      reportingStoryScope,
+      "p-1",
+    ),
+  ).toBeNull();
+});
+
+// The team template asks what the catalog's team preset asks.
+it("asks the team prospecting template from the catalog's team preset", () => {
+  const team = PREPARED_REPORTS.find(
+    (report) => report.id === "team-prospecting-review",
+  );
+  if (team?.kind !== "question") throw new Error("it is a question");
+  const withTeam = {
+    ...reportingStoryCatalog,
+    presets: [
+      ...reportingStoryCatalog.presets,
+      {
+        id: "team" as const,
+        metrics: ["meetings_held" as const, "accepted_opportunities" as const],
+        blocks: ["sdr_outcomes" as const],
+      },
+    ],
+  };
+  const selection = preparedSelection(
+    team,
+    withTeam,
+    reportingStoryScope,
+    "p-1",
+  );
+  expect(selection?.metrics).toEqual([
+    "meetings_held",
+    "accepted_opportunities",
+  ]);
+  expect(selection?.blocks).toEqual(["sdr_outcomes"]);
+  expect(selection?.period).toBe("this_week");
+  expect(
+    preparedSelection(team, reportingStoryCatalog, reportingStoryScope, "p-1"),
+  ).toBeNull();
+});

@@ -21,11 +21,11 @@
 #   update_tag  — the description. Nothing else writes one, and it is what stops
 #                 a third spelling being coined next quarter.
 #
-# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a human releases it.
-# So the honest report of this errand is "waiting", not "done" — the same
-# distinction case 1's criterion 14 exists for, in the one place where the tool
-# is irreversible once released. An answer that describes the vocabulary as
-# already cleaned up has told the user the thing they will act on is finished.
+# merge_tags runs at once for an agent acting as its user, and the user asked
+# for this fold in so many words. So the honest report of this errand is "done":
+# the records that carried the retired word now carry the surviving one. An
+# answer that calls the fold staged or waiting has told the user a decision is
+# still open when it is not.
 name: case32_two_words_for_one_thing
 criteria: [1, 2, 3]
 
@@ -94,11 +94,9 @@ must_mention:
 # and left the next, which is what an enumeration does against an unbounded
 # space of phrasings.
 #
-# WHAT IS STAGED AND WHAT IS NOT. merge_tags is confirm-first and update_tag is
-# auto-execute, so one half of this errand waits on a human and the other half
-# has already landed by the time the answer is written. Criterion 2 is about the
-# FOLD, and it says so: an accurate report of the description that did land must
-# not read as the claim that the vocabulary is already tidy.
+# WHAT CRITERION 2 ASKS. Both writes land by the time the answer is written, and
+# it is about the FOLD: a run that reports only the description says nothing
+# about the records, so it does not pass.
 #
 # WHAT CRITERION 3 CAN HONESTLY ASK, said out loud rather than overclaimed: this
 # lane reads the answer, not the database, so no assertion here can tell a
@@ -108,17 +106,17 @@ must_mention:
 # second errand or folds the pair the wrong way round.
 judge:
   - "Criterion 1. The answer names Strategic Accts as the word that goes and Strategic Account as the word that survives — the one on more records. Any form of the decision counts: folded, merged, retired, dropped, absorbed, 'is the one that goes', 'loses', 'its records move onto Strategic Account'. Answer no if the answer reports the fold the other way round, so that Strategic Accts is the survivor, and no if it never says which of the two words goes."
-  - "Criterion 2. The answer reports that the FOLD has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and the tagged records still carry the word they carried before. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. The description written onto the surviving word is a DIFFERENT write and it does land immediately, so reporting that one as done — 'Strategic Account now carries the description' — says nothing about the fold and is not this criterion's subject: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the tagged records as already moved, with nothing said about a decision anybody still has to take."
+  - "Criterion 2. The answer reports that the FOLD has happened: the records that carried Strategic Accts now carry Strategic Account, and nobody has to release anything. The description written onto the surviving word is a DIFFERENT write; reporting only that one says nothing about the fold. Answer no if the answer says the fold is staged, queued, waiting, pending or held for approval, or never says the records moved."
   - "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes."
-  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, with a person releasing the call. Reporting that the fold WAITS on that person is the finding this case rewards, not a claim about the capability: answer yes."
+  - "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, in one call."
 
 
-# The fold is staged, and a credential does not release its own proposal, so
-# both words still sit on the records the seed put them on. A run that moved
-# the records one by one instead has changed these counts.
+# The fold has gone through, so every record carries the surviving word and none
+# the retired one. A run that moved the records one by one lands here too, which
+# is why the judge reads the answer for the capability.
 must_end_with:
-  - tag "Strategic Account" records=3
-  - tag "Strategic Accts" records=1
+  - tag "Strategic Account" records=4
+  - tag "Strategic Accts" records=0
 
 runs: 3
 pass_at: 2

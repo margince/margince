@@ -1,0 +1,89 @@
+# Spellings of a ladder rung outside surfaces.css that predate the ladder:
+# control faces, pressed and disabled fills, state colours, tints mixed on a
+# rung, and page grounds. A `state:` line is a member's fixed state colour,
+# which outranks the ladder on purpose; its reason follows the bar.
+# surfaces.test.ts holds this list and pins its size; it only shrinks.
+src/app/agentrail.css: .arloose::after { background: var(--bgElevated) }
+src/app/agentrail.css: .rail .arhit { background: radial-gradient( 70% 70% at 50% 42%, color-mix(in srgb, var(--arTone) 14%, transparent), transparent 72% ), var(--bgElevated) }
+src/app/shell.css: .settingssearch input { background: var(--bgElevated) }
+src/app/shell.css: .skiplink { background: var(--bgElevated) }
+src/app/topbar.css: .topbar-search { background: var(--pane) }
+src/design-system/airuntimechip.css: .mw-aistat-btn:hover { background: color-mix(in srgb, var(--ai) 14%, var(--bgElevated)) }
+src/design-system/ambient-waves.tsx: "--bgElevated"
+src/design-system/atoms.css: .actions-split > .btn:last-child { border-inline-start: 1px solid var(--bgElevated) }
+src/design-system/atoms.css: .field-shell { background: var(--bgElevated) }
+src/design-system/atoms.css: .input { background: var(--bgElevated) }
+src/design-system/atoms.css: .textarea { background: var(--bgElevated) }
+src/design-system/avatarstack.css: .avatar-stack-item { box-shadow: 0 0 0 2px var(--bgElevated) }
+src/design-system/base.css: .btn-federated { background: var(--bgElevated) }
+src/design-system/base.css: .btn-ghost { background: var(--pane) }
+src/design-system/checklist.css: .checklist-mark { background: var(--bgElevated) }
+src/design-system/choicelist.css: .choicelist-cards .choicelist-choice { background: var(--bgElevated) }
+src/design-system/choicelist.css: .choicelist-tiles .choicelist-choice { background: var(--bgElevated) }
+src/design-system/decisiondeck.css: .ddeck-ghost { background: var(--bgElevated) }
+src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="accept"] { background: linear-gradient(var(--accentLight), var(--accentLight)), var(--bgElevated) }
+src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="edit"] { background: linear-gradient(var(--aiLight), var(--aiLight)), var(--bgElevated) }
+src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="reject"] { background: linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated) }
+src/design-system/filechip.css: .file-chip { background: var(--bgElevated) }
+src/design-system/filterpills.css: .filterpill { background: var(--bgElevated) }
+src/design-system/inlinechoice.css: .inlinechoice-edit [aria-busy="true"] { background: var(--bgElevated) }
+src/design-system/inlinechoice.css: .inlinetext-edit [aria-busy="true"] { background: var(--bgElevated) }
+src/design-system/listtable.css: .lt-bulkbar { background: var(--bgElevated) }
+src/design-system/listtable.css: .lt-frow { background: var(--bgElevated) }
+src/design-system/listtable.css: .lt-perpage .select-control { background: var(--bgElevated) }
+src/design-system/listtable.css: .lt-search { background: var(--bgElevated) }
+src/design-system/onboarding-stage.css: .ob-page { background: var(--bgElevated) }
+src/design-system/progressbar.css: .progressbar-fill::after { background: linear-gradient( 90deg, transparent 0%, color-mix(in srgb, var(--ai) 40%, var(--bgElevated)) 50%, transparent 100% ) }
+src/design-system/providerrow.css: .provider-row-mark { background: var(--bgElevated) }
+src/design-system/readings.css: .btn.btn-link.segbar-step-1 { background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated)) }
+src/design-system/readings.css: .btn.btn-link.segbar-step-2 { background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated)) }
+src/design-system/readings.css: .chip { background: var(--bgElevated) }
+src/design-system/readings.css: .meterbar.meterbar-has-part > span { background: color-mix(in srgb, var(--accentText) 40%, var(--bgElevated)) }
+src/design-system/readings.css: .segbar-marker { border-inline: 2px solid var(--bgElevated) }
+src/design-system/readings.css: .segbar-part + .segbar-part { border-left: 2px solid var(--bgElevated) }
+src/design-system/readings.css: .segbar-step-1 { background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated)) }
+src/design-system/readings.css: .segbar-step-2 { background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated)) }
+src/design-system/recordchip.css: .record-chip { background: var(--bgElevated) }
+src/design-system/relationshipmap.css: .rmap-box { fill: var(--bgElevated) }
+src/design-system/report-charts.css: .report-chart-column-secondary .report-chart-column-fill { background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated)) }
+src/design-system/report-charts.css: .report-chart-dot { border: 2px solid var(--bgElevated) }
+src/design-system/report-charts.css: .report-chart-key-range::before { border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated)) }
+src/design-system/report-charts.css: .report-chart-range-band { background: color-mix(in srgb, var(--accent) 35%, var(--bgElevated)) }
+src/design-system/richtext.css: .richtext { background: var(--bgElevated) }
+src/design-system/richtext.css: .richtext-foot { background: var(--bgElevated) }
+src/design-system/setpicker.css: .set-picker-frame { background: var(--bgElevated) }
+src/design-system/stageladder.css: .stage-ladder-bar.is-done .stage-ladder-track-bar { background: color-mix(in srgb, var(--accent) 40%, var(--bgElevated)) }
+src/design-system/standingtimeline.css: .standing-timeline-mark-count { color: var(--bgElevated) }
+src/design-system/standingtimeline.css: .standing-timeline-today { color: var(--bgElevated) }
+src/design-system/switch.css: .switchcontrol:disabled[aria-checked="true"] .switchknob::after { background: var(--bgElevated) }
+src/design-system/switch.css: .switchknob { background: var(--bgElevated) }
+src/design-system/visibility.css: .visibility { background: var(--bgElevated) }
+src/design-system/visibility.css: .visibility-withheld { background: linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated) }
+src/features/contacts/contact360.css: .pe-meeting-date { background: var(--bgElevated) }
+src/features/deals/dealroomthreads.css: .board-doc-kind { background: var(--bgElevated) }
+src/features/deals/dealroomthreads.css: .board-doc-page { background: var(--bgElevated) }
+src/features/mail/compose.css: .schedule-hour { background: var(--bgElevated) }
+src/features/onboarding/onboarding-build-scene.css: .ob-build { background: radial-gradient( 760px 520px at 50% 32%, color-mix(in srgb, var(--coreLight) 34%, transparent) 0%, transparent 62% ), linear-gradient( 180deg, color-mix(in srgb, var(--accent) 5%, var(--bgElevated)) 0%, var(--bgElevated) 100% ) }
+src/features/onboarding/onboarding-conversation/conversation.css: .ob-decision-path { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/conversation.css: .ob-triage-continue { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/conversation.css: .ob-triage-continue { box-shadow: 0 calc(100vw + 1px) 0 100vw var(--bgElevated), 0 0 0 100vw var(--borderSubtle) }
+src/features/onboarding/onboarding-conversation/conversation.css: .ob-triage-fact-type { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/conversation.css: .ob-voice-paste-area { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/review-deck.css: .rdeck-card input { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/review-deck.css: .rdeck-card textarea { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/review-deck.css: .rdeck-peek { background: var(--bgElevated) }
+src/features/onboarding/onboarding-conversation/review-deck.css: .rdeck-source { background: var(--bgElevated) }
+src/features/onboarding/onboarding-gate.css: .ob-gate-field { background: var(--bgElevated) }
+src/features/onboarding/onboarding.css: .choice-card { background: var(--bgElevated) }
+src/features/onboarding/onboarding.css: .confirm-origin { background: color-mix(in srgb, var(--bgElevated) 72%, transparent) }
+src/features/onboarding/onboarding.css: .mw-confirm-company { background: color-mix(in srgb, var(--bgElevated) 94%, transparent) }
+src/features/records/customfields.css: .cf-ddl { background: var(--bgElevated) }
+src/features/sign-in/auth.css: .auth-surface { background: radial-gradient( 34% 30% at 24% 26%, color-mix(in srgb, var(--aiLight) 92%, transparent), transparent 66% ), radial-gradient( 30% 28% at 76% 68%, color-mix(in srgb, var(--accentLight) 88%, transparent), transparent 64% ), radial-gradient( 30% 26% at 62% 8%, color-mix(in srgb, var(--coreLight) 70%, transparent), transparent 68% ), var(--bgElevated) }
+src/features/sign-in/magic.marks.css: .magic-mark[data-kind="waiting"] { --mark: var(--bgElevated) }
+src/features/worklist/worklist.css: .worklist-row-selected .worklist-rank { color: var(--bgElevated) }
+state: src/design-system/decisioncard.css: .dcard[data-lapsed] { background: var(--bgInset) } | a lapsed proposal recedes to the inset ground
+state: src/design-system/decisioncard.css: .dcard[data-urgency="lapsed"] { background: var(--bgInset) } | a lapsed proposal recedes to the inset ground
+state: src/design-system/sortablelist.css: .sortable-item.is-selected { background: var(--bgInset) } | the row on show, on the fixed inset ground
+state: src/design-system/statstrip.css: .stat-strip > [aria-pressed="true"] > .stat-card { background: var(--bgInset) } | a pressed reading, on the fixed inset ground
+state: src/design-system/statstrip.css: .stat-strip > button:active:not(:disabled) > .stat-card { background-color: var(--bgInset) } | a reading under the press, on the fixed inset ground
+state: src/features/onboarding/onboarding-conversation/conversation.css: .ob-decision-card.is-picked { background-image: linear-gradient(var(--accentLight), var(--accentLight)) } | the picked choice, in the accent tint that is opaque in light

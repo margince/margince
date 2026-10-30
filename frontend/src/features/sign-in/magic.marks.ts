@@ -6,7 +6,7 @@
 
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import type { Locale } from "../../i18n";
-import type { MagicLine } from "./magic.queries";
+import type { MagicLine } from "../../lib/magic.queries";
 import "./magic.marks.css";
 
 // Agent work wears indigo because a model decided it; sync and rules are grey

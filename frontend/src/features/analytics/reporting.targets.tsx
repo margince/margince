@@ -15,29 +15,27 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import {
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
-import {
-  metricLabel,
-  reportingAmount,
-  reportingPeriodLabel,
-} from "./reporting.model";
+import { reportingAmount, reportingPeriodLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
-import { useReportingPipelines } from "./reporting.queries";
+import { useMetricNames } from "./reporting.queries";
 import { ReportingTargetDialog } from "./reporting.targetdialog";
 
 type Target = components["schemas"]["ReportingTarget"];
 export function ReportingTargets() {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const context = useAnalyticsContext();
   const zone = useRecordZone();
   const { selection } = useAnalyticsSelection(context.data);
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const canCreate = useCanWrite("sales_target", "create");
   const canUpdate = useCanWrite("sales_target", "update");
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
@@ -121,7 +119,7 @@ export function ReportingTargets() {
                             {target.definition.scope.label ??
                               target.definition.scope.kind}
                           </strong>
-                          <div>{metricLabel(target.definition.metric, t)}</div>
+                          <div>{metricName(target.definition.metric)}</div>
                           <div className="t-caption">
                             {reportingPeriodLabel(
                               target.interval,
@@ -131,7 +129,7 @@ export function ReportingTargets() {
                           </div>
                           <div className="t-caption">
                             {target.definition.pipeline_id
-                              ? (pipelines.data?.data.find(
+                              ? (pipelines.data?.find(
                                   (pipeline) =>
                                     pipeline.id ===
                                     target.definition.pipeline_id,

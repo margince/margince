@@ -21,7 +21,7 @@ import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
-import { LeadDetails } from "./leaddetails";
+import { LeadDetails, useFieldSave } from "./leaddetails";
 import { LeadPulse, LeadSubtitle } from "./leadheader";
 import { LeadHistoryTab, LeadLatestInbound } from "./leadhistory";
 import { LeadDealsTab } from "./leadraillinks";
@@ -148,6 +148,7 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // mode).
   const [composing, setComposing] = useState(false);
   const latest = useLatestInbound("lead", lead.id);
+  const saveField = useFieldSave(lead);
 
   return (
     <RecordView
@@ -160,6 +161,13 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         />
       }
       name={leadIdentityName(lead) || t("lead.unnamed")}
+      rename={{
+        label: t("create.fullName"),
+        value: lead.full_name ?? "",
+        canEdit: !writer.readOnly,
+        readOnlyReason: writer.readOnlyReason,
+        onSave: saveField("full_name", true),
+      }}
       identity={lead.id}
       nameBadge={<LeadSubtitle lead={lead} />}
       // A reader has to know this is a prospect and not a contact before they
@@ -219,21 +227,20 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       }
     >
       {tab === "overview" && (
-        <LeadLatestInbound latest={latest} leadId={lead.id} />
-      )}
-      {tab === "overview" && (
-        <LeadOverviewPane
-          lead={lead}
-          id={id}
-          writer={writer}
-          promotion={promotion}
-          terminalReasonId={terminalReasonId}
-          thread={threadQuery}
-          asOf={asOf}
-          onOpenEmail={setOpenEmail}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-        />
+        <LeadLatestInbound latest={latest} leadId={lead.id}>
+          <LeadOverviewPane
+            lead={lead}
+            id={id}
+            writer={writer}
+            promotion={promotion}
+            terminalReasonId={terminalReasonId}
+            thread={threadQuery}
+            asOf={asOf}
+            onOpenEmail={setOpenEmail}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+        </LeadLatestInbound>
       )}
       {tab === "deals" && (
         <LeadDealsTab

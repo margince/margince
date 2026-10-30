@@ -82,6 +82,7 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	in.SharedWithMe = params.SharedWithMe
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {

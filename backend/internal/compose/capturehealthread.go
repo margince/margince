@@ -63,10 +63,11 @@ func captureHeldMeetings(
 		oldest *time.Time
 	)
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	if err := tx.QueryRow(ctx, `
+	query := `
 		SELECT count(*), min(a.created_at)
 		  FROM activity a
-		 WHERE `+filedMeetingHeldClause("a", arg), args...).Scan(&out.Count, &oldest); err != nil {
+		 WHERE ` + filedMeetingHeldClause("a", arg)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&out.Count, &oldest); err != nil {
 		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
 			"compose: counting the filed meetings still held: %w", err)
 	}

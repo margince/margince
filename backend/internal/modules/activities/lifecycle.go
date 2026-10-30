@@ -122,7 +122,7 @@ func updateActivityInTx(
 	// stamps the moment and reopening clears it, so the flag is bound once and
 	// read three times.
 	done := arg(in.IsDone)
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		UPDATE activity SET
 		  subject = coalesce($%[2]d, subject),
 		  body = coalesce($%[3]d, body),
@@ -150,8 +150,8 @@ func updateActivityInTx(
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg)),
-		args...); err != nil {
+		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg))
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	// Read back BEFORE auditing: done_at is stamped by the statement above
@@ -168,10 +168,10 @@ func updateActivityInTx(
 	// already holds is somebody saving a form, and recording it would make
 	// "booked twice" a countable event.
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
-		RecordedAt:     in.recordedAt,
-		ActivityID:     id,
-		Status:         changedMeetingStatus(current, out),
-		ScheduledStart: &out.OccurredAt,
+		RecordedAt: in.recordedAt,
+		ActivityID: id,
+		Status:     changedMeetingStatus(current, out),
+		Scheduled:  scheduledAs(out.OccurredAt, string(out.OccurredPrecision)),
 	}); err != nil {
 		return crmcontracts.Activity{}, err
 	}

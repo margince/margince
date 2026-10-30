@@ -4,6 +4,8 @@
 package meetingmap
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"regexp"
 	"strings"
 
@@ -31,6 +33,15 @@ func descriptionText(desc string) string {
 		desc, _ = htmltext.Render(desc)
 	}
 	return strings.TrimSpace(desc)
+}
+
+// agendaFingerprint identifies the description as the provider sent it, before
+// rendering and masking, so a change to either never reads as a new agenda.
+// Space around the text carries no agenda, so it never asks anyone again. An
+// empty description has a fingerprint too, because an empty slot keeps the stored one.
+func agendaFingerprint(desc string) string {
+	sum := sha256.Sum256([]byte(strings.TrimSpace(desc)))
+	return hex.EncodeToString(sum[:16])
 }
 
 // RerenderStoredBody returns the body capture stores today for a calendar

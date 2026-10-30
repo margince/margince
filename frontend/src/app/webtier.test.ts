@@ -136,6 +136,20 @@ describe("the web tier answers a file it does not have with 404, never the app s
     );
   });
 
+  // The pdf.js worker that reads a Voice DNA PDF is a hashed .mjs asset. A
+  // browser runs a module worker only when it arrives typed as JavaScript.
+  it("serves a hashed .mjs asset as JavaScript", () => {
+    const assets = locate("/assets/pdf.worker.min-3f9a1c.mjs").body;
+    const mjs = /location\s+~\s+\\\.mjs\$\s*\{([^}]*\{\s*\}[^}]*)\}/.exec(
+      assets,
+    )?.[1];
+    expect(mjs, "a .mjs location inside /assets/").toBeDefined();
+    expect(mjs).toMatch(/types\s*\{\s*\}/);
+    expect(mjs).toMatch(/default_type\s+text\/javascript;/);
+    expect(mjs).toMatch(/try_files\s+\$uri\s+=404;/);
+    expect(mjs).not.toMatch(/add_header/);
+  });
+
   it("answers every 404 with a short plain-text body", () => {
     expect(conf).toMatch(/error_page\s+404\s+@not_found;/);
     const notFound = locations().find((l) => l.pattern === "@not_found");
@@ -193,4 +207,13 @@ describe("every response the web tier sends carries the whole security set", () 
       }
     }
   });
+});
+
+it("routes a record card to the public metadata endpoint rather than the static shell", () => {
+  for (const kind of ["deals", "companies", "contacts"]) {
+    expect(
+      locate(`/r/${kind}/01a00000-0000-7000-8000-000000000001`).body,
+    ).toContain("return 302 /v1/public/record-previews/$1/$2;");
+  }
+  expect(locate("/open-record.js").body).toContain("expires -1;");
 });

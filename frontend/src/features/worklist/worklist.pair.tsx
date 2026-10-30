@@ -27,8 +27,13 @@ import { Button, Card } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { problemCodeOf } from "../../lib/problem";
-import { useDedupeDisposition } from "./dedupe.queries";
+import type { MessageKey } from "../../i18n/en";
+import {
+  type PairDecisionFailure,
+  type PairDisposition,
+  pairDecisionFailure,
+  useDedupeDisposition,
+} from "../../lib/dedupe.queries";
 // The review's own sheet: the two columns, the recessed cards and the trailing
 // line of verbs. It travels with the component because two hosts draw it.
 import "./worklist.pair.css";
@@ -74,6 +79,12 @@ function keepLabel(
   return `${visible} — ${side.detail}`;
 }
 
+const FAILURE_MESSAGES = {
+  refused: "worklist.pair.refused",
+  settled: "worklist.pair.alreadySettled",
+  failed: "worklist.pair.failed",
+} as const satisfies Record<PairDecisionFailure, MessageKey>;
+
 export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -85,28 +96,14 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   }
   const mayMerge = item.actions?.includes("merge") ?? false;
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
-  const answer = (
-    disposition: "merge" | "not_a_duplicate",
-    winnerId?: string,
-  ) =>
+  const answer = (disposition: PairDisposition, winnerId?: string) =>
     decide.mutate(
       { id: item.id, disposition, winnerId },
       {
         // A refused decision leaves the row exactly as an unpressed one looks.
         // Without this the reader believes the pair is settled and it is not.
-        //
-        // THREE outcomes, not one. A refusal will refuse again however many
-        // times it is pressed, so "try again" is the wrong instruction — the
-        // reader needs a steward. A conflict means somebody settled the pair
-        // first, and the row is already gone. Only the rest is worth a retry.
         onError: (error) => {
-          const code = problemCodeOf(error);
-          const message =
-            code === "permission_denied"
-              ? "worklist.pair.refused"
-              : code === "already_disposed"
-                ? "worklist.pair.alreadySettled"
-                : "worklist.pair.failed";
+          const failure = pairDecisionFailure(error);
           // The two REASONED refusals stay until the reader dismisses them;
           // only the unexplained failure withdraws itself.
           //
@@ -116,9 +113,9 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           // three and a half seconds is a sentence the reader is invited to
           // miss, and the press that follows fails identically. "Try again"
           // is the only one of the three that means it.
-          toast.show(t(message), {
+          toast.show(t(FAILURE_MESSAGES[failure]), {
             tone: "danger",
-            sticky: code === "permission_denied" || code === "already_disposed",
+            sticky: failure !== "failed",
           });
         },
       },

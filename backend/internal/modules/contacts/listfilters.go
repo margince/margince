@@ -52,6 +52,7 @@ const (
 	filterCompanyID        = "company_id"
 	filterOwnerTeamID      = "owner_team_id"
 	filterUnassigned       = "unassigned"
+	filterSharedWithMe     = "shared_with_me"
 	filterIncludeArchived  = "include_archived"
 	filterSort             = "sort"
 	filterCapturedByKind   = "captured_by_kind"
@@ -76,6 +77,7 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 	filterOwnerID:          storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterOwnerTeamID:      storekit.FilterID(func(in *ListContactsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
 	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
+	filterSharedWithMe:     storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.SharedWithMe = v }),
 	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),

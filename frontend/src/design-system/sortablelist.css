@@ -24,9 +24,8 @@
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-1);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-rest);
   transition:
     box-shadow var(--dur-state) var(--ease-out),
@@ -41,11 +40,13 @@
 }
 
 /* The carried row lifts off the page: the pop shadow every raised surface
-   wears, and the accent edge saying it is the one in hand. */
+   wears, and the accent edge saying it is the one in hand. Its ground is
+   solid, since level 1 is see-through in dark and it passes over rows. */
 .sortable-item.is-lifted {
   position: relative;
   z-index: 1;
   border-color: var(--accent);
+  background-color: var(--ground);
   box-shadow: var(--shadow-pop);
 }
 

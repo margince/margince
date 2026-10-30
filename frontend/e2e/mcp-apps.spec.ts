@@ -41,9 +41,31 @@ const UPDATED = {
   ],
 };
 
+const QUEUE = { approvals: [APPROVAL], next_cursor: "page-2" };
+
+const SLIPPING = {
+  deals: [
+    {
+      rank: 1,
+      deal_id: "0195c3a0-0000-7000-8000-0000000000d1",
+      name: "Acme renewal",
+      amount_minor: 7_200_000,
+      currency: "EUR",
+      evidence: [
+        {
+          source: "deal.last_activity_at",
+          snippet: "no recorded activity since 2026-06-16",
+        },
+      ],
+    },
+  ],
+};
+
 const VIEWS = [
   { file: "create-followups", populated: () => FILED },
   { file: "approval", populated: () => APPROVAL },
+  { file: "approval-queue", populated: () => QUEUE },
+  { file: "attention", populated: () => SLIPPING },
   { file: "update", populated: () => UPDATED },
 ] as const;
 
@@ -346,7 +368,7 @@ const PLAIN_CALLS = [
         warnings: [],
       },
     },
-    heading: 'Updated lead "Jane Doe"',
+    heading: "Updated a lead",
   },
   {
     name: "a refused create",

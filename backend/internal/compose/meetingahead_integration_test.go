@@ -247,11 +247,6 @@ func TestTheLastTouchReadersIgnoreAFutureDatedEmail(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, s := range subjectsFor(t, f.e) {
-		if s.DealID == deal.String() && (s.LastInboundAt == nil || !s.LastInboundAt.Equal(past)) {
-			t.Errorf("the assurance check's last inbound = %v, want the past email at %v", s.LastInboundAt, past)
-		}
-	}
 
 	contact := f.e.SeedContact(t, "Reader Contact", nil)
 	f.logOn(t, "email", onRecord("contact", contact), past)

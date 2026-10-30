@@ -396,6 +396,7 @@ func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcon
 	var input struct {
 		StageID    ids.StageID `json:"stage_id"`
 		LostReason *string     `json:"lost_reason"`
+		LostCode   *string     `json:"lost_reason_code"`
 		WonReason  *string     `json:"won_without_contract_reason"`
 		WonDetail  *string     `json:"won_without_contract_detail"`
 	}
@@ -403,7 +404,7 @@ func (r approvalPreviewReader) stageChanges(ctx context.Context, approval crmcon
 		return apperrors.ErrInvalidArgument
 	}
 	preview, err := r.deals.PreviewAdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(*approval.TargetEntityId)), deals.AdvanceDealInput{
-		ToStageID: input.StageID, LostReason: input.LostReason, WonWithoutContractReason: input.WonReason,
+		ToStageID: input.StageID, LostReason: input.LostReason, LostReasonCode: input.LostCode, WonWithoutContractReason: input.WonReason,
 		WonWithoutContractDetail: input.WonDetail, IfVersion: new(int64(*approval.TargetVersion)),
 	})
 	if err != nil {

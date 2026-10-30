@@ -81,7 +81,7 @@ func nextMeetingSection(
 		attendees []byte
 		occurred  *time.Time
 	)
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, ''), %[3]s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
@@ -95,9 +95,8 @@ func nextMeetingSection(
 		ORDER BY %[6]s, a.id
 		LIMIT 1`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), room,
-		occurredday.AheadSQL("a", fmt.Sprintf("$%d", nowPos)), opts.projectScope(arg), occurredday.StartSQL("a")),
-		args...,
-	).Scan(&id, &occurred, &meeting.OccurredPrecision, &meeting.Subject, &dealID, &attendees)
+		occurredday.AheadSQL("a", fmt.Sprintf("$%d", nowPos)), opts.projectScope(arg), occurredday.StartSQL("a"))
+	err = tx.QueryRow(ctx, query, args...).Scan(&id, &occurred, &meeting.OccurredPrecision, &meeting.Subject, &dealID, &attendees)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing scheduled. The caller holds the grant, so this is the account's
 		// own state and the page says so.

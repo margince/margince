@@ -9,6 +9,8 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef, useEntityName } from "../../components/entityref";
+import { type RailEdit, RailField } from "../../components/railfield";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
@@ -38,6 +40,7 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { forecastLabel } from "./deal360/dealheaderfacts";
+import { useDealEdit } from "./dealedit";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 
@@ -75,18 +78,20 @@ function DealAsideBody({
 }: AsideProps & Readonly<{ lists: readonly { id: string; name: string }[] }>) {
   const t = useT();
   const { locale } = useLocale();
+  const viewerId = useViewerId();
+  const edit = useDealEdit(deal, viewerId ?? "");
   const facts: Facts = {
     deal,
     t,
     locale,
     zone: useRecordZone(),
-    row: rowMaker(deal.masked_fields ?? [], t),
+    row: rowMaker(deal.masked_fields ?? [], t, edit),
   };
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
   const display = useCustomFieldDisplay();
   const reads = {
-    viewerId: useViewerId(),
+    viewerId,
     sources: useAcquisitionSources().data ?? [],
     tags: useRecordTags("deal", deal.id, !deal.archived_at).data,
   };
@@ -119,7 +124,9 @@ function DealAsideBody({
       key: "ownership",
       label: t("record.details.ownership"),
       rows: [
-        facts.row("owner", "list.owner", owner, "owner_id"),
+        facts.row("owner", "list.owner", owner, "owner_id", {
+          keys: ["owner_id"],
+        }),
         {
           key: "partner",
           term: t("deal.aside.partner"),
@@ -142,11 +149,15 @@ function DealAsideBody({
   );
 }
 
+// The fields a row changes, and its value as text when it edits in place.
+type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
+
 type RowMaker = (
   key: string,
   term: MessageKey,
   value: ReactNode,
   maskKey?: string,
+  change?: RowChange,
 ) => DetailRow;
 
 type Facts = Readonly<{
@@ -157,16 +168,35 @@ type Facts = Readonly<{
   row: RowMaker;
 }>;
 
-// A field the reader may not see says so; one nobody filled folds away.
-function rowMaker(masked: readonly string[], t: Translator): RowMaker {
-  return (key, term, value, maskKey = key) => {
+// A field the reader may not see says so; one nobody filled folds away. A row
+// that names its fields changes them in place, empty or not.
+function rowMaker(
+  masked: readonly string[],
+  t: Translator,
+  edit: RailEdit,
+): RowMaker {
+  return (key, term, value, maskKey = key, change = undefined) => {
     if (masked.includes(maskKey)) {
       return { key, term: t(term), value: <FieldGuard mode="masked" /> };
     }
-    if (value === null || value === undefined || value === "") {
-      return { key, term: t(term), value: t("field.unset"), empty: true };
-    }
-    return { key, term: t(term), value };
+    const empty = value === null || value === undefined || value === "";
+    const reading = empty ? t("field.unset") : value;
+    return {
+      key,
+      term: t(term),
+      value: change ? (
+        <RailField
+          edit={edit}
+          keys={change.keys}
+          label={t(term)}
+          reading={reading}
+          text={change.text}
+        />
+      ) : (
+        reading
+      ),
+      empty,
+    };
   };
 }
 
@@ -186,6 +216,13 @@ function day(value: string | null | undefined, facts: Facts) {
 
 function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
   const { deal, t, locale, row } = facts;
+  // Both figures share their currency, so either opens the money together.
+  const moneyKeys = deal.arr_source_offer_id
+    ? ["expected_arr", "currency"]
+    : ["amount", "expected_arr", "currency"];
+  // An offer sets the ARR and currency, so the amount then changes alone.
+  const valueKeys = deal.arr_source_offer_id ? ["amount"] : moneyKeys;
+  const dayText = (value: string | null | undefined) => day(value, facts) ?? "";
   const account: DetailRow =
     deal.company_id && !deal.masked_fields?.includes("company_id")
       ? {
@@ -202,12 +239,14 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       "deals.amount",
       money(deal.amount_minor, deal.currency, locale),
       "amount_minor",
+      { keys: valueKeys },
     ),
     row(
       "expected_arr",
       "deal.expectedArr",
       money(deal.expected_arr_minor, deal.currency, locale),
       "expected_arr_minor",
+      { keys: moneyKeys },
     ),
     row(
       "stage",
@@ -219,24 +258,38 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       "deal.standing.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
+      // A closed deal shows the day it closed, which is not the forecast field.
+      deal.status === "won" || deal.status === "lost"
+        ? undefined
+        : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
       "forecast",
       "deals.filterForecast",
       deal.forecast_category && forecastLabel(deal.forecast_category, t),
       "forecast_category",
+      { keys: ["forecast_category"] },
     ),
-    row("wait_until", "deal.waitUntil", day(deal.wait_until, facts)),
+    row(
+      "wait_until",
+      "deal.waitUntil",
+      day(deal.wait_until, facts),
+      "wait_until",
+      { keys: ["wait_until"], text: dayText(deal.wait_until) },
+    ),
     row(
       "motion",
       "deal.motion",
       optionLabel(MOTION_OPTIONS, deal.commercial_motion, t),
       "commercial_motion",
+      { keys: ["commercial_motion"] },
     ),
     row(
       "priority",
       "deal.priority",
       optionLabel(PRIORITY_OPTIONS, deal.priority, t),
+      "priority",
+      { keys: ["priority"] },
     ),
   ];
 }
@@ -275,6 +328,7 @@ function registrationRows(
       source &&
         (reads.sources.find((one) => one.key === source)?.label ?? source),
       "acquisition_source",
+      { keys: ["acquisition_source"] },
     ),
     row("created", "list.created", day(deal.created_at, facts)),
     row(
@@ -309,13 +363,13 @@ function DealPartner({ deal }: Readonly<{ deal: Deal }>) {
         ? t("deal.attributionInfluenced")
         : undefined;
   return (
-    <a
+    <AppLink
       className="deal-aside-link"
       href={routeHash({ screen: "companies", id: deal.partner_company_id })}
       title={role}
     >
       {[name ?? t("field.unset"), role].filter(Boolean).join(" · ")}
-    </a>
+    </AppLink>
   );
 }
 
@@ -347,13 +401,13 @@ function listSection(
       children: (
         <span className="deal-aside-chips">
           {lists.map((list) => (
-            <a
+            <AppLink
               key={list.id}
               className="deal-aside-chip"
               href={routeHash({ screen: "lists", id: list.id })}
             >
               {list.name}
-            </a>
+            </AppLink>
           ))}
         </span>
       ),

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../design-system/applink";
 import { routeHash } from "../lib/router";
 import type { SpokenLine } from "./ai-activity-speak";
 
@@ -24,7 +25,11 @@ export function RailLine({ line }: Readonly<{ line: SpokenLine }>) {
   return (
     <>
       {line.before}
-      {route === null ? name : <a href={routeHash(route)}>{name}</a>}
+      {route === null ? (
+        name
+      ) : (
+        <AppLink href={routeHash(route)}>{name}</AppLink>
+      )}
       {line.after}
     </>
   );

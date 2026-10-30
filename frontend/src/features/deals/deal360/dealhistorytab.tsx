@@ -9,11 +9,9 @@
 // beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../../components/latestinbound";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import {
   useRecordTimeline,
@@ -153,16 +151,26 @@ export function DealHistoryTab({
 }
 
 /**
- * The newest unanswered thing anyone on the deal sent, leading the Overview
- * with the verbs its History row has.
+ * The newest unanswered thing anyone on the deal sent, for the Overview's Next
+ * bar, with the verbs its History row has.
  */
 export function DealLatestInbound({
   latest,
   dealId,
-}: Readonly<{ latest: JustIn | undefined; dealId: string }>) {
+  onOpenEmail,
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  dealId: string;
+  onOpenEmail?: (activityId: string) => void;
+  children: ReactNode;
+}>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="deal"
+      entityId={dealId}
+      onOpenEmail={onOpenEmail}
       actions={(activity) => (
         <RowAnswerActions
           activity={activity}
@@ -170,6 +178,8 @@ export function DealLatestInbound({
           entityId={dealId}
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }

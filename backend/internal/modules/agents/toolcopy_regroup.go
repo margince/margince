@@ -66,9 +66,10 @@ var changeActivitiesCopy = toolCopy{
 	Purpose: "Log, plan and file activities. log records an email, call, meeting, note or " +
 		"message that already happened, on its records. task creates a task for a seat. attach " +
 		"attaches a file to a record. relink moves one activity to another record; relink_many " +
-		"moves a named set.",
-	Limits: "relink and relink_many wait for a human when they file under a project, and run at " +
-		"once anywhere else. attach checks the record first; read list_documents before " +
+		"moves a named set. ready says the user is ready for a meeting they attend; unready " +
+		"takes it back.",
+	Limits: "relink and relink_many run at once. Tell the user before you file under a project, " +
+		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
 		"attaching the same file again.",
 	Instead: "Use schedule_meeting to book a meeting still to come, and change_state with " +
 		"move_deal when the same event moves a deal, so move and note are one change.",
@@ -78,9 +79,9 @@ var changeActivitiesCopy = toolCopy{
 
 var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the calendar. book places it on the calendar of the seat this " +
-		"passport acts for. invite sends the invitation to its attendees.",
-	Limits: "book runs at once; invite reaches attendees outside the workspace and waits for a " +
-		"human. Read check_availability before booking a time.",
+		"passport acts for and tells nobody else. invite sends the invitation to its attendees.",
+	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
+		"the user's yes first. Read check_availability before booking a time.",
 	Instead: "Use change_activities with log to record a meeting that already happened.",
 	Retain:  "Keep the meeting's id to send its invitation.",
 }
@@ -97,7 +98,8 @@ var changeStateCopy = toolCopy{
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"set_up_partner always waits for a human, takes no margin tier (a human sets that on the " +
 		"company's Partner tab) and is refused for a company that already is a partner. " +
-		"move_deal to a won or lost stage waits for a human; to an open stage it runs at once. " +
+		"move_deal to a won or lost stage closes or reopens the deal, which is the user's " +
+		"decision: unless they named the deal and stage, name them and get their yes first. " +
 		"move_project to closed needs a reason and leaves the project's tasks open. When the user " +
 		"asked for the close, report what is still open and close: an open task is news for " +
 		"them, not a reason to hold back. " +

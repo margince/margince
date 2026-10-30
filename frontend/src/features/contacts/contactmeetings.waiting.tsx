@@ -282,7 +282,7 @@ function ProposalRow({
           {/* Withdrawing is the rare verb, and the one that cannot be undone:
               folded away from the two a reader reaches for. */}
           <OverflowMenu
-            label={t("contact.meetings.moreFor", { subject: proposal.subject })}
+            label={t("record.moreActionsFor", { subject: proposal.subject })}
           >
             <Button variant="ghost" onClick={onWithdraw}>
               {t("contact.meetings.withdraw")}

@@ -162,7 +162,7 @@ describe("the door always says Open", () => {
       name: en["stat.open"],
       description: "Best route",
     });
-    expect(door.getAttribute("href")).toBe("#/contacts/c-1");
+    expect(door.getAttribute("href")).toBe("/#/contacts/c-1");
     expect(screen.queryByRole("button")).toBeNull();
   });
 

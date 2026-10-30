@@ -7,12 +7,14 @@ import {
   TaskCompleteCheck,
   type useTaskUpdate,
 } from "../../components/taskactions";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import {
   OverviewCard,
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
@@ -293,12 +295,12 @@ function DealItem({
   return (
     <OverviewRow
       title={
-        <a
+        <AppLink
           className="co-rowlink"
           href={routeHash({ screen: "deals", id: deal.deal_id })}
         >
           {deal.name}
-        </a>
+        </AppLink>
       }
       sub={sub || undefined}
       right={
@@ -330,12 +332,12 @@ function ProjectItem({
   return (
     <OverviewRow
       title={
-        <a
+        <AppLink
           className="co-rowlink"
           href={routeHash({ screen: "projects", id: project.project_id })}
         >
           {project.name}
-        </a>
+        </AppLink>
       }
       sub={sub}
     />
@@ -364,14 +366,18 @@ function ContactsCard({
       }
       footTone="warn"
     >
-      {contacts.length > 0 &&
-        contacts.map((contact) => (
-          <CompanyContactCard
-            key={contact.contact_id}
-            contact={contact}
-            companyName={view.company.display_name}
-          />
-        ))}
+      {contacts.length > 0 && (
+        <RecordCardList>
+          {contacts.map((contact) => (
+            <li key={contact.contact_id}>
+              <CompanyContactCard
+                contact={contact}
+                companyName={view.company.display_name}
+              />
+            </li>
+          ))}
+        </RecordCardList>
+      )}
     </OverviewCard>
   );
 }

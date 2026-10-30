@@ -15,8 +15,8 @@
   display: block;
   align-self: stretch;
   padding: var(--space-3);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   white-space: pre-wrap;
   word-break: break-all;
 }

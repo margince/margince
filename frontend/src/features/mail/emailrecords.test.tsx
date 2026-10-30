@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { EmailRecordLinks } from "./emailrecords";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
@@ -91,13 +92,15 @@ function draw(node: ReactNode) {
       // "[object Request]" — a stub reading that matches no route and answers
       // every read with a failure, which draws exactly like a refused one.
       const url = input instanceof Request ? input.url : String(input);
+      const company = companyNamesAnswer(url, {
+        [BRANDT]: "Brandt Automotive",
+      });
+      if (company) {
+        return company;
+      }
       const path = new URL(url, "https://test.local").pathname;
       const named: Record<string, unknown> = {
         [`/v1/contacts/${ANA}`]: { id: ANA, full_name: "Ana Sommer" },
-        [`/v1/companies/${BRANDT}`]: {
-          id: BRANDT,
-          display_name: "Brandt Automotive",
-        },
       };
       const body = named[path];
       if (!body) {
@@ -131,9 +134,11 @@ describe("the records a message is filed against", () => {
     );
 
     const contact = await screen.findByText("Ana Sommer");
-    expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
+    expect(contact.getAttribute("href")).toBe(
+      `/r/contacts/${ANA}#/contacts/${ANA}`,
+    );
     const account = await screen.findByText("Brandt Automotive");
-    expect(account.getAttribute("href")).toBe(`#/companies/${BRANDT}`);
+    expect(account.getAttribute("href")).toBe(`/#/companies/${BRANDT}`);
   });
 
   it("opens beside the message rather than over it", async () => {

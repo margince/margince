@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 import { TaskNextSteps } from "../../components/tasknextsteps";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
@@ -70,13 +71,15 @@ export function Triage({
   const cardVerbs =
     onContext || task ? (
       <>
+        {/* The drafted mail stands beside Done, ahead of the way to read
+            more: it is the task's next step, the details are about it. */}
+        {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
         )}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
       </>
     ) : undefined;
   // The head's facts come from the helpers the row uses, so the card and the
@@ -217,9 +220,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <>
       {label && href && (
-        <a className="entity-link" href={href}>
+        <AppLink className="entity-link" href={href}>
           {label}
-        </a>
+        </AppLink>
       )}
       {inbox && <span>{t(`visibility.${inbox}`)}</span>}
     </>

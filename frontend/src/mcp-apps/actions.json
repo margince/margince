@@ -1,4 +1,5 @@
 {
   "approval": ["decide_approvals"],
+  "approval-queue": ["decide_approvals"],
   "create-followups": ["resolve_duplicates", "change_tags"]
 }

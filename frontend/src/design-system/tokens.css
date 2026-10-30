@@ -1,121 +1,83 @@
 /*
- * Margince "Ledger Green" design tokens (ADR-0040, design/00-design-language.md §2).
- * The canonical values live in the spec's design/mockups/app.css :root — this file
- * mirrors them exactly and tokens.test.ts pins every value, so a drift from the
- * design source of truth fails the build.
+ * Margince design tokens. tokens.test.ts pins every value.
  *
- * Semantic split (§2, UX review 2026-06-29): the brand accent (deep emerald) means
- * PRIMARY ACTION and brand only; AI/agent-authored surfaces carry their own indigo
- * hue; status (success/warning/danger) is a third family. One meaning per colour —
- * success stays a brighter grass-green than the brand emerald on purpose.
+ * Semantic split: the brand accent (deep teal) means PRIMARY ACTION and brand
+ * only; AI/agent-authored surfaces carry their own indigo hue; status
+ * (success/warning/danger) is a third family. One meaning per colour — success
+ * stays a brighter grass-green than the brand teal.
  */
 :root {
   /*
-   * The GROUNDS are the design's paper (DESIGN.md §3): a near-neutral page
-   * one hair off white, with the lit corners (--glowA / --glowB, app/shell.css)
-   * carrying whatever colour the chrome has. The grounds themselves stay
-   * neutral so that anything laid ON them — a screenshot pasted into a record,
-   * a monogram fill, another company's logo — reads as itself, and so that the
-   * two themes are one room with the lights up or down rather than two tints.
+   * The GROUNDS are the design's paper (DESIGN.md §3).
    *
-   * A ladder, darkest first, from a well inside a card up to the surface a card
-   * floats on. Each rung is one visible step off its neighbours, and the ORDER
-   * is the part that carries meaning — tokens.test.ts asserts the ordering in
-   * both themes rather than trusting four plausible values to stay in sequence:
+   * Darkest first, as tokens.test.ts asserts the order in both themes:
    *
-   *   --bgInset         #eaedeb  a well inside a card: an inset row, a plate
-   *   --bgHover        #edf0ee  a pointer resting on a row on the page
-   *   --bgPage         #f1f5f2  the reading ground
-   *   --bgElevated     #fbfcfb  a card, a panel, a menu
+   *   --bgHover        #d7ede5  a pointer resting on a row
+   *   --bgInset        #eaedeb  a pressed control, a disabled field
+   *   --bgStrip        #e3f1ec  a toolbar or footer band on the ground
+   *   --bgPage         #eff6f3  the reading ground, flat under the shell
+   *   --bgElevated     #fbfcfb  an overlay, a control's face
    *
-   * The dark theme is NOT this list mirrored. On a dark ground every surface
-   * lifts toward the light, so the ladder runs the other way and only the
-   * DIRECTION of each step is shared; the dark block states its own order.
-   *
-   * The page is no longer the brightest thing on screen; --bgElevated is, and
-   * a card is therefore separated by its own lightness rather than by the
-   * shadow alone. That is what lets --shadow-rest be as slight as it is.
+   * A pane's ground follows its depth, not its kind: the --ladder* tokens below
+   * and surfaces.css. The dark theme states its own order.
    */
-  --bgPage: #f1f5f2;
+  --bgPage: #eff6f3;
   --bgElevated: #fbfcfb;
-  /* 1.19:1 against --bgElevated, which it usually sits on, and 1.12:1 against
-   * --bgPage: one step off BOTH its hosts. The old value was one step off white
-   * only, which is invisible once the page stops being white. */
+  /* Off both of its hosts: 1.15:1 on --bgElevated and 1.07:1 on --bgPage. */
   --bgInset: #eaedeb;
   /* A small inline fill drawn ON one of these rungs — a badge, a key-cap, a
-   * segmented strip, the trough of a meter. TRANSLUCENT rather than a rung of
-   * its own, because a chip has to read one step deeper than whatever it lands
-   * on, and an opaque value can only be a step off ONE ground: --bgInset on a
-   * --bgInset plate is the same colour, which is a chip nobody can see. The same
-   * ink and nearly the same alpha as --paneEdge, which stays a BORDER token —
-   * an edge and a fill are two different jobs, and one name for both would hide
-   * it.
-   *
-   * 0.07 and not deeper: --accentText on this fill over --bgInset — the worst of
-   * the four grounds tokens.test.ts measures a chip over — is 4.57:1, and 0.08
-   * would take it to 4.49:1, under the floor. The ceiling is what the ink on the
-   * chip can pay for, so the fill is chosen last. */
-  --bgChip: rgba(16, 26, 21, 0.07);
-  --bgHover: #edf0ee;
-  /* A RECESS in an elevated surface — the well a board's stage is drawn as.
-   * One hair under --bgElevated (1.03:1), which is what lets the panes inside
-   * it be the lifted thing: --bgInset is a card's own ground, and five of them
-   * side by side read as five cards with cards inside them. */
+   * segmented strip, the trough of a meter. Translucent, so it reads one step
+   * deeper than any rung it lands on, an inset plate included. */
+  --bgChip: rgba(16, 23, 20, 0.03);
+  /* A pressed segment's raised face: the brightest face on its chip track, at
+   * any depth. */
+  --segmentPressed: #fcfffe;
+  --bgHover: #d7ede5;
+  /* A band that lies on the ground, so it stays visible against the page. */
+  --bgStrip: #e3f1ec;
+  /* Hover and strip on a nested ground: a teal shade mixed into that ground
+   * (surfaces.css), at shares that land level 1 on --bgHover and --bgStrip. */
+  --hoverShade: #b2dbcc;
+  --hoverShare: 50%;
+  --stripShade: #98c7b6;
+  --stripShare: 25%;
+  /* A recess one hair under --bgElevated: the head row of a table in prose. */
   --bgWell: #f6f8f7;
-  /* One translucent pane per zone (DESIGN.md §5): white over the lit ground
-   * with a blur behind it, and a hairline for its edge. The two glows are the
-   * chrome — an emerald light at the top-left corner behind the sidebar and an
-   * indigo one at the top-right — faint enough that the eye does not find
-   * them; they are atmosphere, not a feature. */
-  --pane: rgba(255, 255, 255, 0.72);
-  --paneEdge: rgba(16, 26, 21, 0.08);
-  --glowA: rgba(24, 190, 120, 0.06);
-  --glowB: rgba(91, 97, 214, 0.1);
-  /* The lit ground itself: the page colour with the two lights painted INTO it,
-   * fixed radii and no repeat, so nothing is stacked, scrolled or measured for
-   * them — and never animated, because atmosphere that moves is a feature.
-   *
-   * It is a token rather than a rule in the shell's sheet because TWO surfaces
-   * stand on it: the app shell, and the buyer's Deal Room, which is a page of
-   * its own outside the shell (features/deals/buyerroom.css). Spelled twice, the two
-   * would drift, and the one a client sees is the one nobody is looking at. */
-  --groundLit:
-    radial-gradient(900px 620px at 0 0, var(--glowA), transparent 70%) no-repeat,
-    radial-gradient(900px 620px at 100% 0, var(--glowB), transparent 70%)
-    no-repeat,
-    var(--bgPage);
+  /* Level 1, a pane on the page ground, and a hairline for its edge. */
+  --pane: #fcfffe;
+  --paneEdge: #d8e2de;
+  /* Grounds and hairlines by nesting depth (surfaces.css). Solid is level 1 made
+   * opaque, for a band or mark that hides what passes under it. */
+  --ladder1: var(--pane);
+  --ladder1Solid: var(--pane);
+  --ladder2: #f9fbfb;
+  --ladder3: #f1f3f3;
+  --ladder4: #e3e7e8;
+  --ladder1Edge: var(--paneEdge);
+  --ladder2Edge: #e3e7e8;
+  --ladder3Edge: #d0d6d8;
+  --ladder4Edge: #b6bfc1;
 
-  --accent: #0b7a53;
-  /* The accent as TEXT, split from the accent as a FILL, and now diverging from
-   * it in BOTH themes. Dark was the original reason: --accent lightens to the
-   * ADR-0040 mandate #16a34a, and that tone sitting as text on the --accentLight
-   * tint derived from it measures 4.03:1, under the 4.5:1 AA needs for text this
-   * size.
-   * Light diverges for the same reason one step removed. --accentLight is an
-   * alpha tint, so what sits BEHIND it decides what the text is read against,
-   * and the grounds went grey: the Brief glance's count chip (--accentText on
-   * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
-   * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
-   * does: 5.14:1 on that chip now, and clear of 4.5:1 on every ground in the
-   * ladder. Same shape as --tealText. */
-  --accentText: #0a6f4b;
-  --accentLight: rgba(11, 122, 83, 0.09);
-  --accentMed: rgba(11, 122, 83, 0.17);
+  --accent: #045647;
+  /* The accent as TEXT, split from the accent as a FILL: equal in light; in
+   * dark the fill carries a dark ink and the text reads on --accentLight. */
+  --accentText: #045647;
+  --accentLight: #d7ede5;
+  --accentMed: rgba(4, 86, 71, 0.17);
 
   /* Headings, and a record's name where that name IS the title. */
-  --textPrimary: #15201b;
+  --textPrimary: #182c28;
   /* The one SECONDARY neutral, for text that supports rather than carries: a
      placeholder is the first of them, and each further role is decided at the
      element rather than granted here in advance. One token and not a family —
      "quieter than the body" is a single question, and the two greys this tree
      grew for it were the same answer typed twice. */
-  --textSecondary: lch(40% 1 282);
+  --textSecondary: #55645f;
   --textOnAccent: #fff;
   /* The ink for a control filled with --accent SPECIFICALLY (a primary
    * button, a filled step numeral) — split from --textOnAccent because dark
-   * mode lightens --accent and not every --textOnAccent consumer's fill.
-   * Unthemed here; the dark palette below is what makes it diverge. */
-  --textOnAccentControl: #fff;
+   * mode lightens --accent and not every --textOnAccent consumer's fill. */
+  --textOnAccentControl: #f4faf7;
   /* The ink for a control FILLED with a state tone — a destructive button, a
    * completion disc, a primary badge. Its ground is the tone's *Text token and
    * never the base hue. A base is tuned to be SEEN at a bar's or a dot's
@@ -125,13 +87,13 @@
    * neither, 4.46:1 for white and 3.72:1 for the near-black. So the fill is the
    * Text token, which was chosen to carry ink, and this one flips with the
    * theme because the ground under it does: a Text red is deep in light, where
-   * white reads on it, and bright in dark, where near-black does. White here
-   * gives 6.26:1 on --infoText, 5.92:1 on --successText, 5.98:1 on
-   * --warningText, 6.19:1 on --dangerText and 12.46:1 on --discoveryText; the
+   * a near-white reads on it, and bright in dark, where near-black does. This
+   * gives 6.08:1 on --infoText, 5.83:1 on --successText, 5.82:1 on
+   * --warningText, 6.00:1 on --dangerText and 11.78:1 on --discoveryText; the
    * dark block states the other half. Kept a token of its own rather than
    * folded into --textOnAccentControl: the accent and the state hues are
    * different fills that retune independently. */
-  --textOnStatusControl: #fff;
+  --textOnStatusControl: #f4faf7;
 
   --borderSubtle: #e3eae6;
   --borderStrong: #d1d8d4;
@@ -166,14 +128,19 @@
   --avatarBlobBC: 0.05;
   --avatarInkL: 0.43;
   --avatarInkC: 0.07;
-  --bgRail: #13231d;
-  /* §2b rail + brand chip + scrim — the rail is deliberately unthemed
-   * (white-alpha icons on the dark green field in BOTH themes), and the
-   * workspace chip stays brand emerald even when the dark accent lightens. */
+  --bgInkField: #13231d;
+  /* The dark ink field: the one dark-green plate, the same in BOTH themes, for
+   * what passes over the page (a toast, the capture chip, a tooltip, a docked
+   * window's title bar, the client surface's bar). The sidebar is NOT on it:
+   * the sidebar is glass, `--pane` over the ground (shell.css `.rail`).
+   * The workspace chip keeps one brand value even when the dark accent lightens. */
   --overlayScrim: rgba(19, 35, 29, 0.4);
-  --accentBrand: #0b7a53;
-  --railIconActive: #fff;
-  /* The onboarding dialog's dark glass, unthemed like the rail it sits beside:
+  --accentBrand: #045647;
+  --textOnInkField: #fff;
+  /* The quiet ink on the ink field, opaque so its contrast is a number:
+   * 7.6:1 on the plate. inkfield.css hands it to whatever reads --textSecondary there. */
+  --textOnInkFieldQuiet: #a3b5ad;
+  /* The onboarding dialog's dark glass, unthemed like the ink field:
    * the hero is dark in both themes, so its fill, quiet ink and shadow tint are
    * fixed. */
   --obDialogGlass: rgba(255, 255, 255, 0.16);
@@ -283,25 +250,25 @@
    * tint, in both themes, holds each Text token to its base's OKLCh hue, and
    * fails when a state is missing from either theme. */
   --info: #0485f7;
-  --infoText: #0060b7;
+  --infoText: #005eb5;
   --infoSurface: color-mix(in srgb, var(--info) 12%, var(--bgElevated));
   --infoBg: color-mix(in srgb, var(--info) 12%, transparent);
   --infoBorder: color-mix(in srgb, var(--info) 45%, transparent);
 
   --success: #17c964;
-  --successText: #007435;
+  --successText: #007132;
   --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
   --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
 
   --warning: #f5a524;
-  --warningText: #8a5900;
+  --warningText: #885700;
   --warningSurface: color-mix(in srgb, var(--warning) 16%, var(--bgElevated));
   --warningBg: color-mix(in srgb, var(--warning) 16%, transparent);
   --warningBorder: color-mix(in srgb, var(--warning) 45%, transparent);
 
   --danger: #ff383c;
-  --dangerText: #c5001b;
+  --dangerText: #c2001a;
   --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
   --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
@@ -421,8 +388,8 @@
   --controlIcon: 16px;
   /* The vertical inset of ONE option inside a segmented track. Off the 4px
      scale on purpose and therefore a token rather than a raw value: the track
-     draws its own 3px around the options, and the option repeats it so a
-     pressed one sits centred in a control that measures --controlHeight. */
+     draws 3px (edge and padding) around the options, and the option repeats it
+     so a pressed one sits centred in a control that measures --controlHeight. */
   --segmentPaddingY: 3px;
 
   /* A TEXT INPUT is taller than a button, and that is the one place the two
@@ -801,54 +768,50 @@
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
-/*
- * Dark palette (§2: "structure for it; accent lightens toward #16A34A. Build
- * light-first."). The accent value is the ADR-0040 mandate; the surface and text
- * values are the structured dark counterparts pending a spec-side dark pass —
- * every component reads through the same custom properties, so re-tuning the
- * palette later touches only this block. The rail is unchanged: it is already
- * the dark ink-green field in both themes (§2b — white-alpha on --bgRail,
- * deliberately not theme tokens).
- */
+/* Dark palette. --bgInkField is absent: it is one dark plate in both themes. */
 [data-theme="dark"] {
   --bgPage: #0c1311;
   --bgElevated: #161d1a;
   --bgInset: #1a211e;
-  --bgChip: rgba(255, 255, 255, 0.09);
-  --bgHover: #1f2623;
+  --bgChip: rgba(239, 247, 244, 0.09);
+  --segmentPressed: #3d4441;
+  --bgHover: #172823;
+  --bgStrip: #0a1713;
+  --hoverShade: #1a493b;
+  --hoverShare: 25%;
+  --stripShade: #02130e;
+  --stripShare: 60%;
   /* Under --bgElevated, the way the light well sits under its surface: a
      recess goes away from the lifted ground in both themes. */
   --bgWell: #111815;
-  --pane: rgba(255, 255, 255, 0.045);
-  --paneEdge: rgba(255, 255, 255, 0.09);
-  --glowA: rgba(24, 190, 120, 0.1);
-  --glowB: rgba(91, 97, 214, 0.2);
+  --pane: rgba(239, 247, 244, 0.045);
+  --paneEdge: rgba(239, 247, 244, 0.09);
+  /* Each level lifts toward the light on its light rung's hue, and each edge
+     keeps its light contrast. Level 4 stops where a state chip still clears AA. */
+  --ladder1Solid: #161d1b;
+  --ladder2: #1c2020;
+  --ladder3: #1f2323;
+  --ladder4: #212628;
+  --ladder2Edge: #292f30;
+  --ladder3Edge: #31383a;
+  --ladder4Edge: #3b4345;
 
-  --accent: #16a34a;
+  --accent: #3aae94;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
-     fill that ISN'T --accent and doesn't lighten here (the rail toast on
-     --bgRail, the AI FAB on --ai, the voice orb over the Core's own glass,
+     fill that ISN'T --accent and doesn't lighten here (a toast on
+     --bgInkField, the AI FAB on --ai, the voice orb over the Core's own glass,
      the Core's own glass) — dark ink there is a control-boundary failure,
      not a contrast fix, on backgrounds this palette never touches. The five
      state tones are NOT in that set: --textOnStatusControl is their ink, and
      it flips here for the same reason --textOnAccentControl does — see its
      declaration below. */
-  /* Lifted off --accent, which cannot move: #4ade80 is emerald text that
-     reads on an emerald tint on this ground. */
-  --accentText: #4ade80;
-  --accentLight: rgba(22, 163, 74, 0.14);
-  --accentMed: rgba(22, 163, 74, 0.26);
-  /* DARK ink on the accent, not white — the accent itself is untouched
-     because #16a34a is the ADR-0040 mandate, but lightening it flips which
-     ink can sit on it: white measured 3.30:1 against it at 13.5px/600, under
-     the 4.5:1 AA needs (600 weight is not bold, and 13.5px is not large
-     text), and that text is the primary action on every surface — "Sign
-     in", "Send reset link", "Set new password". This ink gives 5.04:1.
-     Light theme keeps white at 5.35:1. Scoped to --textOnAccentControl, not
-     --textOnAccent: the latter still inks the fills that stay dark here
-     (--bgRail, --ai), where this same dark ink would fail rather than fix
-     contrast. */
-  --textOnAccentControl: #04240f;
+  /* Lighter than --accent, so it reads on --accentLight over each dark ground. */
+  --accentText: #66d5ba;
+  --accentLight: rgba(58, 174, 148, 0.16);
+  --accentMed: rgba(58, 174, 148, 0.28);
+  /* Dark ink: white fails AA on the light dark-theme accent. Not --textOnAccent,
+     which still inks fills that stay dark here (--bgInkField, --ai). */
+  --textOnAccentControl: #07221d;
   /* The same flip, one theme later: a filled state control's ground is the
      tone's *Text token, and a Text red is DEEP in light and BRIGHT here — a
      near-black pane barely has to move a hue before it reads on it. So the ink
@@ -867,8 +830,8 @@
   --avatarInkL: 0.9;
   --avatarInkC: 0.045;
 
-  --textPrimary: #fff;
-  --textSecondary: lch(63.304% 1.425 272);
+  --textPrimary: #edf6f4;
+  --textSecondary: #9aa8a3;
 
   --borderSubtle: #22352e;
   --borderStrong: #31463d;
@@ -973,24 +936,35 @@
     --bgPage: #0c1311;
     --bgElevated: #161d1a;
     --bgInset: #1a211e;
-    --bgChip: rgba(255, 255, 255, 0.09);
-    --bgHover: #1f2623;
+    --bgChip: rgba(239, 247, 244, 0.09);
+    --segmentPressed: #3d4441;
+    --bgHover: #172823;
+    --bgStrip: #0a1713;
+    --hoverShade: #1a493b;
+    --hoverShare: 25%;
+    --stripShade: #02130e;
+    --stripShare: 60%;
     /* Under --bgElevated, the way the light well sits under its surface: a
        recess goes away from the lifted ground in both themes. */
     --bgWell: #111815;
-    --pane: rgba(255, 255, 255, 0.045);
-    --paneEdge: rgba(255, 255, 255, 0.09);
-    --glowA: rgba(24, 190, 120, 0.1);
-    --glowB: rgba(91, 97, 214, 0.2);
+    --pane: rgba(239, 247, 244, 0.045);
+    --paneEdge: rgba(239, 247, 244, 0.09);
+    --ladder1Solid: #161d1b;
+    --ladder2: #1c2020;
+    --ladder3: #1f2323;
+    --ladder4: #212628;
+    --ladder2Edge: #292f30;
+    --ladder3Edge: #31383a;
+    --ladder4Edge: #3b4345;
 
-    --accent: #16a34a;
+    --accent: #3aae94;
 
-    --accentText: #4ade80;
+    --accentText: #66d5ba;
 
-    --accentLight: rgba(22, 163, 74, 0.14);
-    --accentMed: rgba(22, 163, 74, 0.26);
+    --accentLight: rgba(58, 174, 148, 0.16);
+    --accentMed: rgba(58, 174, 148, 0.28);
 
-    --textOnAccentControl: #04240f;
+    --textOnAccentControl: #07221d;
     --textOnStatusControl: #04240f;
 
     --avatarGroundL: 0.32;
@@ -1002,8 +976,8 @@
     --avatarInkL: 0.9;
     --avatarInkC: 0.045;
 
-    --textPrimary: #fff;
-    --textSecondary: lch(63.304% 1.425 272);
+    --textPrimary: #edf6f4;
+    --textSecondary: #9aa8a3;
 
     --borderSubtle: #22352e;
     --borderStrong: #31463d;

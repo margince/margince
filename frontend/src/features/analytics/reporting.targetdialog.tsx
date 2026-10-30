@@ -21,14 +21,12 @@ import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { dayInZone, UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { fiscalQuarter, opensFiscalQuarter } from "../../lib/fiscalquarter";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { metricLabel, type ReportingMetricID } from "./reporting.model";
-import {
-  useReportingCatalog,
-  useReportingPipelines,
-} from "./reporting.queries";
+import type { ReportingMetricID } from "./reporting.model";
+import { useReportingCatalog } from "./reporting.queries";
 import { TargetHistory } from "./reporting.targethistory";
 
 type Target = components["schemas"]["ReportingTarget"];
@@ -150,7 +148,7 @@ export function ReportingTargetDialog({
                       .filter((metric) => metric.supports_target)
                       .map((metric) => ({
                         value: metric.id,
-                        label: metricLabel(metric.id, t),
+                        label: metric.label,
                       }))}
                     onChange={(value) => {
                       const selected = catalog.metrics.find(
@@ -360,7 +358,7 @@ function TargetPipelineField({
   onChange: (value: string) => void;
 }>) {
   const t = useT();
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   if (!takesPipeline(definition)) return null;
   return (
     <Field label={t("reporting.pipeline")}>
@@ -371,7 +369,7 @@ function TargetPipelineField({
           value={value}
           options={[
             { value: "", label: t("reporting.allPipelines") },
-            ...(pipelines.data?.data ?? []).map((pipeline) => ({
+            ...(pipelines.data ?? []).map((pipeline) => ({
               value: pipeline.id,
               label: pipeline.name,
             })),

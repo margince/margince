@@ -52,3 +52,4 @@ ccb5c671bcb9781769fb9550e7bddfb5a3b0934c b2a77ae532eea4f11b438f13bd34c4330ff01cd
 b7b06dc10359127ff57ad0baad7a4adb9e74b913 541e6db26df483432708952efd3f9c496d330d34 ratified-8573-a-phase-move-names-its-actor-from-the-audit-row-and-may-be-unknown
 d27e25da7ca3cd4a9828e08eb961a8a76da07880 950608de6a2004dd11a2b9d56b072ccc81d99e8e ratified-an-introduction-can-be-recorded-after-the-fact-so-reason-and-due-date-are-optional-on-an-ask
 f7fe6ec4b79863203693aa0d7419d4b18311e558 6862fdbfce854e9e3c6527e6b06204c32280a75f ratified-an-introduction-can-be-recorded-after-the-fact-so-reason-and-due-date-are-optional-on-an-ask
+521ac02c81425d74b8be26618c6b157d944f0487 b042d606af4d8de4a500f9b975b258e8b988c190 ratified-a-team-review-sends-no-member-meetings-to-a-seat-that-may-not-read-activities

@@ -34,7 +34,7 @@ func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 	}
 	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Kept contact", nil))
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
-		Kind: relationshipKindEmployment, ContactID: &contact, CompanyID: &companyID, IsCurrentPrimary: ptrTrue(), Source: "manual",
+		Kind: relationshipKindEmployment, ContactID: &contact, CompanyID: &companyID, IsCurrentPrimary: new(true), Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the employment: %v", err)
 	}

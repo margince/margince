@@ -11,6 +11,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef, OwnerName } from "../../components/entityref";
+import { RailField } from "../../components/railfield";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -25,6 +26,7 @@ import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";
 
@@ -186,6 +188,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
   const day = (date: string | null | undefined) =>
     date ? formatDateAbbrev(date, locale, zone) : unset;
   const closed = project.phase === "closed";
+  const edit = useProjectEdit(project);
   const about: DetailRow[] = [
     {
       key: "company",
@@ -208,7 +211,15 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     {
       key: "target",
       term: t("project.aside.targetEnd"),
-      value: day(project.target_end_date),
+      value: (
+        <RailField
+          edit={edit}
+          keys={["target_end_date"]}
+          label={t("project.aside.targetEnd")}
+          reading={day(project.target_end_date)}
+          text={project.target_end_date ? day(project.target_end_date) : ""}
+        />
+      ),
       empty: !project.target_end_date,
     },
     ...(closed
@@ -231,7 +242,15 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     {
       key: "description",
       term: t("project.description"),
-      value: project.description || unset,
+      value: (
+        <RailField
+          edit={edit}
+          keys={["description"]}
+          label={t("project.description")}
+          reading={project.description || unset}
+          text={project.description ?? ""}
+        />
+      ),
       empty: true,
     },
     ...customFieldRows(cf, project, display, unset),
@@ -241,7 +260,14 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
       key: "owner",
       term: t("project.owner"),
       value: (
-        <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
+        <RailField
+          edit={edit}
+          keys={["owner_id"]}
+          label={t("project.owner")}
+          reading={
+            <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
+          }
+        />
       ),
     },
   ];

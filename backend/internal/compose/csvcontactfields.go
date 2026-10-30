@@ -47,6 +47,7 @@ func contactCreateFrom(fields map[string]string, typed map[string]any, sourceSys
 	in.FirstName = importString(fields, "first_name")
 	in.LastName = importString(fields, "last_name")
 	in.Title = importString(fields, fieldTitle)
+	in.Employer = contacts.EmployerChoice{CompanyName: importString(fields, csvEmployerName), Role: in.Title, Source: source}
 	in.Address = addressFrom(fields)
 	in.Emails = contactEmailsFrom(fields)
 	in.Phones = contactPhonesFrom(fields, typed)

@@ -9,7 +9,7 @@ model called and what it said. The results go to
 
 This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own
 credentials. The Go tests pin payloads and errors for free. This lane answers
-the question they cannot: whether a model can use the surface.
+the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
 
 > **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It
 > runs the checker, the recorded verdicts of the judge and the unit tests of the bridge,
@@ -19,7 +19,7 @@ See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
 result), and [connect-an-mcp-client.md](connect-an-mcp-client.md) (the surface under
 test). The lane of [certify-an-ai-model.md](certify-an-ai-model.md) is a different one: one
 AI feature, one model. The `e2e-llm` row of
-[reference/make-targets.md](../reference/make-targets.md) lists every setting.
+[reference/make-targets.md](../reference/make-targets.md) lists every setting. [test-the-rest-surface-end-to-end.md](test-the-rest-surface-end-to-end.md) runs the same scenarios through the REST API.
 
 ## 1. Choose the assistant and how to reach it
 

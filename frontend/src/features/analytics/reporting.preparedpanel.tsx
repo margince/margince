@@ -11,6 +11,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { ReportingCharts } from "./reporting.charts";
@@ -21,10 +22,7 @@ import {
   type PreparedReport,
   preparedSelection,
 } from "./reporting.prepared";
-import {
-  useReportingCatalog,
-  useReportingPipelines,
-} from "./reporting.queries";
+import { useReportingCatalog } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -37,7 +35,7 @@ export function PreparedReports({
 }: Readonly<{ scope: ReportingSelection["scope"]; ownLens: boolean }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -68,9 +66,8 @@ export function PreparedReports({
                               report,
                               metrics,
                               scope,
-                              loaded.data.find(
-                                (pipeline) => pipeline.is_default,
-                              )?.id,
+                              loaded.find((pipeline) => pipeline.is_default)
+                                ?.id,
                             )
                           : null
                       }

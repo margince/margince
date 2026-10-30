@@ -63,6 +63,17 @@ type rosterRead struct {
 	cut     bool
 }
 
+func (r *rosterRead) seats() []ids.UUID { return teamSeats(r.members, r.former) }
+
+// rosterSeats is the seats a team page's task reads narrow to in SQL, or nil
+// under every other scope.
+func (s *Service) rosterSeats() []ids.UUID {
+	if s.teamRoster == nil {
+		return nil
+	}
+	return s.teamRoster.seats()
+}
+
 // degradableRoster is the roster read for a page that names its failure: the
 // team scope reports a refused roster as unavailable, so the read must not
 // abort the snapshot on its way to saying so. A page whose scope already read

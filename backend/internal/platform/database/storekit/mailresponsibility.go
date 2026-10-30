@@ -150,26 +150,42 @@ func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity,
 	})
 }
 
+// directRecipientMatch is one parsed To participant naming one of the given
+// addresses. The per-mail test and the set of a seat's mail share it.
+const directRecipientMatch = `recipient.role = 'to'
+ AND lower(recipient.address) = ANY(ADDRESS_LIST)`
+
 // DirectMailRecipientSQL matches parsed To evidence, never editable body text.
 func DirectMailRecipientSQL(activity, addresses string) string {
 	clause := `EXISTS (SELECT 1 FROM activity_participant recipient
- WHERE recipient.activity_id = a.id AND recipient.role = 'to'
- AND lower(recipient.address) = ANY(ADDRESS_LIST))`
+ WHERE recipient.activity_id = a.id AND ` + directRecipientMatch + `)`
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
 }
 
-// DirectMailSeatsSQL lists every seat the mail's parsed To line names.
+// DirectMailActivitiesSQL lists the live inbound mail whose parsed To line
+// names one seat, built once as an array. A seat's own reads start from it,
+// over the address index, rather than testing each mail in the workspace.
+func DirectMailActivitiesSQL(identities, seat string) string {
+	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL
+ WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
+}
+
+// DirectMailSeatsSQL lists every seat the mail's parsed To line names. It is
+// directRecipientMatch with each seat's addresses left a jsonb array, which `?`
+// tests in place instead of unpacking it once per recipient.
 func DirectMailSeatsSQL(activity, identities string) string {
-	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE " +
-		DirectMailRecipientSQL(activity, "ARRAY(SELECT jsonb_array_elements_text(mail_seat.value))") + ")"
+	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE EXISTS (SELECT 1 FROM activity_participant recipient\n WHERE recipient.activity_id = " +
+		activity + ".id AND recipient.role = 'to'\n AND mail_seat.value ? lower(recipient.address)))"
 }
 
 // SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
 // To line when it is the only seat there, else NULL. Two addressed seats make
-// no automatic duty for either, and no shared one.
+// no automatic duty for either, and no shared one. OFFSET 0 keeps the planner
+// from inlining the seat list into both of its uses, which built it twice.
 func SoleDirectMailSeatSQL(activity, identities string) string {
-	seats := DirectMailSeatsSQL(activity, identities)
-	return "(CASE WHEN cardinality(" + seats + ") = 1 THEN (" + seats + ")[1] END)"
+	return "(SELECT CASE WHEN cardinality(direct.seats) = 1 THEN direct.seats[1] END FROM (SELECT " +
+		DirectMailSeatsSQL(activity, identities) + " AS seats OFFSET 0) direct)"
 }
 
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.

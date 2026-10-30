@@ -38,6 +38,8 @@ type InstallationSettings struct {
 	CallWhatsApp bool
 	CallTelegram bool
 	CallZalo     bool
+	// IndividualPerformance is settingsindividualperformance.go's switch.
+	IndividualPerformance bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -107,6 +109,7 @@ type InstallationPatch struct {
 	CallWhatsApp              *bool
 	CallTelegram              *bool
 	CallZalo                  *bool
+	IndividualPerformance     *bool
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -175,6 +178,9 @@ type InstallationSettingsStore struct {
 	config *config.Config
 	// onCountryChange runs inside the transaction that changes the country.
 	onCountryChange CountryChange
+	// onCalendarChange runs inside the transaction that moves the reporting
+	// zone or the fiscal start, before either is written.
+	onCalendarChange CalendarChange
 	// now dates a window change, which takes over at the next reset after it.
 	now func() time.Time
 }
@@ -279,6 +285,9 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		AgentAllowances:      allowances,
 	}
 	if err := s.readCallMessengers(ctx, &out); err != nil {
+		return InstallationSettings{}, err
+	}
+	if err := s.readIndividualPerformance(ctx, &out); err != nil {
 		return InstallationSettings{}, err
 	}
 	return out, nil
@@ -388,7 +397,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites} {
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites} {
 		writes, err := group()
 		if err != nil {
 			return nil, err
@@ -432,6 +441,9 @@ func (s *InstallationSettingsStore) UpdateInstallation(ctx context.Context, in I
 			if err := refuseZoneTheDatabaseLacksTx(ctx, tx, *in.Timezone); err != nil {
 				return err
 			}
+		}
+		if err := s.changeCalendarTx(ctx, tx, in.Timezone, in.FiscalYearStartMonth); err != nil {
+			return err
 		}
 		if err := s.scheduleAgentWindowTx(ctx, tx, in.AgentAllowances.WindowHours); err != nil {
 			return err

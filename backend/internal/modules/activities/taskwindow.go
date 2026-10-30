@@ -44,8 +44,14 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		// meets the exclusive upper bound above exactly: a task due at tomorrow
 		// 00:00 is outside today's read and inside the upcoming one, and none
 		// can fall between the two or be counted by both.
+		// The due date is either the stored one or NULL, so the plain column
+		// bound holds whenever the window's does. Spelled for the task index.
+		from := arg(*in.OpenAndDueAfter)
 		clauses = append(clauses,
-			sprintf(openTask+" AND "+storekit.TaskDueSQL("a")+" >= $%d", arg(*in.OpenAndDueAfter)))
+			sprintf(openTask+" AND a.due_at >= $%[1]d AND "+storekit.TaskDueSQL("a")+" >= $%[1]d", from))
+	}
+	if in.ExceptRemindersDue && reminders != "" {
+		clauses = append(clauses, "NOT COALESCE("+reminders+", FALSE)")
 	}
 	return clauses
 }

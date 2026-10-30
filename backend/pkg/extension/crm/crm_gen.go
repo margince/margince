@@ -192,6 +192,27 @@ func (e ActivityMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for ActivityMessageMove.
+const (
+	ActivityMessageMoveNeedsReply     ActivityMessageMove = "needs_reply"
+	ActivityMessageMoveNone           ActivityMessageMove = "none"
+	ActivityMessageMoveWaitingForThem ActivityMessageMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMessageMove enum.
+func (e ActivityMessageMove) Valid() bool {
+	switch e {
+	case ActivityMessageMoveNeedsReply:
+		return true
+	case ActivityMessageMoveNone:
+		return true
+	case ActivityMessageMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
 	ActivityAudienceParticipants ActivityAudience = "participants"
@@ -753,6 +774,24 @@ func (e DealForecastCategory) Valid() bool {
 	}
 }
 
+// Defines values for DealLostReasonBasis.
+const (
+	Mapped   DealLostReasonBasis = "mapped"
+	Recorded DealLostReasonBasis = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the DealLostReasonBasis enum.
+func (e DealLostReasonBasis) Valid() bool {
+	switch e {
+	case Mapped:
+		return true
+	case Recorded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealPartnerAttribution.
 const (
 	Influenced DealPartnerAttribution = "influenced"
@@ -1097,22 +1136,22 @@ func (e PartnerRelationshipStage) Valid() bool {
 
 // Defines values for RelationshipStrengthBucket.
 const (
-	RelationshipStrengthBucketModerate RelationshipStrengthBucket = "moderate"
-	RelationshipStrengthBucketNone     RelationshipStrengthBucket = "none"
-	RelationshipStrengthBucketStrong   RelationshipStrengthBucket = "strong"
-	RelationshipStrengthBucketWeak     RelationshipStrengthBucket = "weak"
+	Moderate RelationshipStrengthBucket = "moderate"
+	None     RelationshipStrengthBucket = "none"
+	Strong   RelationshipStrengthBucket = "strong"
+	Weak     RelationshipStrengthBucket = "weak"
 )
 
 // Valid indicates whether the value is a known member of the RelationshipStrengthBucket enum.
 func (e RelationshipStrengthBucket) Valid() bool {
 	switch e {
-	case RelationshipStrengthBucketModerate:
+	case Moderate:
 		return true
-	case RelationshipStrengthBucketNone:
+	case None:
 		return true
-	case RelationshipStrengthBucketStrong:
+	case Strong:
 		return true
-	case RelationshipStrengthBucketWeak:
+	case Weak:
 		return true
 	default:
 		return false
@@ -1498,7 +1537,10 @@ type Activity struct {
 
 	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
-	CreatedAt    time.Time             `json:"created_at"`
+
+	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -1543,7 +1585,13 @@ type Activity struct {
 
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time              `json:"occurred_at"`
+
+	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+	// word with them, `none` otherwise.
+	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
+	OccurredAt  time.Time            `json:"occurred_at"`
 
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
@@ -1579,6 +1627,9 @@ type Activity struct {
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
 
+	// WebForm What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`.
+	WebForm *WebFormSubmission `json:"web_form,omitempty"`
+
 	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -1609,6 +1660,12 @@ type ActivityLanguage string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
+
+// ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+// word with them, `none` otherwise.
+type ActivityMessageMove string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
@@ -1948,6 +2005,13 @@ type ComputedField struct {
 // ComputedFieldKind defines model for ComputedField.Kind.
 type ComputedFieldKind string
 
+// ControllerSend Present on a mail sent through the installation's own relay rather than through a
+// member's mailbox. Its presence is the lane.
+type ControllerSend struct {
+	// FromAddress The From address the mail left from, or was staged with while it waits. Null when the relay names none.
+	FromAddress *string `json:"from_address"`
+}
+
 // CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
@@ -2097,8 +2161,14 @@ type Deal struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
-	// LostReason Required when status=lost.
+	// LostReason The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+	LostReasonBasis *DealLostReasonBasis `json:"lost_reason_basis,omitempty"`
+
+	// LostReasonCode The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
 	MaskedFields *[]string `json:"masked_fields,omitempty"`
@@ -2156,6 +2226,9 @@ type DealCommercialMotion string
 
 // DealForecastCategory defines model for Deal.ForecastCategory.
 type DealForecastCategory string
+
+// DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+type DealLostReasonBasis string
 
 // DealPartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 type DealPartnerAttribution string
@@ -2570,8 +2643,13 @@ type Signal struct {
 	// SourceChannel Where the raw signal came from.
 	SourceChannel SignalSourceChannel `json:"source_channel"`
 	Status        SignalStatus        `json:"status"`
-	Summary       string              `json:"summary"`
-	UpdatedAt     time.Time           `json:"updated_at"`
+
+	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
+	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+	// the installation's base language. Every other summary, and a summary stored without its
+	// parts, reads as it was written.
+	Summary   string    `json:"summary"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -2688,6 +2766,52 @@ type SourceQuoteProof struct {
 	End    int    `json:"end"`
 	Sha256 string `json:"sha256"`
 	Start  int    `json:"start"`
+}
+
+// WebFormConsent The consent box the form showed. Absent when the form shows none.
+type WebFormConsent struct {
+	// PolicyVersion The privacy policy version the form named, when it named one.
+	PolicyVersion *string `json:"policy_version,omitempty"`
+	Ticked        bool    `json:"ticked"`
+
+	// Wording The words the box showed, as the admin wrote them when the form was sent.
+	Wording string `json:"wording"`
+}
+
+// WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
+// text and nothing Margince checked, except `consent`, which is the form's own record of
+// its consent box.
+type WebFormSubmission struct {
+	// Campaign The `utm_` parameters the page carried.
+	Campaign []WebFormValue `json:"campaign"`
+	Company  *string        `json:"company,omitempty"`
+
+	// Consent The consent box the form showed. Absent when the form shows none.
+	Consent *WebFormConsent `json:"consent,omitempty"`
+
+	// Email The address the lead was matched or created by.
+	Email string `json:"email"`
+
+	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
+	Extra    []WebFormValue `json:"extra"`
+	FullName *string        `json:"full_name,omitempty"`
+
+	// Message The free text the visitor wrote.
+	Message *string `json:"message,omitempty"`
+
+	// PageUrl The page the form was sent from.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// Phone As typed; it may lack the country prefix a lead's phone needs.
+	Phone    *string `json:"phone,omitempty"`
+	Referrer *string `json:"referrer,omitempty"`
+	Title    *string `json:"title,omitempty"`
+}
+
+// WebFormValue defines model for WebFormValue.
+type WebFormValue struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // Getter for additional properties for Activity. Returns the specified
@@ -2859,6 +2983,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "content_state")
 	}
 
+	if raw, found := object["controller_send"]; found {
+		err = json.Unmarshal(raw, &a.ControllerSend)
+		if err != nil {
+			return fmt.Errorf("error reading 'controller_send': %w", err)
+		}
+		delete(object, "controller_send")
+	}
+
 	if raw, found := object["created_at"]; found {
 		err = json.Unmarshal(raw, &a.CreatedAt)
 		if err != nil {
@@ -2995,6 +3127,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "meeting_status")
 	}
 
+	if raw, found := object["message_move"]; found {
+		err = json.Unmarshal(raw, &a.MessageMove)
+		if err != nil {
+			return fmt.Errorf("error reading 'message_move': %w", err)
+		}
+		delete(object, "message_move")
+	}
+
 	if raw, found := object["occurred_at"]; found {
 		err = json.Unmarshal(raw, &a.OccurredAt)
 		if err != nil {
@@ -3105,6 +3245,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'voice': %w", err)
 		}
 		delete(object, "voice")
+	}
+
+	if raw, found := object["web_form"]; found {
+		err = json.Unmarshal(raw, &a.WebForm)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form': %w", err)
+		}
+		delete(object, "web_form")
 	}
 
 	if raw, found := object["writable"]; found {
@@ -3258,6 +3406,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.ControllerSend != nil {
+		object["controller_send"], err = json.Marshal(a.ControllerSend)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
+		}
+	}
+
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
@@ -3371,6 +3526,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MessageMove != nil {
+		object["message_move"], err = json.Marshal(a.MessageMove)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'message_move': %w", err)
+		}
+	}
+
 	object["occurred_at"], err = json.Marshal(a.OccurredAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
@@ -3456,6 +3618,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["voice"], err = json.Marshal(a.Voice)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.WebForm != nil {
+		object["web_form"], err = json.Marshal(a.WebForm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form': %w", err)
 		}
 	}
 
@@ -4983,6 +5152,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "lost_reason")
 	}
 
+	if raw, found := object["lost_reason_basis"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_basis': %w", err)
+		}
+		delete(object, "lost_reason_basis")
+	}
+
+	if raw, found := object["lost_reason_code"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_code': %w", err)
+		}
+		delete(object, "lost_reason_code")
+	}
+
 	if raw, found := object["masked_fields"]; found {
 		err = json.Unmarshal(raw, &a.MaskedFields)
 		if err != nil {
@@ -5328,6 +5513,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["lost_reason"], err = json.Marshal(a.LostReason)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'lost_reason': %w", err)
+		}
+	}
+
+	if a.LostReasonBasis != nil {
+		object["lost_reason_basis"], err = json.Marshal(a.LostReasonBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_basis': %w", err)
+		}
+	}
+
+	if a.LostReasonCode != nil {
+		object["lost_reason_code"], err = json.Marshal(a.LostReasonCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_code': %w", err)
 		}
 	}
 

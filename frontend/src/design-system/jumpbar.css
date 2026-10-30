@@ -1,0 +1,55 @@
+/* JumpBar: the sections of a long page as pills, pinned at the top of the
+   scroll area. The row scrolls sideways on a phone instead of wrapping, so it
+   stays one line tall over the content. */
+.jumpbar {
+  position: sticky;
+  top: var(--space-2);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(18px);
+}
+
+.jumpbar-targets {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jumpbar-targets button {
+  height: var(--controlHeight);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: transparent;
+  color: var(--textSecondary);
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.jumpbar-targets button:hover {
+  background: var(--bgHover);
+  color: var(--textPrimary);
+}
+
+.jumpbar-targets button:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.jumpbar-action {
+  flex: none;
+}

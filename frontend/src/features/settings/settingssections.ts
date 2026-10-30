@@ -37,7 +37,11 @@ export const SETTINGS_SECTIONS = {
     "scheduling.acceptBookings",
     "workingHours.timezone",
   ],
-  voice: ["settings.voice.title", "settings.voice.addFirstLabel"],
+  voice: [
+    "settings.voice.start.addTitle",
+    "settings.voice.addFirstLabel",
+    "settings.voice.pasteLabel",
+  ],
   agents: [
     "aiAccess.connect.title",
     "agents.connected",
@@ -108,6 +112,7 @@ export const SETTINGS_SECTIONS = {
     "installationSettings.callWhatsApp",
     "installationSettings.callTelegram",
     "installationSettings.callZalo",
+    "installationSettings.individualPerformance",
     "followUpSettings.days",
     "signatureTemplate.label",
   ],
@@ -120,7 +125,11 @@ export const SETTINGS_SECTIONS = {
   ],
   members: [],
   teams: [],
-  roles: ["roles.title"],
+  roles: [
+    "roles.title",
+    "sharedMergeReviews.title",
+    "sharedMergeReviews.switch",
+  ],
   seats: ["license.seats.title", "license.seats.inUse"],
   pipelines: [
     "pipeline.catalog",
@@ -136,6 +145,7 @@ export const SETTINGS_SECTIONS = {
     "leadHandling.targetMinutes",
   ],
   acquisition: ["acqSources.title"],
+  lossreasons: ["lossReasons.title", "lossReasons.legacyTitle"],
   reviewtemplates: [],
   recordroles: ["recordRoles.title"],
   fields: ["cf.title", "cf.object", "cf.audit.title"],

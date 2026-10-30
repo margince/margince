@@ -12,13 +12,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
-// gateCopies counts the content gates in a rendered filter by the request
-// source each one checks.
 func gateCopies(where []string) int {
-	return strings.Count(strings.Join(where, " AND "), "FROM activity request_source")
+	return auth.ContentGateCopies(strings.Join(where, " AND "))
 }
 
 // discoverCopies counts the discover gates on the listed row by the link fold

@@ -1,9 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -86,19 +84,23 @@ function ContactRowActions({
   );
 }
 
-/** The newest unanswered thing the contact sent, leading the Overview. */
+/** The newest unanswered thing the contact sent, for the Overview's Next bar. */
 export function ContactLatestInbound({
   latest,
   contactId,
   view,
+  children,
 }: Readonly<{
   latest: JustIn | undefined;
   contactId: string;
   view: Contact360;
+  children: ReactNode;
 }>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="contact"
+      entityId={contactId}
       actions={(activity) => (
         <ContactRowActions
           activity={activity}
@@ -107,7 +109,9 @@ export function ContactLatestInbound({
           answerOnly
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }
 

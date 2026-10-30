@@ -39,9 +39,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceFailedApproval, day.DidNotRun, asOf, classifyFailedApproval)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceDsr, day.Dsr, asOf, classifyLegalDeadline)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceNoticeCase, day.NoticeCases, asOf, classifyLegalDeadline)
-	rows = appendLane(rows, crmcontracts.WorklistItemSourceDealAtRisk, day.AtRisk, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
-		return classifyRisk(item, at, bar, money)
-	})
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceDealAtRisk, day.AtRisk, asOf, riskClassifier(bar, money))
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceTask, &day.Planned, asOf, classifyTask)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceBounce, day.Bounces, asOf, classifyBounce)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceUndelivered, day.Undelivered, asOf, classifyUndelivered)
@@ -131,9 +129,10 @@ func base(
 		// carrying the payload keeps the verb and the records it acts on
 		// travelling together: a row offering merge with no pair beneath it
 		// would be a button over records the client cannot name.
-		Pair:    item.Pair,
-		DueAt:   item.DueAt,
-		Overdue: item.Overdue,
+		Pair:        item.Pair,
+		ContactCase: item.ContactCase,
+		DueAt:       item.DueAt,
+		Overdue:     item.Overdue,
 		// Carried rather than recomputed, for the reason the deadline itself
 		// is: the group was resolved against the assembly's own boundary and
 		// zone, and a second derivation here would need both again.
@@ -298,6 +297,11 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		out.item.Because = append([]crmcontracts.WorklistReason{reason("reminder_due", nil)}, out.item.Because...)
 		out.reminded = true
 		raiseToTop(&out)
+	}
+	// Work due after today waits in Today's Upcoming section, unless its
+	// reminder already asks for it now.
+	if isUpcoming(item.DueGroup) && !out.reminded && !out.overdue {
+		out.item.Category = categoryUpcoming
 	}
 	return out
 }

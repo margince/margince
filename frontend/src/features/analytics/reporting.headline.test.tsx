@@ -11,6 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
 import {
+  reportingCatalogClient,
   reportingStoryEvaluation,
   reportingStoryRoutes,
   reportingStoryScope,
@@ -27,6 +28,7 @@ afterEach(() => {
 
 const landing = {
   id: "forecast_landing",
+  label: "Forecast landing",
   version: "1",
   unit: "money",
   temporal_basis: "state_at",
@@ -71,7 +73,7 @@ it.each([
     const asked = recordEvaluations();
     render(
       <StoryProviders>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </StoryProviders>,
     );
     await vi.waitFor(() => expect(asked.length).toBeGreaterThan(0));
@@ -81,7 +83,15 @@ it.each([
   },
 );
 
-it("says open pipeline is a count now and the expected finish is this quarter's", () => {
+it("says open pipeline is a count now and the expected finish is this quarter's", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /analytics/metrics": () =>
+      jsonResponse({
+        ...reportingStoryCatalog,
+        metrics: [...reportingStoryCatalog.metrics, landing],
+      }),
+  });
   const evaluation: typeof reportingStoryEvaluation = {
     ...reportingStoryEvaluation,
     metrics: [
@@ -105,6 +115,7 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
       <ResultsSummary evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );
+  expect(await screen.findByText("Forecast landing")).toBeVisible();
   expect(screen.getByText(/^Open deals: 3 · as of /)).toBeVisible();
   expect(
     screen.getByText("This fiscal quarter, from the deal forecast"),
@@ -153,7 +164,7 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
   };
   window.location.hash = "#/analytics/performance";
   render(
-    <StoryProviders>
+    <StoryProviders client={reportingCatalogClient()}>
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
     </StoryProviders>,
   );

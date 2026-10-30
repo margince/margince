@@ -96,7 +96,18 @@ describe("Back to Worklist on the record", () => {
 
     const back = screen.getByRole("link", { name: en["brief.queue.back"] });
     expect(back.getAttribute("href")).toBe(
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+      "/#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+    );
+  });
+
+  it("returns to the view the drawer was on", () => {
+    window.location.hash =
+      "#/contacts/c-1?from=worklist&queue_scope=team&queue_view=decisions";
+    render(<WorklistReturnLink />);
+
+    const back = screen.getByRole("link", { name: en["brief.queue.back"] });
+    expect(back.getAttribute("href")).toBe(
+      "/#/home?queue=1&queue_scope=team&queue_view=decisions",
     );
   });
 
@@ -142,6 +153,25 @@ describe("a related record opened from a record that came from the Worklist", ()
     runContactMomentAction(openDeal, t, handlers);
 
     expect(window.location.hash).toBe("#/deals/d-1?filter=tasks&from=worklist");
+  });
+
+  it("opens the composer drafting when the moment names the composer", () => {
+    const openComposer = vi.fn();
+    runContactMomentAction(
+      {
+        kind: "draft_reply",
+        label: "Draft a follow-up",
+        state: "available",
+        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+      },
+      t,
+      { ...handlers, openComposer },
+    );
+
+    expect(openComposer).toHaveBeenCalledWith(
+      translate("en", "contact.composer.intentFollowUp"),
+      true,
+    );
   });
 
   it("opens the deal bare when the contact came from anywhere else", () => {

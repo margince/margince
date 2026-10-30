@@ -59,6 +59,7 @@ import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
+import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
 import { PublicOriginCard } from "./public-origin";
@@ -71,6 +72,7 @@ import { PrivacyLanes } from "./settings.privacy";
 import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
+import { SharedMergeReviewsCard } from "./sharedmergereviews";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { WebFormsCard } from "./webforms";
@@ -177,7 +179,14 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       // Team Lead's membership hands over, which is not the roster's question.
       return <TeamsCard />;
     case "roles":
-      return <RolesSettings />;
+      // Who may merge a colleague's duplicate of a contact is a question of
+      // who may change what.
+      return (
+        <>
+          <RolesSettings />
+          <SharedMergeReviewsCard />
+        </>
+      );
     case "seats":
       return <LicenseCard />;
 
@@ -196,6 +205,13 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "acquisition":
       return <AcquisitionSourcesCard />;
+    case "lossreasons":
+      return (
+        <>
+          <LossReasonsCard />
+          <LegacyLossReasonsCard />
+        </>
+      );
     case "reviewtemplates":
       return <ReviewTemplatesCard />;
     case "recordroles":

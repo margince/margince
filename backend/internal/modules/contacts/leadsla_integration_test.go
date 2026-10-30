@@ -260,6 +260,18 @@ func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 		t.Errorf("a reassignment moved routed_at to %v, want it held at %s",
 			again.RoutedAt, first)
 	}
+	if arrivedWith := e.arrivalOwner(t, id); arrivedWith == nil || *arrivedWith != e.user {
+		t.Errorf("arrival owner = %v after a reassignment, want the first owner %s", arrivedWith, e.user)
+	}
+}
+
+func (e *promoteConsentEnv) arrivalOwner(t *testing.T, id ids.UUID) *ids.UUID {
+	t.Helper()
+	var owner *ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `SELECT arrival_owner_id FROM lead WHERE id = $1`, id).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	return owner
 }
 
 // The "Take ownership" button starts the clock too.
@@ -293,6 +305,9 @@ func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 	}
 	if routedAt.Before(weekAgo.Add(time.Hour)) {
 		t.Errorf("routed_at = %s, want roughly now", *routedAt)
+	}
+	if arrivedWith := e.arrivalOwner(t, id); arrivedWith == nil || *arrivedWith != e.user {
+		t.Errorf("arrival owner = %v, want the seat that claimed the lead, %s", arrivedWith, e.user)
 	}
 }
 

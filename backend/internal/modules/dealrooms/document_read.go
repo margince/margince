@@ -143,11 +143,12 @@ func documentRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]crmc
 	}
 	// The clause is a %s operand, never part of the format. An audience arm
 	// may carry a LIKE pattern, which a format string would read as a verb.
-	rows, err := tx.Query(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT %s FROM %s
 		  WHERE d.room_id = $%d AND d.archived_at IS NULL%s
 		  ORDER BY d.group_key, d.position, d.created_at, d.id`,
-		documentColumns, documentFrom, arg(roomID), readable), args...)
+		documentColumns, documentFrom, arg(roomID), readable)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list deal room documents: %w", err)
 	}

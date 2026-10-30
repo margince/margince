@@ -55,7 +55,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	if !l.bound {
 		return named
 	}
-	defer timeStage(l.name)()
+	defer timeStage(ctx, l.name)()
 	var items []crmcontracts.AttentionItem
 	err := s.degradable(ctx, laneBudget, func(context.Context) error {
 		var err error
@@ -128,7 +128,10 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetingsAhead(ctx, asOf, until)
+				booked, more, err := s.meetingsAhead(ctx, asOf, until)
+				if err == nil {
+					out.MeetingsMoreAvailable = &more
+				}
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,

@@ -1,0 +1,257 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package compose
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// saveForecastRun keeps a question as its asker saves one, through the real
+// writer.
+func saveForecastRun(ctx context.Context, t *testing.T, e *forecastEnv, q analyticsquery.Query) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		answer, err := RunAnalyticsQuery(ctx, tx, q, analyticsquery.Floor(1))
+		if err != nil {
+			return err
+		}
+		id, err = SaveReportRun(ctx, tx, q, answer, analyticsquery.Floor(1))
+		return err
+	}); err != nil {
+		t.Fatalf("saving %+v: %v", q, err)
+	}
+	return id
+}
+
+// savedRunCount re-asks a saved question and answers its one count.
+func savedRunCount(ctx context.Context, t *testing.T, e *forecastEnv, run ids.UUID) string {
+	t.Helper()
+	var read ReportRun
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		read, err = ReadReportRun(ctx, tx, run, analyticsquery.Floor(1))
+		return err
+	}); err != nil {
+		t.Fatalf("re-asking the saved question: %v", err)
+	}
+	return fmt.Sprint(read.Answer.Rows[0]["count"])
+}
+
+// boundCount asks a report's bound card and answers its one count, and what
+// the reader is told of its question.
+func boundCount(ctx context.Context, t *testing.T, e *forecastEnv, service *reporting.Service, report crmcontracts.ReportingReport) (string, *crmcontracts.ReportingQuestionBinding) {
+	t.Helper()
+	h := newAnalyticsQueryHandlers(InstallationDB(e.Pool), analyticsquery.Floor(1), newAttentionNames(InstallationDB(e.Pool)))
+	h.reportMetrics = service
+	recorder := httptest.NewRecorder()
+	h.AnswerReportingQuestionCard(recorder, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx), report.Id, "bound", crmcontracts.AnswerReportingQuestionCardParams{})
+	answer := decodeAnswer(t, recorder.Body.String())
+	if answer.Answer == nil {
+		t.Fatalf("the bound card answered %s", recorder.Body.String())
+	}
+	return fmt.Sprint(answer.Answer.Rows[0]["count"]), answer.Binding
+}
+
+func moveFiscalStart(ctx context.Context, t *testing.T, e *forecastEnv, month int) {
+	t.Helper()
+	if _, err := NewInstallationSettingsFor(e.Pool).UpdateInstallation(ctx, identity.InstallationPatch{FiscalYearStartMonth: &month}); err != nil {
+		t.Fatalf("moving the fiscal start to %d: %v", month, err)
+	}
+}
+
+// A period saved as a calendar year keeps naming that year after the fiscal
+// start moves. The move writes down the calendar each saved question was asked
+// in. The admin is told how many there are first.
+func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
+	e := setupForecast(t)
+	ctx := reportingActor(e)
+	year := clocktest.Now(t).Year() - 1
+	for _, closed := range []string{
+		fmt.Sprintf("%d-02-10T12:00:00Z", year),
+		fmt.Sprintf("%d-11-10T12:00:00Z", year),
+		fmt.Sprintf("%d-02-10T12:00:00Z", year+1),
+	} {
+		e.seedClosedDeal(t, "Won "+closed, "won", closed, 10000)
+	}
+	calendarYear := analyticsquery.Query{
+		Entity:   "win-loss",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
+		Filters:  []analyticsquery.Filter{{Field: fieldPeriodYear, Op: analyticsquery.OpEq, Value: fmt.Sprint(year)}},
+	}
+	saved := []ids.UUID{saveForecastRun(ctx, t, e, calendarYear), saveForecastRun(ctx, t, e, calendarYear)}
+
+	var impact crmcontracts.InstallationFiscalYearImpact
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		impact, err = fiscalYearImpact(ctx, tx)
+		return err
+	}); err != nil || impact.SavedQuestions != 2 {
+		t.Fatalf("before the move the admin is told %+v (%v), want the 2 saved questions that filter on a period", impact, err)
+	}
+
+	service := newReportingService(e.Pool, func() time.Time { return clocktest.Now(t) })
+	report, err := service.CreateReport(ctx, reportInput(boundCard(saved[0]), workspaceScope))
+	if err != nil {
+		t.Fatalf("binding the saved period: %v", err)
+	}
+
+	moveFiscalStart(ctx, t, e, 4)
+	if got, _ := boundCount(ctx, t, e, service, report); got != "2" {
+		t.Errorf("the bound card counts %s deals in %d after the start moved to April, want the 2 it named when it was placed", got, year)
+	}
+	// Placed after the move, a question saved before it keeps January.
+	late, err := service.CreateReport(ctx, reportInput(boundCard(saved[1]), workspaceScope))
+	if err != nil {
+		t.Fatalf("binding the saved period after the move: %v", err)
+	}
+	got, binding := boundCount(ctx, t, e, service, late)
+	if got != "2" || binding == nil || binding.PeriodBasis == nil || binding.PeriodBasis.FiscalYearStartMonth != 1 {
+		t.Errorf("a question saved under January and placed under April counts %s and says %+v, want 2 and a January start", got, binding)
+	}
+	var events int
+	if err := e.owner.QueryRow(t.Context(), `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'reporting.changed'
+		AND envelope->'entity'->>'id' = ANY($1)`, []string{saved[0].String(), saved[1].String()}).Scan(&events); err != nil || events != 2 {
+		t.Errorf("the move published %d reporting.changed events for the 2 saved questions it rewrote (%v)", events, err)
+	}
+	for _, run := range saved {
+		if got := savedRunCount(ctx, t, e, run); got != "2" {
+			t.Errorf("a saved question counts %s deals in %d after the start moved to April, want the 2 it named under January", got, year)
+		}
+	}
+	fiscal := calendarYear
+	fiscal.Filters = []analyticsquery.Filter{{Field: fieldPeriodYear, Op: analyticsquery.OpEq, Value: fmt.Sprintf("FY%d/%02d", year, (year+1)%100)}}
+	if got := savedRunCount(ctx, t, e, saveForecastRun(ctx, t, e, fiscal)); got != "2" {
+		t.Errorf("a fiscal year asked under April counts %s deals, want the November and the February one", got)
+	}
+}
+
+// A sent edition keeps the calendar it was captured under. A live read of the
+// same report follows the setting and says which start it read.
+func TestAFrozenEditionKeepsItsCalendarWhenTheFiscalStartMoves(t *testing.T) {
+	q := newQuestionEditions(t)
+	q.keepForAYear(t)
+	edition := q.send(t)
+	before := q.read(q.human, t, ids.UUID(edition.Id))
+
+	moveFiscalStart(q.human, t, q.e, 7)
+	after := q.read(q.human, t, ids.UUID(edition.Id))
+	was, now := before.Evaluation.Context.Interval, after.Evaluation.Context.Interval
+	if !was.StartAt.Equal(now.StartAt) || !was.EndAt.Equal(now.EndAt) ||
+		after.Evaluation.Context.FiscalYearStartMonth == nil || *after.Evaluation.Context.FiscalYearStartMonth != 1 {
+		t.Fatalf("the edition reads %+v after the move, want the interval and January start it was captured under", after.Evaluation.Context)
+	}
+	live, err := q.service.EvaluateReport(q.human, ids.UUID(q.report.Id), nil)
+	if err != nil || live.Context.FiscalYearStartMonth == nil || *live.Context.FiscalYearStartMonth != 7 {
+		t.Fatalf("a live read after the move says %+v (%v), want the July start", live.Context.FiscalYearStartMonth, err)
+	}
+}
+
+// A scheduled edition asks a bound card through the same resolver as the
+// page. The filter its saved question carries holds in the kept answer. A
+// native money sum stays answerable, because the currency filter is kept.
+func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
+	q := newQuestionEditions(t)
+	q.keepForAYear(t)
+	for range 3 {
+		q.e.seedOpenDeal(t, "Unpriced", 20, &q.e.Rep1, nil, nil)
+	}
+	run := saveForecastRun(q.human, t, q.e, analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}, {Fn: analyticsquery.Sum, Field: fieldAmountMinor}},
+		Filters:  []analyticsquery.Filter{{Field: fieldCurrency, Op: analyticsquery.OpEq, Value: "EUR"}},
+	})
+	saved := openapi_types.UUID(run)
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{
+		{Id: "trend", Kind: "bookings_trend", Width: crmcontracts.ReportingCardWidthFull},
+		{Id: "open-deals", Kind: "question", Width: crmcontracts.ReportingCardWidthFull, Question: &crmcontracts.ReportingCardQuestion{
+			Entity: "open-deals-per-company", Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count"}}, SavedQuestionId: &saved,
+		}},
+	}}}
+	input := crmcontracts.ReportingReportInput{Name: q.report.Name, Audience: "workspace", Selection: q.report.Selection}
+	input.Selection.Layout = &layout
+	updated, err := q.service.UpdateReport(q.human, ids.UUID(q.report.Id), q.report.Version, input)
+	if err != nil {
+		t.Fatalf("binding the card: %v", err)
+	}
+	q.report = updated
+
+	kept := onlyQuestion(t, q.send(t))
+	if kept.Status != crmcontracts.ReportingEditionQuestionStatusKept || kept.Answer == nil {
+		t.Fatalf("the bound card reads %+v in the edition, want its kept answer", kept)
+	}
+	if got := fmt.Sprint(kept.Answer.Rows[0]["count"]); got != "7" {
+		t.Fatalf("the edition kept a count of %s, want the 7 priced deals its filter names, not all 10", got)
+	}
+	if kept.Binding == nil || !kept.Binding.Filtered {
+		t.Errorf("the edition's card does not say its question filters: %+v", kept.Binding)
+	}
+}
+
+// A kept question whose filter names a subject goes to that subject's access
+// request, and their erasure removes it, so the card answers no reader.
+func TestABoundFilterNamingASubjectIsHandedOverAndErased(t *testing.T) {
+	q := newQuestionEditions(t)
+	subject := q.e.seedID(t, `INSERT INTO contact(id,full_name,source,captured_by) VALUES($1,'Erika Mustermann','manual','human:x')`)
+	if _, err := q.e.owner.Exec(t.Context(), `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'erika@example.com', 'manual', 'human:x')`, subject); err != nil {
+		t.Fatal(err)
+	}
+	run := saveForecastRun(q.human, t, q.e, analyticsquery.Query{
+		Entity:   "open-deals-per-company",
+		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll}},
+		Filters:  []analyticsquery.Filter{{Field: fieldCurrency, Op: analyticsquery.OpEq, Value: "erika@example.com"}},
+	})
+	input := crmcontracts.ReportingReportInput{Name: q.report.Name, Audience: "workspace", Selection: q.report.Selection}
+	layout := []crmcontracts.ReportingSection{{Cards: []crmcontracts.ReportingCard{boundCard(run)}}}
+	input.Selection.Layout = &layout
+	report, err := q.service.UpdateReport(q.human, ids.UUID(q.report.Id), q.report.Version, input)
+	if err != nil {
+		t.Fatalf("binding the card: %v", err)
+	}
+	controller := privacyController(q.e)
+
+	pkg, err := privacy.AssembleSAR(controller, InstallationDB(q.e.Pool), ids.From[ids.ContactKind](subject))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pkg.ReportingQuestionBindings) != 1 || !strings.Contains(fmt.Sprint(pkg.ReportingQuestionBindings[0]["filters"]), "erika@example.com") {
+		t.Fatalf("subject access handed over %+v, want the one kept filter that names the subject", pkg.ReportingQuestionBindings)
+	}
+
+	if err := privacy.NewEraser(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
+		t.Fatal(err)
+	}
+	var kept int
+	if err := q.e.owner.QueryRow(t.Context(), `SELECT count(*) FROM report_definition_revision WHERE report_id = $1 AND question_bindings::text LIKE '%erika@example.com%'`, report.Id).Scan(&kept); err != nil || kept != 0 {
+		t.Fatalf("erasure left %d revisions keeping the subject's address (%v)", kept, err)
+	}
+	var card reporting.QuestionCard
+	if err := database.WithWorkspaceTx(q.human, q.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		card, _, err = q.service.QuestionCardIn(q.human, tx, ids.UUID(report.Id), nil, "bound")
+		return err
+	}); err != nil || card.Bound != nil {
+		t.Fatalf("after erasure the card asks %s (%v), want nothing", card.Bound, err)
+	}
+}

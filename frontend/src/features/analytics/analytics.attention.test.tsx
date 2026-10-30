@@ -39,6 +39,7 @@ const finding = (
   status: "open",
   first_seen_at: "2026-09-01T02:00:00Z",
   last_seen_at: "2026-09-14T02:00:00Z",
+  inputs_changed: false,
 });
 
 const readings = (priced: number, eligible: number) => ({
@@ -266,4 +267,24 @@ it("asks nothing of the forecast for a reader without the forecast grant", async
   await screen.findByRole("heading", { name: "Sales won over time" });
   expect(forecast).not.toHaveBeenCalled();
   expect(exceptions).not.toHaveBeenCalled();
+});
+
+it("says when a named finding is out of date", async () => {
+  window.location.hash = "#/analytics/performance";
+  installFetchStub(
+    routes({
+      "GET /forecast/assurance/exceptions": () =>
+        jsonResponse({
+          data: [{ ...finding("a"), inputs_changed: true }, finding("b")],
+        }),
+    }),
+  );
+  render(<AnalyticsScreen />);
+
+  expect(
+    await screen.findByText(
+      /^Riley Rep · .+ at stake · out of date, changed since the check$/,
+    ),
+  ).toBeTruthy();
+  expect(screen.getAllByText(/out of date/)).toHaveLength(1);
 });

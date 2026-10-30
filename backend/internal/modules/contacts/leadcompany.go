@@ -176,28 +176,6 @@ func leadLinkedCompany(ctx context.Context, tx pgx.Tx, id ids.LeadID) (*ids.Comp
 	return company, nil
 }
 
-// carryLeadCompany gives the contact a lead was promoted into its employment at
-// the lead's linked company. A company the promoter cannot open or attach to adds
-// no edge and does not stop the promotion.
-func (s *Store) carryLeadCompany(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID, title string) error {
-	company, err := leadLinkedCompany(ctx, tx, leadID)
-	if err != nil || company == nil {
-		return err
-	}
-	if !auth.Allows(ctx, "relationship", principal.ActionCreate) || !auth.Allows(ctx, "contact", principal.ActionUpdate) {
-		return nil
-	}
-	visible, err := auth.VisibleTo(ctx, tx, companyEntity, company.UUID)
-	if err != nil || !visible {
-		return err
-	}
-	live, err := companyIsLive(ctx, tx, *company)
-	if err != nil || !live {
-		return err
-	}
-	return s.ensureEmployment(ctx, tx, contactID, *company, title, manualSource)
-}
-
 // carryLeadIndustry writes the lead's typed industry to its linked company when that has
 // none. A company the promoter may not change keeps its value and does not stop the promotion.
 func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.CompanyID, industry *crmcontracts.LeadIndustry) error {

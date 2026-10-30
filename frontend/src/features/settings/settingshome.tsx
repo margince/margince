@@ -4,6 +4,7 @@
 import { ArrowLeft, Lock } from "lucide-react";
 import { type MouseEvent, useState } from "react";
 import { SetupSteps } from "../../components/setup-steps";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -72,7 +73,7 @@ export function SettingsBoundary({
         // so the row can be opened in a new tab, middle-clicked and copied like
         // any other link — and `navigate` on top of it so the SPA does not
         // reload the app to move one address.
-        <a
+        <AppLink
           className="link-button"
           href={`#${routeHashOf()}`}
           onClick={(event) => {
@@ -88,7 +89,7 @@ export function SettingsBoundary({
               goes exactly where the sidebar's first row goes, and a place named
               twice is a place a reader has to work out is one place. */}
           {t("settings.home")}
-        </a>
+        </AppLink>
       }
     >
       {t(
@@ -263,7 +264,7 @@ function PageRow({
   } = trigger;
   const locked = readsOnly(reach, page.id);
   return (
-    <a
+    <AppLink
       className="settings-home-row"
       href={`#/settings/${page.id}`}
       {...(locked ? onRowFocus : {})}
@@ -292,6 +293,6 @@ function PageRow({
         )}
       </span>
       <span className="t-caption">{t(`settings.page.${page.id}.sub`)}</span>
-    </a>
+    </AppLink>
   );
 }

@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,7 +40,10 @@ type Handlers struct {
 	exceptions ExceptionsFunc
 	// now is injected so the suppression ceiling is a function of the request's
 	// own clock rather than of whenever the process happened to start.
-	now func() time.Time
+	now      func() time.Time
+	settings *config.Config
+	locks    func(surface []config.Any) *[]crmcontracts.SettingLock
+	preview  PreviewFunc
 }
 
 // NewHandlers binds the routes to the store and its scoped read.
@@ -116,6 +120,7 @@ func ExceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 			AffectedMinor: e.AffectedMinor,
 			FirstSeenAt:   e.FirstSeenAt,
 			LastSeenAt:    e.LastSeenAt,
+			InputsChanged: e.InputsChanged,
 		}
 		if e.Currency != "" {
 			currency := e.Currency
@@ -176,7 +181,8 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		// Empty, never nil. A run that recorded no coverage is a real answer
 		// and arrives shaped like the array it is; null reads as "unknown",
 		// which is a different claim from "nothing was tried".
-		Sources: CoverageToWire(coverage),
+		Sources:   CoverageToWire(coverage),
+		Freshness: FreshnessToWire(run.Freshness),
 	}
 	if run.EligibleSignals > 0 {
 		signals := run.EligibleSignals
@@ -187,6 +193,22 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		out.Readiness = &verdict
 	}
 	return out
+}
+
+// FreshnessToWire renders what changed after a reading. A reading no run has
+// recorded the inputs of is unknown, never current.
+func FreshnessToWire(f Freshness) crmcontracts.AssuranceFreshness {
+	state := crmcontracts.AssuranceFreshnessStateCurrent
+	switch {
+	case !f.Known:
+		state = crmcontracts.AssuranceFreshnessStateUnknown
+	case f.OutOfDate():
+		state = crmcontracts.AssuranceFreshnessStateOutOfDate
+	}
+	return crmcontracts.AssuranceFreshness{
+		State: state, ChangedDeals: f.ChangedDeals, ChangedSignals: f.ChangedSignals,
+		WorkspaceChanged: f.WorkspaceChanged, ChangedSince: f.FirstChangedAt,
+	}
 }
 
 // CoverageToWire renders one run's source health.

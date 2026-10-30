@@ -16,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 )
 
+const introductionValidationMigration = "core/1792842046"
+
 func newDataTaskEngine(pool *pgxpool.Pool, release string, now func() time.Time) (*datatask.Engine, error) {
 	return datatask.New(pool, dataTaskCatalog(pool, now), release, now, dataTaskFailureNotice(pool))
 }
@@ -46,9 +48,9 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 	return []datatask.Task{
 		heldMailDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedCommitmentsDataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
-		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyIndustryDataTask(), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
+		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyIndustryDataTask(), contactEmployersDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
 		membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
-		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
+		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
 		signalDayCountsDataTask(),
@@ -57,5 +59,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		leadContactPairsDataTask(pool),
 		addressDomainFoldDataTask(),
 		geocodePointsDataTask(),
+		signaturePhonesDataTask(),
+		lossMappingDataTask(pool),
 	}
 }

@@ -9,6 +9,7 @@ import {
   composite,
   contrastOf,
   luminance,
+  luminanceOf,
   normalize,
   parseBlock,
   states,
@@ -40,20 +41,20 @@ const here = dirname(fileURLToPath(import.meta.url));
 // fails whether or not the arithmetic is repeated.
 
 const canonical: Record<string, string> = {
-  "--bgPage": "#f1f5f2",
+  "--bgPage": "#eff6f3",
   "--bgElevated": "#fbfcfb",
   "--bgInset": "#eaedeb",
-  "--bgHover": "#edf0ee",
-  "--accent": "#0B7A53",
-  "--accentLight": "rgba(11,122,83,.09)",
-  "--accentMed": "rgba(11,122,83,.17)",
-  "--textPrimary": "#15201B",
-  "--textSecondary": "lch(40% 1 282)",
+  "--bgHover": "#d7ede5",
+  "--accent": "#045647",
+  "--accentLight": "#d7ede5",
+  "--accentMed": "rgba(4,86,71,.17)",
+  "--textPrimary": "#182c28",
+  "--textSecondary": "#55645f",
   "--textOnAccent": "#fff",
   "--borderSubtle": "#E3EAE6",
   "--borderStrong": "#D1D8D4",
   "--teal": "#0E7490",
-  "--bgRail": "#13231D",
+  "--bgInkField": "#13231D",
   "--ai": "#5B61D6",
   "--aiLight": "rgba(91,97,214,.08)",
   "--aiMed": "rgba(91,97,214,.30)",
@@ -63,24 +64,24 @@ const canonical: Record<string, string> = {
   // down rather than repeated here — this table is the pin that says a value
   // moved at all.
   "--info": "#0485f7",
-  "--infoText": "#0060b7",
+  "--infoText": "#005eb5",
   "--infoSurface": "color-mix(in srgb, var(--info) 12%, var(--bgElevated))",
   "--infoBg": "color-mix(in srgb, var(--info) 12%, transparent)",
   "--infoBorder": "color-mix(in srgb, var(--info) 45%, transparent)",
   "--success": "#17c964",
-  "--successText": "#007435",
+  "--successText": "#007132",
   "--successSurface":
     "color-mix(in srgb, var(--success) 12%, var(--bgElevated))",
   "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
   "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
   "--warning": "#f5a524",
-  "--warningText": "#8a5900",
+  "--warningText": "#885700",
   "--warningSurface":
     "color-mix(in srgb, var(--warning) 16%, var(--bgElevated))",
   "--warningBg": "color-mix(in srgb, var(--warning) 16%, transparent)",
   "--warningBorder": "color-mix(in srgb, var(--warning) 45%, transparent)",
   "--danger": "#ff383c",
-  "--dangerText": "#c5001b",
+  "--dangerText": "#c2001a",
   "--dangerSurface": "color-mix(in srgb, var(--danger) 10%, var(--bgElevated))",
   "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
   "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
@@ -186,14 +187,14 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     }
   });
 
-  it("is Ledger Green — not Gradion orange, not Dispact warm-stone", () => {
-    expect(normalize(light["--accent"])).toBe("#0b7a53");
-    expect(normalize(light["--bgRail"])).toBe("#13231d");
+  it("keeps the deep-teal accent — not Gradion orange, not Dispact warm-stone", () => {
+    expect(normalize(light["--accent"])).toBe("#045647");
+    expect(normalize(light["--bgInkField"])).toBe("#13231d");
     const all = normalize(Object.values(light).join(" "));
     expect(all).not.toContain("#ff6b00"); // Gradion orange
   });
 
-  it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
+  it("keeps the brand teal and success grass-green tonally distinct (§2)", () => {
     expect(normalize(light["--accent"])).not.toBe(
       normalize(light["--success"]),
     );
@@ -211,24 +212,41 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   // way and only the DIRECTION of each step is shared. Each theme therefore
   // states its own expected order, and both are checked the same way.
   describe("the surface ladder holds its order", () => {
-    // Darkest first, as measured. The two themes are deliberately DIFFERENT
-    // sequences: light lifts from the card well up to the elevated surface,
-    // while dark puts the page lowest and lifts every other ground above it,
-    // because a dark surface has only one direction to move in.
+    // Darkest first, as measured. The two themes differ: dark puts
+    // the page lowest and lifts every other ground above it.
     const ladders = {
-      light: ["--bgInset", "--bgHover", "--bgPage", "--bgElevated"],
-      dark: ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"],
-    };
+      light: [
+        "--ladder4",
+        "--bgHover",
+        "--bgInset",
+        "--bgStrip",
+        "--ladder3",
+        "--bgPage",
+        "--bgWell",
+        "--ladder2",
+        "--bgElevated",
+        "--ladder1Solid",
+      ],
+      dark: [
+        "--bgPage",
+        "--bgStrip",
+        "--bgWell",
+        "--bgElevated",
+        "--ladder1Solid",
+        "--ladder2",
+        "--bgInset",
+        "--ladder3",
+        "--bgHover",
+        "--ladder4",
+      ],
+    } as const;
 
     for (const [theme, rungs] of Object.entries(ladders)) {
       it(`${theme}: each rung is strictly lighter than the one below it`, () => {
-        const block =
-          theme === "light"
-            ? light
-            : { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') };
+        const block = themes[theme as keyof typeof ladders];
         const measured = rungs.map((name) => {
           expect(block[name], `${name} missing`).toBeDefined();
-          return { name, l: luminance(block[name]) };
+          return { name, l: luminanceOf(block[name]) };
         });
         for (let i = 1; i < measured.length; i += 1) {
           const below = measured[i - 1];
@@ -241,6 +259,124 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         }
       });
     }
+
+    // Light deepens and dark lifts at every level; dark stops where the state
+    // chips' AA below still holds.
+    it("steps each level of the nesting ladder off the one it lies in", () => {
+      const levels = ["--ladder1Solid", "--ladder2", "--ladder3", "--ladder4"];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (let at = 1; at < levels.length; at += 1) {
+          const ratio = contrastOf(pal[levels[at]], pal[levels[at - 1]]);
+          expect(
+            ratio,
+            `${theme}: ${levels[at]} on ${levels[at - 1]}`,
+          ).toBeGreaterThanOrEqual(1.03);
+        }
+      }
+      const dark = levels.map((name) => luminance(themes.dark[name]));
+      expect([...dark].sort((a, b) => a - b)).toEqual(dark);
+      const lit = levels.map((name) => luminance(themes.light[name]));
+      expect([...lit].sort((a, b) => b - a)).toEqual(lit);
+    });
+
+    it("draws each level's edge off its ground, firmer below level 1", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        const ratios = [1, 2, 3, 4].map((level) => {
+          const ground =
+            pal[level === 1 ? "--ladder1Solid" : `--ladder${level}`];
+          const edge = composite(pal[`--ladder${level}Edge`], ground);
+          return contrastOf(edge, ground);
+        });
+        for (const [at, ratio] of ratios.entries()) {
+          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(1.15);
+        }
+        const deep = ratios.slice(1);
+        expect(
+          [...deep].sort((a, b) => a - b),
+          theme,
+        ).toEqual(deep);
+      }
+    });
+
+    // surfaces.css mixes each level's hover and strip from these shades; level 1
+    // must land where the page tokens stand.
+    it("shades hover and strip off every level's ground, both themes", () => {
+      const wash = (hex: string, share: string) => {
+        const [r, g, b] = [1, 3, 5].map((at) =>
+          Number.parseInt(hex.slice(at, at + 2), 16),
+        );
+        return `rgba(${r}, ${g}, ${b}, ${Number.parseFloat(share) / 100})`;
+      };
+      const grounds = [
+        "--bgElevated",
+        "--ladder1Solid",
+        "--ladder2",
+        "--ladder3",
+        "--ladder4",
+      ];
+      const failures: string[] = [];
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const kind of ["hover", "strip"]) {
+          const tint = wash(pal[`--${kind}Shade`], pal[`--${kind}Share`]);
+          const token = pal[`--bg${kind[0].toUpperCase()}${kind.slice(1)}`];
+          const level1 = composite(tint, pal["--ladder1Solid"]);
+          expect(contrastOf(level1, token), `${theme} ${kind}`).toBeLessThan(
+            1.01,
+          );
+          const lifts = theme === "dark" && kind === "hover";
+          for (const ground of grounds) {
+            const shaded = composite(tint, pal[ground]);
+            const step = contrastOf(shaded, pal[ground]);
+            const lighter = luminanceOf(shaded) > luminanceOf(pal[ground]);
+            if (lighter !== lifts || step < 1.06) {
+              failures.push(
+                `${theme} ${kind} over ${ground}: ${step.toFixed(3)}`,
+              );
+            }
+            for (const role of [
+              "--textPrimary",
+              "--textSecondary",
+              "--accentText",
+            ]) {
+              const ratio = contrastOf(pal[role], shaded);
+              if (ratio < 4.5) {
+                failures.push(
+                  `${theme} ${role} on ${kind} over ${ground}: ${ratio.toFixed(2)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+      expect(failures.join("\n")).toBe("");
+    });
+
+    it("lifts a pressed segment above its chip track on every level", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        for (const ground of [
+          "--bgPage",
+          "--bgElevated",
+          "--ladder1Solid",
+          "--ladder2",
+          "--ladder3",
+          "--ladder4",
+        ]) {
+          const track = composite(pal["--bgChip"], pal[ground]);
+          expect(
+            luminanceOf(pal["--segmentPressed"]),
+            `${theme} on ${ground}`,
+          ).toBeGreaterThan(luminanceOf(track));
+        }
+      }
+    });
+
+    it("makes level 1 opaque without moving it", () => {
+      for (const pal of Object.values(themes)) {
+        expect(composite(pal["--ladder1Solid"], pal["--bgPage"])).toBe(
+          composite(pal["--pane"], pal["--bgPage"]),
+        );
+      }
+    });
 
     // The grounds a callout's words sit on, read from the sheet that paints them.
     const calloutWashes = rulesOf([join(here, "callout.css")])
@@ -284,6 +420,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgElevated": prose,
         "--bgInset": prose,
         "--bgHover": prose,
+        "--bgStrip": prose,
+        "--bgWell": prose,
+        "--ladder1Solid": prose,
+        "--ladder2": prose,
+        "--ladder3": prose,
+        "--ladder4": prose,
         // A FILLED control or a primary badge is a ground too, its label read
         // on the fill, and so is the opaque Surface a soft badge letters on.
         // A state's fill is its TEXT token, never its base: no one ink sits on
@@ -300,6 +442,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ...Object.fromEntries(
           calloutWashes.map((ground) => [ground, ["--textPrimary"]]),
         ),
+        "--segmentPressed": ["--textPrimary"],
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
         "--textPrimary": ["--bgPage"],
@@ -337,7 +480,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
-      const grounds = ["--bgPage", "--bgElevated", "--bgInset", "--bgHover"];
+      const grounds = [
+        "--bgPage",
+        "--bgElevated",
+        "--bgInset",
+        "--bgHover",
+        "--bgStrip",
+        "--bgWell",
+        "--ladder1Solid",
+        "--ladder2",
+        "--ladder3",
+        "--ladder4",
+      ];
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
         for (const [role, tint] of pairs) {
@@ -368,8 +522,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
   describe("dark palette (data-theme toggle)", () => {
     const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
 
-    it("lightens the accent toward #16A34A (ADR-0040)", () => {
-      expect(normalize(dark["--accent"])).toBe("#16a34a");
+    it("lifts the accent so it reads on a dark ground", () => {
+      expect(normalize(dark["--accent"])).toBe("#3aae94");
     });
 
     it("overrides only tokens the light theme defines — no orphan knobs", () => {
@@ -387,14 +541,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // from the light values and where the sweeps read them against near-black.
     it("pins both neutral inks", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
-      expect(normalize(dark["--textPrimary"])).toBe("#fff");
-      expect(normalize(dark["--textSecondary"])).toBe(
-        normalize("lch(63.304% 1.425 272)"),
-      );
+      expect(normalize(dark["--textPrimary"])).toBe("#edf6f4");
+      expect(normalize(dark["--textSecondary"])).toBe("#9aa8a3");
     });
 
-    it("keeps the rail on the shared ink-green field (§2b: the rail is not themed)", () => {
-      expect(dark["--bgRail"]).toBeUndefined();
+    it("keeps the ink field one plate in both themes", () => {
+      expect(dark["--bgInkField"]).toBeUndefined();
     });
 
     // A document nobody stamped — an MCP App view whose host stated no theme —

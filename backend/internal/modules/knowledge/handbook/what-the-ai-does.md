@@ -116,6 +116,9 @@ Where Margince can say who put a value there, it does. The trust marks are:
   This is the installation's own work, such as a planned sweep or a run that
   makes up for lost time. It has a different name from an agent, so you know whether a model
   decided something or Margince did routine work.
+- "Sent by Margince for you" or "Sent by Margince for a colleague": Margince mailed it from the
+  installation's own address, such as a privacy notice. It reads plain "Sent by Margince" when no
+  member is named, and "From {address}" follows when Margince has that address.
 - "Via {connector}": it came from a connected mailbox, named as you know it, such as "Via Gmail"
 - "Imported from {upload}": a CSV import created the company, contact or lead,
   and {upload} is the name you set for the upload. An upload named after a

@@ -31,12 +31,16 @@ import (
 	"go/ast"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const routingTable = "internal/compose/routes.go"
+
+// routingPackage holds every file that may mount a route.
+const routingPackage = "internal/compose"
 
 // sessionMiddleware is the admission point. A handler expression that reaches
 // it is gated; one that does not is below the gate.
@@ -57,6 +61,8 @@ var openToAnyone = gatekit.Waive(map[string]string{
 		"has a token, which is what discovery is for (RFC 8414)",
 	"/.well-known/oauth-protected-resource":     "the same, for the protected-resource metadata (RFC 9728)",
 	"/.well-known/oauth-protected-resource/mcp": "the MCP-scoped spelling of the same document",
+	"GET /.well-known/security.txt": "the file a researcher reads to learn where to report a hole (RFC 9116). " +
+		"It is served only when the deployment configured one, and it holds no installation data",
 })
 
 // verifiesItsOwnCaller are the paths that carry no session and are NOT open:
@@ -74,6 +80,20 @@ var verifiesItsOwnCaller = gatekit.Waive(map[string]string{
 		"middleware, because an MCP caller presents a passport rather than a browser session",
 	"/": "the SPA fallback: static assets and the index document, which are public by nature and " +
 		"carry nothing of the installation's data",
+})
+
+// dynamicRegistrations are the registrations whose pattern is built at run time,
+// keyed "file.go:function". The walk cannot read their path. Each is declared by
+// where it is, with what stands in for the session or what gates it.
+var dynamicRegistrations = gatekit.Waive(map[string]string{
+	"extinbound.go:MountInboundEndpoints": "one signed POST edge for each endpoint a unit declares, at " +
+		"/webhooks/ext/<unit>/<slug>. The core admits the request (workspace, body cap, freshness, rate) and " +
+		"the unit proves the sender by its signature; TestEveryInboundEndpointChecksItsSignature " +
+		"holds every unit to that call",
+	"extroutes.go:MountExtensionRoutes": "not below the gate: it registers onto an inner mux that " +
+		"extensionEdge wraps around the generated router INSIDE the session chain (routes.go), so an " +
+		"extension operation is an authenticated, workspace-scoped call like any other /v1 route. The " +
+		"wrapper cannot be seen from the registration, so it is declared here",
 })
 
 func TestEveryRouteBelowTheAuthGateIsDeclared(t *testing.T) {
@@ -107,36 +127,63 @@ func TestEveryRouteBelowTheAuthGateIsDeclared(t *testing.T) {
 	// there rather than something this walk has to re-check.
 	openToAnyone.AssertAllMatched(t)
 	verifiesItsOwnCaller.AssertAllMatched(t)
+	dynamicRegistrations.AssertAllMatched(t)
 }
 
-// routesBelowTheGate reads the routing table and answers the patterns whose
-// handler never reaches the session middleware.
+// routesBelowTheGate reads every mux registration of the composition package and
+// answers the patterns whose handler never reaches the session middleware.
+//
+// Every file, not the routing table alone. A route mounted from its own file is
+// as reachable as one in routes.go. A census of one file reports a clean answer
+// over the rest. A pattern built from a package constant is read through it.
+// One built at run time is judged by where it is registered.
 func routesBelowTheGate(t *testing.T) []string {
 	t.Helper()
-	file, err := gatekit.ParseFile(filepath.Join(repoRoot, "backend", routingTable), 0)
+	dir := filepath.Join(repoRoot, "backend", routingPackage)
+	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
-		t.Fatalf("parsing %s: %v", routingTable, err)
+		t.Fatal(err)
 	}
+	var files []*ast.File
+	var names []string
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+			continue
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		files = append(files, file)
+		names = append(names, filepath.Base(path))
+	}
+	constants := gatekit.PackageStringConstants(t, dir)
 	var below []string
-	ast.Inspect(file, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok || !isMuxRegistration(call) || len(call.Args) < 2 {
-			return true
+	for i, file := range files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			ast.Inspect(fn.Body, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok || !isMuxRegistration(call) || len(call.Args) < 2 {
+					return true
+				}
+				if reachesSessionMiddleware(call.Args[1]) {
+					return true
+				}
+				if pattern, readable := gatekit.StringExpr(call.Args[0], constants, gatekit.FoldStrict); readable {
+					below = append(below, pattern)
+				} else if !dynamicRegistrations.Waived(t, names[i]+":"+fn.Name.Name) {
+					t.Errorf("%s:%s registers a route below the auth gate whose pattern this walk cannot read, "+
+						"so what it serves is unchecked. Declare it in dynamicRegistrations with the mechanism that proves its caller",
+						names[i], fn.Name.Name)
+				}
+				return true
+			})
 		}
-		pattern, literal := gatekit.LiteralText(call.Args[0])
-		if !literal {
-			// A pattern this walk cannot read is a route it cannot judge, and
-			// silence would be the wrong answer: it would drop out of the
-			// census exactly as an undeclared route does.
-			t.Errorf("%s registers a route whose pattern this walk cannot read as a literal, so whether "+
-				"it sits below the auth gate is unchecked", routingTable)
-			return true
-		}
-		if !reachesSessionMiddleware(call.Args[1]) {
-			below = append(below, pattern)
-		}
-		return true
-	})
+	}
 	sort.Strings(below)
 	return below
 }

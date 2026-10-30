@@ -17,7 +17,6 @@ import (
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -375,10 +374,7 @@ func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
 // whose work stays in the team's view until somebody takes it over.
 func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ranked {
 	team := make(map[ids.UUID]bool, len(roster)+len(former))
-	for _, member := range roster {
-		team[member.UserID] = true
-	}
-	for _, id := range former {
+	for _, id := range teamSeats(roster, former) {
 		team[id] = true
 	}
 	kept := make([]ranked, 0, len(rows))
@@ -394,6 +390,16 @@ func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ran
 	return kept
 }
 
+// teamSeats lists the seats whose work a team view keeps: the live roster and
+// the former teammates. The row filter and the narrowed reads share it.
+func teamSeats(roster []TeamMember, former []ids.UUID) []ids.UUID {
+	seats := make([]ids.UUID, 0, len(roster)+len(former))
+	for _, member := range roster {
+		seats = append(seats, member.UserID)
+	}
+	return append(seats, former...)
+}
+
 // answersTo resolves only named responsibility, using the card's owner resolver.
 // A deal attached for display cannot replace the source lane's attribution.
 func answersTo(row ranked) (ids.UUID, bool) {
@@ -402,21 +408,6 @@ func answersTo(row ranked) (ids.UUID, bool) {
 		return ids.Nil, false
 	}
 	return ids.UUID(*owner.Id), true
-}
-
-// teamWeekFor answers which teams' frozen weeks this reader may open, on the
-// predicate the week is served on. Not a scope: the `team` scope is the team's
-// live work and follows row scope, while the week is a lead's verdict on named
-// colleagues, which a read-only seat reaching every row does not get.
-func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
-	switch auth.TeamWeekReachOf(ctx) {
-	case auth.ReachesEveryTeam:
-		return crmcontracts.WorklistTeamWeekEveryTeam
-	case auth.ReachesTeamsLed:
-		return crmcontracts.WorklistTeamWeekTeamsLed
-	default:
-		return crmcontracts.WorklistTeamWeekNone
-	}
 }
 
 // scopeOptions puts the resolver's answer on the wire.

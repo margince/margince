@@ -160,8 +160,8 @@ describe("DealCard + PipelineBoard", () => {
     const hrefs = screen
       .getAllByRole("link")
       .map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/deals/d1");
-    expect(hrefs).toContain("#/companies/o-1");
+    expect(hrefs).toContain("/#/deals/d1");
+    expect(hrefs).toContain("/#/companies/o-1");
   });
 
   // The refusal case, and the reason the card takes an href rather than an id:
@@ -173,7 +173,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
       screen.getAllByRole("link").map((each) => each.getAttribute("href")),
-    ).toEqual(["#/deals/d1"]);
+    ).toEqual(["/#/deals/d1"]);
   });
 
   // A company has three readings on a card and only one of them is blank. The
@@ -737,6 +737,52 @@ describe("TimelineText on a mail row", () => {
     // EmailEntry's own marks, which the generic row does not draw.
     expect(screen.getByText("Needs reply")).toBeTruthy();
     expect(screen.getByText("Können wir Dienstag sprechen?")).toBeTruthy();
+  });
+
+  // A chat message carries the server's move as an email does, so the row says
+  // whose move it is. A withheld one says nothing.
+  it("draws whose move a chat message is, and none when it is withheld", () => {
+    const message = (withheld: boolean) => ({
+      id: `a-chat-${withheld}`,
+      kind: "message" as const,
+      title: "Can we move to Thursday?",
+      atIso: "2026-07-01T09:12:00Z",
+      atPrecision: "instant" as const,
+      provenance: { kind: "human" as const, self: true },
+      direction: "inbound" as const,
+      messageMove: "needs_reply" as const,
+      withheld,
+    });
+    const { unmount } = render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(false)]}
+        timelineGroups={[
+          {
+            id: "g",
+            kind: "single",
+            entries: [message(false)],
+            partial: false,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Needs reply")).toBeTruthy();
+    unmount();
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(true)]}
+        timelineGroups={[
+          { id: "g", kind: "single", entries: [message(true)], partial: false },
+        ]}
+      />,
+    );
+    expect(screen.queryByText("Needs reply")).toBeNull();
   });
 
   // A withheld email whose server has not caught up carries no summary and

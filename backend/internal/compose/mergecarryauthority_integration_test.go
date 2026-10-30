@@ -94,15 +94,14 @@ func TestTheCarriersRefuseContactsOutsideTheCallersRowScope(t *testing.T) {
 	}
 }
 
-// A promoting rep holds lead:update and contact:create and never contact:update.
-// The carry must still run for them, or the gate would roll back every
-// promotion of a lead holding a link.
+// With no employer evidence, promotion needs lead:update and contact:create.
+// Consent carry does not require contact:update on the newly created contact.
 func TestARepWhoMayPromoteButNotEditContactsStillCarriesTheLeadsLinks(t *testing.T) {
 	c := setupCarry(t)
 	owner := ids.From[ids.UserKind](c.e.Rep1)
-	name, company, address := "Pia Promote", "Scope GmbH", "pia@leadcarry.test"
+	name, address := "Pia Promote", "pia@gmail.com"
 	lead, _, err := c.contacts.CreateLead(c.admin, contacts.CreateLeadInput{
-		FullName: &name, CompanyName: &company, Email: &address, OwnerID: &owner, Source: "manual",
+		FullName: &name, Email: &address, OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

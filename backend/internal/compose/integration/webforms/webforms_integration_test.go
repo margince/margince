@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,6 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -165,6 +168,53 @@ func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
 	}
 }
 
+func TestAFormNoteAnswersTheSubmissionFieldByField(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
+		"consent_wording": "You may contact me.", "consent_policy_version": "2026-10",
+	})
+	answer := browserPost(t, e, form.FormKey, url.Values{
+		"name": {"Ada Lovelace"}, "email": {"ada@visitor.example"}, "message": {"Please call me"},
+		"budget": {"10k"}, "consent": {"on"}, "utm_source": {"newsletter"}, "page_url": {siteOrigin + "/pricing"},
+	}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	var noteID string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM activity WHERE source_system = 'web_form' AND kind = 'note'`).Scan(&noteID); err != nil {
+		t.Fatal(err)
+	}
+	var note crmcontracts.Activity
+	if status := e.Call(t, "GET", "/v1/activities/"+noteID, nil, nil, &note); status != http.StatusOK {
+		t.Fatalf("GET the note → %d", status)
+	}
+	sent := note.WebForm
+	if sent == nil {
+		t.Fatal("the note answers no web_form, so a reader gets the fields only as text")
+	}
+	if sent.Email != "ada@visitor.example" || deref(sent.FullName) != "Ada Lovelace" || deref(sent.Message) != "Please call me" ||
+		deref(sent.PageUrl) != siteOrigin+"/pricing" {
+		t.Errorf("fields = email %q, name %q, message %q, page %q", sent.Email, deref(sent.FullName), deref(sent.Message), deref(sent.PageUrl))
+	}
+	wantExtra := []crmcontracts.WebFormValue{{Name: "budget", Value: "10k"}}
+	wantCampaign := []crmcontracts.WebFormValue{{Name: "utm_source", Value: "newsletter"}}
+	if !slices.Equal(sent.Extra, wantExtra) || !slices.Equal(sent.Campaign, wantCampaign) {
+		t.Errorf("extra = %v, campaign = %v, want %v and %v", sent.Extra, sent.Campaign, wantExtra, wantCampaign)
+	}
+	if c := sent.Consent; c == nil || !c.Ticked || c.Wording != "You may contact me." || deref(c.PolicyVersion) != "2026-10" {
+		t.Errorf("consent = %+v, want the ticked box with its wording and policy version", c)
+	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
@@ -179,6 +229,65 @@ func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {
 	}
 	if notes := notesOnLeadWithEmail(t, e, "bob@visitor.example"); len(notes) != 2 {
 		t.Fatalf("notes = %d, want one per submission", len(notes))
+	}
+}
+
+func TestAnErasedAddressGetsTheReceiptAnyOtherPostGets(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	const erased, clean = "geloescht@visitor.example", "neu@visitor.example"
+	var subject struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
+		"full_name": "Die Betroffene", "source": "manual",
+		"emails": []integration.AnyMap{{"email": erased, "email_type": "work", "is_primary": true}},
+	}, nil, &subject); status != http.StatusCreated {
+		t.Fatalf("creating the subject → %d", status)
+	}
+	eraseContact(t, e, subject.ID)
+
+	erasedAnswer := browserPost(t, e, form.FormKey, url.Values{"email": {erased}, "message": {"Hello again"}}, siteOrigin)
+	cleanAnswer := browserPost(t, e, form.FormKey, url.Values{"email": {clean}, "message": {"Hello"}}, siteOrigin)
+	if erasedAnswer.Status != http.StatusAccepted || cleanAnswer.Status != http.StatusAccepted {
+		t.Fatalf("the erased address → %d %s, a clean one → %d %s; want 202 for both",
+			erasedAnswer.Status, erasedAnswer.Body, cleanAnswer.Status, cleanAnswer.Body)
+	}
+	if erasedAnswer.Body != cleanAnswer.Body {
+		t.Fatalf("the erased answer %s differs from the clean answer %s", erasedAnswer.Body, cleanAnswer.Body)
+	}
+	if count, _, _ := leadsWithEmail(t, e, erased); count != 0 {
+		t.Fatalf("the erased address landed %d lead(s), want none", count)
+	}
+	if count, _, _ := leadsWithEmail(t, e, clean); count != 1 {
+		t.Fatalf("the clean address landed %d lead(s), want 1", count)
+	}
+	var kept int
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM erasure_suppression WHERE kind = 'email' AND value_hash = $1`,
+		storekit.SuppressionHash(erased)).Scan(&kept); err != nil {
+		t.Fatal(err)
+	}
+	if kept != 1 {
+		t.Fatalf("the post lifted the suppression: %d row(s) left, want 1", kept)
+	}
+}
+
+// eraseContact erases a contact the way an admin fulfils an Art. 17 request.
+func eraseContact(t *testing.T, e *apptest.AppEnv, contactID string) {
+	t.Helper()
+	var dsr struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/data-subject-requests", integration.AnyMap{
+		"kind": "erasure", "subject_ref": contactID,
+	}, nil, &dsr); status != http.StatusCreated {
+		t.Fatalf("filing the erasure request → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, integration.AnyMap{
+		"status": "fulfilled", "resolution": "erased per Art. 17", "identity_check": "id_document",
+	}, nil, nil); status != http.StatusOK {
+		t.Fatalf("fulfilling the erasure request → %d", status)
 	}
 }
 

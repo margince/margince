@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
 import { ChartContext } from "./reporting.chartcontext";
@@ -15,9 +16,16 @@ import type {
   ReportingChart,
   ReportingEvaluation,
   ReportingEvidenceRef,
+  ReportingSelection,
 } from "./reporting.model";
-import { type KeptQuestions, QuestionCard } from "./reporting.questioncard";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
+import {
+  type KeptQuestions,
+  QuestionCard,
+  type ReportRevision,
+} from "./reporting.questioncard";
 import { ResultsSummary } from "./reporting.summary";
+import { TargetComparison } from "./reporting.targetcomparison";
 import { WrittenSummary } from "./reporting.written";
 import "./reporting.css";
 
@@ -25,13 +33,18 @@ type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
 export function ReportingCharts({
   evaluation,
+  report,
   editionId,
   kept,
   afterSummary,
   onEvidence,
+  onApplySelection,
   rolePreview,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  // The saved report and revision this evaluation reads, which a bound
+  // question card asks the server about.
+  report?: ReportRevision;
   editionId?: string;
   // What a sent edition kept of its question cards.
   kept?: KeptQuestions;
@@ -39,10 +52,15 @@ export function ReportingCharts({
   // act on before reading further.
   afterSummary?: ReactNode;
   onEvidence: EvidenceAction;
+  // Switches the page to a selection the server offers, where it can.
+  onApplySelection?: (selection: ReportingSelection) => void;
   // Set while the page shows the report as a role reads it.
   rolePreview?: boolean;
 }>) {
   const t = useT();
+  // Every card names its metric from the catalog, so the page waits for it
+  // rather than show an id.
+  const catalog = useReportingCatalog();
   const charts = pageCharts(evaluation);
   // Said once for the page: on every card it would repeat one fact many times.
   const withheld =
@@ -52,25 +70,34 @@ export function ReportingCharts({
     ? laidOut(evaluation.selection.layout, charts)
     : [{ items: charts.map((chart) => ({ chart, full: false })) }];
   return (
-    <div className="reporting-results">
-      <WrittenSummary evaluation={evaluation} />
-      <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
-      {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
-      {afterSummary}
-      {sections.map((section) => (
-        <ChartSection
-          // A card is placed once, so a section's first item names it.
-          key={section.items[0] ? itemKey(section.items[0]) : "empty"}
-          section={section}
-          evaluation={evaluation}
-          editionId={editionId}
-          onEvidence={onEvidence}
-          questions={questionMode(editionId, rolePreview)}
-          kept={kept}
-        />
-      ))}
-      <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
-    </div>
+    <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
+      {() => (
+        <div className="reporting-results">
+          <WrittenSummary evaluation={evaluation} />
+          <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+          <TargetComparison
+            evaluation={evaluation}
+            onApply={onApplySelection}
+          />
+          {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
+          {afterSummary}
+          {sections.map((section) => (
+            <ChartSection
+              // A card is placed once, so a section's first item names it.
+              key={section.items[0] ? itemKey(section.items[0]) : "empty"}
+              section={section}
+              evaluation={evaluation}
+              report={report}
+              editionId={editionId}
+              onEvidence={onEvidence}
+              questions={questionMode(editionId, rolePreview)}
+              kept={kept}
+            />
+          ))}
+          <MetricsTable evaluation={evaluation} onEvidence={onEvidence} />
+        </div>
+      )}
+    </QueryGate>
   );
 }
 
@@ -104,6 +131,7 @@ export function pageCharts(evaluation: ReportingEvaluation): ReportingChart[] {
 function ChartSection({
   section,
   evaluation,
+  report,
   editionId,
   onEvidence,
   questions,
@@ -111,6 +139,7 @@ function ChartSection({
 }: Readonly<{
   section: LaidOutSection;
   evaluation: ReportingEvaluation;
+  report?: ReportRevision;
   editionId?: string;
   onEvidence: EvidenceAction;
   questions: "live" | "frozen" | "preview";
@@ -146,6 +175,7 @@ function ChartSection({
               card={item.question}
               wide={wide[index] === true}
               evaluation={evaluation}
+              report={report}
               mode={questions}
               kept={kept}
             />
@@ -170,7 +200,9 @@ function itemKey(item: LaidOutItem): string {
     : `question:${item.question.id}`;
 }
 
-// One chart in its panel, with the door to the records behind it.
+// One chart in its panel. The head holds the title alone. What the figure
+// covers and the door to its records sit in the foot, so a row of cards reads
+// as titles over charts.
 export function ChartPanel({
   chart,
   wide,
@@ -185,37 +217,38 @@ export function ChartPanel({
   onEvidence: EvidenceAction;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
-      title={chartTitle(chart, evaluation, t)}
-      // The one door from a chart to the records behind it, in the head
-      // beside the title it opens, rather than trailing the figure.
-      titleAction={
-        drawn ? (
-          <Button
-            variant="link"
-            onClick={() =>
-              onEvidence({
-                metric: chart.metric,
-                context_id: chart.context_id,
-              })
-            }
-          >
-            {t("reporting.viewRecords")}
-          </Button>
-        ) : undefined
+      title={chartTitle(chart, evaluation, t, metricName)}
+      footer={
+        <>
+          <ChartContext
+            chart={chart}
+            evaluation={evaluation}
+            editionId={editionId}
+          />
+          {drawn && (
+            <Button
+              variant="link"
+              onClick={() =>
+                onEvidence({
+                  metric: chart.metric,
+                  context_id: chart.context_id,
+                })
+              }
+            >
+              {t("reporting.viewRecords")}
+            </Button>
+          )}
+        </>
       }
     >
       <PanelBody>
-        <ChartContext
-          chart={chart}
-          evaluation={evaluation}
-          editionId={editionId}
-        />
         {drawn ? (
           <ChartBody
             chart={chart}

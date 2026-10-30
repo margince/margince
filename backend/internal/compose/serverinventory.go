@@ -132,6 +132,7 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
+	reviewAnswerHandlers
 	companyOfferedHandlers
 	strengthHandlers
 	recordAccessHandlers
@@ -196,6 +197,7 @@ type Server struct {
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
 	analyticsContextHandlers
+	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and

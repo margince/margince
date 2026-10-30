@@ -25,11 +25,12 @@ func TestAWorklistReadTimesEachOfItsStages(t *testing.T) {
 	}
 	after := attention.StageTimings()
 	for _, stage := range []string{
-		"this_morning", "needs_you", "planned", "relationship_decay", "done_for_you",
-		"subject_labels", "waiting_customers", "plan", "awaiting", "deal_moves",
+		"this_morning", "needs_you", "planned", "relationship_decay", "subject_labels",
+		"waiting_customers", "plan", "awaiting", "deal_moves",
 		"meeting_horizon", "rank", "row_names",
 	} {
-		if after[stage].Count() <= before[stage].Count() {
+		key := attention.StageKey{Read: attention.ReadWorklist, Stage: stage}
+		if after[key].Count() <= before[key].Count() {
 			t.Errorf("stage %s was not timed by the read", stage)
 		}
 	}

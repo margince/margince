@@ -14,8 +14,7 @@
   /* min-height:0 is what lets the scrolling body actually shrink inside a
    * flex column; without it the table pushes the surface past the viewport. */
   min-height: 0;
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   /* The list surface is one card, and takes the resting shadow: the same
      plate rule as `.card`, `Panel` and the readings strip. */
@@ -72,7 +71,7 @@
   cursor: pointer;
 }
 .lt-vtab:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* The view in use takes the pressed filter pill's neutral pair
@@ -143,7 +142,6 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
-  background: var(--bgPage);
 }
 
 .lt-spacer {
@@ -293,7 +291,7 @@
   white-space: nowrap;
 }
 .lt-frow-seg:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -314,7 +312,7 @@
   flex: none;
 }
 .lt-frow > .lt-menu-wrap:has(> .lt-frow-value) {
-  flex: 1 1 0;
+  flex: 1 0 auto;
   max-inline-size: calc(100% - var(--controlHeight));
   margin-inline-end: var(--controlHeight);
 }
@@ -368,7 +366,7 @@
   cursor: pointer;
 }
 .lt-frow-more:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 
@@ -422,7 +420,6 @@
   max-block-size: var(--menuMaxBlockSize, 400px);
   overflow-y: auto;
   padding: var(--controlGap);
-  background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
@@ -472,7 +469,7 @@
   cursor: pointer;
 }
 .lt-mback:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The attribute search, at the top of the Filter button's first step. Full
@@ -522,7 +519,7 @@
   cursor: pointer;
 }
 .lt-mi:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The sort direction sits AGAINST its label: it qualifies that name — "Owner,
@@ -707,7 +704,7 @@
   z-index: 1;
   text-align: left;
   padding: var(--space-2) var(--space-3);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
   /* A label longer than its column wraps, and the column keeps its width. */
   hyphens: auto;
@@ -756,7 +753,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderStrong);
 }
 
@@ -791,7 +788,7 @@
 }
 
 .lt-table tbody tr:hover td {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .lt-rowlink {
@@ -833,7 +830,7 @@
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--bgElevated);
+  background: var(--ground);
   border-right: 1px solid var(--borderSubtle);
 }
 
@@ -883,7 +880,7 @@
   z-index: 3;
 }
 .lt-table tbody tr:hover td.lt-identity {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* A chip comes down to 20px wherever a 28px mark would make its row taller
@@ -1032,7 +1029,7 @@
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
-  background: var(--bgPage);
+  background: var(--groundStrip);
 }
 
 /* The paging slot the caller fills with its keyset "Load more". */
@@ -1077,7 +1074,7 @@
   cursor: pointer;
 }
 .lt-pager button:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* The page in view, in the pressed filter pill's neutral pair: a filled

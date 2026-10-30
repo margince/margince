@@ -89,10 +89,10 @@ describe("SettingsScreen page layout", () => {
     // Every row addresses the level's own depth. The group a page sits under is
     // no longer a segment in its address, so a page that changed group would
     // keep the link a reader bookmarked.
-    expect(account.getAttribute("href")).toBe("#/settings/account");
+    expect(account.getAttribute("href")).toBe("/#/settings/account");
     expect(
       screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
-    ).toBe("#/settings/fields");
+    ).toBe("/#/settings/fields");
   });
 
   it("renders only the active page's cards — the passport is off the Account page", async () => {

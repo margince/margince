@@ -352,10 +352,10 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		return e.applyJudged(ctx, row, answers[0].Verdict,
 			capture.MeasuredVerdict(float64(answers[0].Confidence), servedModel))
 	}
-	// One re-ask below the floor, then terminal (ADR-0072 §4). The retry is not
-	// a hope that the same question answers differently: an unbound structured
-	// call escalates the routing ladder, so the second attempt is a stronger
-	// model looking at the same message.
+	// One re-ask below the floor, then terminal (ADR-0072). The retry asks for a
+	// fresh answer, because the result cache would hand back the first one. It
+	// is the same request to the same rung. The router climbs only on an
+	// unusable answer, not on a low-confidence one.
 	//
 	// A pass whose re-ask budget is spent takes the answer the floor already
 	// gives it: terminally unsure, a human decides. Not deferred — the row has
@@ -371,7 +371,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 		}
 		return 1, nil
 	}
-	retry, retryModel, err := e.ask(ctx, row)
+	retry, retryModel, err := e.ask(ai.WithFreshAnswer(ctx), row)
 	if err != nil {
 		return 0, err
 	}

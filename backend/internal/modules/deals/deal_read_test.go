@@ -137,7 +137,9 @@ func TestAReferenceFilterIsNarrowedToTargetsTheCallerReads(t *testing.T) {
 		UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true}},
+			Objects: map[string]principal.ObjectGrant{
+				"deal": {Read: true}, "company": {Read: true}, "project": {Read: true},
+			},
 			RowScope: principal.RowScopeOwn,
 		},
 	}

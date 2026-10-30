@@ -5,8 +5,7 @@
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline
 reports, sales performance, time in stage, your own outcomes, delivery and data
 coverage. It is in the sidebar under **Insights**. It answers two different
-kinds of question and keeps them apart: what the records say, and what somebody
-expects will happen.
+kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
 
 Every number here opens the records it was made from. If a figure looks wrong,
 open it rather than guessing.
@@ -37,20 +36,23 @@ To see your pipeline report in Margince, click **Analytics** in the sidebar and 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcomes**, **Delivery** and **Reports**. The **Setup** menu at the end of the tab row holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get.
+The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
+
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
-The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
-It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
+The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts. It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
 
 The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
 
-The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** tab instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
+A check is **Out of date** when a record it read changed after it ran. It reads deals with their offers, contracts and activities, buying signals with their company, stages and forecast calls. The verdict and findings stay as the check left them, with the mark beside them, and the verdict loses its colour. **Check again** reads the changes now, and the next nightly check reads them too. A check that could not read every source, the mailbox included, clears no mark. Until a check reads every source, the review says it cannot tell whether anything changed.
+
+The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** button there instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
-The **My outcomes** section shows your own targets, open deals and meetings, for a rep only.
-The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
+A deal's own amount is in that deal's currency, and amounts in two currencies cannot be added. So a custom report that totals, averages, or takes the smallest, largest or middle deal amount must group by currency or filter to one currency. For one total across currencies, measure the amount in the base currency, which converts each deal at its own rate. A deal whose currency has no rate is left out of that total. A count of the base amount says how many deals it covers. A saved report that adds amounts across currencies says so when you open it, instead of showing a number.
+
+The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
@@ -73,23 +75,21 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 ## The reporting sections
 
-When sales reporting is turned on, **Reports**, **Targets** and **Definitions**
-join the Performance view, which leads with graphs. Saving, scheduling and
-comparisons of editions are in [Sales reporting](sales-reporting.md).
+When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
-Two sections appear only for some seats, and when they are missing, that means
-something:
-
-- **My outcomes** appears only for a seat that sees only its own records, such
-  as a rep. A manager never sees the tab, because the section answers for one
-  seat and a manager's view covers more. If you open its address, it says so:
-  "This section measures one user’s records. Wider sections cover the rest of
-  the lens."
-- **Data coverage** appears where you have permission to see it. It appears
-  even on a new installation where no check has ever run, and the page then
-  says so in words.
+Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet.
 
 The section is part of the address, so a link to one opens it.
+
+## Overview
+
+Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. A reader who measures a team also gets **Team prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows four readings, a few sentences on what they mean, and what needs you.
+
+**Sales review** opens on this fiscal quarter with **Sales won**, **Expected finish**, **Gap to target** and **Open pipeline**. The last one says how far the open deals cover what is left to win. With no sales target, **Closed win rate** takes the place of the gap, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Below are the open forecast checks and **Since the last capture**, which shows how the open pipeline moved. It needs two captures before it can compare.
+
+**My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
+
+**Team prospecting** shows a team’s meetings held, accepted handoffs and qualified leads, each counted once for the team. **Handoff feedback** counts what was handed on, accepted, returned (sent back to try again) and rejected in the period. It says how each round handed on in the period ended, why, and what still waits; under five rounds is a small sample. **Members** has one row per colleague you may measure, in name order, and a shared meeting counts in each row. The figures follow who is on the team today. With **Show individual performance** off, no row shows, and a total that would show one colleague’s work is held back.
 
 ## Which records a number covers
 
@@ -115,7 +115,7 @@ covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
-the owners you may measure, and the answer says so.
+the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
 
 ## Under every report
 
@@ -188,29 +188,29 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. Every chart opens its evidence and offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
-Switch to **SDR outcomes** for held meetings and accepted opportunities. **Leads** shows new leads, status changes, leads qualified and first response time. **Partners** shows partner pipeline, sales won, commission and active partners. A view is not offered when your role cannot read its figures.
+The **SDR outcomes** tab shows held meetings, accepted opportunities, leads qualified, first response time and the leads still waiting for a first reply. **Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 
-The **My outcomes** section of Analytics shows your own work, in three panels.
+The **My outcomes** section of Analytics shows your own work, in up to six panels.
 
-**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**.
+**My targets**: each figure that can take a target, against your own target for this month or this fiscal quarter. A card reads "10 of 15", with the dates the target covers and "67% of target" under it. A figure with no target says **No target set** and shows the month so far. Only targets on your own name for all pipelines show here; team, company and single-pipeline targets are listed under **Targets**. **My open deals**: deals and value, both opening the Deals section.
 
-**My open deals**: deals and value, both opening the Deals section.
+**My meetings**: meetings *you host*, counted by where each stands today. The states are **Booked, Held, No-show, Canceled.** The line under it states the rule that readers often get wrong: "A held meeting no longer counts as booked." The count has no date filter; use **Analytics → SDR outcomes** for period totals.
 
-**My meetings**: meetings *you host*, counted by where each stands today. The states are **Booked, Held, No-show, Canceled.** The line under it states the rule that readers often get wrong: "A held meeting no longer counts as booked." The count has no date filter; use **Performance → SDR outcomes** for period totals.
+**My leads this month**: leads qualified, first reply time for answered leads only, and the leads still waiting for a first reply. The definition of leads qualified is shown above the figures. Where the workspace is not set up for SDR handoffs, the panel also shows **Meetings coming up**.
+
+**Handoffs waiting on others** appears only when Analytics is set up for SDR teams. It counts the handoffs you sent that nobody has decided, the longest wait, those in the shared queue and those returned to you. A handoff returned and sent again waits from the new sending. One whose recipient can no longer act is counted as blocked, and a manager must reassign it. A prospect you cannot open is listed without its name. Only the age is shown, because no handoff target time is set.
+
+**Waiting on you**: the first items of your Worklist, in its order. When a source could not be read, the panel says the list may be missing items and never says that nothing needs you.
 
 ## Delivery
 
 The **Delivery** section of Analytics holds the project reports.
 
-**Projects by phase**: phase, projects, open deal value, won deal value.
-
-**Open project tasks**: project, phase, open tasks, overdue tasks.
-
-**Projects inactive for 30 days**: project, phase, quiet since.
+**Projects by phase**: phase, projects, open deal value, won deal value. **Open project tasks**: project, phase, open tasks, overdue tasks. **Projects inactive for 30 days**: project, phase, quiet since.
 
 When there is nothing, the page says which nothing it means: "No projects yet. Create one under
 Projects with New project. A won deal moves its project to Delivering." or "No project in delivery has gone quiet."
@@ -348,6 +348,9 @@ pipeline with all it needs:
 
 Neither the landing nor this figure is shown under **My teams**. A total of
 teams that made their own calls would describe none of them.
+
+A deal whose customer stopped answering gets a review here, whatever its close
+date: see [Deals the customer still supports](deals-the-customer-supports.md).
 
 ### The receipt
 

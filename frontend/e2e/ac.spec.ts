@@ -440,10 +440,10 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
     menu.getByRole("menuitem", { name: "Einstellungen" }),
-  ).toHaveAttribute("href", "#/settings");
+  ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
-  ).toHaveAttribute("href", "#/settings/meetings");
+  ).toHaveAttribute("href", "/#/settings/meetings");
   await expect(menu.locator("a[href]")).toHaveCount(2);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
@@ -1008,27 +1008,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
-// The decision queue lives on Today now, one decision at a time: the focus lane
-// draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a contact presses is unchanged and this asserts it
-// where a contact now finds it.
-test("AC-inbox: the staged decision is on the day's queue", async ({
+test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
-  await page.goto("/#/worklist");
-  // The queue shows the decision by the sentence the SERVER composed for it,
-  // not by its kind: the old lane drew "E-Mail senden" from the kind label,
-  // and a queue that has to rank things across producers names each one by
-  // what it actually is. Answering it stays the approvals surface's own job,
-  // so the verbs are asserted where they live rather than here.
-  // That the decision is ANSWERABLE here is the claim worth making, so this
-  // asserts the verb rather than the text.
-  //
-  // The verb is "Entscheiden" and not a verdict: a decision is answered in a
-  // drawer now, so the queue draws the way IN to the answer rather than the
-  // answers themselves (AC-WORKLIST-SDR-03, which walks the drawer and asserts
-  // the verdicts inside it). Asserting "Übernehmen" here would be asserting the
-  // shape the row deliberately stopped having.
+  await page.goto("/#/home?queue=1&queue_view=decisions");
   await expect(
     page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
@@ -1333,6 +1316,56 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
+test("AC-create-3: a company created with a domain offers the contacts on it, none ticked", async ({
+  page,
+}) => {
+  // A reader who may link contacts to a company, which the shared admin is not.
+  await page.route(/\/v1\/me$/, (route) =>
+    route.fulfill({
+      json: meFixture({
+        allow: {
+          company: ["read", "create", "update"],
+          contact: ["read", "update"],
+          relationship: ["read", "create"],
+        },
+      }),
+    }),
+  );
+  await page.goto("/#/companies");
+  await page.getByRole("button", { name: de["create.company"] }).click();
+  await page
+    .getByLabel(`${de["create.displayName"]} *`)
+    .fill("Nordlicht Logistik GmbH");
+  await page.getByRole("button", { name: de["field.addDomain"] }).click();
+  await page
+    .getByLabel(`${de["field.domain"]} *`)
+    .fill("nordlicht-logistik.example");
+  await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+  await expect(page).toHaveURL(/#\/companies\/o-new$/);
+
+  const dialog = page.getByRole("dialog", {
+    name: de["co.domainContacts.dialogTitle"],
+  });
+  const ticks = dialog.getByRole("checkbox");
+  await expect(ticks).toHaveCount(2);
+  await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: de["co.domainContacts.linkNone"] }),
+  ).toBeDisabled();
+
+  await dialog.getByRole("checkbox", { name: /Anja Petersen/ }).check();
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/companies/o-new/link-contacts"),
+  );
+  await dialog
+    .getByRole("button", { name: copy(de["co.domainContacts.link_one"]) })
+    .click();
+  expect((await sent).postDataJSON()).toEqual({ contact_ids: ["p-anja"] });
+  await expect(dialog).toBeHidden();
+});
+
 test.describe("§3.8: 390px mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -1433,10 +1466,10 @@ test.describe("§3.8: 390px mobile", () => {
       // below the fold — a measurement of the wrong control is a green that
       // means nothing.
       //
-      // `btn-primary` is how the queue marks the one emerald verb. Where a row
-      // draws none — an inline decision offers several equal answers — the
-      // LOWEST control is measured instead, because a row is only workable
-      // when the reader can reach all of it.
+      // `btn-primary` is how the queue marks the one accent verb. An inline
+      // decision offers several equal answers and draws none. There the
+      // lowest control is measured, because a row works only when the reader
+      // can reach all of it.
       //
       // Read off the ROW, never from a list of the containers it groups its
       // verbs into. A selector naming those is a claim about which groups
@@ -1485,7 +1518,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-WORKLIST-SDR-03: a decision is answered in a drawer, not in the row", async ({
     page,
   }) => {
-    await page.goto("/#/worklist");
+    await page.goto("/#/home?queue=1&queue_view=decisions");
     await page.waitForLoadState("networkidle");
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
@@ -1593,7 +1626,7 @@ test.describe("§3.8: 390px mobile", () => {
     test("the day's queue is workable with a thumb at 390px", async ({
       page,
     }) => {
-      await page.goto("/#/worklist");
+      await page.goto("/#/home?queue=1&queue_view=decisions");
       await page.waitForLoadState("networkidle");
       await settleAnimations(page);
       await expect(
@@ -3397,29 +3430,30 @@ test.describe("calling a contact", () => {
   const callVerb = (scope: Page | Locator) =>
     scope.getByRole("link", { name: de["record.verb.call"], exact: true });
 
-  test("the header Call dials the primary of two numbers", async ({ page }) => {
+  test("the number in the details dials the primary of two numbers", async ({
+    page,
+  }) => {
     await page.goto(`/#/contacts/${CALLED_CONTACT}`);
     await expectShellRendered(page);
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
-    ).toHaveAttribute("href", tel);
+      page.locator(".record-aside").locator(`a[href="${tel}"]`),
+    ).toBeVisible();
   });
 
-  test("the header Call on a contact with no number is refused and says why", async ({
-    page,
-  }) => {
+  test("a contact with no number offers no Call at all", async ({ page }) => {
     await page.goto("/#/contacts/p-anna");
     await expectShellRendered(page);
-    const call = page.getByRole("button", {
-      name: de["contact.action.call"],
-      exact: true,
-    });
-    await expect(call).toBeDisabled();
-    await expect(call).toHaveAccessibleDescription(
-      de["contact.action.noPhone"],
-    );
     await expect(
-      page.getByRole("link", { name: de["contact.action.call"] }),
+      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: de["contact.action.call"],
+        exact: true,
+      }),
     ).toHaveCount(0);
   });
 
@@ -3477,13 +3511,13 @@ test.describe("calling a contact", () => {
       return { opener, dialog };
     }
 
-    test("a task from a call offers Call, Email and Open contact, in tab order", async ({
+    test("a task from a call offers Call, Draft email and Open contact, in tab order", async ({
       page,
     }) => {
       const { opener, dialog } = await openTask(page, taskFromCall.subject);
       const call = callVerb(dialog);
       const email = dialog.getByRole("button", {
-        name: de["record.verb.email"],
+        name: de["task.next.draftEmail"],
         exact: true,
       });
       const open = dialog.getByRole("link", {
@@ -3494,7 +3528,7 @@ test.describe("calling a contact", () => {
       await expect(email).toBeVisible();
       await expect(open).toHaveAttribute(
         "href",
-        `#/contacts/${CALLED_CONTACT}`,
+        `/#/contacts/${CALLED_CONTACT}`,
       );
       await settleAnimations(page);
       await expectNoAaViolations(page, "home (task from a call open)");
@@ -3517,7 +3551,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Email and Open contact but no Call", async ({
+    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3526,7 +3560,7 @@ test.describe("calling a contact", () => {
       ).toBeVisible();
       await expect(
         dialog.getByRole("button", {
-          name: de["record.verb.email"],
+          name: de["task.next.draftEmail"],
           exact: true,
         }),
       ).toBeVisible();

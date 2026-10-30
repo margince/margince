@@ -46,19 +46,12 @@ func companyContactStrengths(
 }
 
 // awaitsThem is whether the newest message leaves the move with the other
-// side. A mail asks its badge; a call or a meeting asks its direction.
+// side, by the rule every record's last exchange is read with.
 func (m lastMessage) awaitsThem() bool {
-	if m.Move != nil {
-		return *m.Move == crmcontracts.EmailSummaryMoveWaitingForThem
-	}
-	return m.Direction == string(crmcontracts.ActivityDirectionOutbound)
+	return activities.WhoseMove(m.Move, m.Direction) == crmcontracts.LastExchangeWhoseMoveThem
 }
 
-// owedByUs is whether the newest message leaves the move with us, by the same
-// two rules as awaitsThem.
+// owedByUs is whether the newest message leaves the move with us.
 func (m lastMessage) owedByUs() bool {
-	if m.Move != nil {
-		return *m.Move == crmcontracts.EmailSummaryMoveNeedsReply
-	}
-	return m.Direction == string(crmcontracts.ActivityDirectionInbound)
+	return activities.WhoseMove(m.Move, m.Direction) == crmcontracts.LastExchangeWhoseMoveUs
 }

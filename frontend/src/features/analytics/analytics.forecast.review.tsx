@@ -15,13 +15,29 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
+import { EnforcementSwitch } from "./analytics.forecast.enforcement";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
+import {
+  FreshnessLine,
+  OutOfDateBadge,
+  outOfDate,
+  verdictStands,
+} from "./analytics.forecast.freshness";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
 import { checkLabel, SubjectCell } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
-type Resolution = { id: string; answer: ResolveAnswer; dealId?: string };
+type Resolution = {
+  id: string;
+  answer: ResolveAnswer;
+  dealId?: string;
+  // A customer review's wait and lost answers also write the deal, through
+  // their own routes.
+  review?: boolean;
+  // The reason a review closed lost is lost for, from the loss reason list.
+  lostReasonCode?: string;
+};
 
 // What should be checked before the call.
 //
@@ -82,10 +98,12 @@ export function useInputChecks(enabled = true, scope?: AnalyticsScope) {
   return useQuery({
     enabled,
     queryKey: ["input-checks", query],
-    queryFn: async () => {
+    // The signal stops the read of a scope the reader has already left.
+    queryFn: async ({ signal }) => {
       const data = unwrap(
         await api.GET("/forecast/assurance/exceptions", {
           params: { query },
+          signal,
         }),
       );
       return data.data;
@@ -103,8 +121,17 @@ function ReviewPanel({
   const checks = useInputChecks();
 
   return (
-    <Panel title={title} titleAction={<ReadinessBadge run={run} />}>
+    <Panel
+      title={title}
+      titleAction={
+        <>
+          {outOfDate(run) && <OutOfDateBadge />}
+          <ReadinessBadge run={run} />
+        </>
+      }
+    >
       <PanelBody>
+        <FreshnessLine freshness={run.freshness} />
         {run.sources?.some((source) => source.state !== "checked") ? (
           <CoverageLine sources={run.sources} />
         ) : (
@@ -116,6 +143,7 @@ function ReviewPanel({
             answer to what the coverage line just said, and the header already
             carries the verdict. */}
         <Recheck runId={run.run_id} />
+        <EnforcementSwitch />
       </PanelBody>
       <QueryGate query={checks} pendingLabel={title}>
         {(found) =>
@@ -134,14 +162,17 @@ function ReviewPanel({
 
 // The verdict, as a word rather than a count.
 //
-// `checks_incomplete` is not a worse `needs_review`: one says the pipeline has
-// problems, the other says we could not look, and they take different tones
-// because they ask for different things.
+// `checks_incomplete` is not a worse `needs_review`. One says the pipeline has
+// problems, the other says we could not look, and they ask for different
+// things. A verdict on records that changed since, or may have, keeps its
+// word and loses its tone. "Ready" in green over a moved pipeline would be a
+// false healthy reading.
 function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
   const t = useT();
   if (!run.readiness) {
     return null;
   }
+
   const tone = {
     ready: "success",
     ready_with_exceptions: "accent",
@@ -154,7 +185,11 @@ function ReadinessBadge({ run }: Readonly<{ run: Assurance }>) {
     needs_review: "review.needsReview",
     checks_incomplete: "review.checksIncomplete",
   } as const;
-  return <Badge tone={tone[run.readiness]}>{t(label[run.readiness])}</Badge>;
+  return (
+    <Badge tone={verdictStands(run) ? tone[run.readiness] : "default"}>
+      {t(label[run.readiness])}
+    </Badge>
+  );
 }
 
 // How much of the pipeline the run could read.
@@ -279,9 +314,18 @@ function CheckTable({
         error={resolve.error}
         labels={sheetLabels(t)}
         returnFocusTo={focusAfterClose}
-        onSubmit={(given, dealId) => {
+        onSubmit={(given, dealId, lostReasonCode) => {
           if (sheet !== null) {
-            resolve.mutate({ id: sheet.id, answer: given, dealId });
+            const review =
+              checks.find((check) => check.id === sheet.id)?.type ===
+              "deal_viability";
+            resolve.mutate({
+              id: sheet.id,
+              answer: given,
+              dealId,
+              review,
+              lostReasonCode,
+            });
           }
         }}
         onClose={close}
@@ -305,7 +349,12 @@ function checkColumns(
     {
       key: "finding",
       header: t("review.colFinding"),
-      render: (check) => t(checkLabel(check.type)),
+      render: (check) => (
+        <>
+          {t(checkLabel(check.type))}{" "}
+          {check.inputs_changed && <OutOfDateBadge />}
+        </>
+      ),
     },
     {
       key: "deal",
@@ -355,7 +404,34 @@ function checkColumns(
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, answer, dealId }: Resolution) => {
+    mutationFn: async ({
+      id,
+      answer,
+      dealId,
+      review,
+      lostReasonCode,
+    }: Resolution) => {
+      if (review && answer.outcome === "remind_later") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/wait", {
+            params: { path: { id } },
+            body: { until: answer.remindAt ?? "" },
+          }),
+        );
+        return;
+      }
+      if (review && answer.outcome === "not_relevant") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/close-lost", {
+            params: { path: { id } },
+            body: {
+              lost_reason: answer.reason ?? "",
+              lost_reason_code: lostReasonCode,
+            },
+          }),
+        );
+        return;
+      }
       unwrap(
         await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },

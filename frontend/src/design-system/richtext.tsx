@@ -4,6 +4,8 @@
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
 import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AiPending } from "./aipending";
+import { useAiReveal } from "./aireveal";
 import { plainTextOf, safeEditorHTML } from "./richtext-html";
 import {
   editorHTMLFromMarkdown,
@@ -68,6 +70,8 @@ export function RichText({
   id,
   disabled = false,
   footIn,
+  revealText,
+  thinking,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -137,11 +141,24 @@ export function RichText({
    * mounted yet; absent draws the footer in the frame.
    */
   footIn?: Element | null;
+  /**
+   * The text a model just wrote into the surface. It arrives the way every
+   * machine-written answer does (`AiReveal`): once, the first time it is on
+   * screen. Unset for text a reader typed.
+   */
+  revealText?: string | null;
+  /**
+   * What a model is writing into the surface right now, as the sentence
+   * `AiPending` shows. While the surface is empty its speck rows stand where
+   * the words will land; the first key a reader types takes them away.
+   */
+  thinking?: string | null;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
+  useAiReveal(editor, revealText);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
   // own keystroke.
@@ -302,7 +319,7 @@ export function RichText({
   );
   return (
     <div
-      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
+      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}${thinking ? " is-thinking" : ""}`}
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
@@ -333,6 +350,11 @@ export function RichText({
         onBlur={report}
         onPaste={paste}
       />
+      {thinking && (
+        <div className="richtext-thinking">
+          <AiPending label={thinking} lines={3} />
+        </div>
+      )}
       {/* UNDER the words, and quiet. The toolbar led the control for a while —
           a filled band above the box, before a reader had written anything to
           format — which made four glyphs the first thing on a surface whose

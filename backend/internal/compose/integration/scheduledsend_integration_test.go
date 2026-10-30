@@ -251,7 +251,7 @@ func (p *preflightEnv) closeDealAsLost(t *testing.T) {
 	}
 	stages := apptest.DiscoverSeededPipeline(t, p.AppEnv)
 	if status := p.Call(t, "POST", "/v1/deals/"+p.dealID+"/advance", AnyMap{
-		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence",
+		"to_stage_id": stages.Lost, "lost_reason": "test: closing the fixture's evidence", "lost_reason_code": "other",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("close the fixture's deal → %d", status)
 	}

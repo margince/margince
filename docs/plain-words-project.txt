@@ -491,7 +491,6 @@ else
 elsewhere
 email
 embed
-emerald
 emil
 emoji
 emphasis
@@ -1494,7 +1493,6 @@ strict
 string
 strip
 strong
-stronger
 strongest
 structural
 structure
@@ -1541,6 +1539,7 @@ taller
 tallest
 target
 task
+teal
 team
 tell
 template

@@ -3,6 +3,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { JSX } from "react";
+import { AppLink } from "./applink";
 import { useTruncationTooltip } from "./tooltip";
 import "./breadcrumb.css";
 
@@ -128,9 +129,9 @@ function CrumbStop({
   }
   if (crumb.href) {
     return (
-      <a className="crumbs-link" href={crumb.href}>
+      <AppLink className="crumbs-link" href={crumb.href}>
         <CrumbFace crumb={crumb} />
-      </a>
+      </AppLink>
     );
   }
   return (

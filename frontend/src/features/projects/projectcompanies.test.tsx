@@ -57,7 +57,9 @@ describe("the companies on a project", () => {
     // The defect this holds: `#/companies/<id>` parses to not-found, so the
     // row rendered fine and the click landed on an empty page.
     for (const link of links) {
-      const route = parseHash(link.getAttribute("href") ?? "");
+      const route = parseHash(
+        new URL(link.getAttribute("href") ?? "", location.href).hash,
+      );
       expect(route.screen).not.toBe("not-found");
       expect(route.id).toBe(netcare.company_id);
     }

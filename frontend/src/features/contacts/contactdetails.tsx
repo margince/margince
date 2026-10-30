@@ -1,18 +1,13 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
-import { ADDRESS_FIELDS, addressFrom } from "../../components/companyform";
+import { ADDRESS_FIELDS } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
-import {
-  contactEditFields,
-  mapContactUpdate,
-} from "../../components/contactformfields";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
+import { RailField } from "../../components/railfield";
 import { RecordCustomFields } from "../../components/recordcustomfields";
-import { saveRecordEdit } from "../../components/recordedit";
 import { RecordFields } from "../../components/recordfields";
-import { rawRecord } from "../../components/recordfieldtypes";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import {
@@ -41,10 +36,12 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
-import { useRecordOwners } from "../records/recordreferences";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
+import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { type ProfileField, proposedEmployer } from "./employerproposal";
+import { ProposedEmployerRow } from "./employerproposalrow";
 import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
@@ -59,6 +56,7 @@ type Employment = components["schemas"]["Contact360Employment"];
 export function useContactAboutSections(view: Contact360): DetailSection[] {
   const t = useT();
   const contact = view.contact;
+  const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const ownerName = useMemberName(contact.owner_id);
   const notSet = t("field.unset");
@@ -75,18 +73,39 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     .filter(Boolean)
     .join(", ");
   const employer = currentEmployer(view.employments?.data);
+  const proposed = employer
+    ? undefined
+    : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
+  const record = { entityType: "contact", entityId: contact.id } as const;
+  // Every row but the employer changes in place; an empty one still folds.
+  // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
     key: string,
     term: string,
-    value: ReactNode,
     present: boolean,
-  ): DetailRow => ({
-    key,
-    term,
-    value: present ? value : notSet,
-    empty: !present,
-  });
+    change: Omit<ComponentProps<typeof RailField>, "edit" | "label">,
+  ): DetailRow => {
+    const value = (
+      <RailField
+        {...change}
+        edit={edit}
+        label={term}
+        reading={present ? change.reading : notSet}
+      />
+    );
+    return {
+      key,
+      term,
+      value:
+        present && change.link ? (
+          <span className="fieldgrid-handle">{value}</span>
+        ) : (
+          value
+        ),
+      empty: !present,
+    };
+  };
   return [
     {
       key: "about",
@@ -95,20 +114,16 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
         {
           key: "employer",
           term: t("contact.rail.employer"),
-          value: employer ? <EmployerCard employment={employer} /> : notSet,
-          empty: !employer,
-          block: Boolean(employer),
+          value: employerValue(view, employer, proposed, notSet),
+          empty: !employer && !proposed,
+          block: Boolean(employer ?? proposed),
         },
-        field(
-          "email",
-          t("create.email"),
-          email && (
-            <span className="fieldgrid-handle">
-              <ContactLink
-                kind="email"
-                value={email}
-                record={{ entityType: "contact", entityId: contact.id }}
-              >
+        field("email", t("create.email"), Boolean(email), {
+          keys: ["emails"],
+          link: Boolean(email),
+          reading: email && (
+            <>
+              <ContactLink kind="email" value={email} record={record}>
                 <EmailFace address={email} />
               </ContactLink>
               <BoughtMark
@@ -116,93 +131,92 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
                 subject={email}
               />
               <CopyEmail address={email} />
-            </span>
+            </>
           ),
-          Boolean(email),
-        ),
-        field(
-          "phone",
-          t("create.phone"),
-          phone && (
-            <span className="fieldgrid-handle">
-              <ContactLink
-                kind="phone"
-                value={phone.phone}
-                record={{ entityType: "contact", entityId: contact.id }}
-              />
+        }),
+        field("phone", t("create.phone"), Boolean(phone), {
+          keys: ["phones"],
+          link: Boolean(phone),
+          reading: phone && (
+            <>
+              <ContactLink kind="phone" value={phone.phone} record={record} />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
               />
-            </span>
+            </>
           ),
-          Boolean(phone),
-        ),
-        field(
-          "linkedin",
-          t("contact.page.linkedin"),
+        }),
+        field("linkedin", t("contact.page.linkedin"), linkedin !== "", {
+          keys: ["social.linkedin"],
           // The label claims the destination is LinkedIn, and a crawl or a
           // connector writes this value, so another host gets no link.
-          linkedinHref ? (
+          link: Boolean(linkedinHref),
+          text: linkedin,
+          reading: linkedinHref ? (
             <OffsiteLink href={linkedin}>
               {linkedinHref.pathname.replace(/^\/|\/$/g, "")}
             </OffsiteLink>
           ) : (
             linkedin
           ),
-          linkedin !== "",
-        ),
-        field(
-          "title",
-          t("create.contactTitle"),
-          <>
-            {contact.title}
+        }),
+        field("title", t("create.contactTitle"), Boolean(contact.title), {
+          keys: ["title"],
+          text: contact.title ?? "",
+          reading: contact.title,
+          beside: (
             <BoughtMark
               bought={bought.get("title")}
               subject={contact.title ?? ""}
             />
-          </>,
-          Boolean(contact.title),
-        ),
-        field(
-          "address",
-          t("co.address.summary"),
-          <>
-            {address}
-            {contact.address_country_mismatch && (
-              <>
-                {" "}
-                <AddressCountryMismatchBadge
-                  mismatch={contact.address_country_mismatch}
-                />
-              </>
-            )}
-          </>,
-          address !== "",
-        ),
+          ),
+        }),
+        field("address", t("co.address.summary"), address !== "", {
+          keys: ADDRESS_FIELDS.map((entry) => entry.key),
+          reading: address,
+          beside: contact.address_country_mismatch && (
+            <>
+              {" "}
+              <AddressCountryMismatchBadge
+                mismatch={contact.address_country_mismatch}
+              />
+            </>
+          ),
+        }),
       ],
     },
     {
       key: "ownership",
       label: t("record.details.ownership"),
       rows: [
-        field(
-          "owner",
-          t("contact.page.owner"),
+        field("owner", t("contact.page.owner"), Boolean(contact.owner_id), {
+          keys: ["owner_id"],
           // An owner the roster no longer names is still the owner, and the
           // warning ink says the record needs a new one.
-          owner === t("ref.notInRoster") ? (
-            <span className="pe-detail-warn">
-              {t("contact.aside.ownerGone")}
-            </span>
-          ) : (
-            owner
-          ),
-          Boolean(contact.owner_id),
-        ),
+          reading:
+            owner === t("ref.notInRoster") ? (
+              <span className="pe-detail-warn">
+                {t("contact.aside.ownerGone")}
+              </span>
+            ) : (
+              owner
+            ),
+        }),
       ],
     },
   ];
+}
+
+function employerValue(
+  view: Contact360,
+  employer: Employment | undefined,
+  proposed: ProfileField | undefined,
+  notSet: string,
+): ReactNode {
+  if (employer) return <EmployerCard employment={employer} />;
+  if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
+  return notSet;
 }
 
 /**
@@ -256,8 +270,7 @@ export function ContactDetails({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const canEdit = useCanWriteRecord("contact", contact) && !contact.archived_at;
-  const owners = useRecordOwners(contact.owner_id);
+  const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
@@ -331,7 +344,7 @@ export function ContactDetails({
             <BoughtMark bought={bought.get("linkedin")} subject={linkedin} />
           ),
         }}
-        canEdit={canEdit}
+        canEdit={edit.canEdit}
         // Tags as one more row of the card: filing beside the facts it files.
         extraRows={
           <>
@@ -354,41 +367,17 @@ export function ContactDetails({
             </FieldRow>
           </>
         }
-        fields={[
-          ...contactEditFields(t),
-          ...ADDRESS_FIELDS,
-          {
-            // Still reads visibility, and does not offer it. An owner-private
-            // contact must name an owner, and this field states the rule the
-            // header's toggle obeys.
-            key: "owner_id",
-            required: contact.visibility === "owner",
-            label: "list.owner",
-            type: "select",
-            options: owners.options,
-            hint: owners.hint,
-          },
-        ]}
+        fields={[...edit.fields]}
         groups={[
           {
             label: t("co.address.summary"),
             keys: ADDRESS_FIELDS.map((field) => field.key),
           },
         ]}
-        record={{
-          ...contact,
-          original: contact,
-          ...addressFrom(contact.address),
-          "social.linkedin": linkedin,
-        }}
-        resolveExisting={(_code, id) => ({ screen: "contacts", id })}
+        record={edit.record}
+        resolveExisting={edit.resolveExisting}
         refusalNotice={leadHeldNoticeFor}
-        save={async (values, rows, opened, extra) => {
-          return saveRecordEdit("contact", rawRecord(opened), {
-            ...mapContactUpdate(values, rows, opened),
-            ...extra,
-          });
-        }}
+        save={edit.save}
       />
       <RecordCustomFields kind="contact" record={contact} />
     </>

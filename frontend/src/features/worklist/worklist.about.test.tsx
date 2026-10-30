@@ -56,7 +56,9 @@ it("links the record a message row is about", async () => {
   await screen.findAllByRole("link", { name: "Sonya Beck" });
   expect(
     document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
+  ).toBe(
+    "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
+  );
 });
 
 // The server names the contact behind a thread even when the thread is filed
@@ -107,7 +109,9 @@ it("names the sender behind a deal-filed thread, and which side wrote last", asy
   await screen.findAllByRole("link", { name: "Sonya Beck" });
   expect(
     document.querySelector(".worklist-row-about a")?.getAttribute("href"),
-  ).toBe("#/contacts/01a05500-0000-7000-8000-000000000009");
+  ).toBe(
+    "/r/contacts/01a05500-0000-7000-8000-000000000009#/contacts/01a05500-0000-7000-8000-000000000009",
+  );
   const touch = document.querySelector(".worklist-row-touch");
   expect(touch?.textContent).toContain("Last from this contact");
   expect(touch?.textContent).toContain("03/09/2026");

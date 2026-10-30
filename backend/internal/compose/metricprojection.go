@@ -101,6 +101,8 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.Row.Value != nil && *fact.Row.Value == 1 })
 	case reportingPartnerActivity:
 		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.GroupKey == partnerActiveGroup })
+	case reportingStageConversion, reportingLeadCohortOutcomes:
+		projectCohortRate(&out, cohort)
 	}
 	if def.SupportsTarget {
 		out.TargetActual, _, _ = metricSum(metricFacts(facts, def.Id, reportingTarget))
@@ -205,13 +207,17 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 	case reportingTargetProgress:
 		chart.ContextId = reportingTarget
 		chart.Interval = out.Result.Context.TargetInterval
-		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: string(metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
+		chart.Points = []crmcontracts.ReportingPoint{{Key: string(metric.Id), Label: reportingMetricName(out.Result.Context, metric.Id), Value: metric.TargetActual, Status: metric.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: metric.Id, ContextId: reportingTarget}}}
 	case reportingSdrOutcomes:
 		chart = reportingWeekly(out, chart)
 	case "forecast_support":
 		chart = reportingForecastChart(out, chart)
 	case reportingBreakdown:
 		chart = reportingBreakdownChart(out, chart, metric)
+	case reportingStageCohort:
+		chart = reportingStageCohortChart(out, chart)
+	case reportingLeadCohort:
+		chart = reportingLeadCohortChart(out, chart)
 	case reportingPipelineMovement:
 		chart.Coverage = crmcontracts.ReportingCoverage{Status: reportingUnavailable}
 		reason := reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Collecting)

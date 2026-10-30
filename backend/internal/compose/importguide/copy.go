@@ -12,16 +12,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// Column is one column's guide: what goes in it, an example, and whether a
-// row that creates a record needs it.
+// Column is one column's guide. It holds the mapping step's name for the
+// column, what goes in it and an example. It also says whether a row that
+// creates a record needs the column.
 type Column struct {
-	Description, Example langcopy.Phrase
-	RequiredOnNew        bool
+	Description, Example, Label langcopy.Phrase
+	RequiredOnNew               bool
 }
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
-var Columns = withActivityColumns(map[string]Column{
+var Columns = withLabels(withActivityColumns(map[string]Column{
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten anzulegen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",
@@ -237,7 +238,7 @@ var Columns = withActivityColumns(map[string]Column{
 		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist; wird nur geschrieben, wenn die Zeile den Deal anlegt.",
 		Vi: "Lý do deal bị thua. Bắt buộc khi giai đoạn là thua; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
-})
+}))
 
 // Custom is the guide of a custom field, by its type. A picklist's
 // example is replaced by its first option where the caller may read them.

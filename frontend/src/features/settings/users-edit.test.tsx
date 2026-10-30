@@ -50,6 +50,7 @@ it("saves a reactivated invitation's name and team before first sign-in", async 
   const name = screen.getByRole("textbox", { name: "Full name" });
   await user.clear(name);
   await user.type(name, "Ivy Corrected");
+  await user.click(await screen.findByRole("button", { name: /add teams/i }));
   await user.click(await screen.findByRole("checkbox", { name: "DACH Sales" }));
   await user.click(screen.getByRole("button", { name: "Save member" }));
   await waitFor(() => expect(closed).toHaveBeenCalledOnce());

@@ -189,7 +189,7 @@ it.each(["default", "compact"] as const)(
     expect(
       screen
         .getAllByRole("link")
-        .some((link) => link.getAttribute("href") === rowHref(item)),
+        .some((link) => link.getAttribute("href") === `/${rowHref(item)}`),
     ).toBe(true);
   },
 );

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -12,7 +12,7 @@ What each list offers:
 
 | List | Search | Filters | Tabs | Table and board | Bulk actions |
 |---|---|---|---|---|---|
-| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
+| **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
 | **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
@@ -57,6 +57,10 @@ To see only the records you own in Margince, open **Contacts**, **Companies** or
 1. The **Owner** filter lists **Owned by you**, then every active colleague by name, then **Unassigned**.
 2. **Leads** opens on **Mine** for a user who sees only their own leads. It opens on **All** for one who can see the team's or everyone's.
 Also called: my contacts, my deals, my accounts, assigned to me, owned by me.
+
+### How do I see the contacts shared with me?
+Open **Contacts** in the sidebar and press the **Shared with me** tab. It lists the contacts a colleague owns and shared with you or with a team you are in. A contact you own is never on it. A contact you keep access to after a merge is on it too. When there are none, the list says "No contacts shared with you."
+Also called: contacts others shared, shared contacts, contacts I can see but do not own.
 
 ### How do I filter by a colleague's name?
 To filter a list by one colleague in Margince, press **Filter** → **Owner** and pick the colleague. Every list with an owner has this filter: **Contacts**, **Companies**, **Leads**, **Deals** and **Projects**.

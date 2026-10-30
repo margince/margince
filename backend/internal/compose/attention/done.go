@@ -43,6 +43,8 @@ var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceUndelivered:         true,
 	crmcontracts.WorklistItemSourceDsr:                 true,
 	crmcontracts.WorklistItemSourceNoticeCase:          true,
+	// Done sets a case aside for this owner alone; the other owners keep it.
+	crmcontracts.WorklistItemSourceContactCase: true,
 }
 
 // DoneStore keeps the reader's own Done set. OPTIONAL: unbound, no row is ever
@@ -63,6 +65,9 @@ type doneState struct {
 	at    map[RowRef]time.Time
 	zone  *time.Location
 	probe func([]ranked)
+	// asked are the rows a Done check looks for, by source. A tail may hold
+	// them below the ranked rows.
+	asked map[crmcontracts.WorklistItemSource][]ids.UUID
 }
 
 // offersDone is whether a source's rows offer Done. dispositionsFor answers
@@ -144,6 +149,13 @@ func (s *Service) ReopenRows(ctx context.Context, rows []RowRef) error {
 // scope, its group members included, with nothing hidden as done.
 func (s *Service) dropShown(ctx context.Context, scope string, missing map[RowRef]bool) error {
 	probe := *s
+	probe.marked.asked = map[crmcontracts.WorklistItemSource][]ids.UUID{}
+	for row := range missing {
+		if id, err := ids.Parse(row.RowID); err == nil {
+			source := crmcontracts.WorklistItemSource(row.Source)
+			probe.marked.asked[source] = append(probe.marked.asked[source], id)
+		}
+	}
 	probe.marked.probe = func(candidates []ranked) {
 		for _, row := range candidates {
 			if !domainMaintenanceBatch(row) {

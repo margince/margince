@@ -122,6 +122,28 @@ type ForecastReadingsResult struct {
 	// Snapshots are this period's frozen states, newest first — the ids
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.
 	Snapshots []ForecastSnapshotRefResult `json:"snapshots"`
+
+	// Qualified is the readings restricted to deals the customer still
+	// supports. Absent while the installation does not enforce viability
+	// reviews, which means no qualified reading exists, not that it equals the
+	// figures above.
+	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+}
+
+// ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
+type ForecastQualifiedResult struct {
+	EvidenceMinor int64 `json:"evidence_minor"`
+	BestCaseMinor int64 `json:"best_case_minor"`
+	WeightedMinor int64 `json:"weighted_minor"`
+	ExcludedMinor int64 `json:"excluded_minor"`
+	UnknownMinor  int64 `json:"unknown_minor"`
+	ExcludedCount int   `json:"excluded_count"`
+	UnknownCount  int   `json:"unknown_count"`
+	// The part of the excluded money with no review behind it.
+	UnsupportedMinor int64 `json:"unsupported_minor"`
+	UnsupportedCount int   `json:"unsupported_count"`
+	// AmountsPartial says some left-out deal had no amount the reader can see.
+	AmountsPartial bool `json:"amounts_partial"`
 }
 
 // ForecastSnapshotRefResult is one frozen state a movement can start or end at.
@@ -257,6 +279,21 @@ type ForecastAssuranceResult struct {
 	// different from one it attempted and could not read, and the state field
 	// is where that distinction lives.
 	Sources []ForecastAssuranceSourceResult `json:"sources"`
+	// Freshness says whether the records moved after the run read them. An
+	// out_of_date reading is the run's verdict on records that have changed.
+	Freshness ForecastAssuranceFreshnessResult `json:"freshness"`
+}
+
+// ForecastAssuranceFreshnessResult is what changed after the run read it.
+type ForecastAssuranceFreshnessResult struct {
+	// State is current, out_of_date, or unknown when no run has recorded what
+	// it read since changes were first tracked.
+	State            string `json:"state"`
+	ChangedDeals     int    `json:"changed_deals"`
+	ChangedSignals   int    `json:"changed_signals"`
+	WorkspaceChanged bool   `json:"workspace_changed"`
+	// ChangedSince is the oldest change the run has not read, absent when none.
+	ChangedSince string `json:"changed_since,omitempty"`
 }
 
 // ForecastAssuranceSourceResult is one source and the state the run reached.
@@ -343,6 +380,10 @@ type InputCheckResult struct {
 	// LastSeenAt is the most recent run that still found it. Something seen for
 	// weeks is a different problem from something that appeared last night.
 	LastSeenAt string `json:"last_seen_at"`
+	// InputsChanged is true when the subject, or a stage or forecast call,
+	// changed after the run that found this. Quote such a finding as out of
+	// date. Null when that is not known.
+	InputsChanged *bool `json:"inputs_changed"`
 }
 
 // SourceCoverageReader answers how current the sources behind the numbers are.

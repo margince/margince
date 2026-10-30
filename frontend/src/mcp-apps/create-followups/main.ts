@@ -25,10 +25,11 @@ import {
   changeTable,
   inWords,
   nameField,
+  recordLine,
   recordName,
   recordNoun,
   refusalPanel,
-  summaryPanel,
+  savedPanel,
   withArticle,
 } from "../summary";
 import {
@@ -171,14 +172,14 @@ function createdPanel(created: Record<string, unknown>): HTMLElement {
   const lines = [
     skip === undefined
       ? el("p", "intro", "Saved in Margince.")
-      : el("p", "name", recordName(fields)),
+      : recordLine(recordName(fields), asText(created.id), noun),
   ];
   const rows = changeTable(changesOf(created.changes), {
     skip,
     before: false,
   });
   if (rows !== null) lines.push(rows);
-  return summaryPanel(`Created ${withArticle(noun)}`, ...lines);
+  return savedPanel(`Created ${withArticle(noun)}`, ...lines);
 }
 
 function choices(

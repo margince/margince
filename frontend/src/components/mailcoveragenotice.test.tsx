@@ -33,7 +33,7 @@ it.each<Coverage["state"]>(["partial", "unknown", "unavailable", "withheld"])(
     } else {
       expect(
         screen.getByRole("link", { name: "Check connections" }),
-      ).toHaveAttribute("href", "#/settings/connections");
+      ).toHaveAttribute("href", "/#/settings/connections");
     }
   },
 );

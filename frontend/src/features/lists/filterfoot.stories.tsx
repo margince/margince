@@ -16,9 +16,9 @@ import { useFilterExport } from "./filterexport";
 import { FilterFoot, type FootMode } from "./filterfoot";
 import { SaveToListAction } from "./filterlistedit";
 
-// The filter Panel's footer band: what state the filter is in on the leading
-// edge, and the one emerald way to keep it on the trailing edge, with the rarer
-// verbs folded into More beside it. A new filter, an opened view and a Live
+// The filter Panel's footer band. The leading edge says what state the filter
+// is in. The trailing edge holds the one accent way to keep it, with the rarer
+// verbs in More beside it. A new filter, an opened view and a Live
 // List's filter each keep it their own way.
 const meta: Meta = {
   title: "Patterns/Filters and views/Filter footer",
