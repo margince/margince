@@ -232,7 +232,7 @@ func TestStageCohortCreditsTheOwnerAtEntryAfterAReassignment(t *testing.T) {
 
 // The lead cohort follows the leads that arrived in the interval to their
 // furthest outcome by the cutoff. Each is credited to the owner it arrived
-// with, through a reassignment and an erasure of the person it became.
+// with, through a reassignment and an erasure of the contact it became.
 func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *testing.T) {
 	e := setupForecast(t)
 	start := clocktest.Now(t).Add(-time.Minute)

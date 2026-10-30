@@ -49,7 +49,16 @@ const metricDateHeading: Partial<
   partner_pipeline: "reporting.createdOn",
   partner_won: "reporting.closedOn",
   partner_commission: "reporting.accruedOn",
+  stage_conversion: "reporting.enteredOn",
+  lead_cohort_outcomes: "reporting.arrivedOn",
 };
+
+// A cohort member's row carries its days to an outcome, or open so far, where
+// the reading itself is a rate.
+const COHORT_METRICS: readonly ReportingEvidenceRef["metric"][] = [
+  "stage_conversion",
+  "lead_cohort_outcomes",
+];
 
 // A record's figure is a deal's value unless the metric counts or times it, or
 // the money is a commission rather than the deal.
@@ -115,6 +124,9 @@ export function ReportingEvidenceDrawer({
     evaluation,
     reference,
   );
+  const rowUnit = COHORT_METRICS.includes(reference.metric)
+    ? "days"
+    : (metric?.unit ?? definition?.unit ?? "count");
   const stateLabel = editionId
     ? formatDateTime(
         evaluation.context.state_at,
@@ -268,11 +280,11 @@ export function ReportingEvidenceDrawer({
                       },
                       {
                         key: "amount",
-                        header: valueHeading(reference, metric?.unit, t),
+                        header: valueHeading(reference, rowUnit, t),
                         render: (row) =>
                           reportingAmount(
                             row.value,
-                            metric?.unit ?? definition?.unit ?? "count",
+                            rowUnit,
                             evidence.context.currency,
                             locale,
                           ),

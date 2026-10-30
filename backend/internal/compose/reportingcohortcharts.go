@@ -44,7 +44,7 @@ func cohortRate(facts []reporting.Fact) (rate *float64, progressed, resolved flo
 func projectCohortRate(out *crmcontracts.ReportingMetric, facts []reporting.Fact) {
 	rate, progressed, resolved := cohortRate(facts)
 	out.Value, out.Numerator, out.Denominator = rate, &progressed, &resolved
-	if rate == nil && out.Coverage.Status != "no_data" {
+	if rate == nil && out.Coverage.Status != crmcontracts.ReportingStatusNoData {
 		out.Coverage.Status = reportingInsufficientSample
 	}
 }
@@ -105,7 +105,7 @@ func reportingStageCohortChart(out *reporting.Evaluation, chart crmcontracts.Rep
 	chart.ContextId = reportingInterval
 	chart.Interval = &frame.Interval
 	if frame.PipelineId == nil {
-		chart.Coverage.Status = "not_configured"
+		chart.Coverage.Status = crmcontracts.ReportingStatusNotConfigured
 		reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ChoosePipeline)
 		chart.Coverage.Reason = &reason
 		return chart

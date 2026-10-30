@@ -92,6 +92,7 @@ const TAB_SECTIONS: readonly Section[] = [
   "sdr",
   "leads",
   "partners",
+  "conversion",
   "forecast",
   "pipeline",
   "outcomes",

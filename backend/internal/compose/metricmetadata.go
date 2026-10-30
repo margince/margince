@@ -14,8 +14,9 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	filters := []string{reportingScope, "period", "target_basis"}
 	switch out.Id {
 	case reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsCreated, reportingLeadStatusMoves,
-		reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingPartnerCommission, reportingPartnerActivity:
-	case reportingPartnerPipeline, reportingPartnerWon:
+		reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingPartnerCommission, reportingPartnerActivity,
+		reportingLeadCohortOutcomes:
+	case reportingPartnerPipeline, reportingPartnerWon, reportingStageConversion:
 		filters = append(filters, "pipeline")
 	default:
 		filters = append(filters, "pipeline", "close_window")
@@ -25,7 +26,8 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	out.RequiredFields = &fields
 	out.ReadObject = &spec.object
 	minimum := 0
-	if out.Id == reportingStageAge || out.Id == reportingClosedWinRate || out.Id == reportingLeadFirstResponse {
+	switch out.Id {
+	case reportingStageAge, reportingClosedWinRate, reportingLeadFirstResponse, reportingStageConversion, reportingLeadCohortOutcomes:
 		minimum = analyticsquery.PercentileSampleFloor
 	}
 	out.MinimumCohort = &minimum
@@ -50,7 +52,7 @@ func reportingRequiredFields(metric crmcontracts.ReportingMetricID) []string {
 		return reportingMeetingFields()
 	case reportingAcceptedOpportunities:
 		return []string{"accepted_credit"}
-	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
+	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadCohortOutcomes:
 		return reportingLeadFields(metric)
 	case reportingPartnerActivity:
 		return []string{companyDisplayName, fieldOwnerID, partnerLastActivity, partnerCertStatus}

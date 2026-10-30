@@ -247,6 +247,9 @@ export const reportingSectionMetrics: readonly MetricDefinition[] = [
   sectionDefinition("partner_activity", "count", "state_at", false, [
     "breakdown",
   ]),
+  sectionDefinition("stage_conversion", "percent", "event_period", false, [
+    "stage_cohort",
+  ]),
 ];
 
 // Every metric a seat with lead, partner and commission access reads.
