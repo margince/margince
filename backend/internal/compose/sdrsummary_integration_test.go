@@ -162,6 +162,29 @@ func TestSdrSummaryAgesTheCurrentSubmissionAndDisclosesABlockedRecipient(t *test
 	}
 }
 
+func TestSdrSummaryNeverAgesAHandoffPastItsAsOf(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+	e := f.e
+	f.submit(t, "Earlier prospect", &f.ae)
+	f.at = f.at.Add(2 * time.Hour)
+	f.submit(t, "Later prospect", &f.ae)
+	// The answer is stamped between the two submissions, as a read that
+	// sampled its clock before the second one committed would be.
+	f.at = f.at.Add(-time.Hour)
+	if totals := f.summary(f.ctx, t, e.Rep1).Handoffs; totals == nil || totals.Waiting != 1 {
+		t.Fatalf("a handoff submitted after as_of is not yet waiting: %+v", totals)
+	}
+	page := f.page(f.ctx, t, e.Rep1, nil, 10)
+	if len(page.Rows) != 1 {
+		t.Fatalf("the page holds only the handoff waiting at as_of: %+v", page.Rows)
+	}
+	for _, row := range page.Rows {
+		if row.WaitingSince.After(page.AsOf) {
+			t.Fatalf("a wait starts after the answer's as_of, so its age is negative: %+v at %v", row, page.AsOf)
+		}
+	}
+}
+
 func TestSdrSummaryAcceptanceAfterResubmissionCountsOnce(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
@@ -268,6 +291,12 @@ func TestSdrSummaryWithoutAHandoffWorkflowReadsNoHandoffs(t *testing.T) {
 	}
 	if got.UpcomingMeetings == nil || *got.UpcomingMeetings != 1 {
 		t.Fatalf("one booked meeting is still ahead: %v", got.UpcomingMeetings)
+	}
+	masked := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
+	actor, _ := principal.Actor(masked)
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "activity", Field: "meeting_status", Condition: principal.MaskAlways}}
+	if hidden := f.summary(principal.WithActor(masked, actor), t, e.Rep1).UpcomingMeetings; hidden == nil || *hidden != 0 {
+		t.Fatalf("a seat with the meeting status masked counts no meeting by it: %v", hidden)
 	}
 }
 

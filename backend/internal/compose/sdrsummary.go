@@ -94,11 +94,12 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 		}
 		after = &position
 	}
-	out := crmcontracts.SdrWaitingHandoffPage{AsOf: h.now().UTC(), Rows: []crmcontracts.SdrWaitingHandoff{}}
+	out := crmcontracts.SdrWaitingHandoffPage{Rows: []crmcontracts.SdrWaitingHandoff{}}
 	ctx := r.Context()
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, after, limit)
+		out.AsOf = h.now().UTC()
+		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, out.AsOf, after, limit)
 		return err
 	})
 	if err != nil {
@@ -124,7 +125,7 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 	}
 	if template == crmcontracts.ReportingFrameworkInputTemplateSdr {
 		out.Workflow = crmcontracts.SdrSummaryWorkflowHandoff
-		totals, err := readHandoffTotals(ctx, tx, requested)
+		totals, err := readHandoffTotals(ctx, tx, requested, at)
 		if err != nil {
 			return out, err
 		}
@@ -141,7 +142,7 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 }
 
 // readHandoffTotals counts the scope's open handoffs in one statement.
-func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope) (crmcontracts.SdrHandoffTotals, error) {
+func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) (crmcontracts.SdrHandoffTotals, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "cycle.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
@@ -154,7 +155,7 @@ func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope)
  count(*) FILTER (WHERE h.status=` + b.add(contacts.HandoffRecycled) + `),
  min(cycle.occurred_at) FILTER (WHERE ` + waiting + `)
  ` + handoffCycleSQL + `
- WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + orUnnarrowed(population)
+ WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population)
 	var out crmcontracts.SdrHandoffTotals
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&out.Waiting, &out.Unassigned, &out.Blocked, &out.Returned, &out.OldestWaitingSince)
 	return out, err
@@ -176,21 +177,32 @@ func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedSco
 	if err != nil {
 		return 0, err
 	}
+	fieldScope, _, err := reportingFieldScope(ctx, string(recordTypeActivity), "a", reportingMeetingFields(), &b)
+	if err != nil {
+		return 0, err
+	}
 	upcoming, err := activities.UpcomingMeetingClause(ctx, at, b.arg)
 	if err != nil {
 		return 0, err
 	}
 	query := `SELECT count(*) FROM activity a WHERE a.kind='meeting' AND ` + upcoming + `
- AND ` + population + ` AND ` + orUnnarrowed(visible)
+ AND ` + population + ` AND ` + orUnnarrowed(visible) + ` AND ` + fieldScope
 	var count int
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&count)
 	return count, err
 }
 
+// cycleByAsOf keeps a handoff whose current round began after as_of out of an
+// answer stamped as_of. A read-committed statement can see a later commit, and
+// its wait would otherwise start after the instant the answer names.
+func cycleByAsOf(b *reportingBindings, at time.Time) string {
+	return "cycle.occurred_at<=" + b.add(at)
+}
+
 // readWaitingHandoffs reads one page of waiting handoffs, oldest wait first.
 // The prospect's name is read under the prospect's own row scope and field
 // mask, so a prospect the seat may not read comes back restricted.
-func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScope, after *storekit.Cursor, limit int) ([]crmcontracts.SdrWaitingHandoff, *string, error) {
+func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time, after *storekit.Cursor, limit int) ([]crmcontracts.SdrWaitingHandoff, *string, error) {
 	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
 		return nil, nil, err
 	}
@@ -224,7 +236,7 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
  ` + handoffCycleSQL + `
  LEFT JOIN lead l ON l.id=h.lead_id LEFT JOIN contact c ON c.id=h.contact_id
  CROSS JOIN LATERAL (SELECT ` + subject + ` AS kind) sv
- WHERE h.status=` + b.add(contacts.HandoffSubmitted) + ` AND ` + orUnnarrowed(population) + page + `
+ WHERE h.status=` + b.add(contacts.HandoffSubmitted) + ` AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population) + page + `
  ORDER BY cycle.occurred_at,h.id LIMIT ` + b.add(limit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
