@@ -330,7 +330,7 @@
   align-items: center;
   gap: var(--space-3) var(--space-5);
   padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--groundEdge);
+  border: 1px solid var(--aiMed);
   border-radius: var(--r-lg);
 }
 

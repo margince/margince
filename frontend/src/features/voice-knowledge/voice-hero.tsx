@@ -137,7 +137,7 @@ export function SharpenStrip({
         <b>{headline}</b>
         <Meter
           dense
-          flat
+          tone="ai"
           value={summary.total_words}
           max={Math.max(summary.target_words, 1)}
           label={t("settings.voice.meter", {
@@ -149,10 +149,7 @@ export function SharpenStrip({
       </div>
       <div className="vdna-sharpen-acts">
         {canEdit && (
-          <Button
-            variant="primary"
-            onClick={() => jump(VOICE_SECTIONS.sharpen)}
-          >
+          <Button variant="ai" onClick={() => jump(VOICE_SECTIONS.sharpen)}>
             <Plus aria-hidden /> {t("settings.voice.addWriting")}
           </Button>
         )}

@@ -82,7 +82,8 @@ type MeterFill =
       // and "danger" for a reading the caller has decided is bad news at this
       // value, whichever end that is — a coverage bar that has run low, an
       // overdue bar that has run high.
-      tone?: "warning" | "danger";
+      // "ai" draws what the machine learned in the indigo of its work.
+      tone?: "warning" | "danger" | "ai";
       // The gradient's second colour (`--warning`) reads as a warning creeping
       // in at the high end, which is wrong for a reading with no low-is-bad
       // meaning. `flat` keeps the accent solid instead of fading toward it.
@@ -128,7 +129,7 @@ function meterClass({
   restTone,
   part,
 }: Readonly<{
-  tone?: "warning" | "danger";
+  tone?: "warning" | "danger" | "ai";
   flat?: boolean;
   dense?: boolean;
   restTone?: "accent";

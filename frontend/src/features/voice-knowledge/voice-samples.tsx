@@ -175,7 +175,12 @@ function CorpusMeter({
       <p className="vdna-meter-figure" id={captionId} tabIndex={-1}>
         {sentence}
       </p>
-      <Meter flat value={summary.total_words} max={scale} label={sentence} />
+      <Meter
+        tone="ai"
+        value={summary.total_words}
+        max={scale}
+        label={sentence}
+      />
       <ol className="vdna-bands" aria-hidden>
         {BAND_FLOORS.map((floor) => (
           <li
@@ -203,7 +208,7 @@ function FloorMeter({ words }: Readonly<{ words: number }>) {
     <div className="t-caption vdna-floor">
       <Meter
         dense
-        flat
+        tone="ai"
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
         label={t("settings.voice.floorLabel", {

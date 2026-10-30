@@ -96,7 +96,7 @@ function VoiceCorpusFloorMeter({
     <div className="ob-voice-meter">
       <Meter
         dense
-        flat
+        tone="ai"
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
         label={t("ob.conv.voice.meterLabel", { min: floor })}

@@ -275,7 +275,7 @@ export function VoiceFigures({
             accepted: formatNumber(learning.accepted, locale),
             edited: formatNumber(learning.edited_sent, locale),
           })}
-          meter={{ filled: kept, total: learning.drafted }}
+          meter={{ filled: kept, total: learning.drafted, tone: "ai" }}
         />
       )}
     </StatStrip>

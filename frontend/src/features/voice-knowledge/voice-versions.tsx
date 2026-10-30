@@ -164,7 +164,7 @@ export function CandidateBanner({
       {canEdit && (
         <div className="vdna-candidate-acts">
           <Button
-            variant="primary"
+            variant="ai"
             disabled={transition.isPending}
             onClick={() => transition.mutate("apply")}
           >

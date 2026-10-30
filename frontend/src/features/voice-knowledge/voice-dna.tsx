@@ -66,7 +66,7 @@ export function VoiceDnaCard() {
           // sample drafts) stayed unreachable. There is no empty-state box
           // above it: the card's one job here is to take the first sample,
           // and a box saying there is nothing yet only pushes that job down.
-          <Panel title={t("settings.voice.title")}>
+          <Panel tone="ai" title={t("settings.voice.title")}>
             <PanelBody>
               <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
               {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
@@ -227,7 +227,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       {insights && <VoiceProof insights={insights} />}
 
       <VoiceSection id={VOICE_SECTIONS.sharpen}>
-        <Panel title={t("settings.voice.sharpenTitle")}>
+        <Panel tone="ai" title={t("settings.voice.sharpenTitle")}>
           <PanelBody>
             <PanelIntro>{t("settings.voice.sharpenIntro")}</PanelIntro>
           </PanelBody>
@@ -253,7 +253,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
 
       <div className="vdna-split">
         <VoiceSection id={VOICE_SECTIONS.rules}>
-          <Panel title={t("settings.voice.rulesTitle")}>
+          <Panel tone="ai" title={t("settings.voice.rulesTitle")}>
             <PanelBody>
               <PanelIntro>{t("settings.voice.rulesIntro")}</PanelIntro>
             </PanelBody>
@@ -283,7 +283,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
         </VoiceSection>
 
         <VoiceSection id={VOICE_SECTIONS.builds}>
-          <Panel title={t("settings.voice.buildsTitle")}>
+          <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
             <SettingList bleed="settings">
               {/* A build started while a sample is still arriving would
                   describe a corpus that no longer exists by the time it
