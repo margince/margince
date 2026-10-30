@@ -75,7 +75,7 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 		edge := crmcontracts.ContactCaseEdge{
 			PairId: openapi_types.UUID(e.ID), LeftId: openapi_types.UUID(e.Left), RightId: openapi_types.UUID(e.Right),
 			Confidence: float32(e.Confidence), Status: crmcontracts.ContactCaseEdgeStatus(e.Disposition),
-			Evidence: []crmcontracts.DedupeEvidence{}, CanDismiss: authority.mayDismiss(e), CanMerge: authority.mayMergePair(e),
+			Evidence: []crmcontracts.DedupeEvidence{}, CanDismiss: authority.mayDismiss(e), CanMerge: authority.mergeOffer(e).May, KeepId: (*openapi_types.UUID)(authority.mergeOffer(e).Keep),
 		}
 		if len(e.Evidence) > 0 {
 			if err := json.Unmarshal(e.Evidence, &edge.Evidence); err != nil {
@@ -132,8 +132,9 @@ func (a caseAuthority) delegate(memberIDs []ids.UUID) bool {
 	return !a.delegator.UserID.IsZero() && a.c.actorOwnsAMember(a.delegator, memberIDs)
 }
 
-// mergeMode answers how this reader could merge the whole case. That is by
-// write authority over every member, by the policy as an owner, or not at all.
+// mergeMode answers how this reader could merge in this case. Ordinary and
+// delegated merge the whole case. Pair merges one open pair whose either end
+// the reader may change.
 func (a caseAuthority) mergeMode() crmcontracts.ContactCaseMergeMode {
 	members := memberIDsOf(a.c)
 	switch {
@@ -143,6 +144,8 @@ func (a caseAuthority) mergeMode() crmcontracts.ContactCaseMergeMode {
 		return crmcontracts.ContactCaseMergeModeOrdinary
 	case a.delegate(members):
 		return crmcontracts.ContactCaseMergeModeDelegated
+	case slices.ContainsFunc(a.c.Edges, func(e caseEdge) bool { return a.mergeOffer(e).May }):
+		return crmcontracts.ContactCaseMergeModePair
 	}
 	return crmcontracts.ContactCaseMergeModeNone
 }
@@ -152,10 +155,13 @@ func (a caseAuthority) mayDismiss(e caseEdge) bool {
 	return a.mayAct && ((a.writable[e.Left] && a.writable[e.Right]) || a.delegate([]ids.UUID{e.Left, e.Right}))
 }
 
-// mayMergePair mirrors the pair route's merge, which asks write authority
-// over both ends and is never admitted by the policy.
-func (a caseAuthority) mayMergePair(e caseEdge) bool {
-	return a.mayAct && e.Disposition == dispositionOpen && a.writable[e.Left] && a.writable[e.Right]
+// mergeOffer mirrors the pair route's merge of one open, filed pair. The
+// policy does not widen it.
+func (a caseAuthority) mergeOffer(e caseEdge) MergeOffer {
+	if !a.mayAct || e.Disposition != dispositionOpen {
+		return MergeOffer{}
+	}
+	return OfferMerge(e.Left, e.Right, PairWriters{Left: a.writable[e.Left], Right: a.writable[e.Right]}, true)
 }
 
 func memberIDsOf(c contactCase) []ids.UUID {
