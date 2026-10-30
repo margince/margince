@@ -58697,6 +58697,7 @@ type WorkingHours struct {
 // | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
 // | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
 // | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
+// | `counts[].total` | items | every admitted item of the category for this scope and owner, counted in SQL on this read | exact; absent when not counted |
 // | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
 // | `batch.count` | items | the members of one card | floor when `batch.at_least` |
 // | `bands[].shown` | cards | the rows of this page under one heading | exact |
@@ -58706,11 +58707,21 @@ type WorkingHours struct {
 //
 // A client that has loaded several pages sums items over its loaded cards (one per
 // card, or `batch.count` for a group) and compares that sum with `considered`. Comparing
-// a count of loaded cards with `considered` mixes the two units. A source listed in
-// `sources_unavailable`, or a figure flagged `more_available`, means the page cannot
-// claim it holds everything, even after `next_cursor` is gone. Items past a source's
-// read limit are not reachable through `next_cursor`. They join a later read as the
-// items in front of them are handled.
+// a count of loaded cards with `considered` mixes the two units.
+//
+// **Totals.** Every total arrives on this response; no later read or background job
+// finishes a count. A category states `total` when each source behind it was read whole
+// or counted in SQL under the same admission rules as the list. Any other category
+// whose sources were cut has no `total`, and its `considered` is a floor: a client
+// draws it as "N+" or draws no number. A source in `sources_unavailable` leaves its
+// category without an exact figure, even after `next_cursor` is gone.
+//
+// **Traversal.** Only the first rows are ranked. Past them, the tasks, waiting customers
+// and deals at risk that the ranked rows left out continue as a tail, merged in one
+// order (oldest due date, arrival or expected close first) and reached through
+// `next_cursor` to their end. Items past the read limit of any other source are not
+// reachable through `next_cursor`. They join a later read as the items in front of
+// them are handled.
 type Worklist struct {
 	// AsOf The instant every source below was read at.
 	AsOf time.Time `json:"as_of"`
@@ -58770,10 +58781,10 @@ type Worklist struct {
 	// afterwards, or that overtakes rows already handed out, appears on the next read
 	// rather than extending a finished walk.
 	//
-	// `reach` and `counts` answer a different question — how deep each SOURCE was read,
-	// which is a bound on work rather than the end of a page — so a walk that has ended
-	// can still sit above sources that were cut short, and both statements are true at
-	// once.
+	// `reach` and `counts` answer a different question — how deep each SOURCE was read
+	// on the first page. A walk that has ended has read the tail sources (tasks, waiting
+	// customers, deals at risk) to their end, but can still sit above other sources that
+	// were cut short, and both statements are true at once.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// NextMeeting The reader's next booked customer meeting — linked to a contact, lead or company the
@@ -59192,7 +59203,9 @@ type WorklistCount struct {
 	// MoreAvailable True when any source behind this category was read to its work bound, so items
 	// MAY exist past what was considered. A category inherits its sources' honesty:
 	// reporting "12 decisions" over a pile the read never finished counting is the
-	// failure this flag exists to prevent.
+	// failure this flag exists to prevent. When `total` is present it is the exact
+	// figure even while this is true: the rest of a tail source is reached through
+	// `next_cursor`.
 	MoreAvailable bool `json:"more_available"`
 
 	// Shown How many of them the page carries, counting a folded group as its members.
@@ -60048,8 +60061,10 @@ type WorklistPromiseRecipientStatus string
 //
 // `considered` is how many candidates were read and ranked. It is NOT a total: when
 // `more_available` is true there are candidates past the bound that this read never
-// saw, and no field here claims to know how many. A reader who needs the rest
-// narrows the queue or opens that source's own screen, which pages its own data.
+// saw, and no field here claims to know how many; `counts[].total` is the exact figure
+// per category where one exists. For tasks, waiting customers and deals at risk the
+// rest is reached through `next_cursor`. For any other source a reader who needs the
+// rest narrows the queue or opens that source's own screen, which pages its own data.
 //
 // `shown` is how many of those candidates survived filtering and the page cut, so
 // `shown` under `considered` means the rest were folded, filtered or below the cut —
@@ -67904,7 +67919,7 @@ type GetWorklistParams struct {
 	// ranking, and the next page re-assembles the day, ranks it the same way, and starts
 	// there.
 	//
-	// It encodes the `scope`, `filter` and `owner` it was minted under, NORMALISED, so
+	// It encodes the `scope`, `view`, `filter` and `owner` it was minted under, NORMALISED, so
 	// that two spellings of one question share a cursor: an omitted `filter` and
 	// `filter=all` weigh the same candidates, and naming yourself as `owner` is the
 	// question the default already answers. Sending a cursor alongside a genuinely
@@ -67925,9 +67940,10 @@ type GetWorklistParams struct {
 	// between pages: a rep answers a message, a deal closes, a colleague takes a task.
 	//
 	// Guaranteed: the walk TERMINATES, and over a day that does not move it reaches
-	// every row exactly once. The offset advances on every page and the candidate set is
-	// bounded, so no arrangement of arrivals, answers and reprioritisations makes a
-	// client paging to exhaustion loop.
+	// every row exactly once. The offset advances on every page and the ranked candidate
+	// set is bounded, so no arrangement of arrivals, answers and reprioritisations makes a
+	// client paging to exhaustion loop. Past the ranked rows, each tail source resumes
+	// from its own position in its own order, which also only moves forward.
 	//
 	// A walk is FROZEN at its first page: the rows it covers and the order they sit in
 	// are fixed, so paging does not race the day. `walk` on the response says what has
@@ -67943,9 +67959,10 @@ type GetWorklistParams struct {
 	// Such a row is not lost from the product — the next read of the queue ranks it
 	// afresh and shows it — so treat a walk as a way to reach a backlog you already know
 	// is there, not as a transaction over it. There is no way to ask for the whole day
-	// at one instant: `limit` stops at 100 and a single category can hold more than that,
-	// because the sources are read to their own bounds well past a page (the decision
-	// lane alone weighs 200). `counts` is what says how much is behind the page.
+	// at one instant: `limit` stops at 100 and a single category can hold more than that.
+	// Tasks, waiting customers and deals at risk are reached in full by walking to the end;
+	// the other sources are read to their own bounds (the decision lane alone weighs 200).
+	// `counts` is what says how much is behind the page.
 	//
 	// The alternative was a token naming the last row it handed you, which is the
 	// obvious design and is worse here. When that row is answered between pages, or

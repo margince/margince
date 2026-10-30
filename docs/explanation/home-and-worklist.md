@@ -48,6 +48,18 @@ That is imported history, not today's breach; a duty that fell due while on reco
 `recoveryHorizonDays` (14, `classifyrisk.go`) makes deal recovery urgent when the expected close is past or
 inside it.
 
+A meeting that starts within `meetingHorizon` (2 hours, `rank.go`) is `levelWaiting` until the reader says
+**I’m ready** (`classifyMeeting` in `meeting.go`). Then it keeps its `meeting_soon` reason at `levelAgreed`. The
+readiness is stored per attendee at the meeting's preparation revision, which covers the start, the guests and a
+fingerprint of the invite's own description. A change to any of them asks again; a note typed into the meeting does not.
+
+## Views and Upcoming
+
+`view` (`attention/views.go`) splits the ranked day into **Today**, **Decisions** and **System** by category, before
+the page is cut, so a walk never reaches another view's rows. The cursor binds the view. A task due after today
+that is not late and has no due reminder takes the `upcoming` category (`classify.go`). It is shown only when the
+filter asks for `upcoming`, and `summary` never counts it, so the Upcoming and backlog section cannot inflate Today's total.
+
 ## Deal suggestions need current facts
 
 `admittedBriefItems` in `attention/briefadmission.go` checks each brief suggestion before counts, filters and pages.
@@ -102,7 +114,9 @@ Home, Focus, source reach and summary counts use the same scoped day.
 ## Totals and the rows below the ranked top
 
 Only the first rows are ranked. Ranking needs every candidate in hand, so each lane reads to its cap.
-The ranked rows are those candidates, frozen as a walk (`walk.go`).
+The ranked rows are those candidates, frozen as a walk (`walk.go`). Totals arrive on the first page, with no
+later counting pass and no background job: a source is counted in SQL when the count fits the first page's budget,
+and otherwise stays a floor for the measured reason the census gives.
 
 A category states an exact `total` only when every source behind it was read whole or counted by its store
 (`withTotals` in `attention/totals.go`). The count runs the source's own admission rules in SQL, so it
