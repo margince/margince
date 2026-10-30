@@ -7,13 +7,8 @@ package compose
 
 // Closing a deal through the tool surface asks about its open tasks.
 //
-// The decided behaviour is that a close never settles tasks silently, and that
-// the close itself asks. That question lived only on the web, so the one
-// surface agents use was the one where it could not be put.
-//
-// A close is confirm-first, so each case here stages the call, then retries it
-// with the approval the way the schema's approval_id describes. The retry is
-// where the answer lands.
+// A close never settles tasks silently, and the close itself asks. That
+// question lived only on the web, so the surface agents use could not put it.
 
 import (
 	"encoding/json"
@@ -63,9 +58,8 @@ func newCloseTasksProbe(t *testing.T, name string) closeTasksProbe {
 // close runs the close through the tool and answers its result, which is where
 // the question about the deal's open tasks is answered.
 //
-// It executes rather than staging: confirm-first binds an agent, and this
-// caller is a human holding the grant, which is the same authority the web
-// dialog runs under.
+// It executes rather than staging. Confirm-first binds an agent, and this
+// caller is a human holding the grant, the authority the web dialog runs under.
 func (p closeTasksProbe) close(t *testing.T, settle string) crmcontracts.ProgressDealResult {
 	t.Helper()
 	ctx := p.e.As(p.e.Rep1, []ids.UUID{p.e.Team1}, integration.AdminPerms)
@@ -122,8 +116,8 @@ func TestClosingADealThroughTheToolNamesTheTasksItLeavesOpen(t *testing.T) {
 	}
 }
 
-// Complete is the other answer, and it goes through the write the bulk change
-// applies, so the task carries the same done state the web leaves.
+// Complete is the other answer. It goes through the write the bulk change
+// applies, so the task carries the done state the web leaves.
 func TestClosingADealThroughTheToolCompletesItsTasksWhenAsked(t *testing.T) {
 	p := newCloseTasksProbe(t, "Settled-tasks renewal")
 	result := p.close(t, "complete")
@@ -140,8 +134,8 @@ func TestClosingADealThroughTheToolCompletesItsTasksWhenAsked(t *testing.T) {
 	}
 }
 
-// The contract makes both lists optional, so absent and empty are one claim
-// here and the tests read them the same way.
+// The contract makes both lists optional. Absent and empty are one claim here,
+// so the tests read them the same way.
 func openTasksOf(r crmcontracts.ProgressDealResult) []crmcontracts.DealOpenTask {
 	if r.OpenTasks == nil {
 		return nil
