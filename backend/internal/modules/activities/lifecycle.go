@@ -391,8 +391,14 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		held, err := lockActivityForArchive(ctx, tx, id.UUID)
+		held, err := lockActivityForWrite(ctx, tx, id.UUID)
 		if err != nil {
+			return err
+		}
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return err
+		}
+		if err := auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
 			return err
 		}
 		if !held {
@@ -406,14 +412,10 @@ func (s *Store) RefuseArchiveActivity(ctx context.Context, id ids.ActivityID) er
 // ArchiveActivity retires one activity, conditioned on ifVersion wherever the
 // caller's authority named a version.
 //
-// The write rides storekit's guarded patch rather than a bare UPDATE, for the
-// reason ApplyGuarded's own doc gives — *an unguarded update is not
-// expressible* — which the archive verb was quietly the exception to. With a
-// pin it is the optimistic CAS, so an archive a human released against version
-// 4 lands on version 4 or answers skew; without one it takes the row lock, so
-// it is never LESS guarded than the bare statement it replaces. The gone and
-// already-archived cases keep answering ErrNotFound, which is the same
-// existence-hiding answer as before.
+// The write rides storekit's guarded patch (ApplyGuarded). With a pin it is the
+// optimistic CAS: an archive released against version 4 lands on 4 or answers
+// skew. Without one it takes the row lock. A gone or already-archived
+// row answers ErrNotFound, which hides whether it exists.
 func (s *Store) ArchiveActivity(
 	ctx context.Context, id ids.ActivityID, ifVersion *int64, opts ...ArchiveOption,
 ) (crmcontracts.Activity, error) {
@@ -445,8 +447,14 @@ func (s *Store) ArchiveActivityTx(ctx context.Context, tx pgx.Tx, id ids.Activit
 func archiveActivityInTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion *int64, o archiveOptions, asOf time.Time,
 ) (crmcontracts.Activity, error) {
-	held, err := lockActivityForArchive(ctx, tx, id.UUID)
+	held, err := lockActivityForWrite(ctx, tx, id.UUID)
 	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if err := auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := refuseIfTouched(ctx, tx, id, o); err != nil {

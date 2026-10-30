@@ -48,7 +48,7 @@ func asTeam1Member(e *Env, user ids.UUID, perms principal.Permissions) context.C
 	})
 }
 
-func logOwnActivity(t *testing.T, e *Env, as context.Context, kind string, on ids.UUID) ids.ActivityID {
+func logOwnActivity(as context.Context, t *testing.T, e *Env, kind string, on ids.UUID) ids.ActivityID {
 	t.Helper()
 	subject := "Spoke on LinkedIn"
 	row, _, err := e.Activities.LogActivity(as, activities.LogActivityInput{
@@ -78,8 +78,8 @@ func TestAMemberArchivesTheNotesAndTasksTheyWrote(t *testing.T) {
 	teammate := asTeam1Member(e, e.Rep2, ownArchivePerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
 
-	note, task := logOwnActivity(t, e, rep, "note", mine), logOwnActivity(t, e, rep, "task", mine)
-	theirs := logOwnActivity(t, e, teammate, "note", mine)
+	note, task := logOwnActivity(rep, t, e, "note", mine), logOwnActivity(rep, t, e, "task", mine)
+	theirs := logOwnActivity(teammate, t, e, "note", mine)
 
 	read, err := e.Activities.GetActivity(rep, theirs, storekit.LiveOnly)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestOnlyANoteOrTaskIsTheAuthorsToArchive(t *testing.T) {
 	mail := SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Re: terms', 'body', now(), 'gmail', 'connector:gmail:`+e.Rep1.String()+`')`)
 	LinkActivity(t, OwnerConn(t), mail, objContact, mine)
-	call := logOwnActivity(t, e, rep, "call", mine)
+	call := logOwnActivity(rep, t, e, "call", mine)
 
 	manager := asTeam1Member(e, e.Rep1, withActivityDelete(ownArchivePerms))
 	for name, id := range map[string]ids.ActivityID{"captured mail": ids.From[ids.ActivityKind](mail), "logged call": call} {
@@ -129,8 +129,8 @@ func TestOnlyANoteOrTaskIsTheAuthorsToArchive(t *testing.T) {
 func TestANoteAnAgentLoggedForAMemberIsTheirsToArchive(t *testing.T) {
 	e := Setup(t)
 	elsewhere := e.SeedContact(t, "Other team's", &e.Rep3)
-	forMe := logOwnActivity(t, e, e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), "note", elsewhere)
-	forTeammate := logOwnActivity(t, e, e.AgentFor(t, e.Rep2, []ids.UUID{e.Team1}, ownArchivePerms), "note", elsewhere)
+	forMe := logOwnActivity(e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), t, e, "note", elsewhere)
+	forTeammate := logOwnActivity(e.AgentFor(t, e.Rep2, []ids.UUID{e.Team1}, ownArchivePerms), t, e, "note", elsewhere)
 	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
 
 	if _, err := e.Activities.ArchiveActivity(rep, forTeammate, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -224,7 +224,7 @@ func TestADeleteOnlyRoleReadsArchivableWhereItMayArchive(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	archiver := asTeam1Member(e, e.Rep1, deleteOnlyPerms)
 	mine := e.SeedContact(t, "Mine", &e.Rep1)
-	note := logOwnActivity(t, e, asTeam1Member(e, e.Rep2, ownArchivePerms), "note", mine)
+	note := logOwnActivity(asTeam1Member(e, e.Rep2, ownArchivePerms), t, e, "note", mine)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Teammate's", pipeline, open, &e.Rep2))
 
 	activity, err := e.Activities.GetActivity(archiver, note, storekit.LiveOnly)
@@ -250,7 +250,7 @@ func TestADeleteOnlyRoleReadsArchivableWhereItMayArchive(t *testing.T) {
 }
 
 // handOn names owner on deal as the caller does.
-func handOn(t *testing.T, e *Env, as context.Context, deal ids.DealID, owner ids.UUID) {
+func handOn(as context.Context, t *testing.T, e *Env, deal ids.DealID, owner ids.UUID) {
 	t.Helper()
 	next := ids.From[ids.UserKind](owner)
 	if _, err := e.Deals.UpdateDeal(as, deal, deals.UpdateDealInput{OwnerID: &next}); err != nil {
@@ -258,7 +258,7 @@ func handOn(t *testing.T, e *Env, as context.Context, deal ids.DealID, owner ids
 	}
 }
 
-func assertDealArchive(t *testing.T, e *Env, as context.Context, deal ids.DealID, allowed bool, what string) {
+func assertDealArchive(as context.Context, t *testing.T, e *Env, deal ids.DealID, allowed bool, what string) {
 	t.Helper()
 	read, err := e.Deals.GetDeal(as, deal, storekit.LiveOnly)
 	if err != nil {
@@ -285,27 +285,27 @@ func TestTheLatestOwnerChangeDecidesWhetherTheOwnerArchives(t *testing.T) {
 	}
 
 	retaken := seed()
-	handOn(t, e, e.Admin(), retaken, e.Rep1)
-	handOn(t, e, e.Admin(), retaken, e.Rep2)
-	handOn(t, e, rep, retaken, e.Rep1)
-	assertDealArchive(t, e, rep, retaken, false, "handed over, then taken back after a colleague held it")
+	handOn(e.Admin(), t, e, retaken, e.Rep1)
+	handOn(e.Admin(), t, e, retaken, e.Rep2)
+	handOn(rep, t, e, retaken, e.Rep1)
+	assertDealArchive(rep, t, e, retaken, false, "handed over, then taken back after a colleague held it")
 
 	handedBack := seed()
-	handOn(t, e, rep, handedBack, e.Rep1)
-	handOn(t, e, e.Admin(), handedBack, e.Rep2)
-	handOn(t, e, e.Admin(), handedBack, e.Rep1)
-	assertDealArchive(t, e, rep, handedBack, true, "taken, then handed over by an admin")
+	handOn(rep, t, e, handedBack, e.Rep1)
+	handOn(e.Admin(), t, e, handedBack, e.Rep2)
+	handOn(e.Admin(), t, e, handedBack, e.Rep1)
+	assertDealArchive(rep, t, e, handedBack, true, "taken, then handed over by an admin")
 
 	byAgent := seed()
-	handOn(t, e, e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), byAgent, e.Rep1)
-	assertDealArchive(t, e, rep, byAgent, false, "the rep's agent named the rep owner")
+	handOn(e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), t, e, byAgent, e.Rep1)
+	assertDealArchive(rep, t, e, byAgent, false, "the rep's agent named the rep owner")
 
 	claimed := seed()
 	e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, claimed.UUID)
 	if _, err := e.Deals.ClaimDeal(rep, claimed, nil); err != nil {
 		t.Fatalf("claiming an ownerless deal: %v", err)
 	}
-	assertDealArchive(t, e, rep, claimed, false, "claimed while ownerless")
+	assertDealArchive(rep, t, e, claimed, false, "claimed while ownerless")
 
 	reassigned := seed()
 	if err := e.Deals.Tx(rep, func(tx pgx.Tx) error {
@@ -313,5 +313,5 @@ func TestTheLatestOwnerChangeDecidesWhetherTheOwnerArchives(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("a bulk reassign to the rep: %v", err)
 	}
-	assertDealArchive(t, e, rep, reassigned, false, "reassigned to self in bulk")
+	assertDealArchive(rep, t, e, reassigned, false, "reassigned to self in bulk")
 }

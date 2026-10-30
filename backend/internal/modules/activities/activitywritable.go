@@ -57,19 +57,6 @@ func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts
 	return nil
 }
 
-// lockActivityForArchive locks the row and asks both halves of who may archive
-// it: the row write gate, then the archive rule over the object grant.
-func lockActivityForArchive(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
-	held, err := lockActivityForWrite(ctx, tx, id)
-	if err != nil {
-		return false, err
-	}
-	if err := auth.EnsureActivityWritableIn(ctx, tx, id, !held); err != nil {
-		return false, err
-	}
-	return held, auth.EnsureArchivable(ctx, tx, auth.ActivityArchive, id)
-}
-
 // stampAwaitingOutcome asks awaitingOutcomeClause of the page's readable
 // meetings. Readability is the row's own content_state, which the outcome lane
 // gets from ReadableOnly: a meeting the reader cannot read is not theirs to answer.
