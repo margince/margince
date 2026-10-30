@@ -278,26 +278,24 @@ describe("the Settings Voice DNA card with a profile", () => {
     stubProfile();
     render(<VoiceDnaCard />);
 
-    for (const heading of ["Voice DNA", "Writing samples", "Builds"]) {
+    for (const heading of ["Make it sharper", "Your rules", "Builds"]) {
       expect(
         await screen.findByRole("heading", { name: heading }),
       ).toBeTruthy();
     }
-    // The preferences and the derived text belong to the voice itself, as rows
-    // inside its card rather than as two more header bands. "Your derived
-    // voice" is there only while the profile is not ready — a ready one is
-    // described by the insights above instead.
-    const voice = (
-      await screen.findByRole("heading", { name: "Voice DNA" })
+    // The preferences and the derived text are the rules the writer sets, as
+    // rows inside that card rather than as two more header bands. "Derived
+    // voice" is there only while the profile is not ready: a ready one is
+    // described by the portrait above instead.
+    const rules = (
+      await screen.findByRole("heading", { name: "Your rules" })
     ).closest("section");
-    if (!voice) {
-      throw new Error("the voice heading is not inside a card");
+    if (!rules) {
+      throw new Error("the rules heading is not inside a card");
     }
-    expect(within(voice).getByText("Preferences")).toBeTruthy();
-    expect(within(voice).getByText("Derived voice")).toBeTruthy();
-    expect(
-      within(voice).getByText("Only you can see your Voice DNA."),
-    ).toBeTruthy();
+    expect(within(rules).getByText("Preferences")).toBeTruthy();
+    expect(within(rules).getByText("Derived voice")).toBeTruthy();
+    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -309,7 +307,7 @@ describe("the Settings Voice DNA card with a profile", () => {
     // are here, so the reader who just read "420 of 30,000 words" can act on
     // it without moving.
     const corpus = (
-      await screen.findByRole("heading", { name: "Writing samples" })
+      await screen.findByRole("heading", { name: "Make it sharper" })
     ).closest("section");
     if (!corpus) {
       throw new Error("the corpus heading is not inside a card");

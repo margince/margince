@@ -83,7 +83,14 @@
   .ob-scan-panel,
   .ob-conv-artifact .ob-core-dialog,
   .ob-conv-confirm:not(.ob-triage),
-  .ob-triage-rows > li:not(.ob-triage-solid-divider)
+  .ob-triage-rows > li:not(.ob-triage-solid-divider),
+  .jumpbar,
+  .vdna-hero,
+  .vdna-sharpen,
+  .ob-voice-kind,
+  .ob-voice-print,
+  .ob-voice-result-hero,
+  .ob-voice-building
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -174,7 +181,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -250,7 +264,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -341,7 +362,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -417,7 +445,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -493,7 +528,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -584,7 +626,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -660,7 +709,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -736,7 +792,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -812,7 +875,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -958,7 +1028,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1069,7 +1146,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -1145,7 +1229,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1256,7 +1347,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -1332,7 +1430,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   )
   :where(
     .panel,
@@ -1408,7 +1513,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1460,6 +1572,7 @@
     .ob-stage-light,
     .rail .arhit,
     .standing-sheet > .standing-sheet-pane,
+    .voiceprint-bars span,
     :has(> .ambient-waves),
     [data-ai-reveal="run"]
   )
@@ -1537,7 +1650,14 @@
     .ob-scan-panel,
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
-    .ob-triage-rows > li:not(.ob-triage-solid-divider)
+    .ob-triage-rows > li:not(.ob-triage-solid-divider),
+    .jumpbar,
+    .vdna-hero,
+    .vdna-sharpen,
+    .ob-voice-kind,
+    .ob-voice-print,
+    .ob-voice-result-hero,
+    .ob-voice-building
   ) {
   background-color: var(--ground);
 }
