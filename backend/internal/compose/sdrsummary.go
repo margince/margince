@@ -196,7 +196,7 @@ func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedSco
 // answer stamped as_of. A read-committed statement can see a later commit, and
 // its wait would otherwise start after the instant the answer names.
 func cycleByAsOf(b *reportingBindings, at time.Time) string {
-	return "cycle.occurred_at<=" + b.add(at)
+	return b.add(at) + ">=cycle.occurred_at -- occurred_at raw: a handoff event's instant, not an activity day\n"
 }
 
 // readWaitingHandoffs reads one page of waiting handoffs, oldest wait first.

@@ -65,12 +65,9 @@ const (
 // silently rename the other.
 const handoffStatusKey = "status"
 
-// rbacHandoff is the object every entry point below gates on. The handoff is a
-// sales record about a prospect, so it answers to the same object the lead and
-// the contact do rather than minting a permission of its own.
-const rbacHandoff = HandoffObject
-
-// HandoffObject is the RBAC object a handoff read or write is gated on.
+// HandoffObject is the object every handoff read or write gates on. The handoff
+// is a sales record about a prospect, so it answers to the same object the lead
+// and the contact do rather than minting a permission of its own.
 const HandoffObject = "lead"
 
 var (
@@ -117,7 +114,7 @@ type NewSDRHandoff struct {
 
 // SubmitHandoff records a prospect being handed on.
 func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, error) {
-	if err := auth.Require(ctx, rbacHandoff, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, HandoffObject, principal.ActionCreate); err != nil {
 		return ids.UUID{}, err
 	}
 	if (in.LeadID == nil) == (in.ContactID == nil) {
@@ -186,7 +183,7 @@ type HandoffDecision struct {
 // errHandoffAlreadyDecided rather than taking a second answer, because two
 // decisions on one handoff is two stories about what happened to one prospect.
 func (s *Store) DecideHandoff(ctx context.Context, id ids.UUID, in HandoffDecision) error {
-	if err := auth.Require(ctx, rbacHandoff, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, HandoffObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	if err := validateHandoffDecision(in); err != nil {
@@ -416,7 +413,7 @@ func reasonKindFor(in HandoffDecision) *string {
 // round that is no longer the current one — the history is where that answer
 // lives.
 func (s *Store) ResubmitHandoff(ctx context.Context, id ids.UUID, assignTo *ids.UUID) error {
-	if err := auth.Require(ctx, rbacHandoff, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, HandoffObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
