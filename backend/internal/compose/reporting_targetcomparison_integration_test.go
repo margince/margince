@@ -185,3 +185,33 @@ func comparisonCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) ma
 	}
 	return out
 }
+
+func TestASentEditionKeepsTheTargetComparisonItWasEvaluatedWith(t *testing.T) {
+	q := seedTargetQuarter(t)
+	reportingWorkerIdentity(t, q.env)
+	_, live := q.comparison(t, q.selection())
+	report, err := q.service.CreateReport(q.human, crmcontracts.ReportingReportInput{Name: "Quarter review", Audience: "workspace", Selection: q.selection()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := q.service.Freeze(q.human, ids.UUID(report.Id), report.Revision, "quarter review")
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker := &reportScheduleSweepWorker{pool: q.env.Pool, now: func() time.Time { return q.at }}
+	if err := worker.Work(context.Background(), nil); err != nil {
+		t.Fatal(err)
+	}
+	completed, err := q.service.GetExecution(q.human, ids.UUID(run.Id))
+	if err != nil || completed.EditionId == nil {
+		t.Fatalf("quarter review publication: %+v %v", completed, err)
+	}
+	edition, err := q.service.GetEdition(q.human, ids.UUID(*completed.EditionId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	kept := edition.Evaluation.Metrics[0].TargetComparison
+	if kept == nil || *kept.Gap != *live.Gap || *kept.Coverage != *live.Coverage || kept.Status != live.Status {
+		t.Fatalf("edition kept %+v, want the live comparison %+v", kept, live)
+	}
+}
