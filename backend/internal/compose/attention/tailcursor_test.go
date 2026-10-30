@@ -112,3 +112,40 @@ func isMismatch(err error) bool {
 	_, mismatch := errors.AsType[*storekit.CursorSortMismatchError](err)
 	return mismatch
 }
+
+// laterCount is a task backlog whose count of the later window answers err.
+type laterCount struct {
+	windowRecorder
+	err error
+}
+
+func (c *laterCount) CountTasks(context.Context, TaskWindow) (int, error) { return 9, c.err }
+
+// A count that fails states no exact total for its category, which stays a
+// floor. It never states the number the failed count returned.
+func TestAFailedCountLeavesItsCategoryAFloorAndNoPartialTotal(t *testing.T) {
+	later := crmcontracts.AttentionItemDueGroupTomorrow
+	var planned []crmcontracts.AttentionItem
+	for range upcomingCap {
+		planned = append(planned, crmcontracts.AttentionItem{Source: "task", DueGroup: &later})
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned}
+	key := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryUpcoming)}
+	until := rankInstant.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	for _, tc := range []struct {
+		name   string
+		err    error
+		stated bool
+	}{
+		{"a count that answers", nil, true},
+		{"a count that fails", context.DeadlineExceeded, false},
+	} {
+		svc := (&Service{}).WithTaskBacklog(&laterCount{err: tc.err})
+		reading := svc.readingBacklog(t.Context(), day, until, time.UTC, true)
+		total, stated := reading.backlog.exact[key]
+		if stated != tc.stated || reading.backlog.whole[key] {
+			t.Errorf("%s: the upcoming total is %d (stated %v, whole %v), want stated %v and never whole",
+				tc.name, total, stated, reading.backlog.whole[key], tc.stated)
+		}
+	}
+}
