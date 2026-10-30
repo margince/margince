@@ -34510,9 +34510,9 @@ components:
 
             A saved question, or a report card bound to one, that filters on a period keeps
             the zone and fiscal start it was saved under, so `2026` saved under a January start
-            still means January to December 2026 after the start moves. A question saved before
-            this rule takes the calendar in force when the start or the zone first moves. A
-            relative period, such as this quarter, follows the current setting.
+            still means January to December 2026 after the start moves: the move writes down the
+            calendar in force before it. A relative period, such as this quarter, follows the
+            current setting.
             `/installation/settings/fiscal-year-impact` counts both before a move.
         sign_in_providers:
           type: array

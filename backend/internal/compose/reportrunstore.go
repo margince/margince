@@ -85,13 +85,6 @@ func SaveReportRun(
 		return ids.UUID{}, err
 	}
 
-	// A period filter keeps the calendar it was asked in, so the saved `2026`
-	// names the same twelve months after the fiscal start moves.
-	frame, err := readReportFrame(ctx, tx)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	q.Filters = analyticsquery.StampBasis(q.Filters, isPeriodField(q.Entity), calendarBasisOf(frame))
 	queryJSON, err := json.Marshal(q)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: encoding a report run's question: %w", err)
