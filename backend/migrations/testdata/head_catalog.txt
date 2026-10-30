@@ -555,7 +555,7 @@ public.activity_request_settlement.activity_request_settlement_pkey PRIMARY KEY 
 public.activity_request_settlement.activity_request_settlement_remaining CHECK (((verdict = 'still_owed'::text) OR ((remaining IS NULL) AND (due_at IS NULL))))
 public.activity_request_settlement.activity_request_settlement_request_activity_id_fkey FOREIGN KEY (request_activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_request_settlement.activity_request_settlement_verdict CHECK ((verdict = ANY (ARRAY['settled'::text, 'still_owed'::text, 'unsure'::text])))
-public.activity_request_settlement.confidence numeric NOT NULL gen=- def=-
+public.activity_request_settlement.confidence numeric(4,3) NOT NULL gen=- def=-
 public.activity_request_settlement.decided_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_request_settlement.decided_by text NOT NULL gen=- def=-
 public.activity_request_settlement.due_at timestamp with time zone gen=- def=-
@@ -840,6 +840,7 @@ public.ai_call.ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['ide
 public.ai_call.ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0))
 public.ai_call.ai_call_decision_answer_kind CHECK (((decision_choice IS NULL) OR (kind = 'decision'::text)))
 public.ai_call.ai_call_decision_answer_shape CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))
+public.ai_call.ai_call_decision_confidence_range CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric))))
 public.ai_call.ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text, 'decision'::text])))
 public.ai_call.ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))
 public.ai_call.ai_call_pkey PRIMARY KEY (id)
@@ -863,7 +864,7 @@ public.ai_call.context_scopes text[] NOT NULL gen=- def='{}'::text[]
 public.ai_call.context_tokens_estimate bigint NOT NULL gen=- def=0
 public.ai_call.correlation_id uuid gen=- def=-
 public.ai_call.decision_choice text gen=- def=-
-public.ai_call.decision_confidence double precision gen=- def=-
+public.ai_call.decision_confidence numeric(4,3) gen=- def=-
 public.ai_call.degraded boolean NOT NULL gen=- def=false
 public.ai_call.error_sentinel text gen=- def=-
 public.ai_call.finish_reason text NOT NULL gen=- def=''::text
@@ -1934,7 +1935,7 @@ public.capture_pending_counterparty.capture_pending_counterparty_proposal_id_fke
 public.capture_pending_counterparty.capture_pending_counterparty_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'unsure'::text, 'real'::text, 'noise'::text, 'suppressed'::text, 'rejected'::text])))
 public.capture_pending_counterparty.claimed_by uuid gen=- def=-
 public.capture_pending_counterparty.claimed_until timestamp with time zone gen=- def=-
-public.capture_pending_counterparty.confidence numeric gen=- def=-
+public.capture_pending_counterparty.confidence numeric(4,3) gen=- def=-
 public.capture_pending_counterparty.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty.display_name text gen=- def=-
 public.capture_pending_counterparty.disposition_reason text gen=- def=-
@@ -2020,6 +2021,7 @@ public.capture_test_mailbox_sent_pkey CREATE UNIQUE INDEX capture_test_mailbox_s
 public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture_test_mailbox_sent_user_message_unique ON public.capture_test_mailbox_sent USING btree (user_id, message_id)
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
+public.capture_thread_verdict.capture_thread_verdict_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
 public.capture_thread_verdict.capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.capture_thread_verdict.capture_thread_verdict_pkey PRIMARY KEY (id)
 public.capture_thread_verdict.capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
@@ -2027,7 +2029,7 @@ public.capture_thread_verdict.capture_thread_verdict_thread_user_key UNIQUE (thr
 public.capture_thread_verdict.capture_thread_verdict_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_thread_verdict.claimed_by uuid gen=- def=-
 public.capture_thread_verdict.claimed_until timestamp with time zone gen=- def=-
-public.capture_thread_verdict.confidence numeric gen=- def=-
+public.capture_thread_verdict.confidence numeric(4,3) gen=- def=-
 public.capture_thread_verdict.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_thread_verdict.disposition_reason text gen=- def=-
 public.capture_thread_verdict.first_activity_id uuid gen=- def=-
@@ -2660,7 +2662,7 @@ public.company_fact.captured_by text NOT NULL gen=- def=-
 public.company_fact.category text NOT NULL gen=- def=-
 public.company_fact.company_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text])))
 public.company_fact.company_fact_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_fact.company_fact_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
+public.company_fact.company_fact_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
 public.company_fact.company_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text])))))
 public.company_fact.company_fact_pkey PRIMARY KEY (id)
 public.company_fact.company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
@@ -2671,7 +2673,7 @@ public.company_fact.company_fact_value_key_cardinality CHECK ((((category = 'com
 public.company_fact.company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.company_fact.company_fact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_fact.company_id uuid NOT NULL gen=- def=-
-public.company_fact.confidence real gen=- def=-
+public.company_fact.confidence numeric(4,3) gen=- def=-
 public.company_fact.evidence_snippet text gen=- def=-
 public.company_fact.field text NOT NULL gen=- def=-
 public.company_fact.id uuid NOT NULL gen=- def=uuidv7()
@@ -2871,14 +2873,14 @@ public.company_profile_field.captured_at timestamp with time zone NOT NULL gen=-
 public.company_profile_field.captured_by text NOT NULL gen=- def=-
 public.company_profile_field.company_id uuid NOT NULL gen=- def=-
 public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
-public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
+public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
 public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
 public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
 public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
 public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
-public.company_profile_field.confidence real gen=- def=-
+public.company_profile_field.confidence numeric(4,3) gen=- def=-
 public.company_profile_field.evidence_snippet text gen=- def=-
 public.company_profile_field.field text NOT NULL gen=- def=-
 public.company_profile_field.id uuid NOT NULL gen=- def=uuidv7()
@@ -3396,7 +3398,7 @@ public.contact_profile_field_pkey CREATE UNIQUE INDEX contact_profile_field_pkey
 public.contact_provider_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_provider_claim.captured_by text NOT NULL gen=- def=-
 public.contact_provider_claim.claim_key text NOT NULL gen=- def=-
-public.contact_provider_claim.confidence numeric(5,4) gen=- def=-
+public.contact_provider_claim.confidence numeric(4,3) gen=- def=-
 public.contact_provider_claim.contact_id uuid NOT NULL gen=- def=-
 public.contact_provider_claim.contact_provider_claim_claim_key_check CHECK ((claim_key = ANY (ARRAY['professional_emails'::text, 'personal_emails'::text, 'mobile_phones'::text, 'linkedin_profile'::text, 'current_employment'::text, 'job_history'::text, 'location'::text, 'departments'::text, 'seniorities'::text])))
 public.contact_provider_claim.contact_provider_claim_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
@@ -4064,7 +4066,7 @@ public.deal_room_thread_pkey CREATE UNIQUE INDEX deal_room_thread_pkey ON public
 public.deal_stage_evidence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_evidence.author_side text NOT NULL gen=- def=-
 public.deal_stage_evidence.commitment text NOT NULL gen=- def=-
-public.deal_stage_evidence.confidence numeric(3,2) gen=- def=-
+public.deal_stage_evidence.confidence numeric(4,3) gen=- def=-
 public.deal_stage_evidence.contradicted_by uuid gen=- def=-
 public.deal_stage_evidence.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_evidence.criterion_id uuid NOT NULL gen=- def=-
@@ -4374,10 +4376,10 @@ public.field_mask_role_key_object_field_key CREATE UNIQUE INDEX field_mask_role_
 public.field_provenance acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.field_provenance.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.field_provenance.captured_by text NOT NULL gen=- def=-
-public.field_provenance.confidence real gen=- def=-
+public.field_provenance.confidence numeric(4,3) gen=- def=-
 public.field_provenance.evidence_ref text gen=- def=-
 public.field_provenance.field_name text NOT NULL gen=- def=-
-public.field_provenance.field_provenance_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
+public.field_provenance.field_provenance_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
 public.field_provenance.field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
 public.field_provenance.field_provenance_pkey PRIMARY KEY (id)
 public.field_provenance.id uuid NOT NULL gen=- def=uuidv7()
@@ -7498,7 +7500,7 @@ public.signal.id uuid NOT NULL gen=- def=uuidv7()
 public.signal.kind text NOT NULL gen=- def=-
 public.signal.owner_id uuid gen=- def=-
 public.signal.raw_ref text gen=- def=-
-public.signal.resolution_confidence numeric gen=- def=-
+public.signal.resolution_confidence numeric(4,3) gen=- def=-
 public.signal.resolution_state text NOT NULL gen=- def='resolved'::text
 public.signal.resolved_company_id uuid gen=- def=-
 public.signal.resolved_contact_id uuid gen=- def=-
@@ -7561,7 +7563,7 @@ public.signal_resolution acl=margince_owner=arwdDxt/margince_owner,margince_app=
 public.signal_resolution.captured_by text NOT NULL gen=- def=-
 public.signal_resolution.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.signal_resolution.id uuid NOT NULL gen=- def=uuidv7()
-public.signal_resolution.match_confidence numeric gen=- def=-
+public.signal_resolution.match_confidence numeric(4,3) gen=- def=-
 public.signal_resolution.match_detail jsonb gen=- def=-
 public.signal_resolution.matched_company_id uuid gen=- def=-
 public.signal_resolution.matched_on text gen=- def=-

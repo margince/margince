@@ -426,7 +426,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `author_side` | `text` | yes | One of `buyer`, `seller`, `unknown`. |
 | `commitment` | `text` | yes | One of `agreed`, `proposed`, `none`. |
-| `confidence` | `numeric(3,2)` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `contradicted_by` | `uuid` |  | Points at `deal_stage_evidence.id`. |
 | `criterion_id` | `uuid` | yes | Points at `stage_exit_criterion.id`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
