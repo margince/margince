@@ -93,10 +93,9 @@ func (h Handlers) GetReportingEditionEvidence(w http.ResponseWriter, r *http.Req
 
 // OpeningSelection is what a request that names no metrics opens on.
 //
-// It is passed in rather than spelled here. The catalog publishes it as a
-// preset, the Analytics screen and the daily benchmark both read that preset,
-// and a second copy here drifted from it: the preset had gained two metrics
-// this default never did.
+// Passed in rather than spelled here. The catalog publishes it as a preset,
+// which the Analytics screen and the daily benchmark read. A second copy here
+// drifted from it by two metrics.
 type OpeningSelection struct {
 	Metrics []crmcontracts.ReportingMetricID
 	Blocks  []crmcontracts.ReportingBlockKind

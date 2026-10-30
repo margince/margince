@@ -12,9 +12,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// The reporting doors answer an unselected request with the sales preset, so a
-// client that names no metric is asked the same question the Analytics screen
-// opens on. A copy of this drifted once, by two metrics.
+// The doors answer an unselected request with the sales preset. A client naming
+// no metric is then asked what the Analytics screen opens on. A copy of this
+// drifted once, by two metrics.
 func TestTheOpeningSelectionIsTheSalesPreset(t *testing.T) {
 	var sales crmcontracts.ReportingPreset
 	for _, preset := range reportingPresets {
