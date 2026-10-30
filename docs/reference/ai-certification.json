@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 49,
-    "sites_best_current": 34,
-    "sites_best_partial": 1,
+    "sites_best_current": 33,
+    "sites_best_partial": 2,
     "sites_best_stale": 13,
     "sites_absent": 1,
-    "scenarios": 271,
+    "scenarios": 275,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -8363,8 +8363,8 @@
             "env": "cloud_frontier"
           },
           "sites": 42,
-          "sites_current": 28,
-          "sites_partial": 1,
+          "sites_current": 27,
+          "sites_partial": 2,
           "sites_stale": 13,
           "runs": 654,
           "passed": 642,
@@ -8384,8 +8384,8 @@
             "thinking_level": "low"
           },
           "sites": 38,
-          "sites_current": 26,
-          "sites_partial": 1,
+          "sites_current": 25,
+          "sites_partial": 2,
           "sites_stale": 11,
           "runs": 417,
           "passed": 414,
@@ -8906,7 +8906,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "partial",
           "runs": 9,
           "passed": 9,
           "records": 2
@@ -10398,8 +10398,8 @@
         "env": "cloud_frontier"
       },
       "sites": 45,
-      "sites_current": 30,
-      "sites_partial": 1,
+      "sites_current": 29,
+      "sites_partial": 2,
       "sites_stale": 14,
       "runs": 813,
       "passed": 784,
@@ -10500,8 +10500,8 @@
         "thinking_level": "low"
       },
       "sites": 38,
-      "sites_current": 26,
-      "sites_partial": 1,
+      "sites_current": 25,
+      "sites_partial": 2,
       "sites_stale": 11,
       "runs": 417,
       "passed": 414,
@@ -26002,7 +26002,7 @@
       "missing_context_scopes": [
         "identity"
       ],
-      "best_state": "current",
+      "best_state": "partial",
       "recommended": {
         "binding": {
           "provider": "gemini",
@@ -26011,14 +26011,38 @@
         },
         "band": "supported_degraded",
         "reliability": 1,
-        "state": "current"
+        "state": "partial"
       },
       "scenarios": [
+        {
+          "name": "deal_room_brief_names_the_buyer_who_set_it",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_names_the_buyer_who_set_it_01.yaml"
+        },
+        {
+          "name": "deal_room_brief_only_routine_asks",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_only_routine_asks_01.yaml"
+        },
         {
           "name": "deal_room_brief_reads_the_blocker",
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_reads_the_blocker_01.yaml"
+        },
+        {
+          "name": "deal_room_brief_resolved_condition",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_resolved_condition_01.yaml"
+        },
+        {
+          "name": "deal_room_brief_seller_wrote_the_condition",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_seller_wrote_the_condition_01.yaml"
         }
       ],
       "records": [
@@ -26028,10 +26052,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "partial",
           "band": "supported_degraded",
           "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -26052,10 +26076,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "partial",
           "band": "supported_degraded",
           "scenarios_measured": 1,
-          "scenarios_total": 1,
+          "scenarios_total": 5,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
