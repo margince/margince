@@ -43,6 +43,11 @@ func replaceContactSocial(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, 
 			contactID, row.Platform, row.Handle); err != nil {
 			return fmt.Errorf("insert contact social row: %w", err)
 		}
+		if row.Platform == SocialLinkedIn {
+			if err := fileLinkedInTwinsAtWrite(ctx, tx, contactID, row.Handle); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
