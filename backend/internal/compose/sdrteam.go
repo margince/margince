@@ -365,24 +365,31 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return out, truncated, err
 	}
 	var b reportingBindings
-	held, _, err := heldMeetingSource(ctx, &b, at, window.from, window.to)
-	if err != nil {
-		return nil, false, err
-	}
 	seats := b.add(members)
-	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
-	query := `WITH met AS (SELECT credit.id seat,count(DISTINCT a.id) n FROM ` + held.from + ` CROSS JOIN LATERAL ` + held.seats + `
+	// A seat that may not read activities gets no meetings column, as it gets
+	// no team meeting count.
+	met, meetings, joinMet := "", "NULL::bigint", ""
+	if auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead) {
+		held, _, err := heldMeetingSource(ctx, &b, at, window.from, window.to)
+		if err != nil {
+			return nil, false, err
+		}
+		met = `met AS (SELECT credit.id seat,count(DISTINCT a.id) n FROM ` + held.from + ` CROSS JOIN LATERAL ` + held.seats + `
  WHERE ` + held.where + ` AND credit.id=ANY(` + seats + `) GROUP BY credit.id),
- ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
+ `
+		meetings, joinMet = "COALESCE(met.n,0)", " LEFT JOIN met ON met.seat=u.id"
+	}
+	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
+	query := `WITH ` + met + `ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
  count(*) FILTER (WHERE e.to_status=` + rejected + `) rejected,count(*) FILTER (WHERE e.to_status=` + recycled + `) recycled
  FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "e.occurred_at", window) + ` GROUP BY 1),
  won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
  WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "credit.occurred_at", window) + ` GROUP BY 1),
  waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
  WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(&b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1)
- SELECT u.id,COALESCE(u.display_name,''),COALESCE(met.n,0),COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),
+ SELECT u.id,COALESCE(u.display_name,''),` + meetings + `,COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),
  COALESCE(ev.recycled,0),COALESCE(waits.n,0),waits.since
- FROM app_user u LEFT JOIN met ON met.seat=u.id LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id
+ FROM app_user u` + joinMet + ` LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id
  WHERE u.id=ANY(` + seats + `) ORDER BY lower(COALESCE(u.display_name,'')),u.id`
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {

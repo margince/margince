@@ -55277,11 +55277,11 @@ components:
     SdrTeamMember:
       type: object
       additionalProperties: false
-      required: [id, label, meetings_held, submitted, accepted, rejected, recycled, waiting]
+      required: [id, label, submitted, accepted, rejected, recycled, waiting]
       properties:
         id: { type: string, format: uuid }
         label: { type: string }
-        meetings_held: { type: integer, minimum: 0, description: Held meetings credited to this member. A meeting several members attended counts for each. }
+        meetings_held: { type: integer, minimum: 0, description: 'Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.' }
         submitted: { type: integer, minimum: 0 }
         accepted: { type: integer, minimum: 0 }
         rejected: { type: integer, minimum: 0 }
