@@ -26,6 +26,9 @@
 # the records that carried the retired word now carry the surviving one. An
 # answer that calls the fold staged or waiting has told the user a decision is
 # still open when it is not.
+name: case32_two_words_for_one_thing
+criteria: [1, 2, 3]
+
 # WRITES: the author's own statement that this case changes the world. It is not
 # what decides the reset — the runner rebuilds whenever the LAST run dirtied the
 # world, because the assistant is offered the whole server and any run can write
