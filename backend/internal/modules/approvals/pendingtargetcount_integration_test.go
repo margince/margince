@@ -93,8 +93,8 @@ func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) 
 	}
 }
 
-// Triage is human work: a caller acting for nobody is refused the record's
-// proposals, and is not handed an empty list it could read as "none waiting".
+// Triage is human work, so a caller acting for nobody is refused the record's
+// proposals. An empty list would read as "none waiting".
 func TestARecordsPendingProposalsAreRefusedToACallerActingForNobody(t *testing.T) {
 	e := setupStaging(t)
 	target := e.seedCompany(t)
