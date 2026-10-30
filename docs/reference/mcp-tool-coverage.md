@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 34 of 35 | 🟢 Yes | Reliable on 34 of 34 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 34 of 35 | 🟢 Yes | Reliable on 34 of 34 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 35 of 35 | 🟢 Yes | Reliable on 35 of 35 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 35 of 35 | 🟢 Yes | Reliable on 35 of 35 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -66,7 +66,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Held meetings that became opportunities | A figure only a named report carries is run by name | ✅ | ✅ |
 | Is she already here | Is this contact already here is the identify engine | ✅ | ✅ |
 | Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ |
-| Clear out the dead deals | Ask before archiving what the user did not name | - | - |
+| Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ |
 
 ---
 
@@ -106,12 +106,8 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 34 of 35 | 34 | 0 | 69/72 | 96% |
-| `gpt-5.6-sol@codex-cli` | 34 of 35 | 34 | 0 | 69/72 | 96% |
-
-> `claude-sonnet-5-5@claude-cli` has no committed run for 1 of 35 cases.
-
-> `gpt-5.6-sol@codex-cli` has no committed run for 1 of 35 cases.
+| `claude-sonnet-5-5@claude-cli` | 35 of 35 | 35 | 0 | 72/75 | 96% |
+| `gpt-5.6-sol@codex-cli` | 35 of 35 | 35 | 0 | 72/75 | 96% |
 
 ## The two surfaces
 
@@ -225,7 +221,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case63_is_she_already_here](../../e2e/llm/scenarios/case63-is-she-already-here.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Is this contact already here is the identify engine | `find_records` |
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Catch-up and the brief each use their own view | `read_context` |
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Catch-up and the brief each use their own view | `read_context` |
-| [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | - | not run | - | - | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
+| [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
+| [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 
