@@ -111,6 +111,7 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 // reads and withdraws only their own request.
 func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "Private Card AG", &e.Rep1)
 	request, _ := requestHandover(asker(e), t, e, "company", company)
 	transfers := newOwnershipTransfers(e.Pool)

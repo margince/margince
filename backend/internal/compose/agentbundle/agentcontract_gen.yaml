@@ -19967,10 +19967,6 @@ components:
           type: boolean
           description: >-
             Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
-        receives_handover:
-          type: boolean
-          description: >-
-            Whether this member may be offered a record the caller owns: an active human seat that can write, inside the caller's own write scope or not, because the member agrees to take it. The picker behind `offerOwnershipTransfer` offers these members. Present on `listUsers`; absent means not computed.
         roles:
           type: array
           items: {type: string}

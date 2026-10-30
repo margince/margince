@@ -92,15 +92,14 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 func wireUser(u userRow) crmcontracts.User {
 	created := u.CreatedAt
 	return crmcontracts.User{
-		Id:               openapi_types.UUID(u.ID),
-		Email:            openapi_types.Email(u.Email),
-		DisplayName:      u.DisplayName,
-		Status:           crmcontracts.UserStatus(u.Status),
-		IsAgent:          u.IsAgent,
-		Assignable:       u.Assignable,
-		ReceivesHandover: u.ReceivesHandOver,
-		CreatedAt:        &created,
-		UpdatedAt:        &u.UpdatedAt,
+		Id:          openapi_types.UUID(u.ID),
+		Email:       openapi_types.Email(u.Email),
+		DisplayName: u.DisplayName,
+		Status:      crmcontracts.UserStatus(u.Status),
+		IsAgent:     u.IsAgent,
+		Assignable:  u.Assignable,
+		CreatedAt:   &created,
+		UpdatedAt:   &u.UpdatedAt,
 	}
 }
 

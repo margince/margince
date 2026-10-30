@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -21,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // errTransferOwnerMoved refuses an accept the record has already left: the
@@ -60,12 +58,8 @@ func ownershipTransferAcceptEffect(svc *approvals.Service, t ownershipTransfers)
 		if !ok || decider.UserID.IsZero() || decider.UserID != approvalsubject.OwnershipTransferDecider(proposedChange) {
 			return fmt.Errorf("a handover is accepted by the colleague it is put to: %w", apperrors.ErrPermissionDenied)
 		}
-		giverCtx, err := t.asGiver(ctx, transfer)
-		if err != nil {
-			return err
-		}
 		return svc.RedeemAndApply(ctx, approvalID, ownershipTransferKind, diffHash, func(tx pgx.Tx) error {
-			moved, err := t.handOverTx(giverCtx, tx, transfer)
+			moved, err := t.handOverTx(ctx, tx, transfer)
 			if err != nil {
 				return err
 			}
@@ -74,36 +68,8 @@ func ownershipTransferAcceptEffect(svc *approvals.Service, t ownershipTransfers)
 	}
 }
 
-// errOfferGiverGone refuses an accept once the colleague who offered the
-// record can no longer act: suspended, removed or left.
-var errOfferGiverGone = &contacts.TransferRefusal{
-	Code:    "owner_unavailable",
-	Message: "The colleague who offered this record can no longer hand it over. Decline the offer, or ask an administrator.",
-}
-
-// asGiver binds the giver's own authority for the move. In a request the
-// giver is the decider already. In an offer the receiver decided, so the
-// giver's live grants and seat are read again for the move.
-func (t ownershipTransfers) asGiver(ctx context.Context, transfer approvalsubject.OwnershipTransfer) (context.Context, error) {
-	if !transfer.Offered() {
-		return ctx, nil
-	}
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("compose: a handover outside a workspace")
-	}
-	giver, err := authz.MemberPrincipal(ctx, t.authority, workspace, transfer.FromID)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, errOfferGiverGone
-	}
-	if err != nil {
-		return nil, err
-	}
-	return principal.WithActor(ctx, giver), nil
-}
-
-// handOverTx re-reads the owner and the giver's write authority under the
-// record's row lock, then moves the record and the giver's open work on it.
+// handOverTx re-reads the owner and both parties under the record's row lock.
+// It then moves the record and the giver's open work on it, as the giver.
 func (t ownershipTransfers) handOverTx(ctx context.Context, tx pgx.Tx, transfer approvalsubject.OwnershipTransfer) (transferHandOver, error) {
 	target, ok := t.transferTargets()[transfer.RecordType]
 	if !ok {
@@ -116,13 +82,11 @@ func (t ownershipTransfers) handOverTx(ctx context.Context, tx pgx.Tx, transfer 
 	if row.ownerID == nil || *row.ownerID != transfer.FromID {
 		return transferHandOver{}, errTransferOwnerMoved
 	}
-	if err := auth.EnsureWritableLive(ctx, tx, transfer.RecordType, transfer.RecordID); err != nil {
+	giverCtx, err := transferPartiesTx(ctx, tx, transfer)
+	if err != nil {
 		return transferHandOver{}, err
 	}
-	if err := auth.EnsureHandOverRecipient(ctx, tx, transfer.ToID); err != nil {
-		return transferHandOver{}, err
-	}
-	consented := auth.WithHandOverConsent(ctx, transfer.ToID)
+	consented := auth.WithHandOverConsent(giverCtx, transfer.ToID)
 	from, to := ids.From[ids.UserKind](transfer.FromID), ids.From[ids.UserKind](transfer.ToID)
 	reassigner, ok := target.(bulkReassigner)
 	if !ok {
@@ -162,8 +126,9 @@ func expireTransferEffect() approvals.ExpiredEffect {
 	}
 }
 
-// transferPrecheck refuses an accept before it is decided when the record has
-// already left the giver, so the card can still be declined.
+// transferPrecheck refuses an accept before it is decided, so the card stays
+// pending and can still be declined. It refuses when the record has left the
+// giver, or when either party can no longer give or take it.
 func (t ownershipTransfers) transferPrecheck() approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, _ json.RawMessage) error {
 		transfer, err := decodeTransfer(staged)
@@ -178,7 +143,8 @@ func (t ownershipTransfers) transferPrecheck() approvals.ReleasePrecheck {
 			if owner == nil || *owner != transfer.FromID {
 				return errTransferOwnerMoved
 			}
-			return nil
+			_, err = transferPartiesTx(ctx, tx, transfer)
+			return err
 		})
 	}
 }

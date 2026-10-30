@@ -31,29 +31,13 @@ function json(body: unknown, status = 200) {
   });
 }
 
-// The roster marks who may receive an offer: Mira may, a read seat may not,
-// and the viewer is never offered to themselves.
+// The server names the colleagues it would accept; the picker offers those
+// and no member of the general roster.
+const candidates = {
+  data: [{ id: "u-mira", display_name: "Mira Voss" }],
+};
 const roster = {
-  data: [
-    {
-      id: "u1",
-      display_name: "A Rep",
-      status: "active",
-      receives_handover: true,
-    },
-    {
-      id: "u-mira",
-      display_name: "Mira Voss",
-      status: "active",
-      receives_handover: true,
-    },
-    {
-      id: "u-reader",
-      display_name: "Rhea Reader",
-      status: "active",
-      receives_handover: false,
-    },
-  ],
+  data: [{ id: "u-reader", display_name: "Rhea Reader", status: "active" }],
   page: { has_more: false },
 };
 
@@ -86,6 +70,9 @@ function serve(offered = false) {
       }
       if (key === "GET /users") {
         return json(roster);
+      }
+      if (key === "GET /records/company/co-1/ownership-offer/candidates") {
+        return json(candidates);
       }
       const path = "/records/company/co-1/ownership-offer";
       if (key === `POST ${path}`) {
@@ -129,7 +116,7 @@ afterEach(() => {
 });
 
 describe("HandoverOffer", () => {
-  it("offers the record to a colleague the roster marks, then takes the offer back", async () => {
+  it("offers the record to a colleague the server names, then takes the offer back", async () => {
     const sent = serve();
     const user = userEvent.setup();
     draw(ownCompany);
@@ -141,7 +128,6 @@ describe("HandoverOffer", () => {
       await screen.findByRole("combobox", { name: en["handover.offerTo"] }),
     );
     expect(screen.queryByRole("option", { name: "Rhea Reader" })).toBeNull();
-    expect(screen.queryByRole("option", { name: "A Rep" })).toBeNull();
     await user.click(await screen.findByRole("option", { name: "Mira Voss" }));
     await user.type(
       screen.getByRole("textbox", { name: en["handover.offerNote"] }),

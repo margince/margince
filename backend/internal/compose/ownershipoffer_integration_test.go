@@ -281,21 +281,103 @@ func TestOnlyTheColleagueOfferedTheRecordDecidesIt(t *testing.T) {
 	}
 }
 
-// An owner who left after offering can no longer give the record away, and
-// the colleague can still decline the card.
-func TestAnOfferFromAnOwnerWhoLeftCannotBeAccepted(t *testing.T) {
+// A party who can no longer give or take the record leaves the offer pending
+// when its colleague accepts: the refusal comes before the decision. A giver
+// who left is refused by the precheck and the card can still be declined. A
+// receiver whose role lost the grant likewise. A receiver moved to a read seat
+// no longer sees the card, and the owner withdraws it.
+func TestAnOfferEitherPartyCanNoLongerHonourStaysPending(t *testing.T) {
+	for name, c := range map[string]struct {
+		lapse    func(t *testing.T, e *integration.Env)
+		wantCode string
+	}{
+		"suspended giver": {func(t *testing.T, e *integration.Env) {
+			e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep1)
+		}, "owner_unavailable"},
+		"departed giver": {func(t *testing.T, e *integration.Env) { deactivate(t, e, e.Rep1) }, "owner_unavailable"},
+		"receiver without the grant": {func(t *testing.T, e *integration.Env) {
+			e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.Rep3)
+		}, "receiver_unavailable"},
+		"receiver on a read seat": {func(t *testing.T, e *integration.Env) {
+			e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.Rep3)
+		}, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			grantHandoverRole(t, e, e.Rep1, e.Rep3)
+			company := e.SeedCompany(t, "Lapsed AG", &e.Rep1)
+			offer, _ := offerHandover(t, e, "company", company, e.Rep3)
+			c.lapse(t, e)
+
+			err := decideHandover(receiver(e), t, e, offer.ApprovalID, true)
+			if c.wantCode == "" {
+				if !errors.Is(err, apperrors.ErrNotFound) {
+					t.Fatalf("accepting → %v, want the card gone", err)
+				}
+			} else if code := transferRefusalCode(err); code != c.wantCode {
+				t.Fatalf("accepting → %v (%q), want %s", err, code, c.wantCode)
+			}
+			if status := e.WsScalar(t, `SELECT status FROM approval WHERE id = $1`, offer.ApprovalID); status != "pending" {
+				t.Fatalf("a refused accept left the offer %s, want it pending", status)
+			}
+			if got := ownerOf(t, e, "company", company); got != e.Rep1 {
+				t.Errorf("a refused accept moved the company to %s", got)
+			}
+			if c.wantCode == "" {
+				if err := newOwnershipTransfers(e.Pool).Withdraw(giver(e), "company", company, transferOffered); err != nil {
+					t.Fatalf("the owner withdrawing the offer: %v", err)
+				}
+				return
+			}
+			if err := decideHandover(receiver(e), t, e, offer.ApprovalID, false); err != nil {
+				t.Fatalf("declining after the refused accept: %v", err)
+			}
+			if status := e.WsScalar(t, `SELECT status FROM approval WHERE id = $1`, offer.ApprovalID); status != "rejected" {
+				t.Errorf("the declined offer is %s, want rejected", status)
+			}
+		})
+	}
+}
+
+// The picker names the colleagues an offer would accept and no one else, and
+// only the owner reads it.
+func TestTheOfferPickerNamesOnlyColleaguesWhoCanTakeTheRecord(t *testing.T) {
 	e := integration.Setup(t)
 	grantHandoverRole(t, e, e.Rep1, e.Rep3)
-	company := e.SeedCompany(t, "Left Behind AG", &e.Rep1)
-	offer, _ := offerHandover(t, e, "company", company, e.Rep3)
-	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep1)
+	company := e.SeedCompany(t, "Picked AG", &e.Rep1)
+	readSeat := seedMember(t, e, "reader", "read", "active")
+	suspended := seedMember(t, e, "away", "full", "suspended")
+	noRole := seedMember(t, e, "norole", "full", "active")
+	grantHandoverRole(t, e, readSeat, suspended)
+	transfers := newOwnershipTransfers(e.Pool)
 
-	err := decideHandover(receiver(e), t, e, offer.ApprovalID, true)
-	if code := transferRefusalCode(err); code != "owner_unavailable" {
-		t.Fatalf("accepting from a suspended owner → %v (%q), want owner_unavailable", err, code)
+	candidates, err := transfers.OfferCandidates(giver(e), "company", company)
+	if err != nil {
+		t.Fatalf("reading the candidates: %v", err)
 	}
-	if got := ownerOf(t, e, "company", company); got != e.Rep1 {
-		t.Errorf("a refused accept moved the company to %s", got)
+	named := map[ids.UUID]bool{}
+	for _, candidate := range candidates {
+		named[candidate.ID] = true
+	}
+	if !named[e.Rep3] {
+		t.Errorf("the picker leaves out a colleague who can take the record")
+	}
+	for who, id := range map[string]ids.UUID{
+		"the owner": e.Rep1, "a read seat": readSeat, "a suspended seat": suspended, "a colleague without the grant": noRole,
+	} {
+		if named[id] {
+			t.Errorf("the picker offers %s", who)
+		}
+	}
+	manager := handoverRepPerms()
+	manager.RowScope = principal.RowScopeAll
+	for name, reader := range map[string]context.Context{
+		"a manager who is not the owner": seatedAs(e, e.Rep2, manager),
+		"a colleague":                    receiver(e),
+	} {
+		if _, err := transfers.OfferCandidates(reader, "company", company); !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("%s reading the candidates → %v, want 403 or 404", name, err)
+		}
 	}
 }
 

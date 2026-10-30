@@ -148,3 +148,27 @@ export function useOwnershipOfferActions() {
   });
   return { offer, withdraw };
 }
+
+export type OwnershipOfferCandidate =
+  components["schemas"]["OwnershipOfferCandidate"];
+
+/**
+ * The colleagues the server would accept an offer of this record to. Only the
+ * owner may read it, so the caller asks only while the picker is open.
+ */
+export function useOwnershipOfferCandidates(
+  recordType: TransferableRecordType,
+  id: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [...ownershipOfferKey(recordType, id), "candidates"],
+    enabled,
+    queryFn: async (): Promise<OwnershipOfferCandidate[]> =>
+      unwrap(
+        await api.GET(`${OFFER_PATH}/candidates`, {
+          params: { path: { record_type: recordType, id } },
+        }),
+      ).data,
+  });
+}

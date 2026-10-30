@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,23 +36,47 @@ func offeredToReader(p principal.Principal, a row) bool {
 	return approvalsubject.OwnershipTransferOfferedTo(a.ProposedChange) == p.UserID
 }
 
-// offeredRecordsLive answers, by position, whether each offered record is
-// still live.
-func offeredRecordsLive(ctx context.Context, tx pgx.Tx, refs []targetRef) ([]bool, error) {
+// offeredRecordsLive answers, by position, whether each offer put to p may
+// still be decided: the record is live, and p may still receive it. That is a
+// live human seat that can write (auth.EligibleHandOverRecipients) and a role
+// that may read and change the record's type. One statement asks p's seat, and
+// one more each record type.
+func offeredRecordsLive(ctx context.Context, tx pgx.Tx, p principal.Principal, refs []targetRef) ([]bool, error) {
 	out := make([]bool, len(refs))
+	if len(refs) == 0 {
+		return out, nil
+	}
+	seated, err := auth.EligibleHandOverRecipients(ctx, tx, []ids.UUID{p.UserID})
+	if err != nil {
+		return nil, fmt.Errorf("crmapprovals: asking whether the receiver may still take records: %w", err)
+	}
+	if !seated[p.UserID] {
+		return out, nil
+	}
+	byType := map[string][]int{}
 	for i, ref := range refs {
 		if ref.Type == nil || ref.ID == nil {
 			continue
 		}
-		query, ok := offeredRecordQueries[*ref.Type]
-		if !ok {
+		if _, ok := offeredRecordQueries[*ref.Type]; !ok {
 			continue
 		}
-		live, err := idsAmong(ctx, tx, query, []ids.UUID{*ref.ID})
-		if err != nil {
-			return nil, fmt.Errorf("crmapprovals: reading an offered record: %w", err)
+		if p.Permissions.Allows(*ref.Type, principal.ActionRead) && p.Permissions.Allows(*ref.Type, principal.ActionUpdate) {
+			byType[*ref.Type] = append(byType[*ref.Type], i)
 		}
-		out[i] = live[*ref.ID]
+	}
+	for recordType, at := range byType {
+		rowIDs := make([]ids.UUID, len(at))
+		for j, i := range at {
+			rowIDs[j] = *refs[i].ID
+		}
+		live, err := idsAmong(ctx, tx, offeredRecordQueries[recordType], distinct(rowIDs))
+		if err != nil {
+			return nil, fmt.Errorf("crmapprovals: reading offered records: %w", err)
+		}
+		for _, i := range at {
+			out[i] = live[*refs[i].ID]
+		}
 	}
 	return out, nil
 }

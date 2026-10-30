@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 const offerParamTo = "to_id"
@@ -53,17 +53,14 @@ func (t ownershipTransfers) Offer(ctx context.Context, recordType string, id, to
 	if err != nil {
 		return ownershipRequestView{}, false, err
 	}
-	if err := t.receiverHolds(ctx, recordType, to); err != nil {
-		return ownershipRequestView{}, false, err
-	}
 	var out ownershipRequestView
 	created := false
 	err = t.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := holdOwnRecord(ctx, tx, recordType, id, giver); err != nil {
 			return err
 		}
-		if err := auth.EnsureHandOverRecipient(ctx, tx, to); err != nil {
-			return asOfferReceiverError(err)
+		if eligible, err := receiverEligibleTx(ctx, tx, recordType, to); err != nil || !eligible {
+			return cmp.Or(err, error(errOfferNoSeat))
 		}
 		if out, err = ownRequestTx(ctx, tx, recordType, id, transferOffered); err == nil && out.Transfer.ToID == to {
 			return nil
@@ -106,32 +103,24 @@ func requireOfferer(ctx context.Context, recordType string, to ids.UUID) (ids.UU
 	return p.UserID, nil
 }
 
-// receiverHolds refuses a colleague whose own role cannot change records of
-// this type, who could never see the offer to accept it.
-func (t ownershipTransfers) receiverHolds(ctx context.Context, recordType string, to ids.UUID) error {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return errors.New("compose: an offer outside a workspace")
-	}
-	member, err := authz.MemberPrincipal(ctx, t.authority, workspace, to)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		return errOfferNoSeat
-	}
-	if err != nil {
-		return err
-	}
-	if !member.Permissions.Allows(recordType, principal.ActionRead) || !member.Permissions.Allows(recordType, principal.ActionUpdate) {
-		return errOfferNoSeat
-	}
-	return nil
-}
-
 // holdOwnRecord holds the record for the rest of the transaction and refuses
 // unless the caller owns it and may change it.
 func holdOwnRecord(ctx context.Context, tx pgx.Tx, recordType string, id, giver ids.UUID) error {
 	if err := auth.HoldWritableLive(ctx, tx, recordType, id); err != nil {
 		return err
 	}
+	return refuseUnlessOwner(ctx, tx, recordType, id, giver)
+}
+
+// ownRecordTx is holdOwnRecord for a read, which takes no lock.
+func ownRecordTx(ctx context.Context, tx pgx.Tx, recordType string, id, giver ids.UUID) error {
+	if err := auth.EnsureWritableLive(ctx, tx, recordType, id); err != nil {
+		return err
+	}
+	return refuseUnlessOwner(ctx, tx, recordType, id, giver)
+}
+
+func refuseUnlessOwner(ctx context.Context, tx pgx.Tx, recordType string, id, giver ids.UUID) error {
 	owner, _, err := transferRecordTx(ctx, tx, recordType, id)
 	if err != nil {
 		return err
@@ -140,13 +129,6 @@ func holdOwnRecord(ctx context.Context, tx pgx.Tx, recordType string, id, giver 
 		return errOfferNotOwner
 	}
 	return nil
-}
-
-func asOfferReceiverError(err error) error {
-	if _, ineligible := errors.AsType[*auth.AssigneeNotAllowedError](err); ineligible {
-		return errOfferNoSeat
-	}
-	return err
 }
 
 // The refusals that name the open transfer in the way, by who meets it.

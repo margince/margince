@@ -523,6 +523,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/records/{entity_type}/{id}/context":                            {Op: "getRecordContext", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{entity_type}/{id}/history":                            {Op: "getRecordHistory", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{record_type}/{id}/ownership-offer":                    {Op: "getOwnershipOffer", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/records/{record_type}/{id}/ownership-offer/candidates":         {Op: "listOwnershipOfferCandidates", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{record_type}/{id}/ownership-request":                  {Op: "getOwnershipRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/records/{record_type}/{record_id}/assignments":                 {Op: "listRecordAssignments", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/relationships":                                                 {Op: "listRelationships", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},

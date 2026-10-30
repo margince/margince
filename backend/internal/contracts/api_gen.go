@@ -49223,6 +49223,17 @@ type OwnershipOfferRecordType string
 // OwnershipOfferStatus defines model for OwnershipOffer.Status.
 type OwnershipOfferStatus string
 
+// OwnershipOfferCandidate defines model for OwnershipOfferCandidate.
+type OwnershipOfferCandidate struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// OwnershipOfferCandidates defines model for OwnershipOfferCandidates.
+type OwnershipOfferCandidates struct {
+	Data []OwnershipOfferCandidate `json:"data"`
+}
+
 // OwnershipOfferInput defines model for OwnershipOfferInput.
 type OwnershipOfferInput struct {
 	// Note A line for the colleague, shown on the card.
@@ -57570,9 +57581,6 @@ type User struct {
 
 	// MergedFrom Original account identities consolidated into this member, present only on the administration view.
 	MergedFrom *[]SeatName `json:"merged_from,omitempty"`
-
-	// ReceivesHandover Whether this member may be offered a record the caller owns: an active human seat that can write, inside the caller's own write scope or not, because the member agrees to take it. The picker behind `offerOwnershipTransfer` offers these members. Present on `listUsers`; absent means not computed.
-	ReceivesHandover *bool `json:"receives_handover,omitempty"`
 
 	// Roles This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree.
 	Roles *[]string `json:"roles,omitempty"`
@@ -83308,6 +83316,9 @@ type ServerInterface interface {
 	// Offer the caller's own record to a colleague.
 	// (POST /records/{record_type}/{id}/ownership-offer)
 	OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams)
+	// The colleagues the caller may offer this record to.
+	// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+	ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// Withdraw the caller's open request to be handed this record.
 	// (DELETE /records/{record_type}/{id}/ownership-request)
 	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
@@ -88579,6 +88590,12 @@ func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request,
 // Offer the caller's own record to a colleague.
 // (POST /records/{record_type}/{id}/ownership-offer)
 func (_ Unimplemented) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The colleagues the caller may offer this record to.
+// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+func (_ Unimplemented) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -123064,6 +123081,47 @@ func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// ListOwnershipOfferCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOwnershipOfferCandidates(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // WithdrawOwnershipRequest operation middleware
 func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request) {
 
@@ -133043,6 +133101,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.OfferOwnershipTransfer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-offer/candidates", wrapper.ListOwnershipOfferCandidates)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.WithdrawOwnershipRequest)

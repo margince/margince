@@ -8,8 +8,6 @@
 // offered to and takes the offer back.
 
 import { useState } from "react";
-import { useHandOverRecipientOptions } from "../../components/assigneepicker";
-import { RosterFailedLine } from "../../components/entityref";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
@@ -25,6 +23,7 @@ import {
   type TransferableRecordType,
   useOwnershipOffer,
   useOwnershipOfferActions,
+  useOwnershipOfferCandidates,
 } from "./ownershiprequest";
 
 type OfferedRecord = Readonly<{
@@ -65,7 +64,7 @@ export function HandoverOffer({
       expiresAt={open.data.expires_at}
     />
   ) : (
-    <OfferForm kind={kind} id={id} viewerId={viewerId} />
+    <OfferForm kind={kind} id={id} />
   );
 }
 
@@ -115,15 +114,18 @@ function OfferStanding({
 function OfferForm({
   kind,
   id,
-  viewerId,
-}: Readonly<{ kind: TransferableRecordType; id: string; viewerId: string }>) {
+}: Readonly<{ kind: TransferableRecordType; id: string }>) {
   const t = useT();
   const toast = useToast();
   const [opened, setOpened] = useState(false);
   const [toId, setToId] = useState("");
   const [note, setNote] = useState("");
   const { offer } = useOwnershipOfferActions();
-  const { options, roster } = useHandOverRecipientOptions(viewerId, opened);
+  const candidates = useOwnershipOfferCandidates(kind, id, opened);
+  const options = (candidates.data ?? []).map((candidate) => ({
+    value: candidate.id,
+    label: candidate.display_name,
+  }));
   if (!opened) {
     return (
       <Button variant="link" onClick={() => setOpened(true)}>
@@ -151,7 +153,9 @@ function OfferForm({
           />
         )}
       </Field>
-      <RosterFailedLine kind="user" roster={roster} />
+      {candidates.error && (
+        <ErrorLine inline>{problemMessageOf(candidates.error, t)}</ErrorLine>
+      )}
       <Field label={t("handover.offerNote")}>
         {(control) => (
           <Textarea

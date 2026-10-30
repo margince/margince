@@ -24795,9 +24795,10 @@ paths:
         Only the record's owner may offer it, and only while they may change it; anyone else gets
         `403` (a manager who is not the owner reassigns the record directly). The offer is an
         `ownership_transfer` approval in the colleague's inbox; only that colleague can accept it, and
-        it stays open for 7 days. The colleague may be any active human seat that can write, inside the
-        owner's own write scope or not, because they agree to take the record. When they accept, the
-        record moves to them, and so do the open deals linked to it and the open tasks on it that the
+        it stays open for 7 days. The colleague may be any active human seat that can write and whose
+        role may read and change records of this type, inside the owner's own write scope or not,
+        because they agree to take the record; `listOwnershipOfferCandidates` names them. When they
+        accept, the record moves to them, and so do the open deals linked to it and the open tasks on it that the
         owner holds. Each moved row gets its own audit row and updated event. A second press for the
         same colleague answers the open offer with `200`; a new offer answers `201`. `422` with
         `owner_not_assignable` when the colleague cannot hold the record. `409 transfer_pending` when
@@ -24852,6 +24853,34 @@ paths:
       description: The card leaves the colleague's inbox. `404` when the caller has no open offer.
       responses:
         '204': { description: The offer is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-offer/candidates:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: listOwnershipOfferCandidates
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The colleagues the caller may offer this record to.
+      description: |
+        Only the record's owner, while they may change it, reads the list; anyone else gets `403` or
+        `404`. It names every colleague `offerOwnershipTransfer` would accept for this record: an active
+        human seat that can write and whose role may read and change records of this type, inside the
+        owner's own write scope or not. The caller is left out.
+      responses:
+        '200':
+          description: The colleagues, by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOfferCandidates' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -57054,13 +57083,6 @@ components:
             Present on `listUsers`; absent means not computed, and a client then offers the
             member and lets the write decide. A deactivated member is listed with `false` on the
             management view, so a list can still be filtered by the work they left behind.
-        receives_handover:
-          type: boolean
-          description: >
-            Whether this member may be offered a record the caller owns: an active human seat that
-            can write, inside the caller's own write scope or not, because the member agrees to take
-            it. The picker behind `offerOwnershipTransfer` offers these members. Present on
-            `listUsers`; absent means not computed.
         roles:
           type: array
           items: { type: string }
@@ -63618,6 +63640,19 @@ components:
       properties:
         to_id: { type: string, format: uuid, description: The colleague the record is offered to. }
         note: { type: string, maxLength: 500, description: 'A line for the colleague, shown on the card.' }
+    OwnershipOfferCandidates:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/OwnershipOfferCandidate' }
+    OwnershipOfferCandidate:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
     OwnershipOffer:
       type: object
       required: [approval_id, record_type, record_id, to_id, status, expires_at]

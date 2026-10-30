@@ -124,3 +124,16 @@ func wireOwnershipOffer(view ownershipRequestView) crmcontracts.OwnershipOffer {
 		ExpiresAt:  view.ExpiresAt,
 	}
 }
+
+func (h ownershipRequestHandlers) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+	candidates, err := h.transfers.OfferCandidates(r.Context(), recordType, ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.OwnershipOfferCandidates{Data: make([]crmcontracts.OwnershipOfferCandidate, len(candidates))}
+	for i, candidate := range candidates {
+		out.Data[i] = crmcontracts.OwnershipOfferCandidate{Id: openapi_types.UUID(candidate.ID), DisplayName: candidate.DisplayName}
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

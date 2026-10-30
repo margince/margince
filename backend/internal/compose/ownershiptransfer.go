@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 const (
@@ -53,20 +52,16 @@ type ownershipTransfers struct {
 	contacts *contacts.Store
 	deals    *deals.Store
 	tasks    *activities.Store
-	// authority resolves a member's own grants: the receiver an offer is put
-	// to, and the giver an accepted offer moves the record as.
-	authority authz.Resolver
 }
 
 func newOwnershipTransfers(pool *pgxpool.Pool) ownershipTransfers {
 	db := InstallationDB(pool)
 	return ownershipTransfers{
-		db:        db,
-		staging:   NewApprovalsService(db),
-		contacts:  newContactsStore(db).WithShareRequests(contactShareRequests(pool)),
-		deals:     deals.NewStore(db, DealsInstallation()),
-		tasks:     activities.NewStore(db),
-		authority: identity.NewServiceFor(db),
+		db:       db,
+		staging:  NewApprovalsService(db),
+		contacts: newContactsStore(db).WithShareRequests(contactShareRequests(pool)),
+		deals:    deals.NewStore(db, DealsInstallation()),
+		tasks:    activities.NewStore(db),
 	}
 }
 

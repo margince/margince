@@ -3187,6 +3187,10 @@ func (stubs) OfferOwnershipTransfer(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "OfferOwnershipTransfer")
 }
 
+func (stubs) ListOwnershipOfferCandidates(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListOwnershipOfferCandidates")
+}
+
 func (stubs) WithdrawOwnershipRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "WithdrawOwnershipRequest")
 }

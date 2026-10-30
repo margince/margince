@@ -55,7 +55,7 @@ func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows [
 	if err != nil {
 		return nil, err
 	}
-	offered, err := offeredRecordsLive(ctx, tx, offers)
+	offered, err := offeredRecordsLive(ctx, tx, p, offers)
 	if err != nil {
 		return nil, err
 	}
