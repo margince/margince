@@ -6312,6 +6312,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
+  "compose.draftingBody": "Đang viết bản nháp.",
   "compose.askAgain": "Đổi yêu cầu",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":

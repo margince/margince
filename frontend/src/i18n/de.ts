@@ -6467,6 +6467,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
+  "compose.draftingBody": "Der Entwurf wird geschrieben.",
   "compose.askAgain": "Auftrag ändern",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":

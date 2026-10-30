@@ -6513,6 +6513,7 @@ export const en = {
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
+  "compose.draftingBody": "Writing the draft.",
   "compose.askAgain": "Change the ask",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
