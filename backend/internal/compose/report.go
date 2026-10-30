@@ -366,6 +366,9 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	if err != nil {
 		return reportOutcome{}, err
 	}
+	if err := refuseUngroupedNativeMoney(spec, groupBy, req.Filters, aggregates); err != nil {
+		return reportOutcome{}, err
+	}
 
 	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
 	if err != nil {
@@ -431,9 +434,6 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary
 		// error would name a field the caller never wrote.
 		return nil, nil, &EmptyReportPlanError{}
-	}
-	if err := refuseUngroupedNativeMoney(spec, groupBy, aggregates); err != nil {
-		return nil, nil, err
 	}
 	return columns, selects, nil
 }

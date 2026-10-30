@@ -245,11 +245,9 @@ describe("the collect scene's corpus floor meter", () => {
   it("reflects the real corpus count, never a derived or estimated one", () => {
     collectScene({ summary: summaryOf(342) });
 
-    const bar = document.querySelector(
-      ".ob-voice-meter-bar",
-    ) as HTMLProgressElement;
-    expect(bar.value).toBe(342);
-    expect(bar.max).toBe(VOICE_MIN_WORDS);
+    const bar = screen.getByRole("meter");
+    expect(bar.getAttribute("aria-valuenow")).toBe("342");
+    expect(bar.getAttribute("aria-valuemax")).toBe(String(VOICE_MIN_WORDS));
     expect(document.querySelector(".ob-voice-meter-line")?.textContent).toBe(
       `342 of ${VOICE_MIN_WORDS} words`,
     );

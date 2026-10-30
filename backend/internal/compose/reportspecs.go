@@ -85,7 +85,12 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:   colOwnerID,
 			fieldCurrency:  colCurrency,
 		},
-		measures:       map[string]string{fieldAmountMinor: colAmountMinor},
+		// The base measure answers "how much is open at this company" across
+		// currencies, priced the way pipeline-current prices a deal.
+		measures: map[string]string{
+			fieldAmountMinor:     colAmountMinor,
+			fieldAmountBaseMinor: pipelineBaseValueExpr,
+		},
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,

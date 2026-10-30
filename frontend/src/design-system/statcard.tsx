@@ -70,12 +70,18 @@ const COUNTABLE = 6;
 // of records.
 const SEGMENTS = ["first", "second", "third", "fourth", "fifth", "sixth"];
 
-function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
+// `tone: "ai"` draws a count of what the machine's work earned in indigo.
+function Meter({
+  filled,
+  total,
+  tone,
+}: Readonly<{ filled: number; total: number; tone?: "ai" }>) {
   const held = Math.min(Math.max(filled, 0), total);
+  const toned = tone ? " stat-card-meter-ai" : "";
   if (total <= COUNTABLE) {
     return (
       <span
-        className="stat-card-meter stat-card-meter-segments"
+        className={`stat-card-meter stat-card-meter-segments${toned}`}
         aria-hidden="true"
       >
         {SEGMENTS.slice(0, total).map((segment, index) => (
@@ -92,7 +98,7 @@ function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
     );
   }
   return (
-    <span className="stat-card-meter" aria-hidden="true">
+    <span className={`stat-card-meter${toned}`} aria-hidden="true">
       <span
         className="stat-card-meter-fill"
         style={{ inlineSize: `${Math.round((held / total) * 100)}%` }}
@@ -144,7 +150,7 @@ export function StatCard({
   //
   // Only for a reading that HAS a denominator. A figure with nothing to be out
   // of gets no bar rather than a bar with an invented one.
-  meter?: { filled: number; total: number };
+  meter?: { filled: number; total: number; tone?: "ai" };
   // What the reading rests on, and the words that name it. The copy belongs to
   // the caller, because no copy lives in a primitive.
   basis?: ReactNode;

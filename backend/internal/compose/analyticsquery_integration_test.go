@@ -195,7 +195,8 @@ func TestAFilterThatSeparatesOutTooFewRecordsIsRefused(t *testing.T) {
 
 	// Leg one: the whole population. Served, and correctly — eight deals.
 	whole, err := e.askAnalytics(ctx, t, analyticsquery.Query{
-		Entity: "open-deals-per-company",
+		Entity:  "open-deals-per-company",
+		Filters: []analyticsquery.Filter{{Field: "currency", Op: analyticsquery.OpEq, Value: "EUR"}},
 		Measures: []analyticsquery.Measure{
 			{Fn: analyticsquery.CountAll, As: "n"},
 			{Fn: analyticsquery.Sum, Field: "amount_minor", As: "total"},
@@ -215,6 +216,7 @@ func TestAFilterThatSeparatesOutTooFewRecordsIsRefused(t *testing.T) {
 		Entity: "open-deals-per-company",
 		Filters: []analyticsquery.Filter{
 			{Field: "owner_id", Op: analyticsquery.OpNe, Value: e.Rep3.String()},
+			{Field: "currency", Op: analyticsquery.OpEq, Value: "EUR"},
 		},
 		Measures: []analyticsquery.Measure{
 			{Fn: analyticsquery.CountAll, As: "n"},
