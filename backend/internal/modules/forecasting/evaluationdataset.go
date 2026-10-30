@@ -23,7 +23,7 @@ const EvaluationDatasetVersion = "forecast_evaluation_dataset_v1"
 // EvaluationDataset is the versioned input of one forecast evaluation: the
 // frozen snapshots, oldest first, and the outcome of each period as it stood
 // at OutcomesAsOf. It holds the workspace scope only and names no deal, team
-// or person. A copy kept for a rerun holds nothing an erasure has to reach.
+// or seat. A copy kept for a rerun holds nothing an erasure has to reach.
 type EvaluationDataset struct {
 	Version string `json:"version"`
 	// DefinitionVersion is the reading rules of the build that read the

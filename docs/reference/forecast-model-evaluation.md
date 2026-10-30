@@ -57,7 +57,7 @@ The database read is one `REPEATABLE READ, READ ONLY` transaction under the prin
   a snapshot uses, and for each open deal whether it was won inside the period.
 
 Team and owner snapshots are counted and left out. Their outcome needs the population of a past day, which no
-snapshot stores. The file names no deal, team or person, so a copy kept for a rerun holds nothing an erasure has to
+snapshot stores. The file names no deal, team or seat, so a copy kept for a rerun holds nothing an erasure has to
 reach.
 
 A snapshot's horizon is the days from its local day to its period's last day. A snapshot taken at period close, or
