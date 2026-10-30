@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { formatMoneyCompact } from "../../format/format";
 import { en } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
-import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
+import {
+  REPORTING_FIXTURE_ZONE,
+  reportingMetricNames,
+} from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -100,7 +103,7 @@ describe("the seat's figures against its own targets", () => {
       meetings_held: { actual: 10, targets: { fiscal_quarter: 15 } },
     });
 
-    const text = await card(en["reporting.meetings_held"]);
+    const text = await card(reportingMetricNames.meetings_held);
     expect(text).toContain(progress("10", "15"));
     // The dates the target covers, and 10 of 15 told as a whole percent.
     expect(text).toContain(`${QUARTER} · ${share("67")}`);
@@ -111,7 +114,7 @@ describe("the seat's figures against its own targets", () => {
       meetings_held: { actual: 10, targets: { month: 20, fiscal_quarter: 40 } },
     });
 
-    const texts = await cards(en["reporting.meetings_held"]);
+    const texts = await cards(reportingMetricNames.meetings_held);
     expect(texts).toHaveLength(2);
     expect(texts[0]).toContain(`${QUARTER} · ${share("25")}`);
     expect(texts[1]).toContain(`${MONTH} · ${share("50")}`);
@@ -120,7 +123,7 @@ describe("the seat's figures against its own targets", () => {
   it("names the failed reading instead of a count against a target", async () => {
     showTargets({ meetings_held: { actual: null, targets: { month: 15 } } });
 
-    const text = await card(en["reporting.meetings_held"]);
+    const text = await card(reportingMetricNames.meetings_held);
     expect(text).toContain(en["reporting.status.failed"]);
     expect(text).not.toContain(progress("0", "15"));
     expect(text).toContain(MONTH);
@@ -131,7 +134,7 @@ describe("the seat's figures against its own targets", () => {
       meetings_held: { actual: 4, targets: { month: 15 }, withheld: true },
     });
 
-    const text = await card(en["reporting.meetings_held"]);
+    const text = await card(reportingMetricNames.meetings_held);
     expect(text).toContain(en["analytics.readingUnavailable"]);
     expect(text).toContain(en["reporting.withheld"]);
     expect(text).not.toContain(en["analytics.noTargetSet"]);
@@ -151,7 +154,7 @@ describe("the seat's figures against its own targets", () => {
   it("says no target is set, and still shows the month so far", async () => {
     showTargets({ bookings_won: { actual: 2_500_000 } });
 
-    const text = await card(en["reporting.bookings_won"]);
+    const text = await card(reportingMetricNames.bookings_won);
     expect(text).toContain(en["analytics.noTargetSet"]);
     expect(text).toContain(
       en["analytics.noTargetSetActual"].replace(
@@ -163,7 +166,7 @@ describe("the seat's figures against its own targets", () => {
 
   it("asks for the seat's own figures, per basis, for every targetable metric", async () => {
     const asked = showTargets({});
-    await card(en["reporting.meetings_held"]);
+    await card(reportingMetricNames.meetings_held);
 
     const targetable = reportingSectionsCatalog.metrics
       .filter((metric) => metric.supports_target)

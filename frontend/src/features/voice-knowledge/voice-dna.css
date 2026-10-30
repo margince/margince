@@ -557,3 +557,73 @@
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
+
+/* ---- before the first build ---- */
+
+.vdna-firstbuild {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 40rem;
+}
+
+.vdna-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vdna-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--textSecondary);
+}
+
+.vdna-step-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  color: var(--aiText);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+}
+
+.vdna-step-mark svg {
+  width: 14px;
+  height: 14px;
+}
+
+.vdna-steps li[data-state="current"] .vdna-step-mark {
+  background: var(--ai);
+  border-color: var(--ai);
+  color: var(--textOnAccent);
+}
+
+.vdna-steps li[data-state="done"] .vdna-step-mark {
+  background: var(--aiLight);
+}
+
+.vdna-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.vdna-steps li[data-state="current"] b,
+.vdna-steps li[data-state="done"] b {
+  color: var(--textPrimary);
+}
+
+.vdna-steps b {
+  font-weight: var(--fontWeightMedium);
+}

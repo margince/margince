@@ -38,7 +38,7 @@ export const SETTINGS_SECTIONS = {
     "workingHours.timezone",
   ],
   voice: [
-    "settings.voice.title",
+    "settings.voice.start.addTitle",
     "settings.voice.addFirstLabel",
     "settings.voice.pasteLabel",
   ],

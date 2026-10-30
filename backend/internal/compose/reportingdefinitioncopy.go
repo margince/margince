@@ -5,8 +5,42 @@ package compose
 
 import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
+
+// reportingMetricNames are the names the screen and the CSV export show for
+// each metric. The id stays the machine identifier.
+//
+//nolint:dupl // every metric table is a map of phrases, so the tables share one shape and no text
+var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
+	reportingBookingsWon:              {En: "Sales won", De: "Gewonnener Umsatz", Vi: "Doanh số đã chốt"},
+	reportingClosedWinRate:            {En: "Closed win rate", De: "Gewinnquote abgeschlossener Deals", Vi: "Tỷ lệ thắng trên deal đã đóng"},
+	reportingOpenPipeline:             {En: "Open pipeline", De: "Offene Pipeline", Vi: "Pipeline đang mở"},
+	reportingStageAge:                 {En: "Time in current stage", De: "Zeit in der aktuellen Phase", Vi: "Thời gian ở giai đoạn hiện tại"},
+	reportingQualifiedPipelineCreated: {En: "Qualified pipeline created", De: "Neu qualifizierte Pipeline", Vi: "Pipeline đủ điều kiện đã tạo"},
+	reportingMeetingsHeld:             {En: "Meetings held", De: "Durchgeführte Termine", Vi: "Cuộc họp đã diễn ra"},
+	reportingAcceptedOpportunities:    {En: "Accepted handoffs", De: "Angenommene Übergaben", Vi: "Bàn giao đã chấp nhận"},
+	reportingForecastLanding:          {En: "Forecast landing", De: "Erwartetes Ergebnis", Vi: "Dự kiến cuối kỳ"},
+	reportingLeadsCreated:             {En: "New leads", De: "Neue Leads", Vi: "Lead mới"},
+	reportingLeadStatusMoves:          {En: "Lead status changes", De: "Statuswechsel von Leads", Vi: "Lượt đổi trạng thái lead"},
+	reportingLeadsPromoted:            {En: "Leads qualified", De: "Qualifizierte Leads", Vi: "Lead đủ điều kiện"},
+	reportingLeadFirstResponse:        {En: "First response time", De: "Zeit bis zur ersten Antwort", Vi: "Thời gian phản hồi đầu tiên"},
+	reportingPartnerPipeline:          {En: "Partner pipeline", De: "Pipeline über Partnerunternehmen", Vi: "Pipeline từ đối tác"},
+	reportingPartnerWon:               {En: "Partner sales won", De: "Umsatz über Partnerunternehmen", Vi: "Doanh số chốt từ đối tác"},
+	reportingPartnerCommission:        {En: "Partner commission", De: "Provision für Partnerunternehmen", Vi: "Hoa hồng đối tác"},
+	reportingPartnerActivity:          {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
+}
+
+// reportingMetricName names a metric in the reading's language. An edition
+// keeps no name, so a metric retired since it was captured says so.
+func reportingMetricName(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID) string {
+	name, ok := reportingMetricNames[metric]
+	if !ok {
+		name = reportingLabelWords.MetricRetired
+	}
+	return reporting.ExplanationCopy(frame).Say(name)
+}
 
 // The tables answer what a salesperson asks about a figure: what it counts, who
 // gets credit, what missing data does. Each sentence states only what that

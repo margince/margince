@@ -6,6 +6,29 @@ import type {
   ReportingReport,
 } from "../features/analytics/reporting.model";
 
+// The English names the server's catalog gives each metric.
+export const reportingMetricNames: Record<
+  components["schemas"]["ReportingMetricID"],
+  string
+> = {
+  bookings_won: "Sales won",
+  closed_win_rate: "Closed win rate",
+  open_pipeline: "Open pipeline",
+  stage_age: "Time in current stage",
+  qualified_pipeline_created: "Qualified pipeline created",
+  meetings_held: "Meetings held",
+  accepted_opportunities: "Accepted handoffs",
+  forecast_landing: "Forecast landing",
+  leads_created: "New leads",
+  lead_status_moves: "Lead status changes",
+  leads_promoted: "Leads qualified",
+  lead_first_response: "First response time",
+  partner_pipeline: "Partner pipeline",
+  partner_won: "Partner sales won",
+  partner_commission: "Partner commission",
+  partner_activity: "Active partners",
+};
+
 export const reportingStoryScope = {
   kind: "team",
   id: "11111111-1111-4111-8111-111111111111",
@@ -311,6 +334,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       ...reportingStoryEvaluation.metrics.map(
         (metric): components["schemas"]["ReportingMetricDefinition"] => ({
           id: metric.id,
+          label: reportingMetricNames[metric.id],
           version: metric.version,
           unit:
             metric.unit === reportingStoryEvaluation.context.currency
@@ -331,6 +355,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       ),
       {
         id: "qualified_pipeline_created",
+        label: reportingMetricNames.qualified_pipeline_created,
         version: "1",
         unit: "money",
         temporal_basis: "event_period",
@@ -342,6 +367,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       },
       {
         id: "meetings_held",
+        label: reportingMetricNames.meetings_held,
         version: "2",
         unit: "count",
         temporal_basis: "event_period",
@@ -353,6 +379,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       },
       {
         id: "accepted_opportunities",
+        label: reportingMetricNames.accepted_opportunities,
         version: "1",
         unit: "count",
         temporal_basis: "event_period",

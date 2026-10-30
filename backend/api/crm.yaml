@@ -54978,9 +54978,15 @@ components:
       - unit
       - supports_target
       - blocks
+      - label
       properties:
         allowed_filters: {type: array, items: {type: string}}
         attribution: {type: string}
+        label:
+          type: string
+          description: The metric's name in the reader's language, as the
+            screen and the CSV export show it. Presentation only; `id` stays the
+            machine identifier, and no receipt depends on it.
         required_fields: {type: array, items: {type: string}}
         read_object: {type: string}
         minimum_cohort: {type: integer}

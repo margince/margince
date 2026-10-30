@@ -40279,6 +40279,8 @@ export interface components {
         ReportingMetricDefinition: {
             allowed_filters?: string[];
             attribution?: string;
+            /** @description The metric's name in the reader's language, as the screen and the CSV export show it. Presentation only; `id` stays the machine identifier, and no receipt depends on it. */
+            label: string;
             required_fields?: string[];
             read_object?: string;
             minimum_cohort?: number;
