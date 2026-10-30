@@ -230,13 +230,17 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.Departed = departed
-		if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
-			return err
-		}
 		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 		out.Status = StatusComplete
 		if out.Readiness == ReadinessChecksIncomplete {
 			out.Status = StatusIncomplete
+		}
+		// A run that could not read a source it needs did not read the
+		// changes that source carries, so only a complete one clears them.
+		if out.Status == StatusComplete {
+			if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
+				return err
+			}
 		}
 		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
 			out.Status, out.Readiness)

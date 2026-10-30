@@ -56,9 +56,10 @@ func TestEveryDealAndForecastEventHasAnInputDecision(t *testing.T) {
 		t.Errorf("%s rides the deal stream or is a forecast event, and inputChanges has no decision for it: "+
 			"say whether it makes the input check's reading out of date", eventType)
 	}
+	catalog := events.Types()
 	for _, eventType := range DecidedInputEvents() {
-		if !slices.Contains(census, eventType) {
-			t.Errorf("inputChanges decides %s, which is not a deal-stream or forecast catalog type", eventType)
+		if !slices.Contains(catalog, eventType) {
+			t.Errorf("inputChanges decides %s, which is not a catalog type", eventType)
 		}
 		if change, _ := InputChangeOf(eventType); change.Why == "" {
 			t.Errorf("inputChanges decides %s with no reason", eventType)

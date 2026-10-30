@@ -31,14 +31,14 @@ END $$;
 -- one row however long it runs. Derived state with no audit or outbox of its
 -- own: the domain write that caused each change carries the write shape.
 --
--- subject_id names a deal the way assurance_exception.subject_id does, with no
--- foreign key: a deleted deal leaves a row nobody joins to. A change that names
--- no deal (a stage, a pipeline, a forecast call) is the one 'workspace' row,
--- keyed by the nil id.
+-- subject_id names a deal or a signal the way assurance_exception.subject_id
+-- does, with no foreign key: a deleted subject leaves a row nobody joins to. A
+-- change that names no subject (a stage, a pipeline, a forecast call) is the one
+-- 'workspace' row, keyed by the nil id.
 CREATE TABLE assurance_input_change (
     subject_kind text NOT NULL
         CONSTRAINT assurance_input_change_subject_kind_check
-        CHECK (subject_kind IN ('deal', 'workspace')),
+        CHECK (subject_kind IN ('deal', 'signal', 'workspace')),
     subject_id uuid NOT NULL,
     generation bigint NOT NULL,
     changed_at timestamptz NOT NULL DEFAULT now(),
@@ -50,8 +50,8 @@ CREATE TABLE assurance_input_change (
 CREATE INDEX assurance_input_change_by_generation ON assurance_input_change (generation);
 
 -- The highest change this run could see before it read the deals. NULL on a
--- run that read no deals, and on every run from before this column: neither
--- may clear a change.
+-- run that did not read all it needs, and on every run from before this column:
+-- neither may clear a change. While no run has one, freshness is unknown.
 ALTER TABLE assurance_run ADD COLUMN read_through_generation bigint;
 
 ALTER TABLE assurance_exception DROP COLUMN input_changed_at;

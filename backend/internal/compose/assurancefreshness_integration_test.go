@@ -12,12 +12,17 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -41,10 +46,29 @@ func setupFreshness(t *testing.T) *freshnessEnv {
 	e.store = assurance.NewStore(InstallationDB(e.Pool))
 	e.faulted = e.dealNamed(t, "Assurance Faulted")
 	e.healthy = e.dealNamed(t, "Assurance Fixture")
+	e.mailboxReadOnTime(t)
 	if err := e.run(t); err != nil {
 		t.Fatalf("the first pass: %v", err)
 	}
+	if f := e.freshness(t); !f.Known {
+		t.Fatal("the first pass read every source and still left freshness unknown")
+	}
 	return e
+}
+
+// mailboxReadOnTime is a mail connector that synced three hours ago, so a pass
+// reads every source it needs and may record what it read.
+func (e *freshnessEnv) mailboxReadOnTime(t *testing.T) {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	conn := integration.SeedIDRow(t, owner, `
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, 'gmail', $2, 'connected')`, e.Rep1)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO capture_sync_state (connection_id, last_success_at)
+		VALUES ($1, now() - interval '3 hours')`, conn); err != nil {
+		t.Fatalf("seeding the mailbox: %v", err)
+	}
 }
 
 func (e *freshnessEnv) dealNamed(t *testing.T, name string) ids.UUID {
@@ -96,13 +120,14 @@ func (e *freshnessEnv) freshness(t *testing.T) assurance.Freshness {
 	return run.Freshness
 }
 
-// outOfDate is which deals' findings the list marks out of date.
-func (e *freshnessEnv) outOfDate(t *testing.T) map[ids.UUID]bool {
+// findings is the list the endpoint serves, read through the function the
+// server wires to it.
+func (e *freshnessEnv) findings(t *testing.T) []assurance.Exception {
 	t.Helper()
 	var found []assurance.Exception
 	if err := e.store.InTx(e.Admin(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		found, err = AssuranceExceptions(ctx, tx)
+		found, err = AssuranceExceptionsIn(ctx, tx, assurance.Population{})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the findings: %v", err)
@@ -110,9 +135,19 @@ func (e *freshnessEnv) outOfDate(t *testing.T) map[ids.UUID]bool {
 	if len(found) == 0 {
 		t.Fatal("the pass raised no finding, so nothing here could be out of date")
 	}
+	return found
+}
+
+// outOfDate is which deals' findings the list marks out of date. A finding
+// with no answer either way fails: after a complete pass it is always known.
+func (e *freshnessEnv) outOfDate(t *testing.T) map[ids.UUID]bool {
+	t.Helper()
 	out := map[ids.UUID]bool{}
-	for _, f := range found {
-		out[f.SubjectID] = out[f.SubjectID] || f.InputsChanged
+	for _, f := range e.findings(t) {
+		if f.InputsChanged == nil {
+			t.Fatalf("finding %s reached the list with no freshness answer", f.ID)
+		}
+		out[f.SubjectID] = out[f.SubjectID] || *f.InputsChanged
 	}
 	return out
 }
@@ -238,6 +273,27 @@ func TestAChangeDuringAPassKeepsItsResultOutOfDate(t *testing.T) {
 	}
 }
 
+// A pass that read the deals but not the mailbox did not read every input,
+// so it clears nothing either.
+func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
+	e := setupFreshness(t)
+	e.deliver(t, e.editDeal(t, e.faulted, 3650000))
+	mailUnread := func(context.Context, pgx.Tx, time.Time) []assurance.SourceCoverage {
+		return []assurance.SourceCoverage{
+			{Source: sourceMail, State: assurance.CoverageUnavailable},
+			offerCoverage(e.at),
+		}
+	}
+	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, AssuranceConfig())
+	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute), nil)
+	if err != nil || result.Status != assurance.StatusIncomplete || result.EligibleDeals == 0 {
+		t.Fatalf("the pass = %+v, %v; want an incomplete run that read the deals", result, err)
+	}
+	if f := e.freshness(t); f.ChangedDeals != 1 {
+		t.Fatalf("a pass that missed the mailbox cleared the edit: %+v", f)
+	}
+}
+
 // A pass that could not read the deals clears nothing.
 func TestAFailedPassKeepsTheReadingOutOfDate(t *testing.T) {
 	e := setupFreshness(t)
@@ -272,4 +328,84 @@ func (e *freshnessEnv) scanner(subjects assurance.SubjectsFunc) *assurance.Scann
 
 func (e *freshnessEnv) passCtx() context.Context {
 	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), assuranceActor)
+}
+
+// An installation upgraded from before the tracking has runs that recorded
+// nothing. Until a pass records what it read, nothing is claimed either way.
+func TestAReadingFromBeforeTheTrackingIsUnknownUntilTheNextPass(t *testing.T) {
+	e := setupFreshness(t)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `UPDATE assurance_run SET read_through_generation = NULL`); err != nil {
+		t.Fatalf("forgetting what the runs read: %v", err)
+	}
+
+	f := e.freshness(t)
+	if got := assurance.FreshnessToWire(f).State; got != crmcontracts.AssuranceFreshnessStateUnknown {
+		t.Fatalf("a reading no run recorded the inputs of is %q, want unknown", got)
+	}
+	for _, finding := range e.findings(t) {
+		if finding.InputsChanged != nil {
+			t.Fatalf("finding %s claims inputs_changed=%v, which nothing can know", finding.ID, *finding.InputsChanged)
+		}
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the next pass: %v", err)
+	}
+	if got := assurance.FreshnessToWire(e.freshness(t)).State; got != crmcontracts.AssuranceFreshnessStateCurrent {
+		t.Fatalf("after a complete pass the reading is %q, want current", got)
+	}
+}
+
+// list_input_checks reads through the same function as the endpoint, so a
+// model is told a finding is out of date exactly when a screen is.
+func TestTheToolMarksAnEditedDealsFindingsOutOfDate(t *testing.T) {
+	e := setupFreshness(t)
+	e.deliver(t, e.editDeal(t, e.faulted, 3900000))
+
+	raw, err := inputChecksToolReader(e.Pool)(e.Admin(), agents.InputChecksArgs{})
+	if err != nil {
+		t.Fatalf("list_input_checks: %v", err)
+	}
+	var answer agents.InputChecksResult
+	if err := json.Unmarshal(raw, &answer); err != nil {
+		t.Fatalf("decoding list_input_checks: %v", err)
+	}
+	marked := map[string]bool{}
+	for _, check := range answer.Data {
+		if check.InputsChanged == nil {
+			t.Fatalf("list_input_checks sent finding %s with no freshness answer", check.ID)
+		}
+		marked[check.SubjectID] = marked[check.SubjectID] || *check.InputsChanged
+	}
+	if !marked[e.faulted.String()] {
+		t.Fatalf("list_input_checks reads the edited deal's findings as current: %v", marked)
+	}
+}
+
+// A note on the deal moves what its viability read, so the deal is marked; the
+// same activity seen again after a pass read it marks nothing.
+func TestAnActivityOnADealMarksItWhenTheCheckReadsIt(t *testing.T) {
+	e := setupFreshness(t)
+	logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: new("Customer asked for the revised quote"), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: e.faulted}},
+	})
+	if err != nil {
+		t.Fatalf("logging the note: %v", err)
+	}
+	captured := e.lastEnvelope(t, "activity.captured", ids.UUID(logged.Id))
+
+	e.deliver(t, captured)
+	if marked := e.outOfDate(t); !marked[e.faulted] || marked[e.healthy] {
+		t.Fatalf("after a note on one deal the marked deals are %v, want that deal alone", marked)
+	}
+
+	if err := e.run(t); err != nil {
+		t.Fatalf("the next pass: %v", err)
+	}
+	e.deliver(t, captured)
+	if f := e.freshness(t); f.OutOfDate() {
+		t.Fatalf("a note the pass already read marked the reading again: %+v", f)
+	}
 }

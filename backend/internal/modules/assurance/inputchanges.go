@@ -12,6 +12,13 @@ const (
 	// ScopeDeal is a change to one deal's inputs. That deal's findings, and the
 	// run that judged it, are out of date.
 	ScopeDeal InputScope = "deal"
+	// ScopeSignal is a change to what one buying signal's finding read: the
+	// signal, its company, or a suggestion that covers it.
+	ScopeSignal InputScope = "signal"
+	// ScopeDealActivity is a change to an activity. It reaches each open deal
+	// the activity is linked to whose viability fingerprint no longer matches
+	// the one the run stored, so an edit the check does not read marks nothing.
+	ScopeDealActivity InputScope = "deal_activity"
 	// ScopeWorkspace is a change no one deal carries: a stage every deal in it
 	// is judged against, or a forecast call made on the reading. Every finding
 	// and the run are out of date.
@@ -26,9 +33,10 @@ type InputChange struct {
 	Why   string
 }
 
-// inputChanges decides, for every event on the deal stream and every forecast
-// event, whether it makes the last reading out of date.
-// TestEveryDealAndForecastEventHasAnInputDecision fails on a new type that is
+// inputChanges decides, for every event on the deal stream, every forecast
+// event and every event about a table the check reads, whether it makes the
+// last reading out of date. TestEveryDealAndForecastEventHasAnInputDecision
+// and compose's TestEveryTableTheCheckReadsHasItsEventsDecided fail on a type
 // missing here, so a new event is a decision and never a silent gap.
 //
 // A capture connection changing health is not here because it emits no event:
@@ -85,13 +93,32 @@ var inputChanges = map[string]InputChange{
 	"commission.accrued":    {ScopeNone, "commission follows a won deal, which the check no longer reads"},
 	"commission.decided":    {ScopeNone, "commission follows a won deal, which the check no longer reads"},
 
-	"deal_suggestion.created":    {ScopeNone, "a suggestion is not a deal until it is accepted"},
-	"deal_suggestion.accepted":   {ScopeNone, "an accepted suggestion announces its deal as deal.created"},
-	"deal_suggestion.dismissed":  {ScopeNone, "a suggestion is not a deal until it is accepted"},
-	"deal_suggestion.superseded": {ScopeNone, "a suggestion is not a deal until it is accepted"},
+	"deal_suggestion.created":    {ScopeSignal, "an open suggestion citing a signal covers it"},
+	"deal_suggestion.accepted":   {ScopeSignal, "a suggestion that is no longer open stops covering its signals"},
+	"deal_suggestion.dismissed":  {ScopeSignal, "a suggestion that is no longer open stops covering its signals"},
+	"deal_suggestion.superseded": {ScopeSignal, "a suggestion that is no longer open stops covering its signals"},
 	"legal_review.requested":     {ScopeNone, "a legal review is not a rule input"},
 	"legal_review.decided":       {ScopeNone, "a legal review is not a rule input"},
 	"legal_review.withdrawn":     {ScopeNone, "a legal review is not a rule input"},
+
+	"activity.captured": {ScopeDealActivity, "a deal's activities decide its viability and next step"},
+	"activity.updated":  {ScopeDealActivity, "a deal's activities decide its viability and next step"},
+	"activity.archived": {ScopeDealActivity, "an archived activity no longer counts for its deal"},
+	"activity.disposition_recorded": {
+		ScopeDealActivity, "a reply's verdict decides whether the customer refused"},
+	"activity.marked_handled":     {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.readiness_recorded": {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+
+	"signal.detected": {ScopeSignal, "a new buying signal was never judged"},
+	"signal.updated":  {ScopeSignal, "the signal's evidence, company and status are rule inputs"},
+	"signal.resolved": {ScopeSignal, "a resolved signal leaves the checked set"},
+
+	"company.created":  {ScopeNone, "no signal is resolved to a company that did not exist"},
+	"company.updated":  {ScopeSignal, "the company's owner and anchor flag decide its signals' findings"},
+	"company.archived": {ScopeSignal, "an archived company's signals leave the checked set"},
+	"company.restored": {ScopeSignal, "a restored company's signals come back unjudged"},
+	"company.merged":   {ScopeSignal, "the surviving company now carries the other one's signals"},
+	"company.erased":   {ScopeSignal, "an erased company's signals leave the checked set"},
 
 	"forecast.created": {ScopeWorkspace, "a call submitted after the reading was not judged against it"},
 	"forecast.exception_resolved": {
@@ -103,7 +130,7 @@ var inputChanges = map[string]InputChange{
 }
 
 // InputChangeOf answers the decision for one event type. ok is false for a
-// type outside the deal stream and the forecast family.
+// type the check does not read.
 func InputChangeOf(eventType string) (InputChange, bool) {
 	change, ok := inputChanges[eventType]
 	return change, ok

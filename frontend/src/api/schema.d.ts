@@ -41189,8 +41189,8 @@ export interface components {
              * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
              */
             last_seen_at: string;
-            /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a failed run leaves it out of date. */
-            inputs_changed: boolean;
+            /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way. */
+            inputs_changed: boolean | null;
         };
         ResolveInputCheck: {
             /**
@@ -41294,15 +41294,17 @@ export interface components {
             sources: components["schemas"]["ForecastAssuranceSource"][];
             freshness: components["schemas"]["AssuranceFreshness"];
         };
-        /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that fails clears none. */
+        /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
         AssuranceFreshness: {
             /**
-             * @description `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run.
+             * @description `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
              * @enum {string}
              */
-            state: "current" | "out_of_date";
-            /** @description Deals whose record, offers or contracts changed after the check. */
+            state: "current" | "out_of_date" | "unknown";
+            /** @description Deals whose record, offers, contracts or activities changed after the check. */
             changed_deals: number;
+            /** @description Buying signals whose signal, company or deal suggestion changed after the check. */
+            changed_signals: number;
             /** @description A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check. */
             workspace_changed: boolean;
             /**

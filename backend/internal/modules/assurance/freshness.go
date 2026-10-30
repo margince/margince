@@ -28,8 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ChangedSubject is one subject whose inputs moved: a deal, or the workspace
-// as a whole under the nil id.
+// ChangedSubject is one subject whose inputs moved: a deal, a buying signal,
+// or the workspace as a whole under the nil id.
 type ChangedSubject struct {
 	Scope InputScope
 	ID    ids.UUID
@@ -38,12 +38,11 @@ type ChangedSubject struct {
 // DealChanged names one deal whose inputs moved.
 func DealChanged(id ids.UUID) ChangedSubject { return ChangedSubject{Scope: ScopeDeal, ID: id} }
 
+// SignalChanged names one buying signal whose inputs moved.
+func SignalChanged(id ids.UUID) ChangedSubject { return ChangedSubject{Scope: ScopeSignal, ID: id} }
+
 // WorkspaceChanged names a change that reaches every deal.
 func WorkspaceChanged() ChangedSubject { return ChangedSubject{Scope: ScopeWorkspace, ID: ids.Nil} }
-
-// readThroughSQL is the highest generation any run read its deals past. Zero
-// before the first such run, so every change is unread.
-const readThroughSQL = `(SELECT coalesce(max(read_through_generation), 0) FROM assurance_run)`
 
 // MarkInputsChanged records that each subject's inputs moved, in one
 // statement however many subjects there are. A subject named twice is one row.
@@ -99,8 +98,8 @@ func (s *Store) inputGeneration(ctx context.Context, tx pgx.Tx) (int64, error) {
 	return generation, nil
 }
 
-// recordReadThrough says the run read its deals past generation. Only a run
-// that read them calls it; a failed read clears nothing.
+// recordReadThrough says the run read its inputs past generation. Only a run
+// that read everything it needs calls it; any other run clears nothing.
 func (s *Store) recordReadThrough(ctx context.Context, tx pgx.Tx, runID ids.UUID, generation int64) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE assurance_run SET read_through_generation = $2 WHERE id = $1`, runID, generation); err != nil {
@@ -109,10 +108,31 @@ func (s *Store) recordReadThrough(ctx context.Context, tx pgx.Tx, runID ids.UUID
 	return nil
 }
 
+// readThrough is the highest generation any run read its inputs past. known is
+// false while no run has recorded one, which is every installation upgraded
+// from before this tracking until its next complete run.
+func readThrough(ctx context.Context, tx pgx.Tx) (generation int64, known bool, err error) {
+	var recorded *int64
+	if err := tx.QueryRow(ctx,
+		`SELECT max(read_through_generation) FROM assurance_run`).Scan(&recorded); err != nil {
+		return 0, false, fmt.Errorf("assurance: reading what the checks read: %w", err)
+	}
+	if recorded == nil {
+		return 0, false, nil
+	}
+	return *recorded, true, nil
+}
+
 // Freshness is how much of the last reading the records have moved past.
 type Freshness struct {
+	// Known is false while no run has recorded what it read. Nothing can then
+	// be said about what changed since, so the reading is neither current nor
+	// out of date.
+	Known bool
 	// ChangedDeals counts deals whose inputs changed after the reading.
 	ChangedDeals int
+	// ChangedSignals counts buying signals whose inputs changed after it.
+	ChangedSignals int
 	// WorkspaceChanged is a change that reaches every deal.
 	WorkspaceChanged bool
 	// FirstChangedAt is the oldest unread change, nil when there is none.
@@ -120,24 +140,32 @@ type Freshness struct {
 }
 
 // OutOfDate reports whether any input moved after the reading.
-func (f Freshness) OutOfDate() bool { return f.ChangedDeals > 0 || f.WorkspaceChanged }
+func (f Freshness) OutOfDate() bool {
+	return f.ChangedDeals > 0 || f.ChangedSignals > 0 || f.WorkspaceChanged
+}
 
 func readFreshness(ctx context.Context, tx pgx.Tx) (Freshness, error) {
-	var out Freshness
+	generation, known, err := readThrough(ctx, tx)
+	if err != nil || !known {
+		return Freshness{}, err
+	}
+	out := Freshness{Known: true}
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FILTER (WHERE subject_kind = 'deal'),
+		       count(*) FILTER (WHERE subject_kind = 'signal'),
 		       coalesce(bool_or(subject_kind = 'workspace'), false),
 		       min(changed_at)
 		  FROM assurance_input_change
-		 WHERE generation > `+readThroughSQL).
-		Scan(&out.ChangedDeals, &out.WorkspaceChanged, &out.FirstChangedAt); err != nil {
+		 WHERE generation > $1`, generation).
+		Scan(&out.ChangedDeals, &out.ChangedSignals, &out.WorkspaceChanged, &out.FirstChangedAt); err != nil {
 		return Freshness{}, fmt.Errorf("assurance: reading what changed since the check: %w", err)
 	}
 	return out, nil
 }
 
-// MarkOutOfDate sets InputsChanged on each finding whose deal, or the
-// workspace, changed after the reading, in one read for the whole list.
+// MarkOutOfDate sets InputsChanged on each finding: true when its subject, or
+// the workspace, changed after the reading, false when nothing did, and nil
+// while no run has recorded what it read. One read for the whole list.
 //
 // It takes findings its caller already read under the caller's own scope, and
 // answers only about those, so it adds no gate of its own.
@@ -145,17 +173,19 @@ func MarkOutOfDate(ctx context.Context, tx pgx.Tx, found []Exception) error {
 	if len(found) == 0 {
 		return nil
 	}
-	dealIDs := make([]ids.UUID, 0, len(found))
+	generation, known, err := readThrough(ctx, tx)
+	if err != nil || !known {
+		return err
+	}
+	subjects := make([]ids.UUID, 0, len(found))
 	for _, e := range found {
-		if e.SubjectKind == subjectKindDeal {
-			dealIDs = append(dealIDs, e.SubjectID)
-		}
+		subjects = append(subjects, e.SubjectID)
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT subject_kind, subject_id
 		  FROM assurance_input_change
-		 WHERE generation > `+readThroughSQL+`
-		   AND (subject_kind = 'workspace' OR (subject_kind = 'deal' AND subject_id = ANY($1)))`, dealIDs)
+		 WHERE generation > $1
+		   AND (subject_kind = 'workspace' OR subject_id = ANY($2))`, generation, subjects)
 	if err != nil {
 		return fmt.Errorf("assurance: reading which findings are out of date: %w", err)
 	}
@@ -170,8 +200,8 @@ func MarkOutOfDate(ctx context.Context, tx pgx.Tx, found []Exception) error {
 	}
 	everything := changed[WorkspaceChanged()]
 	for i := range found {
-		found[i].InputsChanged = everything ||
-			(found[i].SubjectKind == subjectKindDeal && changed[DealChanged(found[i].SubjectID)])
+		moved := everything || changed[ChangedSubject{Scope: InputScope(found[i].SubjectKind), ID: found[i].SubjectID}]
+		found[i].InputsChanged = &moved
 	}
 	return nil
 }

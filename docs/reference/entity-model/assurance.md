@@ -124,13 +124,13 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `changed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `generation` | `bigint` | yes |  |
 | `subject_id` | `uuid` | yes |  |
-| `subject_kind` | `text` | yes | One of `deal`, `workspace`. |
+| `subject_kind` | `text` | yes | One of `deal`, `signal`, `workspace`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Rules**
 
-- `assurance_input_change_subject_kind_check`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'workspace'])))`
+- `assurance_input_change_subject_kind_check`: `CHECK ((subject_kind = ANY (ARRAY['deal', 'signal', 'workspace'])))`
 
 **Indexes**
 

@@ -320,7 +320,8 @@ func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
 // two never decide "out of date" apart.
 func freshnessToolResult(in crmcontracts.AssuranceFreshness) agents.ForecastAssuranceFreshnessResult {
 	out := agents.ForecastAssuranceFreshnessResult{
-		State: string(in.State), ChangedDeals: in.ChangedDeals, WorkspaceChanged: in.WorkspaceChanged,
+		State: string(in.State), ChangedDeals: in.ChangedDeals, ChangedSignals: in.ChangedSignals,
+		WorkspaceChanged: in.WorkspaceChanged,
 	}
 	if in.ChangedSince != nil {
 		out.ChangedSince = in.ChangedSince.UTC().Format(time.RFC3339)
@@ -362,8 +363,8 @@ func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 				ID: e.ID.String(), Type: e.Type, SubjectKind: e.SubjectKind,
 				SubjectID: e.SubjectID.String(), Severity: e.Severity,
 				AffectedMinor: e.AffectedMinor, Currency: e.Currency,
-				Claim:       storedSlots(e.Claim),
-				Observed:    storedSlots(e.Observed),
+				Claim:         storedSlots(e.Claim),
+				Observed:      storedSlots(e.Observed),
 				FirstSeenAt:   e.FirstSeenAt.UTC().Format(time.RFC3339),
 				LastSeenAt:    e.LastSeenAt.UTC().Format(time.RFC3339),
 				InputsChanged: e.InputsChanged,

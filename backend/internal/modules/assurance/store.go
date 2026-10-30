@@ -475,7 +475,7 @@ type Exception struct {
 	// because it decides what to group and never draws a row — and the wire
 	// then names the subject by id alone, which is what it did before.
 	SubjectLabel string
-	// InputsChanged is set when the subject, or the workspace, changed after
-	// the last run read it (MarkOutOfDate).
-	InputsChanged bool
+	// InputsChanged says whether the subject, or the workspace, changed after
+	// the last run read it (MarkOutOfDate). Nil when that is not known.
+	InputsChanged *bool
 }

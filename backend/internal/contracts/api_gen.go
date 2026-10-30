@@ -2144,6 +2144,7 @@ func (e AssuranceFindingCountSeverity) Valid() bool {
 const (
 	AssuranceFreshnessStateCurrent   AssuranceFreshnessState = "current"
 	AssuranceFreshnessStateOutOfDate AssuranceFreshnessState = "out_of_date"
+	AssuranceFreshnessStateUnknown   AssuranceFreshnessState = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the AssuranceFreshnessState enum.
@@ -2152,6 +2153,8 @@ func (e AssuranceFreshnessState) Valid() bool {
 	case AssuranceFreshnessStateCurrent:
 		return true
 	case AssuranceFreshnessStateOutOfDate:
+		return true
+	case AssuranceFreshnessStateUnknown:
 		return true
 	default:
 		return false
@@ -29442,22 +29445,25 @@ type AssuranceFindingCount struct {
 // AssuranceFindingCountSeverity defines model for AssuranceFindingCount.Severity.
 type AssuranceFindingCountSeverity string
 
-// AssuranceFreshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that fails clears none.
+// AssuranceFreshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
 type AssuranceFreshness struct {
-	// ChangedDeals Deals whose record, offers or contracts changed after the check.
+	// ChangedDeals Deals whose record, offers, contracts or activities changed after the check.
 	ChangedDeals int `json:"changed_deals"`
+
+	// ChangedSignals Buying signals whose signal, company or deal suggestion changed after the check.
+	ChangedSignals int `json:"changed_signals"`
 
 	// ChangedSince The oldest change the check has not read. Absent when there is none.
 	ChangedSince *time.Time `json:"changed_since,omitempty"`
 
-	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run.
+	// State `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 	State AssuranceFreshnessState `json:"state"`
 
 	// WorkspaceChanged A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check.
 	WorkspaceChanged bool `json:"workspace_changed"`
 }
 
-// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run.
+// AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
 
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
@@ -41892,7 +41898,7 @@ type ForecastAssurance struct {
 	EligibleDeals   int  `json:"eligible_deals"`
 	EligibleSignals *int `json:"eligible_signals,omitempty"`
 
-	// Freshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that fails clears none.
+	// Freshness Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none.
 	Freshness AssuranceFreshness `json:"freshness"`
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
@@ -43720,8 +43726,8 @@ type InputCheck struct {
 	FirstSeenAt time.Time               `json:"first_seen_at"`
 	Id          openapi_types.UUID      `json:"id"`
 
-	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a failed run leaves it out of date.
-	InputsChanged bool `json:"inputs_changed"`
+	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
+	InputsChanged *bool `json:"inputs_changed"`
 
 	// LastSeenAt The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
 	LastSeenAt time.Time `json:"last_seen_at"`

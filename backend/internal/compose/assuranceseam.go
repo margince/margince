@@ -174,14 +174,7 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	// A task the product filed itself asks for a next step; it is not one.
-	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
-		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
-	query := fmt.Sprintf(assuranceSubjectsSQL, humanTask,
-		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
-		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
-		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, assuranceSubjectsQuery(now, identities, only, arg), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}
@@ -276,6 +269,18 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
 		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
+}
+
+// assuranceSubjectsQuery is the statement assuranceSubjects runs. Rendered
+// apart so a test can read which tables the check reads.
+func assuranceSubjectsQuery(now time.Time, identities string, only *ids.UUID, arg func(any) int) string {
+	// A task the product filed itself asks for a next step; it is not one.
+	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
+		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
+	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
+		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
+		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
 }
 
 // onlyDealSQL narrows the read to one deal, or to none of them when unset.

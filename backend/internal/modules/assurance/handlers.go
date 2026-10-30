@@ -195,15 +195,19 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 	return out
 }
 
-// FreshnessToWire renders what changed after a reading.
+// FreshnessToWire renders what changed after a reading. A reading no run has
+// recorded the inputs of is unknown, never current.
 func FreshnessToWire(f Freshness) crmcontracts.AssuranceFreshness {
 	state := crmcontracts.AssuranceFreshnessStateCurrent
-	if f.OutOfDate() {
+	switch {
+	case !f.Known:
+		state = crmcontracts.AssuranceFreshnessStateUnknown
+	case f.OutOfDate():
 		state = crmcontracts.AssuranceFreshnessStateOutOfDate
 	}
 	return crmcontracts.AssuranceFreshness{
-		State: state, ChangedDeals: f.ChangedDeals, WorkspaceChanged: f.WorkspaceChanged,
-		ChangedSince: f.FirstChangedAt,
+		State: state, ChangedDeals: f.ChangedDeals, ChangedSignals: f.ChangedSignals,
+		WorkspaceChanged: f.WorkspaceChanged, ChangedSince: f.FirstChangedAt,
 	}
 }
 

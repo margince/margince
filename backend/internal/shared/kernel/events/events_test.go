@@ -308,10 +308,12 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
 		"cg:deal-room-timeline": {"gw:events:crm:deal"},
-		// The input check's reading marked out of date: the deal family and
-		// the forecast call on the identity stream.
-		"cg:assurance-freshness": {"gw:events:crm:deal", "gw:events:crm:identity"},
-		"cg:commitment-settle":   {"gw:events:crm:activity", "gw:events:crm:contact"},
+		// The input check's reading marked out of date by what it read: deals,
+		// forecast calls, activities, buying signals and their companies.
+		"cg:assurance-freshness": {
+			"gw:events:crm:activity", "gw:events:crm:capture", "gw:events:crm:company",
+			"gw:events:crm:deal", "gw:events:crm:identity"},
+		"cg:commitment-settle": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.

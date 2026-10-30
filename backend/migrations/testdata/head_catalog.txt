@@ -1308,7 +1308,7 @@ public.assurance_exception.version bigint NOT NULL gen=- def=1
 public.assurance_exception_pkey CREATE UNIQUE INDEX assurance_exception_pkey ON public.assurance_exception USING btree (id)
 public.assurance_input_change acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.assurance_input_change.assurance_input_change_pkey PRIMARY KEY (subject_kind, subject_id)
-public.assurance_input_change.assurance_input_change_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'workspace'::text])))
+public.assurance_input_change.assurance_input_change_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'workspace'::text])))
 public.assurance_input_change.changed_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_input_change.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_input_change.generation bigint NOT NULL gen=- def=-
