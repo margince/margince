@@ -37,10 +37,14 @@ When nothing is left to win, the panel says **Target reached** and shows no cove
 
 - No sales won target is set for this scope, pipeline and quarter. A missing target is not a target of zero.
 - A deal amount has no exchange rate, so the totals would be too low.
-- You cannot see every deal in the scope.
+- You cannot see every deal in the scope, or the amount of one.
+- **Show individual performance** is off, and one colleague besides you makes up the figures.
+- The manager's call is below the sales already won.
 - The time span is not this quarter, or the scope is several teams at once.
 - One pipeline is picked, and the target covers all pipelines, or the landing is a manager's call.
 - The target was set in a currency that is no longer the base currency.
+
+When another time span, pipeline or team would compare, a button under the notice switches the page to it.
 
 This comparison is not **Deal value needed** on the **Forecast** page. That figure holds the pipeline against a call or past quarters, never against a target.
 

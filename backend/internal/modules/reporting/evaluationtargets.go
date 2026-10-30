@@ -37,8 +37,8 @@ func keyFor(scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetr
 	return key
 }
 
-func wholePipelineKey(scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetricID) targetKey {
-	key := keyFor(scope, metric)
+func wholePipelineKey(scope crmcontracts.ReportingScope) targetKey {
+	key := keyFor(scope, comparedMetric)
 	key.whole = true
 	return key
 }
@@ -197,11 +197,17 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, evaluation *Evalu
 			return err
 		}
 	}
+	return s.applyChartTargets(ctx, tx, out, reach.owners, pointOwners, held)
+}
+
+// applyChartTargets holds each chart against its targets, and each owner
+// attainment chart against its owners' targets and their allocation.
+func (s *Service) applyChartTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.ReportingEvaluation, owners MeasurableOwners, pointOwners map[int]map[int]openapi_types.UUID, held heldTargets) error {
 	for index := range out.Charts {
 		chart := &out.Charts[index]
 		if points, ok := pointOwners[index]; ok {
 			applyOwnerTargets(chart, points, held)
-			if err := s.ownerTargetAllocation(ctx, tx, reach.owners, out.Context, chart, held); err != nil {
+			if err := s.ownerTargetAllocation(ctx, tx, owners, out.Context, chart, held); err != nil {
 				return err
 			}
 		}
@@ -216,7 +222,7 @@ func applyMetricTargets(ctx context.Context, out *crmcontracts.ReportingEvaluati
 	for index := range out.Metrics {
 		metric := &out.Metrics[index]
 		if metric.Id == forecastLanding {
-			metric.TargetComparison = compareForecast(ctx, *out, *metric, forecast, held)
+			metric.TargetComparison = compareForecast(ctx, *out, forecast, held)
 		}
 		target, ok := held[keyFor(out.Context.Scope, metric.Id)]
 		if !ok || metric.Coverage.Withheld {
@@ -244,7 +250,7 @@ func metricTargetKeys(frame crmcontracts.ReportingContext, metrics []crmcontract
 		}
 		keys = append(keys, keyFor(frame.Scope, comparedMetric))
 		if frame.PipelineId != nil {
-			keys = append(keys, wholePipelineKey(frame.Scope, comparedMetric))
+			keys = append(keys, wholePipelineKey(frame.Scope))
 		}
 	}
 	return keys

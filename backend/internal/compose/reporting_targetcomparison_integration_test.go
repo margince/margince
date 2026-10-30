@@ -35,6 +35,38 @@ type targetQuarter struct {
 	quarter time.Time
 	human   context.Context
 	service *reporting.Service
+	writer  context.Context
+	deals   *deals.Store
+	closeOn time.Time
+	won     ids.UUID
+}
+
+// openDeal writes an open deal expected to close in the quarter.
+func (q targetQuarter) openDeal(t *testing.T, owner ids.UUID, name string, amount int64) crmcontracts.Deal {
+	t.Helper()
+	seat, currency := ids.From[ids.UserKind](owner), "EUR"
+	created, err := q.deals.CreateDeal(q.writer, deals.CreateDealInput{Name: name, AmountMinor: &amount, Currency: &currency, PipelineID: ids.From[ids.PipelineKind](q.env.pipeline), StageID: ids.From[ids.StageKind](q.env.stages[pipelineTestStage]), OwnerID: &seat, ExpectedClose: &q.closeOn, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return created
+}
+
+// win closes a deal as won at the store's clock.
+func (q targetQuarter) win(t *testing.T, deal crmcontracts.Deal) {
+	t.Helper()
+	reason := "purchase_order"
+	if _, err := q.deals.AdvanceDeal(q.writer, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](q.won), WonWithoutContractReason: &reason}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// quarterTarget sets this quarter's sales won target for a scope.
+func (q targetQuarter) quarterTarget(t *testing.T, scope crmcontracts.ReportingScope, value int64) {
+	t.Helper()
+	if _, err := q.service.CreateTarget(q.human, crmcontracts.ReportingTargetInput{Metric: "bookings_won", Scope: scope, PeriodKind: "fiscal_quarter", PeriodStart: openapi_types.Date{Time: q.quarter}, Value: value, Reason: "Quarter commitment"}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func (q targetQuarter) selection() crmcontracts.ReportingSelection {
@@ -49,26 +81,16 @@ func seedTargetQuarter(t *testing.T) targetQuarter {
 	quarter := time.Date(now.Year(), now.Month()-(now.Month()-1)%3, 1, 0, 0, 0, 0, time.UTC)
 	q := targetQuarter{env: e, at: now, quarter: quarter, human: reportingActor(e)}
 	q.service = newReportingService(e.Pool, func() time.Time { return q.at })
-	writer := principal.WithCorrelationID(principal.SystemActing(q.human, "system:target-quarter"), ids.NewV7())
+	q.writer = principal.WithCorrelationID(principal.SystemActing(q.human, "system:target-quarter"), ids.NewV7())
 	clock := quarter
-	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return clock })
-	owner, currency, closeOn := ids.From[ids.UserKind](e.Rep1), "EUR", quarter.AddDate(0, 3, -1)
-	deal := func(name string, amount int64) crmcontracts.Deal {
-		created, err := store.CreateDeal(writer, deals.CreateDealInput{Name: name, AmountMinor: &amount, Currency: &currency, PipelineID: ids.From[ids.PipelineKind](e.pipeline), StageID: ids.From[ids.StageKind](e.stages[pipelineTestStage]), OwnerID: &owner, ExpectedClose: &closeOn, Source: "manual"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return created
-	}
-	won := e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Won',10,'won',100)`, e.pipeline)
-	booked := deal("Booked this quarter", 42_000_000)
+	q.deals = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return clock })
+	q.closeOn = quarter.AddDate(0, 3, -1)
+	q.won = e.seedID(t, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES($1,$2,'Won',10,'won',100)`, e.pipeline)
+	booked := q.openDeal(t, e.Rep1, "Booked this quarter", 42_000_000)
 	clock = quarter.Add(now.Sub(quarter) / 2)
-	reason := "purchase_order"
-	if _, err := store.AdvanceDeal(writer, ids.From[ids.DealKind](ids.UUID(booked.Id)), deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](won), WonWithoutContractReason: &reason}); err != nil {
-		t.Fatal(err)
-	}
-	deal("Expansion", 100_000_000)
-	deal("Renewal", 36_000_000)
+	q.win(t, booked)
+	q.openDeal(t, e.Rep1, "Expansion", 100_000_000)
+	q.openDeal(t, e.Rep1, "Renewal", 36_000_000)
 	if err := config.Save(q.human, StoredConfig(e.Pool), identity.ForecastForwardMeasure, string(forecasting.MeasureManagerCall)); err != nil {
 		t.Fatal(err)
 	}
@@ -83,15 +105,18 @@ func seedTargetQuarter(t *testing.T) targetQuarter {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := q.service.CreateTarget(q.human, crmcontracts.ReportingTargetInput{Metric: "bookings_won", Scope: crmcontracts.ReportingScope{Kind: "workspace"}, PeriodKind: "fiscal_quarter", PeriodStart: openapi_types.Date{Time: quarter}, Value: 80_000_000, Reason: "Quarter commitment"}); err != nil {
-		t.Fatal(err)
-	}
+	q.quarterTarget(t, crmcontracts.ReportingScope{Kind: "workspace"}, 80_000_000)
 	return q
 }
 
 func (q targetQuarter) comparison(t *testing.T, selection crmcontracts.ReportingSelection) (crmcontracts.ReportingEvaluation, crmcontracts.ReportingTargetComparison) {
 	t.Helper()
-	evaluation, err := q.service.Evaluate(q.human, selection)
+	return q.comparisonFor(q.human, t, selection)
+}
+
+func (q targetQuarter) comparisonFor(reader context.Context, t *testing.T, selection crmcontracts.ReportingSelection) (crmcontracts.ReportingEvaluation, crmcontracts.ReportingTargetComparison) {
+	t.Helper()
+	evaluation, err := q.service.Evaluate(reader, selection)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,6 +172,12 @@ func TestAComparisonTheQuarterCannotSupportSaysWhyAndOffersOneItCan(t *testing.T
 	_, got := q.comparison(t, month)
 	if got.Status != "incompatible" || *got.Incompatibility != "period" || got.SupportedSelection.TargetBasis != "fiscal_quarter" || got.Gap != nil {
 		t.Fatalf("month comparison %+v, want a period refusal that offers the fiscal quarter", got)
+	}
+	// The month holds the quarter's target interval; it is still not the quarter.
+	month.TargetBasis = "fiscal_quarter"
+	_, got = q.comparison(t, month)
+	if got.Status != "incompatible" || *got.Incompatibility != "period" || got.SupportedSelection.Period != "this_quarter" {
+		t.Fatalf("month over the quarter's target %+v, want a period refusal that offers this quarter", got)
 	}
 	pipeline := q.selection()
 	pipeline.PipelineId = ptrUUID(q.env.pipeline)
@@ -211,7 +242,7 @@ func TestASentEditionKeepsTheTargetComparisonItWasEvaluatedWith(t *testing.T) {
 		t.Fatal(err)
 	}
 	kept := edition.Evaluation.Metrics[0].TargetComparison
-	if kept == nil || *kept.Gap != *live.Gap || *kept.Coverage != *live.Coverage || kept.Status != live.Status {
+	if kept == nil || kept.Status != live.Status || *kept.Gap != *live.Gap || *kept.Coverage != *live.Coverage {
 		t.Fatalf("edition kept %+v, want the live comparison %+v", kept, live)
 	}
 }

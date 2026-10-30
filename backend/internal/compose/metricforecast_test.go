@@ -163,3 +163,15 @@ func TestAMissingRateLeavesTheOpenTotalsUnknown(t *testing.T) {
 		t.Fatal("the comparison was not told a rate is missing")
 	}
 }
+
+func TestACallBelowWhatIsWonIsMarkedForTheComparison(t *testing.T) {
+	call := int64(70_000_000)
+	readings := forecasting.Readings{WonMinor: 90_000_000}
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !forecastOperands(forecasting.Period{}, readings, landing, nil, false).CallBelowWon {
+		t.Fatal("a 700k call beside 900k won reached the comparison unmarked: it would read both reached and short")
+	}
+}

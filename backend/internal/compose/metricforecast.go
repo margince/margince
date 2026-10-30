@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,6 +28,13 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	scope := forecasting.Scope{Kind: string(frame.Scope.Kind), ID: (*ids.UUID)(frame.Scope.Id)}
 	deals, _, withheld, err := forecastDealsForPipeline(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
+	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
+		// The landing alone is withheld; the evaluation's other figures stand.
+		if e.compared != nil {
+			e.compared.operands = &reporting.ForecastOperands{Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End}, ColleagueWithheld: true}
+		}
+		return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+	}
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -69,7 +77,11 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	// A reader with no capture, such as the weekly digest, compares nothing.
 	if e.compared != nil {
-		e.compared.operands = forecastOperands(period, readings, landing, qualifiedOpen, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
+		operands := forecastOperands(period, readings, landing, qualifiedOpen, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
+		if err := guardForecastOperands(ctx, tx, period, scope, frame, readings, operands); err != nil {
+			return nil, crmcontracts.ReportingCoverage{}, err
+		}
+		e.compared.operands = operands
 	}
 	for i := range facts {
 		if facts[i].SourceType == reportingForecastProjection {
@@ -218,11 +230,47 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 		Measure: crmcontracts.ReportingTargetComparisonBasis(landing.Measure), LandingMinor: landing.AmountMinor,
 		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor, QualifiedOpenMinor: qualifiedOpen,
 		FxMissing: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
-		Operands: crmcontracts.ReportingComparisonOperands{Won: ref("forecast_won"), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
+		CallBelowWon: landing.Caveat == forecasting.CaveatCallBelowActual,
+		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref("forecast_won"), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
 	}
 	if qualifiedOpen != nil {
 		qualified := ref(forecastQualifiedContext)
 		out.Operands.QualifiedOpenPipeline = &qualified
 	}
 	return out
+}
+
+// guardForecastOperands marks what the comparison may not show. One is a
+// population the reader cannot fully see. The other is a total one colleague
+// besides the reader makes up, while individual performance is off. The
+// totals are open, won, and every deal read, which the landing rests on.
+func guardForecastOperands(ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope, frame crmcontracts.ReportingContext, readings forecasting.Readings, operands *reporting.ForecastOperands) error {
+	narrowed, err := forecastPopulationNarrowed(ctx, tx, period, scope, (*ids.UUID)(frame.PipelineId))
+	if err != nil {
+		return err
+	}
+	operands.Narrowed = narrowed
+	var open, won, read []ids.UUID
+	for _, contribution := range readings.Contributions {
+		if contribution.Owner == "" {
+			continue
+		}
+		owner, err := ids.Parse(contribution.Owner)
+		if err != nil {
+			return err
+		}
+		read = append(read, owner)
+		if contribution.InOpen {
+			open = append(open, owner)
+		}
+		if contribution.InWon {
+			won = append(won, owner)
+		}
+	}
+	err = requireNoLoneColleague(ctx, tx, [][]ids.UUID{open, won, read})
+	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
+		operands.ColleagueWithheld = true
+		return nil
+	}
+	return err
 }

@@ -126,6 +126,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		if err != nil {
 			return out, err
 		}
+		read := len(facts)
 		facts, coverage, err = withholdColleagues(ctx, tx, frame, owners, facts, coverage)
 		if err != nil {
 			return out, err
@@ -135,6 +136,9 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		// A failed reading's savepoint rolled its figures back.
 		if spec.definition.Id == reportingForecastLanding && coverage.Status != reportingFailed {
 			out.Forecast = e.compared.operands
+			if out.Forecast != nil && read > len(facts) {
+				out.Forecast.ColleagueWithheld = true
+			}
 		}
 	}
 	if err := projectReportingCharts(&out); err != nil {

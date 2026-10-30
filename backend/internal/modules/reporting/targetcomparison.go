@@ -38,13 +38,22 @@ type ForecastOperands struct {
 	// CallOverPipeline marks a manager-call installation read for one
 	// pipeline: the call covers every pipeline, so it has no landing here.
 	CallOverPipeline bool
-	Operands         crmcontracts.ReportingComparisonOperands
+	// CallBelowWon marks a manager call below the money already won. The
+	// landing then says the quarter falls short while the won total already
+	// passes it, and no gap can say both.
+	CallBelowWon bool
+	// Narrowed marks a population that lost deals to the reader's row scope.
+	Narrowed bool
+	// ColleagueWithheld marks figures that, with individual performance off,
+	// one colleague besides the reader would make up.
+	ColleagueWithheld bool
+	Operands          crmcontracts.ReportingComparisonOperands
 }
 
 // compareForecast places the forecast landing against the target held for
 // it. held carries the scope's target for this pipeline and, when a pipeline
 // is selected, the scope's whole-pipeline target under whole.
-func compareForecast(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, metric crmcontracts.ReportingMetric, ops *ForecastOperands, held heldTargets) *crmcontracts.ReportingTargetComparison {
+func compareForecast(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, ops *ForecastOperands, held heldTargets) *crmcontracts.ReportingTargetComparison {
 	frame := evaluation.Context
 	out := &crmcontracts.ReportingTargetComparison{TargetMetric: comparedMetric}
 	if ops == nil {
@@ -54,32 +63,74 @@ func compareForecast(ctx context.Context, evaluation crmcontracts.ReportingEvalu
 		}
 		return incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityScope, oneTeam(ctx, evaluation.Selection))
 	}
-	out.Basis, out.Operands = &ops.Measure, &ops.Operands
-	whole, wholeHeld := held[wholePipelineKey(frame.Scope, comparedMetric)]
-	target, targetHeld := held[keyFor(frame.Scope, comparedMetric)]
+	if ops.Measure != "" {
+		out.Basis, out.Operands = &ops.Measure, &ops.Operands
+	}
+	if refused := refuseForecast(out, evaluation, *ops); refused != nil {
+		return refused
+	}
+	target, refused := heldTarget(out, evaluation, held)
+	if refused != nil {
+		return refused
+	}
+	measure(out, *ops, target)
+	return out
+}
+
+// refuseForecast answers the state of a forecast that cannot stand against
+// any target, nil when it can. Only this fiscal quarter is compared.
+func refuseForecast(out *crmcontracts.ReportingTargetComparison, evaluation crmcontracts.ReportingEvaluation, ops ForecastOperands) *crmcontracts.ReportingTargetComparison {
 	switch {
-	case frame.TargetInterval == nil || !sameWindow(*frame.TargetInterval, ops.Quarter):
+	case !quarterToDate(evaluation, ops.Quarter):
 		quarter := evaluation.Selection
 		quarter.Period, quarter.TargetBasis, quarter.Interval = reportingThisQuarter, reportingFiscalQuarter, nil
 		return incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityPeriod, &quarter)
 	case ops.CallOverPipeline:
 		return incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityManagerCallPipeline, withoutPipeline(evaluation.Selection))
-	case metric.Coverage.Withheld:
-		out.Status = crmcontracts.ReportingTargetComparisonStatusPartialVisibility
-		return out
+	case ops.ColleagueWithheld:
+		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusColleagueWithheld)
+	case ops.Narrowed:
+		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusPartialVisibility)
 	case ops.FxMissing:
-		out.Status = crmcontracts.ReportingTargetComparisonStatusFxMissing
-		return out
-	case !targetHeld && wholeHeld && whole.Unit == frame.Currency:
-		return incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityPipeline, withoutPipeline(evaluation.Selection))
-	case !targetHeld:
-		out.Status = crmcontracts.ReportingTargetComparisonStatusNoTarget
-		return out
-	case target.Unit != frame.Currency:
-		// No selection changes a target's currency; it is set again.
-		return incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityCurrency, nil)
+		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusFxMissing)
+	case ops.CallBelowWon:
+		return withStatus(out, crmcontracts.ReportingTargetComparisonStatusCallBelowWon)
 	}
-	measure(out, *ops, target)
+	return nil
+}
+
+// heldTarget is the target the landing stands against: the one for this
+// pipeline. The scope's target over every pipeline is refused, because it is
+// not split. A target in another currency is refused first,
+// whichever of the two it is.
+func heldTarget(out *crmcontracts.ReportingTargetComparison, evaluation crmcontracts.ReportingEvaluation, held heldTargets) (crmcontracts.ReportingTarget, *crmcontracts.ReportingTargetComparison) {
+	frame := evaluation.Context
+	target, ok := held[keyFor(frame.Scope, comparedMetric)]
+	whole, wholeHeld := held[wholePipelineKey(frame.Scope)]
+	switch {
+	case !ok && !wholeHeld:
+		return target, withStatus(out, crmcontracts.ReportingTargetComparisonStatusNoTarget)
+	case (ok && target.Unit != frame.Currency) || (!ok && whole.Unit != frame.Currency):
+		// No selection changes a target's currency; it is set again.
+		return target, incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityCurrency, nil)
+	case !ok:
+		return target, incompatible(out, crmcontracts.ReportingTargetComparisonIncompatibilityPipeline, withoutPipeline(evaluation.Selection))
+	}
+	return target, nil
+}
+
+// quarterToDate answers whether the selection reads this fiscal quarter. That
+// is this quarter itself, or the custom interval a sent edition pins it to,
+// which starts where the quarter does. A month that opens the quarter does not.
+func quarterToDate(evaluation crmcontracts.ReportingEvaluation, quarter crmcontracts.ReportingWindow) bool {
+	frame := evaluation.Context
+	period := evaluation.Selection.Period
+	return (period == reportingThisQuarter || period == reportingCustom) && frame.Interval.StartAt.Equal(quarter.StartAt) &&
+		frame.TargetInterval != nil && sameWindow(*frame.TargetInterval, quarter)
+}
+
+func withStatus(out *crmcontracts.ReportingTargetComparison, status crmcontracts.ReportingTargetComparisonStatus) *crmcontracts.ReportingTargetComparison {
+	out.Status = status
 	return out
 }
 

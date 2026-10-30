@@ -17556,6 +17556,8 @@ func (e ReportingTargetComparisonIncompatibility) Valid() bool {
 
 // Defines values for ReportingTargetComparisonStatus.
 const (
+	ReportingTargetComparisonStatusCallBelowWon      ReportingTargetComparisonStatus = "call_below_won"
+	ReportingTargetComparisonStatusColleagueWithheld ReportingTargetComparisonStatus = "colleague_withheld"
 	ReportingTargetComparisonStatusCompared          ReportingTargetComparisonStatus = "compared"
 	ReportingTargetComparisonStatusFxMissing         ReportingTargetComparisonStatus = "fx_missing"
 	ReportingTargetComparisonStatusIncompatible      ReportingTargetComparisonStatus = "incompatible"
@@ -17567,6 +17569,10 @@ const (
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonStatus enum.
 func (e ReportingTargetComparisonStatus) Valid() bool {
 	switch e {
+	case ReportingTargetComparisonStatusCallBelowWon:
+		return true
+	case ReportingTargetComparisonStatusColleagueWithheld:
+		return true
 	case ReportingTargetComparisonStatusCompared:
 		return true
 	case ReportingTargetComparisonStatusFxMissing:
@@ -51826,12 +51832,14 @@ type ReportingTargetComparison struct {
 	Coverage *float64                        `json:"coverage,omitempty"`
 	Gap      *float64                        `json:"gap,omitempty"`
 
-	// Incompatibility Present only with status `incompatible`. `period`: the target
-	// interval is not the current fiscal quarter. `scope`: the forecast
+	// Incompatibility Present only with status `incompatible`. `period`: the selection
+	// is not `this_quarter`, or its target interval is not the current
+	// fiscal quarter. `scope`: the forecast
 	// does not read this scope as one population. `pipeline`: only a
 	// target for the whole scope exists, and it is not split across
 	// pipelines. `manager_call_pipeline`: the landing is a manager call,
-	// which covers every pipeline. `currency`: the target was set in
+	// which covers every pipeline. `currency`: the target that would
+	// apply, for this pipeline or else for every pipeline, was set in
 	// another currency than the base currency.
 	Incompatibility *ReportingTargetComparisonIncompatibility `json:"incompatibility,omitempty"`
 	Landing         *float64                                  `json:"landing,omitempty"`
@@ -51853,9 +51861,15 @@ type ReportingTargetComparison struct {
 	// target is never zero. `fx_missing` means a deal amount has no
 	// exchange rate to the base currency, so the totals are incomplete
 	// and no gap or coverage is given. `partial_visibility` means the
-	// reader cannot see every deal of the scope, so its figures cannot
-	// stand against the scope's whole target. `incompatible` names why
-	// in `incompatibility` and offers `supported_selection`.
+	// reader cannot see every deal of the population asked for, or a
+	// deal's amount, so its figures cannot stand against the scope's
+	// whole target.
+	// `colleague_withheld` means individual performance is off and the
+	// figure would be one colleague's own. `call_below_won` means the
+	// manager call is below what is already won, so the landing and the
+	// sales won disagree and no gap or coverage is given. `incompatible`
+	// names why in `incompatibility` and offers `supported_selection`
+	// when a selection can fix it.
 	Status ReportingTargetComparisonStatus `json:"status"`
 
 	// SupportedSelection Present only with status `incompatible`. The same selection, changed so the comparison is supported.
@@ -51870,12 +51884,14 @@ type ReportingTargetComparison struct {
 // ReportingTargetComparisonBasis The forward measure the landing was projected with.
 type ReportingTargetComparisonBasis string
 
-// ReportingTargetComparisonIncompatibility Present only with status `incompatible`. `period`: the target
-// interval is not the current fiscal quarter. `scope`: the forecast
+// ReportingTargetComparisonIncompatibility Present only with status `incompatible`. `period`: the selection
+// is not `this_quarter`, or its target interval is not the current
+// fiscal quarter. `scope`: the forecast
 // does not read this scope as one population. `pipeline`: only a
 // target for the whole scope exists, and it is not split across
 // pipelines. `manager_call_pipeline`: the landing is a manager call,
-// which covers every pipeline. `currency`: the target was set in
+// which covers every pipeline. `currency`: the target that would
+// apply, for this pipeline or else for every pipeline, was set in
 // another currency than the base currency.
 type ReportingTargetComparisonIncompatibility string
 
@@ -51886,9 +51902,15 @@ type ReportingTargetComparisonIncompatibility string
 // target is never zero. `fx_missing` means a deal amount has no
 // exchange rate to the base currency, so the totals are incomplete
 // and no gap or coverage is given. `partial_visibility` means the
-// reader cannot see every deal of the scope, so its figures cannot
-// stand against the scope's whole target. `incompatible` names why
-// in `incompatibility` and offers `supported_selection`.
+// reader cannot see every deal of the population asked for, or a
+// deal's amount, so its figures cannot stand against the scope's
+// whole target.
+// `colleague_withheld` means individual performance is off and the
+// figure would be one colleague's own. `call_below_won` means the
+// manager call is below what is already won, so the landing and the
+// sales won disagree and no gap or coverage is given. `incompatible`
+// names why in `incompatibility` and offers `supported_selection`
+// when a selection can fix it.
 type ReportingTargetComparisonStatus string
 
 // ReportingTargetInput defines model for ReportingTargetInput.

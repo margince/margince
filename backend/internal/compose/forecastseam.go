@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -46,32 +47,11 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
-	scopeClause, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
+	scopeClause, resolved, populationClause, err := forecastPopulationClauses(ctx, tx, scope, pipeline, arg)
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
-	limited := scopeClause != ""
-	if scopeClause == "" {
-		scopeClause = sqlUnnarrowed
-	}
-
-	// What the caller ASKED to measure, resolved against their own lens. An
-	// unset scope means they named nothing, which is a rep's own records and a
-	// manager's teams — never the installation, which is what this read
-	// answered before and why a rep's forecast was somebody else's.
-	//
-	// Excludes unowned rows even from the caller's own default: a forecast is
-	// a commitment number, and nobody has committed to a deal nobody has
-	// claimed. Widening it would make a manager's team total stop reconciling
-	// with the sum of naming each member by id.
-	resolved, populationClause, err := AnalyticsPopulationClause(
-		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
-	if err != nil {
-		return nil, forecasting.Scope{}, false, err
-	}
-	if populationClause == "" {
-		populationClause = sqlUnnarrowed
-	}
+	limited := scopeClause != sqlUnnarrowed
 
 	// The deal's money in the installation's base currency, converted HERE
 	// rather than in the module: the rate sheet is a table, and forecasting
@@ -106,31 +86,21 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
-	if pipeline != nil {
-		populationClause += fmt.Sprintf(" AND d.pipeline_id=$%d", arg(*pipeline))
-	}
 	qualification, err := forecastQualificationSQL(ctx, tx, arg)
 	if err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
 	sql := fmt.Sprintf(`
-		SELECT d.id, d.owner_id, %[9]s, d.currency, %[1]s,
+		SELECT d.id, d.owner_id, %[5]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.status = 'lost', d.forecast_category,
-		       COALESCE(s.win_probability, 0), d.stage_id, %[10]s
+		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
-		WHERE d.archived_at IS NULL
-		  AND (
-		        (d.expected_close_date BETWEEN $%[2]d AND $%d)
-		     OR (d.closed_at IS NOT NULL
-		         AND (timezone($%d, d.closed_at))::date BETWEEN $%d AND $%d)
-		      )
-		  AND %[7]s
-		  %[8]s`,
-		baseValue,
-		arg(period.StartDate), arg(period.EndDate),
-		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate),
+		WHERE %[2]s
+		  AND %[3]s
+		  %[4]s`,
+		baseValue, forecastWindowSQL(period, arg),
 		scopeClause, "AND "+populationClause, amountSQL, qualification)
 
 	rows, err := tx.Query(ctx, sql, args...)
@@ -149,6 +119,86 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 		return nil, forecasting.Scope{}, false, err
 	}
 	return out, forecastScopeFromResolved(resolved), limited, nil
+}
+
+// forecastWindowSQL is the forecast's period over deal alias d. A live deal is
+// in it when expected in it or closed in it, the close read as a local day.
+func forecastWindowSQL(period forecasting.Period, arg func(any) int) string {
+	return fmt.Sprintf(`d.archived_at IS NULL
+		  AND (
+		        (d.expected_close_date BETWEEN $%d AND $%d)
+		     OR (d.closed_at IS NOT NULL
+		         AND (timezone($%d, d.closed_at))::date BETWEEN $%d AND $%d)
+		      )`,
+		arg(period.StartDate), arg(period.EndDate),
+		arg(period.Zone.String()), arg(period.StartDate), arg(period.EndDate))
+}
+
+// forecastPopulationNarrowed answers whether the reader's row scope hides a
+// deal of the population asked for. A field mask that hides a deal's amount
+// counts too. A boolean, never a count, for the reason ForecastDeals gives.
+func forecastPopulationNarrowed(ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope, pipeline *ids.UUID) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scopeClause, _, populationClause, err := forecastPopulationClauses(ctx, tx, scope, pipeline, arg)
+	if err != nil {
+		return false, err
+	}
+	var hidden []string
+	if scopeClause != sqlUnnarrowed {
+		hidden = append(hidden, "NOT COALESCE(("+scopeClause+"), false)")
+	}
+	readable, masked, err := auth.MaskExcludedClause(ctx, tableDeal, "amount_minor", "d", arg)
+	if err != nil {
+		return false, err
+	}
+	if masked {
+		hidden = append(hidden, "(d.amount_minor IS NOT NULL AND NOT COALESCE(("+readable+"), false))")
+	}
+	if len(hidden) == 0 {
+		return false, nil
+	}
+	var narrowed bool
+	err = tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM deal d WHERE "+forecastWindowSQL(period, arg)+
+		" AND "+populationClause+" AND ("+strings.Join(hidden, " OR ")+"))", args...).Scan(&narrowed)
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether the reader sees every forecast deal: %w", err)
+	}
+	return narrowed, nil
+}
+
+// forecastPopulationClauses are the reader's row scope and the population the
+// forecast was asked to measure, over deal alias d. A clause that narrows
+// nothing is sqlUnnarrowed.
+func forecastPopulationClauses(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipeline *ids.UUID, arg func(any) int) (string, ResolvedScope, string, error) {
+	scopeClause, err := auth.ScopeClauseFor(ctx, tableDeal, "d", arg)
+	if err != nil {
+		return "", ResolvedScope{}, "", err
+	}
+	if scopeClause == "" {
+		scopeClause = sqlUnnarrowed
+	}
+
+	// What the caller asked to measure, resolved against their own lens. An
+	// unset scope is a rep's own records and a manager's teams, never the
+	// installation.
+	//
+	// Unowned rows stay out even of the caller's own default: nobody has
+	// committed to a deal nobody has claimed. Widening it would make a team
+	// total stop matching the sum of its members named one by one.
+	resolved, populationClause, err := AnalyticsPopulationClause(
+		ctx, tx, requestedFromForecastScope(scope), "d", arg, unownedIsExcluded)
+	if err != nil {
+		return "", ResolvedScope{}, "", err
+	}
+	if populationClause == "" {
+		populationClause = sqlUnnarrowed
+	}
+
+	if pipeline != nil {
+		populationClause += fmt.Sprintf(" AND d.pipeline_id=$%d", arg(*pipeline))
+	}
+	return scopeClause, resolved, populationClause, nil
 }
 
 func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
