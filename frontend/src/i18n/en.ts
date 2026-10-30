@@ -3240,13 +3240,14 @@ export const en = {
   // The server's reason codes for the relationship and commercial ratings.
   "co.health.reason.neverWritten":
     "No message from them or meeting is recorded.",
-  "co.health.reason.quiet_one": "No reply or meeting recorded for {days} day.",
+  "co.health.reason.quiet_one":
+    "No reply from them and no meeting for {days} day.",
   "co.health.reason.quiet_other":
-    "No reply or meeting recorded for {days} days.",
+    "No reply from them and no meeting for {days} days.",
   "co.health.reason.quietSince_one":
-    "No reply or meeting recorded since {at} ({days} day).",
+    "No reply from them and no meeting since {at} ({days} day).",
   "co.health.reason.quietSince_other":
-    "No reply or meeting recorded since {at} ({days} days).",
+    "No reply from them and no meeting since {at} ({days} days).",
   "co.health.reason.meetingBooked": "A meeting is booked for {at}.",
   "co.health.reason.lastMetToday": "Last met them today.",
   "co.health.reason.lastMet_one": "Last met them {days} day ago.",
