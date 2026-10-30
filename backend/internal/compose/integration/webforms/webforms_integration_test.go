@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -163,6 +165,53 @@ func TestABrowserFormLandsALeadWithItsMessageOnTheTimeline(t *testing.T) {
 			t.Errorf("the note does not carry %q:\n%s", want, notes[0])
 		}
 	}
+}
+
+func TestAFormNoteAnswersTheSubmissionFieldByField(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
+		"consent_wording": "You may contact me.", "consent_policy_version": "2026-10",
+	})
+	answer := browserPost(t, e, form.FormKey, url.Values{
+		"name": {"Ada Lovelace"}, "email": {"ada@visitor.example"}, "message": {"Please call me"},
+		"budget": {"10k"}, "consent": {"on"}, "utm_source": {"newsletter"}, "page_url": {siteOrigin + "/pricing"},
+	}, siteOrigin)
+	if answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	var noteID string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM activity WHERE source_system = 'web_form' AND kind = 'note'`).Scan(&noteID); err != nil {
+		t.Fatal(err)
+	}
+	var note crmcontracts.Activity
+	if status := e.Call(t, "GET", "/v1/activities/"+noteID, nil, nil, &note); status != http.StatusOK {
+		t.Fatalf("GET the note → %d", status)
+	}
+	sent := note.WebForm
+	if sent == nil {
+		t.Fatal("the note answers no web_form, so a reader gets the fields only as text")
+	}
+	if sent.Email != "ada@visitor.example" || deref(sent.FullName) != "Ada Lovelace" || deref(sent.Message) != "Please call me" ||
+		deref(sent.PageUrl) != siteOrigin+"/pricing" {
+		t.Errorf("fields = email %q, name %q, message %q, page %q", sent.Email, deref(sent.FullName), deref(sent.Message), deref(sent.PageUrl))
+	}
+	wantExtra := []crmcontracts.WebFormValue{{Name: "budget", Value: "10k"}}
+	wantCampaign := []crmcontracts.WebFormValue{{Name: "utm_source", Value: "newsletter"}}
+	if !slices.Equal(sent.Extra, wantExtra) || !slices.Equal(sent.Campaign, wantCampaign) {
+		t.Errorf("extra = %v, campaign = %v, want %v and %v", sent.Extra, sent.Campaign, wantExtra, wantCampaign)
+	}
+	if c := sent.Consent; c == nil || !c.Ticked || c.Wording != "You may contact me." || deref(c.PolicyVersion) != "2026-10" {
+		t.Errorf("consent = %+v, want the ticked box with its wording and policy version", c)
+	}
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func TestASecondSubmissionFromAKnownEmailAddsToItsLead(t *testing.T) {

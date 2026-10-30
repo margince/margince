@@ -306,6 +306,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable && s.raw != nil {
 		raw := s.raw
 		a.Raw = &raw
+		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
 	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)

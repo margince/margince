@@ -26573,6 +26573,9 @@ type Activity struct {
 	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
 	Voice *ActivityVoice `json:"voice,omitempty"`
 
+	// WebForm What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`.
+	WebForm *WebFormSubmission `json:"web_form,omitempty"`
+
 	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -56641,6 +56644,16 @@ type WebForm struct {
 // WebFormState defines model for WebForm.State.
 type WebFormState string
 
+// WebFormConsent The consent box the form showed. Absent when the form shows none.
+type WebFormConsent struct {
+	// PolicyVersion The privacy policy version the form named, when it named one.
+	PolicyVersion *string `json:"policy_version,omitempty"`
+	Ticked        bool    `json:"ticked"`
+
+	// Wording The words the box showed, as the admin wrote them when the form was sent.
+	Wording string `json:"wording"`
+}
+
 // WebFormCreated defines model for WebFormCreated.
 type WebFormCreated struct {
 	// AllowedOrigins The websites a `browser` form takes posts from, as origins (`https://example.com`).
@@ -56725,6 +56738,42 @@ type WebFormReceiptStatus string
 // builder computes with the form's stored secret: the `sender_secret` pasted, or for `typeform`
 // and `tally` one this installation minted when none was.
 type WebFormSender string
+
+// WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
+// text and nothing Margince checked, except `consent`, which is the form's own record of
+// its consent box.
+type WebFormSubmission struct {
+	// Campaign The `utm_` parameters the page carried.
+	Campaign []WebFormValue `json:"campaign"`
+	Company  *string        `json:"company,omitempty"`
+
+	// Consent The consent box the form showed. Absent when the form shows none.
+	Consent *WebFormConsent `json:"consent,omitempty"`
+
+	// Email The address the lead was matched or created by.
+	Email string `json:"email"`
+
+	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
+	Extra    []WebFormValue `json:"extra"`
+	FullName *string        `json:"full_name,omitempty"`
+
+	// Message The free text the visitor wrote.
+	Message *string `json:"message,omitempty"`
+
+	// PageUrl The page the form was sent from.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// Phone As typed; it may lack the country prefix a lead's phone needs.
+	Phone    *string `json:"phone,omitempty"`
+	Referrer *string `json:"referrer,omitempty"`
+	Title    *string `json:"title,omitempty"`
+}
+
+// WebFormValue defines model for WebFormValue.
+type WebFormValue struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
 
 // WebhookBodyContentType The Content-Type of a templated body; null means application/json.
 type WebhookBodyContentType string
@@ -68313,6 +68362,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "voice")
 	}
 
+	if raw, found := object["web_form"]; found {
+		err = json.Unmarshal(raw, &a.WebForm)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form': %w", err)
+		}
+		delete(object, "web_form")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -68676,6 +68733,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["voice"], err = json.Marshal(a.Voice)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.WebForm != nil {
+		object["web_form"], err = json.Marshal(a.WebForm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form': %w", err)
 		}
 	}
 

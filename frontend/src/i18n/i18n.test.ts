@@ -270,6 +270,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.action.email",
   "contact.memory.channelEmail",
   "history.field.email",
+  "activity.webForm.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
   "compose.cc",

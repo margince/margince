@@ -239,3 +239,50 @@ it("labels each guest's answer, and counts the guests a crowd leaves out", async
   expect(line?.textContent).toContain("Dan, Eve");
   expect(line?.textContent).toContain("and 50 more guests not listed");
 });
+it("shows a website form's fields under their labels instead of the note's text", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/form": () =>
+      jsonResponse({
+        id: "form",
+        kind: "note",
+        subject: "Website form: Contact",
+        body: "Consent: not ticked\n\n> Please call me\n>\n> Email: ada@visitor.example",
+        occurred_at: "2026-10-28T13:33:00Z",
+        content_state: "available",
+        source_system: "web_form",
+        links: [],
+        web_form: {
+          message: "Please call me",
+          email: "ada@visitor.example",
+          extra: [{ name: "budget", value: "10k" }],
+          page_url: "javascript:alert(1)",
+          campaign: [
+            { name: "utm_source", value: "newsletter" },
+            { name: "ref", value: "partner" },
+          ],
+          consent: { ticked: false, wording: "You may contact me." },
+        },
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="form"
+      zone={viewerZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText("Please call me")).toBeTruthy();
+  const term = (name: string) =>
+    screen.getByText(name, { selector: "dt" }).nextElementSibling?.textContent;
+  expect(term("Email")).toBe("ada@visitor.example");
+  expect(term("budget")).toBe("10k");
+  expect(term("Campaign source")).toBe("newsletter");
+  expect(term("ref")).toBe("partner");
+  expect(term("Consent")).toContain("Not agreed");
+  expect(term("Consent")).toContain("You may contact me.");
+  // A page address that is no web address stays text, never a link.
+  expect(term("Page")).toBe("javascript:alert(1)");
+  expect(screen.queryByRole("link", { name: /javascript/ })).toBeNull();
+  expect(screen.queryByText(/Consent: not ticked/)).toBeNull();
+});
