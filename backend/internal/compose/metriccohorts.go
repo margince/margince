@@ -26,7 +26,7 @@ func reportingPrevious(frame crmcontracts.ReportingContext) crmcontracts.Reporti
 	if kind == "last_week" {
 		return crmcontracts.ReportingWindow{StartAt: start.AddDate(0, 0, -7), EndAt: start}
 	}
-	if kind == "this_week" {
+	if kind == string(crmcontracts.ReportingSelectionPeriodThisWeek) {
 		// The same stretch of last week, to the same local clock time.
 		return crmcontracts.ReportingWindow{StartAt: start.AddDate(0, 0, -7), EndAt: end.In(start.Location()).AddDate(0, 0, -7)}
 	}

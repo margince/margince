@@ -56,12 +56,12 @@ const proveRestoredInstantsSQL = `
 	              AND damage.action = 'update'
 	              AND (damage.before ->> 'occurred_at')::timestamptz = page.scheduled_start
 	              AND (damage.after ->> 'occurred_at')::timestamptz = (repair.before ->> 'occurred_at')::timestamptz
-	              AND damage.occurred_at <= page.created_at AND page.created_at < repair.occurred_at
+	              AND damage.occurred_at <= page.created_at AND page.created_at < repair.occurred_at -- occurred_at raw: audit row times, not an activity day
 	              AND NOT EXISTS (
 	                  SELECT 1 FROM audit_log moved
 	                   WHERE moved.entity_type = 'activity' AND moved.entity_id = page.activity_id
 	                     AND moved.after ? 'occurred_at'
-	                     AND moved.occurred_at > damage.occurred_at AND moved.occurred_at < repair.occurred_at))
+	                     AND moved.occurred_at > damage.occurred_at AND moved.occurred_at < repair.occurred_at)) -- occurred_at raw: audit row times, not an activity day
 	), proved AS (
 	    UPDATE activity_meeting_history h
 	       SET scheduled_precision = $4
