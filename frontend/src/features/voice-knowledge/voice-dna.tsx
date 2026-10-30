@@ -158,10 +158,8 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
   );
 }
 
-// A profile that exists is one long page about the voice: who the writer is
-// and how strong the voice is, the one move that sharpens it, the figures, the
-// proof in their own words, the drafts it writes, then what it is built from,
-// the rules that steer it and the builds behind it. The jump bar reaches each.
+// A profile that exists is one long page about the voice. It runs from who the
+// writer is to the builds behind it, and the jump bar reaches each section.
 function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
@@ -331,8 +329,8 @@ function VoiceSection({
   );
 }
 
-// The profile's standing at the end of the jump bar: a state only when it
-// wants something, since ready is the normal reading, then its version.
+// The profile's standing at the end of the jump bar. A state shows only when
+// it wants something, since ready is normal. The version follows.
 function VoiceStanding({ profile }: Readonly<{ profile: VoiceProfile }>) {
   const t = useT();
   return (

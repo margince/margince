@@ -4,19 +4,17 @@
 import type { ReactNode } from "react";
 import "./voiceprint.css";
 
-// The waveform's shape is fixed: it is the mark of a voice, not a reading of
-// one, so only its height (how much the voice has heard) and the ring around
-// it carry a value.
+// The waveform's shape is fixed: it is the mark of a voice, not a reading.
+// Only its height (how much it has heard) and the ring carry a value.
 const BARS = [
   18, 30, 46, 62, 40, 72, 90, 64, 38, 54, 82, 100, 76, 48, 60, 88, 70, 44, 58,
   36, 50, 28,
 ];
 
 /**
- * A voice as a ring of progress around a waveform: the settings hero, the
- * onboarding collect and build scenes and a draft's voice match all draw it.
- * `fraction` fills the ring, `amplitude` scales the bars, and `children` take
- * the centre in place of the bars (a match percentage).
+ * A voice as a ring of progress around a waveform. The settings hero, the
+ * onboarding scenes and a draft's voice match all draw it. `fraction` fills
+ * the ring and `amplitude` scales the bars. `children` replace the bars.
  */
 export function Voiceprint({
   fraction,

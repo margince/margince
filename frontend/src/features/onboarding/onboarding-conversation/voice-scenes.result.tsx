@@ -43,13 +43,10 @@ export function VoiceScene({
 }
 
 /**
- * The result scene: what a succeeded build learned. The portrait leads, then a
- * two-column board: the sample it would send on the left, the reading behind it
- * on the right. The settings page draws the same parts, so a reader meets the
- * voice here exactly as they will find it there. The
- * two answers sit on the pinned rail of every scene's primary action. "That is
- * me" confirms. To disagree, the reader adds more writing and builds again: the
- * one correction the product can act on, unlike a tone word it cannot apply.
+ * The result scene: the portrait, then the sample beside the reading behind
+ * it, in the parts the settings page draws. "That is me" confirms. To
+ * disagree, the reader adds writing and builds again: the one correction the
+ * product can act on, unlike a tone word it cannot apply.
  */
 export function VoiceResultScene({
   loading,
@@ -270,11 +267,9 @@ function VoiceDimensionsCard({
 }
 
 /**
- * What a succeeded build learned: the portrait beside a full voiceprint, then
- * the board with the sample on the left and everything measured or observed on
- * the right. Every fact comes from `parseVoiceInsights`; this renders that data
- * and never parses it again. A section with nothing to show renders nothing,
- * and a dimension this shape lacks gets no invented marker.
+ * What a succeeded build learned: the portrait, then the sample beside what
+ * was measured. Every fact comes from `parseVoiceInsights`. A section with
+ * nothing to show renders nothing, and a missing dimension gets no marker.
  */
 function VoiceResultBoard({
   data,

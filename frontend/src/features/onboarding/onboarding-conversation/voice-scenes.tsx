@@ -79,11 +79,9 @@ function useFloorReachedAnnouncement(ready: boolean, words: number): string {
 }
 
 /**
- * The floor meter: the design system's Meter plus the numbers behind it,
- * reading the same corpus total the sources list and the build gate already
- * read, never a second count or a size estimate. The bar caps at the floor:
- * more words keep helping the build, but the floor has nothing further to
- * fill toward. `ready` decides only the wording, never a finished task.
+ * The floor meter reads the corpus total the build gate reads, never a second
+ * count. The bar caps at the floor: more words still help, but the floor has
+ * nothing further to fill. `ready` decides only the wording.
  */
 function VoiceCorpusFloorMeter({
   words,
@@ -118,9 +116,8 @@ function VoiceCorpusFloorMeter({
   );
 }
 
-// The voiceprint fills toward the build floor as writing lands: the ring is the
-// share of the floor, and the waveform rises with it from a murmur. The meter
-// under it says the same count in words, so the drawing stays decoration.
+// The ring is the share of the build floor, and the waveform rises with it.
+// The meter under it says the same count in words, so the drawing is decoration.
 const PRINT_MIN_AMPLITUDE = 0.25;
 
 function VoicePrintCard({

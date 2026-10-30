@@ -33,9 +33,8 @@ function mergeById<T extends { id: string }>(prev: T[], page: T[]): T[] {
   return [...prev.filter((item) => !seen.has(item.id)), ...page];
 }
 
-// One paged read of the version history, shared by every part of the page
-// that needs it: the hero and the candidate review read the first page, the
-// history table the pages a reader loads.
+// One paged read of the version history, shared by the whole page. The hero
+// and the candidate review read the first page; the table loads the rest.
 export function useVoiceVersions(profileId: string | undefined) {
   return useInfiniteQuery({
     queryKey: ["voice-versions", profileId],

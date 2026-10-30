@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 import { usePrefersReducedMotion } from "./motion";
 import "./jumpbar.css";
 
-/** Scrolls to the element with this id and moves focus there, so the next Tab
- * starts inside it; a verb elsewhere on the page that leads to a section uses
- * this rather than a fragment link the router would take. */
+/** Scrolls to the element with this id and focuses it, so the next Tab starts
+ * inside it. A button that leads to a section uses this: the router would take
+ * a fragment link. */
 export function useJumpTo(): (id: string) => void {
   const reduced = usePrefersReducedMotion();
   return (id: string) => {

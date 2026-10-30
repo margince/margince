@@ -109,8 +109,8 @@ export function VoiceHero({
   );
 }
 
-// The one move that makes the voice better, kept at the top of the page: how
-// far the corpus is from its target, what to add next, and the way to add it.
+// The one move that makes the voice better, at the top of the page. It says
+// how far the corpus is from its target and what to add next.
 export function SharpenStrip({
   summary,
   next,

@@ -47,8 +47,8 @@ export function useVoiceSources(profileId: string) {
 
 // Mirrors the server's quality bands so a removal can name the drop before it
 // happens; the server remains the authority.
-// Each band from the corpus size it starts at; the meter's scale reads the same
-// floors, so the marks under the bar and the removal warning cannot disagree.
+// Each band from the corpus size it starts at. The meter reads the same floors,
+// so the marks under the bar and the removal warning cannot disagree.
 const BAND_FLOORS: readonly {
   band: VoiceCorpusSummary["quality_band"];
   from: number;
@@ -157,9 +157,8 @@ function RegisterMix({ summary }: Readonly<{ summary: VoiceCorpusSummary }>) {
   );
 }
 
-// Below the first-build floor, the distance to it is what the reader asks.
-// How far the corpus has come toward the words a sharp voice needs, with the
-// band floors marked under the bar so a reader sees what the next sample buys.
+// How far the corpus has come toward a sharp voice. The band floors sit under
+// the bar, so a reader sees what the next sample buys.
 function CorpusMeter({
   summary,
   captionId,
@@ -195,8 +194,8 @@ function CorpusMeter({
   );
 }
 
-// The design system's Meter rather than a native <progress>, which paints in
-// the browser's own light colours whatever the theme.
+// Below the first-build floor, the distance to it is what the reader asks. A
+// native <progress> would paint in light colours whatever the theme.
 function FloorMeter({ words }: Readonly<{ words: number }>) {
   const t = useT();
   const { locale } = useLocale();

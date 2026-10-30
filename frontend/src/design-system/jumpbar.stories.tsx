@@ -8,8 +8,8 @@ import { Heading } from "./heading";
 import { JumpBar } from "./jumpbar";
 
 /**
- * The section pills of a long page, here over sections tall enough to scroll,
- * so a press shows the jump and the bar staying pinned above it.
+ * The section pills of a long page, over sections tall enough to scroll. A
+ * press shows the jump, and the bar stays pinned above it.
  */
 const TARGETS = [
   { id: "jb-voice", label: "Your voice" },

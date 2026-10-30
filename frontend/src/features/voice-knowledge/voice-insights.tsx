@@ -282,8 +282,8 @@ export function VoiceFigures({
   );
 }
 
-// What the build learned, proven in the writer's own words: up to three lines
-// as quotes with the move each shows, then the themes and what they avoid.
+// What the build learned, in the writer's own words. Up to three quotes show a
+// move each, then come the themes and what they avoid.
 export function VoiceTraits({ data }: Readonly<{ data: VoiceInsightsData }>) {
   const t = useT();
   return (
@@ -337,8 +337,8 @@ export function VoiceTraits({ data }: Readonly<{ data: VoiceInsightsData }>) {
   );
 }
 
-// The build's sample drafts, one at a time behind a switch, each as the email
-// it would be with its voice match as a ring beside it.
+// The build's sample drafts, one at a time behind a switch. Each shows as the
+// email it would be, with its voice match as a ring.
 export function DraftShowcase({
   drafts,
 }: Readonly<{ drafts: VoiceSampleDraft[] }>) {

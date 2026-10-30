@@ -98,18 +98,9 @@ function companyPresence(
 }
 
 /**
- * Which state a voice build is in, by the stage the server last reported.
- *
- * The four stages are not one activity: a snapshot and an extraction are
- * material ARRIVING, an evaluation and an activation are the agent working
- * over what arrived and producing the thing from it. `ingest` covers the
- * first pair, `working` the second, which is as far as the orb's report
- * needs to go.
- */
-/**
- * What a build stage looks like on the Core. A build that has started and
- * reported no stage yet is still a build in flight: material is arriving, so it
- * is intake, not rest.
+ * What a build stage looks like on the Core. A snapshot and an extraction are
+ * material arriving (`ingest`). An evaluation and an activation are the agent
+ * working on it (`working`). A build with no stage yet is still intake.
  */
 function buildCore(stage: BuildStage | null): MarginceCoreState {
   return stage === "evaluate" || stage === "activate" ? "working" : "ingest";

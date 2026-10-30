@@ -59,13 +59,10 @@ function useCrawlingProgress(ceiling: number): number {
 }
 
 /**
- * The build scene: the voiceprint the collect scene grew, now carrying the
- * build's progress ring with the percentage inside it. Beside it (never under
- * it) are what the build is reading and the four pipeline stages as a
- * checklist. The ceiling is derived from the stage
- * the server reports. The displayed number crawls toward it (useCrawlingProgress)
- * so the ring keeps moving during a stage, but never passes the ceiling. It
- * reaches 100 only when the build completes, when this scene leaves the screen.
+ * The build scene: the voiceprint carries the progress ring, with the stages
+ * as a checklist beside it. The ceiling comes from the stage the server
+ * reports. The number crawls toward it so the ring moves during a stage, and
+ * never passes it. It reaches 100 only as the scene leaves the screen.
  */
 export function VoiceBuildScene({
   stage,

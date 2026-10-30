@@ -279,9 +279,8 @@ export const Collecting: Story = {
   }),
 };
 
-// Dark below the 800-word floor: the frame where the corpus meter and the floor
-// meter stand together, both drawn from tokens, beside the thin band and the
-// register mix.
+// Dark below the 800-word floor. The corpus meter and the floor meter stand
+// together here, both drawn from tokens, beside the thin band.
 export const CollectingDark: Story = {
   globals: { theme: "dark" },
   render: voiceStory({
