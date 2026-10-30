@@ -37,7 +37,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /companies/{id}` | updateCompany | Update a company (partial). | Change records | at once |
 | `DELETE /companies/{id}` | archiveCompany | Archive (soft-delete) a company. | Change records | at once |
 | `POST /companies/{id}/merge` | mergeCompany | Merge this company into a target (non-lossy). | Change records | at once |
-| `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count. | Read records | at once |
+| `GET /companies/{id}/hierarchy-rollup` | getCompanyHierarchyRollup | Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count. | Read records | at once |
 | `GET /companies/{id}/360` | getCompany360 | The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps. | Read records | at once |
 | `GET /companies/{id}/intro-paths` | listIntroPaths | The colleagues who could introduce you at this company, warmest first. | Read records | at once |
 | `GET /companies/{id}/graph` | getCompanyGraph | The account's connections one hop out — its contacts, its open deals and their stakeholders, its parent, children and partner companies. | Read records | at once |

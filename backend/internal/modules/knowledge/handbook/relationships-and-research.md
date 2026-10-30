@@ -301,7 +301,11 @@ An address Margince cannot split stays whole under **Registered address** in the
   checked shows as not checked, not as failed.
 - **Hierarchy rollup**: the numbers of a parent company, with the companies under it that you can read added in.
   Any you cannot read are **named as excluded**. Where no exchange rate is
-  there, it shows no total and does not guess a rate.
+  there, it shows no total and does not guess a rate. **Won this quarter**
+  counts deals by the day they were won. Pick **Year**, **Quarter** or
+  **Month**, or step back with the arrows, to see an earlier period. The
+  **Weighted deal value today** is always the open deals as they stand now,
+  whatever period you pick.
 
 The dossier, the scan and the growth fit are yours alone. An agent cannot read any of them, because each is made from one reader's own view.
 

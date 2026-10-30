@@ -2245,16 +2245,34 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
+         * Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count.
          * @description `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
          *     walked with one bounded indexed recursive query. A child the caller cannot read
          *     contributes nothing and is named in `restricted_excluded` — never silently summed.
-         *     All money converts to the workspace base currency; a missing stored FX rate fails
-         *     the whole read with `422 fx_rate_unavailable` rather than substituting a rate of 1.
+         *     All money converts to the workspace base currency. An open deal whose currency has no
+         *     stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
+         *     substituting a rate of 1. A won deal is valued at the base amount frozen when it was
+         *     won; one won deal in the period with no base value makes `closed_won` null.
          *     Totals are server-computed and reconcile exactly to their parts — never client-summed.
          *     Requires read on companies, deals, and activities; figures aggregate every deal
          *     and activity of each readable company — per-record row visibility within a
          *     readable account is deliberately not consulted, so account totals stay whole.
+         *     That company-scope total is not record evidence: it does not admit the caller to
+         *     any deal or activity behind it, and drill-through goes through the ordinary record reads.
+         *
+         *     Each measure has its own date. `closed_won` is the deals won in `closed_won_period`,
+         *     placed by the day they were won (`closed_at`) in the installation's reporting zone and
+         *     fiscal calendar, valued at the base amount frozen when each was won. Name at most one
+         *     of `period_year`, `period_quarter` or `period_month`, spelled the way the period reports
+         *     spell their buckets (`2026`, `2026-Q1`, `2026-03`; an installation whose year begins in
+         *     another month spells its years and quarters `FY2025/26` and `FY2025/26-Q4`). With none,
+         *     the period is the fiscal quarter under way, as before. `weighted_pipeline` is always the
+         *     open deals as they stand at `pipeline_state_at`, whatever period is named: no past
+         *     period's pipeline is reconstructed. `activity_count_30d` counts the 30 days in
+         *     `activity_window` and takes no period.
+         *
+         *     A label in another spelling, two period parameters at once, or a period that has not
+         *     begun is refused with 422 naming the parameter.
          */
         get: operations["getCompanyHierarchyRollup"];
         put?: never;
@@ -29632,6 +29650,13 @@ export interface components {
          * @description The account-tree roll-up over company.parent_company_id. A server read only,
          *     never client-summed. Money is base-currency converted — never a raw
          *     cross-currency sum.
+         *
+         *     `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
+         *     weighted by its stage's win probability, and never a past period's pipeline.
+         *     `closed_won` is the deals won in `closed_won_period`; a null amount means at least
+         *     one of them has no base value on file, so the total is incomplete rather than
+         *     smaller. `activity_count_30d` counts the activities that reached a counted account
+         *     in `activity_window`, the 30 days before the read, which no period parameter moves.
          */
         CompanyHierarchyRollup: {
             /** Format: uuid */
@@ -29639,8 +29664,16 @@ export interface components {
             /** @enum {string} */
             scope: "tree" | "self";
             weighted_pipeline: components["schemas"]["Money"];
+            /**
+             * Format: date-time
+             * @description The instant the pipeline is read at. It is the moment of the read, whatever period is named.
+             */
+            pipeline_state_at: string;
             closed_won: components["schemas"]["Money"];
+            closed_won_period: components["schemas"]["CompanyRollupWonPeriod"];
             activity_count_30d: number;
+            activity_window: components["schemas"]["ReportingWindow"];
+            current_periods: components["schemas"]["CompanyRollupPeriodLabels"];
             /** @description Count of accounts (nodes) included in the roll-up. */
             aggregated_account_count: number;
             /** @description Nodes excluded because the viewer cannot read them — disclosed, never a silent drop. */
@@ -29651,6 +29684,44 @@ export interface components {
             }[];
             /** Format: date-time */
             computed_at: string;
+        };
+        /**
+         * @description The period `closed_won` sums: one bucket of the period reports, cut in the
+         *     installation's reporting zone and fiscal calendar. A period still under way holds
+         *     the deals won by the moment of the read.
+         */
+        CompanyRollupWonPeriod: {
+            /** @enum {string} */
+            grain: "year" | "quarter" | "month";
+            /** @description The bucket's label, spelled as the period reports spell it. */
+            label: string;
+            /**
+             * Format: date-time
+             * @description The first instant of the period.
+             */
+            start_at: string;
+            /**
+             * Format: date-time
+             * @description The first instant after the period.
+             */
+            end_at: string;
+            /**
+             * @description The date that places a won deal in the period, the day it was won.
+             * @enum {string}
+             */
+            anchor: "closed_at";
+            /** @description True when the caller named the period; false for the default, the fiscal quarter under way. */
+            chosen: boolean;
+            /** @description The label of the period just before, at the same grain. */
+            previous: string;
+            /** @description The label of the period just after, or null when that period has not begun. */
+            next: string | null;
+        };
+        /** @description The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself. */
+        CompanyRollupPeriodLabels: {
+            period_year: string;
+            period_quarter: string;
+            period_month: string;
         };
         /**
          * @description Relationship strength for an ACCOUNT: the §4 score of its strongest current
@@ -56747,6 +56818,12 @@ export interface operations {
             query?: {
                 /** @description tree (default): aggregate the whole subtree. self: the root's own figures alone. */
                 scope?: "tree" | "self";
+                /** @description The year whose won deals `closed_won` sums, such as `2026` or `FY2025/26`. */
+                period_year?: string;
+                /** @description The quarter whose won deals `closed_won` sums, such as `2026-Q1` or `FY2025/26-Q4`. */
+                period_quarter?: string;
+                /** @description The month whose won deals `closed_won` sums, such as `2026-03`. */
+                period_month?: string;
             };
             header?: never;
             path: {

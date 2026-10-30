@@ -2714,7 +2714,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tab.rollup": "Tổng hợp",
   "tab.history": "Lịch sử",
 
-  "rollup.weightedPipeline": "Giá trị deal có trọng số",
+  "rollup.weightedPipeline": "Giá trị deal có trọng số hôm nay",
   "rollup.closedWon": "Đã chốt trong quý này",
   "rollup.activity30d": "Hoạt động (30 ngày)",
   "rollup.accounts": "Công ty được tính",
@@ -2722,6 +2722,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rollup.excluded_other": "Đã loại {count} công ty bị ẩn",
   "rollup.fxUnavailable": "Thiếu tỷ giá quy đổi nên không thể tính tổng.",
   "rollup.computedAt": "Tính lúc {when}",
+  "rollup.wonIn": "Đã chốt trong {period}",
+  "rollup.periodNote":
+    "Deal đã chốt được tính vào {period} theo ngày chốt. Giá trị deal có trọng số là các deal đang mở hôm nay.",
+  "rollup.period.label": "Kỳ tính deal đã chốt",
+  "rollup.period.quarterUnderWay": "Quý này",
+  "rollup.period.year": "Năm",
+  "rollup.period.quarter": "Quý",
+  "rollup.period.month": "Tháng",
+  "rollup.period.show": "Xem {period}",
+  "rollup.period.nextNotBegun": "Kỳ tiếp theo chưa bắt đầu",
 
   "nav.partners": "Đối tác",
   "deal.partnerAttribution": "Ghi công đối tác",
@@ -7096,6 +7106,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.q.filters": "Bộ lọc",
   "analytics.q.groupBy": "Nhóm theo",
   "analytics.q.companyField": "{label} (công ty)",
+  "analytics.q.groupOptionCoverage_one": "{label} · {held}/{count} deal",
+  "analytics.q.groupOptionCoverage_other": "{label} · {held}/{count} deal",
   "analytics.q.fieldCoverage_one":
     "{label} có giá trị ở {held} trên {count} deal có thể xem.",
   "analytics.q.fieldCoverage_other":

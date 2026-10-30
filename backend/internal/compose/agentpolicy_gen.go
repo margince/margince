@@ -1091,7 +1091,7 @@ var readViewQueries = map[string][]viewQuery{
 	"GET /v1/companies/{id}/facts":                          {},
 	"GET /v1/companies/{id}/finance-summary":                {},
 	"GET /v1/companies/{id}/graph":                          {},
-	"GET /v1/companies/{id}/hierarchy-rollup":               {{Name: "scope", Type: "string"}},
+	"GET /v1/companies/{id}/hierarchy-rollup":               {{Name: "period_month", Type: "string"}, {Name: "period_quarter", Type: "string"}, {Name: "period_year", Type: "string"}, {Name: "scope", Type: "string"}},
 	"GET /v1/companies/{id}/profile-fields":                 {},
 	"GET /v1/companies/{id}/site-reads/latest":              {},
 	"GET /v1/companies/{id}/site-reads/{readId}":            {},

@@ -36,14 +36,20 @@ type companyRollupHandlers struct {
 
 // GetCompanyHierarchyRollup implements (GET
 // /companies/{id}/hierarchy-rollup). An absent scope defaults to the
-// contract's "tree"; a value outside the enum was refused before this ran.
+// contract's "tree"; a value outside the enum was refused before this ran. An
+// absent period is the fiscal quarter under way.
 func (h companyRollupHandlers) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetCompanyHierarchyRollupParams) {
 	scope := companyRollupScopeTree
 	if params.Scope != nil {
 		scope = string(*params.Scope)
 	}
 
-	result, err := CompanyHierarchyRollup(r.Context(), h.pool, ids.UUID(id), scope, h.now)
+	period, err := NewCompanyRollupPeriod(params.PeriodYear, params.PeriodQuarter, params.PeriodMonth)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	result, err := CompanyHierarchyRollup(r.Context(), h.pool, ids.UUID(id), scope, period, h.now)
 	if err != nil {
 		// This branch survives its MessageFault twin only because it adds the
 		// machine-readable details a fault cannot carry. Detail is the error's OWN
@@ -88,15 +94,28 @@ func companyRollupToWire(result CompanyRollupResult) crmcontracts.CompanyHierarc
 		}{DisplayName: n.DisplayName, Id: openapi_types.UUID(n.ID)}
 	}
 
+	won := result.ClosedWonPeriod
 	return crmcontracts.CompanyHierarchyRollup{
-		RootId:                 openapi_types.UUID(result.RootID),
-		Scope:                  crmcontracts.CompanyHierarchyRollupScope(result.Scope),
-		WeightedPipeline:       companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
-		ClosedWon:              crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
+		RootId:           openapi_types.UUID(result.RootID),
+		Scope:            crmcontracts.CompanyHierarchyRollupScope(result.Scope),
+		WeightedPipeline: companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
+		PipelineStateAt:  result.PipelineStateAt,
+		ClosedWon:        crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
+		ClosedWonPeriod: crmcontracts.CompanyRollupWonPeriod{
+			Grain: crmcontracts.CompanyRollupWonPeriodGrain(won.Grain), Label: won.Label,
+			StartAt: won.Start, EndAt: won.End, Anchor: crmcontracts.CompanyRollupWonPeriodAnchorClosedAt,
+			Chosen: won.Chosen, Previous: won.Previous, Next: won.Next,
+		},
 		ActivityCount30d:       result.ActivityCount30d,
+		ActivityWindow:         crmcontracts.ReportingWindow{StartAt: result.ActivityWindowStart, EndAt: result.ComputedAt},
 		AggregatedAccountCount: result.AggregatedAccountCount,
 		RestrictedExcluded:     restricted,
 		ComputedAt:             result.ComputedAt,
+		CurrentPeriods: crmcontracts.CompanyRollupPeriodLabels{
+			PeriodYear:    result.CurrentPeriods[fieldPeriodYear],
+			PeriodQuarter: result.CurrentPeriods[fieldPeriodQuarter],
+			PeriodMonth:   result.CurrentPeriods[fieldPeriodMonth],
+		},
 	}
 }
 

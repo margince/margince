@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 11 |
 | Tool catalog | 139.0 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36667 |
+| Approx. wire tokens | 36663 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,8 +33,8 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.0 KB | 25% | Yes, every step |
-| Input schemas | 64.8 KB | 46% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.9 KB | 25% | Yes, every step |
+| Input schemas | 64.9 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
 | **Description + input schema** | **99.8 KB** | **71%** | **the recurring cost** |
 
@@ -92,7 +92,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1017 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
@@ -7172,10 +7172,9 @@ which offers it without applying it.
 **Read a view**
 
 ```text
-Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
-deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
-record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers what its
-REST route answers. Name the view, then the id it reads and any of its filters. A view refuses an
+Read what the record tools do not answer: a record's derived views (company_360,
+company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each view answers
+what its REST route answers. Name the view, its id and any of its filters. A view refuses an
 argument it does not take and names the ones it does.
 ```
 
@@ -7292,7 +7291,16 @@ argument it does not take and names the ones it does.
     "period": {
       "type": "string"
     },
+    "period_month": {
+      "type": "string"
+    },
+    "period_quarter": {
+      "type": "string"
+    },
     "period_start": {
+      "type": "string"
+    },
+    "period_year": {
       "type": "string"
     },
     "pinned_only": {
