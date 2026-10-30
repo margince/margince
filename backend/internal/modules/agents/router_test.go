@@ -567,7 +567,8 @@ func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
 	merge.AskUserFirst = true
 	r.Register(&argsTool{spec: merge})
 	r.Register(fakeRouter{name: "change", targets: map[string]string{
-		"archive": "fake_archive", "rename": "fake_rename", "merge": "fake_merge"}})
+		"archive": "fake_archive", "rename": "fake_rename", "merge": "fake_merge",
+	}})
 
 	spec, ok := r.Spec("change")
 	if !ok {
