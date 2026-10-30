@@ -21,6 +21,7 @@ backend/internal/compose/reportsql.go compose.(*reportEngine).fetchRows.func1 re
 backend/internal/compose/company360/suggestionreads.go company360.newestMessage repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/export.go compose.readMember repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/derivationfetch.go compose.(*reportEngine).fetchDerivation.func1 repeats the gate; awaits its own rewrite and bench measurement
+backend/internal/compose/derivationfetch.go compose.derivationRows the drill-through rows half of fetchDerivation, same statement; awaits its own rewrite and bench measurement
 backend/internal/modules/search/queryexec.go search.(*QueryExecutor).answerRows.func1 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/modules/activities/waiting.go activities.(*Store).scanWaitingReplies.func1 gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower
 backend/internal/modules/activities/hiddenbacklog.go activities.(*Store).countWaiting gated once, the set holds every candidate and loses the scan cap's early stop; bench-daily measured it slower
