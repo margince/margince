@@ -5581,7 +5581,7 @@ export interface paths {
          *
          *     The task that leaves an item out is one made from it, or the reminder filed for its
          *     request, a colleague's private task included, as in the `waiting_reply` read.
-         *     `accepts_request` says a person's task made from the item can accept its request
+         *     `accepts_request` says a user's task made from the item can accept its request
          *     (`request_activity_id`), so that completing the task settles the request. An agent
          *     cannot accept a request; its task carries `source_activity_id`, as any task does
          *     when `accepts_request` is false, and that does not settle the request.
@@ -36746,7 +36746,7 @@ export interface components {
              */
             kind: "email" | "message" | "web_form";
             /**
-             * @description A person's task made from it accepts its request through `request_activity_id`, so
+             * @description A user's task made from it accepts its request through `request_activity_id`, so
              *     completing the task settles the request. An agent cannot accept a request: it links
              *     its task with `source_activity_id`, which does not settle it.
              */

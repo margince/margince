@@ -44526,7 +44526,7 @@ type KnowledgeEmbedState string
 
 // LatestInbound defines model for LatestInbound.
 type LatestInbound struct {
-	// AcceptsRequest A person's task made from it accepts its request through `request_activity_id`, so
+	// AcceptsRequest A user's task made from it accepts its request through `request_activity_id`, so
 	// completing the task settles the request. An agent cannot accept a request: it links
 	// its task with `source_activity_id`, which does not settle it.
 	AcceptsRequest bool `json:"accepts_request"`

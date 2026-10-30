@@ -16437,7 +16437,7 @@ components:
         accepts_request:
           type: boolean
           description: |-
-            A person's task made from it accepts its request through `request_activity_id`, so
+            A user's task made from it accepts its request through `request_activity_id`, so
             completing the task settles the request. An agent cannot accept a request: it links
             its task with `source_activity_id`, which does not settle it.
     ActivityListResponse:
