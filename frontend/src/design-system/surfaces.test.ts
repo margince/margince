@@ -37,7 +37,7 @@ import { blocks, resolve, themes } from "./tokens-testing";
 const LEDGER_CEILING = { spellings: 78, states: 6 };
 
 // Joining or leaving the ladder is a decision, so it moves these numbers too.
-const LADDER_SIZE = { surfaces: 74, overlays: 17 };
+const LADDER_SIZE = { surfaces: 74, overlays: 18 };
 
 const here = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = join(here, "..", "..");
