@@ -41189,6 +41189,8 @@ export interface components {
              * @description The most recent run that still found it. A finding seen for weeks is a different thing from one that appeared last night.
              */
             last_seen_at: string;
+            /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a failed run leaves it out of date. */
+            inputs_changed: boolean;
         };
         ResolveInputCheck: {
             /**
@@ -41290,6 +41292,24 @@ export interface components {
             eligible_signals?: number;
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
+            freshness: components["schemas"]["AssuranceFreshness"];
+        };
+        /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that fails clears none. */
+        AssuranceFreshness: {
+            /**
+             * @description `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run.
+             * @enum {string}
+             */
+            state: "current" | "out_of_date";
+            /** @description Deals whose record, offers or contracts changed after the check. */
+            changed_deals: number;
+            /** @description A change that reaches every deal: a stage the deals are judged against, or a forecast call made after the check. */
+            workspace_changed: boolean;
+            /**
+             * Format: date-time
+             * @description The oldest change the check has not read. Absent when there is none.
+             */
+            changed_since?: string;
         };
         ForecastAssuranceSource: {
             /** @enum {string} */

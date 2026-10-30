@@ -41,6 +41,7 @@ function check(id: string, label: string): InputCheck {
     status: "open",
     first_seen_at: "2026-09-01T09:00:00Z",
     last_seen_at: "2026-09-07T09:00:00Z",
+    inputs_changed: false,
   };
 }
 

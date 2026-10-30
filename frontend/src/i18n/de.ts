@@ -6850,6 +6850,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
+  "analytics.attentionOutOfDate":
+    "veraltet — wird beim nächsten Lauf aktualisiert",
   "analytics.attentionAtStake": "{amount} betroffen",
   "analytics.attentionReview": "Prüfen",
   "analytics.attentionChecks_one": "1 Prüfung zur Einschätzung offen",
@@ -7126,6 +7128,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.readyWithExceptions": "Bereit, mit Hinweisen",
   "review.needsReview": "Prüfung nötig",
   "review.checksIncomplete": "Prüfungen unvollständig",
+  "review.outOfDate": "Veraltet",
+  "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
+  "review.outOfDateDeals_other":
+    "{count} Deals haben sich seit dieser Prüfung geändert.",
+  "review.outOfDateWorkspace":
+    "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
+  "review.outOfDateRefresh": "Veraltet — wird beim nächsten Lauf aktualisiert.",
   "review.allSourcesRead": "Alle Quellen geprüft.",
   "review.source.mail": "Postfach",
   "review.source.calendar": "Kalender",

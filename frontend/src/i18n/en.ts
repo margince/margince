@@ -6889,6 +6889,7 @@ export const en = {
     "These numbers cover every project you can read.",
   "analytics.attention": "Needs your attention",
   "analytics.attentionNoOwner": "No owner",
+  "analytics.attentionOutOfDate": "out of date — refreshes on the next run",
   "analytics.attentionAtStake": "{amount} at stake",
   "analytics.attentionReview": "Review",
   "analytics.attentionChecks_one": "1 forecast check to answer",
@@ -7156,6 +7157,12 @@ export const en = {
   "review.readyWithExceptions": "Ready, with notes",
   "review.needsReview": "Needs review",
   "review.checksIncomplete": "Checks incomplete",
+  "review.outOfDate": "Out of date",
+  "review.outOfDateDeals_one": "1 deal changed since this check.",
+  "review.outOfDateDeals_other": "{count} deals changed since this check.",
+  "review.outOfDateWorkspace":
+    "A stage or forecast call changed since this check.",
+  "review.outOfDateRefresh": "Out of date — refreshes on the next run.",
   "review.allSourcesRead": "All sources checked.",
   // The sources a run reads, named for the reader rather than by the server's
   // own vocabulary. The unread line printed the wire keys verbatim, so a German

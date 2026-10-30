@@ -134,6 +134,12 @@ func Groups() []Group {
 		// note that says the buyer just asked something. It listens on the deal
 		// stream, where every deal_room event rides.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
+		// Marking the input check's last reading out of date when a deal, a
+		// stage or a forecast call changes. The deal stream carries the deal
+		// family and the identity stream the forecast call. Its own group
+		// because it only marks: a backlog anywhere else must not leave a
+		// changed deal reading as current.
+		{Name: "cg:assurance-freshness", Streams: forEntities(dealStreamEntity, identityStreamEntity)},
 		// A commitment and the task it became, settled together: a task marked
 		// done settles its claim, a claim settled done completes its task. The
 		// activity stream carries the task's update and the contact stream the

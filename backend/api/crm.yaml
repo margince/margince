@@ -56519,7 +56519,7 @@ components:
     InputCheck:
       type: object
       description: One finding from the nightly input check.
-      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at]
+      required: [id, type, subject_kind, subject_id, severity, status, first_seen_at, last_seen_at, inputs_changed]
       properties:
         id: { type: string, format: uuid }
         type:
@@ -56567,6 +56567,13 @@ components:
           description: >-
             The most recent run that still found it. A finding seen for weeks is a
             different thing from one that appeared last night.
+        inputs_changed:
+          type: boolean
+          description: >-
+            True when the record this finding is about, or a stage or forecast call
+            every finding is judged against, changed after the check read it. The
+            finding is out of date until the next run reads the change; a failed run
+            leaves it out of date.
       additionalProperties: false
     ResolveInputCheck:
       type: object
@@ -56713,7 +56720,7 @@ components:
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it
         was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness]
       properties:
         run_id: { type: string, format: uuid }
         as_of: { type: string, format: date-time }
@@ -56748,6 +56755,34 @@ components:
           type: array
           description: Every source the run tried, and how far it reached into each.
           items: { $ref: '#/components/schemas/ForecastAssuranceSource' }
+        freshness: { $ref: '#/components/schemas/AssuranceFreshness' }
+      additionalProperties: false
+    AssuranceFreshness:
+      type: object
+      description: >-
+        Whether the records changed after this check read them. Changes are marked as
+        they happen; only the next run reads them, and a run that fails clears none.
+      required: [state, changed_deals, workspace_changed]
+      properties:
+        state:
+          type: string
+          enum: [current, out_of_date]
+          description: >-
+            `out_of_date` when any input changed after the check read it. Its verdict
+            and findings stay as the check left them until the next run.
+        changed_deals:
+          type: integer
+          minimum: 0
+          description: Deals whose record, offers or contracts changed after the check.
+        workspace_changed:
+          type: boolean
+          description: >-
+            A change that reaches every deal: a stage the deals are judged against, or a
+            forecast call made after the check.
+        changed_since:
+          type: string
+          format: date-time
+          description: The oldest change the check has not read. Absent when there is none.
       additionalProperties: false
     ForecastAssuranceSource:
       type: object

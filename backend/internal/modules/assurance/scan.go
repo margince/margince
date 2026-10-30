@@ -150,6 +150,12 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.RunID = runID
+		// Before the deals are read, so every change at or below it was
+		// committed before this pass looked (freshness.go).
+		generation, err := s.store.inputGeneration(ctx, tx)
+		if err != nil {
+			return err
+		}
 
 		coverage := s.coverage(ctx, tx, now)
 		for _, c := range coverage {
@@ -224,6 +230,9 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.Departed = departed
+		if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
+			return err
+		}
 		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
 		out.Status = StatusComplete
 		if out.Readiness == ReadinessChecksIncomplete {

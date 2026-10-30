@@ -6678,6 +6678,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
+  "analytics.attentionOutOfDate": "đã cũ — sẽ cập nhật ở lần chạy tiếp theo",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
   "analytics.attentionReview": "Xem xét",
   "analytics.attentionChecks_one": "1 mục kiểm tra dự báo cần trả lời",
@@ -6949,6 +6950,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.readyWithExceptions": "Sẵn sàng, có lưu ý",
   "review.needsReview": "Cần xem lại",
   "review.checksIncomplete": "Kiểm tra chưa hoàn tất",
+  "review.outOfDate": "Đã cũ",
+  "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateDeals_other":
+    "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateWorkspace":
+    "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
+  "review.outOfDateRefresh": "Đã cũ — sẽ cập nhật ở lần chạy tiếp theo.",
   "review.allSourcesRead": "Đã kiểm tra mọi nguồn.",
   "review.source.mail": "hộp thư",
   "review.source.calendar": "lịch",
