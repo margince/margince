@@ -542,7 +542,7 @@ test("a task from a call offers Call, Draft email and Open contact", async () =>
     entityType: "contact",
     entityId: "c-1",
     address: "alice@example.com",
-    draftIntent: `${en["contact.composer.intentCommitment"]}: Call back Alice about the renewal`,
+    draftIntent: `${en["task.next.draftIntent"]}: Call back Alice about the renewal`,
   });
 });
 

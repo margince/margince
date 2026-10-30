@@ -52,10 +52,7 @@ export function TaskNextSteps({
       <CallVerb contact={contact} fromCall={fromCall} />
       <EmailVerb
         contact={contact}
-        intent={intentAbout(
-          t("contact.composer.intentCommitment"),
-          task.subject,
-        )}
+        intent={intentAbout(t("task.next.draftIntent"), task.subject)}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
       {offerOpen &&

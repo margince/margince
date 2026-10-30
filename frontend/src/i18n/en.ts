@@ -6187,6 +6187,7 @@ export const en = {
   "task.untitled": "Untitled task",
   "task.next.openContact": "Open contact",
   "task.next.draftEmail": "Draft email",
+  "task.next.draftIntent": "write about this task",
   "task.next.noAddress": "No email address on this contact.",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
