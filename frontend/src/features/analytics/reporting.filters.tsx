@@ -17,6 +17,7 @@ import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingSelection } from "./reporting.model";
 
 export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
+  "this_week",
   "this_month",
   "last_month",
   "last_week",
