@@ -213,6 +213,12 @@ const INK_FIELD: readonly Entry[] = [
     on: "--bgInkField",
     usage: "White text and icons on the ink field.",
   },
+  {
+    token: "--textOnInkFieldQuiet",
+    on: "--bgInkField",
+    usage:
+      "Quiet text on the ink field; inkfield.css hands it to --textSecondary there.",
+  },
 ];
 
 const ONBOARDING: readonly Entry[] = [
