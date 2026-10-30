@@ -53,6 +53,21 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
     blocks: ["stage_distribution", "stage_age", "pipeline_movement"],
   },
   {
+    id: "my-prospecting-progress",
+    title: "reporting.prepared.prospectingTitle",
+    purpose: "reporting.prepared.prospectingPurpose",
+    kind: "question",
+    period: "this_week",
+    metrics: [
+      "meetings_held",
+      "accepted_opportunities",
+      "leads_promoted",
+      "lead_first_response",
+      "leads_awaiting_response",
+    ],
+    blocks: ["sdr_outcomes", "target_progress"],
+  },
+  {
     id: "sales-by-owner",
     title: "reporting.prepared.ownerTitle",
     purpose: "reporting.prepared.ownerPurpose",

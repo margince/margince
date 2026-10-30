@@ -55,17 +55,7 @@ export function MySdrWork({
 }: Readonly<{ self: string; locale: Locale }>) {
   const t = useT();
   const readsLeads = useCan("lead", "read");
-  const summary = useQuery({
-    queryKey: ["sdr-summary", self],
-    enabled: readsLeads,
-    queryFn: async ({ signal }): Promise<SdrSummary> =>
-      unwrap(
-        await api.GET("/analytics/sdr-summary", {
-          params: { query: { scope_kind: "owner", scope_id: self } },
-          signal,
-        }),
-      ),
-  });
+  const summary = useSdrSummary(self, readsLeads);
   return (
     <>
       {readsLeads && (
@@ -98,6 +88,21 @@ export function MySdrWork({
       <NeedsYourAction locale={locale} />
     </>
   );
+}
+
+/** The seat's own handoff and meeting counts, under the key both views share. */
+export function useSdrSummary(self: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["sdr-summary", self],
+    enabled,
+    queryFn: async ({ signal }): Promise<SdrSummary> =>
+      unwrap(
+        await api.GET("/analytics/sdr-summary", {
+          params: { query: { scope_kind: "owner", scope_id: self } },
+          signal,
+        }),
+      ),
+  });
 }
 
 function MyLeads({
@@ -193,7 +198,7 @@ function leadReading(
   );
 }
 
-function WaitingOnOthers({
+export function WaitingOnOthers({
   self,
   locale,
   summary,
@@ -343,7 +348,7 @@ function WaitingRow({
 
 // The first page of the reader's own day, under the key Home reads it by.
 // The two screens then share one request and one answer.
-function NeedsYourAction({ locale }: Readonly<{ locale: Locale }>) {
+export function NeedsYourAction({ locale }: Readonly<{ locale: Locale }>) {
   const t = useT();
   const day = useInfiniteQuery(worklistDayOptions("mine", "all"));
   const page = day.data?.pages[0];

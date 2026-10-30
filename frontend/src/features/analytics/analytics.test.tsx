@@ -22,6 +22,7 @@ afterEach(() => {
 
 it("draws the tabs in the row's own order, whatever order the sections are listed in", () => {
   expect(analyticsTabs(SECTIONS)).toEqual([
+    "overview",
     "performance",
     "sdr",
     "leads",
@@ -532,7 +533,7 @@ describe("sectionFromAddress", () => {
   // A segment is whatever a reader typed. Anything unrecognized lands on the
   // first section rather than rendering an empty screen.
   it("falls back to the first section for anything it does not know", () => {
-    expect(sectionFromAddress(undefined)).toBe("performance");
-    expect(sectionFromAddress("nonsense")).toBe("performance");
+    expect(sectionFromAddress(undefined)).toBe("overview");
+    expect(sectionFromAddress("nonsense")).toBe("overview");
   });
 });

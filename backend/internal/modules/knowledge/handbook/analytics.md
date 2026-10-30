@@ -36,7 +36,7 @@ To see your pipeline report in Margince, click **Analytics** in the sidebar and 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics tabs are **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
+The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. The date range and pipeline you choose stay set when you change tabs.
 
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
@@ -77,19 +77,17 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
-Two sections appear only for some seats, and when they are missing, that means
-something:
-
-- **My outcomes** appears only for a seat that sees only its own records, such
-  as a rep. A manager never sees the tab, because the section answers for one
-  seat and a manager's view covers more. If you open its address, it says so:
-  "This section measures one user’s records. Wider sections cover the rest of
-  the lens."
-- **Data coverage** appears where you have permission to see it. It appears
-  even on a new installation where no check has ever run, and the page then
-  says so in words.
+Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet.
 
 The section is part of the address, so a link to one opens it.
+
+## Overview
+
+Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows four readings, a few sentences on what they mean, and what needs you.
+
+**Sales review** opens on this fiscal quarter with **Sales won**, **Expected finish**, **Gap to target** and **Open pipeline**. The last one says how far the open deals cover what is left to win. With no sales target, **Closed win rate** takes the place of the gap, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Below are the open forecast checks and **Since the last capture**, which shows how the open pipeline moved. It needs two captures before it can compare.
+
+**My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
 ## Which records a number covers
 
@@ -190,7 +188,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 **Performance** shows sales won, target progress when targets are set, trends and pipeline charts. **View records**, at the foot of every chart, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
-The **SDR outcomes** tab shows held meetings, accepted opportunities, leads qualified, first response time and the leads still waiting for a first reply. **Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures. A workspace set up for SDR teams opens Analytics on **SDR outcomes**.
+The **SDR outcomes** tab shows held meetings, accepted opportunities, leads qualified, first response time and the leads still waiting for a first reply. **Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 

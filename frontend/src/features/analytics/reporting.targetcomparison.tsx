@@ -137,7 +137,7 @@ function QualifiedCard({
   );
 }
 
-function gapWords(gap: number) {
+export function gapWords(gap: number) {
   if (gap > 0) return "reporting.compare.short";
   return gap < 0 ? "reporting.compare.ahead" : "reporting.compare.atTarget";
 }
@@ -178,7 +178,7 @@ function stateKey(comparison: Comparison): StateKey | null {
 }
 
 // Why the quarter has no comparison, and what would give it one.
-function ComparisonState({
+export function ComparisonState({
   comparison,
   onApply,
 }: Readonly<{

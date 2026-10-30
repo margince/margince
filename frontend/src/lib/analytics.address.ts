@@ -22,6 +22,7 @@ import { currentParams } from "./urlstate";
 // reports against this type, so a section cannot be addressable here and
 // missing there.
 export const SECTIONS = [
+  "overview",
   "performance",
   "sdr",
   "leads",
@@ -75,7 +76,7 @@ const SECTION_OF_VIEW: ReadonlyMap<string, Section> = new Map([
 
 export function sectionFromAddress(
   segment: string | undefined,
-  fallback: Section = "performance",
+  fallback: Section = "overview",
   view: string | null = null,
 ): Section {
   if ((segment === undefined || segment === "performance") && view) {
