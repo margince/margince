@@ -179,3 +179,19 @@ func TestTheMeetingsLaneSaysMoreOnlyWhenItLeftAMeetingOut(t *testing.T) {
 		}
 	}
 }
+
+// Imminent preparation is urgent work, and the stated rules still hold around
+// it. A hard deadline that falls before the meeting leads it, and a pin leads both.
+func TestAnEarlierDeadlineAndAPinKeepTheirPlaceAroundImminentPreparation(t *testing.T) {
+	meeting := classifyMeeting(meetingItem(Meeting{
+		ID: ids.NewV7(), Subject: "Pricing review", StartsAt: rankInstant.Add(time.Hour), Preparation: ownPreparation(false),
+	}), rankInstant)
+	earlier := candidate("duty due first", levelWaiting, due(rankInstant.Add(20*time.Minute)))
+	later := candidate("duty due later", levelWaiting, due(rankInstant.Add(3*time.Hour)))
+	routine := candidate("routine", levelRoutine)
+	pinned := applyPins([]ranked{candidate("pinned", levelRoutine)}, map[RowRef]bool{{RowID: "pinned"}: true})[0]
+
+	got := rankAll([]ranked{routine, later, meeting, pinned, earlier})
+
+	assertOrder(t, got, "pinned", "duty due first", meeting.item.Id, "duty due later", "routine")
+}
