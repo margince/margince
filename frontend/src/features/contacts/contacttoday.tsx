@@ -390,8 +390,8 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // The ladder that picks the verb is a rule, not a model, so only a verb whose
-  // press has the model write the mail wears indigo; the rest keep the accent.
+  // A rule ladder picks the verb, not a model. Only a press that has the model
+  // write the mail wears indigo; the rest keep the accent.
   const drafts = momentDrafts(action);
   const variant = drafts ? "ai" : primary ? "primary" : "ghost";
   return (

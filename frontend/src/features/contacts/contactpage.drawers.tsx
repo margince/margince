@@ -212,6 +212,9 @@ export type Drawer =
   | "activity_call"
   | null;
 
+/** What a press on this page asked the composer for. */
+export type PressedComposer = Readonly<{ intent: string; drafts: boolean }>;
+
 /**
  * Whether the composer is open, what it is about, and how to close it.
  *
@@ -227,9 +230,6 @@ export type Drawer =
  * composer. An address is something a contact can type. A stray `?compose=x`
  * silently starting an email is worse than a link that does not work.
  */
-/** What a press on this page asked the composer for. */
-export type PressedComposer = Readonly<{ intent: string; drafts: boolean }>;
-
 export function useComposer(
   t: ReturnType<typeof useT>,
   pressedOpen: boolean,
