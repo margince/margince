@@ -38,7 +38,7 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted:
 		fields = append(fields, "qualified_deal_id")
-	case reportingLeadFirstResponse:
+	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
 	}
 	return fields
@@ -140,8 +140,17 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsPromoted, string(recordTypeLead), query, b, withheld)
 }
 
-// readReportingLeadFirstResponse times each answered lead from when it arrived,
-// the instant the response target runs from, to its first response, in hours.
+// leadArrivedSQL is the arrival cohort both response readings count from: a
+// counted lead no import wrote, which arrived in the window ending at `at`.
+func leadArrivedSQL(frame crmcontracts.ReportingContext, b *reportingBindings, at string) string {
+	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + b.add(reportingEarliest(frame)) + " AND " + leadArrivalSQL + "<" + at
+}
+
+// leadArrivalSQL is when a lead arrived: the instant the response target runs from.
+const leadArrivalSQL = "COALESCE(l.routed_at,l.created_at)"
+
+// readReportingLeadFirstResponse times each answered lead from when it arrived
+// to its first response, in hours.
 func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil
@@ -152,15 +161,35 @@ func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcon
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	said := reporting.ExplanationCopy(frame)
-	arrived := "COALESCE(l.routed_at,l.created_at)"
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + arrived + `,
- GREATEST(EXTRACT(EPOCH FROM (l.first_response_at-` + arrived + `))/3600,0)::float8,'lead_first_response','',''
+	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
+ GREATEST(EXTRACT(EPOCH FROM (l.first_response_at-` + leadArrivalSQL + `))/3600,0)::float8,'lead_first_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
- WHERE ` + countedLeadSQL + ` AND ` + weekly.NonImportedLeadSQL + ` AND l.first_response_at<` + at + `
- AND ` + arrived + `>=` + b.add(reportingEarliest(frame)) + ` AND ` + arrived + `<` + at + ` AND ` + scope + `
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.first_response_at<` + at + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadFirstResponse, string(recordTypeLead), query, b, withheld)
+}
+
+// readReportingLeadsAwaitingResponse counts the leads of the same arrival
+// cohort that still owe a first reply when the reading is taken: an email
+// came in from them, nobody has answered it, and the lead is still open.
+func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	if frame.PipelineId != nil {
+		return nil, noPipelineGap(frame), nil
+	}
+	var b reportingBindings
+	scope, withheld, err := leadMetricScope(ctx, tx, frame, reportingLeadsAwaitingResponse, &b)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	said := reporting.ExplanationCopy(frame)
+	at := b.add(frame.EvaluatedAt)
+	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
+ FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=` + at + `)
+ AND ` + auth.LiveLeadInquiryClause("l") + ` AND ` + scope + `
+ ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
+	return readGroupedFacts(ctx, tx, frame, reportingLeadsAwaitingResponse, string(recordTypeLead), query, b, withheld)
 }
 
 // readGroupedFacts scans a reader's rows of key, source, label, owner, owner

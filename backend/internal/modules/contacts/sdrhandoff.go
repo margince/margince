@@ -68,7 +68,10 @@ const handoffStatusKey = "status"
 // rbacHandoff is the object every entry point below gates on. The handoff is a
 // sales record about a prospect, so it answers to the same object the lead and
 // the contact do rather than minting a permission of its own.
-const rbacHandoff = "lead"
+const rbacHandoff = HandoffObject
+
+// HandoffObject is the RBAC object a handoff read or write is gated on.
+const HandoffObject = "lead"
 
 var (
 	errHandoffNeedsOneSubject = errors.New(

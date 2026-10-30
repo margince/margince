@@ -106,6 +106,11 @@ var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		De: "Wie viele Stunden Leads auf eine erste Antwort gewartet haben, ab der Zuweisung oder, ohne Zuweisung, ab der Erstellung; angezeigt wird der mittlere Wert, etwa die Hälfte der Leads hat also länger gewartet. Beispiel: Antworten nach 1, 2, 4, 8 und 30 Stunden ergeben 4 Stunden.",
 		Vi: "Số giờ lead chờ phản hồi đầu tiên, tính từ lúc được phân công, hoặc lúc tạo nếu chưa phân công; con số là giá trị ở giữa, nên khoảng một nửa số lead đã chờ lâu hơn. Ví dụ: phản hồi sau 1, 2, 4, 8 và 30 giờ cho kết quả 4 giờ.",
 	},
+	reportingLeadsAwaitingResponse: {
+		En: "Of the leads that wrote in by email during the period you picked, the number still waiting for a first reply now, credited to the lead's current owner. These are the leads the first response time cannot count yet. Example: 12 leads wrote in during May and 3 have had no reply, so May shows 3.",
+		De: "Von den Leads, die im gewählten Zeitraum per E-Mail geschrieben haben, die Zahl derer, die jetzt noch auf eine erste Antwort warten, gutgeschrieben der Person, die den Lead jetzt verantwortet. Diese Leads kann die Zeit bis zur ersten Antwort noch nicht zählen. Beispiel: Im Mai schreiben 12 Leads und 3 haben noch keine Antwort, also zeigt der Mai 3.",
+		Vi: "Trong các lead đã gửi email trong khoảng thời gian bạn chọn, số lead hiện vẫn đang chờ phản hồi đầu tiên, tính cho người đang phụ trách lead. Thời gian phản hồi đầu tiên chưa thể tính các lead này. Ví dụ: tháng 5 có 12 lead gửi email và 3 lead chưa được phản hồi, nên tháng 5 hiển thị 3.",
+	},
 	reportingPartnerPipeline: {
 		En: "The total value of deals created in the period you picked that name a partner, split by partner and by whether the partner sourced or influenced the deal, credited to the deal's current owner. Example: a €20,000 deal a partner sourced, created on 6 May, adds €20,000 to that partner's sourced pipeline in May.",
 		De: "Der Gesamtwert der im gewählten Zeitraum erstellten Deals, die ein Partnerunternehmen nennen, aufgeteilt nach Partnerunternehmen und danach, ob es den Deal vermittelt oder beeinflusst hat, gutgeschrieben der Person, die den Deal jetzt verantwortet. Beispiel: Ein vermittelter Deal über 20.000 €, erstellt am 6. Mai, zählt 20.000 € als vermittelt im Mai.",
@@ -186,6 +191,11 @@ var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phra
 		Vi: "Mỗi lead được tính vào kỳ lead đến, dù đủ điều kiện muộn đến đâu, và chỉ tính lần đánh giá đủ điều kiện có gắn với một deal.",
 	},
 	reportingLeadFirstResponse: {
+		En: "A lead counts in the period it arrived, for its current owner.",
+		De: "Ein Lead zählt im Zeitraum seines Eingangs für die Person, die ihn jetzt verantwortet.",
+		Vi: "Mỗi lead được tính vào kỳ lead đến, cho người đang phụ trách lead.",
+	},
+	reportingLeadsAwaitingResponse: {
 		En: "A lead counts in the period it arrived, for its current owner.",
 		De: "Ein Lead zählt im Zeitraum seines Eingangs für die Person, die ihn jetzt verantwortet.",
 		Vi: "Mỗi lead được tính vào kỳ lead đến, cho người đang phụ trách lead.",
@@ -273,6 +283,11 @@ var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		En: "Leads not answered yet, imported leads, merged duplicates and leads archived without being qualified or disqualified are left out; no figure is shown with fewer than 5 answered leads, or with a pipeline chosen.",
 		De: "Noch nicht beantwortete und importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor; bei weniger als 5 beantworteten Leads oder mit einer gewählten Pipeline wird keine Zahl angezeigt.",
 		Vi: "Lead chưa được phản hồi, lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính; không hiển thị số liệu khi có ít hơn 5 lead đã được phản hồi hoặc khi chọn một pipeline.",
+	},
+	reportingLeadsAwaitingResponse: {
+		En: "Only leads you may see are counted; a lead counts only once an email from it came in, imported leads, merged duplicates and archived leads are left out, and with a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Leads, die du sehen darfst; ein Lead zählt erst, wenn eine E-Mail von ihm eingegangen ist, importierte Leads, zusammengeführte Duplikate und archivierte Leads bleiben außen vor, und mit einer gewählten Pipeline gibt es keine Zahl.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead chỉ được tính khi đã có email từ lead gửi đến, lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ không được tính, và khi chọn một pipeline thì không có số liệu.",
 	},
 	reportingPartnerPipeline: {
 		En: "Only deals you may see are counted; a deal with no amount or exchange rate adds nothing and marks the figure as partial, and partners you cannot see share one group without a name.",

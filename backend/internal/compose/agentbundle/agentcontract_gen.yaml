@@ -18430,6 +18430,7 @@ components:
         - lead_status_moves
         - leads_promoted
         - lead_first_response
+        - leads_awaiting_response
         - partner_pipeline
         - partner_won
         - partner_commission

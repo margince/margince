@@ -523,6 +523,14 @@ func (stubs) GetAnalyticsSchema(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsSchema")
 }
 
+func (stubs) GetSdrSummary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrSummaryParams) {
+	httperr.NotImplemented(w, r, "GetSdrSummary")
+}
+
+func (stubs) ListSdrWaitingHandoffs(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSdrWaitingHandoffsParams) {
+	httperr.NotImplemented(w, r, "ListSdrWaitingHandoffs")
+}
+
 func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
 	httperr.NotImplemented(w, r, "ListReportingTargets")
 }
