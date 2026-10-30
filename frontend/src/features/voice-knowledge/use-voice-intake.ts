@@ -3,7 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { isAcceptedCorpusFile } from "../../lib/voice-corpus-file";
 import type { IntakeOutcome, RefusalReason } from "../../lib/voice-intake-core";
-import { intakeFile, intakeTranscript } from "../../lib/voice-intake-core";
+import {
+  intakeFile,
+  intakePaste,
+  intakeTranscript,
+  sourceRef,
+} from "../../lib/voice-intake-core";
 
 // The Settings side of the shared voice-corpus intake: the same core the
 // onboarding act runs on, adapted to a surface that reads its corpus from the
@@ -293,6 +298,15 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
     [knownRefs, note, runIntake],
   );
 
+  // Keyed by content: the same words pasted twice update one row.
+  const addPaste = useCallback(
+    (text: string, label: string) => {
+      const ref = sourceRef("paste", label, text, knownRefs());
+      runIntake(label, () => intakePaste(ref, label, text));
+    },
+    [knownRefs, runIntake],
+  );
+
   const pendingAsk = asks[0] ?? null;
 
   // Settling a question frees one of the capped slots, so the ref moves with
@@ -335,6 +349,7 @@ export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
 
   return {
     addFiles,
+    addPaste,
     pendingAsk,
     answerSpeaker,
     dismissAsk,

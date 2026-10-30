@@ -11991,6 +11991,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.dropHint":
     "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc.",
   "settings.voice.dropEmpty": "Thả tệp vào đây, hoặc bấm để chọn",
+  "settings.voice.pasteLabel": "Hoặc dán văn bản",
+  "settings.voice.pasteAdd": "Thêm văn bản",
+  "settings.voice.pasteSource": "Văn bản đã dán",
   "settings.voice.worksTitle": "Văn mẫu nên dùng",
   "settings.voice.worksEmails":
     "Email đã gửi, lưu dưới dạng .txt, .md, .pdf hoặc .docx.",
@@ -12017,7 +12020,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.noticeSkippedType":
     "Đã bỏ qua {name}. Định dạng hỗ trợ: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "settings.voice.noticeSkippedUnreadable":
-    "Không thể mở {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy lưu lại dưới dạng .txt hoặc .docx rồi thêm tệp đó.",
+    "Không thể mở {name}. Nếu tệp có mật khẩu hoặc bị hỏng, hãy dán nội dung văn bản vào ô bên dưới.",
   "settings.voice.noticeSkippedEmpty":
     "Đã bỏ qua {name}. Tệp không có văn bản.",
   "settings.voice.noticeDismissed":
