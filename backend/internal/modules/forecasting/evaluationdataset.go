@@ -6,6 +6,7 @@ package forecasting
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,77 +19,141 @@ import (
 
 // EvaluationDatasetVersion names the shape of EvaluationDataset. Evaluate
 // refuses a dataset of another shape.
-const EvaluationDatasetVersion = "forecast_evaluation_dataset_v1"
+const EvaluationDatasetVersion = "forecast_evaluation_dataset_v2"
+
+// EvaluationActor is the one principal EvaluationVintagesTx answers.
+const EvaluationActor = "system:forecast-evaluation"
 
 // EvaluationDataset is the versioned input of one forecast evaluation: the
-// frozen snapshots, oldest first, and the outcome of each period as it stood
-// at OutcomesAsOf. It holds the workspace scope only and names no deal, team
-// or seat. A copy kept for a rerun holds nothing an erasure has to reach.
+// frozen snapshots, oldest first, each with the outcome of its own open deals.
+// It holds the workspace scope only and names no deal, team or seat.
 type EvaluationDataset struct {
 	Version string `json:"version"`
 	// DefinitionVersion is the reading rules of the build that read the
 	// outcomes. A snapshot frozen under other rules is not compared with them.
-	DefinitionVersion string    `json:"definition_version"`
-	OutcomesAsOf      time.Time `json:"outcomes_as_of"`
-	// OutcomesDay is OutcomesAsOf's local day in the installation's zone.
-	OutcomesDay time.Time `json:"outcomes_day"`
+	DefinitionVersion string `json:"definition_version"`
+	// OutcomesAsOf is the instant the scoring labels were read at, and
+	// OutcomesDay its local day in the installation's zone.
+	OutcomesAsOf time.Time `json:"outcomes_as_of"`
+	OutcomesDay  time.Time `json:"outcomes_day"`
+	// TrainEnd is the local day the training labels were read at. Only a plan
+	// with the same training end may score this dataset.
+	TrainEnd time.Time `json:"train_end"`
+	// CohortFloor is the fewest deals a vintage or a bin needs before its
+	// money or its share is reported.
+	CohortFloor int `json:"cohort_floor"`
 	// Truncated is true when the read stopped at its vintage bound, so the
 	// newest snapshots are missing from Vintages.
 	Truncated bool `json:"truncated"`
-	// OtherScopes counts the team and owner snapshots left out. Their outcome
-	// needs the population of a past day, which no snapshot stores.
-	OtherScopes int                 `json:"other_scopes"`
-	Vintages    []EvaluationVintage `json:"vintages"`
+	// Snapshots left out by the read, counted by reason. Their figures would
+	// describe too few deals, a team or owner, or one seat's work.
+	LeftOut  []ExclusionCount    `json:"left_out"`
+	Vintages []EvaluationVintage `json:"vintages"`
 }
 
 // EvaluationVintage is one frozen snapshot and what it predicted. Every field
-// but OpenDeals' labels and Outcome was stored when the snapshot was taken.
+// but the outcomes and Tallies was stored when the snapshot was taken.
 type EvaluationVintage struct {
 	ID string `json:"id"`
 	// Context is CaptureKey of the workspace scope and the snapshot's pipeline.
-	Context     string     `json:"context"`
-	PipelineID  *ids.UUID  `json:"pipeline_id,omitempty"`
-	PeriodStart time.Time  `json:"period_start"`
-	PeriodEnd   time.Time  `json:"period_end"`
-	LocalDay    time.Time  `json:"local_day"`
-	TakenAt     time.Time  `json:"taken_at"`
-	Trigger     string     `json:"trigger"`
-	Definition  string     `json:"definition_version"`
-	Currency    string     `json:"base_currency"`
-	Measure     string     `json:"forward_measure,omitempty"`
-	Policy      string     `json:"qualified_policy_version,omitempty"`
-	Population  string     `json:"population_fingerprint"`
-	Eligible    int        `json:"eligible_count"`
-	Priced      int        `json:"priced_count"`
-	FxMissing   int        `json:"fx_missing_count"`
-	Rows        int        `json:"contribution_count"`
-	WonMinor    int64      `json:"won_minor"`
-	Evidence    int64      `json:"evidence_minor"`
-	Weighted    int64      `json:"weighted_minor"`
-	OpenMinor   int64      `json:"open_minor"`
-	OpenDeals   []OpenDeal `json:"open_deals"`
-	// Outcome is nil until the period has ended and its won money was read.
-	Outcome *VintageOutcome `json:"outcome,omitempty"`
-}
-
-// OpenDeal is one open deal a snapshot froze, without its id or money.
-type OpenDeal struct {
-	// DealID joins the deal to its outcome while the dataset is built, and is
+	Context     string    `json:"context"`
+	PipelineID  *ids.UUID `json:"pipeline_id,omitempty"`
+	PeriodStart time.Time `json:"period_start"`
+	PeriodEnd   time.Time `json:"period_end"`
+	LocalDay    time.Time `json:"local_day"`
+	TakenAt     time.Time `json:"taken_at"`
+	Trigger     string    `json:"trigger"`
+	Definition  string    `json:"definition_version"`
+	Currency    string    `json:"base_currency"`
+	Measure     string    `json:"forward_measure,omitempty"`
+	Policy      string    `json:"qualified_policy_version,omitempty"`
+	Population  string    `json:"population_fingerprint"`
+	Eligible    int       `json:"eligible_count"`
+	Priced      int       `json:"priced_count"`
+	FxMissing   int       `json:"fx_missing_count"`
+	Rows        int       `json:"contribution_count"`
+	WonMinor    int64     `json:"won_minor"`
+	Evidence    int64     `json:"evidence_minor"`
+	Weighted    int64     `json:"weighted_minor"`
+	OpenMinor   int64     `json:"open_minor"`
+	// Outcome is the vintage's won money plus what its open deals won inside
+	// the period, as the history stood at OutcomesAsOf. TrainOutcome is the
+	// same as the history stood at TrainEnd. Nil before the period ended.
+	Outcome      *VintageOutcome    `json:"outcome,omitempty"`
+	TrainOutcome *VintageOutcome    `json:"train_outcome,omitempty"`
+	Tallies      CalibrationTallies `json:"tallies"`
+	// OpenDeals and Owners exist only while the dataset is built, and are
 	// never written out.
-	DealID           string `json:"-"`
-	StageProbability *int   `json:"stage_probability"`
-	InEvidence       bool   `json:"in_evidence"`
-	// WonInHorizon is the label: whether the deal was won inside the period.
-	// Nil while the vintage has no outcome.
-	WonInHorizon *bool `json:"won_in_horizon"`
+	OpenDeals []OpenDeal `json:"-"`
+	Owners    []ids.UUID `json:"-"`
 }
 
-// VintageOutcome is the money a period actually won, in the vintage's currency.
+// OpenDeal is one open deal a snapshot froze.
+type OpenDeal struct {
+	DealID           string
+	StageProbability *int
+	InEvidence       bool
+	// WonInHorizon is whether the deal was won inside the period as the
+	// history stood at OutcomesAsOf. Nil when the history cannot say.
+	WonInHorizon *bool
+}
+
+// VintageOutcome is money won, in the vintage's currency.
 type VintageOutcome struct {
 	WonMinor int64 `json:"won_minor"`
-	// FxMissing counts won deals no rate converted. WonMinor then leaves them
-	// out, and the evaluation excludes the vintage.
+	// FxMissing counts won deals whose win recorded no amount in the vintage's
+	// currency. WonMinor leaves them out, and the evaluation excludes the vintage.
 	FxMissing int `json:"fx_missing_count"`
+}
+
+// CalibrationTallies are a vintage's labelled open deals, counted per bin.
+type CalibrationTallies struct {
+	Labelled      int       `json:"labelled"`
+	NoProbability int       `json:"no_probability"`
+	Stage         [10]Tally `json:"stage"`
+	Commit        [2]Tally  `json:"commit"`
+	// BrierSum is the sum of (probability - 100 x won) squared over the deals
+	// Stage holds.
+	BrierSum int64 `json:"brier_sum"`
+}
+
+// Tally is one bin's deals, how many were won, and their summed probability.
+type Tally struct {
+	Deals      int64 `json:"deals"`
+	Won        int64 `json:"won"`
+	PercentSum int64 `json:"percent_sum"`
+}
+
+// TallyOpenDeals counts a vintage's labelled open deals into their bins.
+func TallyOpenDeals(deals []OpenDeal) CalibrationTallies {
+	var out CalibrationTallies
+	for _, deal := range deals {
+		if deal.WonInHorizon == nil {
+			continue
+		}
+		out.Labelled++
+		won := int64(0)
+		if *deal.WonInHorizon {
+			won = 1
+		}
+		commit := 0
+		if deal.InEvidence {
+			commit = 1
+		}
+		out.Commit[commit].Deals++
+		out.Commit[commit].Won += won
+		if deal.StageProbability == nil {
+			out.NoProbability++
+			continue
+		}
+		p := int64(*deal.StageProbability)
+		bin := min(p/10, 9)
+		out.Stage[bin].Deals++
+		out.Stage[bin].Won += won
+		out.Stage[bin].PercentSum += p
+		out.BrierSum += (p - 100*won) * (p - 100*won)
+	}
+	return out
 }
 
 // EvaluationSnapshots is what EvaluationVintagesTx read.
@@ -108,9 +173,9 @@ func (s *Store) EvaluationVintagesTx(ctx context.Context, tx pgx.Tx, limit, maxD
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return EvaluationSnapshots{}, err
 	}
-	// Every workspace snapshot and its deal ids, under no row scope: only a
-	// system pass, never a seat, may read the whole installation's history.
-	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalSystem {
+	// Every workspace snapshot and its deal ids, under no row scope: only the
+	// evaluation's own system pass may read the whole installation's history.
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalSystem || actor.ID != EvaluationActor {
 		return EvaluationSnapshots{}, apperrors.ErrPermissionDenied
 	}
 	var out EvaluationSnapshots
@@ -168,7 +233,7 @@ func attachOpenDeals(ctx context.Context, tx pgx.Tx, vintages []EvaluationVintag
 		index[v.ID], snapshotIDs[i] = i, v.ID
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT snapshot_id, deal_id, stage_probability, in_open, in_evidence
+		SELECT snapshot_id, deal_id, owner_id, stage_probability, in_open, in_evidence
 		  FROM forecast_contribution
 		 WHERE snapshot_id = ANY($1::uuid[])
 		 ORDER BY snapshot_id, deal_id
@@ -184,13 +249,17 @@ func attachOpenDeals(ctx context.Context, tx pgx.Tx, vintages []EvaluationVintag
 				"read fewer snapshots or raise the deal bound", maxDeals)
 		}
 		var snapshotID, dealID ids.UUID
+		var owner *ids.UUID
 		var deal OpenDeal
 		var open bool
-		if err := rows.Scan(&snapshotID, &dealID, &deal.StageProbability, &open, &deal.InEvidence); err != nil {
+		if err := rows.Scan(&snapshotID, &dealID, &owner, &deal.StageProbability, &open, &deal.InEvidence); err != nil {
 			return fmt.Errorf("forecasting: scanning the evaluation's deals: %w", err)
 		}
 		v := &vintages[index[snapshotID.String()]]
 		v.Rows++
+		if owner != nil && !slices.Contains(v.Owners, *owner) {
+			v.Owners = append(v.Owners, *owner)
+		}
 		if open {
 			deal.DealID = dealID.String()
 			v.OpenDeals = append(v.OpenDeals, deal)

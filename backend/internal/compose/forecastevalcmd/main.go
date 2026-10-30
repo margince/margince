@@ -37,10 +37,10 @@ func main() {
 }
 
 type options struct {
-	dsn, datasetIn, datasetOut string
-	asOf                       time.Time
-	plan                       forecasting.EvaluationPlan
-	bounds                     compose.ForecastEvaluationBounds
+	dsn, datasetIn, datasetOut, prereg string
+	asOf                               time.Time
+	plan                               forecasting.EvaluationPlan
+	bounds                             compose.ForecastEvaluationBounds
 }
 
 func run(ctx context.Context, args []string, getenv func(string) string, stdout io.Writer) error {
@@ -56,6 +56,12 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout 
 		if err := writeDataset(opts.datasetOut, dataset); err != nil {
 			return err
 		}
+	}
+	if opts.prereg != "" {
+		if err := checkPreregistration(opts.prereg, dataset, opts.plan); err != nil {
+			return err
+		}
+		opts.plan.ScoreCandidate = true
 	}
 	report, err := forecasting.Evaluate(dataset, opts.plan)
 	if err != nil {
@@ -73,6 +79,7 @@ func parseOptions(args []string, getenv func(string) string) (options, error) {
 	fs.StringVar(&opts.dsn, "dsn", "", "database to read; MARGINCE_DSN when unset")
 	fs.StringVar(&opts.datasetIn, "dataset", "", "score this dataset file instead of reading the database")
 	fs.StringVar(&opts.datasetOut, "write-dataset", "", "write the dataset read from the database to this file")
+	fs.StringVar(&opts.prereg, "preregistration", "", "reviewed pre-registration file; without it the candidate is not scored")
 	fs.StringVar(&asOf, "as-of", "", "instant outcomes are read at, RFC 3339; now when unset")
 	fs.StringVar(&trainEnd, "train-end", "", "first local day after the training window, YYYY-MM-DD")
 	fs.StringVar(&validationEnd, "validation-end", "", "first local day of the test window, YYYY-MM-DD")
@@ -81,9 +88,11 @@ func parseOptions(args []string, getenv func(string) string) (options, error) {
 	fs.IntVar(&opts.bounds.Vintages, "max-vintages", 2000, "most snapshots one database read takes")
 	fs.IntVar(&opts.bounds.Deals, "max-deals", 500000, "most deal rows one database read takes")
 	fs.DurationVar(&opts.bounds.Statement, "statement-timeout", 30*time.Second, "ceiling of each statement")
+	fs.DurationVar(&opts.bounds.Runtime, "timeout", 5*time.Minute, "ceiling of the whole database read")
 	if err := fs.Parse(args); err != nil {
 		return options{}, err
 	}
+	opts.plan.CohortFloor = compose.ForecastEvaluationCohortFloor
 	var err error
 	if opts.plan.TrainEnd, err = parseDay("train-end", trainEnd); err != nil {
 		return options{}, err
@@ -149,7 +158,7 @@ func loadDataset(ctx context.Context, opts options) (forecasting.EvaluationDatas
 		return forecasting.EvaluationDataset{}, err
 	}
 	defer pool.Close()
-	return compose.ForecastEvaluationDataset(ctx, pool, opts.asOf, opts.bounds)
+	return compose.ForecastEvaluationDataset(ctx, pool, opts.asOf, opts.plan.TrainEnd, opts.bounds)
 }
 
 func writeDataset(path string, dataset forecasting.EvaluationDataset) error {

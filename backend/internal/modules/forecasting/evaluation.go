@@ -54,6 +54,8 @@ const (
 	ExcludedEvidenceMissing   = "evidence_missing"
 	ExcludedOutcomeIncomplete = "outcome_incomplete"
 	ExcludedOtherScope        = "scope_not_evaluated"
+	ExcludedBelowFloor        = "below_cohort_floor"
+	ExcludedIndividualOff     = "individual_performance_off"
 )
 
 // EvaluationPlan is what a maintainer fixes before reading a report.
@@ -67,11 +69,20 @@ type EvaluationPlan struct {
 	// SettleDays is how long after a period ends its outcome may still be
 	// corrected. An outcome inside it is pending.
 	SettleDays int `json:"settle_days"`
+	// CohortFloor is the fewest deals behind a reported figure. The command
+	// sets it from the reporting floor; it is no flag.
+	CohortFloor int `json:"cohort_floor"`
+	// ScoreCandidate is set only once a reviewed pre-registration for this
+	// dataset was checked. Without it only the configured readings are scored.
+	ScoreCandidate bool `json:"score_candidate"`
 }
 
 func (p EvaluationPlan) check() error {
 	if !p.TrainEnd.Before(p.ValidationEnd) {
 		return errors.New("forecasting: the training window must end before the validation window")
+	}
+	if p.CohortFloor < 1 {
+		return errors.New("forecasting: an evaluation needs a cohort floor of at least one deal")
 	}
 	if p.SettleDays < 0 {
 		return errors.New("forecasting: the settle days cannot be negative")
@@ -95,6 +106,8 @@ type EvaluationReport struct {
 	Plan              EvaluationPlan   `json:"plan"`
 	Census            PopulationCensus `json:"census"`
 	Candidate         []CandidateFit   `json:"candidate"`
+	// CandidateNotScored says why the candidate has no fit and no rows.
+	CandidateNotScored string `json:"candidate_not_scored,omitempty"`
 	Rows              []EvaluationRow  `json:"rows"`
 }
 
@@ -154,29 +167,37 @@ func Evaluate(dataset EvaluationDataset, plan EvaluationPlan) (EvaluationReport,
 	if err := plan.check(); err != nil {
 		return EvaluationReport{}, err
 	}
-	vintages := slices.Clone(dataset.Vintages)
-	slices.SortFunc(vintages, func(a, b EvaluationVintage) int {
-		return cmp.Or(a.TakenAt.Compare(b.TakenAt), strings.Compare(a.ID, b.ID))
-	})
-	dataset.Vintages = vintages
-	digest, err := datasetDigest(dataset)
+	if !sameCalendarDay(dataset.TrainEnd, plan.TrainEnd) {
+		return EvaluationReport{}, fmt.Errorf("forecasting: the dataset's training labels were read at %s, and the plan trains to %s",
+			dataset.TrainEnd.Format(time.DateOnly), plan.TrainEnd.Format(time.DateOnly))
+	}
+	dataset.Vintages = oldestFirst(dataset.Vintages)
+	digest, err := DatasetDigest(dataset)
 	if err != nil {
 		return EvaluationReport{}, err
 	}
 	included, census := admit(dataset, plan)
-	candidate, fits := fitOpenClosure(included, plan)
-	rows, err := scoreRows(included, plan, fits)
+	report := EvaluationReport{
+		EvaluationVersion: EvaluationVersion, DatasetVersion: dataset.Version, DatasetDigest: digest,
+		OutcomesAsOf: dataset.OutcomesAsOf, Truncated: dataset.Truncated, Plan: plan, Census: census,
+	}
+	var fits map[fitKey]closureRatio
+	if plan.ScoreCandidate {
+		report.Candidate, fits = fitOpenClosure(included, plan)
+	} else {
+		report.CandidateNotScored = "no reviewed pre-registration for this dataset was given"
+	}
+	report.Rows, err = scoreRows(included, plan, fits)
 	if err != nil {
 		return EvaluationReport{}, err
 	}
-	return EvaluationReport{
-		EvaluationVersion: EvaluationVersion, DatasetVersion: dataset.Version, DatasetDigest: digest,
-		OutcomesAsOf: dataset.OutcomesAsOf, Truncated: dataset.Truncated, Plan: plan,
-		Census: census, Candidate: candidate, Rows: rows,
-	}, nil
+	return report, nil
 }
 
-func datasetDigest(dataset EvaluationDataset) (string, error) {
+// DatasetDigest is the SHA-256 of a dataset as Evaluate reads it, with its
+// vintages oldest first. A pre-registration names the dataset by it.
+func DatasetDigest(dataset EvaluationDataset) (string, error) {
+	dataset.Vintages = oldestFirst(dataset.Vintages)
 	body, err := json.Marshal(dataset)
 	if err != nil {
 		return "", fmt.Errorf("forecasting: encoding the dataset for its digest: %w", err)
@@ -185,13 +206,22 @@ func datasetDigest(dataset EvaluationDataset) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
+func oldestFirst(vintages []EvaluationVintage) []EvaluationVintage {
+	out := slices.Clone(vintages)
+	slices.SortFunc(out, func(a, b EvaluationVintage) int {
+		return cmp.Or(a.TakenAt.Compare(b.TakenAt), strings.Compare(a.ID, b.ID))
+	})
+	return out
+}
+
 // admit applies the exclusions and places every included vintage in its
 // window and horizon bucket.
 func admit(dataset EvaluationDataset, plan EvaluationPlan) ([]scored, PopulationCensus) {
-	census := PopulationCensus{Vintages: len(dataset.Vintages) + dataset.OtherScopes}
+	census := PopulationCensus{Vintages: len(dataset.Vintages)}
 	excluded := map[string]int{}
-	if dataset.OtherScopes > 0 {
-		excluded[ExcludedOtherScope] = dataset.OtherScopes
+	for _, left := range dataset.LeftOut {
+		census.Vintages += left.Vintages
+		excluded[left.Reason] += left.Vintages
 	}
 	var out []scored
 	for _, v := range dataset.Vintages {
@@ -218,6 +248,8 @@ func exclusion(v EvaluationVintage, dataset EvaluationDataset, plan EvaluationPl
 	switch {
 	case PredictionKindOf(v.Trigger, v.LocalDay, v.PeriodEnd) != PredictionObserved:
 		return ExcludedAfterOutcome
+	case v.Eligible < plan.CohortFloor:
+		return ExcludedBelowFloor
 	case v.Definition != dataset.DefinitionVersion:
 		return ExcludedDefinitionChanged
 	case !outcomeSettled(v.PeriodEnd, dataset.OutcomesDay, plan.SettleDays):

@@ -128,6 +128,10 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `idx_forecast_contribution_deal`: `btree (deal_id, created_at DESC)`
 - `uq_forecast_contribution_deal`: `unique, btree (snapshot_id, deal_id)`
 
+**Triggers**
+
+- `forecast_contribution_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()`
+
 ## forecast_snapshot
 
 28 columns · primary key `(id)` · referenced by 2 foreign keys
@@ -197,3 +201,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `uq_forecast_snapshot_daily_workspace`: `unique, btree (period_start, period_end, local_day) WHERE ((trigger = 'daily') AND (scope_id IS NULL) AND (pipeline_id IS NULL) AND (population_fingerprint = ''))`
 - `uq_forecast_snapshot_period_close`: `unique, btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close')`
 - `uq_forecast_snapshot_period_close_workspace`: `unique, btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close') AND (scope_id IS NULL))`
+
+**Triggers**
+
+- `forecast_snapshot_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()`

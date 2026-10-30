@@ -31,11 +31,14 @@ func newEvaluationCorpus(t *testing.T) evaluationCorpus {
 	day := func(offset int) time.Time { return anchor.AddDate(0, 0, offset) }
 	c := evaluationCorpus{
 		day: day, q1: [2]time.Time{day(0), day(89)}, q2: [2]time.Time{day(90), day(179)}, q3Start: day(180),
-		plan: EvaluationPlan{TrainEnd: day(100), ValidationEnd: day(170), HorizonEdges: []int{30, 60}, SettleDays: 5},
+		plan: EvaluationPlan{
+			TrainEnd: day(100), ValidationEnd: day(170), HorizonEdges: []int{30, 60}, SettleDays: 5,
+			CohortFloor: 1, ScoreCandidate: true,
+		},
 	}
 	c.dataset = EvaluationDataset{
 		Version: EvaluationDatasetVersion, DefinitionVersion: DefinitionVersion,
-		OutcomesAsOf: day(200).Add(9 * time.Hour), OutcomesDay: day(200),
+		OutcomesAsOf: day(200).Add(9 * time.Hour), OutcomesDay: day(200), TrainEnd: day(100), CohortFloor: 1,
 		Vintages: []EvaluationVintage{
 			c.vintage("a1", c.q1, 10, 100_00, 400_00, 1000_00, 300_00, 900_00),
 			c.vintage("a2", c.q1, 70, 300_00, 400_00, 600_00, 200_00, 900_00),
@@ -50,16 +53,17 @@ func newEvaluationCorpus(t *testing.T) evaluationCorpus {
 func (c evaluationCorpus) vintage(id string, period [2]time.Time, takenOn int, won, weighted, open, evidence, outcome int64) EvaluationVintage {
 	won10, lost := true, false
 	ten, sixty := 10, 60
+	deals := []OpenDeal{
+		{StageProbability: &ten, WonInHorizon: &lost},
+		{StageProbability: &sixty, InEvidence: true, WonInHorizon: &won10},
+	}
 	return EvaluationVintage{
 		ID: id, Context: "workspace::", PeriodStart: period[0], PeriodEnd: period[1],
 		LocalDay: c.day(takenOn), TakenAt: c.day(takenOn).Add(6 * time.Hour), Trigger: TriggerDaily,
 		Definition: DefinitionVersion, Currency: "EUR", Eligible: 3, Priced: 3, Rows: 3,
 		WonMinor: won, Weighted: weighted, OpenMinor: open, Evidence: evidence,
-		OpenDeals: []OpenDeal{
-			{StageProbability: &ten, WonInHorizon: &lost},
-			{StageProbability: &sixty, InEvidence: true, WonInHorizon: &won10},
-		},
-		Outcome: &VintageOutcome{WonMinor: outcome},
+		Tallies: TallyOpenDeals(deals),
+		Outcome: &VintageOutcome{WonMinor: outcome}, TrainOutcome: &VintageOutcome{WonMinor: outcome},
 	}
 }
 
@@ -118,15 +122,17 @@ func TestAnOutcomeKnownAfterTheTrainingWindowNeverShapesTheCandidate(t *testing.
 
 	later := c.dataset
 	later.Vintages = slices.Clone(c.dataset.Vintages)
-	later.Vintages[2].Outcome = &VintageOutcome{WonMinor: 9_000_00}
+	later.Vintages[2].TrainOutcome = &VintageOutcome{WonMinor: 9_000_00}
+	later.Vintages[0].Outcome = &VintageOutcome{WonMinor: 9_000_00}
 	after := scoreCorpus(t, later, c.plan)
 	if !slices.Equal(fits(before), fits(after)) {
-		t.Fatalf("an outcome settled after the training window changed the fit: %v then %v", fits(before), fits(after))
+		t.Fatalf("an outcome settled after the training window, or a correction after it, changed the fit: %v then %v",
+			fits(before), fits(after))
 	}
 
 	settled := c.dataset
 	settled.Vintages = slices.Clone(c.dataset.Vintages)
-	settled.Vintages[0].Outcome = &VintageOutcome{WonMinor: 9_000_00}
+	settled.Vintages[0].TrainOutcome = &VintageOutcome{WonMinor: 9_000_00}
 	if moved := scoreCorpus(t, settled, c.plan); slices.Equal(fits(before), fits(moved)) {
 		t.Fatal("an outcome settled inside the training window did not reach the fit, so the test above proves nothing")
 	}
@@ -195,13 +201,13 @@ func TestEveryExcludedVintageIsCountedUnderItsReason(t *testing.T) {
 	oldRules := c.vintage("old", c.q1, 20, 0, 0, 0, 0, 0)
 	oldRules.Definition = "forecast_v1"
 	erased := c.vintage("erased", c.q1, 30, 0, 0, 0, 0, 0)
-	erased.Rows, erased.OpenDeals = 0, nil
+	erased.Rows = 0
 	unconverted := c.vintage("fx", c.q1, 40, 0, 0, 0, 0, 0)
 	unconverted.Outcome.FxMissing = 1
 	missing := c.vintage("missing", c.q1, 50, 0, 0, 0, 0, 0)
 	missing.Outcome = nil
 	c.dataset.Vintages = append(c.dataset.Vintages, pending, oldRules, erased, unconverted, missing)
-	c.dataset.OtherScopes = 4
+	c.dataset.LeftOut = []ExclusionCount{{Reason: ExcludedOtherScope, Vintages: 4}}
 	report := scoreCorpus(t, c.dataset, c.plan)
 
 	want := map[string]int{
@@ -257,5 +263,47 @@ func TestAVintageIsAPredictionUntilItsPeriodEnds(t *testing.T) {
 	}
 	if got := HorizonDays(end.AddDate(0, 0, -30), end); got != 30 {
 		t.Fatalf("30 days before the end looks %d days ahead", got)
+	}
+}
+
+func TestWithoutAPreregistrationOnlyTheConfiguredReadingsAreScored(t *testing.T) {
+	c := newEvaluationCorpus(t)
+	c.plan.ScoreCandidate = false
+	report := scoreCorpus(t, c.dataset, c.plan)
+	if report.CandidateNotScored == "" || len(report.Candidate) != 0 {
+		t.Fatalf("the candidate was fitted with no pre-registration: %+v", report.Candidate)
+	}
+	for _, row := range report.Rows {
+		if row.Method == MethodOpenClosure {
+			t.Fatalf("the candidate was scored with no pre-registration: %+v", row)
+		}
+	}
+}
+
+// A bin of fewer deals than the floor says how many it holds and nothing
+// about them; a vintage below the floor is not scored at all.
+func TestAFigureBelowTheCohortFloorIsWithheld(t *testing.T) {
+	c := newEvaluationCorpus(t)
+	c.plan.CohortFloor = 2
+	cal := findRow(t, scoreCorpus(t, c.dataset, c.plan), MethodStageWeighting, WindowValidation, "0-29").Calibration
+	for _, bin := range cal.Bins {
+		if bin.Deals != 1 || bin.WonShare != "" || bin.MeanPredicted != "" {
+			t.Fatalf("a one-deal bin under a floor of two reads %+v", bin)
+		}
+	}
+	if cal.BrierScore != "0.0850" {
+		t.Fatalf("two binned deals meet a floor of two, Brier %q", cal.BrierScore)
+	}
+	c.plan.CohortFloor = 4
+	if got := exclusionsOf(scoreCorpus(t, c.dataset, c.plan))[ExcludedBelowFloor]; got != 5 {
+		t.Fatalf("%d vintages of three deals excluded under a floor of four, want 5", got)
+	}
+}
+
+func TestAPlanMustTrainToTheDayTheLabelsWereReadAt(t *testing.T) {
+	c := newEvaluationCorpus(t)
+	c.plan.TrainEnd = c.day(101)
+	if _, err := Evaluate(c.dataset, c.plan); err == nil {
+		t.Fatal("a plan training to another day than the dataset's labels was scored")
 	}
 }

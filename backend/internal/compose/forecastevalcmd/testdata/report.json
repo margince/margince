@@ -1,7 +1,7 @@
 {
   "evaluation_version": "forecast_evaluation_v1",
-  "dataset_version": "forecast_evaluation_dataset_v1",
-  "dataset_digest": "b3ce5428059a8f856fba4f18c104c2ba1011310a5f99bf4960edd5958f640e69",
+  "dataset_version": "forecast_evaluation_dataset_v2",
+  "dataset_digest": "1a4bbaa57970c372341a2bbe104d95686c0cebc26d4cfa12465b0531fb73753b",
   "outcomes_as_of": "2027-05-18T09:00:00Z",
   "truncated": false,
   "plan": {
@@ -11,14 +11,20 @@
       30,
       60
     ],
-    "settle_days": 5
+    "settle_days": 5,
+    "cohort_floor": 5,
+    "score_candidate": true
   },
   "census": {
-    "vintages": 9,
+    "vintages": 10,
     "included": 5,
     "excluded": [
       {
         "reason": "after_outcome",
+        "vintages": 1
+      },
+      {
+        "reason": "below_cohort_floor",
         "vintages": 1
       },
       {
@@ -140,13 +146,11 @@
         "bins": [
           {
             "bin": "not_committed",
-            "deals": 1,
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "committed",
-            "deals": 1,
-            "won_share": "1.0000"
+            "deals": 1
           }
         ]
       }
@@ -177,13 +181,11 @@
         "bins": [
           {
             "bin": "not_committed",
-            "deals": 2,
-            "won_share": "0.0000"
+            "deals": 2
           },
           {
             "bin": "committed",
-            "deals": 2,
-            "won_share": "1.0000"
+            "deals": 2
           }
         ]
       }
@@ -214,13 +216,11 @@
         "bins": [
           {
             "bin": "not_committed",
-            "deals": 1,
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "committed",
-            "deals": 1,
-            "won_share": "1.0000"
+            "deals": 1
           }
         ]
       }
@@ -251,13 +251,11 @@
         "bins": [
           {
             "bin": "not_committed",
-            "deals": 1,
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "committed",
-            "deals": 1,
-            "won_share": "1.0000"
+            "deals": 1
           }
         ]
       }
@@ -288,18 +286,13 @@
         "bins": [
           {
             "bin": "10-19",
-            "deals": 1,
-            "mean_predicted": "0.1000",
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "60-69",
-            "deals": 1,
-            "mean_predicted": "0.6000",
-            "won_share": "1.0000"
+            "deals": 1
           }
-        ],
-        "brier_score": "0.0850"
+        ]
       }
     },
     {
@@ -328,18 +321,13 @@
         "bins": [
           {
             "bin": "10-19",
-            "deals": 2,
-            "mean_predicted": "0.1000",
-            "won_share": "0.0000"
+            "deals": 2
           },
           {
             "bin": "60-69",
-            "deals": 2,
-            "mean_predicted": "0.6000",
-            "won_share": "1.0000"
+            "deals": 2
           }
-        ],
-        "brier_score": "0.0850"
+        ]
       }
     },
     {
@@ -368,18 +356,13 @@
         "bins": [
           {
             "bin": "10-19",
-            "deals": 1,
-            "mean_predicted": "0.1000",
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "60-69",
-            "deals": 1,
-            "mean_predicted": "0.6000",
-            "won_share": "1.0000"
+            "deals": 1
           }
-        ],
-        "brier_score": "0.0850"
+        ]
       }
     },
     {
@@ -408,18 +391,13 @@
         "bins": [
           {
             "bin": "10-19",
-            "deals": 1,
-            "mean_predicted": "0.1000",
-            "won_share": "0.0000"
+            "deals": 1
           },
           {
             "bin": "60-69",
-            "deals": 1,
-            "mean_predicted": "0.6000",
-            "won_share": "1.0000"
+            "deals": 1
           }
-        ],
-        "brier_score": "0.0850"
+        ]
       }
     }
   ]

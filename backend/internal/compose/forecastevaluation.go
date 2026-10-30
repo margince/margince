@@ -12,15 +12,22 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// forecastEvaluationActor is the principal a dataset read runs as.
+// forecastEvaluationActor is the principal a dataset read runs as. The store
+// answers this one principal and no other system pass.
 const forecastEvaluationActor = "system:forecast-evaluation"
+
+// ForecastEvaluationCohortFloor is the fewest deals behind a figure the
+// evaluation reports: the floor reporting puts under a cohort rate.
+const ForecastEvaluationCohortFloor = analyticsquery.PercentileSampleFloor
 
 // ForecastEvaluationBounds caps one dataset read, which runs as one read-only
 // transaction beside the product rather than inside a request.
@@ -28,16 +35,20 @@ type ForecastEvaluationBounds struct {
 	Vintages  int
 	Deals     int
 	Statement time.Duration
+	Runtime   time.Duration
 }
 
-// ForecastEvaluationDataset reads the frozen workspace snapshots and the won
-// money of every period that has ended by asOf, in one snapshot of the data.
+// ForecastEvaluationDataset reads the frozen workspace snapshots and the
+// outcome of each one's open deals, from their stage history as it stood at
+// asOf and at the start of trainEnd, in one snapshot of the data.
 func ForecastEvaluationDataset(
-	ctx context.Context, pool *pgxpool.Pool, asOf time.Time, bounds ForecastEvaluationBounds,
+	ctx context.Context, pool *pgxpool.Pool, asOf, trainEnd time.Time, bounds ForecastEvaluationBounds,
 ) (forecasting.EvaluationDataset, error) {
-	if bounds.Vintages <= 0 || bounds.Deals <= 0 {
-		return forecasting.EvaluationDataset{}, errors.New("compose: a dataset read needs a vintage and a deal bound")
+	if bounds.Vintages <= 0 || bounds.Deals <= 0 || bounds.Runtime <= 0 {
+		return forecasting.EvaluationDataset{}, errors.New("compose: a dataset read needs a vintage, a deal and a runtime bound")
 	}
+	ctx, cancel := context.WithTimeout(ctx, bounds.Runtime)
+	defer cancel()
 	workspaces, err := enumerateWorkspaces(ctx, pool)
 	if err != nil {
 		return forecasting.EvaluationDataset{}, err
@@ -50,7 +61,7 @@ func ForecastEvaluationDataset(
 	store := newForecastStoreFor(pool)
 	out := forecasting.EvaluationDataset{
 		Version: forecasting.EvaluationDatasetVersion, DefinitionVersion: forecasting.DefinitionVersion,
-		OutcomesAsOf: asOf,
+		OutcomesAsOf: asOf, TrainEnd: trainEnd, CohortFloor: ForecastEvaluationCohortFloor,
 	}
 	err = store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY`); err != nil {
@@ -59,22 +70,87 @@ func ForecastEvaluationDataset(
 		if err := database.BoundStatement(ctx, tx, bounds.Statement); err != nil {
 			return err
 		}
-		snapshots, err := store.EvaluationVintagesTx(ctx, tx, bounds.Vintages, bounds.Deals)
-		if err != nil {
-			return err
-		}
-		out.Vintages, out.Truncated, out.OtherScopes = snapshots.Vintages, snapshots.Truncated, snapshots.OtherScopes
-		zone, err := forecastEvaluationZone(ctx, tx)
-		if err != nil {
-			return err
-		}
-		out.OutcomesDay = elapsed.CalendarDay(asOf, zone)
-		return attachForecastOutcomes(ctx, tx, out.Vintages, asOf, zone)
+		return readForecastEvaluation(ctx, tx, store, bounds, &out)
 	})
+	if ctx.Err() != nil {
+		return forecasting.EvaluationDataset{}, fmt.Errorf(
+			"compose: the dataset read passed its runtime bound of %s; read fewer snapshots: %w", bounds.Runtime, err)
+	}
 	if err != nil {
 		return forecasting.EvaluationDataset{}, err
 	}
 	return out, nil
+}
+
+func readForecastEvaluation(
+	ctx context.Context, tx pgx.Tx, store *forecasting.Store, bounds ForecastEvaluationBounds, out *forecasting.EvaluationDataset,
+) error {
+	snapshots, err := store.EvaluationVintagesTx(ctx, tx, bounds.Vintages, bounds.Deals)
+	if err != nil {
+		return err
+	}
+	zone, err := forecastEvaluationZone(ctx, tx)
+	if err != nil {
+		return err
+	}
+	out.OutcomesDay = elapsed.CalendarDay(out.OutcomesAsOf, zone)
+	trainAt := time.Date(out.TrainEnd.Year(), out.TrainEnd.Month(), out.TrainEnd.Day(), 0, 0, 0, 0, zone)
+	if trainAt.After(out.OutcomesAsOf) {
+		return errors.New("compose: the training labels cannot be read after the outcomes; move -train-end before -as-of")
+	}
+	out.Truncated = snapshots.Truncated
+	kept, leftOut, err := admitForecastVintages(ctx, tx, snapshots, out.CohortFloor)
+	if err != nil {
+		return err
+	}
+	out.LeftOut = leftOut
+	instants := forecastOutcomeInstants{asOf: out.OutcomesAsOf, trainAt: trainAt, asOfDay: out.OutcomesDay, zone: zone}
+	if err := labelForecastVintages(ctx, tx, kept, instants, bounds.Deals); err != nil {
+		return err
+	}
+	out.Vintages = kept
+	return nil
+}
+
+// admitForecastVintages leaves out a vintage whose figures describe fewer
+// deals than the floor. While individual performance is off, it also leaves
+// out one whose deals belong to too few colleagues.
+func admitForecastVintages(
+	ctx context.Context, tx pgx.Tx, snapshots forecasting.EvaluationSnapshots, floor int,
+) ([]forecasting.EvaluationVintage, []forecasting.ExclusionCount, error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil {
+		return nil, nil, err
+	}
+	thin := make([]bool, len(snapshots.Vintages))
+	if !allowed {
+		groups := make([][]ids.UUID, len(snapshots.Vintages))
+		for i, v := range snapshots.Vintages {
+			groups[i] = v.Owners
+		}
+		if thin, err = thinGroups(ctx, tx, groups); err != nil {
+			return nil, nil, err
+		}
+	}
+	counts := map[string]int{forecasting.ExcludedOtherScope: snapshots.OtherScopes}
+	var kept []forecasting.EvaluationVintage
+	for i, v := range snapshots.Vintages {
+		switch {
+		case v.Eligible < floor:
+			counts[forecasting.ExcludedBelowFloor]++
+		case thin[i]:
+			counts[forecasting.ExcludedIndividualOff]++
+		default:
+			kept = append(kept, v)
+		}
+	}
+	var leftOut []forecasting.ExclusionCount
+	for _, reason := range []string{forecasting.ExcludedBelowFloor, forecasting.ExcludedIndividualOff, forecasting.ExcludedOtherScope} {
+		if counts[reason] > 0 {
+			leftOut = append(leftOut, forecasting.ExclusionCount{Reason: reason, Vintages: counts[reason]})
+		}
+	}
+	return kept, leftOut, nil
 }
 
 func forecastEvaluationZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
@@ -87,78 +163,4 @@ func forecastEvaluationZone(ctx context.Context, tx pgx.Tx) (*time.Location, err
 		return nil, fmt.Errorf("compose: the installation zone %q is not a zone: %w", name, err)
 	}
 	return zone, nil
-}
-
-type forecastOutcomeKey struct {
-	start, end time.Time
-	pipeline   string
-	currency   string
-}
-
-type forecastOutcome struct {
-	won    forecasting.VintageOutcome
-	wonIDs map[string]bool
-}
-
-// attachForecastOutcomes reads each ended period once, through the deal read
-// and reading rules a snapshot uses. It labels every vintage of that period
-// and every open deal the vintage froze.
-func attachForecastOutcomes(
-	ctx context.Context, tx pgx.Tx, vintages []forecasting.EvaluationVintage, asOf time.Time, zone *time.Location,
-) error {
-	asOfDay := elapsed.CalendarDay(asOf, zone)
-	outcomes := map[forecastOutcomeKey]forecastOutcome{}
-	for i := range vintages {
-		v := &vintages[i]
-		if !v.PeriodEnd.Before(asOfDay) {
-			continue
-		}
-		key := forecastOutcomeKey{start: v.PeriodStart, end: v.PeriodEnd, currency: v.Currency}
-		if v.PipelineID != nil {
-			key.pipeline = v.PipelineID.String()
-		}
-		outcome, ok := outcomes[key]
-		if !ok {
-			read, err := readForecastOutcome(ctx, tx, v, asOf, zone)
-			if err != nil {
-				return err
-			}
-			outcomes[key], outcome = read, read
-		}
-		v.Outcome = &outcome.won
-		for j := range v.OpenDeals {
-			won := outcome.wonIDs[v.OpenDeals[j].DealID]
-			v.OpenDeals[j].WonInHorizon = &won
-		}
-	}
-	return nil
-}
-
-func readForecastOutcome(
-	ctx context.Context, tx pgx.Tx, v *forecasting.EvaluationVintage, asOf time.Time, zone *time.Location,
-) (forecastOutcome, error) {
-	period, err := forecasting.PeriodOfDays(v.PeriodStart, v.PeriodEnd, zone)
-	if err != nil {
-		return forecastOutcome{}, err
-	}
-	deals, _, _, err := forecastDealsForPipeline(ctx, tx, period,
-		forecasting.Scope{Kind: forecasting.ScopeWorkspace}, asOf, v.Currency, v.PipelineID)
-	if err != nil {
-		return forecastOutcome{}, err
-	}
-	readings, err := forecasting.Compute(period, period.LocalDay(asOf), deals)
-	if err != nil {
-		return forecastOutcome{}, err
-	}
-	out := forecastOutcome{won: forecasting.VintageOutcome{WonMinor: readings.WonMinor}, wonIDs: map[string]bool{}}
-	for _, c := range readings.Contributions {
-		if !c.InWon {
-			continue
-		}
-		out.wonIDs[c.DealID] = true
-		if c.ExclusionReason == forecasting.ExcludedFxMissing {
-			out.won.FxMissing++
-		}
-	}
-	return out, nil
 }

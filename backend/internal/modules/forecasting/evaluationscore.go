@@ -31,9 +31,9 @@ type fitKey struct {
 // closureRatio is a fitted ratio kept exact, so a prediction rounds once.
 type closureRatio struct{ num, den *big.Int }
 
-// fitOpenClosure fits the candidate per currency and horizon bucket. A
-// training vintage whose period had not settled by TrainEnd is skipped: its
-// outcome was not known when the training window closed.
+// fitOpenClosure fits the candidate per currency and horizon bucket, on the
+// outcomes as the history stood at TrainEnd. A training vintage whose period
+// had not settled by then is skipped.
 func fitOpenClosure(included []scored, plan EvaluationPlan) ([]CandidateFit, map[fitKey]closureRatio) {
 	sums := map[fitKey]closureRatio{}
 	counts := map[fitKey]int{}
@@ -42,11 +42,13 @@ func fitOpenClosure(included []scored, plan EvaluationPlan) ([]CandidateFit, map
 		if _, ok := sums[key]; !ok {
 			sums[key] = closureRatio{num: new(big.Int), den: new(big.Int)}
 		}
-		if s.window != WindowTrain || !outcomeSettled(s.vintage.PeriodEnd, plan.TrainEnd, plan.SettleDays) {
+		known := s.vintage.TrainOutcome
+		if s.window != WindowTrain || known == nil || known.FxMissing > 0 ||
+			!outcomeSettled(s.vintage.PeriodEnd, plan.TrainEnd, plan.SettleDays) {
 			continue
 		}
 		counts[key]++
-		sums[key].num.Add(sums[key].num, big.NewInt(s.vintage.Outcome.WonMinor-s.vintage.WonMinor))
+		sums[key].num.Add(sums[key].num, big.NewInt(known.WonMinor-s.vintage.WonMinor))
 		sums[key].den.Add(sums[key].den, big.NewInt(s.vintage.OpenMinor))
 	}
 	keys := slices.SortedFunc(maps.Keys(sums), func(a, b fitKey) int {
@@ -88,8 +90,12 @@ func scoreRows(included []scored, plan EvaluationPlan, fits map[fitKey]closureRa
 		groups[key] = append(groups[key], s.vintage)
 	}
 	var rows []EvaluationRow
+	methods := []string{MethodStageWeighting, MethodCommitEvidence}
+	if plan.ScoreCandidate {
+		methods = append(methods, MethodOpenClosure)
+	}
 	for key, vintages := range groups {
-		for _, method := range []string{MethodStageWeighting, MethodCommitEvidence, MethodOpenClosure} {
+		for _, method := range methods {
 			row, err := scoreRow(method, key, vintages, plan, fits)
 			if err != nil {
 				return nil, err
@@ -140,7 +146,7 @@ func scoreRow(method string, key groupKey, vintages []EvaluationVintage, plan Ev
 		return EvaluationRow{}, err
 	}
 	row.Money = money
-	row.Calibration = calibrate(method, vintages)
+	row.Calibration = calibrate(method, vintages, plan.CohortFloor)
 	return row, nil
 }
 

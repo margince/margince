@@ -4583,6 +4583,7 @@ public.forecast_contribution.exclusion_reason text gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
+public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
 public.forecast_contribution.forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
@@ -4607,6 +4608,12 @@ public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- 
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
 public.forecast_contribution.version bigint NOT NULL gen=- def=1
 public.forecast_contribution.weighted_minor bigint gen=- def=-
+public.forecast_contribution_is_frozen() secdef=false cfg=- acl=- 
+BEGIN
+    RAISE EXCEPTION 'a forecast contribution is frozen when its snapshot is taken and cannot be changed'
+        USING ERRCODE = 'restrict_violation';
+END
+
 public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
 public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.forecast_snapshot.base_currency text NOT NULL gen=- def=-
@@ -4623,6 +4630,7 @@ public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFER
 public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
+public.forecast_snapshot.forecast_snapshot_is_frozen CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
@@ -4654,6 +4662,15 @@ public.forecast_snapshot.updated_at timestamp with time zone NOT NULL gen=- def=
 public.forecast_snapshot.version bigint NOT NULL gen=- def=1
 public.forecast_snapshot.weighted_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.won_minor bigint NOT NULL gen=- def=-
+public.forecast_snapshot_is_frozen() secdef=false cfg=- acl=- 
+BEGIN
+    IF (to_jsonb(NEW) - 'call_id') IS DISTINCT FROM (to_jsonb(OLD) - 'call_id') THEN
+        RAISE EXCEPTION 'a forecast snapshot is frozen when it is taken and cannot be changed'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END
+
 public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON public.forecast_snapshot USING btree (id)
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()

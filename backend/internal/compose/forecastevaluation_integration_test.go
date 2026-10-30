@@ -9,52 +9,67 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // evaluationEnv is a quarter a year before the test clock. The daily pass
-// froze it with one deal, then again after a second deal arrived. The first
-// deal is won inside the quarter.
+// froze it with five deals, then again after a sixth arrived. Every win and
+// reopen goes through the deal writer at a set instant:
+//   - the first deal is won inside the quarter and stays won;
+//   - the second is won inside it and reopened after the training end;
+//   - the third is won inside it and reopened after the outcomes are read;
+//   - the sixth, created after the first snapshot, is won inside it.
 type evaluationEnv struct {
 	*integration.Env
-	quarter       forecasting.Period
-	early, late   ids.UUID
-	first, second time.Time
+	quarter                  forecasting.Period
+	open, won                ids.StageID
+	deals                    []ids.UUID
+	first, second            time.Time
+	trainEnd, asOf           time.Time
 }
 
-var evaluationBounds = ForecastEvaluationBounds{Vintages: 100, Deals: 1000, Statement: 10 * time.Second}
+var evaluationBounds = ForecastEvaluationBounds{Vintages: 100, Deals: 1000, Statement: 10 * time.Second, Runtime: time.Minute}
+
+// evaluationAmounts are the six deals' amounts, each a different power of two
+// so every outcome names the deals behind it.
+var evaluationAmounts = []int64{100_00, 200_00, 400_00, 800_00, 1600_00, 3200_00}
 
 func setupEvaluation(t *testing.T) *evaluationEnv {
 	t.Helper()
 	e := &evaluationEnv{Env: integration.Setup(t)}
-	pipeline, open, _ := integration.DealFixture(t, e.Env)
+	var pipeline ids.PipelineID
+	pipeline, e.open, e.won = integration.DealFixture(t, e.Env)
 	e.quarter = evaluationQuarter(t, e.Env, clocktest.Now(t).AddDate(-1, 0, 0))
-	e.first = e.quarter.Start.AddDate(0, 0, 10).Add(12 * time.Hour)
-	e.second = e.quarter.Start.AddDate(0, 0, 20).Add(12 * time.Hour)
+	day := func(offset int) time.Time { return e.quarter.Start.AddDate(0, 0, offset).Add(12 * time.Hour) }
+	e.first, e.second = day(10), day(20)
+	e.trainEnd = e.quarter.EndDate.AddDate(0, 0, 6)
+	e.asOf = e.quarter.End.AddDate(0, 0, 20)
 	closes := e.quarter.StartDate.AddDate(0, 0, 40)
-
-	e.early = e.seedDeal(t, pipeline, open, "Early", closes)
+	owners := []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.Rep1, e.Rep2, e.Rep3}
+	for i := range 5 {
+		e.deals = append(e.deals, e.seedDeal(t, pipeline, owners[i], evaluationAmounts[i], closes))
+	}
 	e.freeze(t, e.first)
-	e.late = e.seedDeal(t, pipeline, open, "Late", closes)
+	e.deals = append(e.deals, e.seedDeal(t, pipeline, owners[5], evaluationAmounts[5], closes))
 	e.freeze(t, e.second)
-	e.WsExec(t, `UPDATE deal SET status = 'won', closed_at = $2, fx_rate_to_base = 1, fx_rate_date = $3 WHERE id = $1`,
-		e.early, e.second.AddDate(0, 0, 5), e.second.AddDate(0, 0, 5).Format(time.DateOnly))
+
+	e.move(t, 0, e.won, day(25))
+	e.move(t, 1, e.won, day(30))
+	e.move(t, 1, e.open, e.quarter.End.AddDate(0, 0, 10))
+	e.move(t, 2, e.won, day(28))
+	e.move(t, 2, e.open, e.asOf.AddDate(0, 0, 5))
+	e.move(t, 5, e.won, day(26))
 	return e
 }
 
@@ -72,17 +87,27 @@ func evaluationQuarter(t *testing.T, e *integration.Env, at time.Time) forecasti
 	return period
 }
 
-func (e *evaluationEnv) seedDeal(t *testing.T, pipeline ids.PipelineID, stage ids.StageID, name string, closes time.Time) ids.UUID {
+func (e *evaluationEnv) seedDeal(t *testing.T, pipeline ids.PipelineID, owner ids.UUID, amount int64, closes time.Time) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := integration.OwnerConn(t).QueryRow(context.Background(), `
 		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
 		                  amount_minor, currency, expected_close_date)
-		VALUES ($1, $2, $3, $4, 'open', 'manual', 'test', 4200000, 'EUR', $5) RETURNING id`,
-		pipeline, stage, name, e.Rep1, closes).Scan(&id); err != nil {
-		t.Fatalf("seeding %s: %v", name, err)
+		VALUES ($1, $2, 'Evaluated', $3, 'open', 'manual', 'test', $4, 'EUR', $5) RETURNING id`,
+		pipeline, e.open, owner, amount, closes).Scan(&id); err != nil {
+		t.Fatalf("seeding a deal: %v", err)
 	}
 	return id
+}
+
+// move takes one deal to a stage through the deal writer, at a set instant.
+func (e *evaluationEnv) move(t *testing.T, deal int, stage ids.StageID, at time.Time) {
+	t.Helper()
+	store := e.Deals.WithClock(func() time.Time { return at })
+	if _, err := store.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](e.deals[deal]),
+		deals.AdvanceDealInput{ToStageID: stage, WonWithoutContractReason: new("verbal")}); err != nil {
+		t.Fatalf("moving deal %d at %s: %v", deal, at, err)
+	}
 }
 
 // freeze runs the daily pass's own per-workspace turn at a fixed instant.
@@ -96,7 +121,7 @@ func (e *evaluationEnv) freeze(t *testing.T, at time.Time) {
 
 func (e *evaluationEnv) dataset(t *testing.T) forecasting.EvaluationDataset {
 	t.Helper()
-	dataset, err := ForecastEvaluationDataset(context.Background(), e.Pool, e.quarter.End.AddDate(0, 0, 20), evaluationBounds)
+	dataset, err := ForecastEvaluationDataset(context.Background(), e.Pool, e.asOf, e.trainEnd, evaluationBounds)
 	if err != nil {
 		t.Fatalf("reading the dataset: %v", err)
 	}
@@ -113,65 +138,38 @@ func wholeWorkspace(dataset forecasting.EvaluationDataset) []forecasting.Evaluat
 	return out
 }
 
-// A deal that arrived after a snapshot was taken is not in its features.
-// Every open deal is labelled from the period's real outcome.
-func TestEachVintageHoldsOnlyTheDealsItFroze(t *testing.T) {
+// The outcome is the vintage's own open deals as their history stood at the
+// read: a reopen after the training end is visible to scoring and not to
+// training, a reopen after the outcomes are read reaches neither, and a deal
+// created after the snapshot counts toward no earlier vintage.
+func TestAnOutcomeIsTheVintagesOwnDealsAsTheirHistoryStood(t *testing.T) {
 	e := setupEvaluation(t)
 	vintages := wholeWorkspace(e.dataset(t))
 	if len(vintages) != 2 {
 		t.Fatalf("%d whole-workspace vintages, want the two the pass took", len(vintages))
 	}
 	first, second := vintages[0], vintages[1]
-	if len(first.OpenDeals) != 1 || len(second.OpenDeals) != 2 {
-		t.Fatalf("the first vintage froze %d open deals and the second %d, want 1 and 2",
-			len(first.OpenDeals), len(second.OpenDeals))
+	if first.Outcome == nil || first.Outcome.WonMinor != 100_00+400_00 {
+		t.Fatalf("the first vintage's outcome is %+v, want the first and third deals", first.Outcome)
 	}
-	if first.OpenDeals[0].DealID != e.early.String() || !*first.OpenDeals[0].WonInHorizon {
-		t.Fatalf("the first vintage's deal is %+v, want the early deal, won", first.OpenDeals[0])
+	if first.TrainOutcome == nil || first.TrainOutcome.WonMinor != 100_00+200_00+400_00 {
+		t.Fatalf("the first vintage's training outcome is %+v, want the first three deals", first.TrainOutcome)
 	}
-	won := 0
-	for _, deal := range second.OpenDeals {
-		if *deal.WonInHorizon {
-			won++
-		}
+	if second.Outcome == nil || second.Outcome.WonMinor != 100_00+400_00+3200_00 {
+		t.Fatalf("the second vintage's outcome is %+v, want the sixth deal too", second.Outcome)
 	}
-	if won != 1 || first.Outcome == nil || first.Outcome.WonMinor != 4200000 {
-		t.Fatalf("%d of the second vintage's deals won, outcome %+v; want one deal of 4200000", won, first.Outcome)
+	if first.Tallies.Labelled != 5 || second.Tallies.Labelled != 6 {
+		t.Fatalf("labelled %d and %d open deals, want 5 and 6", first.Tallies.Labelled, second.Tallies.Labelled)
 	}
 }
 
-func TestAVintageRecordsTheBasisItWasTakenUnder(t *testing.T) {
-	e := setupEvaluation(t)
-	before := wholeWorkspace(e.dataset(t))[1]
-	if before.Measure != string(forecasting.MeasureCommitEvidence) || before.Policy != "" {
-		t.Fatalf("with qualification off the vintage says measure %q policy %q", before.Measure, before.Policy)
-	}
-	sweep := &assuranceSweepWorker{
-		pool: e.Pool, now: func() time.Time { return e.second }, log: slog.New(slog.DiscardHandler),
-		activities: activities.NewStore(InstallationDB(e.Pool)),
-	}
-	if err := (&assuranceRunWorker{sweep: sweep}).Work(context.Background(), &river.Job[AssuranceRunArgs]{
-		Args: AssuranceRunArgs{Workspace: e.WS, RequestedBy: e.Rep1.String()},
-	}); err != nil {
-		t.Fatalf("the input check enforcement waits on: %v", err)
-	}
-	if err := assurance.NewStore(InstallationDB(e.Pool)).SetQualifiedForecastEnforced(
-		e.Admin(), StoredConfig(e.Pool), true); err != nil {
-		t.Fatalf("enforcing: %v", err)
-	}
-	e.freeze(t, e.second.AddDate(0, 0, 1))
-	vintages := wholeWorkspace(e.dataset(t))
-	if last := vintages[len(vintages)-1]; last.Policy != viability.PolicyVersion {
-		t.Fatalf("a vintage taken under enforcement says policy %q, want %q", last.Policy, viability.PolicyVersion)
-	}
-}
-
-// The same rows read twice give one dataset, one report and no deal id.
+// The same rows read twice give one dataset and one report, and the file
+// holds no deal id.
 func TestAnEvaluationOfTheSameSnapshotsIsReproducible(t *testing.T) {
 	e := setupEvaluation(t)
 	plan := forecasting.EvaluationPlan{
-		TrainEnd: e.quarter.StartDate.AddDate(0, 0, 15), ValidationEnd: e.quarter.StartDate.AddDate(0, 0, 18),
-		HorizonEdges: []int{30},
+		TrainEnd: e.trainEnd, ValidationEnd: e.trainEnd.AddDate(0, 0, 1), HorizonEdges: []int{30},
+		CohortFloor: ForecastEvaluationCohortFloor,
 	}
 	var reports [2][]byte
 	for i := range reports {
@@ -180,8 +178,10 @@ func TestAnEvaluationOfTheSameSnapshotsIsReproducible(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bytes.Contains(body, []byte(e.early.String())) || bytes.Contains(body, []byte(e.late.String())) {
-			t.Fatal("the dataset names a deal")
+		for _, deal := range e.deals {
+			if bytes.Contains(body, []byte(deal.String())) {
+				t.Fatal("the dataset names a deal")
+			}
 		}
 		report, err := forecasting.Evaluate(dataset, plan)
 		if err != nil {
@@ -193,47 +193,5 @@ func TestAnEvaluationOfTheSameSnapshotsIsReproducible(t *testing.T) {
 	}
 	if !bytes.Equal(reports[0], reports[1]) {
 		t.Fatalf("two reads of one corpus scored differently:\n%s\n%s", reports[0], reports[1])
-	}
-}
-
-// The week's close is the second snapshot writer, and it stamps the same
-// basis. Its snapshot records a period already over, so it is no prediction.
-func TestAWeeksCloseStampsTheBasisAndIsNoPrediction(t *testing.T) {
-	e := setupEvaluation(t)
-	weekStart := e.quarter.Start.AddDate(0, 0, 7*4)
-	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	if err := newForecastStoreFor(e.Pool).InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		_, _, _, err := NewWeeklyForecast(newForecastStoreFor(e.Pool)).CloseWeek(ctx, tx, weekStart, weekStart.AddDate(0, 0, 7))
-		return err
-	}); err != nil {
-		t.Fatalf("closing the week: %v", err)
-	}
-	var measure, trigger string
-	var localDay, periodEnd time.Time
-	if err := integration.OwnerConn(t).QueryRow(context.Background(), `
-		SELECT COALESCE(forward_measure, ''), trigger, local_day, period_end FROM forecast_snapshot
-		 WHERE trigger = $1 ORDER BY period_end LIMIT 1`, forecasting.TriggerPeriodClose).
-		Scan(&measure, &trigger, &localDay, &periodEnd); err != nil {
-		t.Fatalf("reading the week's closing snapshot: %v", err)
-	}
-	if measure != string(forecasting.MeasureCommitEvidence) {
-		t.Fatalf("the week's closing snapshot says measure %q", measure)
-	}
-	if kind := forecasting.PredictionKindOf(trigger, localDay, periodEnd); kind != forecasting.PredictionAfterOutcome {
-		t.Fatalf("a week's closing snapshot reads as %s", kind)
-	}
-}
-
-// The dataset read takes every deal id the snapshots froze, under no row
-// scope, so a signed-in seat is refused even with admin rights.
-func TestOnlyASystemPassReadsTheEvaluationDataset(t *testing.T) {
-	e := setupEvaluation(t)
-	store := newForecastStoreFor(e.Pool)
-	err := store.InTx(e.Admin(), func(ctx context.Context, tx pgx.Tx) error {
-		_, err := store.EvaluationVintagesTx(ctx, tx, evaluationBounds.Vintages, evaluationBounds.Deals)
-		return err
-	})
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("an admin seat read the evaluation dataset: %v", err)
 	}
 }

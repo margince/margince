@@ -83,77 +83,61 @@ type Calibration struct {
 }
 
 // CalibrationBin is one group of deals and the share of them that was won.
+// Below the cohort floor it says only how many deals it holds.
 type CalibrationBin struct {
 	Bin           string `json:"bin"`
 	Deals         int    `json:"deals"`
 	MeanPredicted string `json:"mean_predicted,omitempty"`
-	WonShare      string `json:"won_share"`
+	WonShare      string `json:"won_share,omitempty"`
 }
 
-type binTally struct{ deals, won, percentSum int64 }
-
-// calibrate bins the labelled open deals of a group. Stage weighting bins by
-// tenths of its probability; commit evidence by whether a deal was committed.
-// The candidate states nothing per deal and has no calibration.
-func calibrate(method string, vintages []EvaluationVintage) *Calibration {
+// calibrate sums the vintages' tallies. Stage weighting bins by tenths of its
+// probability; commit evidence by whether a deal was committed. The candidate
+// states nothing per deal and has no calibration.
+func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibration {
 	if method == MethodOpenClosure {
 		return nil
 	}
 	out := &Calibration{}
-	tallies := map[int]*binTally{}
-	var brier, binned int64
+	var bins [10]Tally
+	var brier int64
 	for _, v := range vintages {
-		for _, deal := range v.OpenDeals {
-			if deal.WonInHorizon == nil {
-				continue
+		out.Deals += v.Tallies.Labelled
+		if method == MethodCommitEvidence {
+			for i, t := range v.Tallies.Commit {
+				bins[i] = addTally(bins[i], t)
 			}
-			out.Deals++
-			won := int64(0)
-			if *deal.WonInHorizon {
-				won = 1
-			}
-			bin := 0
-			if deal.InEvidence {
-				bin = 1
-			}
-			if method == MethodStageWeighting {
-				if deal.StageProbability == nil {
-					out.NoProbability++
-					continue
-				}
-				p := int64(*deal.StageProbability)
-				bin = int(min(p/10, 9))
-				gap := p - 100*won
-				brier += gap * gap
-				binned++
-				tally(tallies, bin).percentSum += p
-			}
-			tally(tallies, bin).deals++
-			tally(tallies, bin).won += won
-		}
-	}
-	for bin := range 10 {
-		t, ok := tallies[bin]
-		if !ok {
 			continue
 		}
-		row := CalibrationBin{Bin: calibrationBinName(method, bin), Deals: int(t.deals), WonShare: ratio(big.NewInt(t.won), big.NewInt(t.deals))}
-		if method == MethodStageWeighting {
-			row.MeanPredicted = ratio(big.NewInt(t.percentSum), big.NewInt(100*t.deals))
+		out.NoProbability += v.Tallies.NoProbability
+		brier += v.Tallies.BrierSum
+		for i, t := range v.Tallies.Stage {
+			bins[i] = addTally(bins[i], t)
+		}
+	}
+	binned := int64(0)
+	for bin, t := range bins {
+		if t.Deals == 0 {
+			continue
+		}
+		binned += t.Deals
+		row := CalibrationBin{Bin: calibrationBinName(method, bin), Deals: int(t.Deals)}
+		if t.Deals >= int64(floor) {
+			row.WonShare = ratio(big.NewInt(t.Won), big.NewInt(t.Deals))
+			if method == MethodStageWeighting {
+				row.MeanPredicted = ratio(big.NewInt(t.PercentSum), big.NewInt(100*t.Deals))
+			}
 		}
 		out.Bins = append(out.Bins, row)
 	}
-	if binned > 0 {
+	if method == MethodStageWeighting && binned >= int64(floor) {
 		out.BrierScore = ratio(big.NewInt(brier), big.NewInt(10000*binned))
 	}
 	return out
 }
 
-func tally(tallies map[int]*binTally, bin int) *binTally {
-	if tallies[bin] == nil {
-		tallies[bin] = &binTally{}
-	}
-	return tallies[bin]
+func addTally(a, b Tally) Tally {
+	return Tally{Deals: a.Deals + b.Deals, Won: a.Won + b.Won, PercentSum: a.PercentSum + b.PercentSum}
 }
 
 func calibrationBinName(method string, bin int) string {

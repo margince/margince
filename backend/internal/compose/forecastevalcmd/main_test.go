@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -15,6 +16,8 @@ import (
 )
 
 var update = flag.Bool("update", false, "rewrite testdata/report.json from testdata/dataset.json")
+
+var preregistered = filepath.Join("testdata", "preregistration.json")
 
 var corpusArgs = []string{
 	"-dataset", filepath.Join("testdata", "dataset.json"),
@@ -35,7 +38,7 @@ func runOnCorpus(t *testing.T, args ...string) []byte {
 // this build prints for it. A change to either the scoring or the dataset
 // shape shows here as a diff to review.
 func TestTheCommittedDatasetPrintsTheCommittedReport(t *testing.T) {
-	got := runOnCorpus(t)
+	got := runOnCorpus(t, "-preregistration", preregistered)
 	golden := filepath.Join("testdata", "report.json")
 	if *update {
 		if err := os.WriteFile(golden, got, 0o600); err != nil {
@@ -86,4 +89,58 @@ func slicesWithout(args []string, name string) []string {
 		out = append(out, args[i])
 	}
 	return out
+}
+
+func TestWithoutAPreregistrationTheCandidateIsNotScored(t *testing.T) {
+	var report struct {
+		NotScored string `json:"candidate_not_scored"`
+		Rows      []struct {
+			Method string `json:"method"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal(runOnCorpus(t), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.NotScored == "" || len(report.Rows) == 0 {
+		t.Fatalf("a run with no pre-registration reads %+v", report)
+	}
+	for _, row := range report.Rows {
+		if row.Method == "candidate_open_closure" {
+			t.Fatal("the candidate was scored with no pre-registration")
+		}
+	}
+}
+
+// A pre-registration with a value left unset, fixed for another dataset, or
+// fixed for other windows does not open the candidate comparison.
+func TestAPreregistrationMustBeCompleteAndForThisDataset(t *testing.T) {
+	body, err := os.ReadFile(preregistered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cases := map[string]func(map[string]any){
+		"unset threshold": func(p map[string]any) { delete(p, "improvement_threshold") },
+		"other dataset":   func(p map[string]any) { p["dataset_digest"] = strings.Repeat("0", 64) },
+		"other windows":   func(p map[string]any) { p["settle_days"] = 6 },
+		"one maintainer":  func(p map[string]any) { p["reviewed_by"] = p["filled_by"] },
+	}
+	for name, change := range cases {
+		var pre map[string]any
+		if err := json.Unmarshal(body, &pre); err != nil {
+			t.Fatal(err)
+		}
+		change(pre)
+		changed, err := json.Marshal(pre)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(t.TempDir(), "pre.json")
+		if err := os.WriteFile(path, changed, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		args := slices.Concat(corpusArgs, []string{"-preregistration", path})
+		if err := run(context.Background(), args, func(string) string { return "" }, &bytes.Buffer{}); err == nil {
+			t.Errorf("%s: the candidate was scored", name)
+		}
+	}
 }

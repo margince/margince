@@ -1,10 +1,21 @@
 {
-  "version": "forecast_evaluation_dataset_v1",
+  "version": "forecast_evaluation_dataset_v2",
   "definition_version": "forecast_v2",
   "outcomes_as_of": "2027-05-18T09:00:00Z",
   "outcomes_day": "2027-05-18T00:00:00Z",
+  "train_end": "2027-02-07T00:00:00Z",
+  "cohort_floor": 5,
   "truncated": false,
-  "other_scopes": 2,
+  "left_out": [
+    {
+      "reason": "below_cohort_floor",
+      "vintages": 1
+    },
+    {
+      "reason": "scope_not_evaluated",
+      "vintages": 2
+    }
+  ],
   "vintages": [
     {
       "id": "a1",
@@ -17,29 +28,90 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 10000,
       "evidence_minor": 30000,
       "weighted_minor": 40000,
       "open_minor": 100000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 90000,
         "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     },
     {
@@ -53,29 +125,90 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 30000,
       "evidence_minor": 20000,
       "weighted_minor": 40000,
       "open_minor": 60000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 90000,
         "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     },
     {
@@ -89,29 +222,86 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 0,
       "evidence_minor": 10000,
       "weighted_minor": 25000,
       "open_minor": 80000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 50000,
         "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     },
     {
@@ -125,29 +315,90 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 20000,
       "evidence_minor": 25000,
       "weighted_minor": 20000,
       "open_minor": 50000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 50000,
         "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     },
     {
@@ -161,29 +412,90 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 40000,
       "evidence_minor": 6000,
       "weighted_minor": 5000,
       "open_minor": 10000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 50000,
         "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     },
     {
@@ -197,26 +509,83 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 0,
       "evidence_minor": 0,
       "weighted_minor": 1000,
       "open_minor": 5000,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ]
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
+      }
     },
     {
       "id": "q1-close",
@@ -229,29 +598,90 @@
       "definition_version": "forecast_v2",
       "base_currency": "EUR",
       "population_fingerprint": "",
-      "eligible_count": 3,
-      "priced_count": 3,
+      "eligible_count": 6,
+      "priced_count": 6,
       "fx_missing_count": 0,
-      "contribution_count": 3,
+      "contribution_count": 6,
       "won_minor": 90000,
       "evidence_minor": 0,
       "weighted_minor": 0,
       "open_minor": 0,
-      "open_deals": [
-        {
-          "stage_probability": 10,
-          "in_evidence": false,
-          "won_in_horizon": false
-        },
-        {
-          "stage_probability": 60,
-          "in_evidence": true,
-          "won_in_horizon": true
-        }
-      ],
       "outcome": {
         "won_minor": 90000,
         "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "stage": [
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 10
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 60
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 0,
+            "won": 0,
+            "percent_sum": 0
+          }
+        ],
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "brier_sum": 1700
       }
     }
   ]
