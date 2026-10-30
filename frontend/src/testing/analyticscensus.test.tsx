@@ -21,6 +21,7 @@ import {
   readings,
   salesEvaluation,
   startingMovement,
+  teamEvaluation,
 } from "../features/analytics/analytics.overview.testkit";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
 import { jsonResponse } from "./story-utils";
@@ -69,6 +70,18 @@ const PROSPECTING: View = {
     ].includes(path(url)),
   optional: (url) =>
     ["/v1/worklist", "/v1/analytics/sdr-summary/handoffs"].includes(path(url)),
+};
+
+const TEAM: View = {
+  critical: (url) =>
+    [
+      "/v1/analytics/context",
+      "/v1/analytics/framework",
+      "/v1/analytics/metrics",
+      "/v1/analytics/evaluate",
+      "/v1/analytics/sdr-team",
+    ].includes(path(url)),
+  optional: () => false,
 };
 
 // Every request the page made, sorted into the shell, the critical path and
@@ -136,6 +149,26 @@ describe("the request census of each opening view", () => {
         "/v1/analytics/framework",
         "/v1/analytics/metrics",
         "/v1/analytics/sdr-summary",
+      ],
+      unplaced: [],
+    });
+  });
+
+  it("asks Team prospecting for one evaluation and one team review, whatever the team's size", async () => {
+    const asked = open(
+      "#/analytics/overview?overview=team",
+      teamEvaluation,
+      { template: "sdr" },
+      createQueryClient(),
+    );
+    await screen.findByRole("table", { name: "Members" });
+    expect(census(asked, TEAM)).toEqual({
+      critical: [
+        "/v1/analytics/context",
+        "/v1/analytics/evaluate",
+        "/v1/analytics/framework",
+        "/v1/analytics/metrics",
+        "/v1/analytics/sdr-team",
       ],
       unplaced: [],
     });

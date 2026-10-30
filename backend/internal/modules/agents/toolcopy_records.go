@@ -36,7 +36,7 @@ var readViewCopy = toolCopy{
 	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
 		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
 		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
-		"Each view answers exactly what the matching REST route answers.",
+		"Each view answers what its REST route answers.",
 	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
 		"it does not take and names the ones it does.",
 }
@@ -235,7 +235,9 @@ var advanceDealCopy = toolCopy{
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
 		"the deal, which is the user's decision: unless they named this deal and stage, name " +
-		"them and get their yes first. A losing stage needs a lost_reason. Read the target " +
+		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
+		"reasons view. A lost_reason note explains it; a note alone is recorded as an unmapped " +
+		"loss. Read the target " +
 		"stage's semantic rather than guessing from its name.",
 	Instead: "Use progress_deal when the move should also leave a note explaining it, which is " +
 		"almost always what a human means by moving a deal on.",
@@ -249,7 +251,9 @@ var progressDealCopy = toolCopy{
 	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
 		"the deal, which is the user's decision: unless they named this deal and stage, name " +
-		"them and get their yes first. A losing stage needs a lost_reason. Read the target " +
+		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
+		"reasons view. A lost_reason note explains it; a note alone is recorded as an unmapped " +
+		"loss. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +
 		"note follows it, so a note that fails to write does not put the deal back — the answer " +
 		"says so, and the note is then log_activity's to retry.",

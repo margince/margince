@@ -208,6 +208,49 @@ describe("the details rows say where a deal stands and how it closed", () => {
     ).toBeInTheDocument();
   });
 
+  it("names a loss by its reason's label, a retired one too, with the note", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: [
+            {
+              id: "r-1",
+              key: "timing",
+              label: "Bad timing",
+              active: false,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        }),
+      ),
+    );
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "lost",
+            lost_reason_code: "timing",
+            lost_reason: "Back next year",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
+    );
+    expect(
+      await screen.findByText("Bad timing — Back next year"),
+    ).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   it("asks nothing about a loss on a deal that is not lost", () => {
     show(
       <FieldGrid>

@@ -9586,6 +9586,24 @@ func (e DealForecastCategory) Valid() bool {
 	}
 }
 
+// Defines values for DealLostReasonBasis.
+const (
+	DealLostReasonBasisMapped   DealLostReasonBasis = "mapped"
+	DealLostReasonBasisRecorded DealLostReasonBasis = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the DealLostReasonBasis enum.
+func (e DealLostReasonBasis) Valid() bool {
+	switch e {
+	case DealLostReasonBasisMapped:
+		return true
+	case DealLostReasonBasisRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealPartnerAttribution.
 const (
 	DealPartnerAttributionInfluenced DealPartnerAttribution = "influenced"
@@ -17267,6 +17285,7 @@ func (e ReportingMetricID) Valid() bool {
 const (
 	ReportingPresetIdSales ReportingPresetId = "sales"
 	ReportingPresetIdSdr   ReportingPresetId = "sdr"
+	ReportingPresetIdTeam  ReportingPresetId = "team"
 )
 
 // Valid indicates whether the value is a known member of the ReportingPresetId enum.
@@ -17275,6 +17294,8 @@ func (e ReportingPresetId) Valid() bool {
 	case ReportingPresetIdSales:
 		return true
 	case ReportingPresetIdSdr:
+		return true
+	case ReportingPresetIdTeam:
 		return true
 	default:
 		return false
@@ -18118,6 +18139,24 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SdrHandoffReasonCountOutcome.
+const (
+	SdrHandoffReasonCountOutcomeRecycled SdrHandoffReasonCountOutcome = "recycled"
+	SdrHandoffReasonCountOutcomeRejected SdrHandoffReasonCountOutcome = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the SdrHandoffReasonCountOutcome enum.
+func (e SdrHandoffReasonCountOutcome) Valid() bool {
+	switch e {
+	case SdrHandoffReasonCountOutcomeRecycled:
+		return true
+	case SdrHandoffReasonCountOutcomeRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrHandoffSubjectType.
 const (
 	SdrHandoffSubjectTypeContact SdrHandoffSubjectType = "contact"
@@ -18148,6 +18187,39 @@ func (e SdrSummaryWorkflow) Valid() bool {
 	case SdrSummaryWorkflowHandoff:
 		return true
 	case SdrSummaryWorkflowQualification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewMembershipBasis.
+const (
+	SdrTeamReviewMembershipBasisCurrent SdrTeamReviewMembershipBasis = "current"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewMembershipBasis enum.
+func (e SdrTeamReviewMembershipBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewWorkflow.
+const (
+	SdrTeamReviewWorkflowHandoff       SdrTeamReviewWorkflow = "handoff"
+	SdrTeamReviewWorkflowQualification SdrTeamReviewWorkflow = "qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewWorkflow enum.
+func (e SdrTeamReviewWorkflow) Valid() bool {
+	switch e {
+	case SdrTeamReviewWorkflowHandoff:
+		return true
+	case SdrTeamReviewWorkflowQualification:
 		return true
 	default:
 		return false
@@ -23971,6 +24043,51 @@ func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for GetSdrTeamReviewParamsScopeKind.
+const (
+	GetSdrTeamReviewParamsScopeKindManagedTeams GetSdrTeamReviewParamsScopeKind = "managed_teams"
+	GetSdrTeamReviewParamsScopeKindTeam         GetSdrTeamReviewParamsScopeKind = "team"
+	GetSdrTeamReviewParamsScopeKindWorkspace    GetSdrTeamReviewParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsScopeKind enum.
+func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
+	switch e {
+	case GetSdrTeamReviewParamsScopeKindManagedTeams:
+		return true
+	case GetSdrTeamReviewParamsScopeKindTeam:
+		return true
+	case GetSdrTeamReviewParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSdrTeamReviewParamsPeriod.
+const (
+	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
+func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
+	switch e {
+	case GetSdrTeamReviewParamsPeriodLastMonth:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodThisMonth:
+		return true
+	case GetSdrTeamReviewParamsPeriodThisWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListApprovalsParamsStatus.
 const (
 	ListApprovalsParamsStatusApproved ListApprovalsParamsStatus = "approved"
@@ -27051,8 +27168,11 @@ type AddressCountryMismatch struct {
 
 // AdvanceDealRequest defines model for AdvanceDealRequest.
 type AdvanceDealRequest struct {
-	// LostReason Required if status=lost.
+	// LostReason A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonCode An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// Status Set when advancing into a terminal stage.
 	Status *AdvanceDealRequestStatus `json:"status,omitempty"`
@@ -29216,6 +29336,24 @@ type AppliedUndo struct {
 
 	// Version The record's version as this receipt was read, for the `If-Match` the restore route requires. Carried on the receipt rather than re-read by the client: a second read would race the sweep, and a stale version is what makes the restore refuse rather than overwrite somebody else's later edit.
 	Version int64 `json:"version"`
+}
+
+// ApplyLegacyLossReasonsRequest defines model for ApplyLegacyLossReasonsRequest.
+type ApplyLegacyLossReasonsRequest struct {
+	// Mappings The decisions the administrator reviewed, each at the version shown.
+	Mappings []struct {
+		Id      openapi_types.UUID `json:"id"`
+		Version int64              `json:"version"`
+	} `json:"mappings"`
+}
+
+// ApplyLegacyLossReasonsResponse defines model for ApplyLegacyLossReasonsResponse.
+type ApplyLegacyLossReasonsResponse struct {
+	// Deals How many lost deals this run changes. One run changes at most 1000; apply again for the rest. Zero starts no run.
+	Deals int `json:"deals"`
+
+	// Mappings How many reviewed mappings the correction applies.
+	Mappings int `json:"mappings"`
 }
 
 // ApplyTagRequest defines model for ApplyTagRequest.
@@ -39037,6 +39175,14 @@ type CreateListRequestListType string
 // CreateListRequestSharing defines model for CreateListRequest.Sharing.
 type CreateListRequestSharing string
 
+// CreateLossReasonRequest defines model for CreateLossReasonRequest.
+type CreateLossReasonRequest struct {
+	// Key Derived from the label when omitted.
+	Key       *string `json:"key,omitempty"`
+	Label     string  `json:"label"`
+	SortOrder *int    `json:"sort_order,omitempty"`
+}
+
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
@@ -39746,8 +39892,14 @@ type Deal struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
-	// LostReason Required when status=lost.
+	// LostReason The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+	LostReasonBasis *DealLostReasonBasis `json:"lost_reason_basis,omitempty"`
+
+	// LostReasonCode The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
 	MaskedFields *[]string           `json:"masked_fields,omitempty"`
@@ -39805,6 +39957,9 @@ type DealCommercialMotion string
 
 // DealForecastCategory defines model for Deal.ForecastCategory.
 type DealForecastCategory string
+
+// DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+type DealLostReasonBasis string
 
 // DealPartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
 type DealPartnerAttribution string
@@ -40672,6 +40827,12 @@ type DecideCommissionRequest struct {
 // DecideCommissionRequestDecision `approve` moves an accrued entry to approved; `pay` moves an approved one to paid.
 // `void` cancels an entry in any live state and writes the reversal beside it.
 type DecideCommissionRequestDecision string
+
+// DecideLegacyLossReasonRequest defines model for DecideLegacyLossReasonRequest.
+type DecideLegacyLossReasonRequest struct {
+	// ReasonKey An active key from `/loss-reasons`.
+	ReasonKey string `json:"reason_key"`
+}
 
 // DecideLegalReviewRequest defines model for DecideLegalReviewRequest.
 type DecideLegalReviewRequest struct {
@@ -45483,6 +45644,32 @@ type LeadSourceListResponse struct {
 	Discovered []DiscoveredLeadSource `json:"discovered"`
 }
 
+// LegacyLossReason One note of lost deals a mapping speaks for.
+type LegacyLossReason struct {
+	// DealCount Lost deals the caller may read that carry it with no code or a mapped one.
+	DealCount int `json:"deal_count"`
+
+	// Mapping An administrator's decision that one legacy note counts under one loss reason.
+	Mapping *LossReasonMapping `json:"mapping,omitempty"`
+
+	// PendingCount Of those, how many the decision would change if applied now. Zero with no decision.
+	PendingCount int `json:"pending_count"`
+
+	// Text The note as one of its deals carries it.
+	Text string `json:"text"`
+
+	// TextHash The key to decide this note under.
+	TextHash string `json:"text_hash"`
+}
+
+// LegacyLossReasonListResponse defines model for LegacyLossReasonListResponse.
+type LegacyLossReasonListResponse struct {
+	Data []LegacyLossReason `json:"data"`
+
+	// DistinctTotal How many notes the list holds, of which `data` is the first page.
+	DistinctTotal int `json:"distinct_total"`
+}
+
 // LegalEntity One legal entity the installation trades as. On the default entity
 // (`is_default`), `display_name`, `legal_name`, `address`, `vat_id`, `register_court`,
 // `register_number` and `logo_url` are the anchor company's values, read live.
@@ -46355,6 +46542,55 @@ type ListVisit struct {
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// LossReason One administered reason a deal can be lost for.
+type LossReason struct {
+	// Active False is retired. Deals keep it and reports group by it, but no new loss can choose it.
+	Active    bool       `json:"active"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// DealCount Live lost deals carrying this key that the caller may see. Absent when the caller may not read deals. Set on the list read; absent on the record a write answers.
+	DealCount *int               `json:"deal_count,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Key The stable identifier stored on the deal. Lowercase, never changes once created, so a report keyed on it survives a rename.
+	Key string `json:"key"`
+
+	// Label What readers see.
+	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
+	// SortOrder Display order in pickers and settings.
+	SortOrder int `json:"sort_order"`
+
+	// System Seeded with the installation. Fully editable; it cannot be removed.
+	System    *bool      `json:"system,omitempty"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	Version   *int64     `json:"version,omitempty"`
+}
+
+// LossReasonListResponse defines model for LossReasonListResponse.
+type LossReasonListResponse struct {
+	Data []LossReason `json:"data"`
+}
+
+// LossReasonMapping An administrator's decision that one legacy note counts under one loss reason.
+type LossReasonMapping struct {
+	DecidedAt time.Time `json:"decided_at"`
+
+	// DecidedBy Who took the decision, in the `captured_by` form.
+	DecidedBy string             `json:"decided_by"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// ReasonKey The key from `/loss-reasons`.
+	ReasonKey string `json:"reason_key"`
+
+	// TextHash The md5 of the note, trimmed and lower-cased, in hex. A key, not a secret: it lives only while a deal carries the note.
+	TextHash string `json:"text_hash"`
+	Version  int64  `json:"version"`
 }
 
 // MagicActor Who acted, and on whose behalf.
@@ -49140,8 +49376,11 @@ type ProgressDealRequest struct {
 	// IfVersion The deal's version the move was decided on. A deal that has changed since is refused.
 	IfVersion *int `json:"if_version,omitempty"`
 
-	// LostReason Required when the stage closes the deal as lost.
+	// LostReason A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.
 	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonCode An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 
 	// Note Logged as a note on the deal's timeline after the move.
 	Note *string `json:"note,omitempty"`
@@ -52792,6 +53031,47 @@ type SchedulingProfile struct {
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
 
+// SdrHandoffCohort defines model for SdrHandoffCohort.
+type SdrHandoffCohort struct {
+	Accepted int `json:"accepted"`
+
+	// MedianDecisionHours Median hours from submission to decision over the decided rounds. Absent with none decided.
+	MedianDecisionHours *float32 `json:"median_decision_hours,omitempty"`
+	Recycled            int      `json:"recycled"`
+	Rejected            int      `json:"rejected"`
+
+	// Rounds Rounds submitted in the period. The denominator of the other four, which add up to it.
+	Rounds int `json:"rounds"`
+
+	// Waiting Rounds still undecided at `observed_through`.
+	Waiting int `json:"waiting"`
+}
+
+// SdrHandoffOutcomes defines model for SdrHandoffOutcomes.
+type SdrHandoffOutcomes struct {
+	// Accepted Deals first accepted from a handoff in the period, each deal once.
+	Accepted int `json:"accepted"`
+
+	// Recycled Handoffs sent back to the submitter in the period, to try again.
+	Recycled int `json:"recycled"`
+
+	// Rejected Handoffs rejected in the period. A rejection ends the handoff.
+	Rejected int `json:"rejected"`
+
+	// Submitted Rounds submitted in the period, resubmissions included.
+	Submitted int `json:"submitted"`
+}
+
+// SdrHandoffReasonCount defines model for SdrHandoffReasonCount.
+type SdrHandoffReasonCount struct {
+	Count   int                          `json:"count"`
+	Label   string                       `json:"label"`
+	Outcome SdrHandoffReasonCountOutcome `json:"outcome"`
+}
+
+// SdrHandoffReasonCountOutcome defines model for SdrHandoffReasonCount.Outcome.
+type SdrHandoffReasonCountOutcome string
+
 // SdrHandoffRecipient defines model for SdrHandoffRecipient.
 type SdrHandoffRecipient struct {
 	// Active False when the recipient was suspended, deactivated or removed. The handoff is then blocked.
@@ -52846,6 +53126,87 @@ type SdrSummary struct {
 
 // SdrSummaryWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
 type SdrSummaryWorkflow string
+
+// SdrTeamHandoffs defines model for SdrTeamHandoffs.
+type SdrTeamHandoffs struct {
+	Cohort   SdrHandoffCohort   `json:"cohort"`
+	Outcomes SdrHandoffOutcomes `json:"outcomes"`
+
+	// Reasons The reasons given for the rejections and returns in `outcomes`, most often first.
+	Reasons []SdrHandoffReasonCount `json:"reasons"`
+
+	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
+	Unattributed int              `json:"unattributed"`
+	Waiting      SdrHandoffTotals `json:"waiting"`
+}
+
+// SdrTeamMeetings defines model for SdrTeamMeetings.
+type SdrTeamMeetings struct {
+	// Held Held customer meetings in the period credited to the team, each counted once.
+	Held int `json:"held"`
+
+	// LimitedHistory Some meetings were recorded before their history was kept, so their credit is read from the meeting as it is today.
+	LimitedHistory bool `json:"limited_history"`
+}
+
+// SdrTeamMember defines model for SdrTeamMember.
+type SdrTeamMember struct {
+	Accepted int                `json:"accepted"`
+	Id       openapi_types.UUID `json:"id"`
+	Label    string             `json:"label"`
+
+	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
+	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
+	Recycled           int        `json:"recycled"`
+	Rejected           int        `json:"rejected"`
+	Submitted          int        `json:"submitted"`
+
+	// Waiting This member's handoffs waiting on somebody else now.
+	Waiting int `json:"waiting"`
+}
+
+// SdrTeamReview defines model for SdrTeamReview.
+type SdrTeamReview struct {
+	// AsOf The instant every figure was read at.
+	AsOf     time.Time        `json:"as_of"`
+	Handoffs *SdrTeamHandoffs `json:"handoffs,omitempty"`
+	Interval ReportingWindow  `json:"interval"`
+	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
+	Members  []SdrTeamMember  `json:"members"`
+
+	// MembersTruncated The team has more measurable members than `members` holds.
+	MembersTruncated bool `json:"members_truncated"`
+
+	// MembersWithheld The installation shows no individual performance, so `members` is empty.
+	MembersWithheld bool `json:"members_withheld"`
+
+	// MembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+	MembershipBasis SdrTeamReviewMembershipBasis `json:"membership_basis"`
+
+	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
+	ObservedThrough time.Time `json:"observed_through"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// SmallSampleBelow A count of rounds below this is too small to compare with another. Show its size, not a rate.
+	SmallSampleBelow int `json:"small_sample_below"`
+
+	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
+	Withheld bool `json:"withheld"`
+
+	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
+	Workflow SdrTeamReviewWorkflow `json:"workflow"`
+}
+
+// SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
+type SdrTeamReviewWorkflow string
 
 // SdrWaitingHandoff defines model for SdrWaitingHandoff.
 type SdrWaitingHandoff struct {
@@ -56341,6 +56702,13 @@ type UpdateListRequest struct {
 
 // UpdateListRequestSharing defines model for UpdateListRequest.Sharing.
 type UpdateListRequestSharing string
+
+// UpdateLossReasonRequest Every field optional; an omitted one is left alone.
+type UpdateLossReasonRequest struct {
+	Active    *bool   `json:"active,omitempty"`
+	Label     *string `json:"label,omitempty"`
+	SortOrder *int    `json:"sort_order,omitempty"`
+}
 
 // UpdateMemberRequest defines model for UpdateMemberRequest.
 type UpdateMemberRequest struct {
@@ -60793,6 +61161,24 @@ type ListSdrWaitingHandoffsParams struct {
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
 type ListSdrWaitingHandoffsParamsScopeKind string
 
+// GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParams struct {
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
+	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Period The period, in the installation's reporting zone.
+	Period *GetSdrTeamReviewParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
+// GetSdrTeamReviewParamsScopeKind defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParamsScopeKind string
+
+// GetSdrTeamReviewParamsPeriod defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParamsPeriod string
+
 // ListReportingTargetsParams defines parameters for ListReportingTargets.
 type ListReportingTargetsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
@@ -63829,6 +64215,9 @@ type ListInputChecksParamsScopeKind string
 // CloseLostInputCheckJSONBody defines parameters for CloseLostInputCheck.
 type CloseLostInputCheckJSONBody struct {
 	LostReason string `json:"lost_reason"`
+
+	// LostReasonCode An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
 }
 
 // WaitInputCheckJSONBody defines parameters for WaitInputCheck.
@@ -64605,6 +64994,83 @@ type ListListMembersParams struct {
 
 	// EntityId Only these records, at most 200, answered in one page; a record that is not a member, or that this caller cannot see, is absent. Takes no cursor.
 	EntityId *[]openapi_types.UUID `form:"entity_id,omitempty" json:"entity_id,omitempty"`
+}
+
+// CreateLossReasonParams defines parameters for CreateLossReason.
+type CreateLossReasonParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListLegacyLossReasonsParams defines parameters for ListLegacyLossReasons.
+type ListLegacyLossReasonsParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DecideLegacyLossReasonParams defines parameters for DecideLegacyLossReason.
+type DecideLegacyLossReasonParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UpdateLossReasonParams defines parameters for UpdateLossReason.
+type UpdateLossReasonParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetMagicParams defines parameters for GetMagic.
@@ -68138,6 +68604,18 @@ type RemoveListMemberJSONRequestBody = ListMemberChangeRequest
 
 // RestoreListMemberJSONRequestBody defines body for RestoreListMember for application/json ContentType.
 type RestoreListMemberJSONRequestBody = RemovalUndo
+
+// CreateLossReasonJSONRequestBody defines body for CreateLossReason for application/json ContentType.
+type CreateLossReasonJSONRequestBody = CreateLossReasonRequest
+
+// ApplyLegacyLossReasonsJSONRequestBody defines body for ApplyLegacyLossReasons for application/json ContentType.
+type ApplyLegacyLossReasonsJSONRequestBody = ApplyLegacyLossReasonsRequest
+
+// DecideLegacyLossReasonJSONRequestBody defines body for DecideLegacyLossReason for application/json ContentType.
+type DecideLegacyLossReasonJSONRequestBody = DecideLegacyLossReasonRequest
+
+// UpdateLossReasonJSONRequestBody defines body for UpdateLossReason for application/json ContentType.
+type UpdateLossReasonJSONRequestBody = UpdateLossReasonRequest
 
 // SaveMailDraftJSONRequestBody defines body for SaveMailDraft for application/json ContentType.
 type SaveMailDraftJSONRequestBody = MailDraftInput
@@ -73654,6 +74132,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "lost_reason")
 	}
 
+	if raw, found := object["lost_reason_basis"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_basis': %w", err)
+		}
+		delete(object, "lost_reason_basis")
+	}
+
+	if raw, found := object["lost_reason_code"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_code': %w", err)
+		}
+		delete(object, "lost_reason_code")
+	}
+
 	if raw, found := object["masked_fields"]; found {
 		err = json.Unmarshal(raw, &a.MaskedFields)
 		if err != nil {
@@ -73999,6 +74493,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["lost_reason"], err = json.Marshal(a.LostReason)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'lost_reason': %w", err)
+		}
+	}
+
+	if a.LostReasonBasis != nil {
+		object["lost_reason_basis"], err = json.Marshal(a.LostReasonBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_basis': %w", err)
+		}
+	}
+
+	if a.LostReasonCode != nil {
+		object["lost_reason_code"], err = json.Marshal(a.LostReasonCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_code': %w", err)
 		}
 	}
 
@@ -80076,6 +80584,9 @@ type ServerInterface interface {
 	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
 	// (GET /analytics/sdr-summary/handoffs)
 	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
+	// How a team's handoffs ended and what still waits, for coaching.
+	// (GET /analytics/sdr-team)
+	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -81591,6 +82102,24 @@ type ServerInterface interface {
 	// Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
 	// (POST /lists/{id}/visit)
 	VisitList(w http.ResponseWriter, r *http.Request, id Id)
+	// List the reasons a deal can be lost for, active and retired, in display order.
+	// (GET /loss-reasons)
+	ListLossReasons(w http.ResponseWriter, r *http.Request)
+	// Add a loss reason.
+	// (POST /loss-reasons)
+	CreateLossReason(w http.ResponseWriter, r *http.Request, params CreateLossReasonParams)
+	// List the notes of lost deals that a mapping speaks for.
+	// (GET /loss-reasons/legacy)
+	ListLegacyLossReasons(w http.ResponseWriter, r *http.Request, params ListLegacyLossReasonsParams)
+	// Apply the reviewed legacy mappings to the lost deals they match.
+	// (POST /loss-reasons/legacy/apply)
+	ApplyLegacyLossReasons(w http.ResponseWriter, r *http.Request)
+	// Decide which loss reason one legacy note counts under.
+	// (PUT /loss-reasons/legacy/{text_hash})
+	DecideLegacyLossReason(w http.ResponseWriter, r *http.Request, textHash string, params DecideLegacyLossReasonParams)
+	// Relabel, reorder or retire a loss reason.
+	// (PATCH /loss-reasons/{id})
+	UpdateLossReason(w http.ResponseWriter, r *http.Request, id Id, params UpdateLossReasonParams)
 	// What the machinery did, what it needs, what it could not finish, and what it is watching.
 	// (GET /magic)
 	GetMagic(w http.ResponseWriter, r *http.Request, params GetMagicParams)
@@ -83322,6 +83851,12 @@ func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, par
 // The handoffs waiting on somebody else, oldest wait first, one page at a time.
 // (GET /analytics/sdr-summary/handoffs)
 func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How a team's handoffs ended and what still waits, for coaching.
+// (GET /analytics/sdr-team)
+func (_ Unimplemented) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -86352,6 +86887,42 @@ func (_ Unimplemented) RestoreList(w http.ResponseWriter, r *http.Request, id Id
 // Record that the signed-in user has opened this list — the mark `since_last_visit` counts from.
 // (POST /lists/{id}/visit)
 func (_ Unimplemented) VisitList(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the reasons a deal can be lost for, active and retired, in display order.
+// (GET /loss-reasons)
+func (_ Unimplemented) ListLossReasons(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a loss reason.
+// (POST /loss-reasons)
+func (_ Unimplemented) CreateLossReason(w http.ResponseWriter, r *http.Request, params CreateLossReasonParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the notes of lost deals that a mapping speaks for.
+// (GET /loss-reasons/legacy)
+func (_ Unimplemented) ListLegacyLossReasons(w http.ResponseWriter, r *http.Request, params ListLegacyLossReasonsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply the reviewed legacy mappings to the lost deals they match.
+// (POST /loss-reasons/legacy/apply)
+func (_ Unimplemented) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Decide which loss reason one legacy note counts under.
+// (PUT /loss-reasons/legacy/{text_hash})
+func (_ Unimplemented) DecideLegacyLossReason(w http.ResponseWriter, r *http.Request, textHash string, params DecideLegacyLossReasonParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Relabel, reorder or retire a loss reason.
+// (PATCH /loss-reasons/{id})
+func (_ Unimplemented) UpdateLossReason(w http.ResponseWriter, r *http.Request, id Id, params UpdateLossReasonParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93976,6 +94547,71 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSdrTeamReview operation middleware
+func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSdrTeamReviewParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSdrTeamReview(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -115029,6 +115665,246 @@ func (siw *ServerInterfaceWrapper) VisitList(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListLossReasons operation middleware
+func (siw *ServerInterfaceWrapper) ListLossReasons(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLossReasons(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateLossReason operation middleware
+func (siw *ServerInterfaceWrapper) CreateLossReason(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateLossReasonParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLossReason(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLegacyLossReasons operation middleware
+func (siw *ServerInterfaceWrapper) ListLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLegacyLossReasonsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLegacyLossReasons(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyLegacyLossReasons operation middleware
+func (siw *ServerInterfaceWrapper) ApplyLegacyLossReasons(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyLegacyLossReasons(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DecideLegacyLossReason operation middleware
+func (siw *ServerInterfaceWrapper) DecideLegacyLossReason(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "text_hash" -------------
+	var textHash string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "text_hash", chi.URLParam(r, "text_hash"), &textHash, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "text_hash", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DecideLegacyLossReasonParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DecideLegacyLossReason(w, r, textHash, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateLossReason operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLossReason(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateLossReasonParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateLossReason(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMagic operation middleware
 func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Request) {
 
@@ -129045,6 +129921,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
 	})
 	r.Group(func(r chi.Router) {
@@ -130558,6 +131437,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/lists/{id}/visit", wrapper.VisitList)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/loss-reasons", wrapper.ListLossReasons)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/loss-reasons", wrapper.CreateLossReason)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/loss-reasons/legacy", wrapper.ListLegacyLossReasons)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/loss-reasons/legacy/apply", wrapper.ApplyLegacyLossReasons)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/loss-reasons/legacy/{text_hash}", wrapper.DecideLegacyLossReason)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/loss-reasons/{id}", wrapper.UpdateLossReason)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/magic", wrapper.GetMagic)

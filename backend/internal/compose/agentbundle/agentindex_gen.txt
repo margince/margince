@@ -89,6 +89,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | Read records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
+| `GET /loss-reasons` | listLossReasons | List the reasons a deal can be lost for, active and retired, in display order. | Read records | at once |
 | `GET /deal-rooms` | listDealRooms | List Deal Rooms (live by default; cursor-paginated). | Read records | at once |
 | `POST /deal-rooms` | createDealRoom | Open a Deal Room on a deal. | Change records | at once |
 | `GET /deal-rooms/{id}` | getDealRoom | Get a Deal Room by id. | Read records | at once |

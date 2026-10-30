@@ -410,7 +410,12 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/record-roles":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/loss-reasons/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PUT /v1/loss-reasons/legacy/{text_hash}": {
+		object: objectCustomField, rowNote: "a mapping is workspace config keyed by a note's hash: it names no deal and has no owner column",
+	},
+	"POST /v1/record-roles": {object: objectCustomField, rowNote: noOwnerCatalog},
 	// A health assessment hangs on the project and has no owner of its own, so
 	// the row a replay must re-probe is the PROJECT: telling somebody how a
 	// delivery is going is something to say only to a caller who may still open

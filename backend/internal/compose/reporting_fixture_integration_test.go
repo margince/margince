@@ -89,7 +89,7 @@ func (f *reportingBusinessFixture) closedDeals(t *testing.T) {
 		input := deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](won), WonWithoutContractReason: &reason}
 		if i >= 12 {
 			reason = "price"
-			input = deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason}
+			input = deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other")}
 		}
 		if _, err := f.store.AdvanceDeal(f.writer, ids.From[ids.DealKind](ids.UUID(deal.Id)), input); err != nil {
 			t.Fatal(err)

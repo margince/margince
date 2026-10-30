@@ -3988,6 +3988,22 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/AcquisitionSourceListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /loss-reasons:
+    get:
+      tags: [Deals]
+      operationId: listLossReasons
+      summary: List the reasons a deal can be lost for, active and retired, in display order.
+      description: |-
+        The administered list a closer picks from when a deal is lost. Retired entries are
+        returned so a deal still carrying one renders its label and a report can still group
+        by it; they cannot be newly chosen.
+      responses:
+        '200':
+          description: The loss reason list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LossReasonListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /record-roles:
     get:
       tags: [Assignments]
@@ -13946,7 +13962,10 @@ components:
           description: The stage to move to. Its semantic decides whether the move is confirm-first.
         lost_reason:
           type: string
-          description: Required when the stage closes the deal as lost.
+          description: 'A free note on a loss. A lost stage needs `lost_reason_code`, this note, or both.'
+        lost_reason_code:
+          type: string
+          description: 'An active key from `/loss-reasons`, expected when the stage closes the deal as lost. A note alone is recorded with no code, as unmapped.'
         won_without_contract_reason:
           type: string
           enum: [imported, purchase_order, verbal, renewal_by_email, other]
@@ -14471,7 +14490,18 @@ components:
           description: >-
             Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
         status: {type: string, enum: [open, won, lost], default: open}
-        lost_reason: {type: [string, 'null'], description: Required when status=lost.}
+        lost_reason: {type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.'}
+        lost_reason_code:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet.
+        lost_reason_basis:
+          type: [string, 'null']
+          readOnly: true
+          enum: [recorded, mapped, null]
+          description: >-
+            How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
@@ -14608,7 +14638,11 @@ components:
       properties:
         to_stage_id: {type: string, format: uuid, description: Target stage (must belong to the deal's pipeline).}
         status: {type: string, enum: [open, won, lost], description: Set when advancing into a terminal stage.}
-        lost_reason: {type: [string, 'null'], description: Required if status=lost.}
+        lost_reason: {type: [string, 'null'], description: 'A free note on a loss. A move to a lost stage needs `lost_reason_code`, this note, or both.'}
+        lost_reason_code:
+          type: [string, 'null']
+          description: >-
+            An active key from `/loss-reasons`, expected on a move to a lost stage and refused on any other move. A loss with only `lost_reason` is accepted and recorded with no code: it counts as unmapped until an administrator maps its note.
         won_without_contract_reason:
           type: [string, 'null']
           enum: [imported, purchase_order, verbal, renewal_by_email, other, null]
@@ -17507,6 +17541,40 @@ components:
       required: [data]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/AcquisitionSource'}}
+    LossReason:
+      type: object
+      description: One administered reason a deal can be lost for.
+      required: [id, key, label, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        key:
+          type: string
+          description: >-
+            The stable identifier stored on the deal. Lowercase, never changes once created, so a report keyed on it survives a rename.
+        label: {type: string, description: What readers see.}
+        label_key: {$ref: '#/components/schemas/ShippedLabelKey'}
+        sort_order: {type: integer, description: Display order in pickers and settings.}
+        active:
+          type: boolean
+          description: False is retired. Deals keep it and reports group by it, but no new loss can choose it.
+        system:
+          type: boolean
+          readOnly: true
+          description: Seeded with the installation. Fully editable; it cannot be removed.
+        deal_count:
+          type: integer
+          readOnly: true
+          minimum: 0
+          description: >-
+            Live lost deals carrying this key that the caller may see. Absent when the caller may not read deals. Set on the list read; absent on the record a write answers.
+        version: {type: integer, format: int64, readOnly: true}
+        created_at: {type: string, format: date-time, readOnly: true}
+        updated_at: {type: string, format: date-time, readOnly: true}
+    LossReasonListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/LossReason'}}
     RecordRole:
       type: object
       description: >-
@@ -19123,6 +19191,7 @@ components:
           enum:
             - sales
             - sdr
+            - team
         metrics:
           type: array
           minItems: 1

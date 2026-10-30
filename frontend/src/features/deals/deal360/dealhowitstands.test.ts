@@ -90,6 +90,33 @@ describe("a closed deal's verdict", () => {
     });
   });
 
+  it("says a code-only loss by its reason's label", () => {
+    const reasons = [
+      {
+        id: "r-1",
+        key: "price",
+        label: "Price",
+        active: false,
+        sort_order: 10,
+        system: true,
+        version: 1,
+        created_at: "2026-10-01T08:00:00Z",
+        updated_at: "2026-10-01T08:00:00Z",
+      },
+    ];
+    expect(
+      closedVerdict(
+        deal({
+          status: "lost",
+          closed_at: "2026-05-13T12:00:00Z",
+          lost_reason_code: "price",
+        }),
+        words,
+        reasons,
+      )?.sentence,
+    ).toBe(`${t("deal.standing.closedOn", { date: "13 May" })} · Price`);
+  });
+
   it("claims no day an imported close does not carry", () => {
     expect(closedVerdict(deal({ status: "won" }), words)?.sentence).toBe(
       undefined,

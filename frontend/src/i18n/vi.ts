@@ -1213,6 +1213,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.prepared.prospectingTitle": "Tiến độ tìm kiếm khách hàng của tôi",
   "reporting.prepared.prospectingPurpose":
     "Cuộc họp đã diễn ra, bàn giao được chấp nhận và lead đủ điều kiện trong tuần này, so với mục tiêu tháng.",
+  "reporting.prepared.teamTitle": "Đánh giá tìm kiếm khách hàng của nhóm",
+  "reporting.prepared.teamPurpose":
+    "Cuộc họp đã diễn ra, bàn giao được chấp nhận và lead đủ điều kiện của nhóm trong tuần này, mỗi thứ tính một lần cho nhóm.",
   "reporting.prepared.title": "Báo cáo soạn sẵn",
   "reporting.prepared.open": "Mở",
   "reporting.prepared.preview": "Xem trước",
@@ -5006,7 +5009,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirmTerminal":
     "Thao tác này sẽ đóng deal với trạng thái {status}. Chưa có gì thay đổi cho đến khi bạn xác nhận.",
   "deals.lostReason": "Lý do thua",
-  "deals.lostReasonNeeded": "Nhập lý do thua deal.",
+  "deals.lostReasonNeeded": "Hãy chọn lý do deal bị thua.",
+  "deals.lostReasonCode": "Vì sao thua?",
+  "deals.lostReasonPick": "Chọn lý do",
+  "deals.lostReasonNote": "Ghi chú (không bắt buộc)",
   "deals.winReasonNeeded": "Chọn cách chốt được deal.",
   "deals.winDetailNeeded": "Mô tả cách chốt được deal.",
   "deals.closeTasks.legend_one":
@@ -5133,6 +5139,45 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
   "legalEntities.countryHint": "Hai chữ cái, ví dụ AT.",
+  "lossReasons.title": "Lý do thua",
+  "lossReasons.sub":
+    "Các lý do để chọn khi một deal bị thua. Báo cáo đếm deal thua theo các lý do này.",
+  "lossReasons.builtin.price": "Giá",
+  "lossReasons.builtin.competitor": "Chọn đối thủ",
+  "lossReasons.builtin.no_budget": "Không có ngân sách",
+  "lossReasons.builtin.no_decision": "Không ra quyết định",
+  "lossReasons.builtin.timing": "Sai thời điểm",
+  "lossReasons.builtin.product_fit": "Sản phẩm không phù hợp",
+  "lossReasons.builtin.went_silent": "Không còn phản hồi",
+  "lossReasons.builtin.other": "Khác",
+  "lossReasons.loading": "Đang tải lý do…",
+  "lossReasons.addOpen": "Lý do mới",
+  "lossReasons.addTitle": "Lý do thua mới",
+  "lossReasons.addConfirm": "Thêm lý do",
+  "lossReasons.renameTitle": "Đổi tên lý do",
+  "lossReasons.activeFor": "Có thể chọn {label} khi deal bị thua",
+  "lossReasons.colReason": "Lý do",
+  "lossReasons.colDeals": "Deal",
+  "lossReasons.deals_one": "{count} deal",
+  "lossReasons.deals_other": "{count} deal",
+  "lossReasons.duplicate":
+    "Đã có lý do mang tên hoặc khóa này. Hãy chọn tên khác.",
+  "lossReasons.legacyTitle": "Ghi chú thua trước đây",
+  "lossReasons.legacySub":
+    "Các deal bị thua trước khi có danh sách này chỉ có ghi chú. Hãy chọn lý do cho từng ghi chú rồi áp dụng. Ghi chú vẫn giữ nguyên như đã viết.",
+  "lossReasons.colPending": "Còn cần đổi",
+  "lossReasons.colNote": "Ghi chú",
+  "lossReasons.colMapTo": "Tính là",
+  "lossReasons.mapFor": "Lý do cho “{note}”",
+  "lossReasons.pick": "Chọn lý do",
+  "lossReasons.apply": "Áp dụng cho deal",
+  "lossReasons.applied_one": "{count} deal sẽ được cập nhật ở chế độ nền.",
+  "lossReasons.applied_other": "{count} deal sẽ được cập nhật ở chế độ nền.",
+  "lossReasons.remaining_one":
+    "Đang hiện {shown} ghi chú phổ biến nhất trong {count} ghi chú.",
+  "lossReasons.remaining_other":
+    "Đang hiện {shown} ghi chú phổ biến nhất trong {count} ghi chú.",
+  "lossReasons.legacyEmpty": "Mọi deal bị thua đều có lý do.",
   "acqSources.title": "Danh sách nguồn",
   "acqSources.builtin.inbound": "Khách tự liên hệ",
   "acqSources.builtin.outbound": "Chủ động tiếp cận",
@@ -6828,6 +6873,62 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không đọc được công ty này có dùng bàn giao SDR hay không.",
   "analytics.overview.workflowTitle": "Bàn giao SDR",
   "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
+  "analytics.overview.team": "Tìm kiếm khách hàng của nhóm",
+  "analytics.team.chooseTeam": "Chọn một nhóm",
+  "analytics.team.chooseTeamBody":
+    "Tìm kiếm khách hàng của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm kiếm khách hàng của tôi.",
+  "analytics.team.todaysMembers":
+    "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo các bàn giao trước đây của họ.",
+  "analytics.team.countedOnce":
+    "Mỗi số liệu tính công việc của nhóm một lần. Một cuộc họp có nhiều thành viên tham dự được tính là một cuộc họp.",
+  "analytics.team.feedback": "Phản hồi về bàn giao",
+  "analytics.team.withheld":
+    "Hiệu suất cá nhân đang tắt, và các số liệu này sẽ cho thấy công việc của một đồng nghiệp.",
+  "analytics.team.decided": "Quyết định trong kỳ này",
+  "analytics.team.submitted": "Đã bàn giao",
+  "analytics.team.submittedDetail": "Các vòng bàn giao, kể cả bàn giao lại",
+  "analytics.team.accepted": "Được chấp nhận",
+  "analytics.team.acceptedDetail":
+    "Mỗi deal một lần, ghi công cho thành viên bàn giao",
+  "analytics.team.returned": "Được trả lại",
+  "analytics.team.returnedDetail": "Gửi lại để bàn giao lần nữa",
+  "analytics.team.rejected": "Bị từ chối",
+  "analytics.team.rejectedDetail": "Từ chối hẳn",
+  "analytics.team.cohort_one":
+    "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
+  "analytics.team.cohort_other":
+    "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
+  "analytics.team.medianDecision":
+    "Một nửa được quyết định trong vòng {hours}.",
+  "analytics.team.smallSampleTitle": "Mẫu nhỏ",
+  "analytics.team.smallSample":
+    "Ít hơn {below} vòng là quá ít để so sánh. Hãy đọc số lượng, không phải tỷ lệ. Không có gì ở đây cho biết ai đã làm việc chăm chỉ đến đâu.",
+  "analytics.team.waitingNow_one": "{count} bàn giao đang chờ quyết định.",
+  "analytics.team.waitingNow_other": "{count} bàn giao đang chờ quyết định.",
+  "analytics.team.blocked_one":
+    "{count} trong số đó chờ một thành viên không còn xử lý được.",
+  "analytics.team.blocked_other":
+    "{count} trong số đó chờ một thành viên không còn xử lý được.",
+  "analytics.team.unattributed_one":
+    "{count} sự kiện bàn giao được ghi trước khi lưu thành viên bàn giao, nên không dòng thành viên nào tính các sự kiện này.",
+  "analytics.team.unattributed_other":
+    "{count} sự kiện bàn giao được ghi trước khi lưu thành viên bàn giao, nên không dòng thành viên nào tính các sự kiện này.",
+  "analytics.team.reasons": "Lý do được nêu",
+  "analytics.team.reason": "Lý do",
+  "analytics.team.outcome": "Kết quả",
+  "analytics.team.count": "Số lượng",
+  "analytics.team.membersWithheld":
+    "Hiệu suất cá nhân đang tắt, nên không hiển thị số liệu của từng thành viên.",
+  "analytics.team.members": "Thành viên",
+  "analytics.team.member": "Thành viên",
+  "analytics.team.meetings": "Cuộc họp đã diễn ra",
+  "analytics.team.waiting": "Đang chờ",
+  "analytics.team.waitingFor_one": "{count}, lâu nhất {age}",
+  "analytics.team.waitingFor_other": "{count}, lâu nhất {age}",
+  "analytics.team.rowsOverlap":
+    "Một cuộc họp có nhiều thành viên tham dự được tính trong dòng của từng thành viên, nên tổng các dòng có thể lớn hơn của nhóm.",
+  "analytics.team.truncated":
+    "Nhóm có nhiều thành viên hơn số dòng trong bảng này.",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",
@@ -6887,6 +6988,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
   "analytics.field.lost_reason": "Lý do thua",
+  "analytics.field.loss_reason": "Lý do thua theo danh sách",
+  "analytics.field.loss_reason_state": "Cách đặt lý do thua",
+  "analytics.lossState.recorded": "Chọn khi đóng deal",
+  "analytics.lossState.mapped": "Gán từ ghi chú",
+  "analytics.lossState.unmapped": "Ghi chú chưa gán",
+  "analytics.lossState.missing": "Không có lý do",
   "analytics.field.meeting_status": "Trạng thái cuộc họp",
   "analytics.field.open_commitments": "Việc cần làm đang mở",
   "analytics.field.open_deal_value_minor": "Giá trị deal đang mở",
@@ -11388,6 +11495,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.page.pipelines.sub":
     "Các giai đoạn deal đi qua, áp dụng cho cả công ty.",
   "settings.page.acquisition.sub": "Các kênh kinh doanh mà deal có thể quy về.",
+  "settings.page.lossreasons.sub":
+    "Vì sao deal bị thua, và ghi chú cũ được tính theo lý do nào.",
   "settings.page.recordroles.sub":
     "Những gì một đồng nghiệp hoặc nhóm lo trên một hồ sơ, ví dụ quản lý khách hàng. Vai trò không cấp quyền truy cập; quyền sửa đến từ người chịu trách nhiệm hồ sơ và việc chia sẻ.",
   "settings.page.leads.sub":
@@ -11451,6 +11560,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tab.stageautomation": "Tự động chuyển giai đoạn",
   "settings.tab.pipelines": "Pipeline",
   "settings.tab.acquisition": "Nguồn tiếp cận",
+  "settings.tab.lossreasons": "Lý do thua",
   "settings.tab.recordroles": "Vai tr\u00f2 ph\u1ee5 tr\u00e1ch",
   "settings.tab.leads": "Quản lý lead",
   "settings.tab.fields": "Trường",

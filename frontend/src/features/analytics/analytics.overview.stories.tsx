@@ -11,13 +11,15 @@ import {
   overviewRoutes,
   prospectingEvaluation,
   salesEvaluation,
+  teamEvaluation,
+  teamReview,
 } from "./analytics.overview.fixtures";
 import type { ReportingEvaluation } from "./reporting.model";
 
 // Analytics' opening page as each reader meets it. The address names the view,
 // so each story opens the one it is about whatever a reader chose before.
 function overview(
-  view: "sales" | "prospecting",
+  view: "sales" | "prospecting" | "team",
   evaluation: ReportingEvaluation | (() => Response),
   routes: Parameters<typeof overviewRoutes>[0] = {},
 ) {
@@ -132,4 +134,36 @@ export const MyProspectingWithNothingYet: Story = {
     ]),
     { seat: "sdr" },
   ),
+};
+
+export const TeamProspecting: Story = {
+  render: overview("team", teamEvaluation(), { template: "sdr" }),
+};
+
+export const TeamProspectingDark: Story = {
+  render: overview("team", teamEvaluation(), { template: "sdr" }),
+  globals: { theme: "dark" },
+};
+
+export const TeamProspectingOnAPhone: Story = {
+  render: overview("team", teamEvaluation(), { template: "sdr" }),
+  globals: { viewport: { value: "phone" } },
+};
+
+export const TeamProspectingWithIndividualPerformanceOff: Story = {
+  render: overview("team", teamEvaluation(), {
+    template: "sdr",
+    team: () =>
+      jsonResponse(teamReview({ members_withheld: true, members: [] })),
+  }),
+};
+
+export const TeamProspectingWithoutHandoffs: Story = {
+  render: overview("team", teamEvaluation(), {
+    template: "sales",
+    team: () =>
+      jsonResponse(
+        teamReview({ workflow: "qualification", handoffs: undefined }),
+      ),
+  }),
 };

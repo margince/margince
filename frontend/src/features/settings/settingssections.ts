@@ -145,6 +145,7 @@ export const SETTINGS_SECTIONS = {
     "leadHandling.targetMinutes",
   ],
   acquisition: ["acqSources.title"],
+  lossreasons: ["lossReasons.title", "lossReasons.legacyTitle"],
   reviewtemplates: [],
   recordroles: ["recordRoles.title"],
   fields: ["cf.title", "cf.object", "cf.audit.title"],

@@ -107,6 +107,22 @@ function show({
             },
           }),
         );
+      if (url.endsWith("/loss-reasons"))
+        return jsonResponse({
+          data: [
+            {
+              id: "r-1",
+              key: "competitor",
+              label: "Chose a competitor",
+              active: true,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        });
       if (url.includes("/deal-suggestions"))
         return jsonResponse({ data: covered ? [suggestion] : [] });
       if (url.includes("/signals/"))
@@ -502,12 +518,23 @@ it("sends a customer review's wait and lost answers to the routes that move the 
   await user.click(within(sheet).getByRole("radio", { name: /Close as lost/ }));
   expect(within(sheet).queryByLabelText(/hidden until/i)).toBeNull();
   await user.type(within(sheet).getByRole("textbox"), "Chose another supplier");
-  await user.click(within(sheet).getByRole("button", { name: "Save answer" }));
+  // The same reason picker as the deal's own close-lost dialog: no reason, no save.
+  const save = within(sheet).getByRole("button", { name: "Save answer" });
+  expect(save.hasAttribute("disabled")).toBe(true);
+  await pickOption(
+    user,
+    within(sheet).getByRole("combobox", { name: "Why was it lost?" }),
+    "Chose a competitor",
+  );
+  await user.click(save);
   await waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0]?.url).toContain(
     `/forecast/assurance/exceptions/${review.id}/close-lost`,
   );
-  expect(posted[0]?.body).toEqual({ lost_reason: "Chose another supplier" });
+  expect(posted[0]?.body).toEqual({
+    lost_reason: "Chose another supplier",
+    lost_reason_code: "competitor",
+  });
 
   await user.click(await answerButton(FIRST_DEAL));
   sheet = await screen.findByRole("dialog");

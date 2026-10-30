@@ -750,6 +750,7 @@ Payload for deal.stage_changed, a deal advanced between stages. Carries the amou
 | `data.fx_rate_to_base` | string | no | The native→base rate frozen at close, carried because REOPENING a deal clears it: a consumer reading the deal back after a reopen could not recover the rate the win was priced at. |
 | `data.import_run_id` | string (uuid) | no | The import run that wrote the event. Present when `imported` is true. |
 | `data.imported` | boolean | no | True when a data import wrote the event. An outside system can tell a deal brought in from another system from one a rep worked in Margince. Absent otherwise. |
+| `data.lost_reason_code` | string | no | The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note. |
 | `data.partner_attribution` | string | no | What that partner did, sourced or influenced, at the moment of the move. Commission accrues on sourced only. |
 | `data.partner_company_id` | string (uuid) | no | The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards. |
 | `data.to_stage_id` | string (uuid) | yes | Stage the deal entered. |
