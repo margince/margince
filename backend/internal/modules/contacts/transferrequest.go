@@ -100,8 +100,14 @@ func requireTransferAsker(ctx context.Context, recordType string) error {
 	if !p.SeatType.CanMutate() {
 		return fmt.Errorf("a read seat does not take on records: %w", apperrors.ErrPermissionDenied)
 	}
-	if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
+	if recordType == entityCompany {
+		if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
+			return err
+		}
+		return auth.Require(ctx, entityCompany, principal.ActionUpdate)
+	}
+	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
 		return err
 	}
-	return auth.Require(ctx, recordType, principal.ActionUpdate)
+	return auth.Require(ctx, entityContact, principal.ActionUpdate)
 }

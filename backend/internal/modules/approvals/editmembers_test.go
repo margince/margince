@@ -6,6 +6,7 @@ package approvals
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -75,10 +76,7 @@ func TestAHandoverTakesNoEditToAnyMember(t *testing.T) {
 		t.Errorf("accepting the request as staged was refused: %v", err)
 	}
 	for member := range staged {
-		edited := map[string]string{}
-		for k, v := range staged {
-			edited[k] = v
-		}
+		edited := maps.Clone(staged)
 		edited[member] = "contact"
 		body, err := json.Marshal(edited)
 		if err != nil {
