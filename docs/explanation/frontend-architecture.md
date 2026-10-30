@@ -253,10 +253,10 @@ for what passes over the page, such as the tooltips the folded sidebar shows
 and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.
 
-The page inks fail on that field: `--textSecondary` and `--accentText` measure under 3:1 there.
-`src/design-system/inkfield.css` lists every component that paints the field and points the text,
-link and focus tokens at the field's inks inside it, with links underlined. A new component on the
-field goes in that list; `inkfield.test.ts` fails one that is missing.
+The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
+under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
+those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
+under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
