@@ -27,15 +27,23 @@ const form: WebForm = {
 
 // load pastes the snippet into a page and runs its script, as a browser does
 // on every load, a load after Back included.
-function load(): string {
+function load(id = ""): string {
   const snippet = browserSnippet(form, "https://margince.test/v1/forms/abc");
   const [markup, script] = snippet.split("<script>");
   document.body.innerHTML = markup;
+  hidden("_mrg_id").value = id;
   new Function(script.replace("</script>", ""))();
+  return hidden("_mrg_ts").value;
+}
+
+function hidden(name: string): HTMLInputElement {
   const field = document.querySelector<HTMLInputElement>(
-    'input[name="_mrg_ts"]',
+    `input[name="${name}"]`,
   );
-  return field?.value ?? "";
+  if (!field) {
+    throw new Error(`the snippet has no ${name} field`);
+  }
+  return field;
 }
 
 afterEach(() => {
@@ -51,6 +59,16 @@ describe("the browser form snippet's fill time", () => {
     const first = load();
     vi.setSystemTime(new Date("2026-10-31T10:00:03Z"));
     expect(load()).toBe(first);
+  });
+
+  it("sends a changed message after Back under a new id, not the last send's", () => {
+    load("the-last-send");
+    expect(hidden("_mrg_id").value).toBe("");
+    hidden("_mrg_id").value = "the-last-send";
+    const restored = new Event("pageshow");
+    Object.defineProperty(restored, "persisted", { value: true });
+    window.dispatchEvent(restored);
+    expect(hidden("_mrg_id").value).toBe("");
   });
 
   it("starts the clock at this load when the session has none", () => {
