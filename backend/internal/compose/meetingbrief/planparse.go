@@ -179,6 +179,9 @@ func keptLine(
 	if !groundedLine(sentence, known) {
 		return Sentence{}, false
 	}
+	if nature == natureRecommendation && claims.OpensInFirstPerson(text) {
+		return Sentence{}, false
+	}
 	return sentence, true
 }
 

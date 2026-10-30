@@ -254,3 +254,37 @@ func padID(i int) string {
 	const base = "0198f000-0000-7000-8000-0000000"
 	return base + string(rune('0'+i/10)) + string(rune('0'+i%10)) + "000"
 }
+
+func TestAFirstPersonObjectiveOrOpeningIsRefusedAndAnImperativeOneKept(t *testing.T) {
+	in := fullInput()
+	line := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + activityID + `"}]}`
+	}
+	const (
+		promisedOpening = "I'll open by asking what prompted the meeting."
+		imperative      = "Open by asking what prompted the meeting."
+		promisedGoal    = "We'll get them to name a decision date."
+		imperativeGoal  = "Get them to name a decision date."
+	)
+	got, err := ParsePlan(`{"objective":`+line(imperativeGoal)+`,"opening":`+line(promisedOpening)+`}`, in, floorFor(in))
+	if err != nil {
+		t.Fatalf("ParsePlan: %v", err)
+	}
+	if got.Opening != nil {
+		t.Errorf("opening = %q, want the first-person opening refused", got.Opening.Text)
+	}
+	if got.Objective == nil || got.Objective.Sentence.Text != imperativeGoal {
+		t.Errorf("objective = %+v, want the imperative objective kept", got.Objective)
+	}
+
+	got, err = ParsePlan(`{"objective":`+line(promisedGoal)+`,"opening":`+line(imperative)+`}`, in, floorFor(in))
+	if err != nil {
+		t.Fatalf("ParsePlan: %v", err)
+	}
+	if got.Objective != nil {
+		t.Errorf("objective = %q, want the first-person objective refused", got.Objective.Sentence.Text)
+	}
+	if got.Opening == nil || got.Opening.Text != imperative {
+		t.Errorf("opening = %+v, want the imperative opening kept", got.Opening)
+	}
+}
