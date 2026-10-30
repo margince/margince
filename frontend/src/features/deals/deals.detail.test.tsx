@@ -340,7 +340,7 @@ describe("DealScreen — edit, archive (A3)", () => {
 
   it("archive confirms then DELETEs", async () => {
     let deleted = false;
-    const d = deal({ id: "x", version: 1 });
+    const d = { ...deal({ id: "x", version: 1 }), archivable: true };
     vi.stubGlobal(
       "fetch",
       stubBackend([d], {

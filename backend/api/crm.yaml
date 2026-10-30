@@ -48210,6 +48210,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant
+            or being the deal's owner with `deal:update`. An owner who named themselves owner
+            (an edit or a claim) needs the delete grant. Server-computed per row, per caller.
+            A UX signal, never the enforcement, exactly like `writable`; absent means NOT
+            archivable.
         status: { type: string, enum: [open, won, lost], default: open }
         lost_reason: { type: [string, 'null'], description: 'The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.' }
         lost_reason_code:
@@ -50503,6 +50512,15 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        archivable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
+            grant, or `activity:update` on a hand-logged note or task the caller wrote (under
+            their own stamp or through an agent acting for them). Captured correspondence and a
+            colleague's note need the delete grant. Server-computed per row, per caller. A UX
+            signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
         awaiting_outcome:
           type: boolean
           readOnly: true
@@ -50790,6 +50808,15 @@ components:
             those are different colleagues, and showing only the first is how a migration
             comes to claim one colleague wrote a decade of everybody else's
             correspondence.
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          readOnly: true
+          description: |
+            Who recorded the activity, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System".
         web_form:
           allOf: [{ $ref: '#/components/schemas/WebFormSubmission' }]
           readOnly: true
@@ -53156,6 +53183,17 @@ components:
             note: { type: [string, 'null'] }
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        create_company:
+          type: boolean
+          default: false
+          description: |
+            What happens to a company name typed on a lead that links no company and whose email
+            names no business domain (a personal address, or none). True links the company of that
+            name, or creates it. False leaves the contact with no employer and puts the name on it
+            as a proposal to link or create; a company is never created from typed text alone.
+            The promote preview's `typed_company` says when this choice applies. A lead with a
+            business email resolves its company from the domain either way, and the typed name
+            only spells a company that is created for it.
 
     QualifyDealRequest:
       type: object
@@ -53226,6 +53264,13 @@ components:
             row scope, so `contact` is omitted. **An absent `contact` never means "no match"**
             — a caller that reads the omission as `create` would tell the rep a duplicate is
             about to be created when the opposite is true.
+        typed_company:
+          type: [string, 'null']
+          description: |
+            The company name typed on the lead when nothing else settles it: the lead links no
+            company and its email names no business domain. Promotion then needs the rep's
+            choice, sent as `create_company`. Absent when the lead links a company, has a
+            business email, or has no typed company name.
 
     DemoteLeadRequest:
       type: object

@@ -85,6 +85,7 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
   promote_fill_company_industry: "approval.preview.promotionFillIndustry",
+  promote_propose_company: "approval.preview.promotionProposeCompany",
   restore_lead_archive_contact: "approval.preview.demoteArchive",
   restore_lead_preserve_contact: "approval.preview.demotePreserve",
   send_without_human_signature: "approval.preview.unsignedSend",

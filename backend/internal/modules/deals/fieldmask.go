@@ -94,6 +94,9 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	if err != nil {
 		return err
 	}
+	if err := stampDealsArchivable(ctx, tx, deals); err != nil {
+		return err
+	}
 	extra, err := unreadableReferences(ctx, tx, deals)
 	if err != nil {
 		return err
@@ -101,6 +104,23 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	return auth.ApplyFieldMasks(ctx, tx, maskObject, deals, dealID, dealWithholders,
 		func(d *crmcontracts.Deal, names []string) { d.MaskedFields = &names },
 		extra, writable)
+}
+
+// stampDealsArchivable sets Archivable from auth.ArchivableSubset, which asks
+// the row write gate itself, so a delete holder without update is answered too.
+func stampDealsArchivable(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
+	named := make([]ids.UUID, len(deals))
+	for i := range deals {
+		named[i] = ids.UUID(deals[i].Id)
+	}
+	archivable, err := auth.ArchivableSubset(ctx, tx, auth.DealArchive, named)
+	if err != nil {
+		return err
+	}
+	for i := range deals {
+		deals[i].Archivable = new(archivable[named[i]])
+	}
+	return nil
 }
 
 // unreadableReferences answers, for each row of the page, which of a deal's

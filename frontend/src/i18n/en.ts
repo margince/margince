@@ -746,6 +746,7 @@ export const en = {
   "approval.preview.promotionExistingContact": "Existing contact to update",
   "approval.preview.promotionSetOrigin": "Link contact back to this lead",
   "approval.preview.promotionCompanyIndustry": "Company industry",
+  "approval.preview.promotionCompanyProposed": "Company to link or create",
   "approval.preview.promotionDuplicateCandidate":
     "Possible duplicate to review",
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
@@ -771,6 +772,8 @@ export const en = {
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
   "approval.preview.promotionFillIndustry":
     "Sets the displayed industry on the linked company, which has none yet.",
+  "approval.preview.promotionProposeCompany":
+    "Creates no company from the typed name. The contact shows the name as a company to link or create.",
   "approval.preview.promotionReview":
     "Creates a separate contact and queues the possible duplicate for review.",
   "approval.preview.promotionAllMarketing": "All marketing",
@@ -4344,6 +4347,11 @@ export const en = {
   "activity.detail.none": "This activity",
   "activity.followUps": "Follow-up tasks",
   "activity.noFollowUps": "No follow-up tasks",
+  "activity.archive": "Archive",
+  "activity.archiveConfirm": "Archive this entry? It leaves the History.",
+  "activity.archiveDone": "Entry archived",
+  "activity.archiveRefused":
+    "You can archive only notes and tasks you wrote yourself. Ask a manager to archive this entry.",
   "activity.notYoursToChange":
     "You cannot change this activity. Ask the colleague it belongs to, or an administrator, for edit rights.",
   "activity.files.empty": "No files on this activity yet.",
@@ -5116,6 +5124,12 @@ export const en = {
   "lead.qualify.title": "Qualify {name}",
   "lead.qualify.contact": "Contact",
   "lead.qualify.alsoDeal": "Also open a deal",
+  "lead.qualify.company": "Company",
+  "lead.qualify.companyUnresolved":
+    "This lead’s email does not show which company {company} is, so no company is added on its own.",
+  "lead.qualify.createCompany": "Add {company} as the employer",
+  "lead.qualify.createCompanyHint":
+    "Links the company with this name, or creates it. Unticked, the contact shows {company} as a company to link or create.",
   "lead.qualify.pipeline": "Pipeline",
   "lead.qualify.stage": "Stage",
   "lead.qualify.dealName": "Deal name",
@@ -5510,6 +5524,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
+  "deal.archiveRefused":
+    "Only the deal’s owner or a manager can archive this deal.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
@@ -15509,6 +15525,7 @@ export const en = {
   "contact.enriched.source.vcard_import": "an imported vCard",
   "contact.enriched.source.contact_research": "accepted research",
   "contact.enriched.source.human_restore": "a restored earlier value",
+  "contact.enriched.source.lead_promotion": "the qualified lead",
   "contact.enriched.source.other": "a captured source",
   "contact.enriched.undo": "Undo",
   "contact.enriched.replaced": "Replaced the older value “{was}”.",

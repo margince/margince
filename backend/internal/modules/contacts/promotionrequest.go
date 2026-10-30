@@ -10,7 +10,7 @@ import (
 
 // PromotionRequestInput keeps request conversion shared by creation and its approval preview.
 func PromotionRequestInput(req crmcontracts.PromoteLeadRequest) PromoteLeadInput {
-	in := PromoteLeadInput{Trigger: string(req.Trigger)}
+	in := PromoteLeadInput{Trigger: string(req.Trigger), CreateCompany: req.CreateCompany != nil && *req.CreateCompany}
 	if req.Evidence != nil {
 		in.EvidenceNote = req.Evidence.Note
 		in.EvidenceActivityID = idArg[ids.ActivityKind](req.Evidence.ActivityId)
