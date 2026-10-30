@@ -16,6 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// sqlNever is a predicate no row satisfies.
+const sqlNever = "false"
+
 // RecordDealsHandOver is what handing on a record's open deals did, or would
 // do: how many moved, and how many stayed with their owner.
 type RecordDealsHandOver struct {
@@ -38,7 +41,7 @@ func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, 
 	case "contact":
 		edgeScope, err := auth.EdgeReadScope(ctx, "r", arg)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return "false", "false", nil
+			return sqlNever, sqlNever, nil
 		}
 		if err != nil {
 			return "", "", err

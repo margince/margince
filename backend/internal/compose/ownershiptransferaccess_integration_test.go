@@ -112,21 +112,21 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Private Card AG", &e.Rep1)
-	request, _ := requestHandover(t, e, asker(e), "company", company)
+	request, _ := requestHandover(asker(e), t, e, "company", company)
 	transfers := newOwnershipTransfers(e.Pool)
 
-	if n := transfersInInbox(t, e, giver(e)); n != 1 {
+	if n := transfersInInbox(giver(e), t, e); n != 1 {
 		t.Errorf("the owner sees %d requests, want 1", n)
 	}
 	for name, reader := range map[string]context.Context{
 		"administrator": seatedAs(e, e.AdminUser, integration.AdminPerms), "asker": asker(e),
 	} {
-		if n := transfersInInbox(t, e, reader); n != 0 {
+		if n := transfersInInbox(reader, t, e); n != 0 {
 			t.Errorf("the %s sees %d requests put to the owner", name, n)
 		}
 	}
 	agent := e.AgentFor(t, e.Rep1, nil, handoverRepPerms())
-	if err := decideHandover(t, e, agent, request.ApprovalID, true); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := decideHandover(agent, t, e, request.ApprovalID, true); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the owner's agent accepting → %v, want 403", err)
 	}
 	if _, err := transfers.Own(seatedAs(e, e.Rep2, handoverRepPerms()), "company", company); !errors.Is(err, apperrors.ErrNotFound) {
@@ -142,12 +142,12 @@ func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 	if err := transfers.Withdraw(asker(e), "company", company); err != nil {
 		t.Fatalf("the asker withdrawing: %v", err)
 	}
-	if n := transfersInInbox(t, e, giver(e)); n != 0 {
+	if n := transfersInInbox(giver(e), t, e); n != 0 {
 		t.Errorf("a withdrawn request still waits in the owner's inbox (%d)", n)
 	}
 
-	again, _ := requestHandover(t, e, asker(e), "company", company)
-	if err := decideHandover(t, e, agent, again.ApprovalID, false); err != nil {
+	again, _ := requestHandover(asker(e), t, e, "company", company)
+	if err := decideHandover(agent, t, e, again.ApprovalID, false); err != nil {
 		t.Errorf("the owner's agent declining → %v, want it allowed", err)
 	}
 }

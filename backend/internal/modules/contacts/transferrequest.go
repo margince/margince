@@ -39,10 +39,14 @@ func (e *TransferRefusal) MessageFault() (code, message string) { return e.Code,
 func (e *TransferRefusal) Unwrap() error { return apperrors.ErrConflict }
 
 var (
-	errTransferUnowned = &TransferRefusal{Code: "unowned",
-		Message: "Nobody owns this record yet. Take ownership of it instead."}
-	errTransferAlreadyYours = &TransferRefusal{Code: "already_yours_to_change",
-		Message: "You can already change this record, so there is nothing to ask for."}
+	errTransferUnowned = &TransferRefusal{
+		Code:    "unowned",
+		Message: "Nobody owns this record yet. Take ownership of it instead.",
+	}
+	errTransferAlreadyYours = &TransferRefusal{
+		Code:    "already_yours_to_change",
+		Message: "You can already change this record, so there is nothing to ask for.",
+	}
 )
 
 // TransferableRecord is the record a request asks for, read under a share lock

@@ -84,8 +84,10 @@ func (e *ownershipNoteError) FieldFault() (field, code, message string) {
 	return bulkParamNote, "too_long", e.Error()
 }
 
-var errOwnerUnavailable = &contacts.TransferRefusal{Code: "owner_unavailable",
-	Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator to hand it over."}
+var errOwnerUnavailable = &contacts.TransferRefusal{
+	Code:    "owner_unavailable",
+	Message: "The owner of this record cannot be asked, because they are suspended or have left. Ask an administrator to hand it over.",
+}
 
 // Request asks the record's owner to hand it to the caller. created is false
 // when the caller's open request already stood and is answered instead.

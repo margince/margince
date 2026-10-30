@@ -27,12 +27,18 @@ type transferOutcome struct {
 }
 
 var (
-	transferDeclined = transferOutcome{"ownership_request_declined",
-		ownershipTransferWords.Declined, ownershipTransferWords.DeclinedBody}
-	transferExpired = transferOutcome{"ownership_request_expired",
-		ownershipTransferWords.Expired, ownershipTransferWords.ExpiredBody}
-	transferWithdrawn = transferOutcome{"ownership_request_withdrawn",
-		ownershipTransferWords.Withdrawn, ownershipTransferWords.WithdrawnBody}
+	transferDeclined = transferOutcome{
+		"ownership_request_declined",
+		ownershipTransferWords.Declined, ownershipTransferWords.DeclinedBody,
+	}
+	transferExpired = transferOutcome{
+		"ownership_request_expired",
+		ownershipTransferWords.Expired, ownershipTransferWords.ExpiredBody,
+	}
+	transferWithdrawn = transferOutcome{
+		"ownership_request_withdrawn",
+		ownershipTransferWords.Withdrawn, ownershipTransferWords.WithdrawnBody,
+	}
 )
 
 const transferAcceptedKind = "ownership_request_accepted"

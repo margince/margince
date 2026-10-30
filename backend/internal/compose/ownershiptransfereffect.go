@@ -24,8 +24,10 @@ import (
 
 // errTransferOwnerMoved refuses an accept the record has already left: the
 // giver the request names no longer owns it.
-var errTransferOwnerMoved = &contacts.TransferRefusal{Code: "owner_changed",
-	Message: "This record has changed owner since the request was made, so it cannot be handed over from here. Decline the request."}
+var errTransferOwnerMoved = &contacts.TransferRefusal{
+	Code:    "owner_changed",
+	Message: "This record has changed owner since the request was made, so it cannot be handed over from here. Decline the request.",
+}
 
 // transferTargets are the record adapters a transfer locks and moves through:
 // the bulk change's, so a handed-over record is written as a reassignment is.

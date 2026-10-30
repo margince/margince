@@ -51,7 +51,7 @@ func seatedAs(e *integration.Env, user ids.UUID, perms principal.Permissions) co
 func asker(e *integration.Env) context.Context { return seatedAs(e, e.Rep3, handoverRepPerms()) }
 func giver(e *integration.Env) context.Context { return seatedAs(e, e.Rep1, handoverRepPerms()) }
 
-func requestHandover(t *testing.T, e *integration.Env, ctx context.Context, recordType string, id ids.UUID) (ownershipRequestView, bool) {
+func requestHandover(ctx context.Context, t *testing.T, e *integration.Env, recordType string, id ids.UUID) (ownershipRequestView, bool) {
 	t.Helper()
 	out, created, err := newOwnershipTransfers(e.Pool).Request(ctx, recordType, id, "I run this account now")
 	if err != nil {
@@ -60,13 +60,13 @@ func requestHandover(t *testing.T, e *integration.Env, ctx context.Context, reco
 	return out, created
 }
 
-func decideHandover(t *testing.T, e *integration.Env, ctx context.Context, id ids.ApprovalID, approve bool) error {
+func decideHandover(ctx context.Context, t *testing.T, e *integration.Env, id ids.ApprovalID, approve bool) error {
 	t.Helper()
 	_, err := approvalsServiceWithEffects(e.Pool).Decide(ctx, id, approve, nil)
 	return err
 }
 
-func transfersInInbox(t *testing.T, e *integration.Env, reader context.Context) int {
+func transfersInInbox(reader context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	kind, pending := ownershipTransferKind, approvals.StatusPending
 	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind, Status: &pending})
@@ -150,7 +150,7 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 	buyer := e.SeedContact(t, "BAER buyer", &e.Rep1)
 	sharedTask := taskOn(t, e, "Ask the buyer at BAER", e.Rep1, linkTo("company", company), linkTo("contact", buyer))
 
-	request, created := requestHandover(t, e, asker(e), "company", company)
+	request, created := requestHandover(asker(e), t, e, "company", company)
 	if !created || request.Transfer.FromID != e.Rep1 || request.Transfer.DeciderID != e.Rep1 {
 		t.Fatalf("request = %+v (created %v), want a new request put to the owner", request, created)
 	}
@@ -158,7 +158,7 @@ func TestAnAcceptedHandoverMovesTheCompanyAndTheOwnersOpenWorkOnIt(t *testing.T)
 	if !strings.Contains(summary, "Open deals that move with it: 1. Open tasks: 1.") {
 		t.Errorf("the card reads %q, want it to say one open deal and one open task move", summary)
 	}
-	if err := decideHandover(t, e, giver(e), request.ApprovalID, true); err != nil {
+	if err := decideHandover(giver(e), t, e, request.ApprovalID, true); err != nil {
 		t.Fatalf("the owner accepting: %v", err)
 	}
 
@@ -224,12 +224,12 @@ func TestAHandedOverContactTakesOnlyTheWorkThatIsItsAlone(t *testing.T) {
 	ownTask := taskOn(t, e, "Ask Pat for the PO", e.Rep1, linkTo("contact", contact))
 	sharedTask := taskOn(t, e, "Ask Pat about Example AG", e.Rep1, linkTo("contact", contact), linkTo("company", kept))
 
-	request, _ := requestHandover(t, e, asker(e), "contact", contact)
+	request, _ := requestHandover(asker(e), t, e, "contact", contact)
 	summary := e.WsScalar(t, `SELECT summary FROM approval WHERE id = $1`, request.ApprovalID)
 	if !strings.Contains(summary, "Open deals that move with it: 1. Open tasks: 1.") {
 		t.Errorf("the card reads %q, want the one deal and the one task that move", summary)
 	}
-	if err := decideHandover(t, e, giver(e), request.ApprovalID, true); err != nil {
+	if err := decideHandover(giver(e), t, e, request.ApprovalID, true); err != nil {
 		t.Fatalf("the owner accepting: %v", err)
 	}
 	for name, c := range map[string]struct {
@@ -283,8 +283,8 @@ func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) 
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Kept GmbH", &e.Rep1)
 
-	first, _ := requestHandover(t, e, asker(e), "company", company)
-	if err := decideHandover(t, e, giver(e), first.ApprovalID, false); err != nil {
+	first, _ := requestHandover(asker(e), t, e, "company", company)
+	if err := decideHandover(giver(e), t, e, first.ApprovalID, false); err != nil {
 		t.Fatalf("the owner declining: %v", err)
 	}
 	if got := ownerOf(t, e, "company", company); got != e.Rep1 {
@@ -294,7 +294,7 @@ func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) 
 		t.Errorf("decline notices = %d, want 1", n)
 	}
 
-	second, created := requestHandover(t, e, asker(e), "company", company)
+	second, created := requestHandover(asker(e), t, e, "company", company)
 	if !created || second.ApprovalID == first.ApprovalID {
 		t.Fatalf("asking again after a decline answered %+v (created %v), want a new request", second, created)
 	}
@@ -319,7 +319,7 @@ func TestADeclinedOrExpiredRequestLeavesTheRecordAndTellsTheAsker(t *testing.T) 
 func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Moved AG", &e.Rep1)
-	request, _ := requestHandover(t, e, asker(e), "company", company)
+	request, _ := requestHandover(asker(e), t, e, "company", company)
 
 	if _, err := newOwnershipTransfers(e.Pool).contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company), contacts.UpdateCompanyInput{
 		OwnerID: new(ids.From[ids.UserKind](e.Rep2)),
@@ -332,14 +332,14 @@ func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 	if n := noticesOf(t, e, e.Rep3, transferWithdrawn.kind); n != 1 {
 		t.Errorf("withdrawal notices = %d, want 1", n)
 	}
-	if n := transfersInInbox(t, e, giver(e)); n != 0 {
+	if n := transfersInInbox(giver(e), t, e); n != 0 {
 		t.Errorf("the previous owner still sees %d requests", n)
 	}
 
 	other := e.SeedCompany(t, "Quietly moved AG", &e.Rep1)
-	late, _ := requestHandover(t, e, asker(e), "company", other)
+	late, _ := requestHandover(asker(e), t, e, "company", other)
 	e.WsExec(t, `UPDATE company SET owner_id = $2 WHERE id = $1`, other, e.Rep2)
-	if err := decideHandover(t, e, giver(e), late.ApprovalID, true); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := decideHandover(giver(e), t, e, late.ApprovalID, true); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a giver who can no longer change the record accepting → %v, want the card gone", err)
 	}
 	teamLead := handoverRepPerms()
@@ -349,7 +349,7 @@ func TestARecordThatChangedHandsClosesItsRequest(t *testing.T) {
 		p.SeatType = principal.SeatFull
 		teammate = principal.WithActor(teammate, p)
 	}
-	err := decideHandover(t, e, teammate, late.ApprovalID, true)
+	err := decideHandover(teammate, t, e, late.ApprovalID, true)
 	if code := transferRefusalCode(err); !errors.Is(err, apperrors.ErrConflict) || code != "owner_changed" {
 		t.Fatalf("a teammate who still may change the record accepting → %v (%q), want 409 owner_changed", err, code)
 	}
