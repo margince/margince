@@ -163,6 +163,7 @@ func mayReadAll(ctx context.Context, objects ...string) (bool, error) {
 const (
 	followUpCandidates = "follow_up_candidates"
 	followUpReadable   = "follow_up_readable"
+	followUpHeardSince = "follow_up_heard_since"
 )
 
 // followUpGates are the gate fragments both follow-up reads compose, under
@@ -198,9 +199,12 @@ func followUpReadableSQL(alias string) string {
 }
 
 // followUpStatement puts the candidates and the one gated set before body.
-func followUpStatement(candidates string, g followUpGates, body string) string {
-	return "WITH " + followUpCandidates + " AS MATERIALIZED (" + candidates + "),\n" +
-		followUpReadable + " AS MATERIALIZED (" + g.readable + ")\n" + body
+func followUpStatement(candidates string, g followUpGates, body string, sets ...string) string {
+	with := append([]string{
+		followUpCandidates + " AS MATERIALIZED (" + candidates + ")",
+		followUpReadable + " AS MATERIALIZED (" + g.readable + ")",
+	}, sets...)
+	return "WITH " + strings.Join(with, ",\n") + "\n" + body
 }
 
 // scanFollowUps reads the rows both follow-up statements select.
@@ -229,12 +233,14 @@ func (s *Store) queryAwaitingReplies(
 	}
 	at := fmt.Sprintf("$%d", instant)
 	sentBy := sentByReaderSQL(fmt.Sprintf("$%d", reader), fmt.Sprintf("$%d", addresses))
-	query := followUpStatement(awaitingCandidatesSQL(at, sentBy, fmt.Sprintf("$%d", window)), g, fmt.Sprintf(awaitingRepliesSQL,
+	parts := []any{
 		instant, g.content, g.links, addresses, window,
 		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
 		reader, messageSnoozeLiftedSQL(at, g.back),
 		g.customer, AwaitingReplyScanCap,
-	))
+	}
+	query := followUpStatement(awaitingCandidatesSQL(at, sentBy, fmt.Sprintf("$%d", window)), g,
+		fmt.Sprintf(awaitingRepliesSQL, parts...), fmt.Sprintf(awaitingHeardSinceSQL, parts...))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading replies the reader is waiting for: %w", err)
@@ -315,6 +321,22 @@ func awaitingNeedSQL() string {
 `
 }
 
+// awaitingHeardSinceSQL lists the candidates whose recipients were in contact
+// since, on any channel: a call or a meeting with them is a follow-up already
+// made. It is one set over every candidate. Asked per candidate, it walked each
+// recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
+var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
+	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
+	  JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
+	  JOIN activity_link heard ON heard.contact_id = sent.contact_id
+	  JOIN activity later ON later.id = heard.activity_id
+	 WHERE later.id <> c.id
+	   AND later.archived_at IS NULL
+	   AND %[7]s
+	   AND %[8]s
+	   AND later.occurred_at > c.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
+	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
+
 // awaitingRepliesSQL: every rule sits before the cap.
 //
 //  1. as of, 2. content gate on a, 3. link visibility on wl, 4. the reader's
@@ -340,18 +362,8 @@ var awaitingRepliesSQL = `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
 	   AND ` + occurredday.FromSQL("a", "$%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)") + `
 	   AND %[2]s
-	   -- Nor any contact since with someone it went to, on any channel: a call
-	   -- or a meeting with them is a follow-up already made.
-	   AND NOT EXISTS (SELECT 1 FROM activity_link sent
-	                     JOIN activity_link heard ON heard.contact_id = sent.contact_id
-	                     JOIN activity later ON later.id = heard.activity_id
-	                    WHERE sent.activity_id = a.id AND sent.contact_id IS NOT NULL
-	                      AND later.id <> a.id
-	                      AND later.archived_at IS NULL
-	                      AND %[7]s
-	                      AND %[8]s
-	                      AND later.occurred_at > a.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
-	                      AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)
+	   -- Nor any contact since with someone it went to: awaitingHeardSinceSQL.
+	   AND a.id NOT IN (SELECT id FROM ` + followUpHeardSince + `)
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
