@@ -68,8 +68,10 @@ type sdrTeamWindow struct{ from, to time.Time }
 func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
 	// No history of team membership is kept, so a team's figures follow its
 	// members today, and the answer says so.
-	out := crmcontracts.SdrTeamReview{AsOf: at, Workflow: crmcontracts.SdrTeamReviewWorkflowQualification, SmallSampleBelow: sdrTeamSmallSample,
-		MembershipBasis: crmcontracts.SdrTeamReviewMembershipBasisCurrent, Members: []crmcontracts.SdrTeamMember{}}
+	out := crmcontracts.SdrTeamReview{
+		AsOf: at, Workflow: crmcontracts.SdrTeamReviewWorkflowQualification, SmallSampleBelow: sdrTeamSmallSample,
+		MembershipBasis: crmcontracts.SdrTeamReviewMembershipBasisCurrent, Members: []crmcontracts.SdrTeamMember{},
+	}
 	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
 		return out, err
 	}
