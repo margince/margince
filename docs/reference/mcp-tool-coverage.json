@@ -2005,7 +2005,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1228,
+      "tokens": 1270,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",
