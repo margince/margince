@@ -117,7 +117,7 @@ end. A source that fails while the tail loads is named in `sources_unavailable`,
 
 The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
 when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
-instant, day end and time zone, and every later page reads that same window, even after midnight. Its fingerprint
+time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
 Today only the task source is counted and read on in the tail (`WithTaskBacklog`, `compose/attentiontaskseam.go`).
