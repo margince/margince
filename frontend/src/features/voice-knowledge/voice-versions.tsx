@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -33,67 +33,55 @@ function mergeById<T extends { id: string }>(prev: T[], page: T[]): T[] {
   return [...prev.filter((item) => !seen.has(item.id)), ...page];
 }
 
+// One paged read of the version history, shared by the whole page. The hero
+// and the candidate review read the first page; the table loads the rest.
 export function useVoiceVersions(profileId: string | undefined) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["voice-versions", profileId],
     enabled: Boolean(profileId),
-    queryFn: async (): Promise<VoiceProfileVersion[]> => {
+    initialPageParam: "",
+    queryFn: async ({ pageParam }): Promise<VersionsPage> => {
       const data = unwrap(
         await api.GET("/voice-profiles/{id}/versions", {
-          params: { path: { id: profileId as string } },
+          params: {
+            path: { id: profileId ?? "" },
+            query: pageParam ? { cursor: pageParam } : {},
+          },
         }),
       );
-      return data.data;
+      return { items: data.data, next: data.page.next_cursor ?? null };
+    },
+    getNextPageParam: (page) => page.next ?? undefined,
+  });
+}
+
+// The versions every loaded page holds, newest first, each once.
+export function loadedVersions(
+  pages: readonly VersionsPage[] | undefined,
+): VoiceProfileVersion[] {
+  const all = (pages ?? []).reduce<VoiceProfileVersion[]>(
+    (merged, page) => mergeById(merged, page.items),
+    [],
+  );
+  return all.sort((a, b) => b.profile_version - a.profile_version);
+}
+
+export function useVoiceLearning(profileId: string) {
+  return useQuery({
+    queryKey: ["voice-learning", profileId],
+    queryFn: async (): Promise<VoiceLearningSummary> => {
+      return unwrap(
+        await api.GET("/voice-profiles/{id}/learning", {
+          params: { path: { id: profileId } },
+        }),
+      );
     },
   });
 }
 
-// ActiveVoiceInsights renders the impress surface from the active version
-// and, when a candidate awaits review, the apply/reject banner above it.
-export function ActiveVoiceInsights({
-  profileId,
-  canEdit,
-  onChanged,
-}: Readonly<{
-  profileId: string;
-  canEdit: boolean;
-  onChanged: () => void;
-}>) {
-  const t = useT();
-  const versions = useVoiceVersions(profileId);
-  return (
-    <QueryGate query={versions} pendingLabel={t("settings.voice.title")}>
-      {(list) => {
-        const active = list.find((version) => version.status === "active");
-        const candidate = list.find(
-          (version) => version.status === "candidate",
-        );
-        return (
-          <div>
-            {candidate && (
-              <CandidateBanner
-                profileId={profileId}
-                candidate={candidate}
-                canEdit={canEdit}
-                onChanged={onChanged}
-              />
-            )}
-            {active && (
-              <VoiceInsights
-                data={parseVoiceInsights(active)}
-                profileVersion={active.profile_version}
-              />
-            )}
-          </div>
-        );
-      }}
-    </QueryGate>
-  );
-}
-
 // A candidate never replaces the active voice silently: the owner applies
 // or rejects it, with the version itself and the evaluator's reasons in view.
-function CandidateBanner({
+export function CandidateBanner({
   profileId,
   candidate,
   canEdit,
@@ -176,7 +164,7 @@ function CandidateBanner({
       {canEdit && (
         <div className="vdna-candidate-acts">
           <Button
-            variant="primary"
+            variant="ai"
             disabled={transition.isPending}
             onClick={() => transition.mutate("apply")}
           >
@@ -208,37 +196,11 @@ export function VoiceHistory({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const [versionCursor, setVersionCursor] = useState<string | undefined>();
-  const [allVersions, setAllVersions] = useState<VoiceProfileVersion[]>([]);
   const [restoring, setRestoring] = useState<VoiceProfileVersion | null>(null);
-  // A rolled-back version turns active and loses its menu; focus lands on the head.
   const rolledBack = useRef(false);
   const headingId = useId();
-  const versions = useQuery({
-    queryKey: ["voice-versions", profileId, versionCursor ?? ""],
-    queryFn: async (): Promise<VersionsPage> => {
-      const data = unwrap(
-        await api.GET("/voice-profiles/{id}/versions", {
-          params: {
-            path: { id: profileId },
-            query: versionCursor ? { cursor: versionCursor } : {},
-          },
-        }),
-      );
-      setAllVersions((prev) => mergeById(prev, data.data));
-      return { items: data.data, next: data.page.next_cursor ?? null };
-    },
-  });
-  const learning = useQuery({
-    queryKey: ["voice-learning", profileId],
-    queryFn: async (): Promise<VoiceLearningSummary> => {
-      return unwrap(
-        await api.GET("/voice-profiles/{id}/learning", {
-          params: { path: { id: profileId } },
-        }),
-      );
-    },
-  });
+  const versions = useVoiceVersions(profileId);
+  const learning = useVoiceLearning(profileId);
   const rollback = useMutation({
     mutationFn: async (profileVersion: number) => {
       unwrap(
@@ -268,8 +230,9 @@ export function VoiceHistory({
         }
       />
       <QueryGate query={versions} pendingLabel={t("voice.history.label")}>
-        {(page) =>
-          allVersions.length === 0 ? (
+        {(loaded) => {
+          const allVersions = loadedVersions(loaded.pages);
+          return allVersions.length === 0 ? (
             <PanelBody>
               <SurfaceState
                 state="empty"
@@ -297,23 +260,22 @@ export function VoiceHistory({
                     setRestoring(version);
                   },
                 })}
-                rows={[...allVersions].sort(
-                  (a, b) => b.profile_version - a.profile_version,
-                )}
+                rows={allVersions}
                 rowKey={(version) => version.id}
               />
-              {page.next && (
+              {versions.hasNextPage && (
                 <PanelBody>
                   <Button
-                    onClick={() => setVersionCursor(page.next ?? undefined)}
+                    disabled={versions.isFetchingNextPage}
+                    onClick={() => versions.fetchNextPage()}
                   >
                     {t("voice.history.loadMore")}
                   </Button>
                 </PanelBody>
               )}
             </>
-          )
-        }
+          );
+        }}
       </QueryGate>
       <PanelBody>
         <QueryGate query={learning} pendingLabel={t("voice.history.label")}>

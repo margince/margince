@@ -137,7 +137,10 @@ func (b territoryBook) salesWon(t *testing.T) map[string]int64 {
 	t.Helper()
 	return b.ask(t, analyticsquery.Query{
 		Entity: "deals-by-stage", GroupBy: []string{b.column},
-		Filters:  []analyticsquery.Filter{{Field: "status", Op: analyticsquery.OpEq, Value: "won"}},
+		Filters: []analyticsquery.Filter{
+			{Field: "status", Op: analyticsquery.OpEq, Value: "won"},
+			{Field: "currency", Op: analyticsquery.OpEq, Value: "EUR"},
+		},
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.Sum, Field: "amount_minor", As: "won"}},
 	}, "won")
 }

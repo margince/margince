@@ -174,7 +174,7 @@ function SpeakerPanel({
       </ul>
       <div className="vdna-composer-actions">
         <Button
-          variant="primary"
+          variant="ai"
           disabled={choice === null}
           onClick={() => choice !== null && onAnswer(choice)}
         >

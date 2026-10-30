@@ -531,6 +531,90 @@
   }
 }
 
+.ob-voice-collect-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The voiceprint card: the assistant's own surface, so the AI pair draws its
+   edge and glow, on the same light pane the settings hero uses. */
+.ob-voice-print {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--padPanel);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-lg);
+  background-image: radial-gradient(
+    circle at 50% 30%,
+    var(--aiLight),
+    transparent 60%
+  );
+}
+
+.ob-voice-print .ob-voice-meter {
+  align-self: stretch;
+  margin-top: 0;
+}
+
+/* What to bring: three kinds as a guide above the drop target. */
+.ob-voice-kinds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ob-voice-kind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+
+.ob-voice-kind b {
+  color: var(--textPrimary);
+}
+
+.ob-voice-kind-icon {
+  display: grid;
+  place-items: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--r-md);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.ob-voice-kind-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* On a narrow pane the guide reads as three short rows, so the drop target
+   stays in the first screen. */
+@container ob-scene (max-width: 44rem) {
+  .ob-voice-kinds {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .ob-voice-kind {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+  }
+}
+
 /* ---- the distilling panel ---- */
 
 .ob-distill {
@@ -708,16 +792,17 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
   padding: var(--space-6);
-  border: 1px dashed var(--borderStrong);
+  border: 1px dashed var(--aiMed);
   border-radius: var(--r-lg);
+  background: var(--aiLight);
   text-align: center;
 }
 
 .ob-voice-drop-title {
   margin: 0;
   color: var(--textPrimary);
+  font: var(--fontHeadingSmall);
 }
 
 .ob-voice-drop-sub {
@@ -762,20 +847,13 @@
   box-shadow: var(--focus-glow-ai);
 }
 
-/* The floor meter: a real progress element plus the numbers behind it, so
-   the fill is never the only place the count lives. */
+/* The floor meter: the bar plus the numbers behind it, so the fill is never
+   the only place the count lives. */
 .ob-voice-meter {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-3);
-}
-
-/* A corpus still building: the bar reports work in flight, not a brand ask. */
-.ob-voice-meter-bar {
-  inline-size: 100%;
-  block-size: 6px;
-  accent-color: var(--info);
 }
 
 .ob-voice-meter-line {
@@ -924,6 +1002,30 @@
   }
 }
 
+/* The portrait leads the result the way it leads the settings page: the same
+   light pane, edge and glow, with a full voiceprint where the hero shows its
+   strength. */
+.ob-voice-result-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-4);
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-lg);
+  background-image: radial-gradient(
+    circle at 88% 50%,
+    var(--aiLight),
+    transparent 45%
+  );
+}
+
+.ob-voice-result-hero .vdna-portrait {
+  flex: 1 1 20rem;
+}
+
 /* No sample yet (the starter-corpus case): one column, capped so a single
    card doesn't stretch full-bleed across the surface a two-card board owned. */
 .ob-voice-board-single {
@@ -950,41 +1052,7 @@
   height: 13px;
 }
 
-/* The sample: a real draft in a card of its own — the header names it as a
-   sample and offers the one honest regenerate action (cycling drafts already
-   in hand), the body is the draft, and the footer says what it borrowed. */
-.ob-voice-sample-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.ob-voice-sample-head .ob-voice-result-label {
-  margin: 0;
-}
-
-.ob-voice-sample-subject {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--borderSubtle);
-  color: var(--textPrimary);
-}
-
-.ob-voice-sample-field {
-  font-family: var(--fontFamilyBody);
-}
-
-.ob-voice-sample-body {
-  margin: 0;
-  color: var(--textPrimary);
-  white-space: pre-wrap;
-}
-
+/* The sample names the moves it borrowed, under the draft it shows. */
 .ob-voice-sample-why {
   display: flex;
   gap: var(--space-2);
@@ -1066,40 +1134,6 @@
   margin: var(--space-2) 0 0;
 }
 
-.ob-voice-result-identity {
-  margin: 0;
-  color: var(--textPrimary);
-}
-
-.ob-voice-moves {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ob-voice-moves b {
-  color: var(--textPrimary);
-}
-
-.ob-voice-moves blockquote {
-  margin: var(--space-1) 0 0;
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--borderStrong);
-  font-style: italic;
-}
-
-.ob-voice-avoid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .ob-voice-result-next {
   margin: 0;
   padding: var(--space-4);
@@ -1111,17 +1145,25 @@
   color: var(--textPrimary);
 }
 
-/* The build scene: the Core carries the ring, the percentage sits in it.
+/* The build scene: the voiceprint carries the ring, the percentage sits in it.
    Held to the pair's own measure rather than the board's — the account beside
    the orb is a short line and a four-item checklist, and stretched to 74rem it
    read as two things at opposite ends of the board rather than as one. */
 .ob-voice-building {
   max-width: 48rem;
-  padding-top: var(--space-6);
+  margin-top: var(--space-6);
+  padding: var(--space-8);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-lg);
+  background-image: radial-gradient(
+    circle at 20% 50%,
+    var(--aiLight),
+    transparent 50%
+  );
 }
 
-/* The orb is the subject and keeps its own column; the account reads down the
-   column beside it. Centred under the orb, each of those lines started from a
+/* The voiceprint is the subject and keeps its own column; the account reads
+   down the column beside it. Centred under the orb, each of those lines started from a
    different place and the eye crossed the board to find it. */
 .ob-voice-building-row {
   display: grid;
@@ -1137,9 +1179,8 @@
   min-width: 0;
 }
 
-/* One column where the two cannot sit side by side. The orb is sized in px, so
-   the breakpoint is where the account's own lines start to break, not where
-   the orb stops fitting. */
+/* One column where the two cannot sit side by side: where the account's own
+   lines start to break, not where the voiceprint stops fitting. */
 @container ob-scene (max-width: 32rem) {
   .ob-voice-building-row {
     grid-template-columns: 1fr;
@@ -1147,35 +1188,15 @@
   }
 }
 
-.ob-voice-orb {
-  position: relative;
-  display: grid;
-  place-items: center;
-}
-
-/* The orb's column is `auto` — measured against the Core's own px size — so the
-   primitive's viewport cap has nothing left to protect and would only shrink
-   the sphere on a narrow window that still holds both columns. Set on the Core
-   itself, which is where the default it overrides is declared. */
-.ob-voice-orb .core {
-  --coreCap: 100%;
-}
-
-/* White, not --textPrimary: the ring behind it is the Core's own dark
-   glass, and the number reads AS the ring's centre, not as text laid over
-   it. */
-.ob-voice-orb-pct {
-  position: absolute;
+.ob-voice-build-pct {
   display: flex;
   align-items: baseline;
-  justify-content: center;
-  color: var(--textOnAccent);
-  font-family: var(--fontFamilyHeading);
+  font: var(--fontHeadingXLarge);
   font-variant-numeric: tabular-nums;
 }
 
-.ob-voice-orb-pct small {
-  color: var(--textOnAccent);
+.ob-voice-build-pct small {
+  font: var(--fontHeadingSmall);
 }
 
 .ob-voice-building-meta {

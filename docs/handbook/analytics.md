@@ -50,8 +50,9 @@ The **Reports** section lists saved reports and starts a custom report with **Ne
 
 A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
-The **My outcomes** section shows your own targets, open deals and meetings, for a rep only.
-The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
+A deal's own amount is in that deal's currency, and amounts in two currencies cannot be added. So a custom report that totals, averages, or takes the smallest, largest or middle deal amount must group by currency or filter to one currency. For one total across currencies, measure the amount in the base currency, which converts each deal at its own rate. A deal whose currency has no rate is left out of that total. A count of the base amount says how many deals it covers. A saved report that adds amounts across currencies says so when you open it, instead of showing a number.
+
+The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
 To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**.
