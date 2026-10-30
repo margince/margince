@@ -32,7 +32,6 @@ export function NextBar({
   action,
   snooze,
   more,
-  onward,
 }: Readonly<{
   title?: ReactNode;
   // How late, or what makes it due ("19 days late", "Demo booked").
@@ -50,9 +49,6 @@ export function NextBar({
   // The other open tasks, behind a link to the record's task list. `peek`
   // names them on hover and focus, so "+2 tasks" is never a lone number.
   more?: NextBarMore;
-  // The way past this record once its work is done, such as the next task on
-  // another record. Drawn last, whether or not anything is next here.
-  onward?: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -86,7 +82,7 @@ export function NextBar({
             </>
           )}
         </div>
-        {(action || snooze || more || onward) && (
+        {(action || snooze || more) && (
           <div className="next-bar-verbs">
             {action}
             {snooze && (
@@ -99,7 +95,6 @@ export function NextBar({
               </Button>
             )}
             {more && more.count > 0 && <MoreTasks more={more} />}
-            {onward}
           </div>
         )}
       </div>

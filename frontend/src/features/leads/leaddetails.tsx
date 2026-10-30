@@ -59,9 +59,10 @@ function isBlank(value: string | null | undefined): boolean {
 /**
  * One field of the lead, edited where it stands. Every row saves through
  * the same independent-edit path the record form used, so two rows cannot
- * send a different If-Match or invalidate different caches.
+ * send a different If-Match or invalidate different caches. The record's head
+ * renames the lead through it too.
  */
-function useFieldSave(lead: Lead) {
+export function useFieldSave(lead: Lead) {
   const t = useT();
   const queryClient = useQueryClient();
   return (key: TextKey | "origin" | "industry", required = false) =>

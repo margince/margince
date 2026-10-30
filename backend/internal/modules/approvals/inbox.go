@@ -124,10 +124,8 @@ func (a row) PendingAt(now time.Time) bool {
 // of a caller's inbox.
 const inboxBatch = 200
 
-// PendingScanCap bounds how many staged rows PendingForTarget scans for one
-// record. Decidability is asked of every scanned row, so an unbounded target
-// would make a single record page pay for the whole backlog. A caller that counts a capped
-// result must read a full one as "this many or more"; CountPending is exact.
+// PendingScanCap bounds how many proposals PendingForTarget lists for one
+// record. Its Total still counts every row past the cap.
 const PendingScanCap = inboxBatch
 
 // statusPending is the status column value a staged, undecided row carries.

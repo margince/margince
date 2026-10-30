@@ -171,19 +171,15 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 		out.DealStageMoves = &moves
 	}
 
-	// The section's list stops at its scan cap, so the figure comes from the
-	// engine's exact count under the same predicate. The list's read decides
-	// whether the reader may triage here at all.
-	_, triageable, err := a.pendingApprovals()
+	// The section's list stops at its scan cap, so the figure is the total the
+	// same walk counted past it. That read decides whether the reader may
+	// triage here at all.
+	_, total, triageable, err := a.pendingApprovals()
 	if err != nil {
 		return out, err
 	}
 	if triageable {
-		count, err := a.svc.approvals.CountPendingForTarget(ctx, tx, entityTypeCompany, a.companyID.UUID)
-		if err != nil {
-			return out, err
-		}
-		out.PendingProposals = &count
+		out.PendingProposals = &total
 	}
 
 	return out, nil

@@ -757,13 +757,14 @@ export interface paths {
          *
          *     `company_id` or `company_name` names the employer, and the contact, that company and
          *     the current employment edge between them are written in one transaction: when any of
-         *     them is refused, nothing is written. `company_name` creates the company and needs
+         *     them is refused, nothing is written. `company_name` reuses an unambiguous matching company or creates one and needs
          *     `company:create`; either needs `relationship:create` and `contact:update`. A
          *     `company_id` the caller cannot read answers 422 naming `company_id`, the same for a
          *     missing company and for one hidden by row scope. Sending both answers 422 naming
-         *     `company_name`. The answer's `employer` names the company. An agent sending either
-         *     is refused with 422 `employer_needs_a_human` naming it, and `create_record` does not
-         *     take them: an agent names an employer with a `relationship` write.
+         *     `company_name`. The answer's `employer` names the company. These fields are also
+         *     available to agents, with the same authority and approval requirements. Without a
+         *     named employer, work email evidence enters the shared domain matching and durable
+         *     triage process. Consumer and suppressed domains do not invent employers.
          */
         post: operations["createContact"];
         delete?: never;
@@ -5556,6 +5557,43 @@ export interface paths {
          *     `source_id` that moves the meeting's status is judged the same way, at its stored start.
          */
         post: operations["logActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/latest-inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What they sent on one record in the last 7 days that nobody has answered.
+         * @description The record page's "Just in" read, newest first. An email or message is one the
+         *     `waiting_reply` read lists, so a badge, the waiting lane and this agree on who is
+         *     waiting. A website form lands as a note that read does not know. It counts as
+         *     answered once a later outbound email or message, a call, or a held meeting is on the
+         *     record. An item an open task already stands for is left out, so an empty answer
+         *     does not mean nothing came in. At most 10 items, which is more than a reader sets
+         *     aside in a week.
+         *
+         *     The task that leaves an item out is one made from it, or the reminder filed for its
+         *     request, a colleague's private task included, as in the `waiting_reply` read.
+         *     `accepts_request` says a user's task made from the item can accept its request
+         *     (`request_activity_id`), so that completing the task settles the request. An agent
+         *     cannot accept a request; its task carries `source_activity_id`, as any task does
+         *     when `accepts_request` is false, and that does not settle the request.
+         *
+         *     `last_exchange` is the newest call, meeting, email or message on the record of any
+         *     age, with whose move it leaves. It says where the record stands when nothing is
+         *     next, such as waiting on them since the last mail sent.
+         */
+        get: operations["listLatestInbound"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -27225,7 +27263,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -28638,6 +28676,7 @@ export interface components {
             /** @description The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then. */
             logo_url?: string;
         };
+        /** @description Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
             full_name: string;
             first_name?: string | null;
@@ -28674,10 +28713,10 @@ export interface components {
             convert_lead_ids?: string[];
             /**
              * Format: uuid
-             * @description An existing company this contact works at now. Not with `company_name`. Refused from an agent.
+             * @description An existing company this contact works at now. Not with `company_name`.
              */
             company_id?: string | null;
-            /** @description A new company to create as this contact's employer. Not with `company_id`; blank means no employer. Refused from an agent. */
+            /** @description The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain. */
             company_name?: string | null;
         } & {
             [key: string]: unknown;
@@ -36701,6 +36740,36 @@ export interface components {
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
         } & {
             [key: string]: unknown;
+        };
+        LatestInboundList: {
+            data: components["schemas"]["LatestInbound"][];
+            last_exchange?: components["schemas"]["LastExchange"];
+        };
+        /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
+        LastExchange: {
+            activity: components["schemas"]["Activity"];
+            /**
+             * @description Who answers next. A mail follows its History badge's move. Any other exchange,
+             *     or a mail the reader may not read, follows its direction: what we sent waits on
+             *     them, and what they sent waits on us. `neither` is an exchange with no direction,
+             *     such as a meeting, or a mail whose badge says the thread is settled.
+             * @enum {string}
+             */
+            whose_move: "them" | "us" | "neither";
+        };
+        LatestInbound: {
+            activity: components["schemas"]["Activity"];
+            /**
+             * @description What arrived. A website form is a `note` activity whose `source_system` is `web_form`.
+             * @enum {string}
+             */
+            kind: "email" | "message" | "web_form";
+            /**
+             * @description A user's task made from it accepts its request through `request_activity_id`, so
+             *     completing the task settles the request. An agent cannot accept a request: it links
+             *     its task with `source_activity_id`, which does not settle it.
+             */
+            accepts_request: boolean;
         };
         ActivityListResponse: {
             data: components["schemas"]["Activity"][];
@@ -49740,7 +49809,7 @@ export interface components {
          *
          *     | Figure | Unit | Counted over | Exact or floor |
          *     |---|---|---|---|
-         *     | `summary.*` | items | every candidate this read weighed, before the fold, the filter and the page cut | exact over the sources read |
+         *     | `summary.*` | items | every candidate of the requested view this read weighed, before the fold, the filter and the page cut; never `upcoming` | exact over the sources read |
          *     | `summary.buckets.*` | items | the same candidates, frozen at the walk's first page | exact over the sources read |
          *     | `counts[].considered`, `reach[].considered` | items | every candidate weighed, before the fold and the filter | floor when `more_available` |
          *     | `counts[].shown`, `reach[].shown` | items | the cards on THIS page, each group counted as its members | exact |
@@ -49789,7 +49858,12 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            /**
+             * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
+             * @enum {string}
+             */
+            view?: "today" | "decisions" | "system";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -50273,7 +50347,7 @@ export interface components {
              * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "upcoming";
             /** @description How many items of this kind were read and ranked, before any narrowing. */
             considered: number;
             /** @description How many of them the page carries, counting a folded group as its members. */
@@ -50327,7 +50401,7 @@ export interface components {
             in_play?: number;
             /** @description Routine work: decisions that block nothing, and data hygiene. */
             lower_priority: number;
-            /** @description How many candidates the day holds. The same population the per-category `considered` figures are counted over, so the two agree. */
+            /** @description How many candidates the requested view holds. The same population as the `considered` figures of that view's categories. Upcoming work is never counted here: none of it is due today. */
             total: number;
             buckets?: components["schemas"]["WorklistBuckets"];
             /**
@@ -50884,7 +50958,7 @@ export interface components {
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "upcoming";
             /** @description Whether this work contributes to the urgent summary, independent of a personal pin. */
             urgent?: boolean;
             owner?: components["schemas"]["WorklistOwner"];
@@ -60977,6 +61051,33 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLatestInbound: {
+        parameters: {
+            query: {
+                entity_type: "contact" | "company" | "deal" | "lead" | "project";
+                entity_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unanswered items, newest first; empty when nothing waits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatestInboundList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -72077,8 +72178,34 @@ export interface operations {
                  *     already draws as cards. With no run to compare against it answers empty rather
                  *     than everything: absent is not false, and a reader asking what changed since a
                  *     night that never happened is owed nothing, not the whole queue.
+                 *
+                 *     `upcoming` is planned work due after today: the Upcoming and backlog section
+                 *     at the end of the Today view. These rows never appear in a queue that does not
+                 *     ask for them, and `summary` never counts them; `counts` reports them under the
+                 *     `upcoming` category.
+                 *
+                 *     Every value belongs to one view. `decisions` belongs to the Decisions view,
+                 *     `system` to the System view, `all` to every view, and the rest to Today.
+                 *     Without `view`, `filter=decisions` and `filter=system` are read as that view.
+                 *     A filter sent with a view it does not belong to returns
+                 *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                /**
+                 * @description Which work view to answer. `today` is work a seller executes: every category
+                 *     except `decisions` and `system`. `decisions` is judgements somebody owes, and
+                 *     `system` is problems the product reports about itself. A view narrows the
+                 *     queue before the page is cut, so paging never reaches another view's rows.
+                 *
+                 *     Omitted means no view: the whole day, as before views existed, except that
+                 *     `filter=decisions` and `filter=system` open their view. `summary` counts the
+                 *     requested view only; `counts` still reports every category, so a client can
+                 *     label the other views without a second read.
+                 *
+                 *     A cursor encodes the view it was minted under, and a cursor sent with another
+                 *     view returns `422 code: cursor_param_mismatch`.
+                 */
+                view?: "today" | "decisions" | "system";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**

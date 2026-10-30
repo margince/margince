@@ -44,17 +44,25 @@ import (
 //
 //nolint:dupl // createCompany has the same SHAPE and not the same job: a
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	in, err := w.contactInputForRow(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	var employer contacts.EmployerAttached
+	in.EmployerResult = &employer
 	if in.FullName == "" {
 		return skippedFor(contactUnnamedWhy), nil
 	}
-	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
+	err = w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
 		contact, err := w.contacts.CreateContactTx(ctx, tx, in, w.cols.store)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating contact %s: %w", row.ExternalID, err)
+		}
+		if err := w.recordCreatedEmployer(ctx, tx, employer); err != nil {
+			return ids.UUID{}, err
 		}
 		return ids.UUID(contact.Id), nil
 	})
@@ -70,6 +78,9 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	}
 	if refusedAsErased(err) {
 		return skippedFor(addressErasedWhy), nil
+	}
+	if why, refused := employerRefusalWhy(err); refused {
+		return skippedFor(why), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err

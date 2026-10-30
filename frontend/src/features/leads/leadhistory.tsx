@@ -9,12 +9,9 @@
 // beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   useRecordTimeline,
@@ -23,6 +20,7 @@ import {
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
+import { leadKey } from "../../lib/leadkeys";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab, useFieldHistory } from "../records/history";
@@ -162,16 +160,25 @@ export function LeadHistoryTab({
 }
 
 /**
- * The newest unanswered thing the lead sent, the website form that brought
- * them included, leading the Overview with the verbs its History row has.
+ * The newest unanswered thing the lead sent, the form that brought them
+ * included. The Overview's Next bar shows it with its History row's verbs.
  */
 export function LeadLatestInbound({
   latest,
   leadId,
-}: Readonly<{ latest: JustIn | undefined; leadId: string }>) {
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  leadId: string;
+  children: ReactNode;
+}>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="lead"
+      entityId={leadId}
+      // The Next bar reads the lead's own next task, which a new task moves.
+      refreshKeys={[leadKey(leadId)]}
       actions={(activity) => (
         <RowAnswerActions
           activity={activity}
@@ -179,6 +186,8 @@ export function LeadLatestInbound({
           entityId={leadId}
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }

@@ -7,6 +7,7 @@ import { Button } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineText } from "../design-system/inlinetext";
+import type { RecordRename } from "../design-system/recordview";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import {
@@ -100,11 +101,54 @@ function useRailWrite(edit: RailEdit) {
   return { opened, mutation, canEdit, setDirty, onEditingChange };
 }
 
+/**
+ * One plain field of a record saved in place, the way a left-column row saves
+ * it. The record's head renames through it too.
+ */
+export function useRailText(edit: RailEdit, field: CreateField) {
+  const t = useT();
+  const write = useRailWrite(edit);
+  return {
+    stored: prefillFromRecord([field], edit.record)[field.key] ?? "",
+    canEdit: write.canEdit,
+    onEditingChange: write.onEditingChange,
+    onDirtyChange: write.setDirty,
+    onSave: async (next: string) => {
+      checkFieldValue(field, next, t);
+      await write.mutation.mutateAsync({
+        values: { [field.key]: next },
+        rows: {},
+        baseline: write.opened.current,
+        save: edit.save,
+      });
+    },
+  };
+}
+
+/** The record's name as its head renames it, through the same save. */
+export function useRailRename(
+  edit: RailEdit,
+  key: string,
+  label: string,
+): RecordRename {
+  // An edit that does not offer the field leaves the name as text.
+  const offered = edit.fields.find((field) => field.key === key);
+  const { stored, canEdit, ...write } = useRailText(
+    edit,
+    offered ?? { key, label: "field.unset" },
+  );
+  return {
+    label,
+    value: stored,
+    canEdit: Boolean(offered) && edit.canEdit && canEdit,
+    ...write,
+  };
+}
+
 function RailText({ edit, field, label, text, beside }: FieldProps) {
   const t = useT();
   const { locale } = useLocale();
-  const write = useRailWrite(edit);
-  const stored = prefillFromRecord([field], edit.record)[field.key] ?? "";
+  const { stored, ...write } = useRailText(edit, field);
   return (
     <>
       <InlineText
@@ -122,18 +166,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         }
         maxLength={field.maxLength}
         step={field.step ?? (field.type === "number" ? "any" : undefined)}
-        canEdit={write.canEdit}
-        onEditingChange={write.onEditingChange}
-        onDirtyChange={write.setDirty}
-        onSave={async (next) => {
-          checkFieldValue(field, next, t);
-          await write.mutation.mutateAsync({
-            values: { [field.key]: next },
-            rows: {},
-            baseline: write.opened.current,
-            save: edit.save,
-          });
-        }}
+        {...write}
       />
       {beside}
     </>

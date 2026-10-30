@@ -35,7 +35,11 @@ type ListActivitiesInput struct {
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
-	EntityType      *string
+	// SourceSystem narrows to rows one connector wrote, such as website forms.
+	SourceSystem *string
+	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
+	AnswersThem bool
+	EntityType  *string
 	// note: EntityType+EntityID is the polymorphic activity_link filter —
 	// the target is ANY entity kind, so the id stays untyped (rule 6).
 	EntityID *ids.UUID

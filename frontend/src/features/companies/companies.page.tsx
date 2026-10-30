@@ -34,7 +34,7 @@ import {
 } from "./companyheaderactions";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
-import { CompanyRail } from "./companyrail";
+import { CompanyRail, useCompanyRename } from "./companyrail";
 
 // openTaskId is scoped to the account being read, like the tab. The route
 // swaps one company for another without unmounting this component, so a
@@ -144,6 +144,7 @@ export function CompanyPage({
   // timeline (the 360 renders it, not an `["activities", …]` query), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
+  const rename = useCompanyRename(company);
   const rail = (
     <CompanyRail
       company={company}
@@ -179,6 +180,7 @@ export function CompanyPage({
     <RecordView
       back={<WorklistReturnLink />}
       name={company.display_name}
+      rename={rename}
       identity={company.id}
       avatarSrc={company.logo_url}
       // What the account is, its site and the best way in, one line each.

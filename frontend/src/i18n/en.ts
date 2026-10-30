@@ -511,6 +511,12 @@ export const en = {
   "dataTasks.blocked.earlier_step": "An earlier step must finish first.",
   "dataTasks.blocked.missing_prerequisite":
     "Required updates must finish first.",
+  "approval.preview.createEmployer":
+    "Create the missing company and link this contact as an employee.",
+  "approval.preview.reuseEmployer":
+    "Link this contact to the existing company.",
+  "approval.preview.resolveEmployer":
+    "Resolves the employer from the company or work address, reuses or creates the company, and links employment. Uncertain domains wait for review; eligible enrichment follows company settings.",
   "approval.preview.createContact":
     "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
   "approval.preview.recordAcquisition":
@@ -1646,8 +1652,6 @@ export const en = {
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
   "brief.queue.back": "Back to Worklist",
-  "brief.queue.next": "Next task",
-  "brief.queue.nextNone": "No more records",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
   "brief.queue.hide": "Hide Worklist",
@@ -2831,6 +2835,11 @@ export const en = {
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
+  "scrollSentinel.loading": "Loading more…",
+  "scrollSentinel.failed": "Could not load more.",
+  "scrollSentinel.stalled":
+    "The list stopped moving forward. Retry to continue.",
+  "scrollSentinel.more": "More items are available.",
   "list.viewAll": "All",
   "list.viewHot": "Hot",
 
@@ -3294,12 +3303,21 @@ export const en = {
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",
   "latest.line.open": "{kind}: open in Overview",
+  "latest.makeTask": "Create task",
   "latest.noticed": "Noticed",
+  "latest.read.email": "Read email",
+  "latest.read.message": "Read message",
+  "latest.read.webForm": "Read form",
+  "latest.task.form": "Follow up: {subject}",
+  "latest.task.reply": "Reply: {subject}",
   "standing.next.label": "Next",
   "standing.next.none": "Nothing is due next.",
   "standing.next.snooze": "Snooze",
   "standing.next.more_one": "+{count} task",
   "standing.next.more_other": "+{count} tasks",
+  "standing.exchange.them": "Waiting on them",
+  "standing.exchange.us": "Your turn to answer",
+  "standing.exchange.open": "Open",
   "record.tabs": "Record tabs",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
@@ -5472,8 +5490,12 @@ export const en = {
   "bulk.reason.no_change_done": "Already in that state",
   "worklist.bulk.selectAll_one": "Select the {count} item shown",
   "worklist.bulk.selectAll_other": "Select all {count} items shown",
-  "worklist.bulk.clear": "Clear selection",
-  "worklist.bulk.markDone": "Mark done",
+  "worklist.bulk.select": "Select",
+  "worklist.bulk.cancel": "Cancel",
+  "worklist.bulk.complete_one": "Complete {count} task",
+  "worklist.bulk.complete_other": "Complete {count} tasks",
+  "worklist.bulk.putDown_one": "Take {count} item off my list",
+  "worklist.bulk.putDown_other": "Take {count} items off my list",
   "worklist.bulk.doneCount_one": "Marked {count} item done for you.",
   "worklist.bulk.doneCount_other": "Marked {count} items done for you.",
 
@@ -8326,6 +8348,10 @@ export const en = {
     "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
     "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_refused":
+    "The employer could not be resolved. Choose an unambiguous company that you may link.",
+  "import.reason.employer_will_create":
+    "The employer {name} will be created if it is still missing when this row is imported.",
   "import.reason.empty_payload": "The row has no fields.",
   "import.reason.field_inactive":
     "“{value}” cannot be written: this field is no longer active.",
@@ -16525,20 +16551,9 @@ export const en = {
   // for every fact the server sends as a closed vocabulary.
   "worklist.loading": "Loading Worklist…",
   "worklist.queue": "Today",
-  "worklist.review": "To review",
-  "worklist.more": "Load more",
-  "worklist.more.where":
-    "More of the day: new items can land in “{today}” or “{review}”.",
-  "worklist.more.failed": "More items did not load. Retry.",
-  "worklist.summary":
-    "{urgent} urgent · {due} due · {inPlay} in play · {lower} routine · {total} total",
-  "worklist.summary.noMiddle":
-    "{urgent} urgent · {due} due · {lower} routine · {total} total",
-  "worklist.summary.wholeDay": "Whole day: {sentence}",
-  "worklist.summary.split": "{today} today · {review} to review",
-  "worklist.completeness": "{shown} of {considered} items shown",
-  "worklist.completeness.floor_one": "{shown} item shown",
-  "worklist.completeness.floor_other": "{shown} items shown",
+  "worklist.completeness": "{shown} of {considered} items loaded",
+  "worklist.completeness.floor_one": "{shown} item loaded",
+  "worklist.completeness.floor_other": "{shown} items loaded",
   "worklist.completeness.cards_one": "{cards} card on screen",
   "worklist.completeness.cards_other": "{cards} cards on screen",
   "worklist.completeness.bounded":
@@ -16547,20 +16562,11 @@ export const en = {
     "Some categories may have more items than this list shows.",
   "worklist.completeness.unread_one": "{count} source did not load",
   "worklist.completeness.unread_other": "{count} sources did not load",
-  "worklist.review.partial":
-    "{loaded} of {total} shown. Load more below to see the rest.",
-  "worklist.emptyPage": "Nothing on this page. Load more to continue.",
-  "worklist.review.more":
-    "More pages may contain review items. Load more below to continue.",
-  "worklist.review.snapshotChanged":
-    "{loaded} of {total} snapshot items shown. The day has changed; refresh to update the totals.",
-  "worklist.review.partialDone": "{loaded} of {total} shown.",
-  "worklist.review.floor":
-    "{loaded}+ shown. There may be more items than this list shows.",
+  "worklist.emptyPage": "Nothing in this batch yet. More loads as you scroll.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":
-    "No tasks due today or overdue. Later tasks are on each record’s Tasks tab.",
+    "No tasks due today or overdue. Later tasks are under Upcoming and backlog.",
   "worklist.clearOfWhatWasRead": "No items in the sources that loaded.",
   "worklist.partialTitle": "Worklist incomplete",
   "worklist.partial": "{sources}.",
@@ -16775,8 +16781,8 @@ export const en = {
     "{gone} of these were handled since you opened the list.",
   "worklist.walk.both":
     "{arrived} new and {gone} already handled since you opened the list.",
-  "worklist.walk.title": "List changed",
-  "worklist.walk.refresh": "Refresh",
+  "worklist.walk.title": "New priorities available",
+  "worklist.walk.refresh": "Refresh list",
   "worklist.handled.empty": "No actions taken on your behalf today.",
   "worklist.handled.loading": "Loading actions…",
   "worklist.handled.count": "Recent changes: {count}",
@@ -16894,6 +16900,25 @@ export const en = {
   "worklist.filter.decisions": "Approvals",
   "worklist.filter.relationships": "Quiet relationships",
   "worklist.filter.system": "System",
+  "worklist.filter.upcoming": "Upcoming and backlog",
+  "worklist.upcoming.failed": "Upcoming work did not load.",
+  "worklist.upcoming.end": "All upcoming work is loaded.",
+  "worklist.upcoming.empty": "Nothing planned after today.",
+  "worklist.end.system": "All issues loaded.",
+  "worklist.end.decisions": "All decisions loaded.",
+  "worklist.end.today": "All of today’s work is loaded.",
+  "worklist.clear.system": "No unresolved issues.",
+  "worklist.clear.decisions": "No decisions waiting for you.",
+  "worklist.view.label": "Work view",
+  "worklist.view.today": "Today",
+  "worklist.view.decisions": "Decisions",
+  "worklist.view.system": "System",
+  "worklist.view.total.today_one": "{count} outstanding action",
+  "worklist.view.total.today_other": "{count} outstanding actions",
+  "worklist.view.total.decisions_one": "{count} outstanding decision",
+  "worklist.view.total.decisions_other": "{count} outstanding decisions",
+  "worklist.view.total.system_one": "{count} unresolved issue",
+  "worklist.view.total.system_other": "{count} unresolved issues",
   "worklist.filter.linked.urgent":
     "Showing only urgent items: someone waiting, or a commitment about to break.",
   "worklist.filter.linked.except_decisions":

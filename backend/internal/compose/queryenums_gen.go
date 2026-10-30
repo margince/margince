@@ -15,6 +15,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
 	},
+	"GET /v1/activities/latest-inbound": {
+		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
+	},
 	"GET /v1/ai/call-stats": {
 		{Name: "group", Values: []string{"provider", "model", "served_model", "served_provider", "tier", "task"}, Array: false, Explode: true},
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
@@ -236,8 +239,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "resource", Values: []string{"contacts", "companies", "deals", "activities", "leads", "partners", "projects"}, Array: false, Explode: true},
 	},
 	"GET /v1/worklist": {
-		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief"}, Array: false, Explode: true},
+		{Name: "filter", Values: []string{"all", "urgent", "customer_waiting", "leads", "deals_at_risk", "meetings", "tasks", "decisions", "relationships", "system", "except_decisions", "changed_since_brief", "upcoming"}, Array: false, Explode: true},
 		{Name: "scope", Values: []string{"mine", "unassigned", "team", "all"}, Array: false, Explode: true},
+		{Name: "view", Values: []string{"today", "decisions", "system"}, Array: false, Explode: true},
 	},
 }
 
