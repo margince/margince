@@ -48,7 +48,10 @@ export function useFiguresFollowTheSwitch(enabled = true): void {
       previous.current = shown;
     }
     if (was === true && shown === false) {
-      void client.invalidateQueries({
+      // Reset, not invalidate. Invalidating keeps the cached answer, so a
+      // screen renders a colleague's figures until its refetch settles. An
+      // inactive screen shows them again on remount. Reset drops the data.
+      void client.resetQueries({
         predicate: (query) => mayCarryIndividualFigures(query.queryKey),
       });
     }

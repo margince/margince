@@ -57,9 +57,9 @@ it("drops figures already on screen when the switch goes off", async () => {
     individual_performance: false,
   });
 
-  await waitFor(() =>
-    expect(client.getQueryState(FIGURES_KEY)?.isInvalidated).toBe(true),
-  );
+  // The data is gone, not merely stale. A stale answer is still rendered until
+  // its refetch settles, and an inactive screen would show it again on remount.
+  await waitFor(() => expect(client.getQueryData(FIGURES_KEY)).toBeUndefined());
 });
 
 // A session that opens with the switch already off has nothing to drop, and
