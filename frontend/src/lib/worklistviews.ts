@@ -64,9 +64,14 @@ export function viewOfFilter(filter: WorklistFilter): WorklistView | undefined {
   return FILTER_VIEW[filter] ?? undefined;
 }
 
-/** Whether a category's work belongs to a view. A string, because a missing source names its category untyped. */
+/** The view a category's work belongs to. A string, because a missing source names its category untyped. */
+export function viewOfCategory(category: string): WorklistView {
+  return categoryViews.get(category) ?? DEFAULT_VIEW;
+}
+
+/** Whether a category's work belongs to a view. */
 export function categoryInView(category: string, view: WorklistView): boolean {
-  return (categoryViews.get(category) ?? DEFAULT_VIEW) === view;
+  return viewOfCategory(category) === view;
 }
 
 /** The view an address names, reading an old `filter=decisions` link as its view. */
