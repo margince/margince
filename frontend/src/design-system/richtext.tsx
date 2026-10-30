@@ -4,6 +4,7 @@
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
 import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AiPending } from "./aipending";
 import { useAiReveal } from "./aireveal";
 import { plainTextOf, safeEditorHTML } from "./richtext-html";
 import {
@@ -70,6 +71,7 @@ export function RichText({
   disabled = false,
   footIn,
   revealText,
+  thinking,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -145,6 +147,12 @@ export function RichText({
    * screen. Unset for text a reader typed.
    */
   revealText?: string | null;
+  /**
+   * What a model is writing into the surface right now, as the sentence
+   * `AiPending` shows. While the surface is empty its speck rows stand where
+   * the words will land; the first key a reader types takes them away.
+   */
+  thinking?: string | null;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -311,7 +319,7 @@ export function RichText({
   );
   return (
     <div
-      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
+      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}${thinking ? " is-thinking" : ""}`}
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
@@ -342,6 +350,11 @@ export function RichText({
         onBlur={report}
         onPaste={paste}
       />
+      {thinking && (
+        <div className="richtext-thinking">
+          <AiPending label={thinking} lines={3} />
+        </div>
+      )}
       {/* UNDER the words, and quiet. The toolbar led the control for a while —
           a filled band above the box, before a reader had written anything to
           format — which made four glyphs the first thing on a surface whose
