@@ -185,3 +185,30 @@ func TestTheScanReachesEveryPairOfAProfileHeldPastTheCap(t *testing.T) {
 		t.Errorf("open LinkedIn pairs among the seven holders = %d, want %d", got, want)
 	}
 }
+
+// A pair filed on a shared phone that now holds only on LinkedIn stays. The
+// queue shows the shared profile as its evidence, not an empty address pair.
+func TestAPhonePairThatHoldsOnLinkedInShowsTheProfile(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	left := e.seedContact(ctx, t, "Ola Berg", []string{"ola@phone.example"}, []string{"+49305550111"})
+	right := e.seedContact(ctx, t, "Kim Lund", []string{"kim@phone.example"}, []string{"+49305550111"})
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO contact_social (contact_id, platform, handle)
+			VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/one-human'),
+			       ($2, 'linkedin', 'https://www.linkedin.com/in/one-human')`, left, right)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the shared profile: %v", err)
+	}
+	if _, err := e.store.UpdateContact(ctx, right, UpdateContactInput{Phones: []ContactPhoneInput{}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.recheck(t); got.Closed != 0 {
+		t.Fatalf("the re-check closed a pair the shared profile still holds: %+v", got)
+	}
+	evidence := pairEvidence(ctx, t, e, right.UUID)
+	if len(evidence) != 1 || evidence[0][evidenceFieldKey] != fieldLinkedin {
+		t.Errorf("the pair's evidence is %v, want the shared LinkedIn profile", evidence)
+	}
+}
