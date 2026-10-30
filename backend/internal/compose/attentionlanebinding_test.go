@@ -331,8 +331,8 @@ func bindsALane(fun ast.Expr) bool {
 	return ok && pkg.Name == "attention"
 }
 
-// localSeams maps each local the body assigns a seam to, so a seam built once
-// and passed by name to two bindings is credited like an inline one.
+// localSeams maps each local the body assigns a seam to. A seam built once and
+// passed by name to two bindings is then credited like an inline one.
 func localSeams(body *ast.BlockStmt, returns map[string]string) map[string]string {
 	locals := map[string]string{}
 	ast.Inspect(body, func(n ast.Node) bool {

@@ -214,7 +214,8 @@ type tailPage struct {
 }
 
 // moreTasks reads the next batch of the task window this page's filter shows,
-// in the walk's own window. A task's place in the tail is when it falls due.
+// in the walk's own window. A task's place in the tail is its DueAt, which the
+// store selects as the same storekit.TaskDueSQL its keyset sorts by.
 func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow, after string, limit int) (tailBatch, error) {
 	zone, err := time.LoadLocation(walk.Zone)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -18,8 +19,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // waitingBacklog is who is waiting on three seats, written through the
@@ -262,6 +265,7 @@ func TestTheWaitingTotalMatchesTheMergedWalk(t *testing.T) {
 	for i := range plannedCapForTest + 6 {
 		r.task(t, fmt.Sprintf("Rep1 due %d", i), r.now.Add(-time.Duration(i+1)*3*time.Hour), nil, &r.e.Rep1)
 	}
+	generated := generatedDateTask(t, r)
 	team := map[string]bool{}
 	for _, seat := range []ids.UUID{r.e.Rep1, r.e.Rep2} {
 		for id := range w.cards[seat] {
@@ -309,6 +313,9 @@ func TestTheWaitingTotalMatchesTheMergedWalk(t *testing.T) {
 				t.Error("the task Rep1 took for an old request was never reached")
 			}
 			assertTailOrder(t, served, frozen)
+			if check.scope == "mine" {
+				assertLastTask(t, served, generated)
+			}
 		})
 	}
 }
@@ -448,5 +455,45 @@ func TestNoTailPositionNamesAMessageTheReaderCannotRead(t *testing.T) {
 	}
 	if folded := len(keepWaitingCustomers(scanned)); tailed != folded || tailed != 5 {
 		t.Errorf("the tail drew %d cards, the lane's fold %d, want the 5 the reader may read", tailed, folded)
+	}
+}
+
+// generatedDateTask has the lead writer file Rep1 a task about a refused lead,
+// with the creation-time due date older writers stored. The task keyset reads
+// that as no date, so the tail must place it after every dated task.
+func generatedDateTask(t *testing.T, r reminderEnv) string {
+	t.Helper()
+	owner := ids.From[ids.UserKind](r.e.Rep1)
+	if _, err := r.e.Contacts.CreateContact(r.e.Admin(), contacts.CreateContactInput{
+		FullName: "Mara Held", Source: "manual", OwnerID: &owner,
+		Emails: []contacts.ContactEmailInput{{Email: "mara@customer.example", EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("creating the contact: %v", err)
+	}
+	leads := r.e.Contacts.WithLeadArrivals(newLeadWorkTasks(InstallationDB(r.e.Pool), slog.Default()))
+	in := contacts.CreateLeadInput{FullName: new("Mara H."), Email: new("mara@customer.example"), Source: "web_form"}
+	if _, _, err := leads.CreateLead(r.e.Admin(), in); err == nil {
+		t.Fatal("a lead for a contact's address was created")
+	}
+	id := r.e.WsScalar(t, `SELECT id::text FROM activity WHERE kind = 'task' AND source_system = $1 AND assignee_id = $2`,
+		provenance.LeadForContactSource, r.e.Rep1)
+	// An older writer stamped the task's creation time as its due date. Placed
+	// among the dated tasks, so a merge reading the stored date would misorder it.
+	r.e.WsExec(t, `UPDATE activity SET occurred_at = $2, due_at = $2 WHERE id = $1`, ids.MustParse(id), r.now.Add(-30*time.Hour))
+	return id
+}
+
+// assertLastTask holds that the task with an undated keyset came after every
+// other task the walk served, and once.
+func assertLastTask(t *testing.T, served []servedRow, id string) {
+	t.Helper()
+	last := ""
+	for _, row := range served {
+		if row.source == crmcontracts.WorklistItemSourceTask {
+			last = row.id
+		}
+	}
+	if last != id {
+		t.Errorf("the walk's last task is %s, want the undated generated task %s", last, id)
 	}
 }

@@ -143,3 +143,32 @@ func TestAReadThatGaveNothingStillMovesAndBoundsTheMerge(t *testing.T) {
 		t.Errorf("positions %v, want waiting past what it judged and the task after its first row", rest.At)
 	}
 }
+
+// A task batch sorts as its keyset does, by the effective due date. A generated
+// date counts as none, so an undated task comes last in its batch. The merge
+// reads that order and gives every row once, the undated task last.
+func TestAnUndatedTaskSortsLastAsItsKeysetDoes(t *testing.T) {
+	tasks := tailBatchOf(sourceTask, true, 1, 3)
+	undated := ranked{item: crmcontracts.WorklistItem{Id: ids.NewV7().String(), Source: sourceTask}}
+	tasks.rows = append(tasks.rows, tailRow{row: undated, after: "after-undated", kept: true})
+	waits := tailBatchOf(sourceWaiting, false, 2, 5)
+	rest := cursorOver(tasks, waits)
+
+	got := mergeTail([]tailBatch{tasks, waits}, 10, nil, rest)
+
+	want := []string{
+		tasks.rows[0].row.item.Id, waits.rows[0].row.item.Id, tasks.rows[1].row.item.Id,
+		waits.rows[1].row.item.Id, undated.item.Id,
+	}
+	if len(got) != len(want) {
+		t.Fatalf("merged %d rows, want %d", len(got), len(want))
+	}
+	for i, row := range got {
+		if row.item.Id != want[i] {
+			t.Fatalf("row %d is %s, want %s", i, row.item.Id, want[i])
+		}
+	}
+	if rest.At[string(sourceTask)] != "after-undated" {
+		t.Errorf("the task source stands at %q, want after its undated task", rest.At[string(sourceTask)])
+	}
+}
