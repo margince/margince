@@ -17267,6 +17267,7 @@ func (e ReportingMetricID) Valid() bool {
 const (
 	ReportingPresetIdSales ReportingPresetId = "sales"
 	ReportingPresetIdSdr   ReportingPresetId = "sdr"
+	ReportingPresetIdTeam  ReportingPresetId = "team"
 )
 
 // Valid indicates whether the value is a known member of the ReportingPresetId enum.
@@ -17275,6 +17276,8 @@ func (e ReportingPresetId) Valid() bool {
 	case ReportingPresetIdSales:
 		return true
 	case ReportingPresetIdSdr:
+		return true
+	case ReportingPresetIdTeam:
 		return true
 	default:
 		return false
@@ -18118,6 +18121,24 @@ func (e SchedulingProfileProvider) Valid() bool {
 	}
 }
 
+// Defines values for SdrHandoffReasonCountOutcome.
+const (
+	SdrHandoffReasonCountOutcomeRecycled SdrHandoffReasonCountOutcome = "recycled"
+	SdrHandoffReasonCountOutcomeRejected SdrHandoffReasonCountOutcome = "rejected"
+)
+
+// Valid indicates whether the value is a known member of the SdrHandoffReasonCountOutcome enum.
+func (e SdrHandoffReasonCountOutcome) Valid() bool {
+	switch e {
+	case SdrHandoffReasonCountOutcomeRecycled:
+		return true
+	case SdrHandoffReasonCountOutcomeRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrHandoffSubjectType.
 const (
 	SdrHandoffSubjectTypeContact SdrHandoffSubjectType = "contact"
@@ -18148,6 +18169,39 @@ func (e SdrSummaryWorkflow) Valid() bool {
 	case SdrSummaryWorkflowHandoff:
 		return true
 	case SdrSummaryWorkflowQualification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewMembershipBasis.
+const (
+	SdrTeamReviewMembershipBasisCurrent SdrTeamReviewMembershipBasis = "current"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewMembershipBasis enum.
+func (e SdrTeamReviewMembershipBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewWorkflow.
+const (
+	SdrTeamReviewWorkflowHandoff       SdrTeamReviewWorkflow = "handoff"
+	SdrTeamReviewWorkflowQualification SdrTeamReviewWorkflow = "qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewWorkflow enum.
+func (e SdrTeamReviewWorkflow) Valid() bool {
+	switch e {
+	case SdrTeamReviewWorkflowHandoff:
+		return true
+	case SdrTeamReviewWorkflowQualification:
 		return true
 	default:
 		return false
@@ -23965,6 +24019,51 @@ func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
 	case ListSdrWaitingHandoffsParamsScopeKindTeam:
 		return true
 	case ListSdrWaitingHandoffsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSdrTeamReviewParamsScopeKind.
+const (
+	GetSdrTeamReviewParamsScopeKindManagedTeams GetSdrTeamReviewParamsScopeKind = "managed_teams"
+	GetSdrTeamReviewParamsScopeKindTeam         GetSdrTeamReviewParamsScopeKind = "team"
+	GetSdrTeamReviewParamsScopeKindWorkspace    GetSdrTeamReviewParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsScopeKind enum.
+func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
+	switch e {
+	case GetSdrTeamReviewParamsScopeKindManagedTeams:
+		return true
+	case GetSdrTeamReviewParamsScopeKindTeam:
+		return true
+	case GetSdrTeamReviewParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetSdrTeamReviewParamsPeriod.
+const (
+	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+)
+
+// Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
+func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
+	switch e {
+	case GetSdrTeamReviewParamsPeriodLastMonth:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodThisMonth:
+		return true
+	case GetSdrTeamReviewParamsPeriodThisWeek:
 		return true
 	default:
 		return false
@@ -52792,6 +52891,47 @@ type SchedulingProfile struct {
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
 
+// SdrHandoffCohort defines model for SdrHandoffCohort.
+type SdrHandoffCohort struct {
+	Accepted int `json:"accepted"`
+
+	// MedianDecisionHours Median hours from submission to decision over the decided rounds. Absent with none decided.
+	MedianDecisionHours *float32 `json:"median_decision_hours,omitempty"`
+	Recycled            int      `json:"recycled"`
+	Rejected            int      `json:"rejected"`
+
+	// Rounds Rounds submitted in the period. The denominator of the other four, which add up to it.
+	Rounds int `json:"rounds"`
+
+	// Waiting Rounds still undecided at `observed_through`.
+	Waiting int `json:"waiting"`
+}
+
+// SdrHandoffOutcomes defines model for SdrHandoffOutcomes.
+type SdrHandoffOutcomes struct {
+	// Accepted Deals first accepted from a handoff in the period, each deal once.
+	Accepted int `json:"accepted"`
+
+	// Recycled Handoffs sent back to the submitter in the period, to try again.
+	Recycled int `json:"recycled"`
+
+	// Rejected Handoffs rejected in the period. A rejection ends the handoff.
+	Rejected int `json:"rejected"`
+
+	// Submitted Rounds submitted in the period, resubmissions included.
+	Submitted int `json:"submitted"`
+}
+
+// SdrHandoffReasonCount defines model for SdrHandoffReasonCount.
+type SdrHandoffReasonCount struct {
+	Count   int                          `json:"count"`
+	Label   string                       `json:"label"`
+	Outcome SdrHandoffReasonCountOutcome `json:"outcome"`
+}
+
+// SdrHandoffReasonCountOutcome defines model for SdrHandoffReasonCount.Outcome.
+type SdrHandoffReasonCountOutcome string
+
 // SdrHandoffRecipient defines model for SdrHandoffRecipient.
 type SdrHandoffRecipient struct {
 	// Active False when the recipient was suspended, deactivated or removed. The handoff is then blocked.
@@ -52846,6 +52986,87 @@ type SdrSummary struct {
 
 // SdrSummaryWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
 type SdrSummaryWorkflow string
+
+// SdrTeamHandoffs defines model for SdrTeamHandoffs.
+type SdrTeamHandoffs struct {
+	Cohort   SdrHandoffCohort   `json:"cohort"`
+	Outcomes SdrHandoffOutcomes `json:"outcomes"`
+
+	// Reasons The reasons given for the rejections and returns in `outcomes`, most often first.
+	Reasons []SdrHandoffReasonCount `json:"reasons"`
+
+	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
+	Unattributed int              `json:"unattributed"`
+	Waiting      SdrHandoffTotals `json:"waiting"`
+}
+
+// SdrTeamMeetings defines model for SdrTeamMeetings.
+type SdrTeamMeetings struct {
+	// Held Held customer meetings in the period credited to the team, each counted once.
+	Held int `json:"held"`
+
+	// LimitedHistory Some meetings were recorded before their history was kept, so their credit is read from the meeting as it is today.
+	LimitedHistory bool `json:"limited_history"`
+}
+
+// SdrTeamMember defines model for SdrTeamMember.
+type SdrTeamMember struct {
+	Accepted int                `json:"accepted"`
+	Id       openapi_types.UUID `json:"id"`
+	Label    string             `json:"label"`
+
+	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each.
+	MeetingsHeld int `json:"meetings_held"`
+
+	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
+	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
+	Recycled           int        `json:"recycled"`
+	Rejected           int        `json:"rejected"`
+	Submitted          int        `json:"submitted"`
+
+	// Waiting This member's handoffs waiting on somebody else now.
+	Waiting int `json:"waiting"`
+}
+
+// SdrTeamReview defines model for SdrTeamReview.
+type SdrTeamReview struct {
+	// AsOf The instant every figure was read at.
+	AsOf     time.Time        `json:"as_of"`
+	Handoffs *SdrTeamHandoffs `json:"handoffs,omitempty"`
+	Interval ReportingWindow  `json:"interval"`
+	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
+	Members  []SdrTeamMember  `json:"members"`
+
+	// MembersTruncated The team has more measurable members than `members` holds.
+	MembersTruncated bool `json:"members_truncated"`
+
+	// MembersWithheld The installation shows no individual performance, so `members` is empty.
+	MembersWithheld bool `json:"members_withheld"`
+
+	// MembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+	MembershipBasis SdrTeamReviewMembershipBasis `json:"membership_basis"`
+
+	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
+	ObservedThrough time.Time `json:"observed_through"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// SmallSampleBelow A count of rounds below this is too small to compare with another. Show its size, not a rate.
+	SmallSampleBelow int `json:"small_sample_below"`
+
+	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
+	Withheld bool `json:"withheld"`
+
+	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
+	Workflow SdrTeamReviewWorkflow `json:"workflow"`
+}
+
+// SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
+type SdrTeamReviewWorkflow string
 
 // SdrWaitingHandoff defines model for SdrWaitingHandoff.
 type SdrWaitingHandoff struct {
@@ -60792,6 +61013,24 @@ type ListSdrWaitingHandoffsParams struct {
 
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
 type ListSdrWaitingHandoffsParamsScopeKind string
+
+// GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParams struct {
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
+	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Period The period, in the installation's reporting zone.
+	Period *GetSdrTeamReviewParamsPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
+// GetSdrTeamReviewParamsScopeKind defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParamsScopeKind string
+
+// GetSdrTeamReviewParamsPeriod defines parameters for GetSdrTeamReview.
+type GetSdrTeamReviewParamsPeriod string
 
 // ListReportingTargetsParams defines parameters for ListReportingTargets.
 type ListReportingTargetsParams struct {
@@ -80076,6 +80315,9 @@ type ServerInterface interface {
 	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
 	// (GET /analytics/sdr-summary/handoffs)
 	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
+	// How a team's handoffs ended and what still waits, for coaching.
+	// (GET /analytics/sdr-team)
+	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -83322,6 +83564,12 @@ func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, par
 // The handoffs waiting on somebody else, oldest wait first, one page at a time.
 // (GET /analytics/sdr-summary/handoffs)
 func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How a team's handoffs ended and what still waits, for coaching.
+// (GET /analytics/sdr-team)
+func (_ Unimplemented) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93976,6 +94224,71 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSdrTeamReview operation middleware
+func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSdrTeamReviewParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period", r.URL.Query(), &params.Period, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSdrTeamReview(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129043,6 +129356,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)

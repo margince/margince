@@ -67,6 +67,13 @@ const SDR_METRICS: readonly MetricID[] = [
   "leads_awaiting_response",
 ];
 
+const TEAM_METRICS: readonly MetricID[] = [
+  "meetings_held",
+  "accepted_opportunities",
+  "leads_promoted",
+  "leads_awaiting_response",
+];
+
 function definition(id: MetricID): Definition {
   return {
     id,
@@ -89,6 +96,7 @@ export const overviewCatalog: components["schemas"]["ReportingCatalog"] = {
   presets: [
     { id: "sales", metrics: [...SALES_METRICS], blocks: [] },
     { id: "sdr", metrics: [...SDR_METRICS], blocks: [] },
+    { id: "team", metrics: [...TEAM_METRICS], blocks: [] },
   ],
 };
 
@@ -202,6 +210,82 @@ export function prospectingEvaluation(
   };
 }
 
+/** The team preset's evaluation for the DACH team this week. */
+export function teamEvaluation(): ReportingEvaluation {
+  const week = prospectingEvaluation([
+    metric("meetings_held", 7),
+    metric("accepted_opportunities", 3),
+    metric("leads_promoted", 5),
+    metric("leads_awaiting_response", 2),
+  ]);
+  return {
+    ...week,
+    context: { ...week.context, scope: TEAM },
+    selection: { ...week.selection, scope: TEAM, metrics: [...TEAM_METRICS] },
+  };
+}
+
+type TeamReview = components["schemas"]["SdrTeamReview"];
+
+/** The DACH team's handoff review: two SDRs, one round still waiting. */
+export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
+  return {
+    as_of: interval.end_at,
+    scope: TEAM,
+    interval: { start_at: "2026-09-20T22:00:00Z", end_at: interval.end_at },
+    observed_through: interval.end_at,
+    workflow: "handoff",
+    withheld: false,
+    small_sample_below: 5,
+    membership_basis: "current",
+    meetings: { held: 7, limited_history: false },
+    handoffs: {
+      outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },
+      cohort: {
+        rounds: 4,
+        accepted: 2,
+        rejected: 1,
+        recycled: 0,
+        waiting: 1,
+        median_decision_hours: 20,
+      },
+      waiting: { waiting: 2, unassigned: 0, blocked: 1, returned: 1 },
+      reasons: [
+        { outcome: "rejected", label: "Wrong territory", count: 1 },
+        { outcome: "recycled", label: "Needs more qualification", count: 1 },
+      ],
+      unattributed: 0,
+    },
+    members_withheld: false,
+    members: [
+      {
+        id: SELF,
+        label: "Riley Rep",
+        meetings_held: 4,
+        submitted: 4,
+        accepted: 2,
+        rejected: 1,
+        recycled: 1,
+        waiting: 1,
+        oldest_waiting_since: "2026-09-21T08:00:00Z",
+      },
+      {
+        id: "00000000-0000-4000-8000-0000000000a2",
+        label: "Sam SDR",
+        meetings_held: 4,
+        submitted: 2,
+        accepted: 1,
+        rejected: 0,
+        recycled: 0,
+        waiting: 1,
+        oldest_waiting_since: "2026-09-22T08:00:00Z",
+      },
+    ],
+    members_truncated: false,
+    ...over,
+  };
+}
+
 /** The movement read with no second capture yet. */
 export function startingMovement(): ReportingEvaluation {
   return {
@@ -301,6 +385,7 @@ export function overviewRoutes(
     summary?: () => Response | Promise<Response>;
     checks?: () => Response | Promise<Response>;
     framework?: () => Response | Promise<Response>;
+    team?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
   const seat = over.seat ?? "leader";
@@ -347,6 +432,7 @@ export function overviewRoutes(
         })),
     "GET /analytics/sdr-summary/handoffs": () =>
       jsonResponse({ as_of: interval.end_at, rows: [] }),
+    "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
     "GET /worklist": () => jsonResponse(QUIET_DAY),
   };
 }

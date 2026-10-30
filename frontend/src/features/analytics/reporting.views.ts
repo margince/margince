@@ -106,6 +106,18 @@ export function metricView(metric: ReportingMetricID): ReportingView {
 // on a page that reads this quarter too.
 const QUARTER_ONLY: ReportingMetricID = "forecast_landing";
 
+/** The metrics and charts the server's preset of this id asks this reader. */
+export function presetRequest(
+  id: PresetID,
+  catalog: Pick<Catalog, "presets">,
+): Readonly<{ metrics: ReportingMetricID[]; blocks: ReportingBlockKind[] }> {
+  const preset = catalog.presets.find((entry) => entry.id === id);
+  return {
+    metrics: [...(preset?.metrics ?? [])],
+    blocks: [...(preset?.blocks ?? [])],
+  };
+}
+
 /**
  * The metrics and charts a view asks on this catalog. A preset view asks the
  * preset the server published for this reader, plus the expected finish on a
@@ -123,12 +135,10 @@ export function viewRequest(
     METRIC_VIEW[QUARTER_ONLY] === view &&
     catalog.metrics.some((metric) => metric.id === QUARTER_ONLY);
   if ("preset" in shape) {
-    const preset = catalog.presets.find((entry) => entry.id === shape.preset);
-    const metrics = [...(preset?.metrics ?? [])];
-    return {
-      metrics: quarterly ? [...metrics, QUARTER_ONLY] : metrics,
-      blocks: [...(preset?.blocks ?? [])],
-    };
+    const asked = presetRequest(shape.preset, catalog);
+    return quarterly
+      ? { ...asked, metrics: [...asked.metrics, QUARTER_ONLY] }
+      : asked;
   }
   const metrics = catalog.metrics
     .filter(

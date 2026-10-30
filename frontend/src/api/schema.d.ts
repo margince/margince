@@ -19876,6 +19876,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/sdr-team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How a team's handoffs ended and what still waits, for coaching.
+         * @description A team's prospecting over one period, read up to `observed_through`, which is the earlier
+         *     of the period's end and `as_of`.
+         *
+         *     `handoffs.outcomes` counts the decisions made in the period, whenever their handoff was
+         *     submitted. `handoffs.cohort` follows the rounds submitted in the period instead and says
+         *     how each ended by `observed_through`. A round is one submission: a handoff sent back and
+         *     submitted again has two. Accepted counts each resulting deal once, credited to the seat
+         *     that submitted the handoff, so a prospect sent back and then accepted is one accepted
+         *     opportunity. A rejection ends a handoff; a return (`recycled`) sends it back to try again.
+         *     The two are never counted together.
+         *
+         *     `meetings.held` counts each held meeting once for the team, by the rule the held-meetings
+         *     reading uses. A meeting several members attended counts in each of their rows, so the
+         *     rows can add up to more than the team.
+         *
+         *     `members` is one row per member the seat may measure one by one, read in one statement
+         *     per figure for the whole team. While the installation shows no individual performance,
+         *     `members_withheld` is true and no row is sent. If the team's figures would then show one
+         *     colleague's work (any one figure, judged by the seats behind it), `withheld` is true and no
+         *     figure is sent.
+         *
+         *     An event recorded before the submitter was kept with it is counted in `unattributed`, for
+         *     the whole company only, and in no member's row.
+         */
+        get: operations["getSdrTeamReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/schema": {
         parameters: {
             query?: never;
@@ -40280,6 +40322,101 @@ export interface components {
             /** @description Absent on the last page. */
             next_cursor?: string;
         };
+        SdrTeamReview: {
+            /**
+             * @description Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
+             * @enum {string}
+             */
+            membership_basis: "current";
+            /**
+             * Format: date-time
+             * @description The instant every figure was read at.
+             */
+            as_of: string;
+            scope: components["schemas"]["AnalyticsScope"];
+            interval: components["schemas"]["ReportingWindow"];
+            /**
+             * Format: date-time
+             * @description The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
+             */
+            observed_through: string;
+            /**
+             * @description `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
+             * @enum {string}
+             */
+            workflow: "handoff" | "qualification";
+            /** @description Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent. */
+            withheld: boolean;
+            /** @description A count of rounds below this is too small to compare with another. Show its size, not a rate. */
+            small_sample_below: number;
+            meetings?: components["schemas"]["SdrTeamMeetings"];
+            handoffs?: components["schemas"]["SdrTeamHandoffs"];
+            /** @description The installation shows no individual performance, so `members` is empty. */
+            members_withheld: boolean;
+            members: components["schemas"]["SdrTeamMember"][];
+            /** @description The team has more measurable members than `members` holds. */
+            members_truncated: boolean;
+        };
+        SdrTeamMeetings: {
+            /** @description Held customer meetings in the period credited to the team, each counted once. */
+            held: number;
+            /** @description Some meetings were recorded before their history was kept, so their credit is read from the meeting as it is today. */
+            limited_history: boolean;
+        };
+        SdrTeamHandoffs: {
+            outcomes: components["schemas"]["SdrHandoffOutcomes"];
+            cohort: components["schemas"]["SdrHandoffCohort"];
+            waiting: components["schemas"]["SdrHandoffTotals"];
+            /** @description The reasons given for the rejections and returns in `outcomes`, most often first. */
+            reasons: components["schemas"]["SdrHandoffReasonCount"][];
+            /** @description Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them. */
+            unattributed: number;
+        };
+        SdrHandoffOutcomes: {
+            /** @description Rounds submitted in the period, resubmissions included. */
+            submitted: number;
+            /** @description Deals first accepted from a handoff in the period, each deal once. */
+            accepted: number;
+            /** @description Handoffs rejected in the period. A rejection ends the handoff. */
+            rejected: number;
+            /** @description Handoffs sent back to the submitter in the period, to try again. */
+            recycled: number;
+        };
+        SdrHandoffCohort: {
+            /** @description Rounds submitted in the period. The denominator of the other four, which add up to it. */
+            rounds: number;
+            accepted: number;
+            rejected: number;
+            recycled: number;
+            /** @description Rounds still undecided at `observed_through`. */
+            waiting: number;
+            /** @description Median hours from submission to decision over the decided rounds. Absent with none decided. */
+            median_decision_hours?: number;
+        };
+        SdrHandoffReasonCount: {
+            /** @enum {string} */
+            outcome: "rejected" | "recycled";
+            label: string;
+            count: number;
+        };
+        SdrTeamMember: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /** @description Held meetings credited to this member. A meeting several members attended counts for each. */
+            meetings_held: number;
+            submitted: number;
+            accepted: number;
+            rejected: number;
+            recycled: number;
+            /** @description This member's handoffs waiting on somebody else now. */
+            waiting: number;
+            /**
+             * Format: date-time
+             * @description When this member's longest current wait began. Absent with nothing waiting.
+             */
+            oldest_waiting_since?: string;
+        };
         ReportingScope: {
             /** @enum {string} */
             kind: "owner" | "team" | "workspace" | "managed_teams";
@@ -40663,7 +40800,7 @@ export interface components {
         };
         ReportingPreset: {
             /** @enum {string} */
-            id: "sales" | "sdr";
+            id: "sales" | "sdr" | "team";
             metrics: components["schemas"]["ReportingMetricID"][];
             blocks: components["schemas"]["ReportingBlockKind"][];
         };
@@ -83423,6 +83560,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SdrWaitingHandoffPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getSdrTeamReview: {
+        parameters: {
+            query?: {
+                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. */
+                scope_kind?: "team" | "workspace" | "managed_teams";
+                /** @description The team named by `scope_kind`. */
+                scope_id?: string;
+                /** @description The period, in the installation's reporting zone. */
+                period?: "this_week" | "last_week" | "this_month" | "last_month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrTeamReview"];
                 };
             };
             401: components["responses"]["Unauthorized"];

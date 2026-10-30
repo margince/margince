@@ -24,6 +24,7 @@ import {
 } from "./analytics.overview.choice";
 import { MyProspecting } from "./analytics.overview.prospecting";
 import { SalesReview } from "./analytics.overview.sales";
+import { TeamProspecting } from "./analytics.overview.team";
 import {
   useReportingCatalog,
   useReportingFramework,
@@ -61,7 +62,10 @@ export function AnalyticsOverview({
   return (
     <QueryGate query={catalog} pendingLabel={t("analytics.sectionOverview")}>
       {(catalog) => {
-        const offered = overviewViews(catalog);
+        const offered = overviewViews(
+          catalog,
+          context.default_scope.kind !== "owner",
+        );
         const chosen = openingView(
           offered,
           params.get(OVERVIEW_DIAL),
@@ -90,9 +94,21 @@ export function AnalyticsOverview({
               labels={{
                 sales: t("analytics.overview.sales"),
                 prospecting: t("analytics.overview.prospecting"),
+                team: t("analytics.overview.team"),
               }}
             />
           ) : null;
+        if (view === "team")
+          return (
+            <TeamProspecting
+              key={view}
+              catalog={catalog}
+              scope={scope}
+              workflow={framework}
+              switcher={switcher}
+              scopeControl={scopeControl}
+            />
+          );
         return view === "sales" ? (
           <SalesReview
             key={view}

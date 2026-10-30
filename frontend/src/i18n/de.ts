@@ -1233,6 +1233,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.prepared.prospectingTitle": "Mein Akquisefortschritt",
   "reporting.prepared.prospectingPurpose":
     "Gehaltene Termine, angenommene Übergaben und qualifizierte Leads dieser Woche, gegen die Monatsziele.",
+  "reporting.prepared.teamTitle": "Team-Akquise im Überblick",
+  "reporting.prepared.teamPurpose":
+    "Gehaltene Termine, angenommene Übergaben und qualifizierte Leads des Teams in dieser Woche, jeweils einmal fürs Team gezählt.",
   "reporting.prepared.title": "Vorbereitete Berichte",
   "reporting.prepared.open": "Öffnen",
   "reporting.prepared.preview": "Vorschau",
@@ -7009,6 +7012,65 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ob dieses Unternehmen SDR-Übergaben nutzt, konnte nicht gelesen werden.",
   "analytics.overview.workflowTitle": "SDR-Übergaben",
   "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
+  "analytics.overview.team": "Team-Akquise",
+  "analytics.team.chooseTeam": "Wähle ein Team",
+  "analytics.team.chooseTeamBody":
+    "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
+  "analytics.team.todaysMembers":
+    "Diese Zahlen folgen dem heutigen Team. Ein Mitglied, das gegangen ist, nimmt seine früheren Übergaben mit.",
+  "analytics.team.countedOnce":
+    "Jede Zahl zählt die Arbeit des Teams einmal. Ein Termin mit mehreren Mitgliedern ist hier ein Termin.",
+  "analytics.team.feedback": "Rückmeldung zu Übergaben",
+  "analytics.team.withheld":
+    "Die Einzelleistung ist ausgeschaltet, und diese Zahlen würden die Arbeit eines einzelnen Teammitglieds zeigen.",
+  "analytics.team.decided": "Entscheidungen in diesem Zeitraum",
+  "analytics.team.submitted": "Übergeben",
+  "analytics.team.submittedDetail":
+    "Übergaberunden, erneute Übergaben eingeschlossen",
+  "analytics.team.accepted": "Angenommen",
+  "analytics.team.acceptedDetail":
+    "Jeder Deal einmal, gutgeschrieben dem Mitglied, das übergeben hat",
+  "analytics.team.returned": "Zurückgegeben",
+  "analytics.team.returnedDetail": "Zurückgeschickt für einen neuen Versuch",
+  "analytics.team.rejected": "Abgelehnt",
+  "analytics.team.rejectedDetail": "Endgültig abgelehnt",
+  "analytics.team.cohort_one":
+    "Von {count} Runde aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
+  "analytics.team.cohort_other":
+    "Von {count} Runden aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
+  "analytics.team.medianDecision":
+    "Die Hälfte war innerhalb von {hours} entschieden.",
+  "analytics.team.smallSampleTitle": "Eine kleine Stichprobe",
+  "analytics.team.smallSample":
+    "Weniger als {below} Runden sind zu wenige für einen Vergleich. Lies die Anzahl, keine Quote. Nichts hier sagt, wie viel jemand gearbeitet hat.",
+  "analytics.team.waitingNow_one":
+    "{count} Übergabe wartet gerade auf eine Entscheidung.",
+  "analytics.team.waitingNow_other":
+    "{count} Übergaben warten gerade auf eine Entscheidung.",
+  "analytics.team.blocked_one":
+    "{count} davon wartet auf jemanden, der nicht mehr handeln kann.",
+  "analytics.team.blocked_other":
+    "{count} davon warten auf jemanden, der nicht mehr handeln kann.",
+  "analytics.team.unattributed_one":
+    "{count} Übergabe-Ereignis wurde erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt es.",
+  "analytics.team.unattributed_other":
+    "{count} Übergabe-Ereignisse wurden erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt sie.",
+  "analytics.team.reasons": "Genannte Gründe",
+  "analytics.team.reason": "Grund",
+  "analytics.team.outcome": "Ergebnis",
+  "analytics.team.count": "Anzahl",
+  "analytics.team.membersWithheld":
+    "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
+  "analytics.team.members": "Mitglieder",
+  "analytics.team.member": "Mitglied",
+  "analytics.team.meetings": "Gehaltene Termine",
+  "analytics.team.waiting": "Wartet gerade",
+  "analytics.team.waitingFor_one": "{count}, längste {age}",
+  "analytics.team.waitingFor_other": "{count}, längste {age}",
+  "analytics.team.rowsOverlap":
+    "Ein Termin mit mehreren Mitgliedern zählt in jeder ihrer Zeilen. Die Zeilen können daher zusammen mehr ergeben als das Team.",
+  "analytics.team.truncated":
+    "Das Team hat mehr Mitglieder, als diese Tabelle zeigt.",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",

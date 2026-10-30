@@ -83,11 +83,13 @@ The section is part of the address, so a link to one opens it.
 
 ## Overview
 
-Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows four readings, a few sentences on what they mean, and what needs you.
+Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. A reader who measures a team also gets **Team prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows four readings, a few sentences on what they mean, and what needs you.
 
 **Sales review** opens on this fiscal quarter with **Sales won**, **Expected finish**, **Gap to target** and **Open pipeline**. The last one says how far the open deals cover what is left to win. With no sales target, **Closed win rate** takes the place of the gap, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Below are the open forecast checks and **Since the last capture**, which shows how the open pipeline moved. It needs two captures before it can compare.
 
 **My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
+
+**Team prospecting** shows a team’s meetings held, accepted handoffs and qualified leads, each counted once for the team. **Handoff feedback** counts what was handed on, accepted, returned (sent back to try again) and rejected in the period. It says how each round handed on in the period ended, why, and what still waits; under five rounds is a small sample. **Members** has one row per colleague you may measure, in name order, and a shared meeting counts in each row. The figures follow who is on the team today. With **Show individual performance** off, no row shows, and a total that would show one colleague’s work is held back.
 
 ## Which records a number covers
 
