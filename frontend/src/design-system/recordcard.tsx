@@ -108,3 +108,13 @@ export function RecordCard({
     </div>
   );
 }
+
+/**
+ * A stack of `RecordCard`s, each in its own `<li>`. The list owns the gap, so
+ * a surface that stacks cards never draws them edge to edge.
+ */
+export function RecordCardList({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return <ul className="record-card-list">{children}</ul>;
+}
