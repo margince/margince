@@ -14,9 +14,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
