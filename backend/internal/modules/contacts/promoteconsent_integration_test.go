@@ -124,8 +124,10 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"lead":    {Create: true, Read: true, Update: true, Delete: true},
-				"contact": {Create: true, Read: true, Update: true, Delete: true},
+				"company":      {Create: true, Read: true, Update: true},
+				"relationship": {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true, Delete: true},
+				"contact":      {Create: true, Read: true, Update: true, Delete: true},
 				// The lead vocabularies share the custom-field catalog's grant.
 				"custom_field": {Create: true, Read: true, Update: true, Delete: true},
 			},

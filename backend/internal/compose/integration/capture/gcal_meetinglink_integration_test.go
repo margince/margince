@@ -57,7 +57,7 @@ func connectorCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -72,7 +72,7 @@ func contactCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

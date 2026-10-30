@@ -174,8 +174,8 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	// nobody has imported.
 	const contacts = "Email,Full Name,Company\n" +
 		"ada@x.test,Ada Lovelace,Analytical Engines\n" +
-		"joan@x.test,Joan Clarke,Bletchley Ltd\n" +
-		"katherine@x.test,Katherine Johnson,Langley Research\n"
+		"joan@bletchley.test,Joan Clarke,Bletchley Ltd\n" +
+		"katherine@langley.test,Katherine Johnson,Langley Research\n"
 
 	profile, status := uploadCSV(t, e, "contact", contacts)
 	if status != http.StatusOK {
@@ -196,22 +196,15 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	if report.Links == nil {
 		t.Fatal("the report carries no links section, so a contact approving it is told nothing about employers")
 	}
-	// The file asks for three links and two of the companies are here, so the
-	// preview says three offered with one named as unresolvable. Both numbers
-	// matter: "3 asked for, 1 we cannot make" is the decision a contact is
-	// actually taking, and reporting only the resolvable two would hide the
-	// company they need to go and import.
+	// The missing employer is created with its contact.
 	if report.Links.Offered != 3 {
 		t.Fatalf("links.offered = %d, want the 3 the file names", report.Links.Offered)
 	}
 	if report.Links.Applied != 0 {
 		t.Fatalf("links.applied = %d on a dry run, want 0 — a dry run writes nothing", report.Links.Applied)
 	}
-	if len(report.Links.Unresolved) != 1 {
-		t.Fatalf("unresolved = %+v, want the one company that is not in the CRM", report.Links.Unresolved)
-	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "Langley Research") {
-		t.Fatalf("reason = %q, want it to name the company that was not found", report.Links.Unresolved[0].Reason)
+	if len(report.Links.Unresolved) != 0 {
+		t.Fatalf("unresolved = %+v, want all named employers to resolve or be created", report.Links.Unresolved)
 	}
 
 	var approved importRunDTO
@@ -223,11 +216,10 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &after); s != http.StatusOK {
 		t.Fatalf("report after commit → %d, want 200", s)
 	}
-	if after.Links == nil || after.Links.Applied != 2 {
-		t.Fatalf("links after commit = %+v, want the 2 the preview promised", after.Links)
+	if after.Links == nil || after.Links.Applied != 3 {
+		t.Fatalf("links after commit = %+v, want the 3 the preview promised", after.Links)
 	}
-	// Every contact lands, including the one whose employer was not found: an
-	// unresolvable company is a missing link, never a missing contact.
+	// All three employer choices can be fulfilled.
 	if got := importedContactCount(t, e); got != 3 {
 		t.Fatalf("contacts = %d, want all 3 — a row's employer not resolving must not lose the contact", got)
 	}
@@ -263,12 +255,27 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
 		t.Fatalf("report → %d, want 200", s)
 	}
-	if report.Links == nil || len(report.Links.Unresolved) != 1 {
-		t.Fatalf("links = %+v, want the differently-spelled company reported unresolved", report.Links)
+	if report.Links == nil || len(report.Links.Unresolved) != 0 {
+		t.Fatalf("links: %+v", report.Links)
 	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "Northwind Inc") {
-		t.Fatalf("reason = %q, want it to name the company as the FILE spells it",
-			report.Links.Unresolved[0].Reason)
+	var approved importRunDTO
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve: %d", status)
+	}
+	var companies struct {
+		Data []struct {
+			DisplayName string `json:"display_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/companies", nil, nil, &companies); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	names := map[string]bool{}
+	for _, company := range companies.Data {
+		names[company.DisplayName] = true
+	}
+	if !names["Northwind Inc"] || !names["Northwind GmbH"] {
+		t.Fatalf("distinct companies: %v", names)
 	}
 }
 

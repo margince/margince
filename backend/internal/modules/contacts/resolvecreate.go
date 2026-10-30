@@ -91,15 +91,20 @@ func ownerFromUUID(u *ids.UUID) *ids.UserID {
 // purpose, so a caller's columns are visible at its call site rather than
 // hidden behind a policy enum.
 type ContactSpec struct {
-	FullName  string
-	FirstName *string
-	LastName  *string
-	Title     *string
-	OwnerID   *ids.UserID
-	Address   *crmcontracts.Address
-	Social    map[string]any
-	Emails    []ContactEmailInput
-	Phones    []ContactPhoneInput
+	newContact       bool
+	Employer         EmployerChoice
+	EmployerAttached *EmployerAttached
+	CaptureEmployer  *EnsureCounterpartyInput
+	EmployerResult   *EnsureCounterpartyResult
+	FullName         string
+	FirstName        *string
+	LastName         *string
+	Title            *string
+	OwnerID          *ids.UserID
+	Address          *crmcontracts.Address
+	Social           map[string]any
+	Emails           []ContactEmailInput
+	Phones           []ContactPhoneInput
 
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
@@ -151,7 +156,7 @@ type ContactSpec struct {
 // deliberately not such a lane: a household line and a switchboard belong to
 // several real contacts, so a shared number creates and the caller records the
 // pair for review (creatededupe.go states the same policy per lane).
-func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) (ids.ContactID, error) {
+func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolution, spec ContactSpec) (ids.ContactID, error) {
 	if match.Decision == DecisionExactCollision && match.MatchedLane != lanePhone {
 		return ids.ContactID{}, refusedContactCreate(ctx, tx, match, spec)
 	}
@@ -196,6 +201,10 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	// knows. Leaving it to callers is how three of four doors would record it
 	// and the fourth would be discovered by an auditor.
 	if err := recordAcquisition(ctx, tx, id, spec.Acquisition, spec.CapturedBy); err != nil {
+		return ids.ContactID{}, err
+	}
+	spec.newContact = true
+	if err := s.resolveCreatedEmployer(ctx, tx, id, spec); err != nil {
 		return ids.ContactID{}, err
 	}
 	return id, nil
