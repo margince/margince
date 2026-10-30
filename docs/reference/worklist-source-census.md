@@ -16,7 +16,7 @@ that can remove or merge a source's rows.
 |---|---|---|
 | A | `admitBySource` (`admission.go`) | Drops a row whose owner kind its source does not allow |
 | B | `dropDealsAlreadyWaiting` (`classify.go`) | Drops a `deal_at_risk` row when a `customer_waiting` row names the same deal |
-| C | `narrowToScope` (`scope.go`) | Owner admission: keeps the reader's, a named owner's, the unowned or the roster's rows. `team` filters by roster here, after the lane caps |
+| C | `narrowToScope` (`scope.go`) | Owner admission: keeps the reader's, a named owner's, the unowned or the roster's rows. `team` filters by roster here, after the lane caps; the task, waiting and at-risk reads already narrowed to it in SQL |
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
 | F | `dropDone` (`done.go`) | Drops rows the reader marked done that have not come back |
@@ -41,7 +41,7 @@ seam or lane cuts after reading.
 
 | Source | Owning store | Bound | Scope narrowing |
 |---|---|---|---|
-| `task` | `modules/activities` `Store.ListActivities`, through `compose/attentiontaskseam.go` | Due by end of today: `plannedCap` = 12 (SQL). Due in the next `upcomingHorizonDays` = 14: `upcomingCap` = 6 (SQL). Due reminders: every page of `reminderPage` = 200. Overdue tasks age out after `worklistAgeOutDays` = 30 (`modules/activities/worklistageout.go`), unless a human reopened the task, the reader pinned it, or its reminder is due | `mine` and a named owner: `assignee_id` in SQL. `unassigned`: `assignee_id IS NULL`. `team` and `all`: row scope only |
+| `task` | `modules/activities` `Store.ListActivities`, through `compose/attentiontaskseam.go` | Due by end of today: `plannedCap` = 12 (SQL). Due in the next `upcomingHorizonDays` = 14: `upcomingCap` = 6 (SQL). Due reminders: every page of `reminderPage` = 200. Overdue tasks age out after `worklistAgeOutDays` = 30 (`modules/activities/worklistageout.go`), unless a human reopened the task, the reader pinned it, or its reminder is due | `mine` and a named owner: `assignee_id` in SQL. `unassigned`: `assignee_id IS NULL`. `team`: the roster's seats and nobody (`TeamQueueOf`) in SQL. `all`: row scope only |
 | `meeting` | `activities` `ListActivities` through `attentionMeetings.Today` (`compose/attentionmeetingseam.go`) Two reads, timed and all-day, each of `plannedCap` + 1 = 13 rows (SQL) and cut to 12 in Go, so at most 24, from now to end of today. Meetings still to confirm are kept past the cut | `mine`: meeting responsibility. Named owner: host. `unassigned`: no host. `team` and `all`: row scope only |
 | `meeting_outcome` | `activities` `ListActivities` through `attentionMeetingsAwaitingOutcome` | `plannedCap` (SQL), oldest first, back `unansweredLookbackDays` = 14 | As `meeting` |
 | `brief_item` | `compose/briefs` latest run, through `compose/attentionbriefingseam.go` | `briefQueueTarget` = 7 when the run is built (Go) | The reader's own run only; dropped on a named owner's page |
@@ -76,7 +76,7 @@ a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows; none on a team page (see below) |
+| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
@@ -95,9 +95,11 @@ a verb of their own: a task is completed, a decision is decided.
 | System sources | A, C, F, G (incidents), H | Yes | No | No |
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
-window is the planned lane's own count; the later window is `CountTasks`. A team page counts neither: the roster arm
-(`TeamQueueOf` in `modules/activities`) defeats the open-task index, and at 10,000 tasks a seat the count outran
-`laneBudget`. The tail still reads the team's tasks through that arm.
+window is the planned lane's own count; the later window is `CountTasks`. A team page reads, counts and continues
+its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
+C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's
+window took 38 ms, against 69 ms for the count of every readable task it replaces. The later window's count took
+26 ms. The team page's first-page p50 stayed within 5% of the page without them.
 
 The `customer_waiting` source is read on below the ranked rows to its end, in every scope, by
 `WaitingCardsAfter` (`modules/activities/waitingcards.go`). Each read judges a fixed number of messages after
