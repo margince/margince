@@ -504,7 +504,7 @@ paths:
           description: Lookup by normalized domain (the employer-inference index).
         - name: lifecycle
           in: query
-          schema: {type: string, enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]}
+          schema: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
           description: Where the account stands with us.
         - name: relationship_type
           in: query
@@ -10827,9 +10827,9 @@ components:
           items: {$ref: '#/components/schemas/CompanyDomain'}
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
-            Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+            Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
@@ -10953,8 +10953,9 @@ components:
             the seat named by `owner_id` alone. Absent = untouched.
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
-          description: Where the account stands with us. Absent = untouched.
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
+          description: >-
+            Where the account stands with us. Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           description: >-
@@ -11326,7 +11327,7 @@ components:
           properties:
             lifecycle:
               type: string
-              enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+              enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
             relationship_types:
               type: array
               items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}

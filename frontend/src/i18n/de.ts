@@ -3259,6 +3259,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Zielunternehmen",
   "company.lifecycle.prospect": "Interessent",
   "company.lifecycle.opportunity": "Chance",
+  "company.lifecycle.onboarding": "Onboarding",
+  "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live heißt: Der vereinbarte erste Umfang ist im Einsatz. Das setzt nur ein Mensch, nie ein Assistent oder eine Automatisierung.",
   "company.lifecycle.customer": "Kunde",
   "company.lifecycle.former_customer": "Ehemaliger Kunde",
   "company.lifecycle.disqualified": "Disqualifiziert",

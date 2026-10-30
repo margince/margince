@@ -4761,6 +4761,8 @@ const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
 	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
 	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
+	CompanyLifecycleLive           CompanyLifecycle = "live"
+	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
 	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
 	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
 	CompanyLifecycleTarget         CompanyLifecycle = "target"
@@ -4775,6 +4777,10 @@ func (e CompanyLifecycle) Valid() bool {
 	case CompanyLifecycleDisqualified:
 		return true
 	case CompanyLifecycleFormerCustomer:
+		return true
+	case CompanyLifecycleLive:
+		return true
+	case CompanyLifecycleOnboarding:
 		return true
 	case CompanyLifecycleOpportunity:
 		return true
@@ -5091,6 +5097,8 @@ const (
 	Company360StateStripAccountLifecycleCustomer       Company360StateStripAccountLifecycle = "customer"
 	Company360StateStripAccountLifecycleDisqualified   Company360StateStripAccountLifecycle = "disqualified"
 	Company360StateStripAccountLifecycleFormerCustomer Company360StateStripAccountLifecycle = "former_customer"
+	Company360StateStripAccountLifecycleLive           Company360StateStripAccountLifecycle = "live"
+	Company360StateStripAccountLifecycleOnboarding     Company360StateStripAccountLifecycle = "onboarding"
 	Company360StateStripAccountLifecycleOpportunity    Company360StateStripAccountLifecycle = "opportunity"
 	Company360StateStripAccountLifecycleProspect       Company360StateStripAccountLifecycle = "prospect"
 	Company360StateStripAccountLifecycleTarget         Company360StateStripAccountLifecycle = "target"
@@ -5105,6 +5113,10 @@ func (e Company360StateStripAccountLifecycle) Valid() bool {
 	case Company360StateStripAccountLifecycleDisqualified:
 		return true
 	case Company360StateStripAccountLifecycleFormerCustomer:
+		return true
+	case Company360StateStripAccountLifecycleLive:
+		return true
+	case Company360StateStripAccountLifecycleOnboarding:
 		return true
 	case Company360StateStripAccountLifecycleOpportunity:
 		return true
@@ -20373,6 +20385,8 @@ const (
 	UpdateCompanyRequestLifecycleCustomer       UpdateCompanyRequestLifecycle = "customer"
 	UpdateCompanyRequestLifecycleDisqualified   UpdateCompanyRequestLifecycle = "disqualified"
 	UpdateCompanyRequestLifecycleFormerCustomer UpdateCompanyRequestLifecycle = "former_customer"
+	UpdateCompanyRequestLifecycleLive           UpdateCompanyRequestLifecycle = "live"
+	UpdateCompanyRequestLifecycleOnboarding     UpdateCompanyRequestLifecycle = "onboarding"
 	UpdateCompanyRequestLifecycleOpportunity    UpdateCompanyRequestLifecycle = "opportunity"
 	UpdateCompanyRequestLifecycleProspect       UpdateCompanyRequestLifecycle = "prospect"
 	UpdateCompanyRequestLifecycleTarget         UpdateCompanyRequestLifecycle = "target"
@@ -20387,6 +20401,10 @@ func (e UpdateCompanyRequestLifecycle) Valid() bool {
 	case UpdateCompanyRequestLifecycleDisqualified:
 		return true
 	case UpdateCompanyRequestLifecycleFormerCustomer:
+		return true
+	case UpdateCompanyRequestLifecycleLive:
+		return true
+	case UpdateCompanyRequestLifecycleOnboarding:
 		return true
 	case UpdateCompanyRequestLifecycleOpportunity:
 		return true
@@ -24537,6 +24555,8 @@ const (
 	ListCompaniesParamsLifecycleCustomer       ListCompaniesParamsLifecycle = "customer"
 	ListCompaniesParamsLifecycleDisqualified   ListCompaniesParamsLifecycle = "disqualified"
 	ListCompaniesParamsLifecycleFormerCustomer ListCompaniesParamsLifecycle = "former_customer"
+	ListCompaniesParamsLifecycleLive           ListCompaniesParamsLifecycle = "live"
+	ListCompaniesParamsLifecycleOnboarding     ListCompaniesParamsLifecycle = "onboarding"
 	ListCompaniesParamsLifecycleOpportunity    ListCompaniesParamsLifecycle = "opportunity"
 	ListCompaniesParamsLifecycleProspect       ListCompaniesParamsLifecycle = "prospect"
 	ListCompaniesParamsLifecycleTarget         ListCompaniesParamsLifecycle = "target"
@@ -24551,6 +24571,10 @@ func (e ListCompaniesParamsLifecycle) Valid() bool {
 	case ListCompaniesParamsLifecycleDisqualified:
 		return true
 	case ListCompaniesParamsLifecycleFormerCustomer:
+		return true
+	case ListCompaniesParamsLifecycleLive:
+		return true
+	case ListCompaniesParamsLifecycleOnboarding:
 		return true
 	case ListCompaniesParamsLifecycleOpportunity:
 		return true
@@ -33880,7 +33904,7 @@ type Company struct {
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -33946,7 +33970,7 @@ type Company struct {
 // CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
 type CompanyIndustry string
 
-// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyLifecycle string
 
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
@@ -56322,7 +56346,7 @@ type UpdateCompanyRequest struct {
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
@@ -56360,7 +56384,7 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 type UpdateCompanyRequestLifecycle string
 
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.

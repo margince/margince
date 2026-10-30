@@ -2491,7 +2491,7 @@ public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_
 public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
 public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
 public.company.company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
-public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
+public.company.company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'onboarding'::text, 'live'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text])))
 public.company.company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text)))
 public.company.company_logo_icon_names_its_origin CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))
 public.company.company_logo_names_its_origin CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))

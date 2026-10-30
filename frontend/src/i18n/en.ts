@@ -3211,6 +3211,10 @@ export const en = {
   "company.lifecycle.target": "Target",
   "company.lifecycle.prospect": "Prospect",
   "company.lifecycle.opportunity": "Opportunity",
+  "company.lifecycle.onboarding": "Onboarding",
+  "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live means the agreed first scope is in use. Only a colleague sets it, never an assistant or an automation.",
   "company.lifecycle.customer": "Customer",
   "company.lifecycle.former_customer": "Former customer",
   "company.lifecycle.disqualified": "Disqualified",

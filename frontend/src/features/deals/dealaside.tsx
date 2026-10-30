@@ -22,7 +22,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -423,7 +423,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const name = company?.display_name;
   const stage =
     company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(COMPANY_LIFECYCLE_LABELS[company.lifecycle])
+      ? t(LIFECYCLE_LABELS[company.lifecycle])
       : undefined;
   const facts = [
     stage,

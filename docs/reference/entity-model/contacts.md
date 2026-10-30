@@ -74,7 +74,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_description_length`: `CHECK (((description IS NULL) OR (length(description) <= 500)))`
 - `company_geocode_resolved_has_a_point`: `CHECK (((geocode_status IS DISTINCT FROM 'ok') OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))`
 - `company_geocode_status_check`: `CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok', 'failed', 'no_match', 'stale']))))`
-- `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'customer', 'former_customer', 'disqualified'])))`
+- `company_lifecycle_check`: `CHECK ((lifecycle = ANY (ARRAY['unknown', 'target', 'prospect', 'opportunity', 'onboarding', 'live', 'customer', 'former_customer', 'disqualified'])))`
 - `company_linkedin_url_shape`: `CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$')))`
 - `company_logo_icon_names_its_origin`: `CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL)))`
 - `company_logo_names_its_origin`: `CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL)))`
