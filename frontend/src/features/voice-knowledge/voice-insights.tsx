@@ -6,7 +6,11 @@ import { Badge, Card, SegmentedControl } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber, identifierNumber } from "../../format/format";
+import {
+  formatNumber,
+  formatPercent,
+  identifierNumber,
+} from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import "./voice-dna.css";
 
@@ -359,10 +363,7 @@ export function DraftShowcase({
         }),
     ]),
   );
-  const pct =
-    shown.score === null
-      ? null
-      : formatNumber(Math.round(shown.score * 100), locale);
+  const pct = shown.score === null ? null : formatPercent(shown.score, locale);
   return (
     <div className="vdna-drafts">
       {drafts.length > 1 && (
@@ -393,7 +394,7 @@ export function DraftShowcase({
               fraction={shown.score}
               label={t("voice.insights.voiceScore", { pct })}
             >
-              <span className="vdna-match-pct">{pct}%</span>
+              <span className="vdna-match-pct">{pct}</span>
             </Voiceprint>
             <span className="t-caption">
               {t("voice.insights.matchCaption")}

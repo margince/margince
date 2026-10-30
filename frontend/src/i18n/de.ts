@@ -10371,7 +10371,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.kindMail": "Gesendete E-Mails",
   "ob.conv.voice.kindMailBody":
     "Ein paar Verläufe, die du selbst geschrieben hast",
-  "ob.conv.voice.kindCall": "Gesprächsprotokolle",
+  "ob.conv.voice.kindCall": "Gesprächstranskripte",
   "ob.conv.voice.kindCallBody": "Nur deine eigenen Beiträge bleiben",
   "ob.conv.voice.kindDoc": "Angebote und Beiträge",
   "ob.conv.voice.kindDocBody": "Jeder Text, den du selbst geschrieben hast",
@@ -12111,7 +12111,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.bandDrop":
     "Ohne diese Probe sinkt das Stilprofil von {from} auf {to}.",
   "voice.insights.avoidLabel": "Was dein Schreibstil vermeidet",
-  "voice.insights.voiceScore": "Stilübereinstimmung {pct} %",
+  "voice.insights.voiceScore": "Stilübereinstimmung {pct}",
   "voice.insights.next.addTranscript":
     "Füge ein Gesprächs- oder Termintranskript hinzu. Gesprochene Worte sind die stärkste Quelle.",
   "voice.insights.next.addEmail":
@@ -12150,10 +12150,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.heroPendingBody":
     "Füge eigene Texte hinzu und erstelle das Profil. Danach klingt jeder Entwurf nach dir.",
   "settings.voice.strength": "Stärke: {band}",
-  "settings.voice.toSharp_one": "Noch {count} Wort bis zum scharfen Profil",
-  "settings.voice.toSharp_other": "Noch {count} Wörter bis zum scharfen Profil",
+  "settings.voice.toSharp_one": "Noch {count} Wort bis zum präzisen Profil",
+  "settings.voice.toSharp_other": "Noch {count} Wörter bis zum präzisen Profil",
   "settings.voice.atSharp":
-    "Dein Profil ist scharf. Neue Texte halten es aktuell.",
+    "Dein Profil ist präzise. Neue Texte halten es aktuell.",
   "settings.voice.movesTitle": "Deine typischen Züge",
   "settings.voice.movesIntro":
     "Sätze aus deinen eigenen Texten, und was jeder davon bewirkt.",

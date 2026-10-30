@@ -10102,7 +10102,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.kindBest": "Nên bắt đầu",
   "ob.conv.voice.kindMail": "Email đã gửi",
   "ob.conv.voice.kindMailBody": "Vài chuỗi thư do chính bạn viết",
-  "ob.conv.voice.kindCall": "Bản ghi cuộc gọi",
+  "ob.conv.voice.kindCall": "Bản chép lời cuộc gọi",
   "ob.conv.voice.kindCallBody": "Chỉ giữ lại phần bạn nói",
   "ob.conv.voice.kindDoc": "Đề xuất và bài đăng",
   "ob.conv.voice.kindDocBody": "Bất kỳ văn bản nào bạn tự viết",
@@ -11786,7 +11786,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.register.general": "chung",
   "settings.voice.bandDrop": "Gỡ mẫu này sẽ hạ giọng văn từ {from} xuống {to}.",
   "voice.insights.avoidLabel": "Những điều giọng văn tránh",
-  "voice.insights.voiceScore": "Độ khớp giọng văn {pct}%",
+  "voice.insights.voiceScore": "Độ khớp giọng văn {pct}",
   "voice.insights.next.addTranscript":
     "Thêm bản chép lời cuộc gọi hoặc cuộc họp; lời nói là nguồn mạnh nhất.",
   "voice.insights.next.addEmail":

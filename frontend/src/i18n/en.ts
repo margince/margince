@@ -12135,7 +12135,7 @@ export const en = {
   "settings.voice.bandDrop":
     "Removing this lowers the voice from {from} to {to}.",
   "voice.insights.avoidLabel": "What your voice avoids",
-  "voice.insights.voiceScore": "Voice match {pct}%",
+  "voice.insights.voiceScore": "Voice match {pct}",
   "voice.insights.next.addTranscript":
     "Add a call or meeting transcript; spoken words are the strongest source.",
   "voice.insights.next.addEmail":
@@ -12170,7 +12170,7 @@ export const en = {
   "settings.voice.addWriting": "Add writing",
   "settings.voice.seeSamples": "See all samples",
   "settings.voice.heroLabel": "Your Voice DNA",
-  "settings.voice.heroPending": "Margince has not learned your voice yet",
+  "settings.voice.heroPending": "Margince has not learned your voice",
   "settings.voice.heroPendingBody":
     "Add some of your own writing and build it. Every draft then sounds like you.",
   "settings.voice.strength": "Voice strength: {band}",
