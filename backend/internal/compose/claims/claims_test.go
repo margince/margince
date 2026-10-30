@@ -7,7 +7,11 @@ package claims
 // and it is one implementation precisely so it cannot be lenient in one place
 // and strict in another. These cases are DOSS-FORM-1 read back as behaviour.
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
 
 const (
 	companyID = "019fd000-0000-7000-8000-000000000001"
@@ -182,5 +186,90 @@ func TestTerminateSentence(t *testing.T) {
 				t.Errorf("TerminateSentence(%q) = %q, want %q", c.value, got, c.want)
 			}
 		})
+	}
+}
+
+func TestEveryShippedLanguageNamesTheSubjectsThatMakeAPromise(t *testing.T) {
+	for _, lang := range textlang.Shipped {
+		if len(writerSubjects[lang]) == 0 {
+			t.Errorf("%q ships with no writer subjects, so a recommendation written as a promise in it is shown", lang)
+		}
+	}
+}
+
+func TestEveryListedWriterSubjectIsRefused(t *testing.T) {
+	for lang, subjects := range writerSubjects {
+		for _, subject := range subjects {
+			if !OpensWithWriterSubject(subject + " send the agreement.") {
+				t.Errorf("%s subject %q is listed and still not refused", lang, subject)
+			}
+		}
+	}
+}
+
+func TestARecommendationOpeningWithIOrWeIsAPromise(t *testing.T) {
+	for _, text := range []string{
+		"I'll send the finalized partnership agreement once legal completes its review.",
+		"I will send the agreement.",
+		"We should send the agreement today.",
+		"Let's send the agreement.",
+		"I’ll send the agreement.",
+		`"I'll send the agreement," you said.`,
+		"'We'll follow up on Monday.'",
+		"- I'll send the agreement.",
+		"Ich schicke den Vertrag morgen.",
+		"„Ich schicke den Vertrag morgen.“",
+		"WIR senden den Vertrag.",
+		"Tôi sẽ gửi hợp đồng.",
+		"Chúng tôi sẽ gửi hợp đồng.",
+		"chúng   tôi sẽ gửi hợp đồng.",
+		"Let us send the agreement.",
+		"Lass uns den Vertrag schicken.",
+		"Lasst uns den Vertrag schicken.",
+		"Chúng ta sẽ gửi hợp đồng.",
+		"Chúng mình sẽ gửi hợp đồng.",
+		"1. I'll send it.",
+		"2) We'll call them.",
+		"To\u0302i se\u0303 gu\u031B\u0309i",
+		"Iʼll send it.",
+		"I.e. send the agreement.", // the splitter reads "I.e." as the words i and e
+	} {
+		if !OpensWithWriterSubject(text) {
+			t.Errorf("OpensWithWriterSubject(%q) = false, want the promise refused", text)
+		}
+	}
+}
+
+func TestAnInstructionOrAFactIsNotAPromise(t *testing.T) {
+	for _, text := range []string{
+		"Send them the final partnership agreement for signature once legal finishes its review.",
+		"Ask them which sub-processor blocks sign-off.",
+		"Iceland is their next market.",
+		"Wire the deposit before Friday.",
+		"Ichthys Energy signed in May.",
+		"I-beam supply is their bottleneck.",
+		"They asked for the agreement; I couldn't see their reply.",
+		"Schicke ihnen den Vertrag.",
+		"",
+	} {
+		if OpensWithWriterSubject(text) {
+			t.Errorf("OpensWithWriterSubject(%q) = true, want it kept", text)
+		}
+	}
+}
+
+func TestKeepBriefRefusesAMoveWrittenAsAPromiseWithoutSpendingTheBudget(t *testing.T) {
+	cite := []Evidence{{EntityType: "deal", EntityID: dealID}}
+	kept := KeepBrief([]Sentence{
+		{Text: "I couldn't see their mailbox.", Nature: "fact", Evidence: cite},
+		{Text: "I'll send the renewal terms.", Nature: "recommendation", Evidence: cite},
+		{Text: "Send the renewal terms.", Nature: "recommendation", Evidence: cite},
+	}, supplied(), BriefBounds{
+		Sentences: 5, Recommendations: 1,
+		Natures: map[string]bool{"fact": true, "recommendation": true},
+		Fact:    "fact", Recommendation: "recommendation",
+	})
+	if len(kept) != 2 || kept[0].Text != "I couldn't see their mailbox." || kept[1].Text != "Send the renewal terms." {
+		t.Fatalf("kept %+v, want the fact and the instruction, and the promise dropped", kept)
 	}
 }
