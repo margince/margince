@@ -51,7 +51,7 @@ export type WorkContext = Readonly<{
 }>;
 
 /**
- * The view to open with. A reader whose lens covers other people, or who
+ * The view to open with. A reader whose lens covers colleagues, or who
  * records the team's forecast, reviews sales. A reader who measures their own
  * records in a workspace that runs SDR handoffs reviews their prospecting.
  * Everyone else reviews sales.
