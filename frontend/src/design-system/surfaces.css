@@ -1441,7 +1441,6 @@
   --groundEdge: var(--ladder2Edge);
 }
 :where(
-    .aipending-sheen,
     .arhit,
     .arphead,
     .avatar-mesh,

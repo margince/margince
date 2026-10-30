@@ -4,6 +4,7 @@
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
 import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useAiReveal } from "./aireveal";
 import { plainTextOf, safeEditorHTML } from "./richtext-html";
 import {
   editorHTMLFromMarkdown,
@@ -68,6 +69,7 @@ export function RichText({
   id,
   disabled = false,
   footIn,
+  revealCue,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -137,11 +139,18 @@ export function RichText({
    * mounted yet; absent draws the footer in the frame.
    */
   footIn?: Element | null;
+  /**
+   * Moves when a model has just written the text, which then arrives the way
+   * every machine-written answer does (`AiReveal`). Unset for text a reader
+   * typed or reopened.
+   */
+  revealCue?: number | null;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
+  useAiReveal(editor, revealCue);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
   // own keystroke.

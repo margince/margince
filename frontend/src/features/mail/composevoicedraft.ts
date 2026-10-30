@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
@@ -137,6 +137,10 @@ export function useVoiceDraft({
     });
   };
 
+  // Counts the drafts that reached the body, so each one arrives on screen as a
+  // model's words do; a draft the rep's own words held back does not.
+  const [drafted, setDrafted] = useState<number | null>(null);
+
   const draft = useDraftMutation({
     entityId,
     onUnavailable: (reason) => fields.setDraftUnavailable(reason),
@@ -157,6 +161,9 @@ export function useVoiceDraft({
       });
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);
+      if (written) {
+        setDrafted((count) => (count ?? 0) + 1);
+      }
       revealDraftedBody();
     },
     resetUnavailable: () => {
@@ -259,6 +266,7 @@ export function useVoiceDraft({
     control,
     discardControl,
     rejectionInFlight,
+    drafted,
     need: draftNeed(groundable, recipient),
     // A rewrite replaces the body, so it waits for any draft in flight.
     rewrite: (instruction: string) => draft.mutate(ask(instruction)),
