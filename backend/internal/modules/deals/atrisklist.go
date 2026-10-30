@@ -12,29 +12,56 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// AtRiskWindow is the at-risk candidate set in one predicate: open deals quiet
-// for QuietForDays, or open deals whose expected close is before CloseBefore.
-// The Worklist's two sweeps read its arms one at a time.
+// AtRiskWindow is the at-risk rule, the one spelling every at-risk read
+// builds on: open deals quiet for QuietForDays at AsOf, or open deals whose
+// expected close is before CloseBefore, the workspace day of AsOf. Arm picks
+// one half, which is how the Worklist's two bounded sweeps read it.
 type AtRiskWindow struct {
 	QuietForDays int
+	AsOf         time.Time
 	CloseBefore  time.Time
+	Arm          AtRiskArm
 }
+
+// AtRiskArm names which half of the at-risk rule a read applies.
+type AtRiskArm int
+
+const (
+	// AtRiskEither is the whole rule.
+	AtRiskEither AtRiskArm = iota
+	// AtRiskQuiet is the quiet half.
+	AtRiskQuiet
+	// AtRiskOverdue is the past-its-close half.
+	AtRiskOverdue
+)
 
 // AtRiskSort orders the at-risk set by expected close, earliest first, with an
 // undated deal last.
 const AtRiskSort = closeDateField
 
 // atRiskTerms adds the at-risk predicate and the position sink to a list read.
+// Both halves are judged at the window's own instant, never the database's.
 func (in ListDealsInput) atRiskTerms(pre *storekit.ListPrelude, where []string) []string {
 	if in.positions != nil {
 		pre.CollectPositions(in.positions)
 	}
-	if in.AtRisk == nil {
+	window := in.AtRisk
+	if window == nil {
 		return where
 	}
-	closes := fmt.Sprintf("(status = 'open' AND expected_close_date < $%d)",
-		pre.Arg(in.AtRisk.CloseBefore.Format(time.DateOnly)))
-	return append(where, "("+QuietSQL("", in.AtRisk.QuietForDays)+" OR "+closes+")")
+	quiet := func() string {
+		return quietAtSQL("", window.QuietForDays, fmt.Sprintf("$%d::timestamptz", pre.Arg(window.AsOf)))
+	}
+	closes := func() string {
+		return fmt.Sprintf("(status = 'open' AND expected_close_date < $%d)", pre.Arg(window.CloseBefore.Format(time.DateOnly)))
+	}
+	switch window.Arm {
+	case AtRiskQuiet:
+		return append(where, quiet())
+	case AtRiskOverdue:
+		return append(where, closes())
+	}
+	return append(where, "("+quiet()+" OR "+closes()+")")
 }
 
 // ListDealsPositioned is ListDeals that also answers, for each row, the cursor

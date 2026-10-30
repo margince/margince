@@ -9,6 +9,8 @@ package attention
 import (
 	"context"
 	"log/slog"
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -61,7 +63,11 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 	if err != nil {
 		return tailBatch{}, err
 	}
-	waiting, err := s.dealsWaiting(ctx, walk.AsOf, read)
+	dealIDs := make([]ids.UUID, len(read))
+	for i, deal := range read {
+		dealIDs[i] = deal.Row.DealID
+	}
+	elsewhere, err := s.dealsElsewhere(ctx, walk.AsOf, dealIDs, page.dealsAbove)
 	if err != nil {
 		return tailBatch{}, err
 	}
@@ -69,32 +75,41 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 	rows := appendLane(nil, sourceAtRisk, &items, walk.AsOf, riskClassifier(materialBarOf(page.day, s.money), money))
 	batch := tailBatch{more: more, rows: make([]tailRow, len(read))}
 	for i, deal := range read {
-		id := deal.Row.DealID
 		batch.rows[i] = tailRow{
-			row: rows[i], at: deal.Row.ExpectedCloseDate, after: deal.After,
-			elsewhere: waiting[id] || page.dealsAbove[id],
+			row: rows[i], at: deal.Row.ExpectedCloseDate, after: deal.After, elsewhere: elsewhere[deal.Row.DealID],
 		}
 	}
 	return batch, nil
 }
 
-// dealsWaiting is step B for a tail batch: the deals a waiting card names,
-// anywhere in the waiting source, under this page's narrowing.
-func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, read []Positioned[RiskyDeal]) (map[ids.UUID]bool, error) {
-	if s.backlog.waiting == nil || len(read) == 0 {
-		return map[ids.UUID]bool{}, nil
+// dealsElsewhere are the deals the at-risk tail never serves as at risk: those
+// a waiting card names anywhere under this page's narrowing (step B), and those
+// a ranked row above reports (step E, dealsReported). The tail and the Done
+// check both ask it.
+func (s *Service) dealsElsewhere(
+	ctx context.Context, asOf time.Time, deals []ids.UUID, reported map[ids.UUID]bool,
+) (map[ids.UUID]bool, error) {
+	elsewhere := maps.Clone(reported)
+	if elsewhere == nil {
+		elsewhere = map[ids.UUID]bool{}
 	}
-	deals := make([]ids.UUID, len(read))
-	for i, deal := range read {
-		deals[i] = deal.Row.DealID
+	if s.backlog.waiting == nil || len(deals) == 0 {
+		return elsewhere, nil
 	}
-	return s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
+	waiting, err := s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(elsewhere, waiting)
+	return elsewhere, nil
 }
 
 // riskInTail is, for a Done check, the asked deals this scope's tail would
-// serve: at risk under its owners, and named by no waiting card. A failed read
+// serve: at risk under its owners, and in no other row (dealsElsewhere). A failed read
 // answers none, so the Done is refused rather than granted blind.
-func (s *Service) riskInTail(ctx context.Context, asOf time.Time, bounded map[crmcontracts.WorklistItemSource]bool) []ranked {
+func (s *Service) riskInTail(
+	ctx context.Context, asOf time.Time, bounded map[crmcontracts.WorklistItemSource]bool, ranking []ranked,
+) []ranked {
 	asked := s.marked.asked[sourceAtRisk]
 	if len(asked) == 0 || s.backlog.risk == nil || !bounded[sourceAtRisk] {
 		return nil
@@ -108,18 +123,14 @@ func (s *Service) riskInTail(ctx context.Context, asOf time.Time, bounded map[cr
 		slog.Log(ctx, laneFailureLevel(ctx), "a Done check could not read the at-risk tail", "error", err)
 		return nil
 	}
-	read := make([]Positioned[RiskyDeal], 0, len(held))
-	for deal := range held {
-		read = append(read, Positioned[RiskyDeal]{Row: RiskyDeal{DealID: deal}})
-	}
-	waiting, err := s.dealsWaiting(ctx, asOf, read)
+	elsewhere, err := s.dealsElsewhere(ctx, asOf, slices.Collect(maps.Keys(held)), dealsReported(ranking, s.aboveTheTail(ranking)))
 	if err != nil {
 		slog.Log(ctx, laneFailureLevel(ctx), "a Done check could not read who is waiting", "error", err)
 		return nil
 	}
 	var rows []ranked
 	for deal := range held {
-		if !waiting[deal] {
+		if !elsewhere[deal] {
 			rows = append(rows, ranked{item: crmcontracts.WorklistItem{Source: sourceAtRisk, Id: deal.String()}})
 		}
 	}

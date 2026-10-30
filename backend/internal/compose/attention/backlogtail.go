@@ -101,8 +101,7 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 }
 
 // withTail fills what the ranked rows left of a page from the backlog, once
-// they have run out. above is what the ranked rows hold: the frozen walk when
-// one is resumed, else this read's own ranking with every group's members.
+// they have run out.
 func (s *Service) withTail(
 	ctx context.Context, page tailPage, shown []ranked, more bool, limit int, from *backlogCursor, ranking []ranked,
 ) ([]ranked, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
@@ -112,19 +111,24 @@ func (s *Service) withTail(
 	if from == nil || more {
 		return shown, from, nil
 	}
-	above := map[worklistsnap.Row]bool{}
-	if s.walk != nil {
-		for _, at := range s.walk.Rows {
-			above[at] = true
-		}
-	} else {
-		for _, at := range frozenRows(ranking) {
-			above[at] = true
-		}
-	}
+	above := s.aboveTheTail(ranking)
 	page.dealsAbove = dealsReported(ranking, above)
 	tail, rest, failed := s.backlogTail(ctx, page, limit-len(shown), from, above)
 	return append(shown, tail...), rest, failed
+}
+
+// aboveTheTail is what the ranked rows hold: the frozen walk when one is
+// resumed, else this read's own ranking with every group's members.
+func (s *Service) aboveTheTail(ranking []ranked) map[worklistsnap.Row]bool {
+	above := map[worklistsnap.Row]bool{}
+	rows := frozenRows(ranking)
+	if s.walk != nil {
+		rows = s.walk.Rows
+	}
+	for _, at := range rows {
+		above[at] = true
+	}
+	return above
 }
 
 // backlogTail reads up to need rows below the ranked ones and answers where

@@ -296,7 +296,7 @@ func (s *Service) worklistFrom(
 	}
 	// A Done being checked asks which rows this day draws, not for a page.
 	if s.marked.probe != nil {
-		s.marked.probe(slices.Concat(rows, s.riskInTail(ctx, day.AsOf, bounded), s.waitingInTail(ctx, day.AsOf, bounded)))
+		s.marked.probe(slices.Concat(rows, s.riskInTail(ctx, day.AsOf, bounded, rows), s.waitingInTail(ctx, day.AsOf, bounded)))
 		return crmcontracts.Worklist{}
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
