@@ -44,7 +44,7 @@ type rollupPeriodRefusal struct{ field, message string }
 func (e *rollupPeriodRefusal) Error() string { return e.message }
 func (e *rollupPeriodRefusal) Unwrap() error { return apperrors.ErrInvalidArgument }
 func (e *rollupPeriodRefusal) FieldFault() (field, code, message string) {
-	return e.field, "invalid", e.message
+	return e.field, codeInvalid, e.message
 }
 
 // NewCompanyRollupPeriod reads the three optional period parameters. Naming
@@ -65,8 +65,10 @@ func NewCompanyRollupPeriod(year, quarter, month *string) (CompanyRollupPeriod, 
 	case 1:
 		return named[0], nil
 	}
-	return CompanyRollupPeriod{}, &rollupPeriodRefusal{field: named[1].Field,
-		message: "name one of period_year, period_quarter or period_month, not several"}
+	return CompanyRollupPeriod{}, &rollupPeriodRefusal{
+		field:   named[1].Field,
+		message: "name one of period_year, period_quarter or period_month, not several",
+	}
 }
 
 // periodAt is one instant whose bucket label is wanted at one period field.
