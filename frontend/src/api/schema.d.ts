@@ -40626,8 +40626,8 @@ export interface components {
             /** Format: uuid */
             id: string;
             label: string;
-            /** @description Held meetings credited to this member. A meeting several members attended counts for each. */
-            meetings_held: number;
+            /** @description Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is. */
+            meetings_held?: number;
             submitted: number;
             accepted: number;
             rejected: number;

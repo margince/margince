@@ -104,6 +104,19 @@ export function MemberTable({ review }: Readonly<{ review: Review }>) {
         },
       ]
     : [];
+  // The server leaves meetings out for a seat that may not read activities,
+  // so the column is left out rather than shown as zero.
+  const meetingColumns = review.members.some((row) => row.meetings_held != null)
+    ? [
+        {
+          key: "meetings",
+          header: t("analytics.team.meetings"),
+          align: "end" as const,
+          render: (row: Member) =>
+            row.meetings_held == null ? "" : count(row.meetings_held),
+        },
+      ]
+    : [];
   return (
     <Panel title={t("analytics.team.members")}>
       <PanelBody>
@@ -118,16 +131,13 @@ export function MemberTable({ review }: Readonly<{ review: Review }>) {
               grow: true,
               render: (row) => row.label,
             },
-            {
-              key: "meetings",
-              header: t("analytics.team.meetings"),
-              align: "end",
-              render: (row) => count(row.meetings_held),
-            },
+            ...meetingColumns,
             ...handoffColumns,
           ]}
         />
-        <p className="t-caption">{t("analytics.team.rowsOverlap")}</p>
+        {meetingColumns.length > 0 && (
+          <p className="t-caption">{t("analytics.team.rowsOverlap")}</p>
+        )}
         {review.membership_basis === "current" && (
           <p className="t-caption">{t("analytics.team.todaysMembers")}</p>
         )}

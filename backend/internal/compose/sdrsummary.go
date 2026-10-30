@@ -131,7 +131,7 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 		}
 		out.Handoffs = &totals
 	}
-	if auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead) {
+	if mayReadSdrMeetings(ctx) {
 		upcoming, err := readUpcomingMeetings(ctx, tx, requested, at)
 		if err != nil {
 			return out, err
@@ -296,4 +296,10 @@ func scanWaitingHandoff(row pgx.CollectableRow) (crmcontracts.SdrWaitingHandoff,
 		out.Recipient = &crmcontracts.SdrHandoffRecipient{Id: *ptrUUID(*recipient), Label: recipientLabel, Active: active}
 	}
 	return out, nil
+}
+
+// mayReadSdrMeetings is the one rule for every SDR figure counted from
+// meetings: a meeting is an activity, so the seat needs activity read.
+func mayReadSdrMeetings(ctx context.Context) bool {
+	return auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead)
 }

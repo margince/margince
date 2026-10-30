@@ -116,6 +116,31 @@ describe("Team prospecting", () => {
     ).toBe(false);
   });
 
+  it("leaves the meetings column out when the server sends no member's meetings", async () => {
+    const review = teamReview();
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: () =>
+        jsonResponse({
+          ...review,
+          meetings: undefined,
+          members: review.members.map(
+            ({ meetings_held: _hidden, ...row }) => row,
+          ),
+        }),
+    });
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(
+      within(members).queryByRole("columnheader", { name: "Meetings held" }),
+    ).toBeNull();
+    expect(
+      within(members).getByRole("columnheader", { name: "Submitted" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/the rows can add up to more than the team/),
+    ).toBeNull();
+  });
+
   it("names no member while individual performance is off", async () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",

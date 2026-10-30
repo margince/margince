@@ -53155,8 +53155,8 @@ type SdrTeamMember struct {
 	Id       openapi_types.UUID `json:"id"`
 	Label    string             `json:"label"`
 
-	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each.
-	MeetingsHeld int `json:"meetings_held"`
+	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.
+	MeetingsHeld *int `json:"meetings_held,omitempty"`
 
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
