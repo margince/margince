@@ -198,7 +198,6 @@ func TestIndividualPerformanceOffRefusesAFilteredTotalOneColleagueMakesUp(t *tes
 	e.seedWinIn(t, e.Rep1, "EUR")
 	e.seedWinIn(t, members[0], "EUR")
 	e.seedWinIn(t, members[1], "EUR")
-	e.seedWinIn(t, members[0], "USD")
 	lead := e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)
 	team := `"scope":{"kind":"team","id":"` + e.Team1.String() + `"}`
 	e.showIndividualPerformance(t, false)
@@ -206,6 +205,9 @@ func TestIndividualPerformanceOffRefusesAFilteredTotalOneColleagueMakesUp(t *tes
 	if status, code := e.reportRefusal(lead, t, "win-loss", `{`+team+`}`); status != http.StatusOK {
 		t.Fatalf("the team's total over two other contributors = %d %q, want 200", status, code)
 	}
+	// win-loss answers per currency, so a currency one colleague sold in is
+	// such a group even with no filter.
+	e.seedWinIn(t, members[0], "USD")
 	status, code := e.reportRefusal(lead, t, "win-loss", `{`+team+`,"filters":{"currency":"USD"}}`)
 	requireRefusedIndividual(t, "a total only one colleague sold into", status, code)
 	status, code = e.reportRefusal(lead, t, "win-loss",
@@ -262,7 +264,7 @@ func TestIndividualPerformanceOffWithholdsEveryColleaguesFact(t *testing.T) {
 }
 
 // exportShare downloads a frozen share's CSV as reader.
-func (e *forecastEnv) exportShare(t *testing.T, reader context.Context, token string) (int, string) {
+func (e *forecastEnv) exportShare(reader context.Context, t *testing.T, token string) (int, string) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/forecast/shared/"+token+"/export.csv", nil).WithContext(reader)
 	rec := httptest.NewRecorder()
@@ -288,12 +290,12 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 	})
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 
-	status, body := e.exportShare(t, reader, token)
+	status, body := e.exportShare(reader, t, token)
 	if status != http.StatusOK || !strings.Contains(body, e.Rep3.String()) {
 		t.Fatalf("with the switch on the export = %d and names the colleague %v, want 200 and yes", status, strings.Contains(body, e.Rep3.String()))
 	}
 	e.showIndividualPerformance(t, false)
-	status, body = e.exportShare(t, reader, token)
+	status, body = e.exportShare(reader, t, token)
 	if status != http.StatusOK {
 		t.Fatalf("with the switch off the export = %d, want 200", status)
 	}
@@ -348,7 +350,7 @@ func TestIndividualPerformanceOffWithholdsATwoMemberTeamsTarget(t *testing.T) {
 }
 
 // listsTarget answers whether the reader's target list holds target.
-func listsTarget(t *testing.T, service *reporting.Service, reader context.Context, target crmcontracts.ReportingTarget) bool {
+func listsTarget(reader context.Context, t *testing.T, service *reporting.Service, target crmcontracts.ReportingTarget) bool {
 	t.Helper()
 	list, err := service.ListTargets(reader, nil, 100, reporting.TargetFilter{})
 	if err != nil {
@@ -404,14 +406,14 @@ func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T)
 	}
 	reportingTeammate(t, e)
 	e.showIndividualPerformance(t, false)
-	if !listsTarget(t, service, admin, target) {
+	if !listsTarget(admin, t, service, target) {
 		t.Fatal("with the switch off a company of three members does not show its target")
 	}
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at = now()
 		WHERE NOT is_agent AND id <> ALL($1)`, []ids.UUID{e.Rep1, e.Rep3}); err != nil {
 		t.Fatal(err)
 	}
-	if listsTarget(t, service, admin, target) {
+	if listsTarget(admin, t, service, target) {
 		t.Error("with the switch off a company of the reader and one colleague still lists its target")
 	}
 }
