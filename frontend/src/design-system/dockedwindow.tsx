@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import { useFocusHandoff } from "./focushandoff";
 import { Heading } from "./heading";
@@ -213,7 +214,9 @@ export function DockedWindow({
     onStateChange("min");
   };
   const grown = state === "max";
-  return (
+  // Portalled to the end of the body, after the dialog it was opened from:
+  // at the overlays' level, document order is what draws it above that dialog.
+  return createPortal(
     <>
       <section
         ref={box}
@@ -297,6 +300,7 @@ export function DockedWindow({
           <ChevronUp aria-hidden="true" />
         </button>
       )}
-    </>
+    </>,
+    document.body,
   );
 }
