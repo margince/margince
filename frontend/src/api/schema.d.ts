@@ -40075,8 +40075,14 @@ export interface components {
             scope: components["schemas"]["ReportingScope"];
             /** Format: uuid */
             pipeline_id?: string;
-            /** @enum {string} */
-            period: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+            /**
+             * @description `this_week` runs from Monday 00:00 in the installation zone to the
+             *     evaluation time. Read at that exact moment, the week holds no time
+             *     yet and the context's interval starts where it ends. A month target
+             *     beside it still counts the whole month up to the evaluation time.
+             * @enum {string}
+             */
+            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
             interval?: components["schemas"]["ReportingWindow"];
             /** @enum {string} */
             target_basis: "month" | "fiscal_quarter";
@@ -67091,7 +67097,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -67154,7 +67160,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -67193,7 +67199,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";

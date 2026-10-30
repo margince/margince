@@ -1120,6 +1120,8 @@ export const en = {
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
   "reporting.resultsThrough": "Results through {at}",
+  "reporting.periodNotStarted":
+    "The period starts {at}; nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
@@ -1159,6 +1161,7 @@ export const en = {
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
     "This fiscal quarter, from the deal forecast",
+  "reporting.this_week": "This week",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
   "reporting.last_week": "Last completed week",

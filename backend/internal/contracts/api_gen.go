@@ -17387,6 +17387,7 @@ const (
 	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
 	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
 	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
+	ReportingSelectionPeriodThisWeek    ReportingSelectionPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the ReportingSelectionPeriod enum.
@@ -17401,6 +17402,8 @@ func (e ReportingSelectionPeriod) Valid() bool {
 	case ReportingSelectionPeriodThisMonth:
 		return true
 	case ReportingSelectionPeriodThisQuarter:
+		return true
+	case ReportingSelectionPeriodThisWeek:
 		return true
 	default:
 		return false
@@ -23510,6 +23513,7 @@ const (
 	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
 	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
 	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
+	EvaluateReportingParamsPeriodThisWeek    EvaluateReportingParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the EvaluateReportingParamsPeriod enum.
@@ -23524,6 +23528,8 @@ func (e EvaluateReportingParamsPeriod) Valid() bool {
 	case EvaluateReportingParamsPeriodThisMonth:
 		return true
 	case EvaluateReportingParamsPeriodThisQuarter:
+		return true
+	case EvaluateReportingParamsPeriodThisWeek:
 		return true
 	default:
 		return false
@@ -23594,6 +23600,7 @@ const (
 	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
 	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
 	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
+	ExportReportingEvaluationParamsPeriodThisWeek    ExportReportingEvaluationParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the ExportReportingEvaluationParamsPeriod enum.
@@ -23608,6 +23615,8 @@ func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
 	case ExportReportingEvaluationParamsPeriodThisMonth:
 		return true
 	case ExportReportingEvaluationParamsPeriodThisQuarter:
+		return true
+	case ExportReportingEvaluationParamsPeriodThisWeek:
 		return true
 	default:
 		return false
@@ -23678,6 +23687,7 @@ const (
 	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
 	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
 	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
+	GetReportingEvidenceParamsPeriodThisWeek    GetReportingEvidenceParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the GetReportingEvidenceParamsPeriod enum.
@@ -23692,6 +23702,8 @@ func (e GetReportingEvidenceParamsPeriod) Valid() bool {
 	case GetReportingEvidenceParamsPeriodThisMonth:
 		return true
 	case GetReportingEvidenceParamsPeriodThisQuarter:
+		return true
+	case GetReportingEvidenceParamsPeriodThisWeek:
 		return true
 	default:
 		return false
@@ -51550,8 +51562,13 @@ type ReportingSelection struct {
 	// Layout Sections of cards, in reading order. Absent means one untitled section of
 	// full-width cards in `blocks` order. A report holds at most 20 cards in total,
 	// counted across all its sections.
-	Layout      *[]ReportingSection           `json:"layout,omitempty"`
-	Metrics     []ReportingMetricID           `json:"metrics"`
+	Layout  *[]ReportingSection `json:"layout,omitempty"`
+	Metrics []ReportingMetricID `json:"metrics"`
+
+	// Period `this_week` runs from Monday 00:00 in the installation zone to the
+	// evaluation time. Read at that exact moment, the week holds no time
+	// yet and the context's interval starts where it ends. A month target
+	// beside it still counts the whole month up to the evaluation time.
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
 	Scope       ReportingScope                `json:"scope"`
@@ -51561,7 +51578,10 @@ type ReportingSelection struct {
 // ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
 type ReportingSelectionCloseWindow string
 
-// ReportingSelectionPeriod defines model for ReportingSelection.Period.
+// ReportingSelectionPeriod `this_week` runs from Monday 00:00 in the installation zone to the
+// evaluation time. Read at that exact moment, the week holds no time
+// yet and the context's interval starts where it ends. A month target
+// beside it still counts the whole month up to the evaluation time.
 type ReportingSelectionPeriod string
 
 // ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
