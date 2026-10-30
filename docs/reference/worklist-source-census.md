@@ -32,7 +32,7 @@ category's `total` uses the exact counts in `exactSources` (`totals.go`): approv
 windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
-(`backlogmerge.go`). Today those are the task and `customer_waiting` sources.
+(`backlogmerge.go`). Today those are the task, `customer_waiting` and `deal_at_risk` sources.
 
 ## Sources: store, bound and scope
 
@@ -80,7 +80,7 @@ a verb of their own: a task is completed, a decision is decided.
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No |
-| `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes | Cursor exists, unused | No |
+| `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
 | `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No |
 | `weekly_commitment` | A, C, H | Go | No | No |
@@ -123,9 +123,29 @@ With 2,476 cards a seat in `make bench-worklist-backlog`, a count took 850 ms on
 snapshot transaction, so the count cannot run beside them. The category stays a floor when the lane's scan is
 cut, and scrolling reaches every card.
 
+The `deal_at_risk` source is read on below the ranked rows to its end, in every scope, by `quietDealTail`
+(`compose/slipping.go`). It reads the lane's two sweeps as one predicate, `AtRiskWindow` in
+`modules/deals/atrisklist.go`, ordered by expected close with undated deals last. The lane's steps hold in the tail:
+
+- Step B: `DealsWaiting` (`compose/attentionwaitingseam.go`) asks which deals a waiting card names. It runs the
+  waiting tail's own card statement over the messages filed under the batch's deals
+  (`WaitingCardsOnDeals` in `modules/activities/waitingcards.go`), under the page's waiting narrowing. When the
+  waiting lane's scan was cut, the ranked at-risk rows ask it too (`dropDealsWaitingPastTheScan`).
+- Step E: a tail row carries no brief item. A deal that a ranked row already names, such as a brief row the fold
+  left standing, is left out of the tail (`dealsReported` in `attention/backlogrisk.go`).
+- Step F: the tail reads the reader's Done marks for its rows, and `dropDone` applies the came-back rule to each
+  row's own dates. `MarkRowsDone` finds a tail deal through `riskInTail`.
+
+The category states no exact total. A count must apply step B to every at-risk deal, so it judges every waiting
+message filed under them by the queue's rules, and it needs the reader's Done marks on all of them. On the
+`make bench-worklist-backlog` data, the busiest seat has 1,535 at-risk deals. Reading their ids took 49 to 65 ms
+warm and 221 ms cold. Step B over them took 44 to 52 ms warm and 259 ms cold, with no waiting message filed under a
+deal; real mail on deals makes it cost more, up to the waiting count's own 850 ms. The first page may grow by at most
+5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
+every deal.
+
 The other sources still run steps in Go that their count would need:
 
-- `deal_at_risk`: step B needs the whole waiting population, and step F's came-back rule reads the row's own dates.
 - `customer_waiting`: the count does not fit the first page, as above.
 - `brief_item`, `relationship_decay` and `weekly_commitment`: ranked or folded in Go.
 - Every other source: no count query that applies its steps exists yet.

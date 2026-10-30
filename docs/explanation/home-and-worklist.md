@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -118,8 +118,8 @@ every source in the tail is read to its end. A source that fails while the tail 
 `sources_unavailable`, and the list stops short of it.
 
 The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
-a time: a task's due date, or when a waiting customer's message came in. Rows go from the earliest time to the
-latest, and an undated task goes last. A tie goes to the source's name, then to the store's own order. So the
+a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
+from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
 longest-standing work comes first, whichever source holds it.
 
 Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
@@ -131,7 +131,7 @@ when its own read finds nothing more, so completing tasks above never ends it. T
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Two sources are read on in the tail today:
+Three sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page counts no task window, because that count ran past the lane
@@ -140,6 +140,15 @@ Two sources are read on in the tail today:
   messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
   is one card, and other mail is one card per sender and subject. The category has no count: judging every message
   costs more than the first page may spend.
+
+- Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
+  deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
+  by expected close, and draws each deal as the lane does. A deal a waiting card names is left out, even when that
+  card is far down the waiting source (`DealsWaiting`). A deal a row above already names, such as a brief row, is left
+  out too, so one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
+
+When the waiting lane's scan was cut, the ranked at-risk rows are also checked against every waiting card, not only
+the ranked ones. A deal a customer waits on is never shown as at risk.
 
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
