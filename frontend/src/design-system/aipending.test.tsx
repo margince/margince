@@ -23,9 +23,7 @@ describe("AiPending", () => {
 
   it("keeps its ornament out of the accessibility tree", () => {
     render(<AiPending label="Reading." />);
-    for (const ornament of document.querySelectorAll(
-      ".aipending-tile, .aipending-sheen",
-    )) {
+    for (const ornament of document.querySelectorAll(".aipending-tile")) {
       expect(ornament.getAttribute("aria-hidden")).toBe("true");
     }
   });

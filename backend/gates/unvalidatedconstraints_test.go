@@ -59,6 +59,11 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"exactly the installations that have been running longest. The ordering it depends on is now " +
 		"what both purge paths do — the markers are deleted before the run is scrubbed — so what it " +
 		"binds from here on is the whole guarantee asked for",
+	"activity_meeting_history.activity_meeting_history_start_precision": "" +
+		"rows recorded before the column hold a start whose precision nobody wrote down, and NULL is " +
+		"how they say so. A VALIDATE would fail on every installation with meeting history. The " +
+		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
+		"unknown on purpose, and the rule binds every row written since",
 })
 
 // polymorphicBranchKey is the one cost shared by every key generated from a

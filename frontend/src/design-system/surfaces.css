@@ -1553,7 +1553,6 @@
   --groundEdge: var(--ladder2Edge);
 }
 :where(
-    .aipending-sheen,
     .arhit,
     .arphead,
     .avatar-mesh,
@@ -1570,7 +1569,8 @@
     .rail .arhit,
     .standing-sheet > .standing-sheet-pane,
     .voiceprint-bars span,
-    :has(> .ambient-waves)
+    :has(> .ambient-waves),
+    [data-ai-reveal="run"]
   )
   :where(
     .panel,

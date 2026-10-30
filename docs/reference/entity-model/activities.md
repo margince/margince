@@ -380,7 +380,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_meeting_history
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -391,6 +391,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 | `effective_at` | `timestamp with time zone` | yes |  |
 | `host_id_at_change` | `uuid` |  |  |
 | `partial_pre_history` | `boolean`, default `false` | yes |  |
+| `scheduled_precision` | `text` |  |  |
 | `scheduled_start` | `timestamp with time zone` |  |  |
 | `source_id` | `text` |  |  |
 | `status` | `text` | yes | One of `booked`, `held`, `no_show`, `canceled`. |
@@ -406,6 +407,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `activity_meeting_history_source_pairing`: `CHECK (((source_id IS NULL) = (source_system IS NULL)))`
+- `activity_meeting_history_start_precision`: `CHECK ( CASE WHEN (scheduled_start IS NULL) THEN (scheduled_precision IS NULL) ELSE ((scheduled_precision IS NOT NULL) AND (scheduled_precision = ANY (ARRAY['instant', 'day']))) END) NOT VALID`
 - `activity_meeting_history_status_check`: `CHECK ((status = ANY (ARRAY['booked', 'held', 'no_show', 'canceled'])))`
 
 **Indexes**
