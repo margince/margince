@@ -337,12 +337,12 @@ new since you opened the list. Refresh to add them." **Refresh list** updates th
 
 ### How complete is this?
 The Worklist counts items, not cards: 8 possible duplicates are one card. More rows load as you
-scroll; a failed batch says "Could not load more." with **Retry**.
+move down the list. If they fail to load, the list says "Could not load more." with **Retry**.
 
 - **"{shown} of {considered} items loaded"**: a share, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": no
   share, because nobody knows the total. Each load checks a fixed number per category, and
-  scrolling stops there. Approvals are counted in full in every view but Team, so Decisions can show
+  the list stops there. Approvals are counted in full in every view but Team, so Decisions can show
   the total. A filter with no counts says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 

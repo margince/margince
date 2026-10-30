@@ -122,8 +122,11 @@ func TestAFilterFromAnotherViewIsRefusedNamingItsView(t *testing.T) {
 		}
 	}
 	for _, ok := range []struct{ view, filter string }{
-		{viewToday, "tasks"}, {viewToday, "urgent"}, {viewToday, "upcoming"},
-		{viewDecisions, "decisions"}, {viewSystem, "all"},
+		{viewToday, "tasks"},
+		{viewToday, "urgent"},
+		{viewToday, "upcoming"},
+		{viewDecisions, "decisions"},
+		{viewSystem, "all"},
 	} {
 		if _, err := resolveView(ok.view, ok.filter); err != nil {
 			t.Errorf("view %s refused its own filter %s: %v", ok.view, ok.filter, err)
