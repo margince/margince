@@ -201,7 +201,7 @@ func (s *Service) editionQuestions(ctx context.Context, tx pgx.Tx, edition *crmc
 }
 
 func (s *Service) revealQuestion(ctx context.Context, tx pgx.Tx, edition *crmcontracts.ReportingEdition, card QuestionCard, q storedQuestion) (crmcontracts.ReportingEditionQuestion, error) {
-	out := crmcontracts.ReportingEditionQuestion{CardId: q.cardID, Status: crmcontracts.ReportingEditionQuestionStatusWithheld}
+	out := crmcontracts.ReportingEditionQuestion{CardId: q.cardID, Status: crmcontracts.ReportingEditionQuestionStatusWithheld, Binding: card.Binding}
 	if q.reason != nil {
 		reason := crmcontracts.ReportingEditionQuestionReason(*q.reason)
 		out.Status, out.Reason = crmcontracts.ReportingEditionQuestionStatusNotKept, &reason

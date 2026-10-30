@@ -57,8 +57,9 @@ func savedRunCount(ctx context.Context, t *testing.T, e *forecastEnv, run ids.UU
 	return fmt.Sprint(read.Answer.Rows[0]["count"])
 }
 
-// boundCount asks a report's bound card and answers its one count.
-func boundCount(ctx context.Context, t *testing.T, e *forecastEnv, service *reporting.Service, report crmcontracts.ReportingReport) string {
+// boundCount asks a report's bound card and answers its one count, and what
+// the reader is told of its question.
+func boundCount(ctx context.Context, t *testing.T, e *forecastEnv, service *reporting.Service, report crmcontracts.ReportingReport) (string, *crmcontracts.ReportingQuestionBinding) {
 	t.Helper()
 	h := newAnalyticsQueryHandlers(InstallationDB(e.Pool), analyticsquery.Floor(1), newAttentionNames(InstallationDB(e.Pool)))
 	h.reportMetrics = service
@@ -68,7 +69,7 @@ func boundCount(ctx context.Context, t *testing.T, e *forecastEnv, service *repo
 	if answer.Answer == nil {
 		t.Fatalf("the bound card answered %s", recorder.Body.String())
 	}
-	return fmt.Sprint(answer.Answer.Rows[0]["count"])
+	return fmt.Sprint(answer.Answer.Rows[0]["count"]), answer.Binding
 }
 
 func moveFiscalStart(ctx context.Context, t *testing.T, e *forecastEnv, month int) {
@@ -115,8 +116,22 @@ func TestASavedPeriodKeepsItsDatesWhenTheFiscalStartMoves(t *testing.T) {
 	}
 
 	moveFiscalStart(ctx, t, e, 4)
-	if got := boundCount(ctx, t, e, service, report); got != "2" {
+	if got, _ := boundCount(ctx, t, e, service, report); got != "2" {
 		t.Errorf("the bound card counts %s deals in %d after the start moved to April, want the 2 it named when it was placed", got, year)
+	}
+	// Placed after the move, a question saved before it keeps January.
+	late, err := service.CreateReport(ctx, reportInput(boundCard(saved[1]), workspaceScope))
+	if err != nil {
+		t.Fatalf("binding the saved period after the move: %v", err)
+	}
+	got, binding := boundCount(ctx, t, e, service, late)
+	if got != "2" || binding == nil || binding.PeriodBasis == nil || binding.PeriodBasis.FiscalYearStartMonth != 1 {
+		t.Errorf("a question saved under January and placed under April counts %s and says %+v, want 2 and a January start", got, binding)
+	}
+	var events int
+	if err := e.owner.QueryRow(t.Context(), `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'reporting.changed'
+		AND envelope->'entity'->>'id' = ANY($1)`, []string{saved[0].String(), saved[1].String()}).Scan(&events); err != nil || events != 2 {
+		t.Errorf("the move published %d reporting.changed events for the 2 saved questions it rewrote (%v)", events, err)
 	}
 	for _, run := range saved {
 		if got := savedRunCount(ctx, t, e, run); got != "2" {
@@ -186,5 +201,8 @@ func TestASentEditionAsksABoundCardWithItsFilters(t *testing.T) {
 	}
 	if got := fmt.Sprint(kept.Answer.Rows[0]["count"]); got != "7" {
 		t.Fatalf("the edition kept a count of %s, want the 7 priced deals its filter names, not all 10", got)
+	}
+	if kept.Binding == nil || !kept.Binding.Filtered {
+		t.Errorf("the edition's card does not say its question filters: %+v", kept.Binding)
 	}
 }

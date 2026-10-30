@@ -17302,6 +17302,24 @@ func (e ReportingQualifiedCoverageStatus) Valid() bool {
 	}
 }
 
+// Defines values for ReportingQuestionAnswerStatus.
+const (
+	ReportingQuestionAnswerStatusAnswered   ReportingQuestionAnswerStatus = "answered"
+	ReportingQuestionAnswerStatusRestricted ReportingQuestionAnswerStatus = "restricted"
+)
+
+// Valid indicates whether the value is a known member of the ReportingQuestionAnswerStatus enum.
+func (e ReportingQuestionAnswerStatus) Valid() bool {
+	switch e {
+	case ReportingQuestionAnswerStatusAnswered:
+		return true
+	case ReportingQuestionAnswerStatusRestricted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingReportAudience.
 const (
 	ReportingReportAudiencePrivate   ReportingReportAudience = "private"
@@ -43958,6 +43976,21 @@ type InstallationBrand struct {
 	LogoUrl *string `json:"logo_url,omitempty"`
 }
 
+// InstallationFiscalYearImpact What a move of the fiscal year start does to saved work, counted before the move is
+// saved. A saved question or a report card that filters on a period such as `2026` keeps
+// the dates it was saved with. A report that reads a relative period, such as this
+// quarter, follows the new start.
+type InstallationFiscalYearImpact struct {
+	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
+	ReportsWithKeptPeriods int `json:"reports_with_kept_periods"`
+
+	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	ReportsWithRelativePeriods int `json:"reports_with_relative_periods"`
+
+	// SavedQuestions Saved questions, of every member, that filter on a period.
+	SavedQuestions int `json:"saved_questions"`
+}
+
 // InstallationJurisdiction Which jurisdiction this installation runs under and what that selection puts in force.
 // Each section names its own source: the unit that ships the pack, the pack's retention
 // classes, the messaging rule set with its own version, and the request deadlines.
@@ -44059,12 +44092,12 @@ type InstallationSettings struct {
 	// a reader can tell which twelve months a bucket covers without knowing the
 	// convention. A January year is not a span and keeps the plain `2026`.
 	//
-	// One thing it does NOT carry, and a client storing report filters should know it:
-	// a SAVED report view holds the bucket's text, so a view saved under one fiscal
-	// start names a different span after the start moves — or no span at all, since a
-	// calendar year maps onto parts of two fiscal years. The report still runs and
-	// still looks right. Whether such a view is re-pointed, invalidated or merely
-	// warned about is undecided: margince/margince#2569.
+	// A saved question, or a report card bound to one, that filters on a period keeps
+	// the zone and fiscal start it was saved under, so `2026` saved under a January start
+	// still means January to December 2026 after the start moves: the move writes down the
+	// calendar in force before it. A relative period, such as this quarter, follows the
+	// current setting.
+	// `/installation/settings/fiscal-year-impact` counts both before a move.
 	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
 
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
@@ -51342,11 +51375,10 @@ type ReportingCard struct {
 	Metric *ReportingMetricID `json:"metric,omitempty"`
 
 	// Question A custom analytics question a card asks. Present exactly when the card's `kind` is
-	// `question`. The page asks it through `/analytics/query` for each reader, under their
-	// own grants and over the report's scope. Every reader of the report receives it, so it
-	// carries no filters (a filter value can name a record a reader may not open), no scope
-	// and no save. A sent edition keeps the answer its sender was given, as
-	// `ReportingEditionQuestion` describes.
+	// `question`. Every reader of the report receives it, so it carries no filters (a filter
+	// value can name a record a reader may not open), no scope and no save. A sent edition
+	// keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+	// with `binding` asks a saved question the server keeps, filters and all.
 	Question *ReportingCardQuestion `json:"question,omitempty"`
 
 	// Width `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
@@ -51360,12 +51392,14 @@ type ReportingCardWidth string
 type ReportingCardKind string
 
 // ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is
-// `question`. The page asks it through `/analytics/query` for each reader, under their
-// own grants and over the report's scope. Every reader of the report receives it, so it
-// carries no filters (a filter value can name a record a reader may not open), no scope
-// and no save. A sent edition keeps the answer its sender was given, as
-// `ReportingEditionQuestion` describes.
+// `question`. Every reader of the report receives it, so it carries no filters (a filter
+// value can name a record a reader may not open), no scope and no save. A sent edition
+// keeps the answer its sender was given, as `ReportingEditionQuestion` describes. A card
+// with `binding` asks a saved question the server keeps, filters and all.
 type ReportingCardQuestion struct {
+	// Binding The opaque reference to the saved question a bound card asks. Send it back unchanged to keep it.
+	Binding *string `json:"binding,omitempty"`
+
 	// Entity The population, by name.
 	Entity  string    `json:"entity"`
 	GroupBy *[]string `json:"group_by,omitempty"`
@@ -51373,6 +51407,9 @@ type ReportingCardQuestion struct {
 	// Limit The rows the card shows; 100 when absent.
 	Limit    *int               `json:"limit,omitempty"`
 	Measures []AnalyticsMeasure `json:"measures"`
+
+	// SavedQuestionId Sent on a save to bind the card to this saved question. Never served back.
+	SavedQuestionId *openapi_types.UUID `json:"saved_question_id,omitempty"`
 }
 
 // ReportingCatalog defines model for ReportingCatalog.
@@ -51432,10 +51469,13 @@ type ReportingComparisonOperands struct {
 
 // ReportingContext defines model for ReportingContext.
 type ReportingContext struct {
-	CloseInterval         *ReportingWindow     `json:"close_interval,omitempty"`
-	Currency              string               `json:"currency"`
-	DefinitionVersion     string               `json:"definition_version"`
-	EvaluatedAt           time.Time            `json:"evaluated_at"`
+	CloseInterval     *ReportingWindow `json:"close_interval,omitempty"`
+	Currency          string           `json:"currency"`
+	DefinitionVersion string           `json:"definition_version"`
+	EvaluatedAt       time.Time        `json:"evaluated_at"`
+
+	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
+	FiscalYearStartMonth  *int                 `json:"fiscal_year_start_month,omitempty"`
 	FrameworkRevision     int64                `json:"framework_revision"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
@@ -51504,7 +51544,10 @@ type ReportingEditionList struct {
 // record behind it; any other row arrives withheld, as the analytics floor withholds one.
 type ReportingEditionQuestion struct {
 	Answer *AnalyticsAnswer `json:"answer,omitempty"`
-	CardId string           `json:"card_id"`
+
+	// Binding What every reader of a report may know of the saved question a card is bound to.
+	Binding *ReportingQuestionBinding `json:"binding,omitempty"`
+	CardId  string                    `json:"card_id"`
 
 	// Reason Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
 	Reason *ReportingEditionQuestionReason `json:"reason,omitempty"`
@@ -51659,6 +51702,12 @@ type ReportingMetricDefinitionTemporalBasis string
 // ReportingMetricID defines model for ReportingMetricID.
 type ReportingMetricID string
 
+// ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
+type ReportingPeriodBasis struct {
+	FiscalYearStartMonth int    `json:"fiscal_year_start_month"`
+	Timezone             string `json:"timezone"`
+}
+
 // ReportingPoint defines model for ReportingPoint.
 type ReportingPoint struct {
 	At           *time.Time            `json:"at,omitempty"`
@@ -51708,6 +51757,29 @@ type ReportingQualifiedCoverage struct {
 // ReportingQualifiedCoverageStatus `not_enforced` means the qualified forecast is switched off, so no
 // open deal is judged and no qualified figure exists.
 type ReportingQualifiedCoverageStatus string
+
+// ReportingQuestionAnswer A bound question card's answer for this reader. `restricted`: the reader may not see a
+// value the question filters on, so nothing of the answer is shown: no rows, no labels
+// and no total.
+type ReportingQuestionAnswer struct {
+	Answer *AnalyticsAnswer `json:"answer,omitempty"`
+
+	// Binding What every reader of a report may know of the saved question a card is bound to.
+	Binding *ReportingQuestionBinding     `json:"binding,omitempty"`
+	Status  ReportingQuestionAnswerStatus `json:"status"`
+}
+
+// ReportingQuestionAnswerStatus defines model for ReportingQuestionAnswer.Status.
+type ReportingQuestionAnswerStatus string
+
+// ReportingQuestionBinding What every reader of a report may know of the saved question a card is bound to.
+type ReportingQuestionBinding struct {
+	// Filtered Whether the question narrows its population with filters.
+	Filtered bool `json:"filtered"`
+
+	// PeriodBasis The calendar a kept question's period filters keep their dates in.
+	PeriodBasis *ReportingPeriodBasis `json:"period_basis,omitempty"`
+}
 
 // ReportingReport defines model for ReportingReport.
 type ReportingReport struct {
@@ -56001,10 +56073,8 @@ type UpdateInstallationSettingsRequest struct {
 	// reports on read and stores nothing, so moving it re-labels every period report at
 	// once and re-means no stored row.
 	//
-	// It does not re-point a SAVED report view, which holds the bucket's TEXT and so
-	// names a different span afterwards. Sending this field is enough to leave those
-	// views filtering on a span nobody asked for; nothing here reports how many.
-	// margince/margince#2569.
+	// A saved period filter keeps the dates it was saved with, and a relative period
+	// follows the new start. `/installation/settings/fiscal-year-impact` counts both.
 	FiscalYearStartMonth *int `json:"fiscal_year_start_month,omitempty"`
 
 	// FollowUpReconcileIntervalSeconds Set the value `OperationSettings.follow_up_reconcile_interval_seconds` describes.
@@ -60650,6 +60720,16 @@ type ListReportingExecutionsParams struct {
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// AnswerReportingQuestionCardParams defines parameters for AnswerReportingQuestionCard.
+type AnswerReportingQuestionCardParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
+// ExplainReportingQuestionCardParams defines parameters for ExplainReportingQuestionCard.
+type ExplainReportingQuestionCardParams struct {
+	Revision *int64 `form:"revision,omitempty" json:"revision,omitempty"`
+}
+
 // PreviewReportingReportAsRoleParams defines parameters for PreviewReportingReportAsRole.
 type PreviewReportingReportAsRoleParams struct {
 	Role     string `form:"role" json:"role"`
@@ -60675,6 +60755,9 @@ type ListReportRunsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Entity Only the questions about this population.
+	Entity *string `form:"entity,omitempty" json:"entity,omitempty"`
 }
 
 // UpdateReportingScheduleParams defines parameters for UpdateReportingSchedule.
@@ -67434,6 +67517,9 @@ type UpdateReportingReportJSONRequestBody = ReportingReportInput
 
 // SaveReportingReportDraftJSONRequestBody defines body for SaveReportingReportDraft for application/json ContentType.
 type SaveReportingReportDraftJSONRequestBody = ReportingReportDraftInput
+
+// ExplainReportingQuestionCardJSONRequestBody defines body for ExplainReportingQuestionCard for application/json ContentType.
+type ExplainReportingQuestionCardJSONRequestBody = ReportRunCell
 
 // CreateReportingScheduleJSONRequestBody defines body for CreateReportingSchedule for application/json ContentType.
 type CreateReportingScheduleJSONRequestBody = ReportingScheduleInput
@@ -79945,6 +80031,12 @@ type ServerInterface interface {
 	// List reporting executions
 	// (GET /analytics/reports/{id}/executions)
 	ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams)
+	// A question card's answer, asked on the server for this reader.
+	// (GET /analytics/reports/{id}/questions/{card_id}/answer)
+	AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params AnswerReportingQuestionCardParams)
+	// The records behind one cell of a question card.
+	// (POST /analytics/reports/{id}/questions/{card_id}/explain)
+	ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams)
 	// Evaluate a saved report as a seat holding one role would read it. Human-only.
 	// (GET /analytics/reports/{id}/reader-preview)
 	PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams)
@@ -81262,6 +81354,9 @@ type ServerInterface interface {
 	// Update the installation's settings (admin/ops).
 	// (PATCH /installation/settings)
 	UpdateInstallationSettings(w http.ResponseWriter, r *http.Request)
+	// How much saved work reads a period, before the fiscal start moves (admin/ops).
+	// (GET /installation/settings/fiscal-year-impact)
+	GetFiscalYearImpact(w http.ResponseWriter, r *http.Request)
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
@@ -83137,6 +83232,18 @@ func (_ Unimplemented) EvaluateReportingReport(w http.ResponseWriter, r *http.Re
 // List reporting executions
 // (GET /analytics/reports/{id}/executions)
 func (_ Unimplemented) ListReportingExecutions(w http.ResponseWriter, r *http.Request, id Id, params ListReportingExecutionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A question card's answer, asked on the server for this reader.
+// (GET /analytics/reports/{id}/questions/{card_id}/answer)
+func (_ Unimplemented) AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params AnswerReportingQuestionCardParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The records behind one cell of a question card.
+// (POST /analytics/reports/{id}/questions/{card_id}/explain)
+func (_ Unimplemented) ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -85771,6 +85878,12 @@ func (_ Unimplemented) GetInstallationSettings(w http.ResponseWriter, r *http.Re
 // Update the installation's settings (admin/ops).
 // (PATCH /installation/settings)
 func (_ Unimplemented) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How much saved work reads a period, before the fiscal start moves (admin/ops).
+// (GET /installation/settings/fiscal-year-impact)
+func (_ Unimplemented) GetFiscalYearImpact(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93157,6 +93270,120 @@ func (siw *ServerInterfaceWrapper) ListReportingExecutions(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// AnswerReportingQuestionCard operation middleware
+func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "card_id" -------------
+	var cardId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "card_id", chi.URLParam(r, "card_id"), &cardId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "card_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AnswerReportingQuestionCardParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerReportingQuestionCard(w, r, id, cardId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExplainReportingQuestionCard operation middleware
+func (siw *ServerInterfaceWrapper) ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "card_id" -------------
+	var cardId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "card_id", chi.URLParam(r, "card_id"), &cardId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "card_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ExplainReportingQuestionCardParams
+
+	// ------------- Optional query parameter "revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "revision", r.URL.Query(), &params.Revision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExplainReportingQuestionCard(w, r, id, cardId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewReportingReportAsRole operation middleware
 func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request) {
 
@@ -93422,6 +93649,19 @@ func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "entity" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity", r.URL.Query(), &params.Entity, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity", Err: err})
 		}
 		return
 	}
@@ -111514,6 +111754,26 @@ func (siw *ServerInterfaceWrapper) UpdateInstallationSettings(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// GetFiscalYearImpact operation middleware
+func (siw *ServerInterfaceWrapper) GetFiscalYearImpact(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetFiscalYearImpact(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetInstallationSetup operation middleware
 func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
 
@@ -128740,6 +129000,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/reports/{id}/executions", wrapper.ListReportingExecutions)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/reports/{id}/questions/{card_id}/answer", wrapper.AnswerReportingQuestionCard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/reports/{id}/questions/{card_id}/explain", wrapper.ExplainReportingQuestionCard)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/reports/{id}/reader-preview", wrapper.PreviewReportingReportAsRole)
 	})
 	r.Group(func(r chi.Router) {
@@ -130055,6 +130321,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/installation/settings", wrapper.UpdateInstallationSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/installation/settings/fiscal-year-impact", wrapper.GetFiscalYearImpact)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)

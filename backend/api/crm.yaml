@@ -55882,6 +55882,8 @@ components:
             `unanswered`: the sender could not ask the question when the edition was captured.
             `counts_other_records`: the question measures or groups through records of other kinds
             than its population, which an edition does not keep.
+        binding:
+          $ref: '#/components/schemas/ReportingQuestionBinding'
         answer:
           $ref: '#/components/schemas/AnalyticsAnswer'
     ReportingEvidenceRow:

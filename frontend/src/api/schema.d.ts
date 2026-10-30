@@ -40874,6 +40874,7 @@ export interface components {
              * @enum {string}
              */
             reason?: "retention_unconfigured" | "too_many_records" | "unanswered" | "counts_other_records";
+            binding?: components["schemas"]["ReportingQuestionBinding"];
             answer?: components["schemas"]["AnalyticsAnswer"];
         };
         ReportingEvidenceRow: {

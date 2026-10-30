@@ -281,6 +281,8 @@ func modulesEmitting(sites []emitSite) []string {
 // module announces a fact that IS the first module's fact. None is a second
 // meaning for one name, which is what the rule protects.
 var sharedEventTypes = gatekit.Waive(map[string]string{
+	"reporting.changed <- internal/compose":                   "compose writes down the calendar a saved analytics question's periods keep when the reporting zone or fiscal start moves. report_run is compose's table, and the event says what every reporting.changed says: a reporting object changed, so a consumer re-reads its authorized state",
+	"reporting.changed <- internal/modules/forecasting":       "forecasting records a capture status change on its own capture table. The event carries only the object and the action, as every reporting.changed does, so a consumer re-reads authorized state whichever module wrote it",
 	"activity.updated <- internal/modules/privacy":            "Privacy removes or redacts commitment evidence in its erasure transaction. The activity event invalidates the same admission projection the owning activity writer updates; importing that module would violate module boundaries.",
 	"conversation_claim.changed <- internal/modules/contacts": "The claim owner publishes corrections, renewals and settlement.",
 	"conversation_claim.changed <- internal/modules/privacy":  "Privacy deletes quoted claims in its erasure transaction and publishes erased status so consumers discard their copies. The event retains only claim identity and status, never erased content.",

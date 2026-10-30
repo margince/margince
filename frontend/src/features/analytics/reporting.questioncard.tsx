@@ -84,11 +84,14 @@ export function QuestionCard({
     >
       <PanelBody>
         {mode === "frozen" && question && keptAnswer?.answer ? (
-          <AnswerTable
-            query={question}
-            answer={keptAnswer.answer}
-            baseCurrency={evaluation.context.currency}
-          />
+          <>
+            <AnswerTable
+              query={question}
+              answer={keptAnswer.answer}
+              baseCurrency={evaluation.context.currency}
+            />
+            <BindingNote binding={keptAnswer.binding} />
+          </>
         ) : mode !== "live" || !question ? (
           <EmptyState>
             {t(

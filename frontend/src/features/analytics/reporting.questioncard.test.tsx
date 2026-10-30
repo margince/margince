@@ -422,7 +422,43 @@ it("shows a restricted bound card with nothing of its answer", async () => {
   });
   drawBound();
   expect(
-    await screen.findByText(/filters on records your access does not cover/),
+    await screen.findByText(/cannot see everything this question filters on/),
   ).toBeInTheDocument();
   expect(screen.queryByText(/This question has filters/)).toBeNull();
+});
+
+it("shows the calendar a sent edition's bound card kept its periods in", async () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
+        <ReportingCharts
+          evaluation={withBoundCard}
+          editionId="edition"
+          kept={{
+            questions: [
+              {
+                card_id: "bound",
+                status: "kept",
+                answer: ANSWER,
+                binding: {
+                  filtered: true,
+                  period_basis: {
+                    timezone: "Europe/Berlin",
+                    fiscal_year_start_month: 1,
+                  },
+                },
+              },
+            ],
+          }}
+          onEvidence={() => {}}
+        />
+      </RecordZoneProvider>
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByText(
+      /fiscal year starting in January, in Europe\/Berlin/,
+    ),
+  ).toBeInTheDocument();
 });

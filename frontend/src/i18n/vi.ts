@@ -1081,7 +1081,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundUnsaved":
     "Lưu báo cáo để xem câu trả lời của câu hỏi này. Báo cáo giữ các bộ lọc của nó.",
   "reporting.questionRestricted":
-    "Câu hỏi này lọc theo các bản ghi ngoài quyền truy cập của bạn, nên câu trả lời không được hiển thị.",
+    "Bạn không xem được mọi thứ mà câu hỏi này lọc theo, nên câu trả lời không được hiển thị.",
   "reporting.questionBoundFiltered":
     "Câu hỏi này có bộ lọc. Báo cáo giữ các bộ lọc đó, và mỗi tài khoản chỉ thấy phần thuộc quyền truy cập của chính tài khoản đó.",
   "reporting.questionBoundPeriod":
@@ -12890,9 +12890,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} báo cáo có thẻ lọc theo một kỳ. Các báo cáo giữ nguyên ngày.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} báo cáo đọc quý này hoặc mục tiêu theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} báo cáo đọc quý này hoặc mục tiêu theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
+    "{count} báo cáo đọc quý này, mục tiêu theo quý tài chính hoặc khung chốt theo quý tài chính. Các báo cáo theo mốc bắt đầu mới.",
   "installationSettings.fiscalImpactLoading":
     "Đang đếm các phần đã lưu mà thay đổi này liên quan…",
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",

@@ -68,11 +68,13 @@ func (q reportingQuestions) BindSavedQuestion(ctx context.Context, tx pgx.Tx, sa
 	if err := question.Validate(schema); err != nil {
 		return reporting.Binding{}, err
 	}
-	return bindingOf(question, basis)
+	return bindingOf(question)
 }
 
 // bindingOf is a bound question with the shape every reader of a report sees.
-func bindingOf(question analyticsquery.Query, basis analyticsquery.CalendarBasis) (reporting.Binding, error) {
+// The calendar it states is the one its period filters keep, which a question
+// saved before a move keeps from before it.
+func bindingOf(question analyticsquery.Query) (reporting.Binding, error) {
 	shape := analyticsquery.Query{Entity: question.Entity, GroupBy: question.GroupBy, Measures: question.Measures, Limit: question.Limit}
 	wire, err := wireFromQuery(shape)
 	if err != nil {
@@ -89,7 +91,7 @@ func bindingOf(question analyticsquery.Query, basis analyticsquery.CalendarBasis
 	}
 	for _, f := range question.Filters {
 		if f.Basis != nil {
-			out.Basis = &crmcontracts.ReportingPeriodBasis{Timezone: basis.Timezone, FiscalYearStartMonth: basis.FiscalStartMonth}
+			out.Basis = &crmcontracts.ReportingPeriodBasis{Timezone: f.Basis.Timezone, FiscalYearStartMonth: f.Basis.FiscalStartMonth}
 			break
 		}
 	}
