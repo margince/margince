@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // Five deals per currency, so every currency group clears the privacy floor.
@@ -32,7 +33,7 @@ func seedMixedCurrencyPipeline(t *testing.T, d *twoDoors) {
 	if base := baseCurrency(t, d.e); base != "EUR" {
 		t.Fatalf("the bootstrapped installation's base currency is %s; these sums are worked out in EUR", base)
 	}
-	today := time.Now().UTC().Format(time.DateOnly)
+	today := clocktest.Now(t).UTC().Format(time.DateOnly)
 	// CHF gets no rate: its deals are priced natively and cannot be converted.
 	for from, rate := range map[string]string{"USD": "0.5", "JPY": "0.006"} {
 		if status := d.e.Call(t, "POST", "/v1/fx-rates",
@@ -75,8 +76,10 @@ func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T)
 
 	for _, entity := range []string{"deals-by-stage", "open-deals-per-company", "win-loss"} {
 		for _, fn := range []string{"sum", "avg", "min", "max", "median"} {
-			query := map[string]any{"entity": entity, "scope_kind": "workspace",
-				"measures": []any{map[string]any{"fn": fn, "field": "amount_minor"}}}
+			query := map[string]any{
+				"entity": entity, "scope_kind": "workspace",
+				"measures": []any{map[string]any{"fn": fn, "field": "amount_minor"}},
+			}
 			var refusal struct {
 				Details struct{ Kind, Message, Suggest string } `json:"details"`
 			}
@@ -94,13 +97,17 @@ func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T)
 		}
 	}
 
-	report := map[string]any{"group_by": []any{"stage_id"},
-		"aggregates": []any{map[string]any{"fn": "sum", "field": "amount_minor", "as": "total"}}}
+	report := map[string]any{
+		"group_by":   []any{"stage_id"},
+		"aggregates": []any{map[string]any{"fn": "sum", "field": "amount_minor", "as": "total"}},
+	}
 	if body := d.restStatus(t, "POST", "/v1/reports/deals-by-stage", report, http.StatusUnprocessableEntity); !strings.Contains(string(body), "amount_base_minor") {
 		t.Errorf("the report route's refusal names no converted measure: %s", body)
 	}
-	if tool := d.toolRefused(t, "run_report", map[string]any{"report": "deals-by-stage",
-		"group_by": report["group_by"], "aggregates": report["aggregates"]}); !strings.Contains(tool, "amount_base_minor") {
+	if tool := d.toolRefused(t, "run_report", map[string]any{
+		"report":   "deals-by-stage",
+		"group_by": report["group_by"], "aggregates": report["aggregates"],
+	}); !strings.Contains(tool, "amount_base_minor") {
 		t.Errorf("run_report's refusal names no converted measure: %s", tool)
 	}
 }
@@ -121,8 +128,10 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 		}
 	}
 
-	pinned := askMoney(t, d, map[string]any{"entity": "deals-by-stage", "measures": sum,
-		"filters": []any{map[string]any{"field": "currency", "op": "eq", "value": "JPY"}}})
+	pinned := askMoney(t, d, map[string]any{
+		"entity": "deals-by-stage", "measures": sum,
+		"filters": []any{map[string]any{"field": "currency", "op": "eq", "value": "JPY"}},
+	})
 	if len(pinned.Rows) != 1 || fmt.Sprint(pinned.Rows[0]["total"]) != itoa(mixedCurrencyDeals["JPY"]*dealsPerCurrency) {
 		t.Errorf("pinned to JPY the answer is %+v, want one row of %d yen", pinned.Rows, mixedCurrencyDeals["JPY"]*dealsPerCurrency)
 	}
