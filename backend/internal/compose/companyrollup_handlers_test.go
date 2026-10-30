@@ -4,12 +4,14 @@
 package compose
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -69,5 +71,56 @@ func TestCompanyRollupToWireEmptyRestrictedIsNeverNil(t *testing.T) {
 	}
 	if len(wire.RestrictedExcluded) != 0 {
 		t.Errorf("restricted_excluded = %+v, want empty", wire.RestrictedExcluded)
+	}
+}
+
+// The wire states each measure's own date: the pipeline at the read, closed-won
+// over its period with that period's neighbours, activity over its 30 days.
+func TestCompanyRollupToWireStatesEachMeasuresDate(t *testing.T) {
+	read := time.Date(2026, time.October, 30, 9, 0, 0, 0, time.UTC)
+	next := "2026-Q3"
+	result := CompanyRollupResult{
+		RootID: ids.NewV7(), Scope: companyRollupScopeTree, BaseCurrency: "EUR", ComputedAt: read,
+		ActivityWindowStart: read.AddDate(0, 0, -30),
+		ClosedWonPeriod: RollupWonPeriod{
+			Grain: "quarter", Label: "2026-Q2", Chosen: true, Previous: "2026-Q1", Next: &next,
+			Start: time.Date(2026, time.April, 1, 0, 0, 0, 0, time.UTC), End: time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC),
+		},
+		CurrentPeriods: map[string]string{fieldPeriodYear: "2026", fieldPeriodQuarter: "2026-Q4", fieldPeriodMonth: "2026-10"},
+	}
+
+	wire := companyRollupToWire(result)
+
+	if !wire.PipelineStateAt.Equal(read) || !wire.ActivityWindow.EndAt.Equal(read) || !wire.ActivityWindow.StartAt.Equal(result.ActivityWindowStart) {
+		t.Errorf("pipeline at %s, activity over [%s, %s), want both read at %s", wire.PipelineStateAt, wire.ActivityWindow.StartAt, wire.ActivityWindow.EndAt, read)
+	}
+	won := wire.ClosedWonPeriod
+	if won.Grain != crmcontracts.CompanyRollupWonPeriodGrainQuarter || won.Label != "2026-Q2" || !won.Chosen ||
+		won.Anchor != crmcontracts.CompanyRollupWonPeriodAnchorClosedAt || won.Previous != "2026-Q1" || won.Next == nil || *won.Next != next ||
+		!won.StartAt.Equal(result.ClosedWonPeriod.Start) || !won.EndAt.Equal(result.ClosedWonPeriod.End) {
+		t.Errorf("closed_won_period = %+v, want the chosen quarter 2026-Q2 with its neighbours", won)
+	}
+	if wire.CurrentPeriods.PeriodYear != "2026" || wire.CurrentPeriods.PeriodQuarter != "2026-Q4" || wire.CurrentPeriods.PeriodMonth != "2026-10" {
+		t.Errorf("current_periods = %+v", wire.CurrentPeriods)
+	}
+}
+
+// One period parameter names the window; none keeps the default; several are
+// refused naming one of them.
+func TestTheRollupTakesAtMostOnePeriodParameter(t *testing.T) {
+	label := "2026"
+	if period, err := NewCompanyRollupPeriod(nil, nil, nil); err != nil || period != (CompanyRollupPeriod{}) {
+		t.Errorf("no parameter = %+v %v, want the default", period, err)
+	}
+	if period, err := NewCompanyRollupPeriod(&label, nil, nil); err != nil || period.Field != fieldPeriodYear || period.Label != label {
+		t.Errorf("period_year = %+v %v", period, err)
+	}
+	_, err := NewCompanyRollupPeriod(&label, nil, &label)
+	refusal, ok := errors.AsType[*rollupPeriodRefusal](err)
+	if !ok || !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("two parameters = %v, want a refusal", err)
+	}
+	if field, _, _ := refusal.FieldFault(); field != fieldPeriodMonth {
+		t.Errorf("the refusal names %s, want period_month", field)
 	}
 }

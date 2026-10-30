@@ -5989,6 +5989,42 @@ func (e CompanyQuestion) Valid() bool {
 	}
 }
 
+// Defines values for CompanyRollupWonPeriodAnchor.
+const (
+	CompanyRollupWonPeriodAnchorClosedAt CompanyRollupWonPeriodAnchor = "closed_at"
+)
+
+// Valid indicates whether the value is a known member of the CompanyRollupWonPeriodAnchor enum.
+func (e CompanyRollupWonPeriodAnchor) Valid() bool {
+	switch e {
+	case CompanyRollupWonPeriodAnchorClosedAt:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyRollupWonPeriodGrain.
+const (
+	CompanyRollupWonPeriodGrainMonth   CompanyRollupWonPeriodGrain = "month"
+	CompanyRollupWonPeriodGrainQuarter CompanyRollupWonPeriodGrain = "quarter"
+	CompanyRollupWonPeriodGrainYear    CompanyRollupWonPeriodGrain = "year"
+)
+
+// Valid indicates whether the value is a known member of the CompanyRollupWonPeriodGrain enum.
+func (e CompanyRollupWonPeriodGrain) Valid() bool {
+	switch e {
+	case CompanyRollupWonPeriodGrainMonth:
+		return true
+	case CompanyRollupWonPeriodGrainQuarter:
+		return true
+	case CompanyRollupWonPeriodGrainYear:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyScanState.
 const (
 	CompanyScanStateDegraded CompanyScanState = "degraded"
@@ -35550,15 +35586,34 @@ type CompanyGrowthFit struct {
 // CompanyHierarchyRollup The account-tree roll-up over company.parent_company_id. A server read only,
 // never client-summed. Money is base-currency converted — never a raw
 // cross-currency sum.
+//
+// `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
+// weighted by its stage's win probability, and never a past period's pipeline.
+// `closed_won` is the deals won in `closed_won_period`; a null amount means at least
+// one of them has no base value on file, so the total is incomplete rather than
+// smaller. `activity_count_30d` counts the activities that reached a counted account
+// in `activity_window`, the 30 days before the read, which no period parameter moves.
 type CompanyHierarchyRollup struct {
-	ActivityCount30d int `json:"activity_count_30d"`
+	ActivityCount30d int             `json:"activity_count_30d"`
+	ActivityWindow   ReportingWindow `json:"activity_window"`
 
 	// AggregatedAccountCount Count of accounts (nodes) included in the roll-up.
 	AggregatedAccountCount int `json:"aggregated_account_count"`
 
 	// ClosedWon Money as integer minor-units + ISO-4217 currency. Never a float.
-	ClosedWon  Money     `json:"closed_won"`
-	ComputedAt time.Time `json:"computed_at"`
+	ClosedWon Money `json:"closed_won"`
+
+	// ClosedWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
+	// installation's reporting zone and fiscal calendar. A period still under way holds
+	// the deals won by the moment of the read.
+	ClosedWonPeriod CompanyRollupWonPeriod `json:"closed_won_period"`
+	ComputedAt      time.Time              `json:"computed_at"`
+
+	// CurrentPeriods The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself.
+	CurrentPeriods CompanyRollupPeriodLabels `json:"current_periods"`
+
+	// PipelineStateAt The instant the pipeline is read at. It is the moment of the read, whatever period is named.
+	PipelineStateAt time.Time `json:"pipeline_state_at"`
 
 	// RestrictedExcluded Nodes excluded because the viewer cannot read them — disclosed, never a silent drop.
 	RestrictedExcluded []struct {
@@ -35816,6 +35871,46 @@ type CompanyProfileInput struct {
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
 // `whats_changed` — what has moved on this account recently.
 type CompanyQuestion string
+
+// CompanyRollupPeriodLabels The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself.
+type CompanyRollupPeriodLabels struct {
+	PeriodMonth   string `json:"period_month"`
+	PeriodQuarter string `json:"period_quarter"`
+	PeriodYear    string `json:"period_year"`
+}
+
+// CompanyRollupWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
+// installation's reporting zone and fiscal calendar. A period still under way holds
+// the deals won by the moment of the read.
+type CompanyRollupWonPeriod struct {
+	// Anchor The date that places a won deal in the period, the day it was won.
+	Anchor CompanyRollupWonPeriodAnchor `json:"anchor"`
+
+	// Chosen True when the caller named the period; false for the default, the fiscal quarter under way.
+	Chosen bool `json:"chosen"`
+
+	// EndAt The first instant after the period.
+	EndAt time.Time                   `json:"end_at"`
+	Grain CompanyRollupWonPeriodGrain `json:"grain"`
+
+	// Label The bucket's label, spelled as the period reports spell it.
+	Label string `json:"label"`
+
+	// Next The label of the period just after, or null when that period has not begun.
+	Next *string `json:"next"`
+
+	// Previous The label of the period just before, at the same grain.
+	Previous string `json:"previous"`
+
+	// StartAt The first instant of the period.
+	StartAt time.Time `json:"start_at"`
+}
+
+// CompanyRollupWonPeriodAnchor The date that places a won deal in the period, the day it was won.
+type CompanyRollupWonPeriodAnchor string
+
+// CompanyRollupWonPeriodGrain defines model for CompanyRollupWonPeriod.Grain.
+type CompanyRollupWonPeriodGrain string
 
 // CompanyScan One reader's scan of one account: the state of the read, and what the account looks
 // like it needs — the model's stored findings and the 360's live rules as ONE list,
@@ -62355,6 +62450,15 @@ type ConfirmCompanyFactParams struct {
 type GetCompanyHierarchyRollupParams struct {
 	// Scope tree (default): aggregate the whole subtree. self: the root's own figures alone.
 	Scope *GetCompanyHierarchyRollupParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// PeriodYear The year whose won deals `closed_won` sums, such as `2026` or `FY2025/26`.
+	PeriodYear *string `form:"period_year,omitempty" json:"period_year,omitempty"`
+
+	// PeriodQuarter The quarter whose won deals `closed_won` sums, such as `2026-Q1` or `FY2025/26-Q4`.
+	PeriodQuarter *string `form:"period_quarter,omitempty" json:"period_quarter,omitempty"`
+
+	// PeriodMonth The month whose won deals `closed_won` sums, such as `2026-03`.
+	PeriodMonth *string `form:"period_month,omitempty" json:"period_month,omitempty"`
 }
 
 // GetCompanyHierarchyRollupParamsScope defines parameters for GetCompanyHierarchyRollup.
@@ -81111,7 +81215,7 @@ type ServerInterface interface {
 	// Re-assemble the caller's growth fit now, past a fingerprint that still matches.
 	// (POST /companies/{id}/growth-fit)
 	RefreshCompanyGrowthFit(w http.ResponseWriter, r *http.Request, id Id)
-	// Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
+	// Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count.
 	// (GET /companies/{id}/hierarchy-rollup)
 	GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyHierarchyRollupParams)
 	// The colleagues who could introduce you at this company, warmest first.
@@ -84822,7 +84926,7 @@ func (_ Unimplemented) RefreshCompanyGrowthFit(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Roll up a company's account tree — weighted pipeline, current-quarter closed-won, 30-day activity count.
+// Roll up a company's account tree — weighted pipeline today, closed-won in a chosen period (default the current fiscal quarter), 30-day activity count.
 // (GET /companies/{id}/hierarchy-rollup)
 func (_ Unimplemented) GetCompanyHierarchyRollup(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyHierarchyRollupParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100739,6 +100843,45 @@ func (siw *ServerInterfaceWrapper) GetCompanyHierarchyRollup(w http.ResponseWrit
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period_year" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period_year", r.URL.Query(), &params.PeriodYear, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_year"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_year", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period_quarter" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period_quarter", r.URL.Query(), &params.PeriodQuarter, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_quarter"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_quarter", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "period_month" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "period_month", r.URL.Query(), &params.PeriodMonth, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "period_month"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "period_month", Err: err})
 		}
 		return
 	}

@@ -9,8 +9,8 @@ package compose
 // measures over the included nodes. Lives in compose because the read
 // spans company, deal, stage, activity, and fx_rate — exactly the
 // composition layer's charter; it durably owns none of them. The pure
-// mechanics it builds on (prune, quarter bounds, rounding) live in
-// companyrollup.go.
+// mechanics it builds on (prune, rounding) live in companyrollup.go, and the
+// period closed-won sums in companyrollupperiod.go.
 
 import (
 	"context"
@@ -44,12 +44,17 @@ const (
 // company: every money figure in workspace base-currency minor
 // units, plus the identity-only disclosure of pruned branches.
 type CompanyRollupResult struct {
-	RootID                 ids.UUID
-	Scope                  string
-	WeightedPipelineMinor  int64
-	ClosedWonMinor         *int64
-	BaseCurrency           string
-	ActivityCount30d       int
+	RootID                ids.UUID
+	Scope                 string
+	WeightedPipelineMinor int64
+	ClosedWonMinor        *int64
+	ClosedWonPeriod       RollupWonPeriod
+	BaseCurrency          string
+	ActivityCount30d      int
+	ActivityWindowStart   time.Time
+	// CurrentPeriods names the year, quarter and month under way at
+	// ComputedAt, keyed by period field.
+	CurrentPeriods         map[string]string
 	AggregatedAccountCount int
 	RestrictedExcluded     []restrictedNode
 	ComputedAt             time.Time
@@ -68,12 +73,16 @@ type CompanyRollupResult struct {
 // per-activity row visibility is deliberately not consulted, so account
 // totals stay whole (the contract's description states the same policy).
 //
+// period names the window closed-won sums; its zero value is the fiscal
+// quarter under way. The weighted pipeline is the open deals at the read
+// whatever period is named, because no history of past pipelines is stored.
+//
 // now is the read's injected clock (house shape: deals.CloseDateCorrector,
 // approvals.Service, ai.meter) — the HTTP handler defaults it to time.Now
 // at server construction, and a test pins a fixed instant so a quarter or
 // 30-day window boundary can never flake between when it seeds and when
 // the read evaluates "now".
-func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID, scope string, now func() time.Time) (CompanyRollupResult, error) {
+func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.UUID, scope string, period CompanyRollupPeriod, now func() time.Time) (CompanyRollupResult, error) {
 	for _, object := range []datasource.EntityType{datasource.EntityCompany, datasource.EntityDeal, datasource.EntityActivity} {
 		if err := auth.Require(ctx, string(object), principal.ActionRead); err != nil {
 			return CompanyRollupResult{}, err
@@ -88,6 +97,12 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 		}
 		baseCurrency, loc, fiscalStart, err := rollupInstallationMeta(ctx, tx)
 		if err != nil {
+			return err
+		}
+		if result.CurrentPeriods, err = rollupCurrentPeriods(ctx, tx, asOf, loc, fiscalStart); err != nil {
+			return err
+		}
+		if result.ClosedWonPeriod, err = resolveRollupPeriod(ctx, tx, period, result.CurrentPeriods, asOf, loc, fiscalStart); err != nil {
 			return err
 		}
 		nodes, err := loadCompanyTree(ctx, tx, rootID)
@@ -108,13 +123,14 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
 			return err
 		}
-		if result.ClosedWonMinor, err = closedWonMinorThisQuarter(ctx, tx, included, asOf, loc, fiscalStart, baseCurrency); err != nil {
+		if result.ClosedWonMinor, err = closedWonMinorIn(ctx, tx, included, result.ClosedWonPeriod, asOf, baseCurrency); err != nil {
 			return err
 		}
 		if result.ActivityCount30d, err = companyActivityCount30d(ctx, tx, included, asOf); err != nil {
 			return err
 		}
 		result.BaseCurrency = baseCurrency
+		result.ActivityWindowStart = asOf.AddDate(0, 0, -companyActivityWindowDays)
 		result.AggregatedAccountCount = len(included)
 		result.RestrictedExcluded = restricted
 		return nil
@@ -128,7 +144,7 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 // rollupInstallationMeta reads the installation's base currency, reporting
 // timezone and the month its business year begins — the basis every figure in
 // this rollup is expressed in. A stored zone the host cannot resolve degrades
-// the quarter window to UTC rather than failing the read — the zone was
+// the period window to UTC rather than failing the read — the zone was
 // validated at write time, so this only fires when the host lost its tzdata,
 // and an aggregate read is the wrong place to surface that deployment fault.
 //
@@ -366,16 +382,15 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	return total, nil
 }
 
-// closedWonMinorThisQuarter values closed deals in the workspace's fiscal
-// quarter through the same valuation rule as its other deal totals.
-func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UUID, asOf time.Time, loc *time.Location, fiscalStart int, baseCurrency string) (*int64, error) {
-	start, end := currentQuarterBounds(asOf, loc, fiscalStart)
-	args := []any{included, start, end}
+// closedWonMinorIn values the deals won in the period, placed by closed_at,
+// through the same valuation rule as the installation's other deal totals.
+func closedWonMinorIn(ctx context.Context, tx pgx.Tx, included []ids.UUID, period RollupWonPeriod, asOf time.Time, baseCurrency string) (*int64, error) {
+	args := []any{included, period.Start, period.End}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	// SUM over the MASKED expression rather than a filtered row set. The two
 	// agree here because SUM skips a NULL, and nulling is the cheaper spelling
 	// — it needs no second clause threaded into a WHERE that already binds
-	// three positions. A withheld amount contributes nothing to the quarter,
+	// three positions. A withheld amount contributes nothing to the period,
 	// which is the same answer the row itself gives the caller.
 	amount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
 		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(baseCurrency)), "d"), arg)
@@ -397,6 +412,9 @@ func closedWonMinorThisQuarter(ctx context.Context, tx pgx.Tx, included []ids.UU
 	return total, err
 }
 
+// companyActivityWindowDays is how many days back activity_count_30d counts.
+const companyActivityWindowDays = 30
+
 // companyActivityCount30d counts live activities that reach any included
 // company in [asOf−30d, asOf), a day entry by its date, and have happened by asOf.
 // The upper bound keeps a future-dated activity (a scheduled call, a
@@ -417,6 +435,6 @@ func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID
 		WHERE `+activities.CompanyLinkedActivityExistsAny(1)+`
 		  AND a.archived_at IS NULL
 		  AND `+occurredday.WithinSQL("a", "$2", "$3")+` AND `+occurredday.HappenedSQL("a", "$3"),
-		included, asOf.AddDate(0, 0, -30), asOf).Scan(&count)
+		included, asOf.AddDate(0, 0, -companyActivityWindowDays), asOf).Scan(&count)
 	return count, err
 }
