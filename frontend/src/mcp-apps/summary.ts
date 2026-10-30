@@ -152,18 +152,17 @@ export function changeTable(
   const table = el("table", "evidence");
   const body = el("tbody");
   for (const change of rows) {
-    const after = shown(change.field, change.after);
+    const after = el("span", "value-now", shown(change.field, change.after));
+    const cell = el("td", "name");
+    if (opts.before) {
+      cell.append(
+        el("span", "value-was", shown(change.field, change.before)),
+        el("span", "value-arrow", " → "),
+      );
+    }
+    cell.appendChild(after);
     const tr = el("tr");
-    tr.append(
-      el("th", "meta", change.label),
-      el(
-        "td",
-        "name",
-        opts.before
-          ? `${shown(change.field, change.before)} → ${after}`
-          : after,
-      ),
-    );
+    tr.append(el("th", "meta", change.label), cell);
     body.appendChild(tr);
   }
   table.appendChild(body);
@@ -193,7 +192,9 @@ function statusPanel(
 ): HTMLElement {
   const card = panel(
     title,
-    action === undefined ? { level: "h1" } : { level: "h1", action },
+    action === undefined
+      ? { level: "h1" }
+      : { level: "h1", action, tone: "success" },
   );
   const body = panelBody();
   body.append(...lines);

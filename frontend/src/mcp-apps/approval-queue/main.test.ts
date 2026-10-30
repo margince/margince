@@ -77,6 +77,9 @@ describe("the approval queue", () => {
     ]);
     expect(asked[0]).toContain(`approval_id ${FIRST}`);
     expect(labels(root).filter((l) => l === "Approve")).toHaveLength(2);
+    expect(root.querySelector(".view-hero-figure")?.textContent).toBe(
+      "2decisions waiting",
+    );
   });
 
   it("answers a bundle's waiting members together", async () => {

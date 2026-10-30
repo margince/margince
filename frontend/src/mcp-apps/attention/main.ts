@@ -1,6 +1,7 @@
-// The attention card: what read_attention answered, as a ranked list a reader
-// scans. One tool answers three questions, and the answer's shape says which:
-// deals slipping this week, relationships going cold, or promises still open.
+// The attention card: what read_attention answered, led by the figure that
+// matters and a picture of its parts, then a ranked list a reader scans. One
+// tool answers three questions, and the answer's shape says which: deals
+// slipping this week, relationships at risk, or promises still open.
 //
 // Each row's "Catch me up" puts the follow-up question in the chat. The card
 // calls no tool itself, so it declares no actions.
@@ -8,15 +9,8 @@
 import { askAssistant } from "../actions";
 import { badge } from "../badge";
 import { el } from "../bridge";
-import {
-  avatar,
-  button,
-  panel,
-  panelBody,
-  type Stat,
-  statStrip,
-  viewRenderer,
-} from "../parts";
+import { hero, type Part, ring, segments, share } from "../hero";
+import { avatar, button, panel, panelBody, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asFiniteNumber,
@@ -26,7 +20,7 @@ import {
   type ToolCall,
   type Warning,
 } from "../types";
-import { money } from "../values";
+import { compactMoney, money } from "../values";
 import "../view.css";
 
 /** render draws the card, keeping the reader's place across a redraw. */
@@ -55,42 +49,49 @@ function draw(
   }
 }
 
-/** The card's frame: the title, a count beside it, and the figures under it. */
+/** The card's frame: a tinted head with the count, and a body for the lead. */
 function frame(
   title: string,
   count: number,
-  stats: Stat[],
-  floor?: string,
+  tone: "warning" | "danger" | "success",
 ): { card: HTMLElement; body: HTMLElement } {
   const card = panel(title, {
     level: "h1",
-    action: badge(String(count), count > 0 ? "warning" : "success"),
+    tone,
+    action: badge(String(count), count > 0 ? tone : "success"),
   });
   const body = panelBody();
-  if (count > 0 || floor !== undefined)
-    body.appendChild(statStrip(stats, floor));
   card.appendChild(body);
   return { card, body };
 }
 
+type Row = Readonly<{
+  marker: HTMLElement;
+  name: string;
+  reasons: HTMLElement[];
+  figure?: string;
+  bar?: HTMLElement;
+  tone: "warning" | "danger" | "neutral";
+  question: string;
+}>;
+
 /** A ranked row: the marker, what it is and why, its figure, and the door. */
-function row(
-  marker: HTMLElement,
-  name: string,
-  reasons: HTMLElement[],
-  figure: string,
-  question: string,
-): HTMLElement {
-  const item = el("li", "panel-row item attention-row");
+function row(r: Row): HTMLElement {
+  const item = el("li", "attention-row");
+  item.dataset.tone = r.tone;
   const text = el("div", "attention-text");
-  text.appendChild(el("p", "name", name));
   const why = el("div", "attention-reasons");
-  why.append(...reasons);
-  text.appendChild(why);
+  why.append(...r.reasons);
+  text.append(el("p", "name attention-name", r.name), why);
   const end = el("div", "attention-end");
-  if (figure !== "") end.appendChild(el("span", "figure", figure));
-  end.appendChild(button("Catch me up", "ghost", () => askAssistant(question)));
-  item.append(marker, text, end);
+  if (r.figure !== undefined) {
+    end.appendChild(el("span", "figure attention-figure", r.figure));
+  }
+  if (r.bar !== undefined) end.appendChild(r.bar);
+  end.appendChild(
+    button("Catch me up", "ghost", () => askAssistant(r.question)),
+  );
+  item.append(r.marker, text, end);
   return item;
 }
 
@@ -100,62 +101,30 @@ function rankMarker(rank: number): HTMLElement {
   return node;
 }
 
+/** reasonLine is one reason an item is on the card, in the server's words,
+ *  which are written in the workspace's own language. */
+function reasonLine(words: string): HTMLElement {
+  const line = el("p", "meta attention-reason");
+  line.append(el("span", "attention-mark"), words);
+  return line;
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 function slippingCard(answer: Record<string, unknown>): HTMLElement {
   const deals = asList(answer.deals).map(asRecord);
   const { card, body } = frame(
     "Slipping this week",
     deals.length,
-    slippingFigures(deals),
+    deals.length > 0 ? "warning" : "success",
   );
   if (deals.length === 0) {
     body.appendChild(el("p", "intro", "No deal is slipping this week."));
     return card;
   }
-  const list = el("ol");
-  deals.forEach((deal, index) => {
-    const name = asText(deal.name) || "Unnamed deal";
-    const reasons = asList(deal.evidence)
-      .map(asRecord)
-      .map((e) => reasonLine(asText(e.snippet)));
-    list.appendChild(
-      row(
-        rankMarker(asFiniteNumber(deal.rank) ?? index + 1),
-        name,
-        reasons,
-        deal.amount_minor === undefined
-          ? ""
-          : money(deal.amount_minor, deal.currency),
-        `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): what happened and what should I do next?`,
-      ),
-    );
-  });
-  card.appendChild(list);
-  return card;
-}
-
-/** What is at stake: one total when every amount is in one currency. */
-function slippingFigures(deals: Record<string, unknown>[]): Stat[] {
-  const priced = deals.filter(
-    (d) => asFiniteNumber(d.amount_minor) !== null && asText(d.currency) !== "",
-  );
-  const currencies = new Set(priced.map((d) => asText(d.currency)));
-  const stats: Stat[] = [
-    { label: "Deals slipping", value: String(deals.length), tone: "warning" },
-  ];
-  const [only] = [...currencies];
-  if (currencies.size === 1 && only !== undefined) {
-    const total = priced.reduce(
-      (sum, d) => sum + (asFiniteNumber(d.amount_minor) ?? 0),
-      0,
-    );
-    stats.push({ label: "Value at stake", value: money(total, only) });
-  } else if (currencies.size > 1) {
-    stats.push({
-      label: "Value at stake",
-      value: "Mixed",
-      detail: `In ${currencies.size} currencies`,
-    });
-  }
+  const stake = atStake(deals);
   const quiet = deals.filter((d) =>
     asList(d.evidence).some((e) =>
       ["deal.last_activity_at", "deal.created_at"].includes(
@@ -163,54 +132,118 @@ function slippingFigures(deals: Record<string, unknown>[]): Stat[] {
       ),
     ),
   ).length;
-  stats.push({ label: "Gone quiet", value: String(quiet) });
-  return stats;
+  body.appendChild(
+    hero({
+      kicker: "Pipeline at risk",
+      figure: stake.figure,
+      caption: stake.total === null ? "deals slipping" : "at stake",
+      sentence: `${plural(deals.length, "deal is", "deals are")} slipping. ${plural(quiet, "has", "have")} gone quiet.`,
+      tone: "warning",
+      ...(stake.parts.length > 1 ? { picture: segments(stake.parts) } : {}),
+    }),
+  );
+  const list = el("ol", "attention-list");
+  deals.forEach((deal, index) => {
+    const name = asText(deal.name) || "Unnamed deal";
+    const amount = asFiniteNumber(deal.amount_minor);
+    const rank = asFiniteNumber(deal.rank) ?? index + 1;
+    list.appendChild(
+      row({
+        marker: rankMarker(rank),
+        name,
+        reasons: asList(deal.evidence)
+          .map(asRecord)
+          .map((e) => reasonLine(asText(e.snippet))),
+        ...(amount === null
+          ? {}
+          : { figure: money(deal.amount_minor, deal.currency) }),
+        ...(amount === null || stake.total === null || stake.total <= 0
+          ? {}
+          : { bar: share(amount / stake.total, "warning") }),
+        tone: rank === 1 ? "danger" : "warning",
+        question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): what happened and what should I do next?`,
+      }),
+    );
+  });
+  card.appendChild(list);
+  return card;
+}
+
+/** What is at stake: one total, and each deal's part of it, when every amount
+ *  is in one currency. Across currencies there is no total to state. */
+function atStake(deals: Record<string, unknown>[]): {
+  figure: string;
+  total: number | null;
+  parts: Part[];
+} {
+  const priced = deals.filter(
+    (d) => asFiniteNumber(d.amount_minor) !== null && asText(d.currency) !== "",
+  );
+  const currencies = new Set(priced.map((d) => asText(d.currency)));
+  const [only] = [...currencies];
+  if (currencies.size !== 1 || only === undefined) {
+    return { figure: String(deals.length), total: null, parts: [] };
+  }
+  const total = priced.reduce(
+    (sum, d) => sum + (asFiniteNumber(d.amount_minor) ?? 0),
+    0,
+  );
+  const parts: Part[] = priced.map((d, i) => ({
+    label: asText(d.name) || "Unnamed deal",
+    value: asFiniteNumber(d.amount_minor) ?? 0,
+    shown: compactMoney(d.amount_minor, only),
+    tone: i === 0 ? "danger" : "warning",
+  }));
+  return { figure: compactMoney(total, only), total, parts };
 }
 
 function atRiskCard(answer: Record<string, unknown>): HTMLElement {
   const deals = asList(answer.deals).map(asRecord);
   const scanned = asFiniteNumber(answer.deals_scanned) ?? 0;
+  const { card, body } = frame(
+    "Relationships at risk",
+    deals.length,
+    deals.length > 0 ? "warning" : "success",
+  );
   const floor =
     answer.truncated === true
       ? `The check stopped after ${scanned} deals, so there may be more.`
       : answer.coverage_withheld === true
         ? "Some deals could not be checked with your access."
         : undefined;
-  const { card, body } = frame(
-    "Relationships at risk",
-    deals.length,
-    [
-      { label: "Deals checked", value: String(scanned) },
-      {
-        label: "At risk",
-        value: String(deals.length),
-        ...(deals.length > 0 ? { tone: "warning" as const } : {}),
-      },
-    ],
-    floor,
+  body.appendChild(
+    hero({
+      kicker: "Relationship coverage",
+      figure: String(deals.length),
+      caption: `of ${plural(scanned, "deal", "deals")} at risk`,
+      sentence:
+        deals.length === 0
+          ? "No open deal rests on one relationship or has gone quiet."
+          : "These rest on one relationship, or the people on them have gone quiet.",
+      tone: deals.length > 0 ? "warning" : "success",
+      picture: segments([
+        { label: "At risk", value: deals.length, tone: "warning" },
+        {
+          label: "Covered",
+          value: Math.max(0, scanned - deals.length),
+          tone: "success",
+        },
+      ]),
+    }),
   );
-  if (deals.length === 0) {
-    body.appendChild(
-      el(
-        "p",
-        "intro",
-        "No open deal rests on one relationship or has gone quiet.",
-      ),
-    );
-    return card;
-  }
-  const list = el("ol");
+  if (floor !== undefined) body.appendChild(el("p", "readings-floor", floor));
+  if (deals.length === 0) return card;
+  const list = el("ol", "attention-list");
   deals.forEach((deal, index) => {
     const name = asText(deal.name) || "Unnamed deal";
-    const reasons = asList(deal.risks).map(asRecord).map(riskLine);
     list.appendChild(
-      row(
-        rankMarker(index + 1),
+      row({
+        marker: rankMarker(index + 1),
         name,
-        reasons,
-        "",
-        `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): who do we know there, and how do we widen it?`,
-      ),
+        reasons: asList(deal.risks).map(asRecord).map(riskLine),
+        tone: "warning",
+        question: `Catch me up on the deal "${name}" (${asText(deal.deal_id)}): who do we know there, and how do we widen it?`,
+      }),
     );
   });
   card.appendChild(list);
@@ -227,40 +260,42 @@ function riskLine(risk: Record<string, unknown>): HTMLElement {
   );
 }
 
-/** reasonLine is one reason an item is on the card, in the server's words,
- *  which are written in the workspace's own language. */
-function reasonLine(words: string): HTMLElement {
-  const line = el("p", "meta attention-reason");
-  line.append(el("span", "attention-mark"), words);
-  return line;
-}
-
 function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
   const promises = asList(answer.commitments).map(asRecord);
-  const state = (s: string) => promises.filter((p) => asText(p.state) === s);
-  const overdue = state("overdue").length;
+  const count = (s: string) =>
+    promises.filter((p) => asText(p.state) === s).length;
+  const overdue = count("overdue");
   const unowned = promises.filter((p) => asText(p.assignee_name) === "").length;
-  const { card, body } = frame("Open promises", promises.length, [
-    {
-      label: "Overdue",
-      value: String(overdue),
-      ...(overdue > 0 ? { tone: "danger" as const } : {}),
-    },
-    { label: "Coming up", value: String(state("upcoming").length) },
-    { label: "No date", value: String(state("undated").length) },
-    {
-      label: "Nobody owns",
-      value: String(unowned),
-      ...(unowned > 0 ? { tone: "warning" as const } : {}),
-    },
-  ]);
+  const { card, body } = frame(
+    "Open promises",
+    promises.length,
+    overdue > 0 ? "danger" : promises.length > 0 ? "warning" : "success",
+  );
   if (promises.length === 0) {
     body.appendChild(
       el("p", "intro", "Every promise made to a customer is kept."),
     );
     return card;
   }
-  const list = el("ol");
+  const parts: Part[] = [
+    { label: "Overdue", value: overdue, tone: "danger" },
+    { label: "Coming up", value: count("upcoming"), tone: "accent" },
+    { label: "No date", value: count("undated"), tone: "neutral" },
+  ];
+  body.appendChild(
+    hero({
+      kicker: "Promises to customers",
+      figure: String(overdue),
+      caption: "overdue",
+      sentence:
+        unowned === 0
+          ? "Every promise has an owner."
+          : `${plural(unowned, "promise has", "promises have")} nobody to keep it.`,
+      tone: overdue > 0 ? "danger" : "accent",
+      beside: ring(parts, String(promises.length), "open"),
+    }),
+  );
+  const list = el("ol", "attention-list");
   for (const promise of promises) list.appendChild(promiseRow(promise));
   card.appendChild(list);
   return card;
@@ -269,29 +304,25 @@ function commitmentsCard(answer: Record<string, unknown>): HTMLElement {
 function promiseRow(promise: Record<string, unknown>): HTMLElement {
   const subject = asText(promise.subject) || "A promise";
   const owner = asText(promise.assignee_name);
-  const marker = avatar(
-    owner === "" ? "?" : owner,
-    asText(promise.assignee_id),
-  );
-  const reasons: HTMLElement[] = [];
-  const status = el("p", "meta");
+  const status = el("p", "meta attention-status");
   status.append(dueBadge(promise), " ");
   status.append(owner === "" ? badge("Nobody owns this", "warning") : owner);
-  reasons.push(status);
+  const reasons = [status];
   const about = asList(promise.about)
     .map((a) => asText(asRecord(a).name))
     .filter((n) => n !== "");
-  if (about.length > 0)
+  if (about.length > 0) {
     reasons.push(el("p", "meta", `For ${about.join(", ")}`));
+  }
   const quote = asText(promise.quote);
-  if (quote !== "") reasons.push(el("p", "meta attention-quote", `"${quote}"`));
-  return row(
-    marker,
-    subject,
+  if (quote !== "") reasons.push(el("p", "attention-quote", quote));
+  return row({
+    marker: avatar(owner === "" ? "?" : owner, asText(promise.assignee_id)),
+    name: subject,
     reasons,
-    "",
-    `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""}: where does it stand, and what should happen next?`,
-  );
+    tone: asText(promise.state) === "overdue" ? "danger" : "neutral",
+    question: `Catch me up on the promise "${subject}"${about.length > 0 ? ` to ${about.join(", ")}` : ""}: where does it stand, and what should happen next?`,
+  });
 }
 
 function dueBadge(promise: Record<string, unknown>): HTMLElement {

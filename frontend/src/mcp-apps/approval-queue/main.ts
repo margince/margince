@@ -16,14 +16,8 @@ import {
   type Proposal,
   proposalOf,
 } from "../decision";
-import {
-  button,
-  panel,
-  panelBody,
-  type Stat,
-  statStrip,
-  viewRenderer,
-} from "../parts";
+import { hero, segments } from "../hero";
+import { button, panel, panelBody, viewRenderer } from "../parts";
 import { refusalPanel } from "../summary";
 import {
   asList,
@@ -58,9 +52,14 @@ function draw(
     .filter((p): p is Proposal => p !== null);
   const now = Date.now();
   const open = proposals.filter((p) => isOpen(p, now));
+  const outcomes = outcomesOf(root);
+  const waiting = open.filter((p) => outcomes.get(p.id)?.kind !== "decided");
   const card = panel("Waiting for your decision", {
     level: "h1",
-    action: badge(String(open.length), open.length > 0 ? "accent" : "default"),
+    action: badge(
+      String(waiting.length),
+      waiting.length > 0 ? "accent" : "success",
+    ),
   });
   const body = panelBody();
   if (proposals.length === 0) {
@@ -69,8 +68,7 @@ function draw(
     root.appendChild(card);
     return;
   }
-  body.appendChild(statStrip(figures(proposals, open, now)));
-  const outcomes = outcomesOf(root);
+  body.appendChild(lead(open, waiting, now));
   const again = () => render(root, data, warnings, call);
   const list = el("ol", "decision-list");
   for (const group of byBundle(proposals)) {
@@ -111,28 +109,36 @@ function draw(
   root.appendChild(card);
 }
 
-/** The queue at a glance: what waits, what runs out soon, and whose it is. */
-function figures(all: Proposal[], open: Proposal[], now: number): Stat[] {
-  const soon = open.filter((p) => {
+/** The queue at a glance: what waits, what runs out soon, and what was
+ *  answered here, which grows as the reader works down the list. */
+function lead(open: Proposal[], waiting: Proposal[], now: number): HTMLElement {
+  const soon = waiting.filter((p) => {
     const at = Date.parse(p.expiresAt);
     return !Number.isNaN(at) && at - now < SIX_HOURS_MS;
   }).length;
-  const stats: Stat[] = [
-    { label: "Waiting", value: String(open.length) },
-    {
-      label: "Run out within 6 hours",
-      value: String(soon),
-      ...(soon > 0 ? { tone: "warning" as const } : {}),
-    },
-    {
-      label: "Proposed by an assistant",
-      value: String(open.filter((p) => p.byAssistant).length),
-    },
-  ];
-  const answered = all.length - open.length;
-  return answered > 0
-    ? [...stats, { label: "Answered or lapsed", value: String(answered) }]
-    : stats;
+  const byAssistant = waiting.filter((p) => p.byAssistant).length;
+  const sentence =
+    waiting.length === 0
+      ? "Everything on this page is answered."
+      : soon > 0
+        ? `${soon} ${soon === 1 ? "runs" : "run"} out within 6 hours. ${byAssistant} proposed by an assistant.`
+        : `${byAssistant} proposed by an assistant. Nothing runs out within 6 hours.`;
+  return hero({
+    kicker: "Approvals",
+    figure: String(waiting.length),
+    caption: waiting.length === 1 ? "decision waiting" : "decisions waiting",
+    sentence,
+    tone: waiting.length === 0 ? "success" : "ai",
+    picture: segments([
+      {
+        label: "Answered here",
+        value: open.length - waiting.length,
+        tone: "success",
+      },
+      { label: "Running out soon", value: soon, tone: "warning" },
+      { label: "Waiting", value: waiting.length - soon, tone: "ai" },
+    ]),
+  });
 }
 
 /** byBundle keeps the answer's order and puts the members of a bundle together,

@@ -23,8 +23,10 @@ function mount(data: unknown): HTMLElement {
 
 const names = (root: HTMLElement) =>
   [...root.querySelectorAll(".attention-row .name")].map((n) => n.textContent);
-const figures = (root: HTMLElement) =>
-  [...root.querySelectorAll(".stat-card")].map((c) => c.textContent);
+const lead = (root: HTMLElement) =>
+  root.querySelector(".view-hero-figure")?.textContent;
+const legend = (root: HTMLElement) =>
+  [...root.querySelectorAll(".view-legend-item")].map((i) => i.textContent);
 
 beforeEach(() => {
   asked.length = 0;
@@ -36,8 +38,14 @@ describe("the attention card for slipping deals", () => {
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe("Slipping this week");
     expect(names(root)).toEqual(["Acme renewal", "Nordwind rollout"]);
-    expect(figures(root)[0]).toBe("Deals slipping2");
-    expect(figures(root)[1]).toMatch(/^Value at stake.*97,?000/);
+    expect(lead(root)).toMatch(/97K\s*at stake$/);
+    expect(root.querySelector(".view-hero-sentence")?.textContent).toBe(
+      "2 deals are slipping. 1 has gone quiet.",
+    );
+    expect(legend(root)).toEqual([
+      expect.stringMatching(/^Acme renewal.*72K$/),
+      expect.stringMatching(/^Nordwind rollout.*25K$/),
+    ]);
     expect(
       [...root.querySelectorAll(".attention-reason")].map((r) => r.textContent),
     ).toEqual([
@@ -50,7 +58,8 @@ describe("the attention card for slipping deals", () => {
   it("totals no value across currencies", () => {
     const [first, second] = (slippingFixture.data as { deals: object[] }).deals;
     const root = mount({ deals: [first, { ...second, currency: "USD" }] });
-    expect(figures(root)[1]).toBe("Value at stakeMixedIn 2 currencies");
+    expect(lead(root)).toBe("2deals slipping");
+    expect(root.querySelector(".view-segments")).toBeNull();
   });
 
   it("puts a catch-up question about the deal in the chat", () => {
@@ -78,7 +87,8 @@ describe("the attention card for relationships at risk", () => {
     expect(root.textContent).toContain(
       "Only one engaged contact on their side (Lena Vogt)",
     );
-    expect(figures(root)).toEqual(["Deals checked42", "At risk1"]);
+    expect(lead(root)).toBe("1of 42 deals at risk");
+    expect(legend(root)).toEqual(["At risk1", "Covered41"]);
   });
 
   it("says the check stopped short rather than calling the rest clean", () => {
@@ -98,12 +108,12 @@ describe("the attention card for open promises", () => {
     const root = mount(commitmentsFixture.data);
     expectReadable(root);
     expect(root.querySelector("h1")?.textContent).toBe("Open promises");
-    expect(figures(root)).toEqual([
-      "Overdue1",
-      "Coming up0",
-      "No date1",
-      "Nobody owns1",
-    ]);
+    expect(lead(root)).toBe("1overdue");
+    expect(root.querySelector(".view-ring")?.textContent).toBe("2open");
+    expect(legend(root)).toEqual(["Overdue1", "Coming up0", "No date1"]);
+    expect(root.querySelector(".view-hero-sentence")?.textContent).toBe(
+      "1 promise has nobody to keep it.",
+    );
     expect(root.textContent).toContain("6 days late");
     expect(root.textContent).toContain("Nobody owns this");
     expect(root.textContent).toContain("For Acme GmbH");
@@ -116,7 +126,9 @@ describe("the attention card for open promises", () => {
       as_of: "2026-10-30T00:00:00Z",
       commitments: [{ ...late, days_overdue: 0 }],
     });
-    expect(root.querySelector(".badge-danger")?.textContent).toBe("Late");
+    expect(
+      root.querySelector(".attention-status .badge-danger")?.textContent,
+    ).toBe("Late");
   });
 });
 

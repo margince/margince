@@ -20,7 +20,6 @@
 
 import { meshOf, meshStyle, monogramOf } from "../design-system/avatarmesh";
 import type { PanelTone } from "../design-system/panel";
-import type { STAT_CARD_TONES } from "../design-system/statcard";
 import type { StrengthBand } from "../design-system/strengthmeter";
 import { el, heading, onResult } from "./bridge";
 import { NO_CALL, type ToolCall, type Warning } from "./types";
@@ -170,70 +169,6 @@ export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   for (let i = 0; i < 3; i++) bars.appendChild(el("i"));
   node.append(bars, word);
   return node;
-}
-
-type StatTone = (typeof STAT_CARD_TONES)[number];
-
-/** One reading on a strip: its name, its figure and an optional line under it. */
-export type Stat = Readonly<{
-  label: string;
-  value: string;
-  tone?: StatTone;
-  detail?: string;
-}>;
-
-/**
- * statStrip mirrors `StatStrip density="plate"` holding `StatCard` items: readings
- * read across as one set. `floor` mirrors `ReadingsFloor`, the sentence that
- * says the figures were read up to a limit.
- */
-export function statStrip(stats: readonly Stat[], floor?: string): HTMLElement {
-  const wrap = el("div", "stat-strip-wrap");
-  const strip = el("section", "stat-strip");
-  // The plate: one ground with rules between cells. It sits over a list inside
-  // a card, where a row of separate tiles would stand apart from it.
-  strip.dataset.density = "plate";
-  const slots = stats.length;
-  for (const [name, cap] of [
-    ["--stat-strip-slots", 6],
-    ["--stat-strip-slots-3", 3],
-    ["--stat-strip-slots-2", 2],
-  ] as const) {
-    strip.style.setProperty(name, String(Math.min(slots, cap)));
-  }
-  for (const [name, cap] of [
-    ["--stat-strip-tail-6", 6],
-    ["--stat-strip-tail-3", 3],
-    ["--stat-strip-tail-2", 2],
-  ] as const) {
-    const columns = Math.max(1, Math.min(slots, cap));
-    strip.style.setProperty(name, String(columns - ((slots - 1) % columns)));
-  }
-  for (const stat of stats) strip.appendChild(statCard(stat));
-  wrap.appendChild(strip);
-  if (floor !== undefined) wrap.appendChild(el("p", "readings-floor", floor));
-  return wrap;
-}
-
-function statCard(stat: Stat): HTMLElement {
-  const card = el("section", "stat-card");
-  card.title = stat.value;
-  const label = el("span", "stat-card-label");
-  label.appendChild(el("span", "stat-card-label-text", stat.label));
-  card.append(
-    label,
-    el(
-      "span",
-      stat.tone === undefined
-        ? "stat-card-value"
-        : `stat-card-value stat-card-${stat.tone}`,
-      stat.value,
-    ),
-  );
-  if (stat.detail !== undefined) {
-    card.appendChild(el("span", "stat-card-detail t-caption", stat.detail));
-  }
-  return card;
 }
 
 /** eyebrow mirrors `Eyebrow` in its label use: the small title over a line. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { count, day, money, percent } from "./values";
+import { compactMoney, count, day, money, percent } from "./values";
 
 describe("the value helpers refuse to render nonsense", () => {
   it("renders a non-finite proportion as an em dash rather than NaN", () => {
@@ -66,5 +66,17 @@ describe("day renders the calendar day the server judged in", () => {
     expect(day(undefined)).toBe("—");
     expect(day("")).toBe("—");
     expect(day("not a date")).toBe("—");
+  });
+});
+
+describe("compactMoney states an amount as a headline does", () => {
+  it("scales by the currency's own minor units", () => {
+    expect(compactMoney(11_500_000, "EUR")).toMatch(/^€115K$/);
+    expect(compactMoney(11_500_000, "JPY")).toMatch(/11\.5M/);
+  });
+
+  it("renders an amount it cannot read as an em dash", () => {
+    expect(compactMoney(undefined, "EUR")).toBe("—");
+    expect(compactMoney(100, "")).toBe("—");
   });
 });

@@ -28,9 +28,7 @@
 @import "../design-system/readings.css";
 @import "../design-system/callout.css";
 @import "../design-system/strengthmeter.css";
-/* The readings strip over a list, and the staged proposal card. */
-@import "../design-system/atoms.css";
-@import "../design-system/statstrip.css";
+/* The floor line under a reading, and the staged proposal card. */
 @import "../design-system/readingsfloor.css";
 @import "../design-system/trust.css";
 @import "../design-system/decisioncard.css";
@@ -227,22 +225,274 @@ ol {
   gap: var(--space-2);
 }
 
-/* A ranked attention row: its rank or owner, what it is and why, then its
-   figure over the door to ask about it. */
-.attention-row {
+.bundle-line {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-md);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+
+/* The lead of a card: the figure it is about, washed in its status tone from
+   the top-left as the app's HowItStands card is, so the answer is read
+   before the rows. Each tone names the colour family it washes in. */
+.view-hero {
+  --hero: var(--accent);
+  --hero-ink: var(--accentText);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  --hero-wash: color-mix(in srgb, var(--hero) 8%, var(--ground));
+  background: var(--hero-wash);
+  box-shadow: var(--shadow-rest);
+}
+
+.view-hero[data-tone="success"] {
+  --hero: var(--success);
+  --hero-ink: var(--successText);
+}
+
+.view-hero[data-tone="warning"] {
+  --hero: var(--warning);
+  --hero-ink: var(--warningText);
+}
+
+.view-hero[data-tone="danger"] {
+  --hero: var(--danger);
+  --hero-ink: var(--dangerText);
+}
+
+.view-hero[data-tone="ai"] {
+  --hero: var(--aiText);
+  --hero-ink: var(--aiText);
+}
+
+/* With a picture beside the words, the two share a row while there is room
+   for both and stack when the frame is narrow. */
+.view-hero-split {
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+}
+
+@media (max-width: 30rem) {
+  .view-hero-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.view-hero .t-eyebrow {
+  font: var(--fontHeadingXXSmall);
+  color: var(--hero-ink);
+}
+
+.view-hero-figure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.view-hero-number {
+  font: var(--fontDisplayLarge);
+  font-family: system-ui, sans-serif;
+  font-weight: var(--fontWeightBold);
+  font-variant-numeric: tabular-nums;
+  color: var(--hero-ink);
+}
+
+.view-hero-caption {
+  font: var(--fontHeadingSmall);
+  font-family: system-ui, sans-serif;
+  color: var(--textSecondary);
+}
+
+.view-hero-sentence {
+  margin-top: var(--space-2);
+  color: var(--textSecondary);
+}
+
+/* Parts of one total on one track, then the legend that names them. The
+   colours are the status families, so a part reads as what it is. */
+.view-segments {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.view-segments-track {
+  display: flex;
+  gap: 3px;
+  block-size: var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  overflow: hidden;
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+
+.view-segment {
+  flex-basis: 0;
+  min-inline-size: 6px;
+}
+
+[data-tone="danger"].view-segment,
+[data-tone="danger"].view-swatch {
+  background: var(--danger);
+}
+
+[data-tone="warning"].view-segment,
+[data-tone="warning"].view-swatch {
+  background: var(--warning);
+}
+
+[data-tone="success"].view-segment,
+[data-tone="success"].view-swatch {
+  background: var(--success);
+}
+
+[data-tone="accent"].view-segment,
+[data-tone="accent"].view-swatch {
+  background: var(--accent);
+}
+
+[data-tone="ai"].view-segment,
+[data-tone="ai"].view-swatch {
+  background: var(--aiText);
+}
+
+[data-tone="neutral"].view-segment,
+[data-tone="neutral"].view-swatch {
+  background: var(--borderStrong);
+}
+
+.view-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.view-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.view-swatch {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-xs);
+}
+
+.view-legend-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+/* A whole as a ring around its count, painted by one conic gradient. */
+.view-ring-wrap {
+  --ring-danger: var(--danger);
+  --ring-warning: var(--warning);
+  --ring-success: var(--success);
+  --ring-accent: var(--accent);
+  --ring-ai: var(--aiText);
+  --ring-neutral: var(--borderStrong);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.view-ring-wrap .view-legend {
+  flex-direction: column;
+}
+
+.view-ring {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 112px;
+  block-size: 112px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ring-fill);
+}
+
+.view-ring-middle {
+  display: grid;
+  place-items: center;
+  inline-size: 78px;
+  block-size: 78px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--hero-wash);
+}
+
+.view-ring-count {
+  font: var(--fontHeadingLarge);
+  font-family: system-ui, sans-serif;
+  font-weight: var(--fontWeightBold);
+  font-variant-numeric: tabular-nums;
+}
+
+.view-ring-word {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+/* The ranked list under a lead: each row a card of its own, its tone as a
+   band down the leading edge. */
+.attention-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.attention-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+  background: var(--ground);
+  box-shadow: inset 3px 0 0 0 var(--borderStrong);
+}
+
+.attention-row[data-tone="warning"] {
+  box-shadow: inset 3px 0 0 0 var(--warning);
+}
+
+.attention-row[data-tone="danger"] {
+  box-shadow: inset 3px 0 0 0 var(--danger);
+}
+
+.attention-name {
+  font-weight: var(--fontWeightMedium);
 }
 
 .attention-rank {
   display: inline-grid;
   place-items: center;
-  inline-size: var(--space-6);
-  block-size: var(--space-6);
+  inline-size: 28px;
+  block-size: 28px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--warningSurface);
   border: 1px solid var(--warningBorder);
   color: var(--warningText);
+}
+
+.attention-row[data-tone="danger"] .attention-rank {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--textOnAccent);
 }
 
 .attention-reasons {
@@ -255,28 +505,37 @@ ol {
   display: grid;
   justify-items: end;
   gap: var(--space-2);
+  min-inline-size: 7rem;
 }
 
+.attention-figure {
+  font: var(--fontHeadingXSmall);
+  font-variant-numeric: tabular-nums;
+}
+
+.view-share {
+  inline-size: 100%;
+}
+
+/* The sentence a promise was made in, quoted as the customer heard it. */
 .attention-quote {
+  margin-top: var(--space-1);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--borderStrong);
+  font: var(--fontBodySmall);
   font-style: italic;
+  color: var(--textSecondary);
 }
 
-/* The figures sit on the panel's ground, with the list's first rule under them. */
-.panel-body > .stat-strip-wrap + .intro,
-.panel-body > .stat-strip-wrap + .decision-list {
-  margin-top: var(--space-4);
-}
-
-/* The record a write landed on: its chip, its name and its kind on one line. */
-.record-line {
+.attention-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
-/* One reason an item is on the attention card, led by a dot in the warning
-   tone, so the list reads as concerns before a word of it is read. */
+/* One reason an item is on the card, led by a dot in the warning tone, so the
+   list reads as concerns before a word of it is read. */
 .attention-reason {
   display: flex;
   align-items: baseline;
@@ -290,4 +549,51 @@ ol {
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--warning);
+}
+
+.attention-row[data-tone="danger"] .attention-mark {
+  background: var(--danger);
+}
+
+/* The record a write landed on: its chip, its name and its kind on one line. */
+.record-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A change as it was and as it is: the old value receding, the new one set
+   on a chip in the accent, so the eye lands on what the call made true. */
+.value-was {
+  color: var(--textSecondary);
+  text-decoration: line-through;
+  text-decoration-color: var(--borderStrong);
+}
+
+.value-arrow {
+  color: var(--textSecondary);
+}
+
+.value-now {
+  padding: 1px var(--space-2);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
+}
+
+.evidence th {
+  inline-size: 30%;
+}
+
+.evidence tr + tr > * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* What a proposal was read out of, quoted as it was written. */
+.dcard-evidence .evidence-list li {
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--aiMed);
+  font-style: italic;
 }
