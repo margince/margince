@@ -4,6 +4,8 @@
 import { describe, expect, it } from "vitest";
 import {
   axisOf,
+  axisPct,
+  BREAK_AT,
   clusterEvents,
   groupMarks,
   instant,
@@ -94,16 +96,50 @@ describe("the grid lines", () => {
 describe("the room after today", () => {
   it("leaves a week at least, so today never stands on the axis's end", () => {
     const today = day("2026-10-21");
-    const range = axisOf(today, [day("2026-10-02"), day("2026-10-20")]);
+    const { range } = axisOf(today, [day("2026-10-02"), day("2026-10-20")]);
     expect(pct(today, range)).toBeLessThan(90);
   });
 
   it("still reaches the last date ahead", () => {
-    const range = axisOf(day("2026-08-13"), [
+    const axis = axisOf(day("2026-08-13"), [
       day("2026-06-03"),
       day("2026-09-30"),
     ]);
-    expect(new Date(range.end).toISOString()).toBe("2026-09-30T00:00:00.000Z");
+    expect(new Date(axis.range.end).toISOString()).toBe(
+      "2026-09-30T00:00:00.000Z",
+    );
+    expect(axis.far).toBeUndefined();
+  });
+});
+
+describe("a date far ahead", () => {
+  const today = day("2026-10-30");
+  const recent = [day("2026-09-07"), day("2026-09-23")];
+  const close = day("2029-08-29");
+
+  it("does not stretch the axis: the span stays on the recent months", () => {
+    const axis = axisOf(today, [...recent, close]);
+    expect(new Date(axis.range.start).toISOString()).toBe(
+      "2026-09-01T00:00:00.000Z",
+    );
+    expect(axis.range.end).toBeLessThan(day("2027-01-01"));
+    expect(axis.far).toBe(close);
+  });
+
+  it("sits past the break at the right end, the dated span before it", () => {
+    const axis = axisOf(today, [...recent, close]);
+    expect(axisPct(close, axis)).toBe(100);
+    expect(axisPct(axis.range.end, axis)).toBe(BREAK_AT);
+    expect(axisPct(today, axis)).toBeLessThan(BREAK_AT);
+    expect(axisPct(day("2026-09-23"), axis)).toBeGreaterThan(15);
+  });
+
+  it("is drawn to scale while it is no further ahead than the line looks back", () => {
+    const axis = axisOf(today, [day("2025-10-01"), day("2027-06-30")]);
+    expect(axis.far).toBeUndefined();
+    expect(axisPct(day("2027-06-30"), axis)).toBe(
+      pct(day("2027-06-30"), axis.range),
+    );
   });
 });
 

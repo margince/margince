@@ -1,4 +1,3 @@
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import {
   type CSSProperties,
   type RefObject,
@@ -11,29 +10,33 @@ import {
   type OccurredPrecision,
 } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
-import { formatDayMonth, monthName } from "../format/format.dates";
+import {
+  formatDayMonth,
+  monthAndYear,
+  monthName,
+} from "../format/format.dates";
 import { UTC_ZONE } from "../format/timezone";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
-import { type PeekContent, type PeekItem, usePeek } from "./peek";
 import { useScrollRegion } from "./scrollregion";
 import {
   axisOf,
+  axisPct,
+  BREAK_MARK_AT,
   clusterEvents,
   groupMarks,
   instant,
   isWeekly,
   LABEL_MAX_PX,
   type LabelPlace,
-  type MarkGroup,
-  pct,
   placeLabels,
   RIGHT_ALIGN_AFTER,
+  type TimelineAxis,
   type TimelineKind,
-  type TimelineRange,
   tickLabelsShown,
   ticksOf,
 } from "./standingtimeline.layout";
-import { TIMELINE_ICON } from "./timelineentry";
+import { MarkLane } from "./standingtimeline.marks";
+import type { TIMELINE_ICON } from "./timelineentry";
 import "./standingtimeline.css";
 
 /**
@@ -135,15 +138,17 @@ export function StandingTimeline({
   }
   const today = instant(asOf);
   const sorted = [...events].sort((a, b) => instant(a.at) - instant(b.at));
-  const range = axisOf(
+  const axis = axisOf(
     today,
     sorted.map((event) => instant(event.at)),
   );
-  const nowPct = pct(today, range);
-  const gapPct = gap ? Math.min(pct(instant(gap.from), range), nowPct) : nowPct;
+  const nowPct = axisPct(today, axis);
+  const gapPct = gap
+    ? Math.min(axisPct(instant(gap.from), axis), nowPct)
+    : nowPct;
   const items = sorted.map((event) => ({
     event,
-    pct: pct(instant(event.at), range),
+    pct: axisPct(instant(event.at), axis),
     kind: event.kind,
   }));
   const labels = clusterEvents(items, canvasPx).map(({ lead, members }) => {
@@ -155,7 +160,7 @@ export function StandingTimeline({
           })
         : undefined;
     const sub = [event?.sub, more].filter(Boolean).join(" · ");
-    return { event, at, sub };
+    return { event, at, sub, alone: members.length === 1 };
   });
   const places = placeLabels(
     labels.map(({ event, at, sub }) => ({
@@ -178,12 +183,12 @@ export function StandingTimeline({
     right: `${100 - nowPct}%`,
     "--standing-timeline-room": `${nowPct}%`,
   };
-  const drawn = markedEvents(sorted);
+  const drawn = namedActivities(labels, places);
   const lane = marks
     .filter(
       (mark) =>
         !drawn.has(mark.key) &&
-        instant(mark.at) >= range.start &&
+        instant(mark.at) >= axis.range.start &&
         activityHasBegun(mark.at, mark.precision, today, record),
     )
     .sort((a, b) => instant(a.at) - instant(b.at));
@@ -196,7 +201,7 @@ export function StandingTimeline({
             className="standing-timeline-canvas"
             aria-hidden="true"
           >
-            <Ticks range={range} locale={locale} canvasPx={canvasPx} />
+            <Ticks axis={axis} locale={locale} canvasPx={canvasPx} />
             {gap && (
               <div className="standing-timeline-gap" style={gapStyle}>
                 <span className="standing-timeline-gap-title">{gap.title}</span>
@@ -206,6 +211,16 @@ export function StandingTimeline({
               </div>
             )}
             <Spine gapPct={gapPct} nowPct={nowPct} />
+            {axis.far !== undefined && (
+              <span
+                className="standing-timeline-break"
+                style={{ left: `${BREAK_MARK_AT}%` }}
+              >
+                <span className="standing-timeline-break-label">
+                  {monthAndYear(new Date(axis.far), locale, UTC_ZONE)}
+                </span>
+              </span>
+            )}
             {items.map(({ event, pct: at }) => (
               <span
                 key={event.key}
@@ -234,7 +249,7 @@ export function StandingTimeline({
           <MarkLane
             marks={lane}
             groups={groupMarks(
-              lane.map((mark) => pct(instant(mark.at), range)),
+              lane.map((mark) => axisPct(instant(mark.at), axis)),
               canvasPx,
               nowPct,
             )}
@@ -252,118 +267,18 @@ export function StandingTimeline({
   );
 }
 
-// The activities the events already draw, so their marks are left out.
-function markedEvents(events: readonly TimelineEvent[]): Set<string> {
-  return new Set(events.flatMap((event) => event.activityIds ?? []));
-}
-
-// The marks' own layer, beside the canvas rather than inside it. The canvas is
-// drawn for the eye and hidden from assistive technology. A chip is a control
-// a reader must be able to reach.
-function MarkLane({
-  marks,
-  groups,
-}: Readonly<{ marks: readonly TimelineMark[]; groups: readonly MarkGroup[] }>) {
-  return (
-    <div className="standing-timeline-marks">
-      {groups.map((group) => (
-        <MarkChip
-          key={marks[group.members[0] ?? 0]?.key}
-          px={group.px}
-          members={group.members.flatMap((index) => marks[index] ?? [])}
-        />
-      ))}
-    </div>
+// The activities a drawn label names, so their marks are left out. An event
+// folded into a neighbour's "+N more", or left without room, names nothing,
+// so its activities stay in the mark lane rather than vanish from the line.
+function namedActivities(
+  labels: readonly Readonly<{ event?: TimelineEvent; alone: boolean }>[],
+  places: readonly LabelPlace[],
+): Set<string> {
+  return new Set(
+    labels.flatMap(({ event, alone }, index) =>
+      alone && places[index] ? (event?.activityIds ?? []) : [],
+    ),
   );
-}
-
-// The most rows one card lists; the rest are named and left to History.
-const CARD_ROWS = 6;
-
-function MarkChip({
-  px,
-  members,
-}: Readonly<{ px: number; members: readonly TimelineMark[] }>) {
-  const plural = usePlural();
-  const t = useT();
-  const { locale } = useLocale();
-  const newest = members.at(-1);
-  const oldest = members[0];
-  const content: PeekContent | undefined =
-    newest && oldest
-      ? {
-          head:
-            members.length === 1
-              ? newest.what
-              : plural("standing.mark.group", members.length, {
-                  count: formatNumber(members.length, locale),
-                  range:
-                    oldest.when === newest.when
-                      ? newest.when
-                      : t("standing.mark.range", {
-                          from: oldest.when,
-                          to: newest.when,
-                        }),
-                }),
-          items: [...members].reverse().slice(0, CARD_ROWS).map(markRow),
-          foot:
-            members.length > CARD_ROWS
-              ? plural("standing.mark.more", members.length - CARD_ROWS, {
-                  count: formatNumber(members.length - CARD_ROWS, locale),
-                })
-              : undefined,
-        }
-      : undefined;
-  const {
-    ref: peekRef,
-    props: peekProps,
-    panel: peekPanel,
-    open: peekOpen,
-  } = usePeek<HTMLButtonElement>({ content, pressOpens: true });
-  if (!newest || !content) {
-    return null;
-  }
-  const Icon = TIMELINE_ICON[newest.kind];
-  return (
-    <>
-      <button
-        ref={peekRef}
-        type="button"
-        className="standing-timeline-mark"
-        style={{ left: `${px}px` }}
-        aria-label={content.head}
-        aria-haspopup="true"
-        aria-expanded={peekOpen}
-        {...peekProps}
-      >
-        <Icon aria-hidden="true" />
-        {members.length === 1 && newest.direction && (
-          <span className="standing-timeline-mark-way">
-            {newest.direction === "inbound" ? (
-              <ArrowDownLeft aria-hidden="true" />
-            ) : (
-              <ArrowUpRight aria-hidden="true" />
-            )}
-          </span>
-        )}
-        {members.length > 1 && (
-          <span className="standing-timeline-mark-count">
-            {formatNumber(members.length, locale)}
-          </span>
-        )}
-      </button>
-      {peekPanel}
-    </>
-  );
-}
-
-function markRow(mark: TimelineMark): PeekItem {
-  return {
-    key: mark.key,
-    title: mark.title,
-    sub: [mark.detail, mark.when].filter(Boolean).join(" · "),
-    onOpen: mark.onOpen,
-  };
 }
 
 // The canvas's drawn width, so labels are measured against the room they
@@ -387,13 +302,14 @@ function useWidth(target: RefObject<HTMLDivElement | null>): number {
 }
 
 function Ticks({
-  range,
+  axis,
   locale,
   canvasPx,
-}: Readonly<{ range: TimelineRange; locale: Locale; canvasPx: number }>) {
-  const weekly = isWeekly(range);
-  const ticks = ticksOf(range).map((tick) => ({
+}: Readonly<{ axis: TimelineAxis; locale: Locale; canvasPx: number }>) {
+  const weekly = isWeekly(axis.range);
+  const ticks = ticksOf(axis.range).map((tick) => ({
     ...tick,
+    pct: axisPct(tick.at, axis),
     text: weekly
       ? formatDayMonth(new Date(tick.at).toISOString(), locale, UTC_ZONE)
       : monthName(new Date(tick.at).getUTCMonth() + 1, locale),

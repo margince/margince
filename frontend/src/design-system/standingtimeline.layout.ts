@@ -70,18 +70,51 @@ export function rangeOf(moments: readonly number[]): TimelineRange {
   return { start, end: after.getTime() - DAY_MS };
 }
 
+/** The least the axis looks ahead of today before a later date is drawn past
+ *  a break: a close years out must not shrink this month to a pixel. */
+const MIN_LOOKAHEAD_MS = 8 * 7 * DAY_MS;
+
+/** The share of the canvas the dated span takes when a date lies past the
+ *  break; the rest holds the break and that date. */
+export const BREAK_AT = 86;
+
+/** Where on the canvas the break between the dated span and the far dates
+ *  stands. */
+export const BREAK_MARK_AT = (BREAK_AT + 100) / 2;
+
+/** The dated span, and the earliest moment past it when any lies so far
+ *  ahead that it is drawn past a break at the canvas's right end. */
+export type TimelineAxis = Readonly<{ range: TimelineRange; far?: number }>;
+
 /**
- * The axis for a record read at `today`: every event, and room after today
- * (a week, or a sixth of the time before it). The Today pill then never
- * stands on the axis's end.
+ * The axis for a record read at `today`. It looks as far ahead of today as it
+ * looks back (at least `MIN_LOOKAHEAD_MS`), with room after today (a week,
+ * or a sixth of the time before it) so the Today pill never stands on the
+ * axis's end. A date further ahead is not stretched to: it sits past a break.
  */
 export function axisOf(
   today: number,
   moments: readonly number[],
-): TimelineRange {
+): TimelineAxis {
   const first = Math.min(today, ...moments);
+  const reach = today + Math.max(today - first, MIN_LOOKAHEAD_MS);
+  const near = moments.filter((at) => at <= reach);
   const room = Math.max(7 * DAY_MS, (today - first) / 6);
-  return rangeOf([today, today + room, ...moments]);
+  const range = rangeOf([today, today + room, ...near]);
+  const beyond = moments.filter((at) => at > range.end);
+  return beyond.length > 0 ? { range, far: Math.min(...beyond) } : { range };
+}
+
+/** Where a moment sits on the canvas, as a percentage: on the dated span, or
+ *  at the right end past the break. */
+export function axisPct(at: number, axis: TimelineAxis): number {
+  if (axis.far === undefined) {
+    return pct(at, axis.range);
+  }
+  if (at > axis.range.end) {
+    return 100;
+  }
+  return Math.round(pct(at, axis.range) * BREAK_AT) / 100;
 }
 
 /** Where a moment sits on the axis, as a percentage held to 0–100. */

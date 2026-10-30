@@ -3153,13 +3153,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.neverWritten":
     "Chưa ghi nhận tin nhắn nào từ họ hoặc cuộc họp nào.",
   "co.health.reason.quiet_one":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào trong {days} ngày.",
   "co.health.reason.quiet_other":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp trong {days} ngày.",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào trong {days} ngày.",
   "co.health.reason.quietSince_one":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào từ {at} ({days} ngày).",
   "co.health.reason.quietSince_other":
-    "Chưa ghi nhận phản hồi hoặc cuộc họp từ {at} ({days} ngày).",
+    "Chưa có phản hồi từ phía họ hay cuộc họp nào từ {at} ({days} ngày).",
   "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
