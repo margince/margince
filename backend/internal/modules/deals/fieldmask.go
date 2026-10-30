@@ -106,8 +106,8 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 		extra, writable)
 }
 
-// stampDealsArchivable sets Archivable on a page whose Writable is already
-// stamped: the archive asks the row write gate and the deal archive rule both.
+// stampDealsArchivable sets Archivable from auth.ArchivableSubset, which asks
+// the row write gate itself, so a delete holder without update is answered too.
 func stampDealsArchivable(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
 	named := make([]ids.UUID, len(deals))
 	for i := range deals {
@@ -118,8 +118,7 @@ func stampDealsArchivable(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 		return err
 	}
 	for i := range deals {
-		may := deals[i].Writable != nil && *deals[i].Writable && archivable[named[i]]
-		deals[i].Archivable = &may
+		deals[i].Archivable = new(archivable[named[i]])
 	}
 	return nil
 }

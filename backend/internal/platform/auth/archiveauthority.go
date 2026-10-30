@@ -17,14 +17,35 @@ import (
 // ArchiveRule names who may archive a row without the object's delete grant.
 // It is a holder of update for whom own matches the row.
 type ArchiveRule struct {
-	object string
-	table  string
-	own    func(alias string, me int, arg func(any) int) string
+	object   string
+	table    string
+	own      func(alias string, me int, arg func(any) int) string
+	writable func(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
+}
+
+// liveDealWrites is the row write gate the deal archive asks, over a page.
+func liveDealWrites(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	writable, err := rowWriteSubset(ctx, tx, p, tableDeal, rowIDs)
+	if err != nil {
+		return nil, err
+	}
+	archived, err := archivedAmong(ctx, tx, tableDeal, writable)
+	if err != nil {
+		return nil, err
+	}
+	for id := range archived {
+		delete(writable, id)
+	}
+	return writable, nil
+}
+
+func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	return ActivityWritableSubset(ctx, tx, rowIDs)
 }
 
 // ActivityArchive admits the author of a hand-logged note or task. Captured
 // correspondence and a colleague's notes keep needing activity.delete.
-var ActivityArchive = ArchiveRule{object: "activity", table: "activity", own: func(alias string, me int, arg func(any) int) string {
+var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writable: activityWrites, own: func(alias string, me int, arg func(any) int) string {
 	return fmt.Sprintf(`(%[1]s.kind IN ('note', 'task') AND %[1]s.source = $%[2]d AND %[3]s)`,
 		alias, arg(provenance.RecordSourceManual), activityAuthorSQL(alias, me, arg))
 }}
@@ -32,7 +53,7 @@ var ActivityArchive = ArchiveRule{object: "activity", table: "activity", own: fu
 // DealArchive admits the deal's owner, unless the owner took the deal
 // themselves. A write share lets its holder name themselves owner, so without
 // that arm the share would carry the archive the decision keeps from it.
-var DealArchive = ArchiveRule{object: tableDeal, table: tableDeal, own: func(alias string, me int, _ func(any) int) string {
+var DealArchive = ArchiveRule{object: tableDeal, table: tableDeal, writable: liveDealWrites, own: func(alias string, me int, _ func(any) int) string {
 	return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
 	   SELECT 1 FROM (SELECT made.action, made.actor_id, made.on_behalf_of FROM audit_log made
 	     WHERE made.entity_type = 'deal' AND made.entity_id = %[1]s.id
@@ -68,20 +89,33 @@ func EnsureArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, id ids.UUID
 	return nil
 }
 
-// ArchivableSubset answers EnsureArchivable for a page at once. The caller
-// ANDs it with the row's writable flag, as the archive itself asks both.
+// ArchivableSubset answers, for a page, which rows the caller may archive:
+// the seat, the row write gate EnsureArchivable's callers ask, and the rule.
+// It is the whole answer, so a delete holder without update is not refused.
 func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
-	if Allows(ctx, r.object, principal.ActionDelete) {
-		all := make(map[ids.UUID]bool, len(rowIDs))
-		for _, id := range rowIDs {
-			all[id] = true
-		}
-		return all, nil
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if !Allows(ctx, r.object, principal.ActionUpdate) || len(rowIDs) == 0 {
+	canDelete := Allows(ctx, r.object, principal.ActionDelete)
+	mutable := p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
+	if !mutable || len(rowIDs) == 0 || (!canDelete && !Allows(ctx, r.object, principal.ActionUpdate)) {
 		return map[ids.UUID]bool{}, nil
 	}
-	return ownedArchivable(ctx, tx, r, rowIDs)
+	writable, err := r.writable(ctx, tx, p, rowIDs)
+	if err != nil || canDelete {
+		return writable, err
+	}
+	candidates := make([]ids.UUID, 0, len(writable))
+	for id, may := range writable {
+		if may {
+			candidates = append(candidates, id)
+		}
+	}
+	if len(candidates) == 0 {
+		return map[ids.UUID]bool{}, nil
+	}
+	return ownedArchivable(ctx, tx, r, candidates)
 }
 
 func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {

@@ -11,6 +11,8 @@ import (
 	"maps"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -202,4 +204,114 @@ func withActivityDelete(base principal.Permissions) principal.Permissions {
 	objects["activity"] = grant
 	base.Objects = objects
 	return base
+}
+
+// deleteOnlyPerms is a custom role that may read and archive but not edit.
+var deleteOnlyPerms = principal.Permissions{
+	RoleKeys: []string{roleRep},
+	Objects: map[string]principal.ObjectGrant{
+		objContact:         {Read: true},
+		objDeal:            {Read: true, Delete: true},
+		"activity":         {Read: true, Delete: true},
+		objPipeline:        {Read: true},
+		objInstallSettings: {Read: true},
+	},
+	RowScope: principal.RowScopeTeam,
+}
+
+func TestADeleteOnlyRoleReadsArchivableWhereItMayArchive(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	archiver := asTeam1Member(e, e.Rep1, deleteOnlyPerms)
+	mine := e.SeedContact(t, "Mine", &e.Rep1)
+	note := logOwnActivity(t, e, asTeam1Member(e, e.Rep2, ownArchivePerms), "note", mine)
+	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Teammate's", pipeline, open, &e.Rep2))
+
+	activity, err := e.Activities.GetActivity(archiver, note, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *activity.Writable || !*activity.Archivable {
+		t.Errorf("note: writable=%v archivable=%v, want false/true", *activity.Writable, *activity.Archivable)
+	}
+	read, err := e.Deals.GetDeal(archiver, deal, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *read.Writable || !*read.Archivable {
+		t.Errorf("deal: writable=%v archivable=%v, want false/true", *read.Writable, *read.Archivable)
+	}
+	if _, err := e.Activities.ArchiveActivity(archiver, note, nil); err != nil {
+		t.Errorf("archiving the note it reads as archivable → %v", err)
+	}
+	if _, err := e.Deals.ArchiveDeal(archiver, deal, nil); err != nil {
+		t.Errorf("archiving the deal it reads as archivable → %v", err)
+	}
+}
+
+// handOn names owner on deal as the caller does.
+func handOn(t *testing.T, e *Env, as context.Context, deal ids.DealID, owner ids.UUID) {
+	t.Helper()
+	next := ids.From[ids.UserKind](owner)
+	if _, err := e.Deals.UpdateDeal(as, deal, deals.UpdateDealInput{OwnerID: &next}); err != nil {
+		t.Fatalf("handing the deal to %s: %v", owner, err)
+	}
+}
+
+func assertDealArchive(t *testing.T, e *Env, as context.Context, deal ids.DealID, allowed bool, what string) {
+	t.Helper()
+	read, err := e.Deals.GetDeal(as, deal, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *read.Archivable != allowed {
+		t.Errorf("%s: archivable=%v, want %v", what, *read.Archivable, allowed)
+	}
+	_, err = e.Deals.ArchiveDeal(as, deal, nil)
+	if allowed && err != nil {
+		t.Errorf("%s: archive → %v, want allowed", what, err)
+	}
+	if !allowed && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("%s: archive → %v, want ErrPermissionDenied", what, err)
+	}
+}
+
+func TestTheLatestOwnerChangeDecidesWhetherTheOwnerArchives(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	rep := asTeam1Member(e, e.Rep1, ownArchivePerms)
+	seed := func() ids.DealID {
+		return ids.From[ids.DealKind](e.SeedDeal(t, "Deal "+ids.NewV7().String()[:8], pipeline, open, &e.Rep2))
+	}
+
+	retaken := seed()
+	handOn(t, e, e.Admin(), retaken, e.Rep1)
+	handOn(t, e, e.Admin(), retaken, e.Rep2)
+	handOn(t, e, rep, retaken, e.Rep1)
+	assertDealArchive(t, e, rep, retaken, false, "handed over, then taken back after a colleague held it")
+
+	handedBack := seed()
+	handOn(t, e, rep, handedBack, e.Rep1)
+	handOn(t, e, e.Admin(), handedBack, e.Rep2)
+	handOn(t, e, e.Admin(), handedBack, e.Rep1)
+	assertDealArchive(t, e, rep, handedBack, true, "taken, then handed over by an admin")
+
+	byAgent := seed()
+	handOn(t, e, e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, ownArchivePerms), byAgent, e.Rep1)
+	assertDealArchive(t, e, rep, byAgent, false, "the rep's agent named the rep owner")
+
+	claimed := seed()
+	e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, claimed.UUID)
+	if _, err := e.Deals.ClaimDeal(rep, claimed, nil); err != nil {
+		t.Fatalf("claiming an ownerless deal: %v", err)
+	}
+	assertDealArchive(t, e, rep, claimed, false, "claimed while ownerless")
+
+	reassigned := seed()
+	if err := e.Deals.Tx(rep, func(tx pgx.Tx) error {
+		return e.Deals.ReassignDealTx(rep, tx, reassigned, ids.From[ids.UserKind](e.Rep1), nil)
+	}); err != nil {
+		t.Fatalf("a bulk reassign to the rep: %v", err)
+	}
+	assertDealArchive(t, e, rep, reassigned, false, "reassigned to self in bulk")
 }

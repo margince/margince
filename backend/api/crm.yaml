@@ -48208,7 +48208,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether THIS caller may archive THIS deal: `writable`, plus the `deal:delete` grant
+            Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant
             or being the deal's owner with `deal:update`. An owner who named themselves owner
             (an edit or a claim) needs the delete grant. Server-computed per row, per caller.
             A UX signal, never the enforcement, exactly like `writable`; absent means NOT
@@ -50510,7 +50510,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            Whether THIS caller may archive THIS activity: `writable`, plus the `activity:delete`
+            Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete`
             grant, or `activity:update` on a hand-logged note or task the caller wrote (under
             their own stamp or through an agent acting for them). Captured correspondence and a
             colleague's note need the delete grant. Server-computed per row, per caller. A UX

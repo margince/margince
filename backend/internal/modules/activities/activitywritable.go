@@ -32,26 +32,26 @@ func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontract
 }
 
 // stampActivitiesWritable answers what the update and archive paths ask. The
-// object grant comes first, then the row authority for the whole page at once,
-// then the archive rule over that.
+// update path needs the object grant, then the row authority for the whole
+// page at once. Archivable is auth.ArchivableSubset's answer whole.
 func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
-	may, archivable := make(map[ids.UUID]bool), make(map[ids.UUID]bool)
+	named := make([]ids.UUID, len(page))
+	for i := range page {
+		named[i] = ids.UUID(page[i].Id)
+	}
+	may := make(map[ids.UUID]bool)
 	if mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
-		named := make([]ids.UUID, len(page))
-		for i := range page {
-			named[i] = ids.UUID(page[i].Id)
-		}
 		var err error
 		if may, err = auth.ActivityWritableSubset(ctx, tx, named); err != nil {
 			return err
 		}
-		if archivable, err = auth.ArchivableSubset(ctx, tx, auth.ActivityArchive, named); err != nil {
-			return err
-		}
 	}
-	for i := range page {
-		id := ids.UUID(page[i].Id)
-		w, a := may[id], may[id] && archivable[id]
+	archivable, err := auth.ArchivableSubset(ctx, tx, auth.ActivityArchive, named)
+	if err != nil {
+		return err
+	}
+	for i, id := range named {
+		w, a := may[id], archivable[id]
 		page[i].Writable, page[i].Archivable = &w, &a
 	}
 	return nil
