@@ -53,6 +53,13 @@ export type WorklistPicks = Readonly<{
   toggle: (item: WorklistItem) => void;
 }>;
 
+/** No selection: rows draw no checkbox. */
+export const NO_PICKS: WorklistPicks = {
+  offered: false,
+  picked: new Set(),
+  toggle: () => undefined,
+};
+
 /**
  * The selection over the loaded queue. Only rows the queue still holds count,
  * so a row a refetch took away cannot stay selected out of sight.

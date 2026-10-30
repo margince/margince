@@ -13,6 +13,7 @@ import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { useT } from "../../i18n";
 import { exactCount } from "../../lib/worklistcounts";
 import { UPCOMING } from "../../lib/worklistviews";
+import { NO_PICKS } from "./worklist.bulkdone";
 import type { Worklist, WorklistScope } from "./worklist.queries";
 import { loadedQueue, useWorklist } from "./worklist.queries";
 import { QueueRows, type RowContext } from "./worklist.queue";
@@ -62,7 +63,13 @@ export function UpcomingSection({
       }
     >
       {items.length > 0 && (
-        <QueueRows items={items} {...rows} positions={positions} />
+        // A look-ahead, not today's work: its rows take no part in selection.
+        <QueueRows
+          items={items}
+          {...rows}
+          positions={positions}
+          picks={NO_PICKS}
+        />
       )}
       {read.data && items.length === 0 && !read.hasNextPage && (
         <p className="t-body">{t("worklist.upcoming.empty")}</p>

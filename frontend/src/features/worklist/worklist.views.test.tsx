@@ -169,4 +169,40 @@ describe("Upcoming and backlog", () => {
       expect(upcoming?.get("view")).toBe("today");
     });
   });
+
+  it("draws no checkbox on an upcoming row, even in selection mode", async () => {
+    const task = row({
+      id: "t1",
+      source: "task",
+      title: "Send the quote",
+      actions: ["complete"],
+      version: 1,
+    });
+    stub(
+      day({
+        queue: [task],
+        counts: [
+          {
+            category: "upcoming",
+            considered: 1,
+            shown: 0,
+            more_available: false,
+          },
+        ],
+      }),
+    );
+    renderWorklist();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["worklist.bulk.select"] }),
+    );
+    await user.click(screen.getByText(en["worklist.filter.upcoming"]));
+
+    // The stub answers the upcoming read with the same row, so it shows twice.
+    await vi.waitFor(() => {
+      expect(screen.getAllByText("Send the quote")).toHaveLength(2);
+    });
+    const box = en["bulk.selectRow"].replace("{name}", "Send the quote");
+    expect(screen.getAllByRole("checkbox", { name: box })).toHaveLength(1);
+  });
 });
