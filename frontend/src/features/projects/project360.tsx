@@ -15,6 +15,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
+import { useRailRename } from "../../components/railfield";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RecordTeam } from "../../components/recordteam";
 import {
@@ -68,6 +69,7 @@ import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
+import { useProjectEdit } from "./projectedit";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn as two
 // cards. On the left, what the project is; on the right, the next task, how it
@@ -136,10 +138,16 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // that drawer and the gate both verbs read.
   const activity = useActivityGate();
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
+  const rename = useRailRename(
+    useProjectEdit(project),
+    "name",
+    t("project.name"),
+  );
   return (
     <RecordView
       aside={<ProjectDetails view={view} />}
       name={project.name}
+      rename={rename}
       identity={project.id}
       zone={recordZone}
       nameBadge={<ProjectSubtitle view={view} />}
