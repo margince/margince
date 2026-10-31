@@ -399,14 +399,15 @@ func explainWithheldOwners(ctx context.Context, tx pgx.Tx, out *reporting.Evalua
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
 // is that colleague's number, however old. It answers only the reader's own
-// rows, which the export prints, as the live per-deal rows do.
-func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) ([]SharedContribution, error) {
+// rows, which the export prints, as the live per-deal rows do. limited says
+// the switch narrowed them, as ForecastReaderContributions says it.
+func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) (visible []SharedContribution, limited bool, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return rows, err
+		return rows, false, err
 	}
 	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	owners, categories := []ids.UUID{}, []string{}
 	for _, row := range rows {
@@ -415,7 +416,7 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 		}
 	}
 	if err := requireNoLoneColleague(ctx, tx, categoryGroups(owners, categories)); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	own := make([]SharedContribution, 0, len(rows))
 	for _, row := range rows {
@@ -423,7 +424,7 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 			own = append(own, row)
 		}
 	}
-	return own, nil
+	return own, true, nil
 }
 
 // readerOwnsRow is the per-deal row rule while the switch is off: a row stays

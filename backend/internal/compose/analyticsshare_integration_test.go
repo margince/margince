@@ -517,7 +517,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
-	body, err := shareRowsCSV(rows, nil, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -531,20 +531,20 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 	on := true
 	drawn := forecasting.Range{LowMinor: 1200, HighMinor: 3400, Runs: 8}
-	body, err := shareRowsCSV([]SharedContribution{{DealName: "Frozen"}}, &on, &drawn)
+	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on)
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor") ||
-		!strings.HasSuffix(lines[1], ",true,,1200,3400") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited") ||
+		!strings.HasSuffix(lines[1], ",true,,1200,3400,false") {
 		t.Errorf("the export does not carry the snapshot's self_correcting and the reader's range:\n%s", body)
 	}
 }
 
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
-	body, err := shareRowsCSV(rows, nil, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -29840,8 +29840,14 @@ paths:
         was summed from. A file whose rows and whose total disagree is worse than no file:
         somebody reconciles it by hand and concludes the product is wrong about one of them.
 
-        A live share exports the rows as they stand; a snapshot share exports the frozen
-        contributions. Refusals are the same 404 the read is, for the same reason.
+        One exception: while the installation has individual performance switched off, the
+        rows are the caller's own deals and the headline still covers the whole team. The
+        shared view's `contributions_limited` and the file's `contributions_limited` column
+        both say `true` then, so the gap is stated rather than left to reconcile.
+
+        A snapshot share exports the frozen contributions. A live share has no export and
+        answers 404, because the forecast's own export already serves its rows to a signed-in
+        caller. Refusals are the same 404 the read is, for the same reason.
 
         Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
         opening the file reads them as the text the record holds rather than evaluating them.
@@ -58021,7 +58027,8 @@ components:
           type: boolean
           description: >-
             True when `contributions` holds only the caller's own deals because the installation
-            switched off individual performance. The totals still include colleagues' deals.
+            switched off individual performance. The totals still include colleagues' deals. On a
+            shared snapshot it says the same of the rows its CSV export holds.
         contributions:
           type: array
           items: { $ref: '#/components/schemas/ForecastContribution' }

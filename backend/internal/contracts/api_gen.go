@@ -42914,7 +42914,7 @@ type ForecastReadings struct {
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
 
-	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
 	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
 	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
 

@@ -20259,7 +20259,7 @@ components:
         contributions_limited:
           type: boolean
           description: >-
-            True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+            True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
         contributions:
           type: array
           items: {$ref: '#/components/schemas/ForecastContribution'}
