@@ -70,10 +70,10 @@ func (f *stageCohortFixture) openDealOf(t *testing.T, seat, stage ids.UUID, toda
 // forecastOverHTTP reads GET /forecast with its contributions.
 func (f *stageCohortFixture) forecastOverHTTP(t *testing.T, today time.Time) crmcontracts.ForecastReadings {
 	t.Helper()
-	return f.forecastOverHTTPAs(t, f.forecastReader(), today)
+	return f.forecastOverHTTPAs(f.forecastReader(), t, today)
 }
 
-func (f *stageCohortFixture) forecastOverHTTPAs(t *testing.T, reader context.Context, today time.Time) crmcontracts.ForecastReadings {
+func (f *stageCohortFixture) forecastOverHTTPAs(reader context.Context, t *testing.T, today time.Time) crmcontracts.ForecastReadings {
 	t.Helper()
 	handlers := newForecastHandlers(f.env.Pool, func() time.Time { return today })
 	workspace, with := crmcontracts.GetForecastParamsScopeKindWorkspace, true
@@ -95,10 +95,10 @@ func (f *stageCohortFixture) forecastOverHTTPAs(t *testing.T, reader context.Con
 // forecastOverTool reads forecast_readings with its contributions.
 func (f *stageCohortFixture) forecastOverTool(t *testing.T, today time.Time) agents.ForecastReadingsResult {
 	t.Helper()
-	return f.forecastOverToolAs(t, f.forecastReader(), today)
+	return f.forecastOverToolAs(f.forecastReader(), t, today)
 }
 
-func (f *stageCohortFixture) forecastOverToolAs(t *testing.T, reader context.Context, today time.Time) agents.ForecastReadingsResult {
+func (f *stageCohortFixture) forecastOverToolAs(reader context.Context, t *testing.T, today time.Time) agents.ForecastReadingsResult {
 	t.Helper()
 	raw, err := forecastToolReader(f.env.Pool)(reader, agents.ForecastRequest{
 		AsOf: today.Format(time.DateOnly), ScopeKind: "workspace", Contributions: true,
@@ -228,8 +228,8 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 	}
 	reader := auth.WithIndividualPerformance(f.forecastReader(), false)
 
-	overHTTP := f.forecastOverHTTPAs(t, reader, today)
-	overTool := f.forecastOverToolAs(t, reader, today)
+	overHTTP := f.forecastOverHTTPAs(reader, t, today)
+	overTool := f.forecastOverToolAs(reader, t, today)
 	for door, rows := range map[string][]agents.ForecastContributionResult{
 		"http": asToolRows(t, *overHTTP.Contributions), "tool": overTool.Contributions,
 	} {

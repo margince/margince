@@ -62,9 +62,12 @@ func TestStageEvidenceCountsOnlyClosedEntriesAndCensorsOpenOnes(t *testing.T) {
 		// win. The plain share is 1/3; the estimate weighs the win by the
 		// deals still open when it came, so it reads higher.
 		{"censoring reweighs a late close", []StageEntry{
-			{Days: 5, Outcome: EntryLost}, {Days: 6, Outcome: EntryLost},
-			{Days: 10, Outcome: EntryOpen}, {Days: 11, Outcome: EntryOpen},
-			{Days: 50, Outcome: EntryWon}, {Days: 60, Outcome: EntryOpen},
+			{Days: 5, Outcome: EntryLost},
+			{Days: 6, Outcome: EntryLost},
+			{Days: 10, Outcome: EntryOpen},
+			{Days: 11, Outcome: EntryOpen},
+			{Days: 50, Outcome: EntryWon},
+			{Days: 60, Outcome: EntryOpen},
 		}, 3, 0.5},
 	}
 	for _, c := range cases {
