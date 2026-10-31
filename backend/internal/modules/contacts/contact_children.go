@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -384,6 +385,12 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	if err := storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
 		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
+		return err
+	}
+	if err := auditattribution.StampCreators(ctx, tx, contactEntity, contacts,
+		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		auditattribution.NoneWithheld[crmcontracts.Contact],
+		func(p *crmcontracts.Contact, who *crmcontracts.PrincipalAttribution) { p.CreatedBy = who }); err != nil {
 		return err
 	}
 	return attachContactReachability(ctx, tx, idx, contactIDs)

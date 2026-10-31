@@ -21,6 +21,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -139,7 +140,19 @@ func readCompany(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived stor
 	if err := attachCompanyPartners(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := attachCompanyCreators(ctx, tx, companies); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	return companies[0], nil
+}
+
+// attachCompanyCreators names who created each company of a page. A row the
+// reader may not see never reaches a page, so none is withheld.
+func attachCompanyCreators(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
+	return auditattribution.StampCreators(ctx, tx, companyEntity, companies,
+		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
+		auditattribution.NoneWithheld[crmcontracts.Company],
+		func(o *crmcontracts.Company, who *crmcontracts.PrincipalAttribution) { o.CreatedBy = who })
 }
 
 // scanCompany scans core + active custom columns; extra receives

@@ -336,3 +336,25 @@ func TestAutomaticWorkHealthIsForAnAdminOnly(t *testing.T) {
 		t.Errorf("a 31-day window got %d, want 422", code)
 	}
 }
+
+// A record's creator is its earliest create row, the one its source badge
+// names. A later machine create row over a colleague's own task is a replay,
+// not automatic work.
+func TestAutomaticWorkLeavesOutATaskAColleagueCreatedFirst(t *testing.T) {
+	f := newWorkFixture(t)
+	task := f.promiseTask(t, f.e.Rep1)
+	created := f.dbNow(t)
+	f.e.WsExec(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		VALUES ($1, 'human', $2, 'create', 'activity', $3, $4)`,
+		ids.NewV7(), "human:"+f.e.Rep1.String(), task.UUID, created.Add(-time.Hour))
+
+	health := f.report(t, created, 7)
+	for _, colleague := range health.Colleagues {
+		for _, tally := range colleague.Tallies {
+			if tally.Kind == crmcontracts.AutomaticWorkKindNamePromiseTask && tally.Counts.Created != 0 {
+				t.Errorf("a task a colleague created first counts as automatic work: %+v", tally.Counts)
+			}
+		}
+	}
+}

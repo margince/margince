@@ -79,22 +79,31 @@ func (a Attribution) Wire() *crmcontracts.PrincipalAttribution {
 	return out
 }
 
-// CreatorsTx is who created each named record of one type: its earliest create
-// audit row. A record with no surviving create row is absent from the result,
-// and a caller reads that as unknown, never as the system. The caller has
-// already read the records; this admits nothing on its own.
+// FirstCreateSQL is the create audit row a record's creator is read from. It is
+// the earliest, with the id breaking a tie, so a replayed create never changes
+// who made the record. Both arguments are SQL expressions, never request text.
+func FirstCreateSQL(entityType, entityID string) string {
+	return `SELECT c.id, c.actor_type, c.actor_id, c.on_behalf_of, c.passport_id, c.occurred_at
+		  FROM audit_log c
+		 WHERE c.entity_type = ` + entityType + ` AND c.entity_id = ` + entityID + ` AND c.action = 'create'
+		 ORDER BY c.occurred_at, c.id LIMIT 1`
+}
+
+// CreatorsTx is who created each named record of one type, read from
+// FirstCreateSQL. A record with no surviving create row is absent from the
+// result, and a caller reads that as unknown, never as the system. The caller
+// has already read the records; this admits nothing on its own.
 func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []ids.UUID) (map[ids.UUID]Attribution, error) {
 	out := make(map[ids.UUID]Attribution, len(entityIDs))
 	if len(entityIDs) == 0 {
 		return out, nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (a.entity_id)
-		       a.entity_id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
+		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
 		       `+ActorNameColumn+`, obo.display_name, oc.client_name
-		FROM audit_log a`+ActorNameJoins+AgentClientNameJoin+`
-		WHERE a.entity_type = $1 AND a.entity_id = ANY($2) AND a.action = 'create'
-		ORDER BY a.entity_id, a.occurred_at, a.id`, entityType, entityIDs)
+		FROM unnest($2::uuid[]) AS named(id)
+		CROSS JOIN LATERAL (`+FirstCreateSQL("$1", "named.id")+`) a`+ActorNameJoins+AgentClientNameJoin,
+		entityType, entityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("auditattribution: reading creators: %w", err)
 	}
@@ -113,3 +122,31 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	}
 	return out, nil
 }
+
+// StampCreators sets on each row of a page who created it, in one statement.
+// A withheld row gets none: whose agent wrote content the reader may not see,
+// and through which tool, is part of that content.
+func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, page []T,
+	id func(T) ids.UUID, withheld func(T) bool, set func(*T, *crmcontracts.PrincipalAttribution),
+) error {
+	readable := make([]ids.UUID, 0, len(page))
+	for i := range page {
+		if !withheld(page[i]) {
+			readable = append(readable, id(page[i]))
+		}
+	}
+	creators, err := CreatorsTx(ctx, tx, entityType, readable)
+	if err != nil {
+		return err
+	}
+	for i := range page {
+		if creator, found := creators[id(page[i])]; found {
+			set(&page[i], creator.Wire())
+		}
+	}
+	return nil
+}
+
+// NoneWithheld is the withheld answer for a record type a reader sees whole or
+// not at all.
+func NoneWithheld[T any](T) bool { return false }
