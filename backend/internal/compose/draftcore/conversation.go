@@ -21,7 +21,11 @@ type Turn struct {
 	ID        string
 	Kind      crmcontracts.ActivityKind
 	Direction string
-	At        time.Time
+	// ByColleague says a seat in this workspace wrote this turn, from the row's
+	// own voice rather than from which way it travelled. A colleague's mail can
+	// arrive inbound, and direction alone calls that the counterparty's.
+	ByColleague bool
+	At          time.Time
 	// DateOnly says At is a day entry's anchor, so only its date is known.
 	DateOnly bool
 	Subject  string
@@ -77,6 +81,9 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 		}
 		if activity.Direction != nil {
 			turn.Direction = string(*activity.Direction)
+		}
+		if voice := activity.Voice; voice != nil && voice.Author != nil {
+			turn.ByColleague = voice.Author.Kind == crmcontracts.ActivityAuthorKindColleague
 		}
 		if activity.Subject != nil {
 			turn.Subject = *activity.Subject
