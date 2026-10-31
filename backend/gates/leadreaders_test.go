@@ -170,7 +170,7 @@ var ruledLeadReads = gatekit.Waive(map[string]string{
 // safe direction; the alternative is a pattern that reads green over a real
 // read somewhere else.
 var notTheLeadTable = gatekit.Waive(map[string]string{
-	"internal/modules/deals/wonstints.go:wonStintsSQL": "`extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at)` — the window function that reads the NEXT row's value, measuring how long a deal sat in each stage. The statement never names the lead table",
+	"internal/modules/deals/wonstints.go:wonStints": "`extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at)` — the window function that reads the NEXT row's value, measuring how long a deal sat in each stage. The statement never names the lead table",
 })
 
 // deferredLeadReads: a DISCLOSING read that is still ungated, each naming the

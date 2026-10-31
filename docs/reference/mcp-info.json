@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 142776,
+    "tool_catalog_bytes": 142980,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36781,
+    "approx_wire_tokens_total": 36832,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 35758,
-      "input_schema_bytes": 66831,
+      "input_schema_bytes": 67035,
       "output_schema_bytes": 30933,
-      "description_plus_input_schema_bytes": 102589
+      "description_plus_input_schema_bytes": 102793
     }
   },
   "tools": {
@@ -5502,6 +5502,10 @@
               "description": "readings only: Which period to read, by naming a day inside it. Omit for the current one.",
               "format": "date",
               "type": "string"
+            },
+            "contributions": {
+              "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
+              "type": "boolean"
             },
             "from": {
               "description": "movement only: The opening snapshot.",

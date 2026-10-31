@@ -152,3 +152,60 @@ func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement 
 	}
 	return out
 }
+
+// ContributionsToWire renders the deals behind the won and open readings, in
+// the order the readings hold them. The HTTP door and the forecast tool both
+// render through it.
+func ContributionsToWire(in []Contribution) []crmcontracts.ForecastContribution {
+	out := make([]crmcontracts.ForecastContribution, 0, len(in))
+	for _, c := range in {
+		if !c.InOpen && !c.InWon {
+			continue
+		}
+		dealID, err := ids.Parse(c.DealID)
+		if err != nil {
+			continue
+		}
+		row := crmcontracts.ForecastContribution{
+			DealId: openapi_types.UUID(dealID), DealName: c.Name, BaseMinor: c.BaseMinor,
+			WeightedMinor: c.WeightedMinor, InWon: c.InWon, InOpen: c.InOpen,
+			InEvidence: c.InEvidence, InBestCase: c.InBestCase,
+			TypedProbability: c.TypedProbability, ChanceInUse: c.StageProbability, EvidenceN: c.EvidenceN,
+			Signals: wireSignals(c.Signals), Effect: c.Effect,
+			AppliedProbability: AppliedProbability(c.StageProbability, c.Effect),
+		}
+		row.OwnerId = optionalWireID(c.Owner)
+		row.StageId = optionalWireID(c.StageID)
+		if c.Category != "" {
+			row.Category = &c.Category
+		}
+		if c.ExclusionReason != "" {
+			reason := crmcontracts.ForecastContributionExclusionReason(c.ExclusionReason)
+			row.ExclusionReason = &reason
+		}
+		out = append(out, row)
+	}
+	return out
+}
+
+func wireSignals(in []Signal) []crmcontracts.ForecastRiskSignal {
+	out := make([]crmcontracts.ForecastRiskSignal, len(in))
+	for i, signal := range in {
+		out[i] = crmcontracts.ForecastRiskSignal{
+			Code: crmcontracts.ForecastRiskSignalCode(signal.Code), Days: signal.Days, Count: signal.Count,
+			StageId: optionalWireID(signal.StageID), ClosesInDays: signal.ClosesInDays,
+		}
+		if signal.ClosePassed {
+			out[i].ClosePassed = new(true)
+		}
+	}
+	return out
+}
+
+func optionalWireID(raw string) *openapi_types.UUID {
+	parsed := nullableID(raw)
+	if parsed == nil {
+		return nil
+	}
+	return new(openapi_types.UUID(*parsed))
+}

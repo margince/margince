@@ -32,7 +32,10 @@ import {
   SETTINGS_IN_SERVER_TEXT,
 } from "./aicaches";
 import { CallingSettingsRows } from "./installation-settings.calling";
-import { IndividualPerformanceRows } from "./installation-settings.individual";
+import {
+  ForecastSelfCorrectingRows,
+  IndividualPerformanceRows,
+} from "./installation-settings.individual";
 import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
@@ -92,7 +95,10 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       // An open page would keep text written in the old language or zone.
       // The switch changes what every reading may show, so nothing cached
       // under the old answer may be drawn again.
-      if (patch.individual_performance !== undefined) {
+      if (
+        patch.individual_performance !== undefined ||
+        patch.forecast_self_correcting !== undefined
+      ) {
         void queryClient.invalidateQueries();
       }
       if (SETTINGS_IN_SERVER_TEXT.some((key) => patch[key] !== undefined)) {
@@ -168,6 +174,7 @@ function InstallationSettingsForm({
   });
   const calling = useUpdateInstallationSettings();
   const individual = useUpdateInstallationSettings();
+  const selfCorrecting = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
@@ -333,6 +340,12 @@ function InstallationSettingsForm({
         canManage={canManage}
         denialId={denialId}
         update={individual}
+      />
+      <ForecastSelfCorrectingRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={selfCorrecting}
       />
       {editing !== null && (
         <InstallationProfileDialog

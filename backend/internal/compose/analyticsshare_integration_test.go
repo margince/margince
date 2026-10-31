@@ -55,20 +55,18 @@ func (e *forecastEnv) freezeWorkspace(t *testing.T) ids.UUID {
 		if err != nil {
 			return err
 		}
-		deals, _, _, err := ForecastDeals(ctx, tx, period,
+		assembly, err := ForecastAssemble(ctx, tx, period,
 			forecasting.Scope{Kind: forecasting.ScopeWorkspace}, time.Now(), baseCurrency)
 		if err != nil {
 			return err
 		}
-		readings, err := forecasting.Compute(period, period.LocalDay(time.Now()), deals)
-		if err != nil {
-			return err
-		}
-		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+		snapshot := forecasting.NewSnapshot{
 			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
 			Trigger: forecasting.TriggerCall, BaseCurrency: baseCurrency,
-			Readings: readings, TakenAt: time.Now(),
-		})
+			Readings: assembly.Readings, TakenAt: time.Now(),
+		}
+		snapshot.StampChances(assembly)
+		id, err = store.TakeSnapshot(ctx, tx, snapshot)
 		return err
 	}); err != nil {
 		t.Fatalf("freezing the seeded deals: %v", err)
@@ -223,6 +221,17 @@ func TestASharedSnapshotRecomputesRatherThanServingTheStoredTotal(t *testing.T) 
 	}
 	if whole.Withheld {
 		t.Error("nothing was withheld from a reader who sees every deal, and the answer says otherwise")
+	}
+	var frame shareFrame
+	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(snapshotWriterCtx(e.WS), func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		frame, err = snapshotFrame(ctx, tx, id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if frame.SelfCorrecting == nil || !*frame.SelfCorrecting {
+		t.Errorf("the frozen share's frame reads self_correcting %v, want the snapshot's true", frame.SelfCorrecting)
 	}
 
 	// A rep on one team reads THEIR team's half, not the whole frozen state.
@@ -508,7 +517,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(rows, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,9 +528,21 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	}
 }
 
+func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
+	on := true
+	body, err := shareRowsCSV([]SharedContribution{{DealName: "Frozen"}}, &on)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts") || !strings.HasSuffix(lines[1], ",true,") {
+		t.Errorf("the export does not carry the snapshot's self_correcting:\n%s", body)
+	}
+}
+
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(rows, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

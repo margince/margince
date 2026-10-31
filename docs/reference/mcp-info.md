@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 139.4 KB |
+| Tool catalog | 139.6 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36781 |
+| Approx. wire tokens | 36832 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 30.2 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.9 KB | 25% | Yes, every step |
-| Input schemas | 65.3 KB | 46% | Yes, every step |
+| Input schemas | 65.5 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
-| **Description + input schema** | **100.2 KB** | **71%** | **the recurring cost** |
+| **Description + input schema** | **100.4 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -84,7 +84,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 875 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -6089,6 +6089,10 @@ in EUR is EUR 31,000.
       "description": "readings only: Which period to read, by naming a day inside it. Omit for the current one.",
       "format": "date",
       "type": "string"
+    },
+    "contributions": {
+      "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
+      "type": "boolean"
     },
     "from": {
       "description": "movement only: The opening snapshot.",

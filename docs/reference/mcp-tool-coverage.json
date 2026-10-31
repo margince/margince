@@ -2166,7 +2166,7 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 824,
+      "tokens": 875,
       "agents": [],
       "required_by_cases": [
         "case22_can_i_trust_the_numbers",

@@ -19,23 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// DealsFunc reads the deals in scope for a period, already row-scoped.
-//
-// Injected rather than imported: the deals live in another module and the row
-// scope is applied where the caller's authority already sits, which is the
-// composition layer. The boolean says whether anything was withheld — and it is
-// a boolean and never a count, because a count of what a caller may not read is
-// itself a statement about how much of it there is.
-//
-// asOf and baseCurrency travel with the request because the conversion needs
-// both: a rate is looked up as of a DAY, and there is no base amount without a
-// currency to convert into.
-// The Scope it returns is the one it RESOLVED, which is not always the one it
-// was handed: an unset scope means the caller named nothing, and what that
-// means depends on their lens. The reading reports the resolved one, so an
-// answer always says which population it is about.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, Scope, bool, error)
-
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
 // to identity.
@@ -74,6 +57,9 @@ type Baseline struct {
 	// empty while enforcement is off. Read from the setting, so a period with
 	// no deal still records it.
 	QualifiedPolicy string
+	// Assembly is the whole result the readings came from, kept so a snapshot
+	// of the baseline freezes the basis of its chances too.
+	Assembly Assembly
 }
 
 // BaselineFunc reads the population a call is made about the way a capture
@@ -85,14 +71,18 @@ type BaselineFunc func(ctx context.Context, tx pgx.Tx, scope Scope, period Perio
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
 	store    *Store
-	deals    DealsFunc
+	assemble AssembleFunc
 	period   PeriodFunc
 	resolve  ResolveScopeFunc
 	history  HistoryFunc
 	measure  MeasureFunc
 	holds    HoldsDealsFunc
 	baseline BaselineFunc
-	now      func() time.Time
+	// stageChances serves the stage-chances read; see stagechances.go.
+	stageChances StageChancesFunc
+	// readerRows narrows per-deal rows to what the reader may see one by one.
+	readerRows ReaderRowsFunc
+	now        func() time.Time
 }
 
 // WithCallBaseline keeps a baseline with every call recorded through these
@@ -105,11 +95,11 @@ func (h Handlers) WithCallBaseline(baseline BaselineFunc) Handlers {
 
 // NewHandlers binds the routes to the store and its seams.
 func NewHandlers(
-	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc,
+	store *Store, assemble AssembleFunc, period PeriodFunc, resolve ResolveScopeFunc,
 	history HistoryFunc, measure MeasureFunc, holds HoldsDealsFunc, now func() time.Time,
 ) Handlers {
 	return Handlers{
-		store: store, deals: deals, period: period, resolve: resolve,
+		store: store, assemble: assemble, period: period, resolve: resolve,
 		history: history, measure: measure, holds: holds, now: now,
 	}
 }
@@ -147,21 +137,19 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, resolved, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		assembly, err := h.assemble(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
-		scope = resolved
-		// The as-of DAY, not the instant. The slipped rule compares calendar
-		// days, and handing it a clock makes a deal due today read as slipped
-		// from noon onward — which the report engine, comparing dates, would
-		// not agree with.
-		readings, err := Compute(period, period.LocalDay(at), deals)
-		if err != nil {
-			return err
-		}
+		scope, readings := assembly.Scope, assembly.Readings
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
-		out.ScopeLimited = &limited
+		out.ScopeLimited = &assembly.Limited
+		out.SelfCorrecting = &assembly.SelfCorrecting
+		if params.Contributions != nil && *params.Contributions {
+			if err := h.contributionRows(ctx, tx, readings, &out); err != nil {
+				return err
+			}
+		}
 		holds, err := h.holds(ctx, tx, scope)
 		if err != nil {
 			return err
@@ -394,12 +382,14 @@ func (h Handlers) recordWithBaseline(ctx context.Context, tx pgx.Tx, in NewCall)
 	if err != nil {
 		return Call{}, err
 	}
-	if _, err := h.store.TakeSnapshot(ctx, tx, NewSnapshot{
+	snapshot := NewSnapshot{
 		Period: in.Period, Scope: baseline.Scope, Trigger: TriggerCall,
 		BaseCurrency: baseline.BaseCurrency, Readings: baseline.Readings, TakenAt: submitted,
 		CallID: &out.ID, PopulationFingerprint: baseline.PopulationFingerprint,
 		ForwardMeasure: baseline.ForwardMeasure, QualifiedPolicyVersion: baseline.QualifiedPolicy,
-	}); err != nil {
+	}
+	snapshot.StampChances(baseline.Assembly)
+	if _, err := h.store.TakeSnapshot(ctx, tx, snapshot); err != nil {
 		return Call{}, err
 	}
 	out.HasBaseline = true

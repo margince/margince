@@ -59,6 +59,15 @@ history.
   won inside the period, as their stage history stood at `-as-of` and at the start of `-train-end`;
 - for each such snapshot, its open deals counted into calibration bins, with no deal id and no amount.
 
+Since `forecast_v3` a deal's weight is its chance in use, not the typed stage chance. `forecasting.ChanceInUse`
+blends the typed chance with the stage's recorded won share as a beta prior of strength `forecasting.PriorStrength`;
+`forecasting.EstimateStageEvidence` is the Aalen–Johansen estimate, with open entries censored at the start of the
+as-of day. A risk signal's odds ratio, `forecasting.RiskEffect`, is learned from settled frozen contribution rows and
+shrunk toward 1; only `forecasting.StrongestEffect` applies. Each contribution row freezes the typed chance, chance in
+use, evidence count, signals and effect, and each snapshot freezes whether self-correction was on, the evidence cutoff
+and the signal rules version. A row frozen before `forecast_v3` holds none of them. A snapshot frozen under
+`forecast_v2` is `definition_changed`.
+
 A deal counts as won inside the period when its last stage move before the instant is a win dated inside the period.
 Its money is the amount in the snapshot's currency that the win recorded. A reopen before the instant undoes the win;
 a reopen after it does not. A deal created after a snapshot is in none of that snapshot's figures.
@@ -92,7 +101,7 @@ is always a backtest.
 
 | Method | Prediction |
 |---|---|
-| `stage_weighting` | won plus the weighted open pipeline, through `forecasting.ProjectLanding` |
+| `stage_weighting` | won plus the weighted open pipeline, through `forecasting.ProjectLanding`; each deal at the chance in use the snapshot froze |
 | `commit_evidence` | won plus the committed open pipeline, through `forecasting.ProjectLanding` |
 | `candidate_open_closure` | won plus open money times the share of open money that closed in training |
 

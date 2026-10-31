@@ -941,6 +941,63 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
+  "reporting.movement.record_changed":
+    "Chance durch erfasste Abschlüsse verschoben",
+  "installationSettings.selfCorrectingTitle": "Prognose",
+  "installationSettings.selfCorrecting": "Prognose selbst korrigieren lassen",
+  "installationSettings.selfCorrectingHint":
+    "Jede Phase beginnt mit der eingetragenen Chance. Sobald aus einer Phase erfasste Deals abgeschlossen sind, rückt die Prognose die Chance dieser Phase an deren Ergebnis heran; die eingetragene Chance zählt dabei wie 20 Deals. Importierte Phasenwechsel zählen nie.",
+  "installationSettings.selfCorrectingOn":
+    "Die Prognose gewichtet jeden offenen Deal mit der genutzten Chance seiner Phase und mit einem Risikosignal, sobald eingefrorene Prognosen dessen Wirkung zeigen.",
+  "installationSettings.selfCorrectingOff":
+    "Die Prognose gewichtet jeden offenen Deal wie bisher mit der in seiner Phase eingetragenen Chance.",
+  "stage.chance.noEvidence":
+    "Eingetragen {typed} · Noch kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
+  "stage.chance.off":
+    "Prognose nutzt die eingetragenen {typed}: Selbstkorrektur ist aus",
+  "forecast.deals.title": "Deals hinter dem gewichteten Wert",
+  "forecast.deals.open": "Jeden offenen Deal und seine Chance zeigen",
+  "forecast.deals.introOn":
+    "Jeder Deal zählt mit der genutzten Chance seiner Phase, verschoben durch das stärkste Risikosignal, sobald abgeschlossene Prognosen dessen Wirkung zeigen.",
+  "forecast.deals.introOff":
+    "Jeder Deal zählt mit der in seiner Phase eingetragenen Chance. Die Selbstkorrektur ist aus.",
+  "forecast.deals.none":
+    "Kein offener Deal soll in diesem Zeitraum abschließen.",
+  "forecast.deals.typed": "Eingetragen {percent}",
+  "forecast.deals.uses": "nutzt {percent}",
+  "stage.chance.withEvidence_other":
+    "Eingetragen {typed} · {count} erfasste Deals von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "stage.chance.withEvidence_one":
+    "Eingetragen {typed} · {count} erfasster Deal von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "forecast.deals.recorded_other": "{count} erfasste Ergebnisse",
+  "forecast.deals.recorded_one": "{count} erfasstes Ergebnis",
+  "forecast.deals.afterRisk": "{percent} nach Risiko",
+  "forecast.deals.colDeal": "Deal",
+  "forecast.deals.colSignals": "Risikosignale",
+  "forecast.deals.colAmount": "Betrag",
+  "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
+  "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
+  "forecast.signal.quiet": "Kunde schweigt",
+  "forecast.signal.stuck": "Lange in der Phase",
+  "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
+  "forecast.deals.limited":
+    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
+  "forecast.signal.closesNoMeeting_other":
+    "Schließt in {count} Tagen, kein Termin geplant",
+  "forecast.signal.closesNoMeeting_one":
+    "Schließt in {count} Tag, kein Termin geplant",
+  "forecast.signal.closesTomorrow": "Schließt morgen, kein Termin geplant",
+  "forecast.signal.closesToday": "Schließt heute, kein Termin geplant",
+  "forecast.signal.noReply_other": "Seit {count} Tagen keine Antwort",
+  "forecast.signal.noReply_one": "Seit {count} Tag keine Antwort",
+  "forecast.signal.closeMoved_other": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closeMoved_one": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closePassed": "Abschlussdatum verstrichen",
+  "forecast.signal.stuckDays_other": "Seit {count} Tagen in dieser Phase",
+  "forecast.signal.stuckDays_one": "Seit {count} Tag in dieser Phase",
+  "forecast.signal.stuckIn_other": "Seit {count} Tagen in {stage}",
+  "forecast.signal.stuckIn_one": "Seit {count} Tag in {stage}",
   "reporting.movement.won": "Gewonnen",
   "reporting.movement.lost": "Verloren",
   "reporting.movement.reopened_or_archived": "Wieder geöffnet oder archiviert",
@@ -2067,6 +2124,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
