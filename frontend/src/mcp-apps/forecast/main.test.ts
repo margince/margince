@@ -180,8 +180,8 @@ describe("the forecast card for the open findings", () => {
     expect(root.querySelector(".panel-head .badge")?.textContent).toBe(
       "2 findings",
     );
-    const lines = [...root.querySelectorAll(".context-line")].map((line) =>
-      line.textContent,
+    const lines = [...root.querySelectorAll(".context-line")].map(
+      (line) => line.textContent,
     );
     expect(lines).toEqual([
       `Stale close dateHigh, ${compactMoney(1_200_000, "EUR")} at stake`,
