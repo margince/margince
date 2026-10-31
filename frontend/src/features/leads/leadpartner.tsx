@@ -29,7 +29,11 @@ type Translate = ReturnType<typeof useT>;
 export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
   const readsCompanies = useCan("company", "read");
   const readsPartners = useCan("partner", "read");
-  return usePartnerCompanyOptions(readsCompanies && readsPartners).data;
+  const granted = readsCompanies && readsPartners;
+  // A disabled query still answers its cached data, so a revoked grant must
+  // hide what an earlier fetch loaded.
+  const options = usePartnerCompanyOptions(granted).data;
+  return granted ? options : undefined;
 }
 
 /** A referring partner's name, or its id when the options do not hold it. */

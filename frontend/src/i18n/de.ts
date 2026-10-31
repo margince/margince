@@ -2975,7 +2975,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.activated": "Aktiviert am {date}",
   "lead.partner": "Empfohlen von Partner",
   "lead.partnerNone": "Kein Partner",
-  "lead.partnerAwaiting": "Wartet auf Annahme",
+  "lead.partnerAwaiting": "Noch nicht angenommen",
   "lead.partnerAccept": "Für den Partner annehmen",
   "lead.partnerAccepted": "Für den Partner angenommen am {date}",
   "lead.partnerAcceptedKept":

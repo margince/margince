@@ -17,7 +17,7 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
-5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner.
+5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
 6. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
@@ -138,7 +138,7 @@ To edit a lead in Margince, open it from **Leads** and click the value to change
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner. A role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead and choose **Assign** beside **Owner** at its top. Then pick a colleague under **Choose a colleague**.

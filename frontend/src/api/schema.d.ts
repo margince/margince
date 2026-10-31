@@ -38920,8 +38920,10 @@ export interface components {
             project_id?: string | null;
             /**
              * Format: uuid
-             * @description The partner company that referred the lead. Needs `partner:read` (403 otherwise). It
-             *     must be a live partner the caller can read: 422 `not_a_partner` otherwise.
+             * @description The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+             *     company that does not exist or that the caller cannot read is 422
+             *     `reference_not_found`; a readable company with no live partner programme is 422
+             *     `not_a_partner`.
              */
             partner_company_id?: string | null;
             /**

@@ -39462,8 +39462,10 @@ type CreateLeadRequest struct {
 	OriginDetail *string             `json:"origin_detail,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// PartnerCompanyId The partner company that referred the lead. Needs `partner:read` (403 otherwise). It
-	// must be a live partner the caller can read: 422 `not_a_partner` otherwise.
+	// PartnerCompanyId The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+	// company that does not exist or that the caller cannot read is 422
+	// `reference_not_found`; a readable company with no live partner programme is 422
+	// `not_a_partner`.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.

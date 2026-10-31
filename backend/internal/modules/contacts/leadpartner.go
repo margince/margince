@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -47,7 +48,11 @@ func setLeadPartner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current c
 	if in.PartnerCompanyID == nil && !cleared {
 		return nil
 	}
-	if current.PartnerAcceptedAt != nil {
+	stored, err := readStoredLeadPartner(ctx, tx, ids.From[ids.LeadKind](ids.UUID(current.Id)))
+	if err != nil {
+		return err
+	}
+	if stored.acceptedAt != nil {
 		return &PartnerLeadAcceptedError{code: "partner_already_accepted"}
 	}
 	if in.PartnerCompanyID == nil {
@@ -57,8 +62,27 @@ func setLeadPartner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current c
 	if err := ensureLeadPartner(ctx, tx, partner); err != nil {
 		return err
 	}
-	p.Set(leadPartnerField, current.PartnerCompanyId, partner.UUID)
+	p.Set(leadPartnerField, stored.partner, partner.UUID)
 	return nil
+}
+
+// storedLeadPartner is the lead's partner link as the row holds it.
+type storedLeadPartner struct {
+	partner    *ids.UUID
+	acceptedAt *time.Time
+}
+
+// readStoredLeadPartner reads the partner link from the row, not from a read
+// of the lead. A read blanks a partner the caller cannot open, and with it the
+// stamp, while a decision about the link must see what is stored.
+func readStoredLeadPartner(ctx context.Context, tx pgx.Tx, id ids.LeadID) (storedLeadPartner, error) {
+	var out storedLeadPartner
+	err := tx.QueryRow(ctx, `SELECT partner_company_id, partner_accepted_at FROM lead WHERE id = $1`, id).
+		Scan(&out.partner, &out.acceptedAt)
+	if err != nil {
+		return storedLeadPartner{}, fmt.Errorf("read the lead's partner: %w", err)
+	}
+	return out, nil
 }
 
 // ensureLeadPartner refuses a seat without partner read, a referring partner
@@ -171,11 +195,11 @@ func (s *Store) AcceptPartnerLead(ctx context.Context, id ids.LeadID) (crmcontra
 		if err != nil {
 			return err
 		}
-		// The stored partner, not the read's: a read blanks a partner the caller
-		// cannot see, and that caller must hear 404, not "no partner".
-		var stored *ids.UUID
-		if err := tx.QueryRow(ctx, `SELECT partner_company_id FROM lead WHERE id = $1`, id).Scan(&stored); err != nil {
-			return fmt.Errorf("read the lead's partner: %w", err)
+		// The stored partner, not the read's: a caller who cannot see the
+		// partner must hear 404, not "no partner".
+		stored, err := readStoredLeadPartner(ctx, tx, id)
+		if err != nil {
+			return err
 		}
 		partner, err := acceptablePartnerLead(ctx, tx, current, stored)
 		if err != nil {
@@ -204,9 +228,9 @@ func (s *Store) AcceptPartnerLead(ctx context.Context, id ids.LeadID) (crmcontra
 // acceptablePartnerLead answers the partner a lead may be accepted for, or
 // why not. The lead may name no partner, have left the open ladder, or carry a
 // stamp already. The caller may also be unable to write the partner company.
-func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, stored *ids.UUID) (ids.CompanyID, error) {
+func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, stored storedLeadPartner) (ids.CompanyID, error) {
 	switch {
-	case current.PartnerAcceptedAt != nil:
+	case stored.acceptedAt != nil:
 		return ids.CompanyID{}, &PartnerLeadAcceptedError{code: "already_accepted"}
 	case current.MergedIntoId != nil:
 		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "lead_merged",
@@ -217,11 +241,11 @@ func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.
 	case current.ArchivedAt != nil:
 		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "lead_archived",
 			"an archived lead cannot be accepted for a partner; restore it first")
-	case stored == nil:
+	case stored.partner == nil:
 		return ids.CompanyID{}, httperr.Validation(leadPartnerField, "no_partner",
 			"name the partner that referred this lead before accepting it")
 	}
-	partner := ids.From[ids.CompanyKind](*stored)
+	partner := ids.From[ids.CompanyKind](*stored.partner)
 	// Acceptance writes the partner's activation, so it takes the write gate
 	// every partner writer takes: an unseen partner is 404, a read share 403.
 	if err := auth.EnsureWritable(ctx, tx, "company", partner.UUID); err != nil {

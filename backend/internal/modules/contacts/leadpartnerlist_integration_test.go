@@ -161,6 +161,11 @@ func TestALeadListFilterByAnUnseenPartnerMatchesNothing(t *testing.T) {
 		t.Errorf("the lead's read gave a seat that cannot open the partner partner %v, accepted %v by %v",
 			read.PartnerCompanyId, read.PartnerAcceptedAt, read.PartnerAcceptedBy)
 	}
+	// The blank read must not reopen the link: the accepted partner stays.
+	other, _ := newPartnerCompany(admin, t, e, "Visible Partner AG", UpsertPartnerInput{PartnerRole: "referral"})
+	if _, err := e.store.UpdateLead(blind, leadID, UpdateLeadInput{PartnerCompanyID: &other}); messageCode(err) != "partner_already_accepted" {
+		t.Errorf("replacing an accepted partner the seat cannot see: err = %v, want partner_already_accepted", err)
+	}
 }
 
 // Whether a company is a partner is partner data. A seat without partner read
