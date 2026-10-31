@@ -249,7 +249,7 @@ func meetingNeedSQL() string {
 	        SELECT COALESCE(named.merged_into_id, named.id) AS contact_id, min(c.follow_from) AS since
 	          FROM ` + followUpCandidates + ` c
 	          JOIN (SELECT l.activity_id, l.contact_id FROM activity_link l WHERE l.contact_id IS NOT NULL
-	                UNION SELECT p.activity_id, p.contact_id FROM activity_participant p
+	                UNION ALL SELECT p.activity_id, p.contact_id FROM activity_participant p
 	                 WHERE p.contact_id IS NOT NULL AND p.user_id IS NULL) met ON met.activity_id = c.id
 	          JOIN contact named ON named.id = met.contact_id
 	         GROUP BY 1) recipient

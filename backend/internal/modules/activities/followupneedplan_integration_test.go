@@ -78,11 +78,13 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 		if n.SubplanName != "CTE "+followUpReadable {
 			return
 		}
-		n.walk(func(step planNode) { peak = max(peak, step.ActualRows*step.ActualLoops) })
 		gated += n.ActualLoops
-		if strings.Contains(n.IndexCond, "ANY") {
-			gatedByID++
-		}
+		n.walk(func(step planNode) {
+			peak = max(peak, step.ActualRows*step.ActualLoops)
+			if step.Alias == "readable" && strings.Contains(step.IndexCond, "ANY") {
+				gatedByID++
+			}
+		})
 	})
 	if gated == 0 {
 		t.Fatal("the content gate over the meetings' history never ran, so this test checks nothing")
