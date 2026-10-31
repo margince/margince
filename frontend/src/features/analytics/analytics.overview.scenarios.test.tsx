@@ -228,7 +228,7 @@ const SIGNATURES: Readonly<
   },
   wrongTargetScope: { sales: shows("Pick one team to compare with a target") },
   notEnoughHistory: {
-    sales: shows("Comparison starts after a second compatible capture."),
+    sales: shows(/^History starts with the next capture, /),
     prospecting: async () => {
       await shows("—")();
       expect(screen.queryByText(/history/i)).toBeNull();

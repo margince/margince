@@ -2,12 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { EmptyState } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import { formatDateAbbrev } from "../../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { AttentionState } from "./analytics.attention";
-import { ChartContext } from "./reporting.chartcontext";
 import { ChartPanel } from "./reporting.charts";
 import {
   ReportingEvidenceDrawer,
@@ -23,7 +21,8 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 
 // How the open pipeline moved between the two latest compatible captures. It
 // is read once the action list has its answer, so at most two optional reads
-// are in flight. With fewer than two captures it says when comparison starts.
+// are in flight. With fewer than two captures it says, in one line, when
+// history started and when the movement shows.
 export function SinceLastReview({
   catalog,
   scope,
@@ -36,6 +35,7 @@ export function SinceLastReview({
   after: AttentionState;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const offered = catalog.metrics.some(
     (metric) =>
       metric.id === "open_pipeline" &&
@@ -87,30 +87,42 @@ export function SinceLastReview({
           );
         }
         return (
-          <Panel
-            title={t("analytics.overview.sinceTitle")}
-            footer={<ChartContext chart={chart} evaluation={evaluation} />}
-          >
-            <PanelBody>
-              <EmptyState>{movementState(chart, t)}</EmptyState>
-            </PanelBody>
-          </Panel>
+          <p className="analytics-open-line">
+            <span className="analytics-attention-title">
+              {t("analytics.overview.sinceTitle")}:
+            </span>{" "}
+            <span className="t-caption">
+              {movementState(chart, evaluation.context.timezone, t, locale)}
+            </span>
+          </p>
         );
       }}
     </QueryGate>
   );
 }
 
-// Why the movement has nothing to draw: the reader cannot have it, the two
-// captures agree, or there is no second capture yet.
+// Why the movement has nothing to draw, in one line rather than an empty
+// panel: the reader cannot have it, the two captures agree, or history is
+// still starting, with the dates of the captures it waits for.
 function movementState(
   chart: ReportingEvaluation["charts"][number],
-  t: ReturnType<typeof useT>,
+  zone: string,
+  t: Translator,
+  locale: Locale,
 ): string {
   const { status, reason } = chart.coverage;
-  if (status !== "ok" && status !== "no_data")
-    return reason ?? t(`reporting.status.${status}`);
-  return chart.opening_snapshot_id
-    ? t("analytics.overview.noMovement")
-    : t("analytics.overview.historyStarts");
+  if (chart.opening_snapshot_id) return t("analytics.overview.noMovement");
+  const next = chart.capture_status?.next_capture_at;
+  const unsupported = status !== "ok" && status !== "no_data";
+  if (!next || (unsupported && status !== "unavailable"))
+    return unsupported
+      ? (reason ?? t(`reporting.status.${status}`))
+      : t("analytics.overview.historyStarts");
+  const day = (at: string) => formatDateAbbrev(at, locale, zone);
+  return chart.state_at
+    ? t("analytics.overview.historyFrom", {
+        date: day(chart.state_at),
+        next: day(next),
+      })
+    : t("analytics.overview.historyNext", { next: day(next) });
 }

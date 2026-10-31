@@ -60,16 +60,16 @@ export function MonthlyTargets({
       ))}
       {held.length === 0 && hidden.length === 0 ? (
         <p className="t-caption">
-          {t("analytics.overview.noMonthlyTarget")}.
-          {canSet && (
-            <>
-              {" "}
-              <AppLink
-                href={analyticsSectionHref("targets", scopeDials(ownScope))}
-              >
-                {t("analytics.overview.setTarget")}
-              </AppLink>
-            </>
+          {t("analytics.overview.noMonthlyTarget")}.{" "}
+          {/* A seat that may not set one is told who can, in one short line. */}
+          {canSet ? (
+            <AppLink
+              href={analyticsSectionHref("targets", scopeDials(ownScope))}
+            >
+              {t("analytics.overview.setTarget")}
+            </AppLink>
+          ) : (
+            t("analytics.overview.targetWhoShort")
           )}
         </p>
       ) : (
