@@ -86,7 +86,7 @@ type LeadPartnerFilter struct {
 
 // clauses renders the filter over the lead row. It reads partner and company
 // data, so it takes both grants. Both arms read the partner through the
-// caller's company scope: the lead's own read blanks a partner the caller
+// caller's company scope. The lead's own read blanks a partner the caller
 // cannot open, so no filter may match on one.
 func (f LeadPartnerFilter) clauses(ctx context.Context, arg func(any) int) ([]string, error) {
 	if f.CompanyID == nil && f.Accepted == nil {
