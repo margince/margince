@@ -173,10 +173,10 @@ func TestSdrTeamReviewSeparatesOutcomesFromRoundsAndCountsSharedWorkOnce(t *test
 	if len(got.Members) != 2 || got.MembersWithheld || got.MembersTruncated {
 		t.Fatalf("members = %+v, want one row per SDR", got.Members)
 	}
-	if first.MeetingsHeld == nil || *first.MeetingsHeld != 1 || first.Submitted != 3 || first.Accepted != 1 || first.Rejected != 1 || first.Recycled != 1 || first.Waiting != 0 {
+	if first.MeetingsHeld == nil || *first.MeetingsHeld != 1 || memberFigure(first.Submitted) != 3 || memberFigure(first.Accepted) != 1 || memberFigure(first.Rejected) != 1 || memberFigure(first.Recycled) != 1 || memberFigure(first.Waiting) != 0 {
 		t.Errorf("Rep1's row = %+v", first)
 	}
-	if second.MeetingsHeld == nil || *second.MeetingsHeld != 1 || second.Submitted != 1 || second.Accepted != 0 || second.Waiting != 1 || second.OldestWaitingSince == nil {
+	if second.MeetingsHeld == nil || *second.MeetingsHeld != 1 || memberFigure(second.Submitted) != 1 || memberFigure(second.Accepted) != 0 || memberFigure(second.Waiting) != 1 || second.OldestWaitingSince == nil {
 		t.Errorf("the second SDR's row = %+v; a meeting both attended is in each row", second)
 	}
 }
@@ -220,7 +220,7 @@ func TestSdrTeamReviewCountsAnUnattributedEventForNoMember(t *testing.T) {
 		t.Fatalf("a team neither claims an event that names no submitter nor learns how many the company holds: %+v", team.Handoffs)
 	}
 	for _, row := range team.Members {
-		if row.Submitted != 0 || row.Waiting != 0 {
+		if memberFigure(row.Submitted) != 0 || memberFigure(row.Waiting) != 0 {
 			t.Fatalf("an unattributed event is no member's history: %+v", row)
 		}
 	}
@@ -252,7 +252,7 @@ func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
 		if ids.UUID(row.Id) == e.Rep1 {
 			want = 1
 		}
-		if row.Accepted != want {
+		if memberFigure(row.Accepted) != want {
 			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, row.Accepted, want)
 		}
 	}

@@ -81,6 +81,12 @@ func readSdrTeamLeads(ctx context.Context, tx pgx.Tx, seats []ids.UUID, window s
 	return out, rows.Err()
 }
 
+// mayReadHandoffs is the one grant every handoff figure of a review answers
+// to, the team's and each member's, in either workflow.
+func mayReadHandoffs(ctx context.Context) bool {
+	return auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead)
+}
+
 // readerWithheldFigures names the figures the requesting reader's grants
 // leave out of a review. A target held against leads the reader may not see
 // says nothing, so targets need lead read as well as target read.
@@ -90,7 +96,7 @@ func readerWithheldFigures(ctx context.Context, workflow crmcontracts.SdrTeamRev
 	if !weekly.MayReadMeetings(ctx) {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresMeetings)
 	}
-	if workflow == crmcontracts.SdrTeamReviewWorkflowHandoff && !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
+	if !mayReadHandoffs(ctx) {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresHandoffs)
 	}
 	if !leads {
@@ -115,12 +121,6 @@ func (f sdrTeamMemberFigures) apply(ctx context.Context, tx pgx.Tx, out *crmcont
 	seats := make([]ids.UUID, len(out.Members))
 	for index, member := range out.Members {
 		seats[index] = ids.UUID(member.Id)
-	}
-	if slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresHandoffs) {
-		for index := range out.Members {
-			member := &out.Members[index]
-			member.Submitted, member.Accepted, member.Rejected, member.Recycled, member.Waiting, member.OldestWaitingSince = 0, 0, 0, 0, 0, nil
-		}
 	}
 	if slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresLeads) {
 		return nil

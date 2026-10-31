@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -221,6 +222,18 @@ func TestSdrTeamMembersHoldOnlyTheirOwnMonthlyTarget(t *testing.T) {
 	if rows[f.second].Target != nil {
 		t.Fatalf("a member with no target has none: %+v", rows[f.second].Target)
 	}
+	// The reporting service answers to the target grant itself, whoever asks it.
+	err := InstallationDB(e.Pool).Tx(manager, func(tx pgx.Tx) error {
+		targets, readable, err := newReportingService(e.Pool, func() time.Time { return f.at }).OwnerTargets(
+			withoutGrants(manager, "sales_target"), tx, crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, reportingLeadsPromoted, window, []ids.UUID{e.Rep1})
+		if err == nil && (readable || len(targets) != 0) {
+			t.Errorf("a reader without target read learns targets: %v %v", readable, targets)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // Each figure answers to the reader's own grant: activity read for meetings,
@@ -238,7 +251,7 @@ func TestSdrTeamMembersWithholdEachFigureByTheReadersGrant(t *testing.T) {
 		{"every grant", manager, nil, true},
 		{"no activity read", withoutGrants(manager, "activity"), []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresMeetings}, true},
 		{"no target read", withoutGrants(manager, "sales_target"), []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresTargets}, true},
-		{"lead read revoked", withoutGrants(manager, "lead"), []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresLeads, crmcontracts.SdrTeamReviewWithheldFiguresTargets}, false},
+		{"lead read revoked", withoutGrants(manager, "lead"), []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresHandoffs, crmcontracts.SdrTeamReviewWithheldFiguresLeads, crmcontracts.SdrTeamReviewWithheldFiguresTargets}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := f.team(tc.reader, t)
@@ -253,6 +266,13 @@ func TestSdrTeamMembersWithholdEachFigureByTheReadersGrant(t *testing.T) {
 			for _, row := range got.Members {
 				if (row.Qualified != nil) != tc.leads || (row.Unanswered != nil) != tc.leads || (row.MeetingsHeld != nil) != meetings {
 					t.Fatalf("%s: qualified %d, unanswered %d, meetings %v", row.Label, memberFigure(row.Qualified), memberFigure(row.Unanswered), row.MeetingsHeld)
+				}
+				// Handoffs are kept with the leads, so even a qualification team's
+				// handoff counts are absent, not zero, without lead read.
+				for _, handoff := range []*int{row.Submitted, row.Accepted, row.Rejected, row.Recycled, row.Waiting} {
+					if (handoff != nil) != tc.leads {
+						t.Fatalf("%s's handoff counts reach a reader without the grant: %+v", row.Label, row)
+					}
 				}
 			}
 		})
@@ -413,7 +433,7 @@ func TestSdrTeamReviewKeepsMeetingsForAReaderWithoutLeadRead(t *testing.T) {
 		t.Fatalf("meetings stay and handoffs go: %+v", got)
 	}
 	for _, row := range membersByID(got) {
-		if row.MeetingsHeld == nil || *row.MeetingsHeld != 1 || row.Submitted != 0 || row.Qualified != nil {
+		if row.MeetingsHeld == nil || *row.MeetingsHeld != 1 || row.Submitted != nil || row.Waiting != nil || row.Qualified != nil {
 			t.Fatalf("%s keeps the meeting and loses the handoff and lead figures: %+v", row.Label, row)
 		}
 	}

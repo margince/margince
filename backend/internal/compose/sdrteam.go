@@ -122,7 +122,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 	if owners.IndividualOff {
 		return out, nil
 	}
-	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at)
+	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at, mayReadHandoffs(ctx))
 	if err != nil {
 		return out, err
 	}
@@ -169,7 +169,7 @@ func readSdrTeamFigures(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return out, err
 	}
 	out.workflow = crmcontracts.SdrTeamReviewWorkflowHandoff
-	if !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
+	if !mayReadHandoffs(ctx) {
 		return out, nil
 	}
 	handoffs, seats, err := readSdrTeamHandoffs(ctx, tx, requested, window, at)
@@ -387,7 +387,9 @@ func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope
 // readSdrTeamMembers reads one row per member the reader may measure, in one
 // statement for the whole team. A member's meetings count every meeting they
 // are credited with, so the rows can add up to more than the team.
-func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time) ([]crmcontracts.SdrTeamMember, bool, error) {
+// Without handoff read no handoff statement runs, and the handoff counts are
+// absent.
+func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time, handoffs bool) ([]crmcontracts.SdrTeamMember, bool, error) {
 	members, truncated, err := sdrTeamMemberPage(ctx, tx, requested, owners)
 	out := []crmcontracts.SdrTeamMember{}
 	if err != nil || len(members) == 0 {
@@ -408,18 +410,16 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
  `
 		meetings, joinMet = "COALESCE(met.n,0)", " LEFT JOIN met ON met.seat=u.id"
 	}
-	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
-	query := `WITH ` + met + `ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
- count(*) FILTER (WHERE e.to_status=` + rejected + `) rejected,count(*) FILTER (WHERE e.to_status=` + recycled + `) recycled
- FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "e.occurred_at", window) + ` GROUP BY 1),
- won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
- WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "credit.occurred_at", window) + ` GROUP BY 1),
- waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
- WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(&b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1)
- SELECT u.id,COALESCE(u.display_name,''),` + meetings + `,COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),
- COALESCE(ev.recycled,0),COALESCE(waits.n,0),waits.since
- FROM app_user u` + joinMet + ` LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id
- WHERE u.id=ANY(` + seats + `) ORDER BY lower(COALESCE(u.display_name,'')),u.id`
+	with, columns, joins := met, "NULL::bigint,NULL::bigint,NULL::bigint,NULL::bigint,NULL::bigint,NULL::timestamptz", ""
+	if handoffs {
+		with += sdrTeamMemberHandoffsSQL(&b, seats, window, at)
+		columns = "COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),COALESCE(ev.recycled,0),COALESCE(waits.n,0),waits.since"
+		joins = " LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id"
+	}
+	query := `WITH ` + with + `seats AS (SELECT unnest(` + seats + `::uuid[]) id)
+ SELECT u.id,COALESCE(u.display_name,''),` + meetings + `,` + columns + `
+ FROM app_user u` + joinMet + joins + `
+ WHERE u.id IN (SELECT id FROM seats) ORDER BY lower(COALESCE(u.display_name,'')),u.id`
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, false, err
@@ -431,6 +431,20 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return member, err
 	})
 	return out, truncated, err
+}
+
+// sdrTeamMemberHandoffsSQL is the members' handoff counts as three named
+// statements, ev, won and waits, each ending in a comma for the next.
+func sdrTeamMemberHandoffsSQL(b *reportingBindings, seats string, window sdrTeamWindow, at time.Time) string {
+	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
+	return `ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
+ count(*) FILTER (WHERE e.to_status=` + rejected + `) rejected,count(*) FILTER (WHERE e.to_status=` + recycled + `) recycled
+ FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "e.occurred_at", window) + ` GROUP BY 1),
+ won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
+ WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "credit.occurred_at", window) + ` GROUP BY 1),
+ waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
+ WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1),
+ `
 }
 
 // sdrTeamMemberPage is the first sdrTeamMemberRows members of the scope the

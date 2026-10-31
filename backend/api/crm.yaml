@@ -55977,7 +55977,7 @@ components:
         members_truncated: { type: boolean, description: The team has more measurable members than `members` holds. }
         withheld_figures:
           type: array
-          description: 'The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, and leaves out `handoffs`; each member''s handoff counts are then zero and mean nothing. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.'
+          description: 'The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member''s handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.'
           items:
             type: string
             enum: [meetings, handoffs, leads, targets]
@@ -56053,7 +56053,8 @@ components:
     SdrTeamMember:
       type: object
       additionalProperties: false
-      required: [id, label, submitted, accepted, rejected, recycled, waiting]
+      required: [id, label]
+      description: 'One member''s figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.'
       properties:
         id: { type: string, format: uuid }
         label: { type: string }
