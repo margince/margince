@@ -448,11 +448,17 @@ for spec in "avery:Avery Holt:Westmere Haulage:held" "blake:Blake Ortiz:Pinecres
         --argjson l "$links" '{kind:"meeting", subject:$s, occurred_at:$at, meeting_status:"held", links:$l}')" >/dev/null
       meetings=$(( meetings + 1 ))
       expect "200" "GET /leads/$id" "$(api GET "/leads/$id")"
+      # Leads qualified counts a lead promoted into a deal. A run before that
+      # rule promoted without one, so its promotion is reversed and made again.
+      if [[ "$(jq -r '.status' "$workdir/body")" == "promoted" && "$(jq -r '.qualified_deal_id // ""' "$workdir/body")" == "" ]]; then
+        expect "200" "POST /leads/$id/demote" "$(api POST "/leads/$id/demote" '{"reason":"Analytics demo: promote again into a deal"}')"
+        expect "200" "GET /leads/$id" "$(api GET "/leads/$id")"
+      fi
       if [[ "$(jq -r '.status' "$workdir/body")" != "promoted" ]]; then
         # A hand-logged meeting names no attendee address, so it cannot prove the
-        # lead took part; the SDR qualifies the lead by hand instead.
+        # lead took part; the SDR qualifies the lead by hand, into a deal.
         expect "200 201" "POST /leads/$id/promote" "$(api POST "/leads/$id/promote" \
-          '{"trigger":"human_qualify","evidence":{"note":"Qualified on the discovery call"}}')"
+          '{"trigger":"human_qualify","evidence":{"note":"Qualified on the discovery call"},"deal":{}}')"
       fi
       ;;
     booked)
@@ -465,7 +471,7 @@ for spec in "avery:Avery Holt:Westmere Haulage:held" "blake:Blake Ortiz:Pinecres
       ;;
   esac
 done
-echo "  OK: $leads leads, $meetings meetings held and those leads qualified, one booked, two call-back tasks"
+echo "  OK: $leads leads, $meetings meetings held and those leads qualified into deals, one booked, two call-back tasks"
 
 # Booked meetings on both sides of the summary's 14-day window: one that
 # already started, two inside, one past the end, and one called off. The
