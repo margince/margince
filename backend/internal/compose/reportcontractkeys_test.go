@@ -9,10 +9,10 @@ import (
 	"testing"
 )
 
-// The contract's report keys are what an assistant holding only the REST skill
-// can choose from, so they must be the keys prebuiltReports serves: a report
-// the engine adds is listed, and one it drops stops being offered. The
-// derivation route takes a key from a handle the server sent, so it lists none.
+// An assistant holding only the REST skill chooses a report from the contract's
+// keys. They must be the keys prebuiltReports serves, so an added report is
+// listed and a dropped one stops being offered. The derivation route lists
+// none, because its key comes from a handle the server sent.
 func TestTheContractListsTheReportsTheEngineServes(t *testing.T) {
 	const path = "/reports/{report}"
 	item := loadContract(t).Paths.Find(path)
