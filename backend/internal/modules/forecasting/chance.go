@@ -6,8 +6,8 @@ package forecasting
 // The chance a forecast weights an open deal by, and the risk effect on it.
 //
 // Both start at today's behaviour and move only on this installation's own
-// evidence. With no evidence, the chance in use is the typed stage chance and
-// every risk effect is 1, so no number moves before the company's outcomes do.
+// evidence. With none, the chance in use is the typed stage chance. Every risk
+// effect is then 1, so no number moves before the company's outcomes do.
 
 import (
 	"cmp"
@@ -25,8 +25,7 @@ const PriorStrength = 20
 type EntryOutcome int
 
 // The outcomes. EntryOpen is censored: the deal had not closed by the evidence
-// cutoff, or left the pipeline first, so it says how long it stayed open and
-// nothing about how it ended.
+// cutoff, or left the pipeline first. It says how long the deal stayed open.
 const (
 	EntryOpen EntryOutcome = iota
 	EntryWon
@@ -93,7 +92,7 @@ func EstimateStageEvidence(entries []StageEntry) StageEvidence {
 
 // ChanceInUse blends the typed chance with the stage's evidence, as a beta
 // prior of strength PriorStrength centred on the typed value. Both are integer
-// percents. No evidence returns the typed value exactly.
+// percents. No evidence returns the typed value unchanged.
 func ChanceInUse(typed int, evidence StageEvidence) int {
 	if evidence.Resolved <= 0 {
 		return typed
@@ -112,7 +111,7 @@ type RiskTally struct {
 
 // RiskEffect is the odds ratio of winning with the signal against without it,
 // shrunk on the log scale toward 1 by PriorStrength. No deal with the signal
-// gives exactly 1. Half a deal is added to each cell so an empty cell gives a
+// gives 1. Half a deal is added to each cell so an empty cell gives a
 // finite ratio.
 func RiskEffect(t RiskTally) float64 {
 	present := t.PresentWon + t.PresentLost

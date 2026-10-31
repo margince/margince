@@ -144,8 +144,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		// The entry refuses a code no compiled-in pack answers; the store runs
 		// the floor carry in the same transaction.
 		Country:      req.Country,
-		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance,
-		ForecastSelfCorrecting: req.ForecastSelfCorrecting,
+		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)

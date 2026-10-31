@@ -38,10 +38,8 @@ type InstallationSettings struct {
 	CallWhatsApp bool
 	CallTelegram bool
 	CallZalo     bool
-	// IndividualPerformance is settingsindividualperformance.go's switch.
-	IndividualPerformance bool
-	// ForecastSelfCorrecting is settingsforecastselfcorrecting.go's switch.
-	ForecastSelfCorrecting bool
+	// The switches of settingsindividualperformance.go and its forecast sibling.
+	IndividualPerformance, ForecastSelfCorrecting bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -287,14 +285,12 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		Operations:           operations,
 		AgentAllowances:      allowances,
 	}
-	if err := s.readCallMessengers(ctx, &out); err != nil {
-		return InstallationSettings{}, err
-	}
-	if err := s.readIndividualPerformance(ctx, &out); err != nil {
-		return InstallationSettings{}, err
-	}
-	if err := s.readForecastSelfCorrecting(ctx, &out); err != nil {
-		return InstallationSettings{}, err
+	for _, read := range []func(context.Context, *InstallationSettings) error{
+		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting,
+	} {
+		if err := read(ctx, &out); err != nil {
+			return InstallationSettings{}, err
+		}
 	}
 	return out, nil
 }

@@ -44,19 +44,14 @@ type Deal struct {
 	Lost     bool
 	Category string
 	// StageProbability is the chance in use, an integer percent: the typed
-	// stage chance, or that chance moved by the stage's recorded outcomes.
+	// stage chance, moved by the stage's recorded outcomes when there are any.
 	StageProbability int
-	// TypedProbability is the chance typed on the stage. Nil where the reader
-	// did not record it apart.
+	// The typed chance, the count of outcomes that moved it, the risk signals
+	// and the strongest one's odds ratio. Nil where the reader set none.
 	TypedProbability *int
-	// EvidenceN is how many recorded outcomes moved the chance. Nil where no
-	// evidence was read.
-	EvidenceN *int
-	// Signals are the risk signals found on the deal; nil where none was
-	// assessed. Effect is the odds ratio the strongest of them applies, nil
-	// for none.
-	Signals []string
-	Effect  *float64
+	EvidenceN        *int
+	Signals          []string
+	Effect           *float64
 	// StageID is which stage the deal stands in, empty where the reader could
 	// not name one. Frozen onto the contribution so a later conversion read can
 	// ask what happened to deals that REACHED a stage — a question the deal's

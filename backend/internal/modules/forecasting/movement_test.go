@@ -122,8 +122,8 @@ func TestAStageWeightChangeMovesTheWeightedReading(t *testing.T) {
 	reconciles(t, m)
 }
 
-// A chance that moves while the deal stays in its stage is the record moving,
-// not a stage move; so is a risk effect that moves on its own.
+// A chance that moves while the deal stays in its stage is the record moving.
+// So is a risk effect that moves on its own.
 func TestAChanceMovedWithoutAStageMoveIsARecordChange(t *testing.T) {
 	t.Parallel()
 	was := open("d1", 10_000)

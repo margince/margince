@@ -11,10 +11,8 @@ package weekly
 // of the week, not folded from any bucket — so they carry no bar here. A reader
 // counting the drawn columns sees eight; this file names only what MOVED.
 //
-// The forecast engine reports thirteen buckets, which is the right grain for
-// diagnosing a quarter and too fine for a weekly retrospective — nobody opens a
-// Monday review to learn that 3% of the change was an FX revaluation. So the
-// thirteen fold into these six.
+// The forecast engine reports thirteen buckets: the grain for diagnosing a
+// quarter, and too fine for a weekly look back. So they fold into these six.
 //
 // Folding is where money goes missing. A bar list that quietly drops a bucket
 // still sums to something and still draws, so the mapping is total by

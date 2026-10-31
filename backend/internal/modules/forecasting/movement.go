@@ -48,10 +48,9 @@ var bucketOrder = []string{
 // and fails when the weekly bridge has no bar for a member — the census that
 // stops a bucket added here from silently vanishing from a waterfall.
 //
-// Exported so a reader that must account for ALL of them derives the set rather
-// than keeping its own copy — the weekly bridge folds these thirteen into seven
-// bars, and a hand-kept list there would silently drop a bucket added here,
-// which is money vanishing from a waterfall that still sums to something.
+// Exported so a reader that must account for every one derives the set. The
+// weekly bridge folds these thirteen into seven bars. A hand-kept list there
+// would drop a bucket added here, and its money with it.
 //
 // Returned as a fresh slice because a package-level array would let one caller
 // reorder every other caller's waterfall.

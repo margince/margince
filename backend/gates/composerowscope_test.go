@@ -58,13 +58,11 @@ import (
 )
 
 const (
-	// composeTier is the subtree this gate judged first, and still the only one
-	// covered whole.
+	// composeTier is the subtree this gate judged first, still the only one whole.
 	composeTier = "internal/compose"
 
-	// rowScopeVocabularyPkg holds ownerScopedTables — the closed set of tables
-	// the row-scope primitives will interpolate, and therefore the closed set of
-	// references this gate is about.
+	// rowScopeVocabularyPkg holds ownerScopedTables: the closed set of tables the
+	// row-scope primitives interpolate, and so the references this gate is about.
 	rowScopeVocabularyPkg = "internal/platform/auth"
 
 	// wantMinimumScopedSites guards against the way this gate fails silently: an

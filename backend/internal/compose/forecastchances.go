@@ -150,8 +150,8 @@ func forecastStageEvidence(ctx context.Context, tx pgx.Tx, cutoff time.Time) (ma
 	return out, nil
 }
 
-// forecastSettledSignalsSQL is, per deal that closed after a forecast froze it
-// open with assessed signals, the signals of the last such forecast and
+// forecastSettledSignalsSQL reads each deal a forecast froze open with signals
+// and that closed later. It answers the last such forecast's signals and
 // whether the deal was won. Only signals of the current rules are pooled.
 const forecastSettledSignalsSQL = `
 	SELECT DISTINCT ON (c.deal_id) c.risk_signals, d.status = 'won'

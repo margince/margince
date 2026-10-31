@@ -29,8 +29,8 @@ func RiskSignalNames() []string {
 }
 
 // RiskSignals answers which risk signals one open deal shows, in a fixed order.
-// stuckAfter is how long nine in ten of this stage's won deals stayed in it,
-// as the seam measured it; nil where too few won deals passed through.
+// stuckAfter is how long nine in ten of this stage's won deals stayed in it.
+// It is nil where too few won deals passed through.
 func RiskSignals(asOf time.Time, s Subject, cfg Config, stuckAfter *time.Duration) []string {
 	out := []string{}
 	if closeKeepsMoving(s, cfg) {

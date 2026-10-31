@@ -119,7 +119,7 @@ func contributionOfDeal(t *testing.T, rows []crmcontracts.ForecastContribution, 
 }
 
 // With no recorded outcome from its stage, a deal is weighted by the typed
-// chance exactly: today's forecast, unchanged.
+// chance: today's forecast, unchanged.
 func TestWithNoRecordedOutcomeTheForecastUsesTheTypedChance(t *testing.T) {
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
@@ -193,7 +193,7 @@ func asToolRows(t *testing.T, rows []crmcontracts.ForecastContribution) []agents
 }
 
 // While individual performance is off, both doors return only the reader's
-// own deals, with no owner on them; the colleagues' deals still count in the
+// own deals, with no owner on them. The colleagues' deals still count in the
 // totals.
 func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 	f := newStageCohortFixture(t)
