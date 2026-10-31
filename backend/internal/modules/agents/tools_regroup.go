@@ -8,6 +8,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
+// The two router names other parts of the server point a model to.
+const (
+	findRecordsToolName   = "find_records"
+	readAttentionToolName = "read_attention"
+)
+
 // The routers below each front one family of verbs under one listed name. A
 // call runs as the verb its action names, at that verb's tier and scope.
 
@@ -15,7 +21,7 @@ type findRecords struct{ routed }
 
 func (findRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "find_records", Title: "Find records", Version: toolVersionV1,
+		Name: findRecordsToolName, Title: "Find records", Version: toolVersionV1,
 		Description: findRecordsCopy.render(), Instead: findRecordsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"engine":{"description":"search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is"},
@@ -55,7 +61,7 @@ type readAttention struct{ routed }
 
 func (readAttention) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_attention", Title: "See what needs attention", Version: toolVersionV1,
+		Name: readAttentionToolName, Title: "See what needs attention", Version: toolVersionV1,
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),

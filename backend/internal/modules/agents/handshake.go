@@ -78,7 +78,7 @@ const orientation = "Margince is a CRM: contacts, companies, deals, leads, proje
 // serves, for the same reason the queue sentence is conditional.
 func (s *Dispatcher) startingTools() string {
 	var served []string
-	for _, name := range []string{"read_attention", "find_records", "read_context", "read_record"} {
+	for _, name := range []string{readAttentionToolName, findRecordsToolName, "read_context", "read_record"} {
 		if _, ok := s.registry.Spec(name); ok {
 			served = append(served, name)
 		}
@@ -120,16 +120,19 @@ const queueInstruction = "A write can also leave a question for a human WITHOUT 
 
 // identity is the serverInfo both framings report: the handshake era in its
 // initialize result, the modern era in every result's _meta.
+// iconSizeAny is the sizes value of an icon that scales, as the SVG does.
+const iconSizeAny = "any"
+
 func (s *Dispatcher) identity() map[string]any {
 	info := map[string]any{
 		fieldName: s.name, "version": s.version,
-		fieldTitle:    serverTitle,
-		"description": serverDescription,
+		fieldTitle:       serverTitle,
+		fieldDescription: serverDescription,
 	}
 	if s.publicOrigin != "" {
 		info["websiteUrl"] = s.publicOrigin
 		info["icons"] = []map[string]any{
-			{"src": s.publicOrigin + "/icon.svg", "mimeType": "image/svg+xml", "sizes": []string{"any"}},
+			{"src": s.publicOrigin + "/icon.svg", "mimeType": "image/svg+xml", "sizes": []string{iconSizeAny}},
 			{"src": s.publicOrigin + "/web-app-manifest-512x512.png", "mimeType": "image/png", "sizes": []string{"512x512"}},
 		}
 	}

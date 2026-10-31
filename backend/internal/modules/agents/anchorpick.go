@@ -19,6 +19,12 @@ import (
 
 const anchorPickKey = "pick_record"
 
+// pickChoice is one record the form offers, as a titled oneOf entry.
+type pickChoice struct {
+	ID    string `json:"const"`
+	Title string `json:"title"`
+}
+
 // pickAnchor asks the user which of hits they meant. It answers the zero id
 // when it cannot ask, and the caller then refuses with the candidates.
 func pickAnchor(
@@ -27,7 +33,7 @@ func pickAnchor(
 	if records == nil || !canAskInChat(ctx) {
 		return ids.UUID{}, nil
 	}
-	choices := make([]map[string]any, 0, len(hits))
+	choices := make([]pickChoice, 0, len(hits))
 	offered := map[string]ids.UUID{}
 	for _, hit := range hits {
 		record, ok, err := readServable(ctx, records, hit.Ref)
@@ -36,7 +42,7 @@ func pickAnchor(
 		}
 		if ok {
 			offered[hit.Ref.ID.String()] = hit.Ref.ID
-			choices = append(choices, map[string]any{"const": hit.Ref.ID.String(), "title": choiceTitle(record, hit.Match)})
+			choices = append(choices, pickChoice{ID: hit.Ref.ID.String(), Title: choiceTitle(record, hit.Match)})
 		}
 	}
 	if len(choices) < 2 {
@@ -46,14 +52,15 @@ func pickAnchor(
 		}
 		return ids.UUID{}, nil
 	}
+	offer, err := json.Marshal(choices)
+	if err != nil {
+		return ids.UUID{}, err
+	}
 	question := chatQuestion{
 		Key:     anchorPickKey,
 		Message: "Which " + args.RecordType + " did you mean by \"" + args.RecordName + "\"?",
-		Schema: map[string]any{
-			"type":       "object",
-			"properties": map[string]any{"record_id": map[string]any{"type": "string", "oneOf": choices}},
-			"required":   []string{"record_id"},
-		},
+		Schema: json.RawMessage(`{"type":"object","required":["record_id"],
+			"properties":{"record_id":{"type":"string","oneOf":` + string(offer) + `}}}`),
 	}
 	reply, err := replyInChat(ctx, question)
 	if err != nil {

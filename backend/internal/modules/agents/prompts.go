@@ -39,7 +39,7 @@ var starterPrompts = []starterPrompt{
 	{
 		Name: "morning_brief", Title: "Brief me for today",
 		Description: "This morning's brief, what is slipping and what waits for your decision.",
-		Tools:       []string{"read_context", "read_attention", listApprovalsToolName},
+		Tools:       []string{"read_context", readAttentionToolName, listApprovalsToolName},
 		Text: "Brief me for today. Read this morning's brief with read_context (about: brief), " +
 			"check read_attention (view: slipping) for deals at risk, and call list_approvals for what " +
 			"waits for my decision. Give me the three things to do first, each with its link.",
@@ -47,7 +47,7 @@ var starterPrompts = []starterPrompt{
 	{
 		Name: "whats_slipping", Title: "What is slipping this week",
 		Description: "Deals at risk this week, and why each one is on the list.",
-		Tools:       []string{"read_attention"},
+		Tools:       []string{readAttentionToolName},
 		Text: "What is slipping this week? Call read_attention with view slipping, then tell me " +
 			"for each deal why it is at risk and the one step that would help, with its link.",
 	},
@@ -70,7 +70,7 @@ var starterPrompts = []starterPrompt{
 	{
 		Name: "open_promises", Title: "What did we promise customers",
 		Description: "Promises made to customers that are still open.",
-		Tools:       []string{"read_attention"},
+		Tools:       []string{readAttentionToolName},
 		Text: "What have we promised customers that is still open? Call read_attention with view " +
 			"commitments, and list each promise with who owns it, when it is due and its link.",
 	},
@@ -88,7 +88,7 @@ var starterPrompts = []starterPrompt{
 			{Name: "with", Description: "Who the call was with", Required: true},
 			{Name: "notes", Description: "What was said and agreed", Required: true},
 		},
-		Tools: []string{"find_records", "change_activities"},
+		Tools: []string{findRecordsToolName, "change_activities"},
 		Text: "Log a call with {with}. Find the record with find_records, then log the call with " +
 			"change_activities. My notes: {notes}",
 	},
@@ -124,7 +124,7 @@ func (s *Dispatcher) promptList(ctx context.Context) []map[string]any {
 	prompts := s.offeredPrompts(ctx)
 	out := make([]map[string]any, 0, len(prompts))
 	for _, prompt := range prompts {
-		entry := map[string]any{fieldName: prompt.Name, fieldTitle: prompt.Title, "description": prompt.Description}
+		entry := map[string]any{fieldName: prompt.Name, fieldTitle: prompt.Title, fieldDescription: prompt.Description}
 		if len(prompt.Arguments) > 0 {
 			entry["arguments"] = prompt.Arguments
 		}
@@ -132,6 +132,9 @@ func (s *Dispatcher) promptList(ctx context.Context) []map[string]any {
 	}
 	return out
 }
+
+// messageRole names who speaks a prompt message.
+const messageRole = "role"
 
 // promptGet answers prompts/get: the request text with the caller's arguments in it.
 func (s *Dispatcher) promptGet(ctx context.Context, params json.RawMessage) (map[string]any, *rpcError) {
@@ -155,10 +158,10 @@ func (s *Dispatcher) promptGet(ctx context.Context, params json.RawMessage) (map
 			text = strings.ReplaceAll(text, "{"+arg.Name+"}", value)
 		}
 		return map[string]any{
-			"description": prompt.Description,
+			fieldDescription: prompt.Description,
 			"messages": []map[string]any{{
-				"role":    "user",
-				"content": map[string]any{"type": fieldText, fieldText: text},
+				messageRole:  "user",
+				fieldContent: map[string]any{"type": fieldText, fieldText: text},
 			}},
 		}, nil
 	}

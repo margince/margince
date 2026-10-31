@@ -46,6 +46,7 @@ func TestAnAmbiguousNameIsAskedAboutInTheChatWithEachRecordsName(t *testing.T) {
 	var schema struct {
 		Properties struct {
 			RecordID struct {
+				//nolint:tagliatelle // oneOf is the JSON Schema keyword
 				OneOf []map[string]string `json:"oneOf"`
 			} `json:"record_id"`
 		} `json:"properties"`

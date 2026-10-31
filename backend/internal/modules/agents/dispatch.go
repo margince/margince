@@ -72,6 +72,13 @@ const (
 	// fieldTitle is the display name, carried BOTH at the top level of a
 	// tools/list entry and inside its annotations — one spelling for both.
 	fieldTitle = "title"
+	// fieldDescription is the prose beside a title in serverInfo, prompts/list
+	// and prompts/get.
+	fieldDescription = "description"
+	// fieldContent carries a tool result's blocks and a prompt message's body.
+	fieldContent = "content"
+	// capabilityListChanged is the member every capability entry answers false.
+	capabilityListChanged = "listChanged"
 )
 
 // negotiateLegacyVersion answers the client's requested MCP revision when this
@@ -309,13 +316,13 @@ func methodNotFound(req rpcRequest) rpcResponse {
 // filtered per caller, so the claim would promise a message that never arrives.
 func (s *Dispatcher) capabilities(modern bool) map[string]any {
 	capabilities := map[string]any{
-		"tools":   map[string]any{"listChanged": false},
-		"prompts": map[string]any{"listChanged": false},
+		"tools":   map[string]any{capabilityListChanged: false},
+		"prompts": map[string]any{capabilityListChanged: false},
 	}
 	if s.resources != nil {
 		// subscribe is FALSE for the same reason, and separately: a
 		// per-caller document has no shared state to subscribe to.
-		capabilities["resources"] = map[string]any{"listChanged": false, "subscribe": false}
+		capabilities["resources"] = map[string]any{capabilityListChanged: false, "subscribe": false}
 	}
 	if modern && s.tasksServed() {
 		// Advertised only where it is real. Without a task store this server
@@ -415,7 +422,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 // this server made and did not keep. structuredContent below is the member that
 // carries that promise, and it is withheld rather than served in violation.
 func (s *Dispatcher) result(name string, out json.RawMessage) map[string]any {
-	res := map[string]any{"content": []map[string]any{{"type": fieldText, fieldText: string(out)}}}
+	res := map[string]any{fieldContent: []map[string]any{{"type": fieldText, fieldText: string(out)}}}
 	if structured, ok := s.structuredContent(name, out); ok {
 		res["structuredContent"] = structured
 	}
@@ -462,7 +469,7 @@ func (s *Dispatcher) structuredContent(name string, out json.RawMessage) (json.R
 
 func toolError(msg string) map[string]any {
 	return map[string]any{
-		"isError": true,
-		"content": []map[string]any{{"type": fieldText, fieldText: msg}},
+		"isError":    true,
+		fieldContent: []map[string]any{{"type": fieldText, fieldText: msg}},
 	}
 }

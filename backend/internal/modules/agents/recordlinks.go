@@ -54,9 +54,10 @@ func linkEvidence(refs []EvidenceRef, origin string) {
 const (
 	minorSuffix   = "_minor"
 	displaySuffix = "_display"
+	fieldCurrency = "currency"
 )
 
-var currencyMembers = []string{"currency", "base_currency"}
+var currencyMembers = []string{fieldCurrency, "base_currency"}
 
 // withReadableAmounts adds `<name>_display` ("72000.00 USD") beside every
 // `<name>_minor` that sits next to a currency. A model then reads money in major

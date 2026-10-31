@@ -15,19 +15,16 @@ import (
 
 const bulkConfirmKey = "confirm_bulk_change"
 
+const bulkConfirmSchema = `{"type":"object","required":["confirm"],
+	"properties":{"confirm":{"type":"boolean","title":"Go ahead","default":false}}}`
+
 // confirmBulkInChat asks the user to confirm before an execute or an undo
 // runs. It answers nil when the change may go ahead, including when this
 // caller cannot be asked.
 func confirmBulkInChat(ctx context.Context, args bulkUpdateRecordsArgs) error {
 	reply, err := replyInChat(ctx, chatQuestion{
 		Key: bulkConfirmKey, Message: bulkConfirmMessage(args),
-		Schema: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"confirm": map[string]any{"type": "boolean", "title": "Go ahead", "default": false},
-			},
-			"required": []string{"confirm"},
-		},
+		Schema: json.RawMessage(bulkConfirmSchema),
 	})
 	if err != nil || !reply.Available {
 		return err
@@ -55,6 +52,12 @@ func bulkConfirmMessage(args bulkUpdateRecordsArgs) string {
 	return fmt.Sprintf("%s %d %s? You can undo it afterwards.", bulkVerbWords(args.Verb), count, noun)
 }
 
+// The two verbs that share their spelling with a tool's name.
+const (
+	verbRemoveTag  = "remove_tag"
+	verbCreateTask = "create_task"
+)
+
 func bulkVerbWords(verb string) string {
 	switch verb {
 	case "reassign_owner":
@@ -67,9 +70,9 @@ func bulkVerbWords(verb string) string {
 		return "Take off the list"
 	case "add_tag":
 		return "Tag"
-	case "remove_tag":
+	case verbRemoveTag:
 		return "Remove the tag from"
-	case "create_task":
+	case verbCreateTask:
 		return "File a task under"
 	case "complete":
 		return "Mark done"

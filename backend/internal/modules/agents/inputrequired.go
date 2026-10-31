@@ -52,7 +52,7 @@ func (inputRequiredResult) resultType() string { return resultTypeInputRequired 
 type chatQuestion struct {
 	Key     string
 	Message string
-	Schema  map[string]any
+	Schema  json.RawMessage
 }
 
 // askInChatError is how a tool says it cannot go on without the user's answer.
@@ -227,8 +227,10 @@ func argsDigest(args json.RawMessage) string {
 
 // chatInputParams are the retry members a tools/call may carry.
 type chatInputParams struct {
+	//nolint:tagliatelle // both are the protocol's wire members, camelCase by the specification
 	InputResponses map[string]json.RawMessage `json:"inputResponses"`
-	RequestState   string                     `json:"requestState"`
+	//nolint:tagliatelle // see InputResponses
+	RequestState string `json:"requestState"`
 }
 
 // withChatInput readies ctx for questions when this caller can be asked. The
