@@ -2886,6 +2886,7 @@ export const en = {
   "partner.activated": "Activated {date}",
   "lead.partner": "Referred by partner",
   "lead.partnerNone": "No partner",
+  "lead.partnerAwaiting": "Awaiting acceptance",
   "lead.partnerAccept": "Accept for partner",
   "lead.partnerAccepted": "Accepted for the partner on {date}",
   "lead.partnerAcceptedKept":

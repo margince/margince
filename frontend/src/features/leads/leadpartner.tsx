@@ -3,6 +3,10 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import type {
+  CreateField,
+  CreateFieldOption,
+} from "../../components/create.fields";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineChoice } from "../../design-system/inlinechoice";
@@ -15,6 +19,45 @@ import { leadWriteKeys } from "../../lib/leadkeys";
 import { usePartnerCompanyOptions } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
 import type { Lead, LeadWriter } from "./leads";
+
+type Translate = ReturnType<typeof useT>;
+
+/**
+ * The installation's partner companies, for a seat that may read companies and
+ * partners. The server refuses a lead's partner to any other seat.
+ */
+export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
+  const readsCompanies = useCan("company", "read");
+  const readsPartners = useCan("partner", "read");
+  return usePartnerCompanyOptions(readsCompanies && readsPartners).data;
+}
+
+/** A referring partner's name, or its id when the options do not hold it. */
+export function leadPartnerName(
+  partners: readonly CreateFieldOption[] | undefined,
+  id: string,
+): string {
+  return partners?.find((option) => option.value === id)?.label ?? id;
+}
+
+/**
+ * The create form's "Referred by partner" picker. It is offered once the
+ * installation has a partner, as the lead's own row is.
+ */
+export function leadPartnerCreateFields(
+  partners: readonly CreateFieldOption[] | undefined,
+  t: Translate,
+): CreateField[] {
+  if (!partners?.length) return [];
+  return [
+    {
+      key: "partner_company_id",
+      label: "lead.partner",
+      type: "select",
+      options: [{ value: "", label: t("lead.partnerNone") }, ...partners],
+    },
+  ];
+}
 
 // Accepting a partner's lead activates the partner. So the verb waits for a
 // partner on the lead and for a seat that may change partners.
@@ -60,13 +103,11 @@ export function useLeadPartnerRow(
   const t = useT();
   const { locale } = useLocale();
   const managesPartners = useCan("partner", "update");
-  const options = usePartnerCompanyOptions(useCan("company", "read")).data;
+  const options = useLeadPartnerOptions();
   if ((options ?? []).length === 0 && !lead.partner_company_id) {
     return null;
   }
   const accepted = lead.partner_accepted_at;
-  const name = (id: string) =>
-    options?.find((option) => option.value === id)?.label ?? id;
   return {
     key: "partner_company_id",
     term: t("lead.partner"),
@@ -81,7 +122,9 @@ export function useLeadPartnerRow(
             { value: "", label: t("lead.partnerNone") },
             ...(options ?? []),
           ]}
-          render={(value) => (value === "" ? t("field.unset") : name(value))}
+          render={(value) =>
+            value === "" ? t("field.unset") : leadPartnerName(options, value)
+          }
           canEdit={!writer.readOnly && !accepted}
           readOnlyReason={
             accepted ? t("lead.partnerAcceptedKept") : writer.readOnlyReason
