@@ -4,9 +4,8 @@
 import type { Translator } from "../i18n";
 
 // The staged-change summary joins `field=value` pairs with ", " (summaryFields
-// in the server's compose/agentsummary.go), ending in "+N more" past eight, after
-// a sentence and ": " when the server has one. noticeheadline.test.ts holds this
-// against the server's own output.
+// in the server's compose/agentsummary.go). Past eight it ends in "+N more".
+// A sentence and ": " come first when the server has one.
 const KEY = String.raw`\p{Ll}[\p{Ll}\p{N}_]*`;
 export const FIELD_PAIRS = new RegExp(
   String.raw`^${KEY}=[^,]*(, ${KEY}=[^,]*)*(, \+\d+ [^,=]+)?$`,
