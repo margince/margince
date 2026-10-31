@@ -20118,8 +20118,17 @@ export interface paths {
          *     was summed from. A file whose rows and whose total disagree is worse than no file:
          *     somebody reconciles it by hand and concludes the product is wrong about one of them.
          *
-         *     A live share exports the rows as they stand; a snapshot share exports the frozen
-         *     contributions. Refusals are the same 404 the read is, for the same reason.
+         *     One exception: while the installation has individual performance switched off, the
+         *     rows are the caller's own deals and the headline still covers the whole team. The
+         *     shared view's `contributions_limited` and the file's `contributions_limited` column
+         *     both say `true` when at least one row was withheld, so the gap is stated rather than
+         *     left to reconcile. When every row was withheld, the file holds one summary row: its
+         *     deal cells are empty, and it carries `self_correcting`, the range and
+         *     `contributions_limited`.
+         *
+         *     A snapshot share exports the frozen contributions. A live share has no export and
+         *     answers 404, because the forecast's own export already serves its rows to a signed-in
+         *     caller. Refusals are the same 404 the read is, for the same reason.
          *
          *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
          *     opening the file reads them as the text the record holds rather than evaluating them.
@@ -23372,6 +23381,11 @@ export interface components {
             updated_at: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+             */
+            last_post_at: string | null;
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
             /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
@@ -25908,12 +25922,14 @@ export interface components {
          *     the body may lack text. `unreadable`: none of it, so the body holds only the From and To
          *     lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
          *     text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-         *     stored before this was recorded and not yet checked against its stored original, or one
-         *     with no original to check. Automatic work (promises, requests and their settlement, and
-         *     the events read from a conversation) is read only from a `complete` mail body.
+         *     stored before this was recorded and not yet checked against its stored original.
+         *     `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+         *     decodes, so its text can never be checked. Automatic work (promises, requests and their
+         *     settlement, and the events read from a conversation) is read only from a `complete` mail
+         *     body.
          * @enum {string}
          */
-        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed";
+        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed" | "unverifiable";
         /**
          * @description One email, composed for reading. The message and its parties come from the activity's
          *     own store; the access block is assembled from the same authority that performs the
@@ -42273,7 +42289,7 @@ export interface components {
              * @description The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
              */
             range_high_minor?: number;
-            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */
+            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds. */
             contributions_limited?: boolean;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
@@ -49552,6 +49568,12 @@ export interface components {
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in the team's counts and each member's row reads zero and says nothing,
+             *     and no member carries a meetings pattern. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             /** Format: uuid */
             id: string;
@@ -50021,6 +50043,12 @@ export interface components {
          *     which is why they are stored rather than recomputed.
          */
         WeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in this review, its prior week and its scorecard reads zero and says
+             *     nothing, and the narrative and learnings read as not run. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             /** Format: uuid */
             id: string;
             /**

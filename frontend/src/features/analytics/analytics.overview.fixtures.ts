@@ -96,7 +96,17 @@ export const overviewCatalog: components["schemas"]["ReportingCatalog"] = {
     definition(id as MetricID),
   ),
   presets: [
-    { id: "sales", metrics: [...SALES_METRICS], blocks: [] },
+    {
+      id: "sales",
+      metrics: [...SALES_METRICS],
+      // The server's sales preset, which the opening page asks three of.
+      blocks: [
+        "bookings_trend",
+        "stage_distribution",
+        "owner_attainment",
+        "stage_age",
+      ],
+    },
     { id: "sdr", metrics: [...SDR_METRICS], blocks: [] },
     { id: "team", metrics: [...TEAM_METRICS], blocks: [] },
   ],
@@ -136,6 +146,7 @@ export function salesEvaluation(
   over: Readonly<{
     comparison?: Comparison;
     metrics?: Metric[];
+    charts?: ReportingEvaluation["charts"];
   }> = {},
 ): ReportingEvaluation {
   return {
@@ -166,7 +177,7 @@ export function salesEvaluation(
         target_comparison: over.comparison ?? compared,
       }),
     ],
-    charts: [],
+    charts: over.charts ?? [],
   };
 }
 

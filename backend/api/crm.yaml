@@ -29840,8 +29840,17 @@ paths:
         was summed from. A file whose rows and whose total disagree is worse than no file:
         somebody reconciles it by hand and concludes the product is wrong about one of them.
 
-        A live share exports the rows as they stand; a snapshot share exports the frozen
-        contributions. Refusals are the same 404 the read is, for the same reason.
+        One exception: while the installation has individual performance switched off, the
+        rows are the caller's own deals and the headline still covers the whole team. The
+        shared view's `contributions_limited` and the file's `contributions_limited` column
+        both say `true` when at least one row was withheld, so the gap is stated rather than
+        left to reconcile. When every row was withheld, the file holds one summary row: its
+        deal cells are empty, and it carries `self_correcting`, the range and
+        `contributions_limited`.
+
+        A snapshot share exports the frozen contributions. A live share has no export and
+        answers 404, because the forecast's own export already serves its rows to a signed-in
+        caller. Refusals are the same 404 the read is, for the same reason.
 
         Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
         opening the file reads them as the text the record holds rather than evaluating them.
@@ -34722,7 +34731,7 @@ components:
       description: >-
         A website form (`web_form`): a public intake address that turns a submission into a lead.
         No secret is ever returned here; `secret_configured` says one is stored.
-      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -34749,6 +34758,12 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        last_post_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the form last landed a post, stamped at most once a minute. Null until the
+            first one since the time was tracked. A post the spam checks drop is not counted.
 
     WebFormCreated:
       allOf:
@@ -37978,16 +37993,18 @@ components:
 
     BodyCompleteness:
       type: string
-      enum: [complete, partial, unreadable, forwarded, unassessed]
+      enum: [complete, partial, unreadable, forwarded, unassessed, unverifiable]
       description: |
         How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
         part was not read in full (it broke while decoding, or it ran past the size limit), so
         the body may lack text. `unreadable`: none of it, so the body holds only the From and To
         lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
         text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-        stored before this was recorded and not yet checked against its stored original, or one
-        with no original to check. Automatic work (promises, requests and their settlement, and
-        the events read from a conversation) is read only from a `complete` mail body.
+        stored before this was recorded and not yet checked against its stored original.
+        `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+        decodes, so its text can never be checked. Automatic work (promises, requests and their
+        settlement, and the events read from a conversation) is read only from a `complete` mail
+        body.
 
     EmailPresentation:
       type: object
@@ -58021,7 +58038,9 @@ components:
           type: boolean
           description: >-
             True when `contributions` holds only the caller's own deals because the installation
-            switched off individual performance. The totals still include colleagues' deals.
+            switched off individual performance and at least one row was withheld. The totals still
+            include colleagues' deals. On a shared snapshot it says the same of the rows its CSV
+            export holds.
         contributions:
           type: array
           items: { $ref: '#/components/schemas/ForecastContribution' }
@@ -67087,6 +67106,12 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        meetings_withheld:
+          type: boolean
+          description: |
+            True when the reader may not read activities. A meeting is an activity, so every
+            meeting figure in the team's counts and each member's row reads zero and says nothing,
+            and no member carries a meetings pattern. Absent from an older server.
         numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         id: { type: string, format: uuid }
         team_id: { type: string, format: uuid }
@@ -67657,6 +67682,12 @@ components:
         which is why they are stored rather than recomputed.
       required: [id, local_week_start, generated_at, as_of, counts, deals]
       properties:
+        meetings_withheld:
+          type: boolean
+          description: |
+            True when the reader may not read activities. A meeting is an activity, so every
+            meeting figure in this review, its prior week and its scorecard reads zero and says
+            nothing, and the narrative and learnings read as not run. Absent from an older server.
         id: { type: string, format: uuid }
         local_week_start:
           type: string

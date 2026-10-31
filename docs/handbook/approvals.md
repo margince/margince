@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewpromotionsight.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to
@@ -17,9 +17,10 @@ A deal win also names its effects on linked correspondence and eligible delivery
 Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
 
-An agent's lead conversion shows what the agent's own run will do, read with the agent's access. If that run
-touches a record you cannot open, the card shows none of the plan. It says that "A colleague who can see them
-must decide it," and you cannot approve it. Fields your role hides stay hidden on the card.
+Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run
+touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can
+see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
+that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
 ## Reading an import proposal
 

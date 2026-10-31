@@ -71,3 +71,22 @@ func TestEachRiskSignalCarriesTheFactsBehindIt(t *testing.T) {
 		}
 	}
 }
+
+func TestAStageWonDealsClickedThroughIsNotStuckOnTheDayADealEnteredIt(t *testing.T) {
+	t.Parallel()
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asOf := time.Date(2026, 10, 31, 15, 0, 0, 0, berlin)
+	stuckAfter := 4 * time.Second
+	enteredThisMorning := Subject{HasNextStep: true, StageID: "stage-1", StageEnteredAt: time.Date(2026, 10, 31, 9, 0, 0, 0, berlin)}
+	if got := RiskSignals(asOf, enteredThisMorning, DefaultConfig(), &stuckAfter, berlin); len(got) != 0 {
+		t.Errorf("a deal in its stage since this morning: got %+v, want no signal", got)
+	}
+	enteredYesterday := Subject{HasNextStep: true, StageID: "stage-1", StageEnteredAt: time.Date(2026, 10, 30, 17, 0, 0, 0, berlin)}
+	want := []RiskSignal{{Code: SignalStuck, Days: new(1), StageID: "stage-1"}}
+	if got := RiskSignals(asOf, enteredYesterday, DefaultConfig(), &stuckAfter, berlin); !reflect.DeepEqual(got, want) {
+		t.Errorf("a deal in its stage since yesterday: got %+v, want %+v", got, want)
+	}
+}

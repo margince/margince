@@ -146,6 +146,11 @@ export const UnassessedWithoutText: Story = {
   args: { completeness: "unassessed", body: HEADER_ONLY },
 };
 
+/** The stored original is gone, so the text can never be checked. */
+export const Unverifiable: Story = {
+  args: { completeness: "unverifiable", body: HEADER_ONLY },
+};
+
 // A relay send seen by its member. The relay's address stands where the rep's would.
 const RELAYED: EmailPresentation = {
   ...BASE,

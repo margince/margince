@@ -252,6 +252,43 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 	}
 }
 
+// A seller reading their own forecast with the switch off loses no row, so
+// neither door says the rows are limited.
+func TestIndividualPerformanceOffLimitsNoRowsOfASellersOwnForecast(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0 := f.stage(0)
+	today := clocktest.Now(t)
+	f.openDeal(t, s0, today)
+	f.openDealOf(t, f.env.Rep3, s0, today)
+	reader := auth.WithIndividualPerformance(f.forecastReader(), false)
+
+	owner, with := crmcontracts.GetForecastParamsScopeKindOwner, true
+	seller := openapi_types.UUID(f.env.Rep1)
+	rec := httptest.NewRecorder()
+	newForecastHandlers(f.env.Pool, func() time.Time { return today }).GetForecast(rec,
+		httptest.NewRequest(http.MethodGet, "/forecast", nil).WithContext(reader),
+		crmcontracts.GetForecastParams{AsOf: &openapi_types.Date{Time: today}, ScopeKind: &owner, ScopeId: &seller, Contributions: &with})
+	var overHTTP crmcontracts.ForecastReadings
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &overHTTP) != nil {
+		t.Fatalf("GET /forecast for the seller answered %d: %s", rec.Code, rec.Body.String())
+	}
+	raw, err := forecastToolReader(f.env.Pool)(reader, agents.ForecastRequest{
+		AsOf: today.Format(time.DateOnly), ScopeKind: "owner", ScopeID: f.env.Rep1, Contributions: true,
+	})
+	var overTool agents.ForecastReadingsResult
+	if err != nil || json.Unmarshal(raw, &overTool) != nil {
+		t.Fatalf("forecast_readings for the seller: %v", err)
+	}
+	if overHTTP.Contributions == nil || len(*overHTTP.Contributions) != 1 || len(overTool.Contributions) != 1 {
+		t.Fatalf("the seller's rows: %v over HTTP, %d over the tool, want their one deal", overHTTP.Contributions, len(overTool.Contributions))
+	}
+	if overHTTP.ContributionsLimited == nil || *overHTTP.ContributionsLimited ||
+		overTool.ContributionsLimited == nil || *overTool.ContributionsLimited {
+		t.Fatalf("contributions_limited = %v over HTTP and %v over the tool, want false on both",
+			overHTTP.ContributionsLimited, overTool.ContributionsLimited)
+	}
+}
+
 // Off, every deal is weighted by its typed chance whatever was recorded.
 func TestSelfCorrectionOffWeighsByTheTypedChance(t *testing.T) {
 	f := newStageCohortFixture(t)

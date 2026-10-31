@@ -31,7 +31,8 @@ var forecastReadingsCopy = toolCopy{
 	// `weighted` is the one that goes unreported when it guesses.
 	Purpose: "Answer what a period is expected to close — `won`, `evidence`, `best_case` and " +
 		"`open`, plus `weighted` — under the installation's own fiscal calendar and base " +
-		"currency.",
+		"currency. `landing` is where the period finishes: won plus the measure it names, or " +
+		"the manager's call.",
 	Limits: "`won` counts deals by the day they ACTUALLY closed, not the day they were " +
 		"expected to. `evidence` is committed pipeline whose close date somebody confirmed; a " +
 		"provisional date stays in `open` and out of `evidence`. `coverage_note` says what the " +

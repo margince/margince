@@ -3687,11 +3687,12 @@ func (e BlockedDomainSource) Valid() bool {
 
 // Defines values for BodyCompleteness.
 const (
-	BodyCompletenessComplete   BodyCompleteness = "complete"
-	BodyCompletenessForwarded  BodyCompleteness = "forwarded"
-	BodyCompletenessPartial    BodyCompleteness = "partial"
-	BodyCompletenessUnassessed BodyCompleteness = "unassessed"
-	BodyCompletenessUnreadable BodyCompleteness = "unreadable"
+	BodyCompletenessComplete     BodyCompleteness = "complete"
+	BodyCompletenessForwarded    BodyCompleteness = "forwarded"
+	BodyCompletenessPartial      BodyCompleteness = "partial"
+	BodyCompletenessUnassessed   BodyCompleteness = "unassessed"
+	BodyCompletenessUnreadable   BodyCompleteness = "unreadable"
+	BodyCompletenessUnverifiable BodyCompleteness = "unverifiable"
 )
 
 // Valid indicates whether the value is a known member of the BodyCompleteness enum.
@@ -3706,6 +3707,8 @@ func (e BodyCompleteness) Valid() bool {
 	case BodyCompletenessUnassessed:
 		return true
 	case BodyCompletenessUnreadable:
+		return true
+	case BodyCompletenessUnverifiable:
 		return true
 	default:
 		return false
@@ -32066,9 +32069,11 @@ type BlockedDomainListResponse struct {
 // the body may lack text. `unreadable`: none of it, so the body holds only the From and To
 // lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
 // text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-// stored before this was recorded and not yet checked against its stored original, or one
-// with no original to check. Automatic work (promises, requests and their settlement, and
-// the events read from a conversation) is read only from a `complete` mail body.
+// stored before this was recorded and not yet checked against its stored original.
+// `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+// decodes, so its text can never be checked. Automatic work (promises, requests and their
+// settlement, and the events read from a conversation) is read only from a `complete` mail
+// body.
 type BodyCompleteness string
 
 // BoughtField One value on a contact that a data provider's run wrote and still owns.
@@ -42914,7 +42919,7 @@ type ForecastReadings struct {
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
 
-	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
 	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
 	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
 
@@ -56179,6 +56184,11 @@ type TeamWeeklyReview struct {
 	Id             openapi_types.UUID `json:"id"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in the team's counts and each member's row reads zero and says nothing,
+	// and no member carries a meetings pattern. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
+
 	// Members Every live member of the team that week, including those whose own week could not be
 	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
 	// kept.
@@ -58334,6 +58344,9 @@ type WebForm struct {
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
 
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
+
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
@@ -58392,6 +58405,9 @@ type WebFormCreated struct {
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
+
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
 
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
@@ -58809,6 +58825,11 @@ type WeeklyReview struct {
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in this review, its prior week and its scorecard reads zero and says
+	// nothing, and the narrative and learnings read as not run. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
 
 	// NarratedAt When a narrative pass last ran, null when none has. A reader showing a review with
 	// no sentence must consult this before saying "a quiet week": without it, a week

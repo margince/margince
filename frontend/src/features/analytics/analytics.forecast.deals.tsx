@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The open deals behind the weighted figure, each with the chance it is
+// The weighted figure and the open deals behind it, each with the chance it is
 // weighted by and why. Its own read, so the headline does not wait for it.
 
 import { Badge, EmptyState } from "../../design-system/atoms";
@@ -24,6 +24,7 @@ import type { AnalyticsScope } from "./analytics.context";
 import {
   type ForecastContribution,
   type ForecastPeriod,
+  type ForecastReadings,
   useForecastContributions,
 } from "./forecast.queries";
 import { signalSentence } from "./forecast.signals";
@@ -45,7 +46,10 @@ export function chanceExplanation(
       percent: percent(row.typed_probability ?? row.chance_in_use, locale),
     }),
   ];
-  if (row.evidence_n !== undefined) {
+  // Evidence stops at the start of today, so a deal closed today counts tomorrow.
+  if (row.evidence_n === 0) {
+    parts.push(t("forecast.deals.recordedNone"));
+  } else if (row.evidence_n !== undefined) {
     parts.push(
       plural("forecast.deals.recorded", row.evidence_n, {
         count: formatNumber(row.evidence_n, locale),
@@ -157,14 +161,26 @@ export function ForecastDeals({
     <div id={FORECAST_DEALS_ANCHOR} tabIndex={-1}>
       <Panel title={label}>
         <PanelBody>
-          <Disclosure summary={t("forecast.deals.open")}>
-            <QueryGate query={contributions} pendingLabel={label}>
-              {(data) => {
-                const open = (data.contributions ?? []).filter(
-                  (row) => row.in_open,
-                );
-                return (
-                  <>
+          <QueryGate query={contributions} pendingLabel={label}>
+            {(data) => {
+              const open = (data.contributions ?? []).filter(
+                (row) => row.in_open,
+              );
+              return (
+                <>
+                  <PanelIntro>
+                    {weightedTotal(data, open.length, words)}
+                  </PanelIntro>
+                  {data.contributions_limited && (
+                    <Callout
+                      tone="info"
+                      kind="standing"
+                      title={t("forecast.deals.limitedTitle")}
+                    >
+                      {t("forecast.deals.limited")}
+                    </Callout>
+                  )}
+                  <Disclosure summary={t("forecast.deals.open")}>
                     <PanelIntro>
                       {t(
                         data.self_correcting
@@ -172,15 +188,6 @@ export function ForecastDeals({
                           : "forecast.deals.introOff",
                       )}
                     </PanelIntro>
-                    {data.contributions_limited && (
-                      <Callout
-                        tone="info"
-                        kind="standing"
-                        title={t("forecast.deals.limitedTitle")}
-                      >
-                        {t("forecast.deals.limited")}
-                      </Callout>
-                    )}
                     {open.length === 0 ? (
                       <EmptyState>{t("forecast.deals.none")}</EmptyState>
                     ) : (
@@ -191,13 +198,34 @@ export function ForecastDeals({
                         columns={dealColumns(words, data.base_currency)}
                       />
                     )}
-                  </>
-                );
-              }}
-            </QueryGate>
-          </Disclosure>
+                  </Disclosure>
+                </>
+              );
+            }}
+          </QueryGate>
         </PanelBody>
       </Panel>
     </div>
   );
+}
+
+// The figure the panel is named for. While the rows are the reader's own, their
+// count is not the total's, so the sentence names no count then.
+function weightedTotal(
+  data: ForecastReadings,
+  openCount: number,
+  { t, plural, locale }: Words,
+): string {
+  const amount = formatMoneyOrAbsent(
+    data.weighted_minor,
+    data.base_currency,
+    locale,
+  );
+  if (data.contributions_limited) {
+    return t("forecast.deals.totalLimited", { amount });
+  }
+  return plural("forecast.deals.total", openCount, {
+    amount,
+    count: formatNumber(openCount, locale),
+  });
 }

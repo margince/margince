@@ -3,7 +3,7 @@ public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/marg
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_assignee_id_retirement_guard CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task'::text) AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
-public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text])))
+public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text, 'unverifiable'::text])))
 public.activity.activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text])))
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
@@ -8743,6 +8743,12 @@ public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 
 public.web_form.web_form_success_message_bounded CHECK (((success_message IS NULL) OR (length(success_message) <= 500)))
 public.web_form.web_form_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.web_form_form_key_key CREATE UNIQUE INDEX web_form_form_key_key ON public.web_form USING btree (form_key)
+public.web_form_last_post acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.web_form_last_post.form_id uuid NOT NULL gen=- def=-
+public.web_form_last_post.last_post_at timestamp with time zone NOT NULL gen=- def=-
+public.web_form_last_post.web_form_last_post_form_id_fkey FOREIGN KEY (form_id) REFERENCES web_form(id) ON DELETE CASCADE
+public.web_form_last_post.web_form_last_post_pkey PRIMARY KEY (form_id)
+public.web_form_last_post_pkey CREATE UNIQUE INDEX web_form_last_post_pkey ON public.web_form_last_post USING btree (form_id)
 public.web_form_pkey CREATE UNIQUE INDEX web_form_pkey ON public.web_form USING btree (id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0

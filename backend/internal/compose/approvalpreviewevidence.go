@@ -45,6 +45,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil
 	}
+	r.touch(map[string][]ids.UUID{entityActivity: {proposal.Evidence.SourceID}, tableSignal: {proposal.SignalID}})
 	var current lifecyclereview.Finding
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := activities.ReadActivityContentTx(ctx, tx, ids.From[ids.ActivityKind](proposal.Evidence.SourceID), storekit.LiveOnly); err != nil {

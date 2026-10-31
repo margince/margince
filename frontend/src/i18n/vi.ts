@@ -931,7 +931,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.selfCorrectingOff":
     "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đã nhập cho giai đoạn, như trước đây.",
   "stage.chance.noEvidence":
-    "Đã nhập {typed} · Chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
+    "Đã nhập {typed} · Trước hôm nay chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
   "stage.chance.off": "Dự báo dùng {typed} đã nhập: tự điều chỉnh đang tắt",
   "forecast.deals.title": "Các giao dịch tạo nên con số có trọng số",
   "forecast.deals.open": "Xem từng giao dịch đang mở và tỷ lệ của nó",
@@ -949,6 +949,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
   "forecast.deals.recorded_other": "{count} kết quả đã ghi nhận",
   "forecast.deals.recorded_one": "{count} kết quả đã ghi nhận",
+  "forecast.deals.recordedNone": "chưa có kết quả ghi nhận trước hôm nay",
+  "forecast.deals.total_other":
+    "Có trọng số {amount} từ {count} giao dịch đang mở",
+  "forecast.deals.total_one":
+    "Có trọng số {amount} từ {count} giao dịch đang mở",
+  "forecast.deals.totalLimited":
+    "Có trọng số {amount}, gồm cả giao dịch của đồng nghiệp",
   "forecast.deals.afterRisk": "{percent} sau rủi ro",
   "forecast.deals.colDeal": "Giao dịch",
   "forecast.deals.colSignals": "Tín hiệu rủi ro",
@@ -962,15 +969,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.stuckDays_one": "Đứng yên {count} ngày ở giai đoạn này",
   "forecast.signal.closeMoved_one": "Ngày chốt đã dời {count} lần",
   "forecast.signal.noReply_one": "Không có phản hồi trong {count} ngày",
-  "forecast.signal.closesNoMeeting_one":
-    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.signal.closesNoStep_one":
+    "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
   "forecast.deals.limited":
     "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
-  "forecast.signal.closesNoMeeting_other":
-    "Chốt sau {count} ngày, chưa có cuộc họp",
-  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa có cuộc họp",
-  "forecast.signal.closesToday": "Chốt hôm nay, chưa có cuộc họp",
+  "forecast.signal.closesNoStep_other":
+    "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
+  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa đặt bước tiếp theo",
+  "forecast.signal.closesToday": "Chốt hôm nay, chưa đặt bước tiếp theo",
   "forecast.signal.noReply_other": "Không có phản hồi trong {count} ngày",
   "forecast.signal.closeMoved_other": "Ngày chốt đã dời {count} lần",
   "forecast.signal.closePassed": "Đã quá ngày chốt",
@@ -4322,6 +4329,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint":
     "Margince không thể nhận diện yêu cầu hoặc cam kết ở đây. Đọc email gốc trong ứng dụng email nếu thiếu nội dung; tự thêm việc cần làm nếu cần.",
+  "email.thread.textUnverifiable":
+    "Không thể kiểm tra nội dung của thư này nữa",
+  "email.thread.textUnverifiableHint":
+    "Bản gốc đã lưu không còn, nên Margince không biết đã đọc hết nội dung hay chưa và không thể nhận diện yêu cầu hoặc cam kết ở đây. Hãy đọc bản gốc trong ứng dụng email; tự thêm việc cần làm nếu cần.",
   "email.thread.textUnreadable": "Không đọc được nội dung của thư này.",
   "email.thread.textUnreadableHint": "Hãy mở thư trong ứng dụng thư để xem.",
   "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",
@@ -7026,8 +7037,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.expectedFinish": "Kết quả dự kiến",
   "analytics.overview.quarterOnly": "Chỉ quý này",
   "analytics.overview.finishBasis": "Cuối quý tài chính này, theo {basis}",
-  "analytics.overview.noTargetRate":
-    "Chưa đặt mục tiêu doanh số, nên tỷ lệ thắng hiển thị ở đây",
+  "analytics.overview.winRateBasis": "Trên các deal đã chốt trong kỳ này",
+  "analytics.overview.summary": "Tóm tắt",
   "analytics.overview.notCompared": "Chưa so sánh",
   "analytics.overview.notComparedDetail": "Ghi chú bên dưới giải thích lý do",
   "analytics.overview.covers": "Bao phủ {ratio}× của {remaining} còn phải chốt",
@@ -14554,6 +14565,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Webhook có chữ ký từ Typeform",
   "webForms.senderLine.tally": "Webhook có chữ ký từ Tally",
   "webForms.row.consent": "Cần đồng ý",
+  "webForms.row.lastPost": "Lần gửi gần nhất {when}",
+  "webForms.row.noPost": "Chưa ghi nhận lần gửi nào",
   "webForms.setup": "Xem cách cài đặt",
   "webForms.edit": "Sửa",
   "webForms.pause": "Tạm dừng biểu mẫu",

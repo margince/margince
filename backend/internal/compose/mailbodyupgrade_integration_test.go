@@ -230,12 +230,13 @@ func assertMailBodyReplayChangesNothing(t *testing.T, o *owedEnv, task datatask.
 	}
 }
 
-// Captured mail with no stored original is never guessed at; mail a member
-// logged is their own whole text.
-func TestMailWithoutAnOriginalStaysUnassessed(t *testing.T) {
+// Captured mail whose stored original is missing or no longer decodes is never
+// guessed at. Nothing is left to check it against, so it is unverifiable, and a
+// second run leaves it so. Mail a member logged is their own whole text.
+func TestMailWithoutAReadableOriginalIsUnverifiable(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
-	var captured, logged ids.UUID
+	var captured, undecodable, logged ids.UUID
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		insert := `INSERT INTO activity (kind, subject, body, direction, occurred_at, source, captured_by, body_completeness)
 			VALUES ('email', 'hi', 'From: a@x.test\nTo: b@y.test', 'inbound', $1, $2, $3, 'unassessed') RETURNING id`
@@ -246,13 +247,24 @@ func TestMailWithoutAnOriginalStaysUnassessed(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	o.runMailBodyTask(t)
-	if got := o.completeness(t, captured); got != "unassessed" {
-		t.Errorf("captured mail with no original was assessed as %q", got)
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `
+		WITH rc AS (INSERT INTO raw_capture (source_system, source_id, payload)
+		            VALUES ('email', 'garbled@x.test', '{"encoding": "base64", "data": "%%% not base64"}'::jsonb) RETURNING id)
+		INSERT INTO activity (kind, subject, body, direction, occurred_at, source, captured_by, raw_capture_id, body_completeness)
+		SELECT 'email', 'hi', 'From: a@x.test' || chr(10) || 'To: b@y.test', 'inbound', $1, 'gmail:seed', 'connector:gmail', id, 'unassessed'
+		  FROM rc RETURNING id`, o.now).Scan(&undecodable); err != nil {
+		t.Fatal(err)
+	}
+	task := o.runMailBodyTask(t)
+	for name, message := range map[string]ids.UUID{"with no original": captured, "with an original that no longer decodes": undecodable} {
+		if got := o.completeness(t, message); got != "unverifiable" {
+			t.Errorf("captured mail %s reads %q, want unverifiable", name, got)
+		}
 	}
 	if got := o.completeness(t, logged); got != "complete" {
 		t.Errorf("logged mail was assessed as %q, want complete", got)
 	}
+	assertMailBodyReplayChangesNothing(t, o, task)
 }
 
 // The task writes nothing a caller other than the system may ask for, and
@@ -322,9 +334,12 @@ func TestTheCompletenessTaskSkipsRestrictedAndAmbiguousMail(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.runMailBodyTask(t)
-	for name, message := range map[string]ids.UUID{"restricted": restricted, "ambiguous": ambiguous} {
-		if got := o.completeness(t, message); got != "unassessed" {
-			t.Errorf("%s mail was assessed as %q", name, got)
-		}
+	if got := o.completeness(t, restricted); got != "unassessed" {
+		t.Errorf("restricted mail was assessed as %q", got)
+	}
+	// Unlinked, so it has no original of its own: unverifiable, and never
+	// judged from the original its Message-ID would find.
+	if got := o.completeness(t, ambiguous); got != "unverifiable" {
+		t.Errorf("unlinked mail reads %q, want unverifiable", got)
 	}
 }

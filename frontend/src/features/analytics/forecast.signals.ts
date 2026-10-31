@@ -56,5 +56,5 @@ function closesSentence(
   if (days === undefined) return t("forecast.signal.no_next_step");
   if (days === 0) return t("forecast.signal.closesToday");
   if (days === 1) return t("forecast.signal.closesTomorrow");
-  return plural("forecast.signal.closesNoMeeting", days, count(days));
+  return plural("forecast.signal.closesNoStep", days, count(days));
 }

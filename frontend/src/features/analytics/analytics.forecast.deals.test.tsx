@@ -79,7 +79,9 @@ async function openDeals() {
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await userEvent.click(screen.getByText("Show each open deal and its chance"));
+  await userEvent.click(
+    await screen.findByText("Show each open deal and its chance"),
+  );
 }
 
 describe("ForecastDeals", () => {
@@ -132,6 +134,55 @@ describe("ForecastDeals", () => {
     expect(
       screen.getByText(
         "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("states the weighted figure the panel is named for", async () => {
+    serve({
+      self_correcting: true,
+      weighted_minor: 21_000_000,
+      contributions: [
+        contribution(),
+        contribution({ deal_id: "018f0000-0000-7000-8000-000000000002" }),
+      ],
+    });
+    await openDeals();
+    expect(
+      await screen.findByText("Weighted €210,000.00 from 2 open deals"),
+    ).toBeTruthy();
+  });
+
+  it("names no count beside a total that includes colleagues' withheld deals", async () => {
+    serve({
+      self_correcting: true,
+      weighted_minor: 21_000_000,
+      contributions_limited: true,
+      contributions: [contribution()],
+    });
+    await openDeals();
+    expect(
+      await screen.findByText(
+        "Weighted €210,000.00, colleagues’ deals included",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says no outcome had closed before today when a stage has none recorded", async () => {
+    serve({
+      self_correcting: true,
+      contributions: [
+        contribution({
+          evidence_n: 0,
+          chance_in_use: 20,
+          applied_probability: 20,
+        }),
+      ],
+    });
+    await openDeals();
+    expect(
+      await screen.findByText(
+        "Typed 20% · no recorded outcome before today · uses 20%",
       ),
     ).toBeTruthy();
   });

@@ -22,11 +22,11 @@ import (
 // a parser wrote without reading the message's charset, and assesses the rest
 // of the mail stored before completeness was recorded. All three go through the
 // parser capture uses today. Mail without its stored original is never guessed
-// at: it stays unassessed, and automatic work does not read it.
+// at: it is recorded as unverifiable, and automatic work does not read it.
 func mailBodyCompletenessDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1792776165_mail_body_completeness", Version: 1,
-		Title: "Restore and assess the text of stored mail", Requires: []string{"core/1792776166"},
+		ID: "core/1792776165_mail_body_completeness", Version: 2,
+		Title: "Restore and assess the text of stored mail", Requires: []string{"core/1793445933"},
 		Steps: []datatask.Step{{
 			Name: "restore_stored_mail_bodies", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -90,7 +90,8 @@ func assessMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 
 // assessStoredMailBody never guesses. Mail no connector parsed is text a member
 // or an import wrote, whole as stored. Captured mail is judged from its stored
-// original; without one, or with one that no longer reads, it stays unassessed.
+// original. Without one, or with one that no longer reads, nothing is left to
+// judge it by. It is unverifiable rather than waiting for a check.
 func assessStoredMailBody(candidate unassessedMailBody) (capture.BodyCompleteness, bool) {
 	if candidate.Body == nil {
 		return "", false
@@ -99,17 +100,17 @@ func assessStoredMailBody(candidate unassessedMailBody) (capture.BodyCompletenes
 		return capture.BodyComplete, true
 	}
 	if candidate.Payload == nil {
-		return "", false
+		return capture.BodyUnverifiable, true
 	}
 	raw, readable := decodedMailOriginal(candidate.Payload)
 	if !readable {
-		return "", false
+		return capture.BodyUnverifiable, true
 	}
 	return mailmap.AssessStoredBody(raw, *candidate.Body)
 }
 
 // decodedMailOriginal decodes a stored original. One that no longer decodes is no
-// evidence of anything, so the row it belongs to is left as it is.
+// evidence of what the text was.
 func decodedMailOriginal(payload []byte) ([]byte, bool) {
 	raw, err := capture.DecodeStoredOriginal(payload)
 	return raw, err == nil

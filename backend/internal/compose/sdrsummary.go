@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -131,7 +132,7 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 		}
 		out.Handoffs = &totals
 	}
-	if mayReadSdrMeetings(ctx) {
+	if weekly.MayReadMeetings(ctx) {
 		upcoming, err := readUpcomingMeetings(ctx, tx, requested, at)
 		if err != nil {
 			return out, err
@@ -296,10 +297,4 @@ func scanWaitingHandoff(row pgx.CollectableRow) (crmcontracts.SdrWaitingHandoff,
 		out.Recipient = &crmcontracts.SdrHandoffRecipient{Id: *ptrUUID(*recipient), Label: recipientLabel, Active: active}
 	}
 	return out, nil
-}
-
-// mayReadSdrMeetings is the one rule for every SDR figure counted from
-// meetings: a meeting is an activity, so the seat needs activity read.
-func mayReadSdrMeetings(ctx context.Context) bool {
-	return auth.Allows(ctx, string(recordTypeActivity), principal.ActionRead)
 }
