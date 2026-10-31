@@ -93,7 +93,12 @@ describe("DecisionCard — what the reader is being asked", () => {
   // summary: the server keeps both back. The card still renders and says so.
   it("renders an approval whose plan the server held back", () => {
     const withheld = approval({
-      preview: { version: 2, state: "needs_wider_sight", changes: [] },
+      preview: {
+        version: 2,
+        state: "needs_wider_sight",
+        changes: [],
+        reviewer_reason: "record_authority",
+      },
     });
     delete withheld.summary;
     delete withheld.proposed_change;
