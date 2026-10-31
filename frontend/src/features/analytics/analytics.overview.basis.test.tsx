@@ -237,6 +237,8 @@ describe("coverage against what is still to win", () => {
     ).toBeVisible();
     const open = await card("All open pipeline");
     expect(open.getByText(money(520_000_000))).toBeVisible();
+    // Today's stock, dated with the cutoff, never the period's own pipeline.
+    expect(open.getByText("Open deals: 61 · as of 31 Oct 2026")).toBeVisible();
     expect((await readings()).queryByText("Open pipeline")).toBeNull();
   });
 

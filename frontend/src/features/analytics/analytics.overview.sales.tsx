@@ -9,7 +9,11 @@ import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDecimal, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatDecimal,
+  formatNumber,
+} from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
@@ -299,12 +303,24 @@ function SalesReadings({
             ? "analytics.overview.openClosing"
             : "analytics.overview.allOpen",
         )}
+        // Today's stock, dated, so a past period never reads it as its own.
         detail={
           openCount != null
-            ? plural("analytics.overview.openDeals", openCount, {
+            ? plural("reporting.openPipelineBasis", openCount, {
                 count: formatNumber(openCount, locale),
+                at: formatDateAbbrev(
+                  context.state_at,
+                  locale,
+                  context.timezone,
+                ),
               })
-            : undefined
+            : t("reporting.openPipelineAsOf", {
+                at: formatDateAbbrev(
+                  context.state_at,
+                  locale,
+                  context.timezone,
+                ),
+              })
         }
         onEvidence={onEvidence}
       />

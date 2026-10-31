@@ -7246,8 +7246,6 @@ export const en = {
   "analytics.overview.summary": "Summary",
   "analytics.overview.notCompared": "Not compared",
   "analytics.overview.notComparedDetail": "The note below says why",
-  "analytics.overview.openDeals_one": "{count} open deal",
-  "analytics.overview.openDeals_other": "{count} open deals",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
   "analytics.overview.salesNothing":
@@ -13669,6 +13667,7 @@ export const en = {
     "Manager’s call: the number set for the period",
   "forecast.landing": "Landing",
   "forecast.landingRecords": "From the deal records",
+  "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.commit_evidence": "Won + confirmed commit",
   "forecast.basis.weighted": "Won + weighted open deals",
   "forecast.basis.manager_call": "Manager’s call",

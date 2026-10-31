@@ -7047,8 +7047,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.summary": "Tóm tắt",
   "analytics.overview.notCompared": "Chưa so sánh",
   "analytics.overview.notComparedDetail": "Ghi chú bên dưới giải thích lý do",
-  "analytics.overview.openDeals_one": "{count} deal đang mở",
-  "analytics.overview.openDeals_other": "{count} deal đang mở",
   "analytics.overview.saveView": "Lưu chế độ xem",
   "analytics.overview.templates": "Mẫu báo cáo",
   "analytics.overview.salesNothing":
@@ -13342,6 +13340,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhận định của quản lý: con số đã nhập cho kỳ",
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingRecords": "Theo dữ liệu deal",
+  "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.commit_evidence": "Đã chốt + cam kết đã xác nhận",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
   "forecast.basis.manager_call": "Ước tính của quản lý",

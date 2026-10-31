@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, SegmentedControl } from "../../design-system/atoms";
+import { Button, SegmentedControl, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
@@ -241,11 +241,14 @@ function ForecastAnswer({
   readings,
   locale,
   period,
+  landingUnrecorded = false,
   onOpenDeals,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
   period: ForecastPeriod;
+  // A snapshot frozen before its landing was kept: the basis is unknown.
+  landingUnrecorded?: boolean;
   onOpenDeals?: () => void;
 }>) {
   const t = useT();
@@ -269,6 +272,7 @@ function ForecastAnswer({
       formatMoneyCompact,
     );
   const call = readings.current_call;
+  const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
   // What best case adds on top of the evidence it contains. Never below zero:
   // a superset smaller than its subset is a server fault, shown as nothing added.
   const bestCaseAdds = Math.max(
@@ -369,10 +373,15 @@ function ForecastAnswer({
           populations at once: a landing summed across books that are called
           separately, and a coverage rate blended over them, would each
           describe none of them. With neither, no strip: an empty one still
-          takes its row and its gaps. */}
-      {(readings.landing || readings.sufficiency) && (
+          takes its row and its gaps. A share has a range without a landing
+          when its snapshot predates the landing, so the range alone keeps
+          the strip. */}
+      {(readings.landing ||
+        readings.sufficiency ||
+        range ||
+        landingUnrecorded) && (
         <StatStrip>
-          {readings.landing && (
+          {readings.landing ? (
             <LandingCard
               landing={readings.landing}
               currency={currency}
@@ -383,14 +392,20 @@ function ForecastAnswer({
                   : readings.current_call?.amount_minor
               }
             />
+          ) : (
+            landingUnrecorded && (
+              <StatCard
+                narrow="row"
+                label={t("forecast.landing")}
+                value={t("forecast.landingUnrecorded")}
+                detail={t("forecast.basis.unknown")}
+              />
+            )
           )}
-          {readings.landing && (
+          {(readings.landing || range) && (
             <ModelRangeCard
               label={t(`forecast.model.${period}`)}
-              range={rangeOf(
-                readings.range_low_minor,
-                readings.range_high_minor,
-              )}
+              range={range}
               wonMinor={readings.won_minor}
               unpriced={readings.eligible_count - readings.priced_count}
               fxMissing={readings.fx_missing_count}
@@ -455,6 +470,9 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
               readings={view.readings}
               locale={locale}
               period="quarter"
+              landingUnrecorded={
+                view.kind === "snapshot" && !view.readings.landing
+              }
             />
           </>
         )}

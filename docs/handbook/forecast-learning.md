@@ -89,6 +89,11 @@ with no exchange rate. When there is no range, it says **No range**.
 figure**. That list holds the deals the range was built from, each with its
 probability. A frozen forecast keeps the range it showed that day.
 
+A shared forecast shows the same two cards. A snapshot keeps the measure its
+landing used and the manager's call it used. The call shows only to someone
+allowed to see it; for anyone else the card shows the deals' own projection. A
+snapshot taken before Margince kept its landing says **Basis not recorded**.
+
 ## Switch it off
 
 An admin can switch all of this off under **Settings → Company profile →

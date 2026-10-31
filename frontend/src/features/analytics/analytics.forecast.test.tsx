@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateAbbrev, formatMoneyCompact } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { ForecastView } from "./analytics.forecast";
+import { ForecastView, SharedForecastView } from "./analytics.forecast";
 
 // The population these tests read under. Workspace because that is what a
 // manager sees, and because a nameable scope is what the editor requires.
@@ -533,4 +533,58 @@ it("says nothing about qualification when the server sends none", async () => {
   render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
   await screen.findByText(/Won plus committed deals/i);
   expect(screen.queryByText(/the customer still supports/i)).toBeNull();
+});
+
+// A share states its landing and modelled finish. A snapshot frozen before the
+// landing was kept says its basis is not recorded, and keeps its range.
+describe("SharedForecastView", () => {
+  const ranged = {
+    range_low_minor: 90_000,
+    range_high_minor: 210_000,
+  };
+  function share(kind: "live" | "snapshot", over: Record<string, unknown>) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          kind,
+          target: "forecast",
+          withheld: false,
+          readings: readings({ ...ranged, ...over }),
+        }),
+      ),
+    );
+    render(<SharedForecastView token="fixture" />);
+  }
+
+  it("shows a live share's landing basis beside its modelled finish", async () => {
+    share("live", {
+      landing: {
+        amount_minor: 160_000,
+        measure: "commit_evidence",
+        won_minor: 40_000,
+        remaining_minor: 120_000,
+      },
+    });
+    expect(await screen.findByText("Won + confirmed commit")).toBeTruthy();
+    expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+  });
+
+  it("says a snapshot from before the landing was kept has no recorded basis", async () => {
+    share("snapshot", {});
+    expect(await screen.findByText("Basis not recorded")).toBeTruthy();
+    expect(screen.getByText("Not recorded")).toBeTruthy();
+    const model = screen
+      .getByText("Modelled quarter finish")
+      .closest("section");
+    expect(model?.textContent).toContain(
+      `${formatMoneyCompact(90_000, "EUR", "en")} to ${formatMoneyCompact(210_000, "EUR", "en")}`,
+    );
+  });
+
+  it("keeps the modelled finish on a live share that carries a range alone", async () => {
+    share("live", {});
+    expect(await screen.findByText("Modelled quarter finish")).toBeTruthy();
+    expect(screen.queryByText("Basis not recorded")).toBeNull();
+  });
 });

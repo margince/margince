@@ -42885,6 +42885,12 @@ export interface components {
          *     The numbers are about THEM. A snapshot share re-sums the frozen contributions this
          *     caller may read rather than serving the stored totals, so two colleagues opening
          *     the same link can correctly see different figures.
+         *
+         *     `readings.landing` is the landing GET /forecast gives this caller: a live share
+         *     computes it now, and a snapshot share from the measure and manager call it froze.
+         *     The call counts only for a caller who may see it. A snapshot frozen before its
+         *     landing was kept has no `readings.landing`, and a reader says its basis is not
+         *     recorded.
          */
         SharedForecastView: {
             /**

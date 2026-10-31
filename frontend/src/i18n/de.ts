@@ -7230,8 +7230,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
-  "analytics.overview.openDeals_one": "{count} offener Deal",
-  "analytics.overview.openDeals_other": "{count} offene Deals",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
   "analytics.overview.salesNothing":
@@ -13702,6 +13700,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
   "forecast.landingRecords": "Aus den Deal-Daten",
+  "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
