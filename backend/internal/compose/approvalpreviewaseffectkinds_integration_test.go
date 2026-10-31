@@ -115,6 +115,7 @@ func (s *promotionSight) requireWaitsForWiderSight(id ids.ApprovalID, secret str
 	s.t.Helper()
 	s.approver = storedMemberSeat(s.t, s.e, s.e.Rep2)
 	requireShowsNothing(s.t, s.preview(id), secret)
+	s.requireWireWithholdsPlan(id, secret)
 	_, err := s.svc.Decide(s.approver, id, true, nil)
 	requireRefusedForSight(s.t, err)
 	if s.e.WsCount(s.t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'pending'`, id.UUID) != 1 {
@@ -148,6 +149,7 @@ func TestAnAgentsArchiveWaitsForAnApproverWhoCanOpenWhatItDetaches(t *testing.T)
 	requireAgentsPlanIsShown(t, s.preview(id), "Hidden Employer")
 	s.hide(employer)
 	requireShowsNothing(t, s.preview(id), "Hidden Employer")
+	s.requireWireWithholdsPlan(id, "Hidden Employer")
 	_, err := s.svc.Decide(s.approver, id, true, nil)
 	requireRefusedForSight(t, err)
 }

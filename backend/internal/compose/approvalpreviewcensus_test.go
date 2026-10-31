@@ -5,6 +5,11 @@ package compose
 
 import (
 	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -154,5 +159,97 @@ func TestEveryApprovalKindIsPreviewedAsThePrincipalThatRunsIt(t *testing.T) {
 		if approvals.PreviewRefusal(preview) == nil {
 			t.Errorf("%s can be approved although its agent can no longer call", kind)
 		}
+	}
+}
+
+// A kind cannot be exercised through the service without a database, so this
+// census reads the dispatch source: only readAs builds a preview, nothing
+// returns before it asks who runs the effect, only read hands it the
+// approvals module's answer, and the service is wired to read.
+func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
+	fset := token.NewFileSet()
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wired := 0
+	for _, name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil {
+				continue
+			}
+			ast.Inspect(fn.Body, func(node ast.Node) bool {
+				if call, ok := node.(*ast.CallExpr); ok && wiresTheDispatch(call) {
+					wired++
+				}
+				selector, ok := node.(*ast.SelectorExpr)
+				if !ok {
+					return true
+				}
+				switch selector.Sel.Name {
+				case "buildPreview":
+					if fn.Name.Name != "readAs" {
+						t.Errorf("%s: %s builds a preview outside the dispatch", fset.Position(selector.Pos()), fn.Name.Name)
+					}
+				case "EffectContext":
+					if fn.Name.Name != "read" {
+						t.Errorf("%s: %s asks who runs the effect outside the dispatch", fset.Position(selector.Pos()), fn.Name.Name)
+					}
+				}
+				return true
+			})
+			if fn.Name.Name == "readAs" {
+				assertNothingReturnsBeforeTheEffect(t, fset, fn)
+			}
+		}
+	}
+	if wired != 1 {
+		t.Errorf("the approvals service is wired to a preview %d times, want once through read", wired)
+	}
+}
+
+// wiresTheDispatch answers whether call hands read to WithPreview.
+func wiresTheDispatch(call *ast.CallExpr) bool {
+	fun, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || fun.Sel.Name != "WithPreview" || len(call.Args) != 1 {
+		return false
+	}
+	arg, ok := call.Args[0].(*ast.SelectorExpr)
+	return ok && arg.Sel.Name == "read"
+}
+
+// assertNothingReturnsBeforeTheEffect holds that readAs answers no kind before
+// it asks who runs the effect, except a terminal approval, which has no preview.
+func assertNothingReturnsBeforeTheEffect(t *testing.T, fset *token.FileSet, fn *ast.FuncDecl) {
+	t.Helper()
+	asked := token.NoPos
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		if call, ok := node.(*ast.CallExpr); ok && asked == token.NoPos {
+			if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "effectOf" {
+				asked = call.Pos()
+			}
+		}
+		return true
+	})
+	if asked == token.NoPos {
+		t.Fatal("readAs never asks who runs the effect")
+	}
+	early := 0
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		if ret, ok := node.(*ast.ReturnStmt); ok && ret.Pos() < asked {
+			early++
+		}
+		return true
+	})
+	if early > 1 {
+		t.Errorf("%s: readAs answers %d times before asking who runs the effect, want only the terminal approval", fset.Position(fn.Pos()), early)
 	}
 }

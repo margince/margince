@@ -32,6 +32,8 @@ type attentionNames struct {
 	projects    *projects.Store
 	identity    *identity.Service
 	collections *collections.Store
+	// seen, when set, hears every record a label resolved.
+	seen func(entityType string, id ids.UUID)
 }
 
 var (
@@ -73,6 +75,13 @@ func (n attentionNames) named(ctx context.Context, entityType string, want []ids
 		return map[ids.UUID]string{}, false, nil
 	}
 	labels, err = labelsOrRefusal(labels, err)
+	if n.seen != nil {
+		for id, label := range labels {
+			if label != "" {
+				n.seen(entityType, id)
+			}
+		}
+	}
 	return labels, true, err
 }
 

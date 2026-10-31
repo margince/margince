@@ -106,8 +106,18 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 			return err
 		}
 		rows[i].Preview = preview
+		if PreviewWithholdsPlan(preview) {
+			// The staged call and its summary say what the preview held back.
+			rows[i].ProposedChange, rows[i].Evidence, rows[i].Summary = nil, nil, nil
+		}
 	}
 	return nil
+}
+
+// PreviewWithholdsPlan reports a preview that shows nothing of the plan. Every
+// surface that reads an approval then withholds the plan too.
+func PreviewWithholdsPlan(preview *crmcontracts.ApprovalPreview) bool {
+	return preview != nil && ((preview.Version != 1 && preview.Version != 2) || preview.State != "ready")
 }
 
 func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {

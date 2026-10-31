@@ -6,18 +6,16 @@ package compose
 import (
 	"context"
 	"errors"
-	"slices"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/modules/contracts"
+	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -44,8 +42,13 @@ func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts
 	if err != nil {
 		return nil, err
 	}
-	r.touched = &previewTouched{}
-	preview, err := r.build(effect, approval)
+	touched := &previewTouched{}
+	builder := r
+	builder.touched = touched
+	if asAgent {
+		builder = builder.recording(touched)
+	}
+	preview, err := builder.buildPreview(effect, approval)
 	if err != nil || preview == nil {
 		return preview, err
 	}
@@ -53,7 +56,8 @@ func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts
 		if preview.ReviewerReason != "" {
 			preview.ReviewerReason = previewReviewer(ctx, approval)
 		}
-		open, err := r.viewerOpensPreview(ctx, approval, preview)
+		withholdConflictSummaries(preview)
+		open, err := r.viewerOpensPreview(ctx, approval, preview, touched)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +66,42 @@ func (r approvalPreviewReader) readAs(ctx context.Context, approval crmcontracts
 			return preview, nil
 		}
 	}
-	return preview, maskForViewer(ctx, approval, preview)
+	return preview, maskForViewer(ctx, approval, preview, touched)
+}
+
+// recording makes every record a label or a record read resolves count as
+// touched, so the sight check covers what the agent's build read.
+func (r approvalPreviewReader) recording(touched *previewTouched) approvalPreviewReader {
+	r.names.seen = touched.add
+	if provider, ok := r.records.(*Provider); ok {
+		r.records = recordedReads{Provider: provider, touched: touched}
+	}
+	return r
+}
+
+// recordedReads is the record provider that notes each record it read.
+type recordedReads struct {
+	*Provider
+	touched *previewTouched
+}
+
+func (p recordedReads) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
+	record, err := p.Provider.Read(ctx, ref)
+	if err == nil {
+		p.touched.add(string(ref.Type), ref.ID)
+	}
+	return record, err
+}
+
+// withholdConflictSummaries keeps a conflict's kind and drops its sentence,
+// which an agent's build may have written from records the viewer cannot open.
+func withholdConflictSummaries(preview *crmcontracts.ApprovalPreview) {
+	if preview.Conflicts == nil {
+		return
+	}
+	for i := range *preview.Conflicts {
+		(*preview.Conflicts)[i].Summary = ""
+	}
 }
 
 // previewTouched collects, by type, records a build read and names only as
@@ -141,8 +180,8 @@ func previewReferences(approval crmcontracts.Approval, preview *crmcontracts.App
 	return out
 }
 
-func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview) (bool, error) {
-	open, err := r.viewerReadsEvery(ctx, previewReferences(approval, preview, r.touched).byType)
+func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) (bool, error) {
+	open, err := r.viewerReadsEvery(ctx, previewReferences(approval, preview, touched).byType)
 	if err != nil || !open || preview.Files == nil || len(*preview.Files) == 0 {
 		return open, err
 	}
@@ -194,6 +233,16 @@ func (r approvalPreviewReader) viewerOpens(ctx context.Context, entityType strin
 		_, err = importHandlers{db: r.db}.stagedFor(ctx, openapi_types.UUID(id))
 	case tableSignal:
 		_, err = r.signals.GetSignal(ctx, ids.From[ids.SignalKind](id), storekit.LiveOnly)
+	case previewEntityContract:
+		_, err = contracts.NewStore(r.db, r.deals.FreezeRateAt, ContractTimezone()).GetContract(ctx, ids.From[ids.ContractKind](id))
+	case previewEntityInvoice:
+		_, _, err = finance.NewStore(r.db, FinanceRates()).InvoiceReference(ctx, id)
+	case previewEntityAttachment:
+		_, err = r.activities.GetAttachmentMeta(ctx, id)
+	case previewEntityPage:
+		// A cited web page is public and outside row scope, as the approval's
+		// own readability rule, which checks only cited activities, treats it.
+		return true, nil
 	default:
 		_, err = r.records.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(entityType), ID: id})
 	}
@@ -212,76 +261,9 @@ func withholdPreview(preview *crmcontracts.ApprovalPreview) {
 	preview.Conflicts, preview.LifecycleEvidence, preview.CurrentVersion = nil, nil, nil
 }
 
-// previewDetailSources names the record fields a plain-text detail repeats
-// under another key, so a mask on the field reaches the detail.
-var previewDetailSources = map[string][]string{
-	"promotion_contact_name":     {fieldFullName},
-	"promotion_contact_email":    {fieldEmail},
-	"promotion_contact_phone":    {fieldPhone, previewFieldPhones},
-	"promotion_contact_title":    {fieldTitle},
-	"promotion_contact_source":   {fieldSource},
-	"promotion_contact_owner":    {bulkParamOwner},
-	"promotion_deal_owner":       {bulkParamOwner},
-	"promotion_company_industry": {fieldIndustry},
-	"promotion_company_proposed": {companyNameField},
-}
-
-// previewMaskedObjects names, per kind, the objects besides the target whose
-// fields its details repeat: a promotion shows the contact the lead becomes.
-var previewMaskedObjects = map[string][]string{
-	operationPromoteLead: {string(recordTypeContact)},
-}
-
-const previewFieldPhones = "phones"
-
-// maskForViewer withholds each change and detail repeating a field the
-// viewer's role masks on the target. An import row is masked by its own object.
-func maskForViewer(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview) error {
-	hasDetails := preview.Details != nil && len(*preview.Details) > 0
-	hasRows := preview.ImportRows != nil && len(*preview.ImportRows) > 0
-	if len(preview.Changes) == 0 && !hasDetails && !hasRows {
-		return nil
-	}
-	viewer, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	var masked []string
-	if approval.TargetEntityType != nil {
-		masked = auth.MaskedFields(viewer, *approval.TargetEntityType, true)
-	}
-	for _, object := range previewMaskedObjects[approval.Kind] {
-		masked = append(masked, auth.MaskedFields(viewer, object, false)...)
-	}
-	maskChanges(preview.Changes, masked)
-	if hasDetails {
-		maskDetails(*preview.Details, masked)
-	}
-	if hasRows {
-		for i := range *preview.ImportRows {
-			row := &(*preview.ImportRows)[i]
-			rowMasked := auth.MaskedFields(viewer, row.Object, true)
-			maskChanges(row.Changes, rowMasked)
-			maskDetails(row.Details, rowMasked)
-		}
-	}
-	return nil
-}
-
-func maskChanges(changes []crmcontracts.ApprovalPreviewChange, masked []string) {
-	for i := range changes {
-		if slices.Contains(masked, changes[i].Field) {
-			changes[i].Before = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
-			changes[i].After = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
-		}
-	}
-}
-
-func maskDetails(details []crmcontracts.ApprovalPreviewDetail, masked []string) {
-	for i := range details {
-		sources := append([]string{details[i].Field}, previewDetailSources[details[i].Field]...)
-		if slices.ContainsFunc(sources, func(field string) bool { return slices.Contains(masked, field) }) {
-			details[i].Value = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
-		}
-	}
-}
+const (
+	previewEntityInvoice    = "invoice"
+	previewEntityAttachment = "attachment"
+	previewEntityPage       = "page"
+	previewEntityContract   = "contract"
+)
