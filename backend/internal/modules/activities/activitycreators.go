@@ -18,25 +18,12 @@ import (
 // an agent's passport. Without this, a note logged through an agent names
 // neither the colleague it worked for nor the tool.
 //
-// A withheld row gets none. Whose agent wrote a private note, and through
-// which tool, is content, and the record History withholds it too.
+// A withheld row gets none, as the record History withholds it too.
 func WithCreators(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
-	readable := make([]ids.UUID, 0, len(page))
-	for i := range page {
-		if !contentWithheld(page[i]) {
-			readable = append(readable, ids.UUID(page[i].Id))
-		}
-	}
-	creators, err := auditattribution.CreatorsTx(ctx, tx, "activity", readable)
-	if err != nil {
-		return err
-	}
-	for i := range page {
-		if creator, found := creators[ids.UUID(page[i].Id)]; found {
-			page[i].CreatedBy = creator.Wire()
-		}
-	}
-	return nil
+	return auditattribution.StampCreators(ctx, tx, "activity", page,
+		func(a crmcontracts.Activity) ids.UUID { return ids.UUID(a.Id) },
+		contentWithheld,
+		func(a *crmcontracts.Activity, who *crmcontracts.PrincipalAttribution) { a.CreatedBy = who })
 }
 
 func contentWithheld(a crmcontracts.Activity) bool {

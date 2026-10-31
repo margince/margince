@@ -387,7 +387,7 @@ func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcon
 		return nil, fmt.Errorf("lock merge-target contact: %w", err)
 	}
 	// A fill-only decision read, never the wire — core columns suffice.
-	current, err := readContact(ctx, tx, contactID, storekit.LiveOnly, nil)
+	current, err := readContactRow(ctx, tx, contactID, storekit.LiveOnly, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read merge-target contact: %w", err)
 	}
