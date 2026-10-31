@@ -2389,6 +2389,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "can_merge": {
+                  "type": "boolean"
+                },
                 "candidate_id": {
                   "type": "string"
                 },
@@ -2424,11 +2427,15 @@
                     ]
                   }
                 },
+                "keep_id": {
+                  "type": "string"
+                },
                 "other_record_id": {
                   "type": "string"
                 }
               },
               "required": [
+                "can_merge",
                 "candidate_id",
                 "confidence",
                 "evidence",

@@ -25,10 +25,45 @@ export function dismissedWith(
 }
 
 /**
- * The members ticked when the review opens: a walk over open pairs from
- * `startId`. It skips a member that someone marked as a different person from
- * a member already taken. So the default never crosses a dismissed pair. It is
- * always connected, which the server requires.
+ * The two members a `pair`-mode review starts on: the ends of a pair the
+ * server offers to merge, touching `start` when one does. The server merges
+ * no more than those two in this mode.
+ */
+function offeredPair(
+  contactCase: ContactCase,
+  start: string,
+): readonly string[] | undefined {
+  if (contactCase.merge_mode !== "pair") return undefined;
+  const offered = contactCase.edges.filter(
+    (edge) => edge.status === "open" && edge.can_merge,
+  );
+  const touching = offered.find((edge) => otherEnd(edge, start));
+  const other = touching && otherEnd(touching, start);
+  if (other) return [start, other];
+  return offered[0] && [offered[0].left_id, offered[0].right_id];
+}
+
+/**
+ * The member that must survive when the ticked members are one pair the
+ * reader may merge only one way. The server refuses any other survivor.
+ */
+export function pairKeep(
+  contactCase: ContactCase,
+  selected: readonly string[],
+): string | undefined {
+  const [one, two, ...rest] = selected;
+  if (contactCase.merge_mode !== "pair" || !one || !two || rest.length > 0) {
+    return undefined;
+  }
+  const joining = contactCase.edges.find(
+    (edge) => edge.status === "open" && otherEnd(edge, one) === two,
+  );
+  return joining?.keep_id ?? undefined;
+}
+
+/**
+ * The members ticked when the review opens. In `pair` mode it is the offered
+ * pair. Otherwise it is a walk over open pairs from `startId`.
  */
 export function defaultSelection(
   contactCase: ContactCase,
@@ -36,6 +71,19 @@ export function defaultSelection(
 ): readonly string[] {
   const ids = new Set(contactCase.members.map((member) => member.id));
   const start = ids.has(startId) ? startId : contactCase.anchor_id;
+  return offeredPair(contactCase, start) ?? walkOpenPairs(contactCase, start);
+}
+
+/**
+ * A walk over open pairs from `start`. It skips a member that someone marked
+ * as not the same as a member already taken, so it never crosses a dismissed
+ * pair. It is always connected, which the server requires.
+ */
+function walkOpenPairs(
+  contactCase: ContactCase,
+  start: string,
+): readonly string[] {
+  const ids = new Set(contactCase.members.map((member) => member.id));
   const taken: string[] = [start];
   const queue = [start];
   for (let at = queue.shift(); at !== undefined; at = queue.shift()) {
@@ -71,13 +119,18 @@ export function isConnected(
   return reached.size === selected.length;
 }
 
-/** The live owners of the ticked members: the only owners a merge may pick. */
+/**
+ * The live owners of the ticked members: the only owners a merge may pick. A
+ * one-way pair keeps its survivor's owner, so that owner is the only choice.
+ */
 export function ownerChoices(
   contactCase: ContactCase,
   selected: readonly string[],
 ): readonly Owner[] {
+  const keep = pairKeep(contactCase, selected);
+  const owning = keep ? [keep] : selected;
   return contactCase.owners.filter((owner) =>
-    owner.member_ids.some((id) => selected.includes(id)),
+    owner.member_ids.some((id) => owning.includes(id)),
   );
 }
 

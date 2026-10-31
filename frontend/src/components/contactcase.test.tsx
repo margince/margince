@@ -110,6 +110,69 @@ describe("which members the review ticks", () => {
   });
 });
 
+describe("a reader who may change one end of a pair", () => {
+  // The reader may change Ana's record only, so Ben's must survive.
+  const pairCase = () => {
+    const one = contactCase({ merge_mode: "pair" });
+    return {
+      ...one,
+      edges: one.edges.map((edge) =>
+        edge.pair_id === "p1"
+          ? { ...edge, can_dismiss: false, keep_id: BEN }
+          : { ...edge, can_dismiss: false, can_merge: false },
+      ),
+    };
+  };
+
+  it("ticks the pair, keeps the colleague's record and its owner", async () => {
+    const one = pairCase();
+    const previews: unknown[] = [];
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () => jsonResponse(one),
+        [`POST ${CASE_PATH}/preview`]: (body) => {
+          previews.push(body);
+          return jsonResponse(previewOutcome({ mode: "pair" }));
+        },
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    expect(
+      await screen.findByRole("checkbox", { name: /Mira Kovac\b/ }),
+    ).toBeChecked();
+    expect(member(/Mira Kovač/)).toBeChecked();
+    expect(member(/M\. Kovac/)).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: /Mira Kovač/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /Mira Kovac$/ })).toBeDisabled();
+    const owner = screen.getByRole("combobox", { name: /Owner/ });
+    expect(owner).toHaveTextContent("Ben Seller");
+    await user.click(owner);
+    const offered = within(await screen.findByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual(["Ben Seller"]);
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await waitFor(() =>
+      expect(previews).toEqual([
+        {
+          revision: "rev-1",
+          member_ids: [ANA, BEN],
+          survivor_id: BEN,
+          owner_id: one.members[1]?.owner_id,
+        },
+      ]),
+    );
+  });
+
+  it("starts on an offered pair when the review opens on another member", () => {
+    expect(defaultSelection(pairCase(), DANA)).toEqual([ANA, BEN]);
+  });
+});
+
 describe("who may own the remaining contact", () => {
   it("offers only the owners of the ticked members", async () => {
     stubWithSession(

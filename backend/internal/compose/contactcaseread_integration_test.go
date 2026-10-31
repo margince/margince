@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -63,6 +64,50 @@ func TestAPairIsMergeableByTheOwnerOfEitherEnd(t *testing.T) {
 	}
 	if edge := c.read(rep, t, own[0]).Edges[0]; !edge.CanMerge {
 		t.Error("a rep may not merge a pair of their own two contacts")
+	}
+}
+
+func TestTheOwnerOfOneMemberOfALargerCaseIsOfferedOnlyTheirPairs(t *testing.T) {
+	c := setupCases(t)
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep2)
+	rep := c.rep(c.e.Rep1)
+	read := c.read(rep, t, members[0])
+	if read.MergeMode != crmcontracts.ContactCaseMergeModePair || len(read.Edges) < 2 {
+		t.Fatalf("the owner of one member reads merge_mode %s over %d pairs, want pair over at least 2", read.MergeMode, len(read.Edges))
+	}
+	var offered []ids.UUID
+	for _, edge := range read.Edges {
+		left, right := ids.UUID(edge.LeftId), ids.UUID(edge.RightId)
+		want, keep := false, ""
+		switch members[0] {
+		case left:
+			want, keep = true, right.String()
+		case right:
+			want, keep = true, left.String()
+		}
+		got := ""
+		if edge.KeepId != nil {
+			got = ids.UUID(*edge.KeepId).String()
+		}
+		if edge.CanMerge != want || got != keep {
+			t.Errorf("the pair %s–%s reads can_merge %v keeping %q, want %v keeping %q", left, right, edge.CanMerge, got, want, keep)
+		}
+		if want && edge.KeepId != nil {
+			offered = []ids.UUID{members[0], ids.UUID(*edge.KeepId)}
+		}
+	}
+	if offered == nil {
+		t.Fatal("no pair offers the owner of one member a merge")
+	}
+	colleague := c.read(c.rep(c.e.Rep2), t, members[0])
+	for _, edge := range colleague.Edges {
+		if ids.UUID(edge.LeftId) != members[0] && ids.UUID(edge.RightId) != members[0] && (!edge.CanMerge || edge.KeepId != nil) {
+			t.Errorf("the owner of both ends reads can_merge %v keeping %v, want true either way", edge.CanMerge, edge.KeepId)
+		}
+	}
+	out, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, offered, offered[1], c.e.Rep2))
+	if err != nil || out.Mode != crmcontracts.ContactCaseOutcomeModePair {
+		t.Fatalf("merging the offered pair = %+v, %v, want a pair merge", out, err)
 	}
 }
 
