@@ -274,22 +274,24 @@ function SalesReadings({
             ? readingValue(landing, evaluation, t, locale)
             : t("analytics.overview.quarterOnly")
         }
+        // The basis sentence alone fills the detail's two lines, so beside a
+        // range it moves into the receipt and the range keeps the detail.
         detail={
-          range ? (
+          range
+            ? t("forecast.range", {
+                low: money(range.lowMinor),
+                high: money(range.highMinor),
+              })
+            : finishBasis
+        }
+        basis={
+          range && (
             <>
-              <span>{finishBasis}</span>
-              <span>
-                {t("forecast.range", {
-                  low: money(range.lowMinor),
-                  high: money(range.highMinor),
-                })}
-              </span>
+              <p>{finishBasis}</p>
+              <p>{t("forecast.rangeBasis")}</p>
             </>
-          ) : (
-            finishBasis
           )
         }
-        basis={range && <p>{t("forecast.rangeBasis")}</p>}
         onOpen={
           landing?.value != null
             ? () => openAnalyticsSection("forecast")

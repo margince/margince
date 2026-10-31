@@ -20118,8 +20118,17 @@ export interface paths {
          *     was summed from. A file whose rows and whose total disagree is worse than no file:
          *     somebody reconciles it by hand and concludes the product is wrong about one of them.
          *
-         *     A live share exports the rows as they stand; a snapshot share exports the frozen
-         *     contributions. Refusals are the same 404 the read is, for the same reason.
+         *     One exception: while the installation has individual performance switched off, the
+         *     rows are the caller's own deals and the headline still covers the whole team. The
+         *     shared view's `contributions_limited` and the file's `contributions_limited` column
+         *     both say `true` when at least one row was withheld, so the gap is stated rather than
+         *     left to reconcile. When every row was withheld, the file holds one summary row: its
+         *     deal cells are empty, and it carries `self_correcting`, the range and
+         *     `contributions_limited`.
+         *
+         *     A snapshot share exports the frozen contributions. A live share has no export and
+         *     answers 404, because the forecast's own export already serves its rows to a signed-in
+         *     caller. Refusals are the same 404 the read is, for the same reason.
          *
          *     Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
          *     opening the file reads them as the text the record holds rather than evaluating them.
@@ -42273,7 +42282,7 @@ export interface components {
              * @description The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
              */
             range_high_minor?: number;
-            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */
+            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds. */
             contributions_limited?: boolean;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];

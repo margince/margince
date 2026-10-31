@@ -89,22 +89,24 @@ export function LandingCard({
         narrow="row"
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
+        // The range alone can take both of the detail's two lines in a slot of
+        // three, so beside it the sum moves into the receipt.
         detail={
-          range ? (
+          range
+            ? t("forecast.range", {
+                low: money(range.lowMinor),
+                high: money(range.highMinor),
+              })
+            : detail
+        }
+        basis={
+          range && (
             <>
-              <span>{detail}</span>
-              <span>
-                {t("forecast.range", {
-                  low: money(range.lowMinor),
-                  high: money(range.highMinor),
-                })}
-              </span>
+              <p>{detail}</p>
+              <p>{t("forecast.rangeBasis")}</p>
             </>
-          ) : (
-            detail
           )
         }
-        basis={range && <p>{t("forecast.rangeBasis")}</p>}
         onOpen={range ? onOpenDeals : undefined}
       />
 

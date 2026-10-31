@@ -41,7 +41,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v3"
+const DefinitionVersion = "forecast_v4"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be

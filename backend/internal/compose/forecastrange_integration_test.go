@@ -22,7 +22,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,6 +45,28 @@ func TestTheHTTPDoorAndTheToolStateOneRange(t *testing.T) {
 		*overTool.RangeLowMinor != *overHTTP.RangeLowMinor || *overTool.RangeHighMinor != *overHTTP.RangeHighMinor {
 		t.Fatalf("the tool's range %v..%v differs from the HTTP door's %d..%d",
 			overTool.RangeLowMinor, overTool.RangeHighMinor, *overHTTP.RangeLowMinor, *overHTTP.RangeHighMinor)
+	}
+}
+
+// One deal worth 1,000,000 at the typed 20%, under the weighted measure, lands
+// at 200,000. The tool states the landing the HTTP door states.
+func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
+	f := newStageCohortFixture(t)
+	today := clocktest.Now(t)
+	f.openDeal(t, f.stage(0), today)
+	weighted := string(forecasting.MeasureWeighted)
+	if err := config.Save(reportingActor(f.env), StoredConfig(f.env.Pool), identity.ForecastForwardMeasure, weighted); err != nil {
+		t.Fatal(err)
+	}
+
+	overHTTP, overTool := f.forecastOverHTTP(t, today), f.forecastOverTool(t, today)
+	if overHTTP.Landing == nil || string(overHTTP.Landing.Measure) != weighted || overHTTP.Landing.AmountMinor != 200_000 {
+		t.Fatalf("GET /forecast landing %+v, want 200,000 by the weighted measure", overHTTP.Landing)
+	}
+	door, tool := overHTTP.Landing, overTool.Landing
+	if tool == nil || tool.AmountMinor != door.AmountMinor || tool.Measure != string(door.Measure) ||
+		tool.WonMinor != door.WonMinor || tool.RemainingMinor != door.RemainingMinor {
+		t.Fatalf("the tool's landing %+v differs from the HTTP door's %+v", tool, door)
 	}
 }
 
@@ -81,9 +105,11 @@ func (e *forecastEnv) issueFrozenShare(t *testing.T) string {
 	return token
 }
 
-// sharedRangeOf opens a share as reader, over HTTP and as its CSV, and returns
-// the range each states. The two must agree.
-func (e *forecastEnv) sharedRangeOf(reader context.Context, t *testing.T, token string) (low, high int64) {
+// openSharedSnapshot opens a share as reader, over HTTP and as its CSV. Each CSV
+// row comes back keyed by its column heading.
+func (e *forecastEnv) openSharedSnapshot(
+	reader context.Context, t *testing.T, token string,
+) (crmcontracts.SharedForecastView, []map[string]string) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, "/v1/forecast/shared/"+token, nil).WithContext(reader)
 	rec := httptest.NewRecorder()
@@ -95,19 +121,34 @@ func (e *forecastEnv) sharedRangeOf(reader context.Context, t *testing.T, token 
 	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
 		t.Fatalf("decoding the shared view: %v", err)
 	}
-	if view.Readings.RangeLowMinor == nil || view.Readings.RangeHighMinor == nil {
-		t.Fatal("the shared view states no range")
-	}
-	low, high = *view.Readings.RangeLowMinor, *view.Readings.RangeHighMinor
-
 	status, body := e.exportShare(reader, t, token)
 	records, err := csv.NewReader(strings.NewReader(body)).ReadAll()
 	if status != http.StatusOK || err != nil || len(records) < 2 {
 		t.Fatalf("exporting the share = %d, %v, %d records", status, err, len(records))
 	}
-	row := records[1]
-	if want := fmt.Sprintf("%d..%d", low, high); row[len(row)-2]+".."+row[len(row)-1] != want {
-		t.Fatalf("the CSV states the range %s..%s, the shared view %d..%d", row[len(row)-2], row[len(row)-1], low, high)
+	rows := make([]map[string]string, 0, len(records)-1)
+	for _, record := range records[1:] {
+		row := map[string]string{}
+		for index, heading := range records[0] {
+			row[heading] = record[index]
+		}
+		rows = append(rows, row)
+	}
+	return view, rows
+}
+
+// sharedRangeOf returns the range a share states over HTTP and in its CSV. The
+// two must agree.
+func (e *forecastEnv) sharedRangeOf(reader context.Context, t *testing.T, token string) (low, high int64) {
+	t.Helper()
+	view, rows := e.openSharedSnapshot(reader, t, token)
+	if view.Readings.RangeLowMinor == nil || view.Readings.RangeHighMinor == nil {
+		t.Fatal("the shared view states no range")
+	}
+	low, high = *view.Readings.RangeLowMinor, *view.Readings.RangeHighMinor
+	if want := fmt.Sprintf("%d..%d", low, high); rows[0]["range_low_minor"]+".."+rows[0]["range_high_minor"] != want {
+		t.Fatalf("the CSV states the range %s..%s, the shared view %d..%d",
+			rows[0]["range_low_minor"], rows[0]["range_high_minor"], low, high)
 	}
 	return low, high
 }
@@ -150,5 +191,63 @@ func TestIndividualPerformanceOffKeepsTheSharedRangeOverTheRowsTheTotalsCount(t 
 	}
 	if onHigh <= 100_000 {
 		t.Fatalf("the high end %d covers the reader's own deal alone, want colleagues' deals counted", onHigh)
+	}
+}
+
+// With individual performance off the export holds the reader's own deal while
+// the headline sums the team's. The view and every CSV row say so.
+func TestASharedSnapshotSaysWhenItsExportHoldsOnlyTheReadersOwnDeals(t *testing.T) {
+	e := setupForecast(t)
+	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
+	e.seedDealClosingWithin(t, "Mine", &e.Rep1, 100_000)
+	for _, owner := range append([]ids.UUID{e.Rep3}, members...) {
+		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
+	}
+	token := e.issueFrozenShare(t)
+	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
+
+	for _, c := range []struct {
+		switchOn bool
+		want     bool
+		rows     int
+	}{{true, false, 4}, {false, true, 1}} {
+		e.showIndividualPerformance(t, c.switchOn)
+		view, rows := e.openSharedSnapshot(reader, t, token)
+		if got := view.Readings.ContributionsLimited; got == nil || *got != c.want {
+			t.Errorf("switch on %v: the view says contributions_limited %v, want %v", c.switchOn, got, c.want)
+		}
+		if len(rows) != c.rows {
+			t.Errorf("switch on %v: the export holds %d rows, want %d", c.switchOn, len(rows), c.rows)
+		}
+		for _, row := range rows {
+			if row["contributions_limited"] != fmt.Sprint(c.want) {
+				t.Errorf("switch on %v: a CSV row says contributions_limited %q, want %v", c.switchOn, row["contributions_limited"], c.want)
+			}
+		}
+		if view.Readings.OpenMinor != 850_000 {
+			t.Errorf("switch on %v: the headline sums %d open, want the team's 850,000", c.switchOn, view.Readings.OpenMinor)
+		}
+	}
+}
+
+// A reader who owns none of the frozen deals gets one summary row, so the file
+// still says the headline counts deals withheld from them.
+func TestASharedSnapshotWithEveryRowWithheldExportsOneSummaryRow(t *testing.T) {
+	e := setupForecast(t)
+	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
+	for _, owner := range append([]ids.UUID{e.Rep3}, members...) {
+		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
+	}
+	token := e.issueFrozenShare(t)
+	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
+	e.showIndividualPerformance(t, false)
+
+	view, rows := e.openSharedSnapshot(reader, t, token)
+	if got := view.Readings.ContributionsLimited; got == nil || !*got {
+		t.Errorf("the view says contributions_limited %v, want true", got)
+	}
+	if len(rows) != 1 || rows[0]["deal_id"] != "" || rows[0]["deal_name"] != "" ||
+		rows[0]["contributions_limited"] != "true" || rows[0]["range_high_minor"] == "" {
+		t.Fatalf("the export rows are %v, want one summary row with no deal, the range and contributions_limited true", rows)
 	}
 }

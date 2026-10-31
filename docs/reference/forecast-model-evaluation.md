@@ -69,8 +69,9 @@ blends the typed chance with the stage's recorded won share as a beta prior of s
 as-of day. A risk signal's odds ratio, `forecasting.RiskEffect`, is learned from settled frozen contribution rows and
 shrunk toward 1; only `forecasting.StrongestEffect` applies. Each contribution row freezes the typed chance, chance in
 use, evidence count, signals and effect, and each snapshot freezes whether self-correction was on, the evidence cutoff
-and the signal rules version. A row frozen before `forecast_v3` holds none of them. A snapshot frozen under
-`forecast_v2` is `definition_changed`.
+and the signal rules version. A row frozen before `forecast_v3` holds none of them. `forecast_v4` moved to the v2
+signal rules, under which a deal is `stuck` only after at least one day in its stage. A snapshot frozen under an
+older definition is `definition_changed`.
 
 A deal counts as won inside the period when its last stage move before the instant is a win dated inside the period.
 Its money is the amount in the snapshot's currency that the win recorded. A reopen before the instant undoes the win;

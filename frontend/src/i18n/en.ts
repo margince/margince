@@ -905,7 +905,7 @@ export const en = {
   "installationSettings.selfCorrectingOff":
     "The forecast weighs each open deal by the chance typed on its stage, as before.",
   "stage.chance.noEvidence":
-    "Typed {typed} · No recorded deal from here has closed yet · Forecast uses {used}",
+    "Typed {typed} · No recorded deal from here has closed before today · Forecast uses {used}",
   "stage.chance.off": "Forecast uses the typed {typed}: self-correction is off",
   "forecast.deals.title": "Deals behind the weighted figure",
   "forecast.deals.open": "Show each open deal and its chance",
@@ -922,6 +922,11 @@ export const en = {
     "Typed {typed} · {count} recorded deal from here closed, {won} won · Forecast uses {used}",
   "forecast.deals.recorded_other": "{count} recorded outcomes",
   "forecast.deals.recorded_one": "{count} recorded outcome",
+  "forecast.deals.recordedNone": "no recorded outcome before today",
+  "forecast.deals.total_other": "Weighted {amount} from {count} open deals",
+  "forecast.deals.total_one": "Weighted {amount} from {count} open deal",
+  "forecast.deals.totalLimited":
+    "Weighted {amount}, colleagues’ deals included",
   "forecast.deals.afterRisk": "{percent} after risk",
   "forecast.deals.colDeal": "Deal",
   "forecast.deals.colSignals": "Risk signals",
@@ -934,12 +939,12 @@ export const en = {
   "forecast.deals.limitedTitle": "Only your own deals are listed",
   "forecast.deals.limited":
     "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
-  "forecast.signal.closesNoMeeting_other":
-    "Closes in {count} days, no meeting booked",
-  "forecast.signal.closesNoMeeting_one":
-    "Closes in {count} day, no meeting booked",
-  "forecast.signal.closesTomorrow": "Closes tomorrow, no meeting booked",
-  "forecast.signal.closesToday": "Closes today, no meeting booked",
+  "forecast.signal.closesNoStep_other":
+    "Closes in {count} days, no next step booked",
+  "forecast.signal.closesNoStep_one":
+    "Closes in {count} day, no next step booked",
+  "forecast.signal.closesTomorrow": "Closes tomorrow, no next step booked",
+  "forecast.signal.closesToday": "Closes today, no next step booked",
   "forecast.signal.noReply_other": "No reply in {count} days",
   "forecast.signal.noReply_one": "No reply in {count} day",
   "forecast.signal.closeMoved_other": "Close date moved {count} times",

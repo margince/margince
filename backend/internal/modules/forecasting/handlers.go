@@ -231,16 +231,11 @@ func (h Handlers) project(
 	period Period, scope Scope, readings Readings, call *int64,
 	asOf time.Time, baseCurrency string,
 ) error {
-	measure, err := h.measure(ctx, tx)
+	landing, err := LandingFor(ctx, tx, h.measure, readings, call)
 	if err != nil {
 		return err
 	}
-	landing, err := ProjectLanding(readings, measure, call)
-	if err != nil {
-		return err
-	}
-	wire := landingToWire(landing)
-	out.Landing = &wire
+	out.Landing = &landing
 
 	// The managed-teams reading covers several populations, so a conversion
 	// rate over it would blend books that are measured separately — and the
@@ -259,6 +254,23 @@ func (h Handlers) project(
 	assessed := sufficiencyToWire(sufficiency)
 	out.Sufficiency = &assessed
 	return nil
+}
+
+// LandingFor answers the landing the forecast read prints, under the measure
+// this installation set. The forecast endpoint and the forecast_readings tool
+// both call it.
+func LandingFor(
+	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call *int64,
+) (crmcontracts.ForecastLanding, error) {
+	set, err := measure(ctx, tx)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	landing, err := ProjectLanding(readings, set, call)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	return landingToWire(landing), nil
 }
 
 // landingToWire maps a projection onto the wire shape.
