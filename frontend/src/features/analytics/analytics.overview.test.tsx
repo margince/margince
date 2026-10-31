@@ -124,7 +124,7 @@ describe("Sales review", () => {
     ).toBeVisible();
   });
 
-  it("asks the preset's trend, stage and team charts, and draws them", async () => {
+  it("asks the preset's trend, stage and team charts apart from the figures, and draws them", async () => {
     const asked = open("#/analytics", (url) =>
       isMovement(url)
         ? startingMovement()
@@ -136,15 +136,25 @@ describe("Sales review", () => {
     expect(
       screen.getByRole("heading", { name: "Sales won by team member" }),
     ).toBeVisible();
-    const sales = asked.find(
+    const reads = asked.filter(
       ({ url }) =>
         url.pathname.endsWith("/analytics/evaluate") && !isMovement(url),
     );
-    expect(sales?.url.searchParams.getAll("blocks")).toEqual([
+    // The figures are one read with no chart; the charts another, with only
+    // the metrics they belong to.
+    const charts = reads.find(({ url }) => url.searchParams.has("blocks"));
+    expect(charts?.url.searchParams.getAll("blocks")).toEqual([
       "bookings_trend",
       "stage_distribution",
       "owner_attainment",
     ]);
+    expect(charts?.url.searchParams.getAll("metrics")).toEqual([
+      "bookings_won",
+      "open_pipeline",
+    ]);
+    expect(
+      reads.filter(({ url }) => !url.searchParams.has("blocks")),
+    ).toHaveLength(1);
   });
 
   it("shows the win rate and no gap without a target, and tells a reader who sets targets", async () => {
@@ -283,13 +293,15 @@ describe("Sales review", () => {
     expect(window.location.hash).toContain("pipeline=all");
   });
 
-  it("says when comparison with an earlier capture starts", async () => {
+  it("says in one line when movement history starts, with no empty panel", async () => {
     open("#/analytics", bySeat("leader"));
+    const line = await screen.findByText(
+      /^History starts with the next capture, .+\. Movement shows once a second one follows\.$/,
+    );
+    expect(line).toBeVisible();
     expect(
-      await screen.findByText(
-        "Comparison starts after a second compatible capture.",
-      ),
-    ).toBeVisible();
+      screen.queryByRole("region", { name: "Since the last capture" }),
+    ).toBeNull();
   });
 
   it("names a part of a figure the reader may not see and a history the import lacks", async () => {

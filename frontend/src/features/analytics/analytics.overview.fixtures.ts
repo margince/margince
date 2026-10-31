@@ -86,9 +86,18 @@ function definition(id: MetricID): Definition {
     supports_target: true,
     allowed_filters: ["scope", "period", "target_basis"],
     definition: `${reportingMetricNames[id]}, as the server defines it.`,
-    blocks: id === "open_pipeline" ? ["pipeline_movement"] : [],
+    blocks: BLOCKS_OF[id] ?? [],
   };
 }
+
+// The charts each metric owns, as the server's catalog declares them: a chart
+// is asked together with the metric it belongs to.
+const BLOCKS_OF: Partial<Record<MetricID, Definition["blocks"]>> = {
+  bookings_won: ["bookings_trend", "owner_attainment"],
+  open_pipeline: ["stage_distribution", "pipeline_movement"],
+  stage_age: ["stage_age"],
+  qualified_pipeline_created: ["owner_attainment"],
+};
 
 /** The catalog a seat reading both presets is given. */
 export const overviewCatalog: components["schemas"]["ReportingCatalog"] = {
@@ -140,6 +149,12 @@ export const compared: Comparison = {
   remaining: 38_000_000,
   open_pipeline: 136_000_000,
   coverage: 3.58,
+  // Where each figure of the comparison is read from, as the server names it.
+  operands: {
+    won: { metric: "forecast_landing", context_id: "forecast_won" },
+    landing: { metric: "forecast_landing", context_id: "forecast_landing" },
+    open_pipeline: { metric: "forecast_landing", context_id: "forecast_open" },
+  },
 };
 
 const SALES_QUARTER = {
@@ -509,6 +524,7 @@ export function overviewRoutes(
     // which the route map cannot tell apart, so openOverview answers it.
     returned?: () => Response;
     pipelines?: () => Response | Promise<Response>;
+    evidence?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
   const seat = over.seat ?? "leader";
@@ -563,5 +579,15 @@ export function overviewRoutes(
         })),
     "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
     "GET /worklist": over.worklist ?? (() => jsonResponse(QUIET_DAY)),
+    // The records behind a figure: none, unless the case lists some.
+    "GET /analytics/evidence":
+      over.evidence ??
+      (() =>
+        jsonResponse({
+          context: salesEvaluation().context,
+          metric: "bookings_won",
+          rows: [],
+          truncated: false,
+        })),
   };
 }

@@ -25,10 +25,13 @@ type Comparison = NonNullable<
  */
 export function HeroAside({
   evaluation,
+  charts,
   onApply,
   targetSetup,
 }: Readonly<{
   evaluation: ReportingEvaluation;
+  // The chart read, once it answered: the period before is read off its trend.
+  charts: ReportingEvaluation | undefined;
   onApply: (selection: ReportingSelection) => void;
   // Who can set a target, for a quarter that has none.
   targetSetup: ReactNode;
@@ -51,7 +54,7 @@ export function HeroAside({
   return (
     <div className="analytics-hero-aside">
       {target}
-      <PriorPeriod evaluation={evaluation} />
+      {charts && <PriorPeriod evaluation={charts} />}
     </div>
   );
 }

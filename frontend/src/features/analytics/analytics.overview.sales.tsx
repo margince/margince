@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
@@ -17,9 +18,9 @@ import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import {
-  BoardChart,
   SalesHero,
-  salesBoardBlocks,
+  StockCharts,
+  useSalesCharts,
 } from "./analytics.overview.board";
 import {
   type OverviewDials,
@@ -46,6 +47,7 @@ import {
 } from "./reporting.evidence";
 import type {
   ReportingEvaluation,
+  ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
 import {
@@ -113,19 +115,19 @@ function SalesReviewBody({
     target_basis: filters.targetBasis,
     close_window: filters.closeWindow,
     metrics,
-    blocks: salesBoardBlocks(blocks),
+    blocks: [],
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   // A pipeline the address names and this reader cannot open is said, never
   // swapped for the default one.
   const pipelineGone = pipelineIsGone(params.get("pipeline"), pipelines);
-  const query = useReportingEvaluation(
-    selection,
-    validDates && metrics.length > 0 && !pipelineGone,
-  );
-  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
-    JSON.stringify(selection),
-  );
+  const asks = validDates && metrics.length > 0 && !pipelineGone;
+  // The figures and the charts are two reads of one question, so a slow or
+  // failed chart never holds back the figures or the actions.
+  const query = useReportingEvaluation(selection, asks);
+  const charts = useSalesCharts(selection, blocks, catalog, asks);
+  const { evidence, evidenceFrom, openEvidence, closeEvidence } =
+    useSelectionEvidence(JSON.stringify(selection));
   const doors = outboundDials(
     "sales",
     answeredDials(selection, filters.start, filters.end),
@@ -200,10 +202,12 @@ function SalesReviewBody({
               <div className="analytics-lead">
                 <SalesHero
                   evaluation={evaluation}
+                  charts={charts}
                   onEvidence={openEvidence}
                   aside={
                     <HeroAside
                       evaluation={evaluation}
+                      charts={charts?.data}
                       onApply={apply}
                       targetSetup={targetSetup}
                     />
@@ -243,29 +247,14 @@ function SalesReviewBody({
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
       {answered && (
-        <>
-          <OpenPipelineLine evaluation={answered} onEvidence={openEvidence} />
-          <div className="analytics-pair">
-            <BoardChart
-              evaluation={answered}
-              kind="stage_distribution"
-              onEvidence={openEvidence}
-            />
-            <BoardChart
-              evaluation={answered}
-              kind="owner_attainment"
-              onEvidence={openEvidence}
-            />
-          </div>
-          {evidence && (
-            <ReportingEvidenceDrawer
-              key={JSON.stringify(evidence)}
-              evaluation={answered}
-              reference={evidence}
-              onClose={closeEvidence}
-            />
-          )}
-        </>
+        <SalesStock
+          answered={answered}
+          charts={charts}
+          evidence={evidence}
+          evidenceFrom={evidenceFrom}
+          onEvidence={openEvidence}
+          onCloseEvidence={closeEvidence}
+        />
       )}
       <SinceLastReview
         catalog={catalog}
@@ -281,6 +270,43 @@ function SalesReviewBody({
           { section: "performance", label: t("analytics.sectionPerformance") },
         ]}
       />
+    </>
+  );
+}
+
+// Under the decision and the actions: all open pipeline, today's stock by
+// stage and the permitted sales by owner, and the evidence drawer for every
+// figure and chart on the page, under the read each came from.
+function SalesStock({
+  answered,
+  charts,
+  evidence,
+  evidenceFrom,
+  onEvidence,
+  onCloseEvidence,
+}: Readonly<{
+  answered: ReportingEvaluation;
+  charts: UseQueryResult<ReportingEvaluation> | undefined;
+  evidence: ReportingEvidenceRef | null;
+  evidenceFrom: ReportingEvaluation | undefined;
+  onEvidence: (
+    reference: ReportingEvidenceRef,
+    from?: ReportingEvaluation,
+  ) => void;
+  onCloseEvidence: () => void;
+}>) {
+  return (
+    <>
+      <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
+      {charts && <StockCharts charts={charts} onEvidence={onEvidence} />}
+      {evidence && (
+        <ReportingEvidenceDrawer
+          key={JSON.stringify(evidence)}
+          evaluation={evidenceFrom ?? answered}
+          reference={evidence}
+          onClose={onCloseEvidence}
+        />
+      )}
     </>
   );
 }
