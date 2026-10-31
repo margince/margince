@@ -4445,6 +4445,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
   "email.thread.textUnassessedHint":
     "Margince kann hier keine Anfragen oder Zusagen erkennen. Lies bei fehlendem Text das Original in deinem E-Mail-Programm; erstelle nötige Aufgaben selbst.",
+  "email.thread.textUnverifiable":
+    "Der Text dieser E-Mail lässt sich nicht mehr prüfen",
+  "email.thread.textUnverifiableHint":
+    "Das gespeicherte Original fehlt. Margince kann daher nicht feststellen, ob es den ganzen Text gelesen hat, und hier keine Anfragen oder Zusagen erkennen. Lies das Original in deinem E-Mail-Programm; erstelle nötige Aufgaben selbst.",
   "email.thread.textUnreadable":
     "Der Text dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnreadableHint":

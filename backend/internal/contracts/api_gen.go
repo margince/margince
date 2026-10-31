@@ -3687,11 +3687,12 @@ func (e BlockedDomainSource) Valid() bool {
 
 // Defines values for BodyCompleteness.
 const (
-	BodyCompletenessComplete   BodyCompleteness = "complete"
-	BodyCompletenessForwarded  BodyCompleteness = "forwarded"
-	BodyCompletenessPartial    BodyCompleteness = "partial"
-	BodyCompletenessUnassessed BodyCompleteness = "unassessed"
-	BodyCompletenessUnreadable BodyCompleteness = "unreadable"
+	BodyCompletenessComplete     BodyCompleteness = "complete"
+	BodyCompletenessForwarded    BodyCompleteness = "forwarded"
+	BodyCompletenessPartial      BodyCompleteness = "partial"
+	BodyCompletenessUnassessed   BodyCompleteness = "unassessed"
+	BodyCompletenessUnreadable   BodyCompleteness = "unreadable"
+	BodyCompletenessUnverifiable BodyCompleteness = "unverifiable"
 )
 
 // Valid indicates whether the value is a known member of the BodyCompleteness enum.
@@ -3706,6 +3707,8 @@ func (e BodyCompleteness) Valid() bool {
 	case BodyCompletenessUnassessed:
 		return true
 	case BodyCompletenessUnreadable:
+		return true
+	case BodyCompletenessUnverifiable:
 		return true
 	default:
 		return false
@@ -32066,9 +32069,11 @@ type BlockedDomainListResponse struct {
 // the body may lack text. `unreadable`: none of it, so the body holds only the From and To
 // lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
 // text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-// stored before this was recorded and not yet checked against its stored original, or one
-// with no original to check. Automatic work (promises, requests and their settlement, and
-// the events read from a conversation) is read only from a `complete` mail body.
+// stored before this was recorded and not yet checked against its stored original.
+// `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+// decodes, so its text can never be checked. Automatic work (promises, requests and their
+// settlement, and the events read from a conversation) is read only from a `complete` mail
+// body.
 type BodyCompleteness string
 
 // BoughtField One value on a contact that a data provider's run wrote and still owns.
