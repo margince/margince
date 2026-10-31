@@ -291,8 +291,8 @@ const DEALS = [
 
 /**
  * The overdue review backlog: 24 open findings on 7 deals. Every deal lacks a
- * next step and an economic buyer; the priced ones also passed their close
- * date, the unpriced ones are committed without an amount. Two have no owner.
+ * next step and an economic buyer. The priced ones also passed their close
+ * date. The unpriced ones are committed without an amount. Two have no owner.
  */
 export function backlogFindings(clock: string): InputCheck[] {
   return DEALS.flatMap(([name, amount, owner], index) => {
