@@ -11,7 +11,7 @@ import {
   type OverviewView,
   overviewAddress,
   type ScenarioName,
-} from "./analytics.overview.scenarios";
+} from "./analytics.overview.scenarios.fixtures";
 
 // Analytics' opening page as each reader meets it, one story per scenario and
 // view the scenario map applies to, named by scenarioStoryName. The address

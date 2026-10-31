@@ -17,7 +17,7 @@ import {
   overviewAddress,
   type ScenarioName,
   scenarioStoryName,
-} from "./analytics.overview.scenarios";
+} from "./analytics.overview.scenarios.fixtures";
 import * as stories from "./analytics.overview.stories";
 import { openOverview, readings } from "./analytics.overview.testkit";
 

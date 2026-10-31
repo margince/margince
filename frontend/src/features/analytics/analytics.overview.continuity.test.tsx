@@ -25,7 +25,10 @@ import {
   rememberView,
 } from "./analytics.overview.context";
 import { backlogFindings } from "./analytics.overview.scenariodata";
-import { isSetup, OVERVIEW_SCENARIOS } from "./analytics.overview.scenarios";
+import {
+  isSetup,
+  OVERVIEW_SCENARIOS,
+} from "./analytics.overview.scenarios.fixtures";
 import {
   ADMIN_GRANTS,
   type AskedRequest,

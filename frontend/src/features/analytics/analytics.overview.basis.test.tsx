@@ -12,7 +12,7 @@ import {
   OVERVIEW_SCENARIOS,
   overviewAddress,
   type ScenarioName,
-} from "./analytics.overview.scenarios";
+} from "./analytics.overview.scenarios.fixtures";
 import {
   compared,
   isMovement,

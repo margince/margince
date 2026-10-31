@@ -14,7 +14,7 @@ import {
   OVERVIEW_SCENARIOS,
   overviewAddress,
   type ScenarioName,
-} from "./analytics.overview.scenarios";
+} from "./analytics.overview.scenarios.fixtures";
 import { openOverview, readings } from "./analytics.overview.testkit";
 
 // Sales review's first screen and its action list: the controls, the lead
