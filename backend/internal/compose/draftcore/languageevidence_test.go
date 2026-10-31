@@ -111,3 +111,42 @@ func TestAddresseeEvidenceIsOnlyTheAddresseesOwnTextNewestFirst(t *testing.T) {
 		t.Errorf("with no addressee there is no addressee evidence, got %q", none)
 	}
 }
+
+// A colleague writing from one of our own domains arrives inbound. Ranked by
+// direction, that mail was the counterparty's best language sample, so a draft
+// mirrored our own writing back at them. The row's voice says who wrote it.
+func TestLanguageEvidenceSkipsAColleaguesOwnInboundMail(t *testing.T) {
+	t.Parallel()
+	in := string(crmcontracts.ActivityDirectionInbound)
+	turns := []draftcore.Turn{
+		{Direction: in, ByColleague: true, At: turnsNow, Text: "our own words"},
+		{Direction: in, At: turnsNow.Add(-24 * time.Hour), Text: "their words"},
+	}
+	got := draftcore.LanguageEvidence(turns, "")
+	if len(got) == 0 || got[0] != "their words" {
+		t.Fatalf("language evidence leads with %v, want their words first", got)
+	}
+}
+
+// One answer for whose word a turn is, so two readers cannot disagree. A
+// colleague writing from one of our own domains arrives inbound, and that is
+// the case direction alone gets wrong.
+func TestATurnSaysWhoseWordItIs(t *testing.T) {
+	t.Parallel()
+	in := string(crmcontracts.ActivityDirectionInbound)
+	out := string(crmcontracts.ActivityDirectionOutbound)
+	for _, c := range []struct {
+		name  string
+		turn  draftcore.Turn
+		their bool
+	}{
+		{"their inbound mail", draftcore.Turn{Direction: in}, true},
+		{"our colleague's inbound mail", draftcore.Turn{Direction: in, ByColleague: true}, false},
+		{"our outbound mail", draftcore.Turn{Direction: out}, false},
+		{"a row naming no direction", draftcore.Turn{}, false},
+	} {
+		if got := c.turn.TheirWord(); got != c.their {
+			t.Errorf("%s: TheirWord() = %v, want %v", c.name, got, c.their)
+		}
+	}
+}
