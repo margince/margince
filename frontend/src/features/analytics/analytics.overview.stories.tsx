@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -15,6 +16,10 @@ import {
   teamReview,
 } from "./analytics.overview.fixtures";
 import type { ReportingEvaluation } from "./reporting.model";
+
+// A quarter with its trend, stage and team charts drawn.
+const charted = () =>
+  salesEvaluation({ charts: reportingStoryEvaluation.charts });
 
 // Analytics' opening page as each reader meets it. The address names the view,
 // so each story opens the one it is about whatever a reader chose before.
@@ -54,16 +59,16 @@ export default meta;
 type Story = StoryObj;
 
 export const SalesReview: Story = {
-  render: overview("sales", salesEvaluation()),
+  render: overview("sales", charted()),
 };
 
 export const SalesReviewDark: Story = {
-  render: overview("sales", salesEvaluation()),
+  render: overview("sales", charted()),
   globals: { theme: "dark" },
 };
 
 export const SalesReviewOnAPhone: Story = {
-  render: overview("sales", salesEvaluation()),
+  render: overview("sales", charted()),
   globals: { viewport: { value: "phone" } },
 };
 

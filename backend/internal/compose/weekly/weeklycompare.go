@@ -281,9 +281,10 @@ func readPriorWeek(
 		return nil, nil
 	}
 	return &PriorWeek{
-		LocalWeekStart: prior.LocalWeekStart,
-		Counts:         prior.Counts,
-		Money:          prior.Money,
+		LocalWeekStart:   prior.LocalWeekStart,
+		Counts:           prior.Counts,
+		Money:            prior.Money,
+		MeetingsWithheld: prior.MeetingsWithheld,
 	}, nil
 }
 

@@ -23,6 +23,7 @@ const form: WebForm = {
   created_at: "2026-09-01T09:00:00Z",
   updated_at: "2026-09-01T09:00:00Z",
   archived_at: null,
+  last_post_at: null,
 };
 
 // load pastes the snippet into a page and runs its script, as a browser does

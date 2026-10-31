@@ -7219,8 +7219,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
   "analytics.overview.finishBasis":
     "Ende dieses Geschäftsquartals, aus {basis}",
-  "analytics.overview.noTargetRate":
-    "Kein Umsatzziel gesetzt, daher steht hier die Gewinnquote",
+  "analytics.overview.winRateBasis":
+    "Von den in diesem Zeitraum abgeschlossenen Deals",
+  "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
   "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",
@@ -14943,6 +14944,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Signierter Webhook von Typeform",
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
+  "webForms.row.lastPost": "Letzte Sendung {when}",
+  "webForms.row.noPost": "Noch keine Sendung erfasst",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",

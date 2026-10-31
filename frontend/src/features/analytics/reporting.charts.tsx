@@ -5,7 +5,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
-import { ChartContext } from "./reporting.chartcontext";
+import { ChartContext, ChartDetails } from "./reporting.chartcontext";
 import {
   type LaidOutItem,
   type LaidOutSection,
@@ -200,9 +200,9 @@ function itemKey(item: LaidOutItem): string {
     : `question:${item.question.id}`;
 }
 
-// One chart in its panel. The head holds the title alone. What the figure
-// covers and the door to its records sit in the foot, so a row of cards reads
-// as titles over charts.
+// One chart in its panel. The head holds the title and one quiet door to what
+// the figure was read from. What it covers and the door to its records share
+// one foot line, so a row of cards reads as titles over charts.
 export function ChartPanel({
   chart,
   wide,
@@ -225,6 +225,7 @@ export function ChartPanel({
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
       title={chartTitle(chart, evaluation, t, metricName)}
+      titleAction={<ChartDetails chart={chart} evaluation={evaluation} />}
       footer={
         <>
           <ChartContext

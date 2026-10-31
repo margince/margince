@@ -43,6 +43,7 @@ func wireForm(f Form) crmcontracts.WebForm {
 		CreatedAt:            f.CreatedAt,
 		UpdatedAt:            f.UpdatedAt,
 		ArchivedAt:           f.ArchivedAt,
+		LastPostAt:           f.LastPostAt,
 	}
 }
 

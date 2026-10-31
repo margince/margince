@@ -228,3 +228,19 @@ func (s *Store) GetForm(ctx context.Context, id ids.UUID) (Form, error) {
 	}
 	return out, err
 }
+
+// notePost stamps when a form last landed a post, at most once a minute. It is
+// a read model, like a passport's last use, so it writes no audit row or event.
+// The post has landed already, so a stamp that fails is logged, not refused.
+func (s *Store) notePost(ctx context.Context, form ids.UUID) {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO web_form_last_post (form_id, last_post_at) VALUES ($1, now())
+			ON CONFLICT (form_id) DO UPDATE SET last_post_at = excluded.last_post_at
+			 WHERE web_form_last_post.last_post_at < excluded.last_post_at - interval '1 minute'`, form)
+		return err
+	})
+	if err != nil {
+		s.log.WarnContext(ctx, "webforms: the form's last post was not stamped", "form", form, "err", err)
+	}
+}
