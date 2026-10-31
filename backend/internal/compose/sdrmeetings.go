@@ -27,6 +27,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
+// sqlNoRecord is a join condition no linked record meets.
+const sqlNoRecord = "false"
+
 // upcomingDays is how many calendar days the upcoming count covers, today
 // included.
 const upcomingDays = 14
@@ -170,7 +173,7 @@ func readUpcomingMeetingPage(ctx context.Context, tx pgx.Tx, requested Requested
 // contact or company the seat may read by name, in that order. A kind the seat
 // holds no read grant for is never picked, so the row degrades to restricted.
 func meetingRecordSQL(ctx context.Context, b *reportingBindings) (string, error) {
-	leadVisible, contactVisible, companyVisible := "false", "false", "false"
+	leadVisible, contactVisible, companyVisible := sqlNoRecord, sqlNoRecord, sqlNoRecord
 	var err error
 	if auth.ReadGranted(ctx, string(recordTypeLead)) {
 		if leadVisible, err = subjectVisibleSQL(ctx, string(recordTypeLead), "l", leadNameFields, b); err != nil {
