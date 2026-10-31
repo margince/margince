@@ -78,8 +78,8 @@ function ReadingTable({
 function lineSegments(
   readings: readonly ChartReading[],
   field: "value" | "comparison",
-  scale: number,
   width: number,
+  y: (value: number) => number,
 ) {
   const lines: string[] = [];
   let points: string[] = [];
@@ -88,10 +88,7 @@ function lineSegments(
     if (value == null) {
       if (points.length) lines.push(points.join(" "));
       points = [];
-    } else
-      points.push(
-        `${chartX(index, readings.length, width)},${chartY(value, scale)}`,
-      );
+    } else points.push(`${chartX(index, readings.length, width)},${y(value)}`);
   });
   if (points.length) lines.push(points.join(" "));
   return lines;
@@ -100,8 +97,11 @@ function lineSegments(
 function chartX(index: number, count: number, width: number) {
   return 56 + (index / Math.max(1, count - 1)) * (width - 76);
 }
-function chartY(value: number, scale: number) {
-  return 198 - (value / scale) * 174;
+// The plot's height in viewBox units, mirrored by `.report-chart-line`.
+const LINE_HEIGHT = { default: 238, compact: 150 } as const;
+
+function chartY(value: number, scale: number, height: number) {
+  return height - 40 - (value / scale) * (height - 64);
 }
 
 export function CumulativeChart({
@@ -113,12 +113,16 @@ export function CumulativeChart({
   reference,
   axisLabel,
   onSelect,
+  size = "default",
 }: ChartProps &
   Readonly<{
     comparisonLabel?: string;
     reference?: Readonly<{ value: number; label: string; amount: string }>;
     axisLabel: (value: number) => string;
+    /** `compact` is a shorter plot, for a chart beside a lead figure. */
+    size?: keyof typeof LINE_HEIGHT;
   }>) {
+  const height = LINE_HEIGHT[size];
   const title = useId();
   const plot = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(680);
@@ -133,6 +137,7 @@ export function CumulativeChart({
   }, []);
   const [active, setActive] = useState<string | null>(null);
   const scale = readingScale(readings, reference?.value) * 1.08;
+  const y = (value: number) => chartY(value, scale, height);
   const selected = readings.find((reading) => reading.key === active);
   const ticks = [0, scale / 2, scale];
   const labels = new Set([
@@ -158,9 +163,9 @@ export function CumulativeChart({
           </span>
         )}
       </div>
-      <div className="report-chart-line" ref={plot}>
+      <div className="report-chart-line" data-size={size} ref={plot}>
         <svg
-          viewBox={`0 0 ${width} 238`}
+          viewBox={`0 0 ${width} ${height}`}
           aria-hidden="true"
           preserveAspectRatio="none"
         >
@@ -170,13 +175,13 @@ export function CumulativeChart({
                 className="report-chart-grid"
                 x1="56"
                 x2={width - 20}
-                y1={chartY(tick, scale)}
-                y2={chartY(tick, scale)}
+                y1={y(tick)}
+                y2={y(tick)}
               />
               <text
                 className="report-chart-axis"
                 x="48"
-                y={chartY(tick, scale) + 4}
+                y={y(tick) + 4}
                 textAnchor="end"
               >
                 {axisLabel(tick)}
@@ -188,18 +193,18 @@ export function CumulativeChart({
               className="report-chart-reference"
               x1="56"
               x2={width - 20}
-              y1={chartY(reference.value, scale)}
-              y2={chartY(reference.value, scale)}
+              y1={y(reference.value)}
+              y2={y(reference.value)}
             />
           )}
-          {lineSegments(readings, "comparison", scale, width).map((points) => (
+          {lineSegments(readings, "comparison", width, y).map((points) => (
             <polyline
               key={points}
               className="report-chart-comparison"
               points={points}
             />
           ))}
-          {lineSegments(readings, "value", scale, width).map((points) => (
+          {lineSegments(readings, "value", width, y).map((points) => (
             <polyline
               key={points}
               className="report-chart-actual"
@@ -213,7 +218,7 @@ export function CumulativeChart({
                   key={reading.key}
                   className="report-chart-axis"
                   x={chartX(index, readings.length, width)}
-                  y="225"
+                  y={height - 13}
                   textAnchor="middle"
                 >
                   {reading.label}
@@ -230,7 +235,7 @@ export function CumulativeChart({
                 className="report-chart-point"
                 style={{
                   left: `${(chartX(index, readings.length, width) / width) * 100}%`,
-                  top: `${(chartY(reading.value, scale) / 238) * 100}%`,
+                  top: `${(y(reading.value) / height) * 100}%`,
                 }}
                 aria-label={`${reading.label}: ${reading.amount}`}
                 onFocus={() => setActive(reading.key)}

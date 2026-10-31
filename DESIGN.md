@@ -290,6 +290,7 @@ target for that new build. The shipped sheet may not match it.
 | Role | Family | Where |
 |---|---|---|
 | Heading | **Outfit** | Every heading, and the one line that names a record: its name, the Brief welcome line, the title of a zone, the agent's verdict word, the word of a reading and its figure. |
+| Display figure | **Outfit**, tabular | The one figure an Analytics view leads with, such as Sales won, at `--fontDisplayFigure`. It sits beside the trend that reached it. It stays smaller than the greeting, so the readings and the first action fit the first screen. |
 | Body and UI | **Geist** | Everything else, prose included. |
 | Figures | **Geist**, tabular (`.t-num`) | Every amount, count, share in %, length of time and date in a row or a cell. An id is plain body type. |
 | Code | **Geist** `Mono` | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |

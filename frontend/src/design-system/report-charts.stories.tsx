@@ -62,7 +62,11 @@ const trend: readonly ChartReading[] = [
 ];
 function Readings({
   rows = trend,
-}: Readonly<{ rows?: readonly ChartReading[] }>) {
+  size,
+}: Readonly<{
+  rows?: readonly ChartReading[];
+  size?: "default" | "compact";
+}>) {
   const [selected, select] = useState("");
   return (
     <>
@@ -79,12 +83,17 @@ function Readings({
           label: "Monthly target",
         }}
         onSelect={select}
+        size={size}
       />
       <p aria-live="polite">{selected && `Evidence for ${selected}`}</p>
     </>
   );
 }
 export const Cumulative: Story = { render: () => <Readings /> };
+// Shorter, for a chart beside a lead figure.
+export const CumulativeCompact: Story = {
+  render: () => <Readings size="compact" />,
+};
 export const MissingObservations: Story = {
   render: () => (
     <Readings
