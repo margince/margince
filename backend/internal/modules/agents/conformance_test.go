@@ -287,7 +287,7 @@ func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.Ra
 	return nil, nil
 }
 
-func (inertLifecycle) Check(context.Context, ids.UUID) error { return nil }
+func (inertLifecycle) Check(context.Context, ids.UUID, *string) error { return nil }
 
 func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, nil

@@ -51,6 +51,7 @@ Sales and data settings in Margince each have one page.
 - Change deal stages: **Pipelines**.
 - Lead origins, reasons to drop a lead, and the first-reply target: **Lead handling**.
 - Where a deal came from: **Acquisition sources**.
+- The stages a partner program moves through: **Partners**.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
 - The price list, rate card and offer templates: **Products and offers**.
@@ -207,6 +208,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead
   origins, which record where a lead came from, are separate.
+- **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a

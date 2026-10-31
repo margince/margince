@@ -83,6 +83,7 @@ var tableOwners = map[string]string{
 	"lead_source":            "internal/modules/contacts",
 	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
+	"partner_stage":          "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
 	// administered reason a refusal names. contacts owns them because the SUBJECT

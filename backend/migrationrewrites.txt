@@ -42,3 +42,5 @@
 1793373553_a_stage_move_keeps_the_stage_order_it_happened_in.up.sql | * | the procedural body grants USAGE on the new sequence to the app role and writes no row; the migration adds empty columns and changes no existing row
 1793379831_a_frozen_forecast_cannot_be_rewritten.up.sql | * | the procedural bodies are trigger functions that refuse an UPDATE and write no row; the migration changes no existing row
 1793390425_a_company_can_be_onboarding_or_live.down.sql | company | runs only on a rollback and moves only accounts set to onboarding or live since the upgrade, which a colleague sets per account as a contract is signed
+1793397376_a_partner_stage_comes_from_a_list.up.sql | *, partner | the trigger is the version bump on the new partner_stage table, which nothing later in the file updates; the UPDATE touches the partner table once, one row per partner company, and a partner programme is a short list beside the company table
+1793397376_a_partner_stage_comes_from_a_list.down.sql | partner | runs only on a rollback and rewrites the partner table once, one row per partner company

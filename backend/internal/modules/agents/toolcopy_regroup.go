@@ -92,7 +92,7 @@ var changeStateCopy = toolCopy{
 		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
 		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
 		"to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a " +
-		"partner program on a company, with company_id, partner_role and optionally " +
+		"partner program on a company, with company_id, partner_kinds and optionally " +
 		"relationship_stage, next_step and next_step_due_at.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +

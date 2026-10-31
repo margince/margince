@@ -89,6 +89,8 @@ type ListCompaniesInput struct {
 	// MemberOf is the list a seam caller narrowed to; the provider resolves it
 	// into Membership before the read.
 	MemberOf *ids.UUID
+	// Partner narrows to companies whose live partner programme matches.
+	Partner partnerProgramFilter
 }
 
 // companyListFields is the company list's core sortable
@@ -242,6 +244,13 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			}
 			where = append(where, sourceKey...)
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
+			partner, err := companyPartnerClause(ctx, in.Partner, arg)
+			if err != nil {
+				return nil, err
+			}
+			if partner != "" {
+				where = append(where, partner)
+			}
 			return appendCompanyEnumClauses(where, in, arg)
 		},
 		scan: scanCompanyPage,
@@ -250,6 +259,9 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 				return err
 			}
 			if err := attachCompanyRelationshipTypes(ctx, tx, companies); err != nil {
+				return err
+			}
+			if err := attachCompanyPartners(ctx, tx, companies); err != nil {
 				return err
 			}
 			if err := storekit.AttachRowTags(ctx, tx, companyEntity, companies,

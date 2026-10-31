@@ -144,6 +144,7 @@
     "GET /v1/offer-templates/{id}": "read_record",
     "GET /v1/offers/{id}": "read_record",
     "GET /v1/openapi.json": "read_view",
+    "GET /v1/partner-stages": "read_view",
     "GET /v1/partners": "list_records",
     "GET /v1/pipelines": "list_pipelines",
     "GET /v1/pipelines/{id}": "read_view",

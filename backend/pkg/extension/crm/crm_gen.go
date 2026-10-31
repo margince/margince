@@ -1035,6 +1035,27 @@ func (e OccurredPrecision) Valid() bool {
 	}
 }
 
+// Defines values for PartnerActivationBasis.
+const (
+	CustomerWon          PartnerActivationBasis = "customer_won"
+	LeadAccepted         PartnerActivationBasis = "lead_accepted"
+	RecordedBeforeLadder PartnerActivationBasis = "recorded_before_ladder"
+)
+
+// Valid indicates whether the value is a known member of the PartnerActivationBasis enum.
+func (e PartnerActivationBasis) Valid() bool {
+	switch e {
+	case CustomerWon:
+		return true
+	case LeadAccepted:
+		return true
+	case RecordedBeforeLadder:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PartnerCertStatus.
 const (
 	Applied   PartnerCertStatus = "applied"
@@ -1079,61 +1100,73 @@ func (e PartnerMarginTier) Valid() bool {
 
 // Defines values for PartnerPartnerRole.
 const (
-	Consulting PartnerPartnerRole = "consulting"
-	Hosting    PartnerPartnerRole = "hosting"
-	Strategic  PartnerPartnerRole = "strategic"
+	PartnerPartnerRoleConsulting PartnerPartnerRole = "consulting"
+	PartnerPartnerRoleHosting    PartnerPartnerRole = "hosting"
+	PartnerPartnerRoleStrategic  PartnerPartnerRole = "strategic"
 )
 
 // Valid indicates whether the value is a known member of the PartnerPartnerRole enum.
 func (e PartnerPartnerRole) Valid() bool {
 	switch e {
-	case Consulting:
+	case PartnerPartnerRoleConsulting:
 		return true
-	case Hosting:
+	case PartnerPartnerRoleHosting:
 		return true
-	case Strategic:
+	case PartnerPartnerRoleStrategic:
 		return true
 	default:
 		return false
 	}
 }
 
-// Defines values for PartnerRelationshipStage.
+// Defines values for PartnerKind.
 const (
-	Active           PartnerRelationshipStage = "active"
-	ActiveReferring  PartnerRelationshipStage = "active_referring"
-	AgreementPending PartnerRelationshipStage = "agreement_pending"
-	Contacted        PartnerRelationshipStage = "contacted"
-	Dormant          PartnerRelationshipStage = "dormant"
-	FitConfirmed     PartnerRelationshipStage = "fit_confirmed"
-	Identified       PartnerRelationshipStage = "identified"
-	InConversation   PartnerRelationshipStage = "in_conversation"
-	NoFit            PartnerRelationshipStage = "no_fit"
-	Research         PartnerRelationshipStage = "research"
+	PartnerKindConsulting PartnerKind = "consulting"
+	PartnerKindHosting    PartnerKind = "hosting"
+	PartnerKindReferral   PartnerKind = "referral"
+	PartnerKindStrategic  PartnerKind = "strategic"
 )
 
-// Valid indicates whether the value is a known member of the PartnerRelationshipStage enum.
-func (e PartnerRelationshipStage) Valid() bool {
+// Valid indicates whether the value is a known member of the PartnerKind enum.
+func (e PartnerKind) Valid() bool {
+	switch e {
+	case PartnerKindConsulting:
+		return true
+	case PartnerKindHosting:
+		return true
+	case PartnerKindReferral:
+		return true
+	case PartnerKindStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerStageMeaning.
+const (
+	Active    PartnerStageMeaning = "active"
+	Candidate PartnerStageMeaning = "candidate"
+	Dormant   PartnerStageMeaning = "dormant"
+	Ended     PartnerStageMeaning = "ended"
+	Ready     PartnerStageMeaning = "ready"
+	Signed    PartnerStageMeaning = "signed"
+)
+
+// Valid indicates whether the value is a known member of the PartnerStageMeaning enum.
+func (e PartnerStageMeaning) Valid() bool {
 	switch e {
 	case Active:
 		return true
-	case ActiveReferring:
-		return true
-	case AgreementPending:
-		return true
-	case Contacted:
+	case Candidate:
 		return true
 	case Dormant:
 		return true
-	case FitConfirmed:
+	case Ended:
 		return true
-	case Identified:
+	case Ready:
 		return true
-	case InConversation:
-		return true
-	case NoFit:
-		return true
-	case Research:
+	case Signed:
 		return true
 	default:
 		return false
@@ -2496,8 +2529,22 @@ type OccurredPrecision string
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
 type Partner struct {
-	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
-	CertStatus PartnerCertStatus `json:"cert_status"`
+	// ActivatedAt When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.
+	ActivatedAt *time.Time `json:"activated_at,omitempty"`
+
+	// ActivatedBy Who accepted the lead or recorded the win that activated the partner.
+	ActivatedBy *string `json:"activated_by,omitempty"`
+
+	// ActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+	ActivationBasis *PartnerActivationBasis `json:"activation_basis,omitempty"`
+
+	// ActivationDealId The won deal that activated the partner.
+	ActivationDealId *string `json:"activation_deal_id,omitempty"`
+
+	// ActivationLeadId The accepted lead that activated the partner.
+	ActivationLeadId *string           `json:"activation_lead_id,omitempty"`
+	ArchivedAt       *time.Time        `json:"archived_at,omitempty"`
+	CertStatus       PartnerCertStatus `json:"cert_status"`
 
 	// CompanyId The company this partner record extends (PK = FK).
 	CompanyId string    `json:"company_id"`
@@ -2524,14 +2571,32 @@ type Partner struct {
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
 	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
 
-	// PartnerRole Functional role; implementation + dev are Margince's turf.
+	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
 	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
-	RelationshipHealth *string                   `json:"relationship_health,omitempty"`
-	RelationshipStage  *PartnerRelationshipStage `json:"relationship_stage,omitempty"`
-	ServedSegments     *[]string                 `json:"served_segments,omitempty"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	RelationshipHealth *string `json:"relationship_health,omitempty"`
+
+	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
+
+	// StageLabel The label `/partner-stages` gives `relationship_stage`.
+	StageLabel *string `json:"stage_label,omitempty"`
+
+	// StageLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	StageLabelKey *ShippedLabelKey `json:"stage_label_key,omitempty"`
+
+	// StageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	StageMeaning *PartnerStageMeaning `json:"stage_meaning,omitempty"`
+	UpdatedAt    time.Time            `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -2540,17 +2605,26 @@ type Partner struct {
 	Version *RowVersion `json:"version,omitempty"`
 }
 
+// PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+type PartnerActivationBasis string
+
 // PartnerCertStatus defines model for Partner.CertStatus.
 type PartnerCertStatus string
 
 // PartnerMarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 type PartnerMarginTier string
 
-// PartnerPartnerRole Functional role; implementation + dev are Margince's turf.
+// PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
 
-// PartnerRelationshipStage defines model for Partner.RelationshipStage.
-type PartnerRelationshipStage string
+// PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
+type PartnerKind string
+
+// PartnerStageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+// active and went quiet. `ended`: the partnership is over or never fit.
+type PartnerStageMeaning string
 
 // PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
 // wrote. The fields mean what they mean on AuditHistoryEntry, and a client
@@ -2658,6 +2732,9 @@ type RowTagColor string
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 // (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64
+
+// ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+type ShippedLabelKey = string
 
 // Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
 // company-level and consent-gated by construction — the only mandatory attribution is
