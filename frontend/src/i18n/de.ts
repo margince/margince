@@ -7298,8 +7298,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.weeksLabel": "{metric} pro Woche",
   "analytics.prospect.weeksByArrival":
     "Jeder Lead zählt in der Woche, in der er eingegangen ist.",
+  "analytics.prospect.weeksUnderWay": "Die letzte Woche zählt bis jetzt.",
   "analytics.prospect.weeksByAcceptance":
-    "Jede Übergabe zählt in der Woche, in der sie angenommen wurde. Die letzte Woche zählt bis jetzt.",
+    "Jede Übergabe zählt in der Woche, in der sie angenommen wurde.",
   "analytics.prospect.historyTitle":
     "Wie sich deine Ergebnisse entwickelt haben",
   "analytics.prospect.historyCaption": "Woche für Woche seit {from}.",

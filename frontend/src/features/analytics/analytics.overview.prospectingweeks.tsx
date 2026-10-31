@@ -172,6 +172,8 @@ export function OutcomeHistory({
                     ? "analytics.prospect.weeksByArrival"
                     : "analytics.prospect.weeksByAcceptance",
                 )}
+                {underWay(evaluation) &&
+                  ` ${t("analytics.prospect.weeksUnderWay")}`}
               </p>
               {evaluation.charts
                 .filter(
@@ -196,4 +198,11 @@ export function OutcomeHistory({
       </PanelBody>
     </Panel>
   );
+}
+
+// Whether the weeks reach past the moment they were read, so the last one is
+// still under way.
+function underWay(evaluation: ReportingEvaluation): boolean {
+  const { interval, evaluated_at } = evaluation.context;
+  return Date.parse(interval.end_at) > Date.parse(evaluated_at);
 }

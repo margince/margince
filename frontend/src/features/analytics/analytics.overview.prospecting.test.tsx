@@ -151,6 +151,37 @@ describe("My prospecting's results", () => {
     expect(columns[4]).toHaveAccessibleName(/: 0$/);
   });
 
+  it("says the last week counts up to now only while it is under way", async () => {
+    const done = prospectingWeeks(
+      week,
+      "accepted_opportunities",
+      [1, 0, 3, 1, 2, 2],
+    );
+    const caption = async (weeks: ReportingEvaluation) => {
+      open(ADDRESS, weekAnd(prospectingEvaluation(), weeks), { seat: "sdr" });
+      const history = within(
+        await screen.findByRole("region", {
+          name: "How your outcomes developed",
+        }),
+      );
+      const text = (await history.findByText(/^Week by week since /))
+        .textContent;
+      cleanup();
+      return text;
+    };
+    expect(await caption(done)).not.toContain("up to now");
+    const ongoing = {
+      ...done,
+      context: {
+        ...done.context,
+        interval: { ...done.context.interval, end_at: "2026-11-01T23:00:00Z" },
+      },
+    };
+    expect(await caption(ongoing)).toContain(
+      "Each handoff counts in the week it was accepted. The last week counts up to now.",
+    );
+  });
+
   it("names no outcome while the workflow is unknown, and offers the read again when it fails", async () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), {
       seat: "sdr",

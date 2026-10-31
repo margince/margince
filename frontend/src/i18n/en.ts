@@ -7307,8 +7307,9 @@ export const en = {
   "analytics.prospect.weeksLabel": "{metric} per week",
   "analytics.prospect.weeksByArrival":
     "Each lead counts in the week it arrived.",
+  "analytics.prospect.weeksUnderWay": "The last week counts up to now.",
   "analytics.prospect.weeksByAcceptance":
-    "Each handoff counts in the week it was accepted. The last week counts up to now.",
+    "Each handoff counts in the week it was accepted.",
   "analytics.prospect.historyTitle": "How your outcomes developed",
   "analytics.prospect.historyCaption": "Week by week since {from}.",
   "analytics.prospect.blocked": "Recipient cannot act",
