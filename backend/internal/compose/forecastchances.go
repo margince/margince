@@ -84,7 +84,7 @@ func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceMo
 		in[i].EvidenceN = new(evidence.Resolved)
 		if found, ok := signals[in[i].ID]; ok {
 			in[i].Signals = found
-			in[i].Effect = forecasting.StrongestEffect(found, model.Effects)
+			in[i].Effect = forecasting.StrongestEffect(forecasting.SignalCodes(found), model.Effects)
 		}
 	}
 	return nil
@@ -218,7 +218,7 @@ func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[
 
 // forecastRiskSignals assesses the open deals through the assurance subjects,
 // the evidence the nightly check reads, and answers their signals by deal id.
-func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []forecasting.Deal) (map[string][]string, error) {
+func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []forecasting.Deal) (map[string][]forecasting.Signal, error) {
 	open := make([]ids.UUID, 0, len(in))
 	for _, deal := range in {
 		if deal.Won || deal.Lost {
@@ -230,9 +230,13 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 		}
 		open = append(open, id)
 	}
-	out := map[string][]string{}
+	out := map[string][]forecasting.Signal{}
 	if len(open) == 0 {
 		return out, nil
+	}
+	zone, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
 	}
 	subjects, err := assuranceSubjects(ctx, tx, at, AssuranceCoverage(ctx, tx, at), open)
 	if err != nil {
@@ -248,7 +252,7 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 		if pace, ok := stuck[subject.StageID]; ok {
 			threshold = &pace
 		}
-		out[subject.DealID] = assurance.RiskSignals(at, subject, cfg, threshold)
+		out[subject.DealID] = forecastSignals(assurance.RiskSignals(at, subject, cfg, threshold, zone))
 	}
 	return out, nil
 }
@@ -315,4 +319,17 @@ func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 		return forecasting.StageChances{}, fmt.Errorf("compose: reading the open stages: %w", err)
 	}
 	return out, nil
+}
+
+// forecastSignals carries the assessment's signals and their facts across to
+// the forecast's own type, field for field.
+func forecastSignals(in []assurance.RiskSignal) []forecasting.Signal {
+	out := make([]forecasting.Signal, len(in))
+	for i, signal := range in {
+		out[i] = forecasting.Signal{
+			Code: signal.Code, Days: signal.Days, Count: signal.Count, StageID: signal.StageID,
+			ClosePassed: signal.ClosePassed, ClosesInDays: signal.ClosesInDays,
+		}
+	}
+	return out
 }

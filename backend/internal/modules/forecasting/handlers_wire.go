@@ -188,10 +188,16 @@ func ContributionsToWire(in []Contribution) []crmcontracts.ForecastContribution 
 	return out
 }
 
-func wireSignals(in []string) []crmcontracts.ForecastContributionSignals {
-	out := make([]crmcontracts.ForecastContributionSignals, len(in))
+func wireSignals(in []Signal) []crmcontracts.ForecastRiskSignal {
+	out := make([]crmcontracts.ForecastRiskSignal, len(in))
 	for i, signal := range in {
-		out[i] = crmcontracts.ForecastContributionSignals(signal)
+		out[i] = crmcontracts.ForecastRiskSignal{
+			Code: crmcontracts.ForecastRiskSignalCode(signal.Code), Days: signal.Days, Count: signal.Count,
+			StageId: optionalWireID(signal.StageID), ClosesInDays: signal.ClosesInDays,
+		}
+		if signal.ClosePassed {
+			out[i].ClosePassed = new(true)
+		}
 	}
 	return out
 }

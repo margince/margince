@@ -42247,6 +42247,8 @@ export interface components {
             qualified?: components["schemas"]["ForecastQualifiedReadings"];
             /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
             self_correcting?: boolean;
+            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */
+            contributions_limited?: boolean;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
         };
@@ -42282,8 +42284,8 @@ export interface components {
             chance_in_use: number;
             /** @description How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off. */
             evidence_n?: number;
-            /** @description Risk signals on an open deal: the close date moved more than twice in 90 days, no next step, the customer quiet past the viability threshold, or longer in the stage than nine in ten won deals stayed. Empty while self-correction is off. */
-            signals: ("close_pushed" | "no_next_step" | "quiet" | "stuck")[];
+            /** @description Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off. */
+            signals: components["schemas"]["ForecastRiskSignal"][];
             /**
              * Format: double
              * @description The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
@@ -42291,6 +42293,17 @@ export interface components {
             effect?: number;
             /** @description The chance in use with `effect` applied to its odds, in percent. */
             applied_probability: number;
+        };
+        /** @description One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it). */
+        ForecastRiskSignal: {
+            /** @enum {string} */
+            code: "close_pushed" | "no_next_step" | "quiet" | "stuck";
+            days?: number;
+            count?: number;
+            /** Format: uuid */
+            stage_id?: string;
+            close_passed?: boolean;
+            closes_in_days?: number;
         };
         ForecastStageChances: {
             /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */

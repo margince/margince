@@ -146,6 +146,9 @@ func TestWithNoRecordedOutcomeTheForecastUsesTheTypedChance(t *testing.T) {
 	if got.SelfCorrecting == nil || !*got.SelfCorrecting {
 		t.Fatalf("self_correcting = %v, want true by default", got.SelfCorrecting)
 	}
+	if got.ContributionsLimited == nil || *got.ContributionsLimited {
+		t.Fatalf("contributions_limited = %v, want false while individual performance is on", got.ContributionsLimited)
+	}
 }
 
 // Twenty recorded wins from a stage typed at 20% move its chance to 60%. A move
@@ -238,8 +241,14 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 			t.Fatalf("%s: rows %+v, want only the reader's deal %s and no owner on it", door, rows, own)
 		}
 	}
+	// The rows and the total differ, and both doors say why.
 	if overHTTP.OpenMinor != int64(1_000_000*(1+len(colleagues))) {
 		t.Fatalf("open = %d, want every deal in the total", overHTTP.OpenMinor)
+	}
+	if overHTTP.ContributionsLimited == nil || !*overHTTP.ContributionsLimited ||
+		overTool.ContributionsLimited == nil || !*overTool.ContributionsLimited {
+		t.Fatalf("contributions_limited = %v over HTTP and %v over the tool, want true on both",
+			overHTTP.ContributionsLimited, overTool.ContributionsLimited)
 	}
 }
 
@@ -293,18 +302,18 @@ func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	rows := make([]forecasting.Contribution, 0, 20)
 	for i := range quiet {
 		rows = append(rows,
-			forecasting.Contribution{DealID: quiet[i].String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
-			forecasting.Contribution{DealID: calm[i].String(), InOpen: true, Signals: []string{}})
+			forecasting.Contribution{DealID: quiet[i].String(), InOpen: true, Signals: []forecasting.Signal{{Code: assurance.SignalQuiet}}},
+			forecasting.Contribution{DealID: calm[i].String(), InOpen: true, Signals: []forecasting.Signal{}})
 	}
 	stillOpen := f.deal(t, f.env.Rep1, s0)
-	rows = append(rows, forecasting.Contribution{DealID: stillOpen.String(), InOpen: true, Signals: []string{assurance.SignalQuiet}})
+	rows = append(rows, forecasting.Contribution{DealID: stillOpen.String(), InOpen: true, Signals: []forecasting.Signal{{Code: assurance.SignalQuiet}}})
 	f.freezeSignals(t, rows, forecasting.TriggerDaily, assurance.RiskSignalsVersion)
 	f.freezeSignals(t, []forecasting.Contribution{
-		{DealID: calm[0].String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
+		{DealID: calm[0].String(), InOpen: true, Signals: []forecasting.Signal{{Code: assurance.SignalQuiet}}},
 	}, forecasting.TriggerRecheck, "v0")
 	lateLoss := f.deal(t, f.env.Rep1, s0)
 	f.freezeSignals(t, []forecasting.Contribution{
-		{DealID: lateLoss.String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
+		{DealID: lateLoss.String(), InOpen: true, Signals: []forecasting.Signal{{Code: assurance.SignalQuiet}}},
 	}, forecasting.TriggerPeriodClose, assurance.RiskSignalsVersion)
 	for i := range quiet {
 		f.lose(t, quiet[i])

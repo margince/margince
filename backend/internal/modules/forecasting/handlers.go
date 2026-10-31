@@ -146,7 +146,7 @@ func (h Handlers) GetForecast(
 		out.ScopeLimited = &assembly.Limited
 		out.SelfCorrecting = &assembly.SelfCorrecting
 		if params.Contributions != nil && *params.Contributions {
-			if out.Contributions, err = h.contributionRows(ctx, tx, readings); err != nil {
+			if err := h.contributionRows(ctx, tx, readings, &out); err != nil {
 				return err
 			}
 		}

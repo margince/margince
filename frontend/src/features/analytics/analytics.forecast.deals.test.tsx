@@ -24,7 +24,7 @@ function contribution(over: Record<string, unknown> = {}) {
     typed_probability: 20,
     chance_in_use: 60,
     evidence_n: 20,
-    signals: ["no_next_step"],
+    signals: [{ code: "no_next_step" }],
     applied_probability: 60,
     ...over,
   };
@@ -95,7 +95,8 @@ describe("ForecastDeals", () => {
     expect(
       await screen.findByText("Typed 20% · 20 recorded outcomes · uses 60%"),
     ).toBeTruthy();
-    expect(screen.getByText("No next step")).toBeTruthy();
+    expect(screen.getByText("No next step booked")).toBeTruthy();
+    expect(screen.queryByText("Only your own deals are listed")).toBeNull();
     expect(screen.queryByText("Already won")).toBeNull();
     expect(fetchMock.mock.calls[0]?.[0].url).toContain("contributions=true");
   });
@@ -109,6 +110,23 @@ describe("ForecastDeals", () => {
     expect(
       await screen.findByText(
         "Typed 20% · 20 recorded outcomes · uses 60% · 43% after risk",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says the rows are the reader's own while individual performance is off", async () => {
+    serve({
+      self_correcting: true,
+      contributions_limited: true,
+      contributions: [contribution()],
+    });
+    await openDeals();
+    expect(
+      await screen.findByText("Only your own deals are listed"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
       ),
     ).toBeTruthy();
   });

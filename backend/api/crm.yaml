@@ -57975,6 +57975,11 @@ components:
             Whether the chances moved with recorded outcomes and learned risk effects
             (installation setting `forecast_self_correcting`). Absent on a stored answer from
             before the field existed.
+        contributions_limited:
+          type: boolean
+          description: >-
+            True when `contributions` holds only the caller's own deals because the installation
+            switched off individual performance. The totals still include colleagues' deals.
         contributions:
           type: array
           items: { $ref: '#/components/schemas/ForecastContribution' }
@@ -58027,11 +58032,10 @@ components:
             Absent while self-correction is off.
         signals:
           type: array
-          items: { type: string, enum: [close_pushed, no_next_step, quiet, stuck] }
+          items: { $ref: '#/components/schemas/ForecastRiskSignal' }
           description: >-
-            Risk signals on an open deal: the close date moved more than twice in 90 days, no
-            next step, the customer quiet past the viability threshold, or longer in the stage
-            than nine in ten won deals stayed. Empty while self-correction is off.
+            Risk signals on an open deal, with the facts the assessment found. Empty while
+            self-correction is off.
         effect:
           type: number
           format: double
@@ -58044,6 +58048,23 @@ components:
           minimum: 0
           maximum: 100
           description: The chance in use with `effect` applied to its odds, in percent.
+      additionalProperties: false
+    ForecastRiskSignal:
+      type: object
+      description: >-
+        One risk signal and its facts. `close_pushed`: the close date moved more than twice in
+        90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no
+        open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away.
+        `quiet`: the customer has said nothing past the viability threshold (`days` of silence).
+        `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+      required: [code]
+      properties:
+        code: { type: string, enum: [close_pushed, no_next_step, quiet, stuck] }
+        days: { type: integer, minimum: 0 }
+        count: { type: integer, minimum: 0 }
+        stage_id: { type: string, format: uuid }
+        close_passed: { type: boolean }
+        closes_in_days: { type: integer, minimum: 0, maximum: 7 }
       additionalProperties: false
     ForecastStageChances:
       type: object

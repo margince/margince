@@ -435,11 +435,12 @@ func readerOwnsRow(ctx context.Context, owner ids.UUID) bool {
 // ForecastReaderContributions narrows the forecast's per-deal rows to what this
 // reader may see one by one. While the switch is off a row names a seat. So
 // only the reader's own deals stay, with no owner on them, as evidence does.
-// The HTTP door and the forecast tool both ask it.
-func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) ([]forecasting.Contribution, error) {
+// The HTTP door and the forecast tool both ask it. limited says the switch
+// narrowed the rows, which both doors tell their reader.
+func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) (visible []forecasting.Contribution, limited bool, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return rows, err
+		return rows, false, err
 	}
 	out := make([]forecasting.Contribution, 0, len(rows))
 	for _, row := range rows {
@@ -450,5 +451,5 @@ func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecast
 		row.Owner = ""
 		out = append(out, row)
 	}
-	return out, nil
+	return out, true, nil
 }

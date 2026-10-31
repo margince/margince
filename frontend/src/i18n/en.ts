@@ -902,8 +902,6 @@ export const en = {
     "The forecast weighs each open deal by its stage’s chance in use, and by a risk signal once frozen forecasts show its effect.",
   "installationSettings.selfCorrectingOff":
     "The forecast weighs each open deal by the chance typed on its stage, as before.",
-  "stage.chance.withEvidence":
-    "Typed {typed} · {count} recorded deals from here closed, {won} won · Forecast uses {used}",
   "stage.chance.noEvidence":
     "Typed {typed} · No recorded deal from here has closed yet · Forecast uses {used}",
   "stage.chance.off": "Forecast uses the typed {typed}: self-correction is off",
@@ -915,17 +913,40 @@ export const en = {
     "Each deal counts at the chance typed on its stage. Self-correction is off.",
   "forecast.deals.none": "No open deal is expected to close in this period.",
   "forecast.deals.typed": "Typed {percent}",
-  "forecast.deals.recorded": "{count} recorded outcomes",
   "forecast.deals.uses": "uses {percent}",
+  "stage.chance.withEvidence_other":
+    "Typed {typed} · {count} recorded deals from here closed, {won} won · Forecast uses {used}",
+  "stage.chance.withEvidence_one":
+    "Typed {typed} · {count} recorded deal from here closed, {won} won · Forecast uses {used}",
+  "forecast.deals.recorded_other": "{count} recorded outcomes",
+  "forecast.deals.recorded_one": "{count} recorded outcome",
   "forecast.deals.afterRisk": "{percent} after risk",
   "forecast.deals.colDeal": "Deal",
   "forecast.deals.colSignals": "Risk signals",
   "forecast.deals.colAmount": "Amount",
   "forecast.deals.colWeighted": "Weighted",
   "forecast.signal.close_pushed": "Close date keeps moving",
-  "forecast.signal.no_next_step": "No next step",
+  "forecast.signal.no_next_step": "No next step booked",
   "forecast.signal.quiet": "Customer quiet",
   "forecast.signal.stuck": "Long in stage",
+  "forecast.deals.limitedTitle": "Only your own deals are listed",
+  "forecast.deals.limited":
+    "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
+  "forecast.signal.closesNoMeeting_other":
+    "Closes in {count} days, no meeting booked",
+  "forecast.signal.closesNoMeeting_one":
+    "Closes in {count} day, no meeting booked",
+  "forecast.signal.closesTomorrow": "Closes tomorrow, no meeting booked",
+  "forecast.signal.closesToday": "Closes today, no meeting booked",
+  "forecast.signal.noReply_other": "No reply in {count} days",
+  "forecast.signal.noReply_one": "No reply in {count} day",
+  "forecast.signal.closeMoved_other": "Close date moved {count} times",
+  "forecast.signal.closeMoved_one": "Close date moved {count} time",
+  "forecast.signal.closePassed": "Close date passed",
+  "forecast.signal.stuckDays_other": "Stalled {count} days in this stage",
+  "forecast.signal.stuckDays_one": "Stalled {count} day in this stage",
+  "forecast.signal.stuckIn_other": "Stalled {count} days in {stage}",
+  "forecast.signal.stuckIn_one": "Stalled {count} day in {stage}",
   "reporting.movement.won": "Won",
   "reporting.movement.lost": "Lost",
   "reporting.movement.reopened_or_archived": "Reopened or archived",

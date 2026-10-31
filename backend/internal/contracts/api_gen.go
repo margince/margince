@@ -11320,30 +11320,6 @@ func (e ForecastContributionExclusionReason) Valid() bool {
 	}
 }
 
-// Defines values for ForecastContributionSignals.
-const (
-	ForecastContributionSignalsClosePushed ForecastContributionSignals = "close_pushed"
-	ForecastContributionSignalsNoNextStep  ForecastContributionSignals = "no_next_step"
-	ForecastContributionSignalsQuiet       ForecastContributionSignals = "quiet"
-	ForecastContributionSignalsStuck       ForecastContributionSignals = "stuck"
-)
-
-// Valid indicates whether the value is a known member of the ForecastContributionSignals enum.
-func (e ForecastContributionSignals) Valid() bool {
-	switch e {
-	case ForecastContributionSignalsClosePushed:
-		return true
-	case ForecastContributionSignalsNoNextStep:
-		return true
-	case ForecastContributionSignalsQuiet:
-		return true
-	case ForecastContributionSignalsStuck:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
@@ -11524,6 +11500,30 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	case ForecastReadingsScopeKindTeam:
 		return true
 	case ForecastReadingsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastRiskSignalCode.
+const (
+	ForecastRiskSignalCodeClosePushed ForecastRiskSignalCode = "close_pushed"
+	ForecastRiskSignalCodeNoNextStep  ForecastRiskSignalCode = "no_next_step"
+	ForecastRiskSignalCodeQuiet       ForecastRiskSignalCode = "quiet"
+	ForecastRiskSignalCodeStuck       ForecastRiskSignalCode = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastRiskSignalCode enum.
+func (e ForecastRiskSignalCode) Valid() bool {
+	switch e {
+	case ForecastRiskSignalCodeClosePushed:
+		return true
+	case ForecastRiskSignalCodeNoNextStep:
+		return true
+	case ForecastRiskSignalCodeQuiet:
+		return true
+	case ForecastRiskSignalCodeStuck:
 		return true
 	default:
 		return false
@@ -42782,9 +42782,9 @@ type ForecastContribution struct {
 	InWon           bool                                 `json:"in_won"`
 	OwnerId         *openapi_types.UUID                  `json:"owner_id,omitempty"`
 
-	// Signals Risk signals on an open deal: the close date moved more than twice in 90 days, no next step, the customer quiet past the viability threshold, or longer in the stage than nine in ten won deals stayed. Empty while self-correction is off.
-	Signals []ForecastContributionSignals `json:"signals"`
-	StageId *openapi_types.UUID           `json:"stage_id,omitempty"`
+	// Signals Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
+	Signals []ForecastRiskSignal `json:"signals"`
+	StageId *openapi_types.UUID  `json:"stage_id,omitempty"`
 
 	// TypedProbability The chance typed on the deal's stage, in percent.
 	TypedProbability *int  `json:"typed_probability,omitempty"`
@@ -42793,9 +42793,6 @@ type ForecastContribution struct {
 
 // ForecastContributionExclusionReason Why a deal in the reading contributes no money.
 type ForecastContributionExclusionReason string
-
-// ForecastContributionSignals defines model for ForecastContribution.Signals.
-type ForecastContributionSignals string
 
 // ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
 type ForecastEnforcementPreview struct {
@@ -42916,7 +42913,10 @@ type ForecastReadings struct {
 
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
-	CurrentCall   *ForecastCall           `json:"current_call,omitempty"`
+
+	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
+	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
 
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
@@ -42975,6 +42975,19 @@ type ForecastReadings struct {
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
+
+// ForecastRiskSignal One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+type ForecastRiskSignal struct {
+	ClosePassed  *bool                  `json:"close_passed,omitempty"`
+	ClosesInDays *int                   `json:"closes_in_days,omitempty"`
+	Code         ForecastRiskSignalCode `json:"code"`
+	Count        *int                   `json:"count,omitempty"`
+	Days         *int                   `json:"days,omitempty"`
+	StageId      *openapi_types.UUID    `json:"stage_id,omitempty"`
+}
+
+// ForecastRiskSignalCode defines model for ForecastRiskSignal.Code.
+type ForecastRiskSignalCode string
 
 // ForecastShare A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest.
 type ForecastShare struct {

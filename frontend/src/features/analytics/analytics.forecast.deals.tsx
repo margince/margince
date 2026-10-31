@@ -5,19 +5,28 @@
 // weighted by and why. Its own read, so the headline does not wait for it.
 
 import { Badge, EmptyState } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Disclosure } from "../../design-system/disclosure";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import {
+  type Locale,
+  type PluralTranslator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
+import { usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
 import {
   type ForecastContribution,
   type ForecastPeriod,
   useForecastContributions,
 } from "./forecast.queries";
+import { signalSentence } from "./forecast.signals";
 
 type T = ReturnType<typeof useT>;
 
@@ -28,6 +37,7 @@ const percent = (value: number, locale: Locale) =>
 export function chanceExplanation(
   row: ForecastContribution,
   t: T,
+  plural: PluralTranslator,
   locale: Locale,
 ): string {
   const parts = [
@@ -37,7 +47,7 @@ export function chanceExplanation(
   ];
   if (row.evidence_n !== undefined) {
     parts.push(
-      t("forecast.deals.recorded", {
+      plural("forecast.deals.recorded", row.evidence_n, {
         count: formatNumber(row.evidence_n, locale),
       }),
     );
@@ -55,11 +65,18 @@ export function chanceExplanation(
   return parts.join(" · ");
 }
 
+type Words = Readonly<{
+  t: T;
+  plural: PluralTranslator;
+  locale: Locale;
+  stageName: (stageId: string) => string | undefined;
+}>;
+
 function dealColumns(
-  t: T,
-  locale: Locale,
+  words: Words,
   currency: string,
 ): DataTableColumn<ForecastContribution>[] {
+  const { t, plural, locale, stageName } = words;
   return [
     {
       key: "deal",
@@ -68,7 +85,9 @@ function dealColumns(
       render: (row) => (
         <CellStack>
           <span>{row.deal_name}</span>
-          <span className="t-caption">{chanceExplanation(row, t, locale)}</span>
+          <span className="t-caption">
+            {chanceExplanation(row, t, plural, locale)}
+          </span>
         </CellStack>
       ),
     },
@@ -77,8 +96,10 @@ function dealColumns(
       header: t("forecast.deals.colSignals"),
       render: (row) =>
         row.signals.map((signal) => (
-          <Badge key={signal} tone="warning">
-            {t(`forecast.signal.${signal}`)}
+          <Badge key={signal.code} tone="warning">
+            {signalSentence(signal, t, plural, stageName, (value) =>
+              formatNumber(value, locale),
+            )}
           </Badge>
         )),
     },
@@ -105,8 +126,21 @@ export function ForecastDeals({
   period,
 }: Readonly<{ scope: AnalyticsScope | undefined; period: ForecastPeriod }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const contributions = useForecastContributions(scope, period);
+  const pipelines = usePipelines();
+  const stages = new Map(
+    (pipelines.data ?? []).flatMap((pipeline) =>
+      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
+    ),
+  );
+  const words: Words = {
+    t,
+    plural,
+    locale,
+    stageName: (stageId) => stages.get(stageId),
+  };
   const label = t("forecast.deals.title");
   return (
     <Panel title={label}>
@@ -126,6 +160,15 @@ export function ForecastDeals({
                         : "forecast.deals.introOff",
                     )}
                   </PanelIntro>
+                  {data.contributions_limited && (
+                    <Callout
+                      tone="info"
+                      kind="standing"
+                      title={t("forecast.deals.limitedTitle")}
+                    >
+                      {t("forecast.deals.limited")}
+                    </Callout>
+                  )}
                   {open.length === 0 ? (
                     <EmptyState>{t("forecast.deals.none")}</EmptyState>
                   ) : (
@@ -133,7 +176,7 @@ export function ForecastDeals({
                       label={label}
                       rows={open}
                       rowKey={(row) => row.deal_id}
-                      columns={dealColumns(t, locale, data.base_currency)}
+                      columns={dealColumns(words, data.base_currency)}
                     />
                   )}
                 </>

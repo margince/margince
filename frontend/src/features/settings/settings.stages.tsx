@@ -94,6 +94,7 @@ export function StageChanceLine({
   chances,
 }: Readonly<{ stage: Stage; chances: StageChances }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const chance = chances?.byStage.get(stage.id);
   if (!chances || !chance) return null;
@@ -108,7 +109,7 @@ export function StageChanceLine({
       used: pct(chance.chance_in_use),
     });
   } else {
-    line = t("stage.chance.withEvidence", {
+    line = plural("stage.chance.withEvidence", chance.evidence_n, {
       typed,
       count: formatNumber(chance.evidence_n, locale),
       won: pct(chance.won_percent),

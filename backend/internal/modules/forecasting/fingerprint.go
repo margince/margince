@@ -30,7 +30,7 @@ func InputFingerprint(rows []Contribution) string {
 			row.DealID, base, row.WeightedMinor, row.InWon, row.InOpen, row.InEvidence,
 			row.InBestCase, row.InLost, row.Qualification, row.Category, row.ExclusionReason,
 			row.StageProbability, optionalInt(row.TypedProbability), optionalInt(row.EvidenceN),
-			strings.Join(row.Signals, ","), optionalEffect(row.Effect))
+			strings.Join(SignalCodes(row.Signals), ","), optionalEffect(row.Effect))
 	}
 	digest := sha256.Sum256(material)
 	return hex.EncodeToString(digest[:])

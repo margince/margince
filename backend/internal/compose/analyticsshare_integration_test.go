@@ -535,7 +535,7 @@ func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting") || !strings.HasSuffix(lines[1], ",true") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts") || !strings.HasSuffix(lines[1], ",true,") {
 		t.Errorf("the export does not carry the snapshot's self_correcting:\n%s", body)
 	}
 }

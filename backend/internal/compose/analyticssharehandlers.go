@@ -389,7 +389,7 @@ var shareExportColumns = []string{
 	"base_minor", "effective_close_date", "category",
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
-	"self_correcting",
+	"self_correcting", "risk_signal_facts",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
@@ -411,7 +411,7 @@ func shareRowsCSV(rows []SharedContribution, selfCorrecting *bool) ([]byte, erro
 			csvCell(row.ExclusionReason),
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
 			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
-			csvCellPtr(selfCorrecting),
+			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)

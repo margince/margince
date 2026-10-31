@@ -124,6 +124,37 @@ func RiskEffect(t RiskTally) float64 {
 	return math.Exp(weight * logOdds)
 }
 
+// Signal is one risk signal on a deal, with the facts the assessment found.
+// Each fact is set only for the signal it belongs to, so every surface states
+// the same numbers.
+type Signal struct {
+	Code string `json:"code"`
+	// Days is how long the deal stalled in its stage (stuck), or how long the
+	// customer has been silent (quiet).
+	Days *int `json:"days,omitempty"`
+	// Count is how often the close date moved (close_pushed).
+	Count *int `json:"count,omitempty"`
+	// StageID is the stage a stuck deal stalled in.
+	StageID string `json:"stage_id,omitempty"`
+	// ClosePassed says the close date of a close_pushed deal is behind us.
+	ClosePassed bool `json:"close_passed,omitempty"`
+	// ClosesInDays is how soon a deal with no next step closes, within a week.
+	ClosesInDays *int `json:"closes_in_days,omitempty"`
+}
+
+// SignalCodes is the codes of the signals, in their order. Nil stays nil, so a
+// deal nobody assessed is still told apart from one with no signal.
+func SignalCodes(in []Signal) []string {
+	if in == nil {
+		return nil
+	}
+	out := make([]string, len(in))
+	for i, signal := range in {
+		out[i] = signal.Code
+	}
+	return out
+}
+
 // StrongestEffect picks the one effect a deal's signals apply: the one
 // furthest from 1. Signals overlap, so multiplying them would count one
 // problem several times. Nil when no signal moves the odds.

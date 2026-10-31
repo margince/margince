@@ -50,7 +50,7 @@ type Deal struct {
 	// and the strongest one's odds ratio. Nil where the reader set none.
 	TypedProbability *int
 	EvidenceN        *int
-	Signals          []string
+	Signals          []Signal
 	Effect           *float64
 	// StageID is which stage the deal stands in, empty where the reader could
 	// not name one. Frozen onto the contribution so a later conversion read can
@@ -142,7 +142,7 @@ type Contribution struct {
 	// contribution frozen before they were recorded.
 	TypedProbability *int
 	EvidenceN        *int
-	Signals          []string
+	Signals          []Signal
 	Effect           *float64
 	// StageID is the stage the deal stood in when this was frozen, empty where
 	// it could not be read. Carried so a conversion rate can be measured per

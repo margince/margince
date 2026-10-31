@@ -40,7 +40,7 @@ type AssembleFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scop
 // ReaderRowsFunc narrows the per-deal rows of a reading to what the reader may
 // see one by one. Injected, because the installation's individual-performance
 // rule lives in the composition layer.
-type ReaderRowsFunc func(ctx context.Context, tx pgx.Tx, rows []Contribution) ([]Contribution, error)
+type ReaderRowsFunc func(ctx context.Context, tx pgx.Tx, rows []Contribution) ([]Contribution, bool, error)
 
 // WithReaderRows narrows the rows GET /forecast?contributions=true returns.
 // Unbound, the door refuses to return rows at all.
@@ -49,16 +49,18 @@ func (h Handlers) WithReaderRows(narrow ReaderRowsFunc) Handlers {
 	return h
 }
 
-// contributionRows renders the per-deal rows this reader may see. Unbound, the
-// door refuses rather than return rows nobody narrowed.
-func (h Handlers) contributionRows(ctx context.Context, tx pgx.Tx, readings Readings) (*[]crmcontracts.ForecastContribution, error) {
+// contributionRows renders the per-deal rows this reader may see onto out, and
+// says when they were narrowed. Unbound, the door refuses rather than return
+// rows nobody narrowed.
+func (h Handlers) contributionRows(ctx context.Context, tx pgx.Tx, readings Readings, out *crmcontracts.ForecastReadings) error {
 	if h.readerRows == nil {
-		return nil, errors.New("forecasting: no reader lens is bound, so per-deal rows cannot be narrowed")
+		return errors.New("forecasting: no reader lens is bound, so per-deal rows cannot be narrowed")
 	}
-	visible, err := h.readerRows(ctx, tx, readings.Contributions)
+	visible, limited, err := h.readerRows(ctx, tx, readings.Contributions)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rows := ContributionsToWire(visible)
-	return &rows, nil
+	out.Contributions, out.ContributionsLimited = &rows, &limited
+	return nil
 }

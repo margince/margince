@@ -135,29 +135,42 @@ type ForecastReadingsResult struct {
 	// SelfCorrecting says whether chances moved with recorded outcomes.
 	SelfCorrecting *bool `json:"self_correcting,omitempty"`
 	// Contributions are the per-deal rows, present only when asked for.
-	Contributions []ForecastContributionResult `json:"contributions,omitempty"`
+	// ContributionsLimited says they hold only the caller's own deals, while
+	// the installation switched off individual performance.
+	Contributions        []ForecastContributionResult `json:"contributions,omitempty"`
+	ContributionsLimited *bool                        `json:"contributions_limited,omitempty"`
+}
+
+// ForecastSignalResult mirrors one ForecastRiskSignal on GET /forecast.
+type ForecastSignalResult struct {
+	Code         string  `json:"code"`
+	Days         *int    `json:"days,omitempty"`
+	Count        *int    `json:"count,omitempty"`
+	StageID      *string `json:"stage_id,omitempty"`
+	ClosePassed  *bool   `json:"close_passed,omitempty"`
+	ClosesInDays *int    `json:"closes_in_days,omitempty"`
 }
 
 // ForecastContributionResult mirrors one ForecastContribution on GET /forecast.
 type ForecastContributionResult struct {
-	DealID             string   `json:"deal_id"`
-	DealName           string   `json:"deal_name"`
-	OwnerID            *string  `json:"owner_id,omitempty"`
-	StageID            *string  `json:"stage_id,omitempty"`
-	Category           *string  `json:"category,omitempty"`
-	BaseMinor          *int64   `json:"base_minor,omitempty"`
-	ExclusionReason    *string  `json:"exclusion_reason,omitempty"`
-	WeightedMinor      int64    `json:"weighted_minor"`
-	InWon              bool     `json:"in_won"`
-	InOpen             bool     `json:"in_open"`
-	InEvidence         bool     `json:"in_evidence"`
-	InBestCase         bool     `json:"in_best_case"`
-	TypedProbability   *int     `json:"typed_probability,omitempty"`
-	ChanceInUse        int      `json:"chance_in_use"`
-	EvidenceN          *int     `json:"evidence_n,omitempty"`
-	Signals            []string `json:"signals"`
-	Effect             *float64 `json:"effect,omitempty"`
-	AppliedProbability int      `json:"applied_probability"`
+	DealID             string                 `json:"deal_id"`
+	DealName           string                 `json:"deal_name"`
+	OwnerID            *string                `json:"owner_id,omitempty"`
+	StageID            *string                `json:"stage_id,omitempty"`
+	Category           *string                `json:"category,omitempty"`
+	BaseMinor          *int64                 `json:"base_minor,omitempty"`
+	ExclusionReason    *string                `json:"exclusion_reason,omitempty"`
+	WeightedMinor      int64                  `json:"weighted_minor"`
+	InWon              bool                   `json:"in_won"`
+	InOpen             bool                   `json:"in_open"`
+	InEvidence         bool                   `json:"in_evidence"`
+	InBestCase         bool                   `json:"in_best_case"`
+	TypedProbability   *int                   `json:"typed_probability,omitempty"`
+	ChanceInUse        int                    `json:"chance_in_use"`
+	EvidenceN          *int                   `json:"evidence_n,omitempty"`
+	Signals            []ForecastSignalResult `json:"signals"`
+	Effect             *float64               `json:"effect,omitempty"`
+	AppliedProbability int                    `json:"applied_probability"`
 }
 
 // ForecastQualifiedResult mirrors the qualified readings on GET /forecast.

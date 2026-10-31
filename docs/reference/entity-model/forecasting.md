@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-32 columns · primary key `(id)` · referenced by 0 foreign keys
+33 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -96,6 +96,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `owner_id` | `uuid` |  |  |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
 | `risk_effect` | `numeric` |  |  |
+| `risk_signal_facts` | `jsonb` |  |  |
 | `risk_signals` | `text[]` |  |  |
 | `snapshot_id` | `uuid` | yes | Points at `forecast_snapshot.id`. |
 | `stage_id` | `uuid` |  |  |
@@ -125,6 +126,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_rate_dated`: `CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))`
 - `forecast_contribution_rate_positive`: `CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))`
 - `forecast_contribution_risk_effect_positive`: `CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric)))`
+- `forecast_contribution_risk_signal_facts_list`: `CHECK (((risk_signal_facts IS NULL) OR (jsonb_typeof(risk_signal_facts) = 'array')))`
 - `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
 - `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`

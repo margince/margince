@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -181,7 +182,7 @@ func (s *Store) writeContributions(
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"qualification", "audit_id", "approval_id", "captured_by",
-			"typed_probability", "evidence_n", "risk_signals", "risk_effect",
+			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -209,6 +210,10 @@ func (s *Store) writeContributions(
 			if row.AmountMinor == nil {
 				currency = nil
 			}
+			facts, err := signalFacts(row.Signals)
+			if err != nil {
+				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
+			}
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
@@ -217,7 +222,7 @@ func (s *Store) writeContributions(
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
-				row.TypedProbability, row.EvidenceN, row.Signals, row.Effect,
+				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
 			}, nil
 		}))
 	if err != nil {
@@ -259,6 +264,15 @@ func checkSnapshot(in NewSnapshot) error {
 		}
 	}
 	return nil
+}
+
+// signalFacts is the signals as the jsonb column stores them; nil stores NULL,
+// a deal nobody assessed.
+func signalFacts(in []Signal) ([]byte, error) {
+	if in == nil {
+		return nil, nil
+	}
+	return json.Marshal(in)
 }
 
 // nullableID keeps an absent owner out of the column as NULL. A deal with no
@@ -306,7 +320,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		       effective_close_date, close_provisional, category, stage_probability,
 		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
 		       exclusion_reason, qualification, audit_id, approval_id,
-		       stage_id, typed_probability, evidence_n, risk_signals, risk_effect
+		       stage_id, typed_probability, evidence_n, risk_signal_facts, risk_effect
 		FROM forecast_contribution
 		WHERE snapshot_id = $1
 		ORDER BY deal_id`, id)
@@ -323,11 +337,15 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		var probability *int
 		var weighted *int64
 		var stage *ids.UUID
+		var facts []byte
 		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
 			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
 			&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
-			&stage, &c.TypedProbability, &c.EvidenceN, &c.Signals, &c.Effect)
+			&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+		if err == nil && facts != nil {
+			err = json.Unmarshal(facts, &c.Signals)
+		}
 		if stage != nil {
 			c.StageID = stage.String()
 		}

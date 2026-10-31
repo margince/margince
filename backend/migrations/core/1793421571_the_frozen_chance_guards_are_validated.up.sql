@@ -11,3 +11,4 @@ ALTER TABLE forecast_contribution VALIDATE CONSTRAINT forecast_contribution_evid
 ALTER TABLE forecast_contribution VALIDATE CONSTRAINT forecast_contribution_risk_signals_known;
 ALTER TABLE forecast_contribution VALIDATE CONSTRAINT forecast_contribution_risk_effect_positive;
 ALTER TABLE forecast_contribution VALIDATE CONSTRAINT forecast_contribution_base_minor_js_safe;
+ALTER TABLE forecast_contribution VALIDATE CONSTRAINT forecast_contribution_risk_signal_facts_list;

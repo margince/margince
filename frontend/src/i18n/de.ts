@@ -951,8 +951,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Prognose gewichtet jeden offenen Deal mit der genutzten Chance seiner Phase und mit einem Risikosignal, sobald eingefrorene Prognosen dessen Wirkung zeigen.",
   "installationSettings.selfCorrectingOff":
     "Die Prognose gewichtet jeden offenen Deal wie bisher mit der in seiner Phase eingetragenen Chance.",
-  "stage.chance.withEvidence":
-    "Eingetragen {typed} · {count} erfasste Deals von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
   "stage.chance.noEvidence":
     "Eingetragen {typed} · Noch kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
   "stage.chance.off":
@@ -966,17 +964,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.none":
     "Kein offener Deal soll in diesem Zeitraum abschließen.",
   "forecast.deals.typed": "Eingetragen {percent}",
-  "forecast.deals.recorded": "{count} erfasste Ergebnisse",
   "forecast.deals.uses": "nutzt {percent}",
+  "stage.chance.withEvidence_other":
+    "Eingetragen {typed} · {count} erfasste Deals von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "stage.chance.withEvidence_one":
+    "Eingetragen {typed} · {count} erfasster Deal von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "forecast.deals.recorded_other": "{count} erfasste Ergebnisse",
+  "forecast.deals.recorded_one": "{count} erfasstes Ergebnis",
   "forecast.deals.afterRisk": "{percent} nach Risiko",
   "forecast.deals.colDeal": "Deal",
   "forecast.deals.colSignals": "Risikosignale",
   "forecast.deals.colAmount": "Betrag",
   "forecast.deals.colWeighted": "Gewichtet",
   "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
-  "forecast.signal.no_next_step": "Kein nächster Schritt",
+  "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
   "forecast.signal.quiet": "Kunde schweigt",
   "forecast.signal.stuck": "Lange in der Phase",
+  "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
+  "forecast.deals.limited":
+    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
+  "forecast.signal.closesNoMeeting_other":
+    "Schließt in {count} Tagen, kein Termin geplant",
+  "forecast.signal.closesNoMeeting_one":
+    "Schließt in {count} Tag, kein Termin geplant",
+  "forecast.signal.closesTomorrow": "Schließt morgen, kein Termin geplant",
+  "forecast.signal.closesToday": "Schließt heute, kein Termin geplant",
+  "forecast.signal.noReply_other": "Seit {count} Tagen keine Antwort",
+  "forecast.signal.noReply_one": "Seit {count} Tag keine Antwort",
+  "forecast.signal.closeMoved_other": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closeMoved_one": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closePassed": "Abschlussdatum verstrichen",
+  "forecast.signal.stuckDays_other": "Seit {count} Tagen in dieser Phase",
+  "forecast.signal.stuckDays_one": "Seit {count} Tag in dieser Phase",
+  "forecast.signal.stuckIn_other": "Seit {count} Tagen in {stage}",
+  "forecast.signal.stuckIn_one": "Seit {count} Tag in {stage}",
   "reporting.movement.won": "Gewonnen",
   "reporting.movement.lost": "Verloren",
   "reporting.movement.reopened_or_archived": "Wieder geöffnet oder archiviert",

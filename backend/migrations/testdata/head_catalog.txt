@@ -4600,6 +4600,7 @@ public.forecast_contribution.forecast_contribution_qualification_check CHECK (((
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
 public.forecast_contribution.forecast_contribution_risk_effect_positive CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_risk_signal_facts_list CHECK (((risk_signal_facts IS NULL) OR (jsonb_typeof(risk_signal_facts) = 'array'::text)))
 public.forecast_contribution.forecast_contribution_risk_signals_known CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed'::text, 'no_next_step'::text, 'quiet'::text, 'stuck'::text])))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
 public.forecast_contribution.forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))
@@ -4617,6 +4618,7 @@ public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.qualification text gen=- def=-
 public.forecast_contribution.risk_effect numeric gen=- def=-
+public.forecast_contribution.risk_signal_facts jsonb gen=- def=-
 public.forecast_contribution.risk_signals text[] gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.stage_id uuid gen=- def=-

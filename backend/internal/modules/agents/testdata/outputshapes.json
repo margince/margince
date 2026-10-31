@@ -5530,7 +5530,30 @@
                 "signals": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "object",
+                    "properties": {
+                      "close_passed": {
+                        "type": "boolean"
+                      },
+                      "closes_in_days": {
+                        "type": "integer"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer"
+                      },
+                      "days": {
+                        "type": "integer"
+                      },
+                      "stage_id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code"
+                    ]
                   }
                 },
                 "stage_id": {
@@ -5556,6 +5579,9 @@
                 "weighted_minor"
               ]
             }
+          },
+          "contributions_limited": {
+            "type": "boolean"
           },
           "coverage_note": {
             "type": "string"
