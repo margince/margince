@@ -12,6 +12,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"math"
 	"testing"
 	"time"
@@ -20,7 +21,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // healthClock is the fixed evaluation instant every seeded timestamp is
@@ -213,5 +217,52 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 	}
 	if !got.AtRisk || got.Health >= 0.35 {
 		t.Fatalf("stalled+silent deal → health %.3f (at_risk=%v), want < 0.35 and at_risk", got.Health, got.AtRisk)
+	}
+}
+
+// An imported win lands its whole history in one instant, so its stint in a
+// stage reads as zero days. Only won deals moved in Margince set the pace the
+// stage-velocity factor compares against: ten wins that spent four days in the
+// stage set it to four, however many imported wins sit beside them.
+func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, won := DealFixture(t, e)
+	reason := "purchase_order"
+	for range 10 {
+		d := e.SeedDeal(t, "Won here", pipeline, open, nil)
+		if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](d), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := owner.Exec(context.Background(), `UPDATE deal_stage_history SET changed_at = changed_at - interval '4 days'
+			WHERE deal_id = $1 AND from_stage_id IS NULL`, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	run := SeedIDRow(t, owner, `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
+		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
+	objects := maps.Clone(AdminPerms.Objects)
+	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	importer := e.As(e.AdminUser, nil, principal.Permissions{RoleKeys: AdminPerms.RoleKeys, Objects: objects, RowScope: principal.RowScopeAll})
+	importer = storekit.WithImportRun(storekit.WithBatch(importer, run), run)
+	closed := clocktest.Now(t)
+	for range 11 {
+		if err := e.Deals.Tx(importer, func(tx pgx.Tx) error {
+			_, err := e.Deals.ImportDealTx(importer, tx, deals.CreateDealInput{Name: "Imported win", PipelineID: pipeline, Source: "import"},
+				&deals.ImportTerminal{StageID: won, ClosedAt: &closed}, deals.CustomColumns{})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	subject := e.SeedDeal(t, "Paced", pipeline, open, nil)
+	got, err := e.Deals.DealHealth(e.Admin(), ids.From[ids.DealKind](subject), clocktest.Now(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if days := got.Evidence.ExpectedDaysInStage; math.Abs(days-4) > 0.01 {
+		t.Fatalf("expected days = %f, want the four days of the wins moved here, not the imported ones", days)
 	}
 }

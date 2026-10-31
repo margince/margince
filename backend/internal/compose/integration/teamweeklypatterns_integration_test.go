@@ -375,6 +375,7 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 	e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, to_stage_id, changed_by, changed_at,
 		owner_id_at_change, semantic_at_change) VALUES ($1, $2, 'human:x', $3, $4, 'open')`,
 		legacy, entered, teamClock.AddDate(0, 0, -30), e.Rep1)
+	seedImportedFunnelMoves(t, e, pipeline, entered, next)
 	writeRepWeek(t, e, e.Rep1)
 	writeRepWeek(t, e, e.Rep2)
 
@@ -483,13 +484,31 @@ func seedFunnel(
 	for i := range entries {
 		deal := e.SeedDeal(t, "Funnel deal", pipeline, ids.From[ids.StageKind](stage), &ownerNow)
 		e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, to_stage_id, changed_by, changed_at,
-			owner_id_at_change, pipeline_id_at_change, semantic_at_change)
-			VALUES ($1, $2, 'human:x', $3, $4, $5, 'open')`, deal, stage, at, ownerThen, pipeline)
+			owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance)
+			VALUES ($1, $2, 'human:x', $3, $4, $5, 'open', 'recorded')`, deal, stage, at, ownerThen, pipeline)
 		if i < converted {
 			e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by,
-				changed_at, owner_id_at_change, pipeline_id_at_change, semantic_at_change)
-				VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open')`,
+				changed_at, owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance)
+				VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open', 'recorded')`,
 				deal, stage, next, at.AddDate(0, 0, 3), ownerThen, pipeline)
 		}
 	}
+}
+
+// seedImportedFunnelMoves gives Rep1 an entry an import brought in, and an
+// entry an import then moved on. Neither shows how Rep1 sells, so neither
+// counts on either side.
+func seedImportedFunnelMoves(t *testing.T, e *teamEnv, pipeline ids.PipelineID, stage, next ids.UUID) {
+	t.Helper()
+	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
+		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
+	at := teamClock.AddDate(0, 0, -30)
+	move := `INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, changed_at,
+		owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance, import_run_id)
+		VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open', $7, $8)`
+	imported := e.SeedDeal(t, "Imported entry", pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
+	e.WsExec(t, move, imported, nil, stage, at, e.Rep1, pipeline, "imported", run)
+	movedOn := e.SeedDeal(t, "Moved on by an import", pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
+	e.WsExec(t, move, movedOn, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, movedOn, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
 }

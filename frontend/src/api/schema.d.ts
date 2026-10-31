@@ -41208,8 +41208,9 @@ export interface components {
              *     instant. Every member is in exactly one outcome, so the counts add
              *     up to `observations`. `unresolved` members have not reached an
              *     outcome yet and are never counted as lost; `history_partial`
-             *     members have a move recorded before Margince kept the stage order,
-             *     so the direction of that move is unknown.
+             *     members left by a move an import brought in, or by a move recorded
+             *     before Margince kept where a move came from or the stage order, so
+             *     that move does not show how the team sells.
              */
             outcomes?: components["schemas"]["ReportingCohortCount"][];
             /**

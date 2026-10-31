@@ -59,7 +59,9 @@ type stageEntries struct {
 // in the window and how many of them later moved on. "Moved on" is a later move
 // to a won stage, or to a later stage of the same pipeline. Stage order is read
 // as configured now: that is the weekly funnel's published meaning, which the
-// Analytics stage cohort does not share.
+// Analytics stage cohort does not share. An entry whose next move an import
+// brought in is left out, as the stage cohort leaves it out of its rate: that
+// move shows the source system's history, not the rep's selling.
 var teamFunnelSQL = `
 	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
 	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,
@@ -77,6 +79,12 @@ var teamFunnelSQL = `
 	  FROM entries e
 	  JOIN stage s ON s.id = e.stage_id AND s.pipeline_id = e.pipeline_id
 	  JOIN pipeline p ON p.id = e.pipeline_id
+	 WHERE NOT EXISTS (
+	         SELECT 1 FROM (SELECT x.provenance FROM deal_stage_history x
+	                         WHERE x.deal_id = e.deal_id
+	                           AND (x.changed_at, x.id) > (e.changed_at, e.id) AND x.changed_at < $%[2]d
+	                         ORDER BY x.changed_at, x.id LIMIT 1) nx
+	          WHERE nx.provenance IS DISTINCT FROM 'recorded')
 	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.pipeline_id, s."position"`
 
 // measureTeamFunnel attaches each measured rep's top deviations.

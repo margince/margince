@@ -5,8 +5,10 @@ package weekly
 
 // StageEntriesSQL is the stage entry rule the weekly funnel and the Analytics
 // stage cohort share. An entry is a deal's earliest move into an open stage in
-// [start, end) that passes narrowing. Narrowing reads the move as h and the
-// deal as d. Pipeline, owner and meaning are the ones the move recorded. Moves in one
+// [start, end) that was made in Margince and passes narrowing. An imported
+// move, or one written before a move kept where it came from, says nothing
+// about how this team sells. Narrowing reads the move as h and the deal as d.
+// Pipeline, owner and meaning are the ones the move recorded. Moves in one
 // instant go in write order, older rows by id. Columns: id, deal_id, stage_id,
 // pipeline_id, owner_id, changed_at.
 func StageEntriesSQL(start, end, narrowing string) string {
@@ -18,6 +20,7 @@ func StageEntriesSQL(start, end, narrowing string) string {
 	 WHERE h.changed_at >= ` + start + ` AND h.changed_at < ` + end + `
 	   AND h.pipeline_id_at_change IS NOT NULL
 	   AND h.semantic_at_change = 'open'
+	   AND h.provenance = 'recorded'
 	   AND (` + narrowing + `)
 	 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id`
 }

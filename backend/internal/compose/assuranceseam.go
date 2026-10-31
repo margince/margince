@@ -88,7 +88,8 @@ const assuranceSubjectsSQL = `
 		           AND (au.before ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date')::date
-		               > (au.before ->> 'expected_close_date')::date) AS close_date_pushes,
+		               > (au.before ->> 'expected_close_date')::date
+		           AND %[10]s) AS close_date_pushes,
 		       EXISTS (SELECT 1
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
@@ -280,7 +281,9 @@ func assuranceSubjectsQuery(now time.Time, identities string, only *ids.UUID, ar
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
-		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
+		// A date an import moved is the source system's history, not a push.
+		storekit.AuditNotFromAnImport("au"))
 }
 
 // onlyDealSQL narrows the read to one deal, or to none of them when unset.

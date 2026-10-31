@@ -46,10 +46,13 @@ const (
 // stageCohortOutcomes is the order a stage point lists its outcomes in.
 var stageCohortOutcomes = []string{cohortAdvanced, cohortWon, cohortLost, cohortRegressed, cohortLeftPipeline, cohortUnresolved, cohortHistoryPartial}
 
-// stageExitSQL names the outcome of an entry from its next move, nx. Won and
-// lost need only the meaning the move recorded; a direction needs both of its
-// recorded positions, and without them the outcome is history_partial.
+// stageExitSQL names the outcome of an entry from its next move, nx. A next
+// move an import brought in, or one that predates provenance, is
+// history_partial: it says nothing about how this team sells. Won and lost need
+// only the meaning the move recorded; a direction needs both of its recorded
+// positions, and without them the outcome is history_partial too.
 const stageExitSQL = `CASE WHEN nx.changed_at IS NULL THEN '` + cohortUnresolved + `'
+	WHEN nx.provenance IS DISTINCT FROM 'recorded' THEN '` + cohortHistoryPartial + `'
 	WHEN nx.semantic_at_change = 'won' THEN '` + cohortWon + `'
 	WHEN nx.semantic_at_change = 'lost' THEN '` + cohortLost + `'
 	WHEN nx.pipeline_id_at_change IS DISTINCT FROM e.pipeline_id THEN '` + cohortLeftPipeline + `'
@@ -119,7 +122,7 @@ func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontr
  JOIN deal t ON t.id=e.deal_id
  LEFT JOIN stage s ON s.id=e.stage_id
  LEFT JOIN app_user u ON u.id=e.owner_id
- LEFT JOIN LATERAL (SELECT x.changed_at,x.semantic_at_change,x.pipeline_id_at_change,x.from_position_at_change,x.to_position_at_change
+ LEFT JOIN LATERAL (SELECT x.changed_at,x.provenance,x.semantic_at_change,x.pipeline_id_at_change,x.from_position_at_change,x.to_position_at_change
    FROM deal_stage_history x WHERE x.deal_id=e.deal_id AND ` + stageMoveOrder("x") + `>` + stageMoveOrder("eh") + ` AND x.changed_at<` + cutoff + `
    ORDER BY x.changed_at,COALESCE(x.write_seq,0),x.id LIMIT 1) nx ON true
  LEFT JOIN LATERAL (SELECT p.semantic_at_change FROM deal_stage_history p
@@ -132,7 +135,7 @@ func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontr
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
 	for _, fact := range facts {
 		if fact.Outcome == cohortHistoryPartial {
-			coverage = reportingGap(reportingPartial, said.Say(cohortWords.StageOrderUnknown))
+			coverage = reportingGap(reportingPartial, said.Say(cohortWords.ExitNotRecorded))
 			coverage.Withheld = withheld
 			break
 		}

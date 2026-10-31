@@ -1353,7 +1353,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.regressed": "Đã lùi lại",
   "reporting.cohortOutcome.left_pipeline": "Pipeline khác",
   "reporting.cohortOutcome.unresolved": "Vẫn đang mở",
-  "reporting.cohortOutcome.history_partial": "Không rõ tiến hay lùi",
+  "reporting.cohortOutcome.history_partial": "Lần chuyển tiếp theo được nhập hoặc không rõ",
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
@@ -1362,7 +1362,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Vẫn đang mở nghĩa là chưa có kết quả khi số liệu này được đọc. Các mục này không bị tính là thua và không tính vào tỷ lệ.",
   "reporting.cohortPartialNote":
-    "Không rõ tiến hay lùi nghĩa là deal đã rời giai đoạn trước khi Margince lưu thứ tự giai đoạn cùng mỗi lần chuyển. Các mục này không tính vào tỷ lệ.",
+    "Lần chuyển tiếp theo được nhập hoặc không rõ nghĩa là deal đã rời giai đoạn bằng một lần chuyển do lần nhập dữ liệu mang vào, hoặc bằng một lần chuyển được ghi trước khi Margince lưu nguồn gốc của lần chuyển hay thứ tự giai đoạn. Các mục này không tính vào tỷ lệ.",
   "reporting.cohortStageDaysNote":
     "Số ngày bên cạnh một kết quả là thời gian trung vị deal ở trong giai đoạn trước kết quả đó. Số ngày bên cạnh Vẫn đang mở là thời gian trung vị ở trong giai đoạn tính đến nay.",
   "reporting.cohortLeadDaysNote":
