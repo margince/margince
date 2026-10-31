@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
-import { FIELD_PAIRS, splitStagedSummary } from "../lib/stagedsummary";
-import { noticeHeadline } from "./noticeheadline";
+import {
+  FIELD_PAIRS,
+  noticeHeadline,
+  splitStagedSummary,
+} from "./noticeheadline";
 
 // The server's own rendering of a staged change's fields, held equal to its
 // producer by compose's agentsummarypairs_test.go.
@@ -64,5 +67,28 @@ describe("splitStagedSummary", () => {
     expect(
       splitStagedSummary(`Found on site: ${HEAD}: ${PRODUCED[0]}`),
     ).toEqual({ sentence: `Found on site: ${HEAD}`, fields: PRODUCED[0] });
+  });
+
+  it("reads the overflow suffix the server adds past eight fields", () => {
+    for (const more of ["+1 more", "+1 weitere", "+1 trường khác"]) {
+      expect(splitStagedSummary(`${HEAD}: a=1, b=2, ${more}`)).toEqual({
+        sentence: HEAD,
+        fields: `a=1, b=2, ${more}`,
+      });
+    }
+  });
+
+  it("reads a key in the reader's own language", () => {
+    expect(
+      splitStagedSummary("Tạo bản ghi bình luận: thuộc=thread-9, body=OK"),
+    ).toEqual({
+      sentence: "Tạo bản ghi bình luận",
+      fields: "thuộc=thread-9, body=OK",
+    });
+  });
+
+  it("leaves a summary it cannot read whole as it was", () => {
+    const comma = `${HEAD}: note=Call the buyer, then send the quote`;
+    expect(splitStagedSummary(comma)).toEqual({ sentence: comma });
   });
 });

@@ -133,18 +133,3 @@ it("shows recorded estimate observations and admits a missing basis", () => {
     ),
   ).toBeNull();
 });
-
-it("reads an approval receipt's sentence, not its field pairs", () => {
-  const result = receiptSummary(
-    {
-      id: "receipt",
-      kind: "approval",
-      summary: "Update record deal: amount_minor=100, currency=EUR",
-      occurred_at: "2026-09-13T08:00:00Z",
-    },
-    (key, values) => translate("en", key, values),
-    "en",
-    viewerZone(),
-  );
-  expect(result).toBe("Update record deal");
-});

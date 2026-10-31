@@ -2,7 +2,40 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Translator } from "../i18n";
-import { splitStagedSummary } from "../lib/stagedsummary";
+
+// The staged-change summary joins `field=value` pairs with ", " (summaryFields
+// in the server's compose/agentsummary.go), ending in "+N more" past eight, after
+// a sentence and ": " when the server has one. noticeheadline.test.ts holds this
+// against the server's own output.
+const KEY = String.raw`\p{Ll}[\p{Ll}\p{N}_]*`;
+export const FIELD_PAIRS = new RegExp(
+  String.raw`^${KEY}=[^,]*(, ${KEY}=[^,]*)*(, \+\d+ [^,=]+)?$`,
+  "u",
+);
+
+const SEPARATOR = ": ";
+
+/**
+ * A staged-change summary, split into its sentence and the raw field pairs
+ * behind it. Text the pattern cannot read whole stays all sentence, which is
+ * how it showed before, so a failed split loses nothing.
+ */
+export function splitStagedSummary(
+  summary: string,
+): Readonly<{ sentence?: string; fields?: string }> {
+  if (FIELD_PAIRS.test(summary)) return { fields: summary };
+  for (
+    let at = summary.indexOf(SEPARATOR);
+    at > 0;
+    at = summary.indexOf(SEPARATOR, at + 1)
+  ) {
+    const fields = summary.slice(at + SEPARATOR.length);
+    if (FIELD_PAIRS.test(fields)) {
+      return { sentence: summary.slice(0, at), fields };
+    }
+  }
+  return { sentence: summary };
+}
 
 /**
  * What a notice is headed with.

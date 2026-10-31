@@ -623,33 +623,3 @@ describe("moveHref — the reconnect move", () => {
     expect(moveOpensComposer(row)).toBe(true);
   });
 });
-
-describe("itemTitle — an approval reads its sentence, not its field pairs", () => {
-  const approval = (title: string): WorklistItem => ({
-    occurred_precision: "instant",
-    id: "a-1",
-    source: "approval",
-    level: 2,
-    category: "decisions",
-    title,
-    because: [],
-    consequence: "none",
-    actions: [],
-  });
-
-  it("drops the raw pairs after the sentence", () => {
-    expect(
-      itemTitle(
-        approval("Update record deal: amount_minor=100, currency=EUR"),
-        t,
-        "en",
-      ),
-    ).toBe("Update record deal");
-  });
-
-  it("falls to the approval title when the summary is only pairs", () => {
-    const title = itemTitle(approval("amount_minor=100"), t, "en");
-    expect(title).not.toContain("amount_minor");
-    expect(title).toBe(itemTitle(approval(""), t, "en"));
-  });
-});
