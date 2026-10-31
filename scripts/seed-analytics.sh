@@ -5,7 +5,7 @@
 # the current quarter, open pipeline of which only part closes this quarter,
 # an input-check backlog of 21 findings on 7 deals, one open deal in a currency
 # with no exchange rate, an import whose won history starts three weeks back,
-# and SDR leads, meetings and tasks.
+# and SDR leads, meetings around the 14-day window, and tasks.
 #
 # An API client, like seed-dev.sh: every record goes through the endpoint that
 # owns it, so it carries its audit and outbox rows. Run it after `make seed-dev`
@@ -466,6 +466,18 @@ for spec in "avery:Avery Holt:Westmere Haulage:held" "blake:Blake Ortiz:Pinecres
   esac
 done
 echo "  OK: $leads leads, $meetings meetings held and those leads qualified, one booked, two call-back tasks"
+
+# Booked meetings on both sides of the summary's 14-day window: one that
+# already started, two inside, one past the end, and one called off. The
+# integration test pins the exact edges; these show them on a screen.
+edge_lead="$(lead farah "Farah Malik" "Kingsway Removals")"
+edge_links="$(jq -n --arg l "$edge_lead" '[{entity_type:"lead", entity_id:$l}]')"
+for spec in "started:-1:booked" "soon:1:booked" "late:300:booked" "beyond:384:booked" "off:48:canceled"; do
+  IFS=: read -r slug hours status <<<"$spec"
+  activity "meeting-edge-$slug" occurred_at "$(jq -n --arg s "Call with Kingsway Removals ($slug)" --arg at "$(iso_in_hours "$hours")" \
+    --arg st "$status" --argjson l "$edge_links" '{kind:"meeting", subject:$s, occurred_at:$at, meeting_status:$st, links:$l}')" >/dev/null
+done
+echo "  OK: five booked meetings around the 14-day window, two of them inside it"
 
 echo "== seed-analytics: input check =="
 as_admin

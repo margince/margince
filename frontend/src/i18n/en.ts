@@ -7310,8 +7310,7 @@ export const en = {
   "analytics.prospect.weeksByAcceptance":
     "Each handoff counts in the week it was accepted. The last week counts up to now.",
   "analytics.prospect.historyTitle": "How your outcomes developed",
-  "analytics.prospect.historyCaption":
-    "Week by week since {from}. The week under way counts so far.",
+  "analytics.prospect.historyCaption": "Week by week since {from}.",
   "analytics.prospect.blocked": "Recipient cannot act",
   "analytics.prospect.unassigned": "Shared queue",
   "analytics.prospect.returned": "Sent back",

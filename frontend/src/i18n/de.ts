@@ -7302,8 +7302,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jede Übergabe zählt in der Woche, in der sie angenommen wurde. Die letzte Woche zählt bis jetzt.",
   "analytics.prospect.historyTitle":
     "Wie sich deine Ergebnisse entwickelt haben",
-  "analytics.prospect.historyCaption":
-    "Woche für Woche seit {from}. Die laufende Woche zählt bis jetzt.",
+  "analytics.prospect.historyCaption": "Woche für Woche seit {from}.",
   "analytics.prospect.blocked": "Kann nicht mehr handeln",
   "analytics.prospect.unassigned": "Gemeinsame Warteschlange",
   "analytics.prospect.returned": "Zurückgegeben",

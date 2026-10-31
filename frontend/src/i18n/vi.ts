@@ -7112,8 +7112,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.weeksByAcceptance":
     "Mỗi bàn giao được tính vào tuần nó được chấp nhận. Tuần cuối được tính đến hiện tại.",
   "analytics.prospect.historyTitle": "Kết quả của bạn đã thay đổi thế nào",
-  "analytics.prospect.historyCaption":
-    "Theo từng tuần từ {from}. Tuần đang diễn ra được tính đến hiện tại.",
+  "analytics.prospect.historyCaption": "Theo từng tuần từ {from}.",
   "analytics.prospect.blocked": "Bên nhận không thể xử lý",
   "analytics.prospect.unassigned": "Hàng chờ chung",
   "analytics.prospect.returned": "Bị trả lại",
