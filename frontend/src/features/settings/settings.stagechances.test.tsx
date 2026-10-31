@@ -52,7 +52,7 @@ describe("StageChanceLine", () => {
     ).toBeTruthy();
   });
 
-  it("says no recorded deal has closed yet", () => {
+  it("says no recorded deal has closed before today", () => {
     line(
       chances(true, {
         evidence_n: 0,
@@ -62,7 +62,7 @@ describe("StageChanceLine", () => {
     );
     expect(
       screen.getByText(
-        "Typed 90% · No recorded deal from here has closed yet · Forecast uses 90%",
+        "Typed 90% · No recorded deal from here has closed before today · Forecast uses 90%",
       ),
     ).toBeTruthy();
   });

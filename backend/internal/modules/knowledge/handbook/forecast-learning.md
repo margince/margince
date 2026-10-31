@@ -8,7 +8,7 @@ where that probability comes from and how it changes as your deals close.
 ## Each stage starts where you typed it
 
 Each stage starts at the win probability typed on it under **Settings →
-Stages**. With no closed deal from a stage yet, the forecast uses that
+Pipelines**. With no closed deal from a stage yet, the forecast uses that
 probability as it is.
 
 As deals recorded entering a stage close, the forecast moves that stage's
@@ -23,8 +23,12 @@ Deals that entered the stage in the last two years count. A deal still open
 counts as open until today. A stage with many new deals is not read as a stage
 that loses them.
 
-**Settings → Stages** shows this beside each stage, for example "Typed 90% · 40
-recorded deals from here closed, 55% won · Forecast uses 62%".
+The count stops at the start of today. So a deal that closes today counts from
+tomorrow. This keeps a frozen forecast the same when it is worked out again.
+
+**Settings → Pipelines** shows this beside each stage, for example "Typed 90% · 40
+recorded deals from here closed, 55% won · Forecast uses 62%". A stage with none
+says "No recorded deal from here has closed before today".
 
 The weighted figures in reports, on the pipeline and in a company's account
 roll-up count each deal at this same probability.
@@ -36,7 +40,8 @@ The forecast marks four risks on an open deal:
 - the close date moved more than twice in 90 days;
 - no next step is written down;
 - the customer has gone quiet, with no reply for some days;
-- the deal has been in its stage longer than nine of every 10 won deals were.
+- the deal has been in its stage longer than nine of every 10 won deals were,
+  and for at least one day.
 
 A risk is shown at once. It changes a deal's weight only later. First, frozen
 forecasts of your own installation must close. They must show what the risk did
@@ -45,9 +50,15 @@ risks, only the one with the most effect counts.
 
 ## See it per deal
 
-**Deals behind the weighted figure**, under the forecast's answer, lists each
-open deal. It shows the probability typed on its stage and the closed deals
-behind it. It shows the probability used, any risk, and the weighted amount.
+**Deals behind the weighted figure**, under the forecast's answer, states the
+weighted figure. It lists each open deal. It shows the probability typed on its
+stage and the closed deals behind it. It shows the probability used, any risk,
+and the weighted amount.
+
+With **Show individual performance** off, the list holds only your own deals,
+but the weighted figure still counts your colleagues' deals. The panel says so.
+A shared frozen forecast says the same in its CSV file, in the column
+`contributions_limited`.
 
 ## The range beside the landing
 
@@ -66,13 +77,15 @@ figure is worked out in a different way, so it can sit outside the range. While
 the forecast corrects itself, a stage with few closed deals has a probability
 the forecast is not so sure of. That makes the range wider.
 
-On both cards, **Evidence** says what the range rests on. On the forecast,
+On both cards, **Evidence** says what the range rests on. The card's other
+line, such as the won and still-to-come amounts, moves there too. On the forecast,
 **Open** on the **Landing** card goes to **Deals behind the weighted figure**.
 That list holds the deals the range was built from, each with its probability. A frozen
 forecast keeps the range it showed that day.
 
 ## Switch it off
 
-An admin can switch all of this off under **Settings → Installation →
+An admin can switch all of this off under **Settings → Company profile →
 Forecast**, with **Let the forecast correct itself**. Off, every deal counts at
-the probability typed on its stage, as it did before.
+the probability typed on its stage, as it did before. The forecast still shows a
+range, built from the typed probabilities.

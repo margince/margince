@@ -931,7 +931,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.selfCorrectingOff":
     "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đã nhập cho giai đoạn, như trước đây.",
   "stage.chance.noEvidence":
-    "Đã nhập {typed} · Chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
+    "Đã nhập {typed} · Trước hôm nay chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
   "stage.chance.off": "Dự báo dùng {typed} đã nhập: tự điều chỉnh đang tắt",
   "forecast.deals.title": "Các giao dịch tạo nên con số có trọng số",
   "forecast.deals.open": "Xem từng giao dịch đang mở và tỷ lệ của nó",
@@ -949,6 +949,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
   "forecast.deals.recorded_other": "{count} kết quả đã ghi nhận",
   "forecast.deals.recorded_one": "{count} kết quả đã ghi nhận",
+  "forecast.deals.recordedNone": "chưa có kết quả ghi nhận trước hôm nay",
+  "forecast.deals.total_other":
+    "Có trọng số {amount} từ {count} giao dịch đang mở",
+  "forecast.deals.total_one":
+    "Có trọng số {amount} từ {count} giao dịch đang mở",
+  "forecast.deals.totalLimited":
+    "Có trọng số {amount}, gồm cả giao dịch của đồng nghiệp",
   "forecast.deals.afterRisk": "{percent} sau rủi ro",
   "forecast.deals.colDeal": "Giao dịch",
   "forecast.deals.colSignals": "Tín hiệu rủi ro",
@@ -962,15 +969,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.stuckDays_one": "Đứng yên {count} ngày ở giai đoạn này",
   "forecast.signal.closeMoved_one": "Ngày chốt đã dời {count} lần",
   "forecast.signal.noReply_one": "Không có phản hồi trong {count} ngày",
-  "forecast.signal.closesNoMeeting_one":
-    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.signal.closesNoStep_one":
+    "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
   "forecast.deals.limited":
     "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
-  "forecast.signal.closesNoMeeting_other":
-    "Chốt sau {count} ngày, chưa có cuộc họp",
-  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa có cuộc họp",
-  "forecast.signal.closesToday": "Chốt hôm nay, chưa có cuộc họp",
+  "forecast.signal.closesNoStep_other":
+    "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
+  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa đặt bước tiếp theo",
+  "forecast.signal.closesToday": "Chốt hôm nay, chưa đặt bước tiếp theo",
   "forecast.signal.noReply_other": "Không có phản hồi trong {count} ngày",
   "forecast.signal.closeMoved_other": "Ngày chốt đã dời {count} lần",
   "forecast.signal.closePassed": "Đã quá ngày chốt",
