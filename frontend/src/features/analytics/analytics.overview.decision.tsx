@@ -64,8 +64,8 @@ export function DecisionSummary({
           ))}
         </ul>
         <Composition evaluation={evaluation} />
+        <ModelledFinish evaluation={evaluation} />
       </PanelBody>
-      <ModelledFinish evaluation={evaluation} />
     </Panel>
   );
 }
