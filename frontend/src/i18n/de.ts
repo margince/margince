@@ -858,6 +858,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
     "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
+  "approval.preview.needsWiderSight":
+    "Diese Änderung betrifft Datensätze, die du nicht öffnen kannst. Entscheiden muss jemand, der sie sehen kann.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, Zeile {line} ({key})",
   "approval.import.create": "Neuen Datensatz erstellen",

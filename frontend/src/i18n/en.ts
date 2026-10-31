@@ -814,6 +814,8 @@ export const en = {
     "The full change cannot be shown. Request a new proposal before approving.",
   "approval.preview.unavailable":
     "Approval context is unavailable. Reload or request a new proposal.",
+  "approval.preview.needsWiderSight":
+    "This change touches records you cannot open. A colleague who can see them must decide it.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, row {line} ({key})",
   "approval.import.create": "Create a new record",
