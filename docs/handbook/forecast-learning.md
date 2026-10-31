@@ -13,7 +13,7 @@ probability as it is.
 
 As deals recorded entering a stage close, the forecast moves that stage's
 probability to match how they ended. It moves a little at a time. The typed
-probability counts as 20 closed deals. So 20 closed deals weigh as much as what
+probability counts as 20 closed deals. So 20 closed deals count as much as what
 you typed, and 200 mostly replace it.
 
 Only stage moves made in Margince count. A move an import brought in counts for
