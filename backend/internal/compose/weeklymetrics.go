@@ -14,7 +14,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -64,7 +66,7 @@ func (weeklyNumericEvaluator) Measure(ctx context.Context, tx pgx.Tx, kind strin
 		} else {
 			out.Held = len(periodFacts)
 			out.Summary.MeetingsCoverage = metric.Coverage
-			out.WithNextStep, err = weeklyConfirmedFollowup(ctx, tx, periodFacts, end)
+			out.WithNextStep, err = weeklyConfirmedFollowup(ctx, tx, periodFacts, end, at)
 			if err != nil {
 				return out, err
 			}
@@ -73,7 +75,9 @@ func (weeklyNumericEvaluator) Measure(ctx context.Context, tx pgx.Tx, kind strin
 	return out, nil
 }
 
-func weeklyConfirmedFollowup(ctx context.Context, tx pgx.Tx, facts []reporting.Fact, end time.Time) (int, error) {
+func weeklyConfirmedFollowup(
+	ctx context.Context, tx pgx.Tx, facts []reporting.Fact, end, at time.Time,
+) (int, error) {
 	if len(facts) == 0 {
 		return 0, nil
 	}
@@ -89,7 +93,16 @@ func weeklyConfirmedFollowup(ctx context.Context, tx pgx.Tx, facts []reporting.F
 	if visible == "" {
 		visible = sqlUnnarrowed
 	}
-	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task JOIN activity meeting ON meeting.id=task.source_activity_id WHERE task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND " + weekly.NextStepTaskSQL("task", "meeting") + " AND task.created_at<" + b.add(end) + " AND " + visible
+	// The meeting as its history stood, so a follow-up recorded when the
+	// meeting was held still counts after the meeting is redated. The facts
+	// above were placed by the same reader.
+	transition := storekit.MeetingHeldAsOfSQL("meeting", b.add(at))
+	began := occurredday.StartAtSQL(transition.Start, transition.Precision)
+	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task" +
+		" JOIN activity meeting ON meeting.id=task.source_activity_id " + transition.Join +
+		" WHERE task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND " +
+		weekly.NextStepTaskAtSQL("task", "meeting", began) +
+		" AND task.created_at<" + b.add(end) + " AND " + visible
 	var count int
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&count)
 	return count, err
