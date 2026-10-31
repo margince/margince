@@ -38,10 +38,13 @@ type PreviewReading struct {
 	Effects []PreviewEffect
 }
 
-const previewStateReady = "ready"
+const (
+	previewStateReady = "ready"
+	previewFieldBody  = "body"
+)
 
 // previewBodyFields are details the card shows as a message body, not a line.
-var previewBodyFields = []string{"body", "html_body", "signature_text", "signature_html"}
+var previewBodyFields = []string{previewFieldBody, "html_body", "signature_text", "signature_html"}
 
 // PreviewWithholdsPlan reports a preview that shows nothing of the plan, as
 // the card shows nothing of it. Whatever reads the plan elsewhere withholds it too.
