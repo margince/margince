@@ -229,3 +229,25 @@ func TestASharedSnapshotSaysWhenItsExportHoldsOnlyTheReadersOwnDeals(t *testing.
 		}
 	}
 }
+
+// A reader who owns none of the frozen deals gets one summary row, so the file
+// still says the headline counts deals withheld from them.
+func TestASharedSnapshotWithEveryRowWithheldExportsOneSummaryRow(t *testing.T) {
+	e := setupForecast(t)
+	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
+	for _, owner := range append([]ids.UUID{e.Rep3}, members...) {
+		e.seedDealClosingWithin(t, "Theirs", &owner, 250_000)
+	}
+	token := e.issueFrozenShare(t)
+	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
+	e.showIndividualPerformance(t, false)
+
+	view, rows := e.openSharedSnapshot(reader, t, token)
+	if got := view.Readings.ContributionsLimited; got == nil || !*got {
+		t.Errorf("the view says contributions_limited %v, want true", got)
+	}
+	if len(rows) != 1 || rows[0]["deal_id"] != "" || rows[0]["deal_name"] != "" ||
+		rows[0]["contributions_limited"] != "true" || rows[0]["range_high_minor"] == "" {
+		t.Fatalf("the export rows are %v, want one summary row with no deal, the range and contributions_limited true", rows)
+	}
+}

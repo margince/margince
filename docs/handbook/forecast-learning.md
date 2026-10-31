@@ -56,9 +56,10 @@ stage and the closed deals behind it. It shows the probability used, any risk,
 and the weighted amount.
 
 With **Show individual performance** off, the list holds only your own deals,
-but the weighted figure still counts your colleagues' deals. The panel says so.
-A shared frozen forecast says the same in its CSV file, in the column
-`contributions_limited`.
+but the weighted figure still counts your colleagues' deals. When that leaves a
+deal out, the panel says so. A shared frozen forecast says the same in its CSV
+file, in the column `contributions_limited`. If you own none of its deals, the
+file holds one row that says only that.
 
 ## The range beside the landing
 

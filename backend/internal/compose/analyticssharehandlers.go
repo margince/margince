@@ -437,11 +437,36 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
 		}
 	}
+	if frozen.Limited && len(frozen.Rows) == 0 {
+		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high)); err != nil {
+			return nil, fmt.Errorf("compose: writing the export's summary row: %w", err)
+		}
+	}
 	out.Flush()
 	if err := out.Error(); err != nil {
 		return nil, fmt.Errorf("compose: finishing the export: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// shareSummaryRecord is the one row a file gets when every row was withheld
+// from its reader. A header alone would not say the headline counts deals.
+// Its deal cells are empty, and only the headline's own cells are filled.
+func shareSummaryRecord(selfCorrecting *bool, low, high *int64) []string {
+	record := make([]string, len(shareExportColumns))
+	for index, column := range shareExportColumns {
+		switch column {
+		case "self_correcting":
+			record[index] = csvCellPtr(selfCorrecting)
+		case "range_low_minor":
+			record[index] = csvCellPtr(low)
+		case "range_high_minor":
+			record[index] = csvCellPtr(high)
+		case "contributions_limited":
+			record[index] = csvCell(true)
+		}
+	}
+	return record
 }
 
 // csvCellPtr renders an optional value, with nil as an EMPTY cell rather than
