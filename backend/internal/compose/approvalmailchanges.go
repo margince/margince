@@ -4,8 +4,8 @@
 package compose
 
 // What an approval email says about a proposed change. The record is the
-// heading, then the proposal, each changed field as before and after, and why
-// the reader is asked. Every value comes from the card's preview, which is read
+// heading, then the proposal and each changed field as before and after. Each
+// operand and further effect follow, then why the reader is asked. Every value comes from the card's preview, which is read
 // as the recipient, so the email names nothing the card would not show them.
 
 import (
@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// mailChangeLimit bounds the changes one email lists; the card shows the rest.
+// mailChangeLimit bounds the fields one email lists; the card shows the rest.
 const mailChangeLimit = 8
 
 // The preview value kinds the email renders in a form of its own.
@@ -30,7 +30,9 @@ const (
 	previewValueExecution   = "execution"
 )
 
-// changeMailFacts is the facts for an approval whose preview is ready.
+// changeMailFacts is the facts for an approval with a preview, as the card
+// reads it: each changed field, operand and further effect. A preview that is
+// not ready has only the card's sentence for its state.
 func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approvalMailFacts {
 	facts := approvalMailFacts{Rich: true}
 	if approval.TargetLabel != nil {
@@ -40,12 +42,22 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 		facts.add(words.MailProposal, *approval.Summary)
 	}
 	lang := textlang.Lang(words.Language)
+	reading := agents.ReadPreview(lang, approval.Preview)
+	if reading.Note != "" {
+		facts.add(words.MailPreviewStatus, reading.Note)
+		return facts
+	}
 	var shown []approvalMailLine
-	for _, change := range approval.Preview.Changes {
+	for _, change := range reading.Changes {
 		before, beforeShown := mailPreviewValue(change.Before, words)
 		after, afterShown := mailPreviewValue(change.After, words)
 		if beforeShown && afterShown {
-			shown = append(shown, approvalMailLine{Label: agents.FieldLabel(lang, change.Field), Value: before + " → " + after})
+			shown = append(shown, approvalMailLine{Label: change.Label, Value: before + " → " + after})
+		}
+	}
+	for _, detail := range reading.Details {
+		if value, ok := mailPreviewValue(detail.Value, words); ok {
+			shown = append(shown, approvalMailLine{Label: detail.Label, Value: value})
 		}
 	}
 	for i, line := range shown {
@@ -54,6 +66,9 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 			break
 		}
 		facts.add(line.Label, line.Value)
+	}
+	for _, effect := range reading.Effects {
+		facts.add(words.MailAlsoChanges, effect.Label)
 	}
 	facts.add(words.MailWhyYou, reviewerSentence(approval.Preview.ReviewerReason, words))
 	return facts
