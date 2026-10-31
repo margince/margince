@@ -96,7 +96,9 @@ Margince tells one colleague about each approval: the one it is for. That is the
 
 A promise read from mail or a meeting and **Add contact from mail** are the exception. Only the colleague who made the promise, or whose mailbox the sender wrote to, is told, and only they may answer it. If they cannot be asked, nobody is.
 
-The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, then the other details the card lists, up to eight lines in all. Each further change the card lists under **Also changes** follows, in the card's words. It also says why you are asked. It leaves out any value you may not see. If the change touches a record you cannot open, the email shows none of the plan and says, as the card does, that a colleague who can see it must decide.
+The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and after the change. The other details the card lists follow, up to eight lines in all. Each further change the card lists under **Also changes** follows, in the card's words. It also says why you are asked.
+
+The email leaves out any value you may not see. If the change touches a record you cannot open, the email shows none of the plan. Like the card, it says a colleague who can see it must decide.
 
 The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
 Also called: approval email, decision needed, who gets notified, approval notice.

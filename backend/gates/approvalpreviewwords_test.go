@@ -61,7 +61,7 @@ func cardCodeMap(t *testing.T, source, open string) map[string]string {
 	return out
 }
 
-// cardPreviewKeys is every effect and state the card words, with its catalog key.
+// cardPreviewKeys reads the effects and states the card words, with their catalog keys.
 func cardPreviewKeys(t *testing.T, preview string) (effects, states map[string]string) {
 	t.Helper()
 	effects = cardCodeMap(t, preview, "const PREVIEW_EFFECT_LABELS")
