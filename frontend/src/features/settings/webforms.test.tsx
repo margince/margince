@@ -55,6 +55,7 @@ const contactForm: WebForm = {
   created_at: "2026-09-01T09:00:00Z",
   updated_at: "2026-09-01T09:00:00Z",
   archived_at: null,
+  last_post_at: null,
 };
 
 const budgetField: CustomField = {
@@ -108,7 +109,7 @@ type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 // write is recorded so a case can assert what was sent.
 function backendFor(
   allow: GrantSpec,
-  forms: WebForm[],
+  forms: readonly (WebForm | Omit<WebForm, "last_post_at">)[],
   writes: Record<string, () => Response> = {},
 ) {
   const sent: Sent[] = [];
@@ -256,6 +257,27 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     expect(await screen.findByText("Jane Doe")).toBeTruthy();
     expect(screen.getByText(/Leads go to/)).toBeTruthy();
+  });
+
+  it("says when each form last landed a post, or that none has yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        { ...contactForm, last_post_at: "2026-10-30T09:00:00Z" },
+        { ...contactForm, id: "wf-2", name: "Demo page", last_post_at: null },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(await screen.findByText(/^Last post /)).toBeTruthy();
+    expect(screen.getByText("No post recorded yet")).toBeTruthy();
+  });
+
+  it("says nothing about posts when the server does not report them", async () => {
+    const { last_post_at: _, ...fromAnOlderServer } = contactForm;
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [fromAnOlderServer]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Contact page")).toBeTruthy();
+    expect(screen.queryByText(/^Last post |^No post recorded yet$/)).toBeNull();
   });
 
   it("says leads arrive unassigned once the form's owner left", async () => {

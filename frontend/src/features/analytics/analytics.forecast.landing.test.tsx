@@ -226,8 +226,37 @@ describe("the range beside the landing", () => {
     expect(line.textContent).toBe(
       `8 in 10 outcomes between ${formatMoneyCompact(610_00, "EUR", "en")} and ${formatMoneyCompact(880_00, "EUR", "en")}`,
     );
-    // The sum the landing was made of keeps its own line.
-    expect(screen.getByText(/^Projected ·/)).toBeTruthy();
+  });
+
+  it("gives the range the whole two-line detail, so the clamp cannot cut it", () => {
+    const { container } = draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        range={range}
+      />,
+    );
+
+    const detail = container.querySelector(".stat-card-detail");
+    expect(detail?.textContent).toMatch(/^8 in 10 outcomes between .+$/);
+    expect(detail?.textContent).not.toContain("Projected");
+  });
+
+  it("moves the sum the landing was made of into the receipt beside the range", async () => {
+    const user = userEvent.setup();
+    draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        range={range}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(await screen.findByText(/^Projected ·/)).toBeTruthy();
   });
 
   it("names the chances in use as the range's basis in the receipt", async () => {

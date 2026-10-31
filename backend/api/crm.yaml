@@ -29840,8 +29840,17 @@ paths:
         was summed from. A file whose rows and whose total disagree is worse than no file:
         somebody reconciles it by hand and concludes the product is wrong about one of them.
 
-        A live share exports the rows as they stand; a snapshot share exports the frozen
-        contributions. Refusals are the same 404 the read is, for the same reason.
+        One exception: while the installation has individual performance switched off, the
+        rows are the caller's own deals and the headline still covers the whole team. The
+        shared view's `contributions_limited` and the file's `contributions_limited` column
+        both say `true` when at least one row was withheld, so the gap is stated rather than
+        left to reconcile. When every row was withheld, the file holds one summary row: its
+        deal cells are empty, and it carries `self_correcting`, the range and
+        `contributions_limited`.
+
+        A snapshot share exports the frozen contributions. A live share has no export and
+        answers 404, because the forecast's own export already serves its rows to a signed-in
+        caller. Refusals are the same 404 the read is, for the same reason.
 
         Text cells beginning with a formula lead are prefixed with a quote, so a spreadsheet
         opening the file reads them as the text the record holds rather than evaluating them.
@@ -34722,7 +34731,7 @@ components:
       description: >-
         A website form (`web_form`): a public intake address that turns a submission into a lead.
         No secret is ever returned here; `secret_configured` says one is stored.
-      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -34749,6 +34758,12 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        last_post_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the form last landed a post, stamped at most once a minute. Null until the
+            first one since the time was tracked. A post the spam checks drop is not counted.
 
     WebFormCreated:
       allOf:
@@ -58021,7 +58036,9 @@ components:
           type: boolean
           description: >-
             True when `contributions` holds only the caller's own deals because the installation
-            switched off individual performance. The totals still include colleagues' deals.
+            switched off individual performance and at least one row was withheld. The totals still
+            include colleagues' deals. On a shared snapshot it says the same of the rows its CSV
+            export holds.
         contributions:
           type: array
           items: { $ref: '#/components/schemas/ForecastContribution' }

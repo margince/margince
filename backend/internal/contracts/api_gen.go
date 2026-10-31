@@ -42914,7 +42914,7 @@ type ForecastReadings struct {
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
 
-	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
 	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
 	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
 
@@ -58334,6 +58334,9 @@ type WebForm struct {
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
 
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
+
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
@@ -58392,6 +58395,9 @@ type WebFormCreated struct {
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
+
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
 
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`

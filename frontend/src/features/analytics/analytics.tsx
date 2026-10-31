@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -32,7 +33,11 @@ import { MyOutcomesView } from "./analytics.outcomes";
 import { AnalyticsOverview } from "./analytics.overview";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { SETUP_LABEL, useAnalyticsSections } from "./analytics.tabs";
+import {
+  SETUP_LABEL,
+  type SetupSection,
+  useAnalyticsSections,
+} from "./analytics.tabs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
@@ -122,35 +127,7 @@ export function AnalyticsScreen({
         }}
         label={t("analytics.sections")}
         trailing={
-          library || setup.length > 0 ? (
-            <>
-              {library && (
-                <Button
-                  variant="ghost"
-                  onClick={() => openAnalyticsSection(library)}
-                >
-                  {t(
-                    library === "reports"
-                      ? "analytics.sectionReports"
-                      : "analytics.sectionQuestions",
-                  )}
-                </Button>
-              )}
-              {setup.length > 0 && (
-                <Popover label={t("analytics.setup")}>
-                  {setup.map((candidate) => (
-                    <Button
-                      key={candidate}
-                      variant="link"
-                      onClick={() => openAnalyticsSection(candidate)}
-                    >
-                      {t(SETUP_LABEL[candidate])}
-                    </Button>
-                  ))}
-                </Popover>
-              )}
-            </>
-          ) : undefined
+          <TabVerbs library={library} setup={setup} section={section} />
         }
       />
       <div className="analytics-body">
@@ -173,6 +150,60 @@ export function AnalyticsScreen({
           )}
         </ReviewActionsContext>
       </div>
+    </div>
+  );
+}
+
+// Reports and Setup at the tab row's end. Reports opens a page, so it carries
+// no caret and marks itself while that page is open; Setup is a menu.
+function TabVerbs({
+  library,
+  setup,
+  section,
+}: Readonly<{
+  library: Section | undefined;
+  setup: readonly SetupSection[];
+  section: Section;
+}>) {
+  const t = useT();
+  if (!library && setup.length === 0) return null;
+  return (
+    <div className="analytics-tab-verbs">
+      {library && (
+        <Button
+          variant="ghost"
+          aria-current={section === library ? "page" : undefined}
+          onClick={() => openAnalyticsSection(library)}
+        >
+          <FileText aria-hidden="true" />
+          {t(
+            library === "reports"
+              ? "analytics.sectionReports"
+              : "analytics.sectionQuestions",
+          )}
+        </Button>
+      )}
+      {setup.length > 0 && (
+        <Popover
+          variant="ghost"
+          label={
+            <>
+              {t("analytics.setup")}
+              <ChevronDown aria-hidden="true" />
+            </>
+          }
+        >
+          {setup.map((candidate) => (
+            <Button
+              key={candidate}
+              variant="link"
+              onClick={() => openAnalyticsSection(candidate)}
+            >
+              {t(SETUP_LABEL[candidate])}
+            </Button>
+          ))}
+        </Popover>
+      )}
     </div>
   );
 }

@@ -954,7 +954,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.selfCorrectingOff":
     "Die Prognose gewichtet jeden offenen Deal wie bisher mit der in seiner Phase eingetragenen Chance.",
   "stage.chance.noEvidence":
-    "Eingetragen {typed} · Noch kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
+    "Eingetragen {typed} · Vor heute kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
   "stage.chance.off":
     "Prognose nutzt die eingetragenen {typed}: Selbstkorrektur ist aus",
   "forecast.deals.title": "Deals hinter dem gewichteten Wert",
@@ -973,6 +973,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingetragen {typed} · {count} erfasster Deal von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
   "forecast.deals.recorded_other": "{count} erfasste Ergebnisse",
   "forecast.deals.recorded_one": "{count} erfasstes Ergebnis",
+  "forecast.deals.recordedNone": "kein erfasstes Ergebnis vor heute",
+  "forecast.deals.total_other": "Gewichtet {amount} aus {count} offenen Deals",
+  "forecast.deals.total_one": "Gewichtet {amount} aus {count} offenen Deal",
+  "forecast.deals.totalLimited":
+    "Gewichtet {amount}, Deals anderer Teammitglieder eingeschlossen",
   "forecast.deals.afterRisk": "{percent} nach Risiko",
   "forecast.deals.colDeal": "Deal",
   "forecast.deals.colSignals": "Risikosignale",
@@ -985,12 +990,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
   "forecast.deals.limited":
     "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
-  "forecast.signal.closesNoMeeting_other":
-    "Schließt in {count} Tagen, kein Termin geplant",
-  "forecast.signal.closesNoMeeting_one":
-    "Schließt in {count} Tag, kein Termin geplant",
-  "forecast.signal.closesTomorrow": "Schließt morgen, kein Termin geplant",
-  "forecast.signal.closesToday": "Schließt heute, kein Termin geplant",
+  "forecast.signal.closesNoStep_other":
+    "Schließt in {count} Tagen, kein nächster Schritt geplant",
+  "forecast.signal.closesNoStep_one":
+    "Schließt in {count} Tag, kein nächster Schritt geplant",
+  "forecast.signal.closesTomorrow":
+    "Schließt morgen, kein nächster Schritt geplant",
+  "forecast.signal.closesToday":
+    "Schließt heute, kein nächster Schritt geplant",
   "forecast.signal.noReply_other": "Seit {count} Tagen keine Antwort",
   "forecast.signal.noReply_one": "Seit {count} Tag keine Antwort",
   "forecast.signal.closeMoved_other": "Abschlussdatum {count}-mal verschoben",
@@ -7208,8 +7215,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
   "analytics.overview.finishBasis":
     "Ende dieses Geschäftsquartals, aus {basis}",
-  "analytics.overview.noTargetRate":
-    "Kein Umsatzziel gesetzt, daher steht hier die Gewinnquote",
+  "analytics.overview.winRateBasis":
+    "Von den in diesem Zeitraum abgeschlossenen Deals",
+  "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
   "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",
@@ -14932,6 +14940,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Signierter Webhook von Typeform",
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
+  "webForms.row.lastPost": "Letzte Sendung {when}",
+  "webForms.row.noPost": "Noch keine Sendung erfasst",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",

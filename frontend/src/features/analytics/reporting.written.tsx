@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Panel, PanelBody } from "../../design-system/panel";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -236,11 +237,19 @@ export function prospectingSummary(
   ].filter((sentence): sentence is string => sentence !== null);
 }
 
+// Titled, the sentences stand in their own panel beside the page's lists.
 export function OpeningSummary({
   sentences,
-}: Readonly<{ sentences: readonly string[] }>) {
+  title,
+}: Readonly<{ sentences: readonly string[]; title?: string }>) {
   if (sentences.length === 0) return null;
-  return <p className="reporting-written">{sentences.join(" ")}</p>;
+  const words = <p className="reporting-written">{sentences.join(" ")}</p>;
+  if (!title) return words;
+  return (
+    <Panel title={title}>
+      <PanelBody>{words}</PanelBody>
+    </Panel>
+  );
 }
 
 // A figure the reader sees in full. Part of one would be stated as the whole.

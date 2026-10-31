@@ -31,15 +31,15 @@ describe("signalSentence", () => {
     [{ code: "no_next_step" }, "No next step booked"],
     [
       { code: "no_next_step", closes_in_days: 0 },
-      "Closes today, no meeting booked",
+      "Closes today, no next step booked",
     ],
     [
       { code: "no_next_step", closes_in_days: 1 },
-      "Closes tomorrow, no meeting booked",
+      "Closes tomorrow, no next step booked",
     ],
     [
       { code: "no_next_step", closes_in_days: 5 },
-      "Closes in 5 days, no meeting booked",
+      "Closes in 5 days, no next step booked",
     ],
   ] satisfies [RiskSignal, string][])("words %j as %s", (signal, want) => {
     expect(sentence(signal)).toBe(want);
