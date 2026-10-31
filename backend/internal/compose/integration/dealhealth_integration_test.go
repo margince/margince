@@ -228,21 +228,8 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, won := DealFixture(t, e)
-	reason := "purchase_order"
-	for range 10 {
-		d := e.SeedDeal(t, "Won here", pipeline, open, nil)
-		if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](d), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := owner.Exec(context.Background(), `UPDATE deal_stage_history SET provenance = NULL,
-			changed_at = changed_at - CASE WHEN from_stage_id IS NULL THEN interval '4 days' ELSE interval '0' END
-			WHERE deal_id = $1`, d); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	run := SeedIDRow(t, owner, `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
-		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
+	seedFourDayWins(t, e, owner, pipeline, open, won)
+	run := SeedIDRow(t, owner, healthImportRunSQL)
 	objects := maps.Clone(AdminPerms.Objects)
 	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 	importer := e.As(e.AdminUser, nil, principal.Permissions{RoleKeys: AdminPerms.RoleKeys, Objects: objects, RowScope: principal.RowScopeAll})
@@ -258,12 +245,85 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 		}
 	}
 
-	subject := e.SeedDeal(t, "Paced", pipeline, open, nil)
+	if days := expectedDaysIn(t, e, pipeline, open); math.Abs(days-4) > 0.01 {
+		t.Fatalf("expected days = %f, want the four days of the wins moved here, not the imported ones", days)
+	}
+}
+
+// Two moves can share an instant. The one written first ends the stint before
+// them, whatever their ids say: here an imported move, so each one-day stint
+// ending in such a pair is left out and the four-day pace holds.
+func TestAStintEndsAtTheMoveWrittenFirstInItsInstant(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	pipeline, open, won := DealFixture(t, e)
+	seedFourDayWins(t, e, owner, pipeline, open, won)
+	run := SeedIDRow(t, owner, healthImportRunSQL)
+	reason := "purchase_order"
+	for range 11 {
+		d := e.SeedDeal(t, "Won in one instant", pipeline, open, nil)
+		if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](d), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := owner.Exec(ctx, `DELETE FROM deal_stage_history WHERE deal_id = $1`, d); err != nil {
+			t.Fatal(err)
+		}
+		left := clocktest.Now(t).Add(-time.Hour)
+		earlierID, laterID := ids.NewV7(), ids.NewV7()
+		if earlierID.String() > laterID.String() {
+			earlierID, laterID = laterID, earlierID
+		}
+		for _, move := range []struct {
+			id         ids.UUID
+			stage      ids.StageID
+			at         time.Time
+			provenance string
+			run        *ids.UUID
+		}{
+			{ids.NewV7(), open, left.Add(-24 * time.Hour), "recorded", nil},
+			{laterID, won, left, "imported", &run},
+			{earlierID, won, left, "recorded", nil},
+		} {
+			if _, err := owner.Exec(ctx, `INSERT INTO deal_stage_history (id, deal_id, to_stage_id, changed_by, changed_at, provenance, import_run_id)
+				VALUES ($1, $2, $3, 'human:x', $4, $5, $6)`, move.id, d, move.stage, move.at, move.provenance, move.run); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if days := expectedDaysIn(t, e, pipeline, open); math.Abs(days-4) > 0.01 {
+		t.Fatalf("expected days = %f, want four: a one-day stint that ends at an imported move does not count", days)
+	}
+}
+
+const healthImportRunSQL = `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
+	VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`
+
+// seedFourDayWins wins ten deals that spent four days in the open stage, with
+// moves saved before provenance was kept.
+func seedFourDayWins(t *testing.T, e *Env, owner *pgx.Conn, pipeline ids.PipelineID, open, won ids.StageID) {
+	t.Helper()
+	reason := "purchase_order"
+	for range 10 {
+		d := e.SeedDeal(t, "Won here", pipeline, open, nil)
+		if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](d), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := owner.Exec(context.Background(), `UPDATE deal_stage_history SET provenance = NULL,
+			changed_at = changed_at - CASE WHEN from_stage_id IS NULL THEN interval '4 days' ELSE interval '0' END
+			WHERE deal_id = $1`, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// expectedDaysIn is the pace a fresh deal in stage is measured against.
+func expectedDaysIn(t *testing.T, e *Env, pipeline ids.PipelineID, stage ids.StageID) float64 {
+	t.Helper()
+	subject := e.SeedDeal(t, "Paced", pipeline, stage, nil)
 	got, err := e.Deals.DealHealth(e.Admin(), ids.From[ids.DealKind](subject), clocktest.Now(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if days := got.Evidence.ExpectedDaysInStage; math.Abs(days-4) > 0.01 {
-		t.Fatalf("expected days = %f, want the four days of the wins moved here, not the imported ones", days)
-	}
+	return got.Evidence.ExpectedDaysInStage
 }

@@ -386,9 +386,10 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Rep1's sixth entry stayed put by hand and only an import moved it on.
 	want := map[ids.UUID]weekly.FunnelDeviation{
-		e.Rep1: {RepEntered: 5, RepConverted: 1, TeamEntered: 10, TeamConverted: 5, DeviationBp: -3000},
-		e.Rep2: {RepEntered: 5, RepConverted: 4, TeamEntered: 10, TeamConverted: 5, DeviationBp: 3000},
+		e.Rep1: {RepEntered: 6, RepConverted: 1, TeamEntered: 11, TeamConverted: 5, DeviationBp: -2879},
+		e.Rep2: {RepEntered: 5, RepConverted: 4, TeamEntered: 11, TeamConverted: 5, DeviationBp: 3455},
 	}
 	for _, rep := range read.Reps {
 		if len(rep.Funnel) != 1 {
@@ -495,20 +496,43 @@ func seedFunnel(
 	}
 }
 
-// seedImportedFunnelMoves gives Rep1 an entry an import brought in, and an
-// entry an import then moved on. Neither shows how Rep1 sells, so neither
-// counts on either side.
+// seedImportedFunnelMoves gives Rep1 four deals an import touched:
+//   - an entry an import brought in, which is no entry;
+//   - an entry an import moved on next, which is left out;
+//   - an entry whose next move was made by hand in the same instant as an
+//     imported move written before it, so the imported move came next and the
+//     entry is left out, whatever the two ids say;
+//   - an entry a hand move kept in its stage and an import then moved on, which
+//     enters but does not convert.
 func seedImportedFunnelMoves(t *testing.T, e *teamEnv, pipeline ids.PipelineID, stage, next ids.UUID) {
 	t.Helper()
 	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
 		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
 	at := teamClock.AddDate(0, 0, -30)
-	move := `INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, changed_at,
+	move := `INSERT INTO deal_stage_history (id, deal_id, from_stage_id, to_stage_id, changed_by, changed_at,
 		owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance, import_run_id)
-		VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open', $7, $8)`
-	imported := e.SeedDeal(t, "Imported entry", pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
-	e.WsExec(t, move, imported, nil, stage, at, e.Rep1, pipeline, "imported", run)
-	movedOn := e.SeedDeal(t, "Moved on by an import", pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
-	e.WsExec(t, move, movedOn, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
-	e.WsExec(t, move, movedOn, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+		VALUES ($1, $2, $3, $4, 'human:x', $5, $6, $7, 'open', $8, $9)`
+	deal := func(name string) ids.UUID {
+		return e.SeedDeal(t, name, pipeline, ids.From[ids.StageKind](stage), &e.Rep1)
+	}
+	imported := deal("Imported entry")
+	e.WsExec(t, move, ids.NewV7(), imported, nil, stage, at, e.Rep1, pipeline, "imported", run)
+
+	movedOn := deal("Moved on by an import")
+	e.WsExec(t, move, ids.NewV7(), movedOn, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, ids.NewV7(), movedOn, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+
+	sameInstant := deal("Moved twice in one instant")
+	e.WsExec(t, move, ids.NewV7(), sameInstant, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
+	smaller, larger := ids.NewV7(), ids.NewV7()
+	if smaller.String() > larger.String() {
+		smaller, larger = larger, smaller
+	}
+	e.WsExec(t, move, larger, sameInstant, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
+	e.WsExec(t, move, smaller, sameInstant, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "recorded", nil)
+
+	keptThenImported := deal("Kept by hand, moved by an import")
+	e.WsExec(t, move, ids.NewV7(), keptThenImported, nil, stage, at, e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, ids.NewV7(), keptThenImported, stage, stage, at.AddDate(0, 0, 1), e.Rep1, pipeline, "recorded", nil)
+	e.WsExec(t, move, ids.NewV7(), keptThenImported, stage, next, at.AddDate(0, 0, 3), e.Rep1, pipeline, "imported", run)
 }

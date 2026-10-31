@@ -49,7 +49,7 @@ func (f *stageCohortFixture) importer(t *testing.T) context.Context {
 
 // importWon brings in a deal its source already won, through the importer's
 // own door.
-func (f *stageCohortFixture) importWon(t *testing.T, importer context.Context) {
+func (f *stageCohortFixture) importWon(importer context.Context, t *testing.T) {
 	t.Helper()
 	owner := ids.From[ids.UserKind](f.env.Rep1)
 	closed := f.at
@@ -66,7 +66,7 @@ func (f *stageCohortFixture) importWon(t *testing.T, importer context.Context) {
 }
 
 // importMove moves a deal the way a re-import of its row does.
-func (f *stageCohortFixture) importMove(t *testing.T, importer context.Context, deal ids.DealID, to ids.UUID) {
+func (f *stageCohortFixture) importMove(importer context.Context, t *testing.T, deal ids.DealID, to ids.UUID) {
 	t.Helper()
 	err := f.store.Tx(importer, func(tx pgx.Tx) error {
 		_, err := f.store.ImportAdvanceDealTx(importer, tx, deal, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](to)}, nil, deals.CustomColumns{})
@@ -102,9 +102,9 @@ func TestStageConversionLeavesOutImportedMoves(t *testing.T) {
 	for range 5 {
 		f.deal(t, rep1, s0, s1)
 	}
-	f.importWon(t, importer)
+	f.importWon(importer, t)
 	movedOnByImport := f.deal(t, rep1, s0)
-	f.importMove(t, importer, movedOnByImport, s1)
+	f.importMove(importer, t, movedOnByImport, s1)
 	legacyExit := f.deal(t, rep1, s0, s1)
 	f.forgetProvenance(t, legacyExit, &s1)
 
@@ -147,6 +147,33 @@ func TestStageConversionIsPartialWhenAnEntryPredatesProvenance(t *testing.T) {
 	}
 	if metric := result.Metrics[0]; metric.Coverage.Status != reportingPartial {
 		t.Fatalf("stage conversion coverage: %+v, want partial for the moves that may be imports", metric.Coverage)
+	}
+}
+
+// An entry's outcome is its next move before the evaluation instant, so a
+// legacy exit after the window's end still marks the reading partial.
+func TestStageConversionIsPartialWhenALegacyExitFallsAfterTheWindow(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0, s1 := f.stage(0), f.stage(1)
+	start := f.at
+	for range 5 {
+		f.deal(t, f.env.Rep1, s0, s1)
+	}
+	late := f.deal(t, f.env.Rep1, s0)
+	interval := crmcontracts.ReportingWindow{StartAt: start, EndAt: f.at}
+	f.at = f.at.Add(2 * time.Hour)
+	if _, err := f.store.AdvanceDeal(f.writer, late, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](s1)}); err != nil {
+		t.Fatal(err)
+	}
+	f.forgetProvenance(t, late, &s1)
+
+	at := f.at.Add(time.Hour)
+	result := f.evaluate(t, newReportingService(f.env.Pool, func() time.Time { return at }), crmcontracts.ReportingScope{Kind: "workspace"}, interval)
+	if first := cohortRows(t, result)[s0.String()]; first.observations != 6 || first.outcomes[cohortAdvanced] != 6 {
+		t.Fatalf("first stage: %+v, want the late deal advanced by its legacy exit", first)
+	}
+	if metric := result.Metrics[0]; metric.Coverage.Status != reportingPartial {
+		t.Fatalf("stage conversion coverage: %+v, want partial for the legacy exit after the window", metric.Coverage)
 	}
 }
 

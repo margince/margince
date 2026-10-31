@@ -59,9 +59,10 @@ type stageEntries struct {
 // in the window and how many of them later moved on. "Moved on" is a later move
 // to a won stage, or to a later stage of the same pipeline. Stage order is read
 // as configured now: that is the weekly funnel's published meaning, which the
-// Analytics stage cohort does not share. An entry whose next move an import
-// brought in is left out, as the stage cohort leaves it out of its rate: that
-// move shows the source system's history, not the rep's selling.
+// Analytics stage cohort does not share. Moves are read in write order. An
+// imported move shows the source system's history, not the rep's selling: it
+// never converts an entry, and an entry whose next move it is is left out, as
+// the stage cohort leaves it out of its rate.
 var teamFunnelSQL = `
 	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
 	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,
@@ -73,17 +74,19 @@ var teamFunnelSQL = `
 	         SELECT 1 FROM deal_stage_history l
 	           LEFT JOIN stage ls ON ls.id = l.to_stage_id AND ls.pipeline_id = e.pipeline_id
 	          WHERE l.deal_id = e.deal_id
-	            AND (l.changed_at, l.id) > (e.changed_at, e.id) AND l.changed_at < $%[2]d
+	            AND ` + StageMoveOrder("l") + ` > ` + StageMoveOrder("eh") + ` AND l.changed_at < $%[2]d
+	            AND l.provenance IS DISTINCT FROM 'imported'
 	            AND l.pipeline_id_at_change = e.pipeline_id
 	            AND (l.semantic_at_change = 'won' OR ls."position" > s."position")))
 	  FROM entries e
+	  JOIN deal_stage_history eh ON eh.id = e.id
 	  JOIN stage s ON s.id = e.stage_id AND s.pipeline_id = e.pipeline_id
 	  JOIN pipeline p ON p.id = e.pipeline_id
 	 WHERE NOT EXISTS (
 	         SELECT 1 FROM (SELECT x.provenance FROM deal_stage_history x
 	                         WHERE x.deal_id = e.deal_id
-	                           AND (x.changed_at, x.id) > (e.changed_at, e.id) AND x.changed_at < $%[2]d
-	                         ORDER BY x.changed_at, x.id LIMIT 1) nx
+	                           AND ` + StageMoveOrder("x") + ` > ` + StageMoveOrder("eh") + ` AND x.changed_at < $%[2]d
+	                         ORDER BY ` + StageMoveOrder("x") + ` LIMIT 1) nx
 	          WHERE nx.provenance = 'imported')
 	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.pipeline_id, s."position"`
 

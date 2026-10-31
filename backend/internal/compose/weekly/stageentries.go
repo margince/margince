@@ -25,3 +25,10 @@ func StageEntriesSQL(start, end, narrowing string) string {
 	   AND (` + narrowing + `)
 	 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id`
 }
+
+// StageMoveOrder is the order one deal's moves were written in. Two moves can
+// share an instant, and the write sequence orders them; rows written before it
+// was kept fall back to their id. alias is a compile-time literal.
+func StageMoveOrder(alias string) string {
+	return "(" + alias + ".changed_at,COALESCE(" + alias + ".write_seq,0)," + alias + ".id)"
+}

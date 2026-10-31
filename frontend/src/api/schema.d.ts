@@ -49576,7 +49576,7 @@ export interface components {
          * @description One stage where the rep converts differently from the team. Entries and conversions are
          *     attributed to the owner at the time of each move. "Converted" is a later move to a won
          *     stage or to a later stage, compared by the stage order as it was configured when the
-         *     week was assembled.
+         *     week was assembled. Moves an import brought in neither enter nor convert a deal.
          */
         TeamWeeklyFunnelDeviation: {
             /** Format: uuid */

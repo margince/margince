@@ -29,8 +29,10 @@ func reportingHistoryCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	case reportingQualifiedPipelineCreated:
 		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(reportingEarliest(frame)) + " AND h.changed_at<" + b.add(frame.EvaluatedAt) + " AND (h.owner_id_at_change IS NULL OR h.pipeline_id_at_change IS NULL))"
 	case reportingStageConversion:
-		start, end := cohortWindow(frame)
-		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(start) + " AND h.changed_at<" + b.add(end) + " AND (h.semantic_at_change IS NULL OR h.pipeline_id_at_change IS NULL OR h.provenance IS NULL))"
+		// Up to the evaluation instant, not the window's end: an entry's
+		// outcome is its next move before the cutoff, wherever that falls.
+		start, _ := cohortWindow(frame)
+		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(start) + " AND h.changed_at<" + b.add(frame.EvaluatedAt) + " AND (h.semantic_at_change IS NULL OR h.pipeline_id_at_change IS NULL OR h.provenance IS NULL))"
 		reason = reportingCoverageWords.LegacyStageMoves
 	case reportingAcceptedOpportunities:
 		object, alias, from, owner = reportingCreditObject, "t", "sdr_handoff t", "t.submitted_by"
