@@ -7411,6 +7411,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leads, die auf eine Antwort warten, sind für dich verborgen.",
   "analytics.team.unansweredFailed":
     "Leads, die auf eine Antwort warten, konnten nicht gelesen werden.",
+  "analytics.team.unansweredPending":
+    "Leads, die auf eine Antwort warten, werden noch gelesen.",
+  "analytics.team.qualifiedHidden":
+    "Qualifizierte Leads sind für dich verborgen.",
   "analytics.team.handoffsHidden": "Übergaben sind für dich verborgen.",
   "analytics.team.hiddenBasis":
     "Deine Rolle umfasst das nicht. Das heißt nicht, dass es null ist.",

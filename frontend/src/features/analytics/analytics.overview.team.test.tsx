@@ -335,6 +335,87 @@ describe("Team prospecting", () => {
     expect(panel.queryByText(/Nothing waits on the team/)).toBeNull();
   });
 
+  describe("the leads still owed a reply keep four states apart", () => {
+    // A qualification team with nothing else waiting, so the unanswered row
+    // alone decides whether the panel may say nothing waits.
+    const quiet = qualificationReview();
+    const zero = () => {
+      const base = qualificationTeam();
+      return {
+        ...base,
+        metrics: base.metrics.map((reading) =>
+          reading.id === "leads_awaiting_response"
+            ? metric("leads_awaiting_response", 0)
+            : reading,
+        ),
+      };
+    };
+    const NOTHING = "Nothing waits on the team in this period.";
+
+    it("says nothing waits only over a measured zero", async () => {
+      open(TEAM_ADDRESS, zero, { template: "sales", team: served(quiet) });
+      expect((await standing()).getByText(NOTHING)).toBeVisible();
+    });
+
+    it("names a figure the review withholds, and claims nothing", async () => {
+      open(TEAM_ADDRESS, zero, {
+        template: "sales",
+        team: served({ ...quiet, withheld_figures: ["unanswered"] }),
+      });
+      const panel = await standing();
+      expect(
+        panel.getByText("Leads waiting for a reply are hidden from you."),
+      ).toBeVisible();
+      expect(panel.queryByText(NOTHING)).toBeNull();
+    });
+
+    it("says the readings failed, and claims nothing", async () => {
+      open(
+        TEAM_ADDRESS,
+        () => jsonResponse({ title: "Unavailable", status: 503 }, 503),
+        { template: "sales", team: served(quiet) },
+      );
+      const panel = await standing();
+      expect(
+        panel.getByText("Leads waiting for a reply could not be read."),
+      ).toBeVisible();
+      expect(panel.queryByText(NOTHING)).toBeNull();
+    });
+
+    it("says the readings are still being read, and claims nothing", async () => {
+      open(
+        TEAM_ADDRESS,
+        zero,
+        { template: "sales", team: served(quiet) },
+        undefined,
+        (url) => url.pathname.endsWith("/analytics/evaluate"),
+      );
+      const panel = await standing();
+      expect(
+        panel.getByText("Leads waiting for a reply are still being read."),
+      ).toBeVisible();
+      expect(panel.queryByText(NOTHING)).toBeNull();
+    });
+  });
+
+  it("leaves out a figure a field mask reaches, and the target held against it", async () => {
+    open(TEAM_ADDRESS, qualificationTeam, {
+      template: "sales",
+      team: served(
+        qualificationReview({
+          withheld_figures: ["qualified", "targets"],
+          member_targets: undefined,
+          members: teamReview().members.map(({ qualified: _q, ...row }) => row),
+        }),
+      ),
+    });
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(headers(members)).toEqual(["Member", "Meetings held", "Unanswered"]);
+    expect(
+      screen.getByText("Qualified leads are hidden from you."),
+    ).toBeVisible();
+  });
+
   it("names no member while individual performance is off, and keeps the bottlenecks", async () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",

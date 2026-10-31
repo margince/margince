@@ -32,8 +32,10 @@ import type {
 type Review = components["schemas"]["SdrTeamReview"];
 type Handoffs = components["schemas"]["SdrTeamHandoffs"];
 type Summary = components["schemas"]["SdrSummary"];
-// What the panel reads of the summary query: its answer, or that it failed.
-type SummaryRead = Readonly<{ data?: Summary; isError: boolean }>;
+// What the panel reads of a query: its answer, or that it failed. Neither is
+// a query still pending.
+type Read<T> = Readonly<{ data?: T; isError: boolean }>;
+type SummaryRead = Read<Summary>;
 
 /** The team's booked meetings, read by the summary My prospecting reads. */
 export function useTeamSummary(scope: HandoffScope, enabled: boolean) {
@@ -76,14 +78,14 @@ type Opener = Readonly<{
  */
 export function TeamStanding({
   review,
-  evaluation,
+  readings,
   summary,
   scope,
   zone,
   onEvidence,
 }: Readonly<{
   review: Review;
-  evaluation?: ReportingEvaluation;
+  readings: Read<ReportingEvaluation>;
   summary: SummaryRead;
   scope: HandoffScope;
   zone: string;
@@ -92,12 +94,17 @@ export function TeamStanding({
   const t = useT();
   const [reasons, setReasons] = useState<Decided | null>(null);
   const [waiting, setWaiting] = useState(false);
-  const rows = useBottlenecks(review, evaluation, {
+  const evaluation = readings.data;
+  const rows = useBottlenecks(review, readings, {
     evidence: onEvidence,
     reasons: setReasons,
     waiting: () => setWaiting(true),
   });
-  const unread = rows.some((row) => !row.action);
+  // Nothing waits only when every input was read. A hidden, failed or pending
+  // input is a row of its own, and a handoff team needs its handoffs read.
+  const nothingWaits =
+    rows.length === 0 &&
+    (review.workflow !== "handoff" || review.handoffs !== undefined);
   return (
     <Panel title={t("analytics.team.standing")}>
       <PanelBody>
@@ -115,7 +122,7 @@ export function TeamStanding({
           )}
         </PanelRow>
       ))}
-      {rows.length === 0 && !unread && (
+      {nothingWaits && (
         <PanelBody>
           <p>{t("analytics.team.nothingWaits")}</p>
         </PanelBody>
@@ -225,7 +232,7 @@ function UpcomingLine({ summary }: Readonly<{ summary: SummaryRead }>) {
 
 function useBottlenecks(
   review: Review,
-  evaluation: ReportingEvaluation | undefined,
+  readings: Read<ReportingEvaluation>,
   open: Opener,
 ): Bottleneck[] {
   const t = useT();
@@ -244,7 +251,14 @@ function useBottlenecks(
       ...handoffBottlenecks(review, review.handoffs, open, t, plural, locale),
     );
   }
-  const unanswered = unansweredBottleneck(evaluation, open, t, plural, locale);
+  const unanswered = unansweredBottleneck(
+    review,
+    readings,
+    open,
+    t,
+    plural,
+    locale,
+  );
   if (unanswered) rows.push(unanswered);
   return rows;
 }
@@ -331,30 +345,39 @@ function handoffBottlenecks(
   return rows;
 }
 
-// Leads that still owe a first reply. A hidden or failed reading is a row of
-// its own, so the panel never claims that nothing waits.
+// Leads that still owe a first reply. Hidden, failed and pending are each a
+// row of their own, so only a measured zero leaves the row out.
 function unansweredBottleneck(
-  evaluation: ReportingEvaluation | undefined,
+  review: Review,
+  readings: Read<ReportingEvaluation>,
   open: Opener,
   t: ReturnType<typeof useT>,
   plural: ReturnType<typeof usePlural>,
   locale: Locale,
 ): Bottleneck | undefined {
-  if (!evaluation) return undefined;
-  const metric = metricOf(evaluation, "leads_awaiting_response");
+  const hidden = {
+    key: "unanswered",
+    title: t("analytics.team.unansweredHidden"),
+    basis: t("analytics.team.hiddenBasis"),
+  };
+  const failed = {
+    key: "unanswered",
+    title: t("analytics.team.unansweredFailed"),
+    basis: t("analytics.prospect.failedDetail"),
+  };
+  if (figureWithheld(review, "leads") || figureWithheld(review, "unanswered"))
+    return hidden;
+  if (readings.isError) return failed;
+  if (!readings.data)
+    return {
+      key: "unanswered",
+      title: t("analytics.team.unansweredPending"),
+      basis: t("analytics.readingLoading"),
+    };
+  const metric = metricOf(readings.data, "leads_awaiting_response");
+  if (metric?.coverage.withheld) return hidden;
   const state = readingState(metric);
-  if (state === "withheld")
-    return {
-      key: "unanswered",
-      title: t("analytics.team.unansweredHidden"),
-      basis: t("analytics.team.hiddenBasis"),
-    };
-  if (state === "failed" || state === "other" || !metric)
-    return {
-      key: "unanswered",
-      title: t("analytics.team.unansweredFailed"),
-      basis: t("analytics.prospect.failedDetail"),
-    };
+  if (state === "failed" || state === "other" || !metric) return failed;
   const value = metric.value ?? 0;
   if (value === 0) return undefined;
   return {

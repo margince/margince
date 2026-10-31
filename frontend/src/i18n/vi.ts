@@ -7214,6 +7214,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các lead đang chờ phản hồi bị ẩn với bạn.",
   "analytics.team.unansweredFailed":
     "Không đọc được các lead đang chờ phản hồi.",
+  "analytics.team.unansweredPending":
+    "Các lead đang chờ phản hồi vẫn đang được đọc.",
+  "analytics.team.qualifiedHidden": "Lead đủ điều kiện bị ẩn với bạn.",
   "analytics.team.handoffsHidden": "Các bàn giao bị ẩn với bạn.",
   "analytics.team.hiddenBasis":
     "Vai trò của bạn không bao gồm mục này. Điều này không có nghĩa là bằng không.",

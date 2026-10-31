@@ -271,7 +271,7 @@ function TeamBody({
               <div className="analytics-pair analytics-pair-table">
                 <TeamStanding
                   review={data}
-                  evaluation={query.data}
+                  readings={query}
                   summary={summary}
                   scope={scope}
                   zone={zone}

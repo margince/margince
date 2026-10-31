@@ -42,10 +42,12 @@ function qualificationColumns(
   locale: Locale,
 ): DataTableColumn<Member>[] {
   const leads = figureWithheld(review, "leads");
+  const qualified = leads || figureWithheld(review, "qualified");
+  const unanswered = leads || figureWithheld(review, "unanswered");
   const meetings = figureWithheld(review, "meetings");
   const targets = review.member_targets;
   return [
-    ...(leads
+    ...(qualified
       ? []
       : [
           countColumn(
@@ -65,7 +67,7 @@ function qualificationColumns(
             locale,
           ),
         ]),
-    ...(leads
+    ...(unanswered
       ? []
       : [
           countColumn(
@@ -177,6 +179,14 @@ function memberNotes(
     figureWithheld(review, "meetings") && t("analytics.team.meetingsHidden"),
     !figureWithheld(review, "meetings") && t("analytics.team.rowsOverlap"),
     qualification && leads && t("analytics.team.leadsHidden"),
+    qualification &&
+      !leads &&
+      figureWithheld(review, "qualified") &&
+      t("analytics.team.qualifiedHidden"),
+    qualification &&
+      !leads &&
+      figureWithheld(review, "unanswered") &&
+      t("analytics.team.unansweredHidden"),
     !qualification && handoffs && t("analytics.team.handoffsHidden"),
     qualification &&
       !leads &&

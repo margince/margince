@@ -97,7 +97,7 @@ export const HandoffStanding: Story = {
     <StoryProviders>
       <TeamStanding
         review={review}
-        evaluation={teamEvaluation()}
+        readings={{ data: teamEvaluation(), isError: false }}
         summary={summary()}
         scope={{ kind: "team", id: review.scope.id }}
         zone={ZONE}
@@ -123,7 +123,7 @@ export const TooFewRounds: Story = {
             },
           }),
         })}
-        evaluation={teamEvaluation()}
+        readings={{ data: teamEvaluation(), isError: false }}
         summary={summary()}
         scope={{ kind: "team", id: review.scope.id }}
         zone={ZONE}
@@ -138,7 +138,24 @@ export const QualificationStanding: Story = {
     <StoryProviders>
       <TeamStanding
         review={qualification}
-        evaluation={qualificationEvaluation()}
+        readings={{ data: qualificationEvaluation(), isError: false }}
+        summary={summary()}
+        scope={{ kind: "team", id: review.scope.id }}
+        zone={ZONE}
+        onEvidence={noop}
+      />
+    </StoryProviders>
+  ),
+};
+
+// The readings are still being read, so the panel names that and never says
+// nothing waits.
+export const ReadingsPending: Story = {
+  render: () => (
+    <StoryProviders>
+      <TeamStanding
+        review={qualification}
+        readings={{ isError: false }}
         summary={summary()}
         scope={{ kind: "team", id: review.scope.id }}
         zone={ZONE}
