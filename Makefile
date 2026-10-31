@@ -481,7 +481,7 @@ seed-dev:
 
 ## seed-analytics — invented records for every Analytics Overview state,
 ## through the public API, on a stack that `make seed-dev` already seeded.
-## Variants by ANALYTICS_WORKFLOW, ANALYTICS_TARGET, ANALYTICS_PER_PERSON and
+## Variants by ANALYTICS_WORKFLOW, ANALYTICS_TARGET, ANALYTICS_INDIVIDUAL and
 ## ANALYTICS_FISCAL_START_MONTH (see the script's header). Idempotent.
 seed-analytics:
 	./scripts/seed-analytics.sh

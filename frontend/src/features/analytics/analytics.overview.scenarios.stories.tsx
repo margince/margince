@@ -99,13 +99,16 @@ export const TeamProspectingTooFewObservations: Story = scenario(
   "tooFewObservations",
   "team",
 );
-export const SalesReviewPerPersonOff: Story = scenario("perPersonOff", "sales");
-export const MyProspectingPerPersonOff: Story = scenario(
-  "perPersonOff",
+export const SalesReviewIndividualPerformanceOff: Story = scenario(
+  "individualPerformanceOff",
+  "sales",
+);
+export const MyProspectingIndividualPerformanceOff: Story = scenario(
+  "individualPerformanceOff",
   "prospecting",
 );
-export const TeamProspectingPerPersonOff: Story = scenario(
-  "perPersonOff",
+export const TeamProspectingIndividualPerformanceOff: Story = scenario(
+  "individualPerformanceOff",
   "team",
 );
 export const SalesReviewNoActionableWork: Story = scenario(

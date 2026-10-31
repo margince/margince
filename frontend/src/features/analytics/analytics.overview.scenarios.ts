@@ -56,7 +56,7 @@ export const ANALYTICS_STATES = [
   "partialValuation",
   "sourceUnavailable",
   "tooFewObservations",
-  "perPersonOff",
+  "individualPerformanceOff",
   "noActionableWork",
   "largeBacklog",
 ] as const;
@@ -413,7 +413,7 @@ export const OVERVIEW_SCENARIOS = {
       team: team(teamOn(dstWeek), { team: json(teamReviewOn(dstWeek)) }),
     },
   },
-  perPersonOff: {
+  individualPerformanceOff: {
     about: "Individual performance is off for the installation.",
     views: {
       sales: sales(

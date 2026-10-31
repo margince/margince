@@ -18,7 +18,7 @@
 #   ANALYTICS_TARGET     wrong-scope (default): a target for the seeded team
 #                        only, so the whole company has none to compare with
 #                        none: no target is written
-#   ANALYTICS_PER_PERSON on (default) | off
+#   ANALYTICS_INDIVIDUAL on (default) | off
 #   ANALYTICS_FISCAL_START_MONTH  1..12; unset leaves the installation's own
 #
 # SDR handoffs have no HTTP writer, so a handoff-mode stack shows the handoff
@@ -34,7 +34,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 SEAT_PASSWORD="${SEAT_PASSWORD:-analytics-demo-password}"
 WORKFLOW="${ANALYTICS_WORKFLOW:-handoff}"
 TARGET="${ANALYTICS_TARGET:-wrong-scope}"
-PER_PERSON="${ANALYTICS_PER_PERSON:-on}"
+INDIVIDUAL_SETTING="${ANALYTICS_INDIVIDUAL:-on}"
 FISCAL_START="${ANALYTICS_FISCAL_START_MONTH:-}"
 KEY="seed-analytics"
 TEAM_NAME="Analytics Demo"
@@ -45,8 +45,8 @@ case "$WORKFLOW" in handoff) TEMPLATE=sdr ;; qualification) TEMPLATE=sales ;;
   *) echo "seed-analytics: ANALYTICS_WORKFLOW is handoff or qualification" >&2; exit 1 ;; esac
 case "$TARGET" in none | wrong-scope) : ;;
   *) echo "seed-analytics: ANALYTICS_TARGET is none or wrong-scope" >&2; exit 1 ;; esac
-case "$PER_PERSON" in on) INDIVIDUAL=true ;; off) INDIVIDUAL=false ;;
-  *) echo "seed-analytics: ANALYTICS_PER_PERSON is on or off" >&2; exit 1 ;; esac
+case "$INDIVIDUAL_SETTING" in on) INDIVIDUAL=true ;; off) INDIVIDUAL=false ;;
+  *) echo "seed-analytics: ANALYTICS_INDIVIDUAL is on or off" >&2; exit 1 ;; esac
 
 workdir="$(mktemp -d -t seed-analytics.XXXXXX)"
 trap 'rm -rf "$workdir"' EXIT
@@ -120,7 +120,7 @@ settings="$(jq -n --argjson i "$INDIVIDUAL" --arg f "$FISCAL_START" \
 expect "200" "PATCH /installation/settings" "$(api PATCH /installation/settings "$settings")"
 ZONE="$(jq -r '.timezone' "$workdir/body")"
 FISCAL="$(jq -r '.fiscal_year_start_month' "$workdir/body")"
-echo "  OK: individual performance $PER_PERSON, zone $ZONE, business year from month $FISCAL"
+echo "  OK: individual performance $INDIVIDUAL_SETTING, zone $ZONE, business year from month $FISCAL"
 
 # The current fiscal quarter's first day, from the installation's own year start.
 month="$(TZ="$ZONE" date +%-m)"
@@ -397,5 +397,5 @@ expect "202 409" "POST /forecast/assurance/runs" "$(api POST /forecast/assurance
 echo "  OK: the input check runs in the background; its findings land on Sales review"
 
 echo ""
-echo "seed-analytics: DONE in $(( $(date +%s) - started ))s — $WORKFLOW workflow, target $TARGET, individual performance $PER_PERSON"
+echo "seed-analytics: DONE in $(( $(date +%s) - started ))s — $WORKFLOW workflow, target $TARGET, individual performance $INDIVIDUAL_SETTING"
 echo "  sign in at $API_BASE as $MANAGER_EMAIL or $SDR_EMAIL with $SEAT_PASSWORD"
