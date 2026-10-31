@@ -19,6 +19,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial } from "../../lib/urlstate";
 import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { rangeOf } from "./analytics.forecast.landing";
 import {
   MetricReading,
   metricOf,
@@ -245,6 +246,12 @@ function SalesReadings({
     comparison?.status === "target_reached";
   const money = (value: number | undefined) =>
     reportingCompactAmount(value, context.currency, context.currency, locale);
+  const range = rangeOf(landing?.range_low_minor, landing?.range_high_minor);
+  const finishBasis = comparison?.basis
+    ? t("analytics.overview.finishBasis", {
+        basis: t(`reporting.compare.basis.${comparison.basis}`),
+      })
+    : t("reporting.forecastLandingBasis");
   const open = metricOf(evaluation, "open_pipeline");
   const openCount = open?.coverage.eligible_count;
   return (
@@ -268,12 +275,21 @@ function SalesReadings({
             : t("analytics.overview.quarterOnly")
         }
         detail={
-          comparison?.basis
-            ? t("analytics.overview.finishBasis", {
-                basis: t(`reporting.compare.basis.${comparison.basis}`),
-              })
-            : t("reporting.forecastLandingBasis")
+          range ? (
+            <>
+              <span>{finishBasis}</span>
+              <span>
+                {t("forecast.range", {
+                  low: money(range.lowMinor),
+                  high: money(range.highMinor),
+                })}
+              </span>
+            </>
+          ) : (
+            finishBasis
+          )
         }
+        basis={range && <p>{t("forecast.rangeBasis")}</p>}
         onOpen={
           landing?.value != null
             ? () => openAnalyticsSection("forecast")

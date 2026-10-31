@@ -13658,6 +13658,9 @@ export const en = {
   "forecast.landing": "Landing",
   "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
   "forecast.landingFromCall": "From the call · {won} won so far",
+  "forecast.range": "8 in 10 outcomes between {low} and {high}",
+  "forecast.rangeBasis":
+    "Based on the chances in use. Each open deal is won or lost by its chance over many runs. One outcome in ten lands below the range and one in ten above it. The range assumes the chances are right.",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingRecordsDetail":
     "Won plus Commit deals with confirmed close dates, without the manager’s call",

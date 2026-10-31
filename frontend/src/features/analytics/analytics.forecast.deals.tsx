@@ -120,6 +120,16 @@ function dealColumns(
   ];
 }
 
+// The panel's place on the page, so a reading drawn from these deals can lead to them.
+export const FORECAST_DEALS_ANCHOR = "forecast-deals";
+
+/** Brings the deals panel into view and moves keyboard focus onto it. */
+export function openForecastDeals(): void {
+  const panel = document.getElementById(FORECAST_DEALS_ANCHOR);
+  panel?.scrollIntoView?.({ block: "start" });
+  panel?.focus();
+}
+
 /** The per-deal drilldown under the forecast's answer. */
 export function ForecastDeals({
   scope,
@@ -143,48 +153,51 @@ export function ForecastDeals({
   };
   const label = t("forecast.deals.title");
   return (
-    <Panel title={label}>
-      <PanelBody>
-        <Disclosure summary={t("forecast.deals.open")}>
-          <QueryGate query={contributions} pendingLabel={label}>
-            {(data) => {
-              const open = (data.contributions ?? []).filter(
-                (row) => row.in_open,
-              );
-              return (
-                <>
-                  <PanelIntro>
-                    {t(
-                      data.self_correcting
-                        ? "forecast.deals.introOn"
-                        : "forecast.deals.introOff",
+    // Focusable only by script, so the jump lands keyboard focus where the eye goes.
+    <div id={FORECAST_DEALS_ANCHOR} tabIndex={-1}>
+      <Panel title={label}>
+        <PanelBody>
+          <Disclosure summary={t("forecast.deals.open")}>
+            <QueryGate query={contributions} pendingLabel={label}>
+              {(data) => {
+                const open = (data.contributions ?? []).filter(
+                  (row) => row.in_open,
+                );
+                return (
+                  <>
+                    <PanelIntro>
+                      {t(
+                        data.self_correcting
+                          ? "forecast.deals.introOn"
+                          : "forecast.deals.introOff",
+                      )}
+                    </PanelIntro>
+                    {data.contributions_limited && (
+                      <Callout
+                        tone="info"
+                        kind="standing"
+                        title={t("forecast.deals.limitedTitle")}
+                      >
+                        {t("forecast.deals.limited")}
+                      </Callout>
                     )}
-                  </PanelIntro>
-                  {data.contributions_limited && (
-                    <Callout
-                      tone="info"
-                      kind="standing"
-                      title={t("forecast.deals.limitedTitle")}
-                    >
-                      {t("forecast.deals.limited")}
-                    </Callout>
-                  )}
-                  {open.length === 0 ? (
-                    <EmptyState>{t("forecast.deals.none")}</EmptyState>
-                  ) : (
-                    <DataTable<ForecastContribution>
-                      label={label}
-                      rows={open}
-                      rowKey={(row) => row.deal_id}
-                      columns={dealColumns(words, data.base_currency)}
-                    />
-                  )}
-                </>
-              );
-            }}
-          </QueryGate>
-        </Disclosure>
-      </PanelBody>
-    </Panel>
+                    {open.length === 0 ? (
+                      <EmptyState>{t("forecast.deals.none")}</EmptyState>
+                    ) : (
+                      <DataTable<ForecastContribution>
+                        label={label}
+                        rows={open}
+                        rowKey={(row) => row.deal_id}
+                        columns={dealColumns(words, data.base_currency)}
+                      />
+                    )}
+                  </>
+                );
+              }}
+            </QueryGate>
+          </Disclosure>
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }

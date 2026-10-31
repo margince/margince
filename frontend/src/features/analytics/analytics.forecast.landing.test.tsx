@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatMoneyCompact } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
@@ -10,6 +10,7 @@ import { en } from "../../i18n/en";
 import {
   LandingCard,
   RecordsLandingCard,
+  rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
 
@@ -205,5 +206,89 @@ describe("a manager's call beside the records", () => {
     expect(
       screen.getByText(formatMoneyCompact(650_00, "EUR", "en")),
     ).toBeTruthy();
+  });
+});
+
+describe("the range beside the landing", () => {
+  const range = { lowMinor: 610_00, highMinor: 880_00 };
+
+  it("states the central 80% of outcomes as its own line, never around the landing", () => {
+    draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        range={range}
+      />,
+    );
+
+    const line = screen.getByText(/^8 in 10 outcomes between /);
+    expect(line.textContent).toBe(
+      `8 in 10 outcomes between ${formatMoneyCompact(610_00, "EUR", "en")} and ${formatMoneyCompact(880_00, "EUR", "en")}`,
+    );
+    // The sum the landing was made of keeps its own line.
+    expect(screen.getByText(/^Projected ·/)).toBeTruthy();
+  });
+
+  it("names the chances in use as the range's basis in the receipt", async () => {
+    const user = userEvent.setup();
+    draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        range={range}
+      />,
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+
+    expect(
+      await screen.findByText(/^Based on the chances in use\./),
+    ).toBeTruthy();
+  });
+
+  it("leads to the deals the range was drawn from", async () => {
+    const user = userEvent.setup();
+    const onOpenDeals = vi.fn();
+    draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        range={range}
+        onOpenDeals={onOpenDeals}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Open" }));
+
+    expect(onOpenDeals).toHaveBeenCalledOnce();
+  });
+
+  it("draws no range line, receipt or door without a range", () => {
+    draw(
+      <LandingCard
+        landing={landing()}
+        currency="EUR"
+        locale="en"
+        onOpenDeals={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/8 in 10 outcomes/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Evidence" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Open" })).toBeNull();
+  });
+});
+
+describe("rangeOf", () => {
+  it("keeps a range only when both ends arrived", () => {
+    expect(rangeOf(610_00, 880_00)).toEqual({
+      lowMinor: 610_00,
+      highMinor: 880_00,
+    });
+    expect(rangeOf(610_00, undefined)).toBeUndefined();
+    expect(rangeOf(undefined, 880_00)).toBeUndefined();
   });
 });

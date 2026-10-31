@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/forecasting/chance.go backend/internal/compose/forecastchances.go backend/internal/modules/assurance/risk.go frontend/src/features/analytics/analytics.forecast.deals.tsx frontend/src/features/settings/settings.stages.tsx -->
+<!-- describes: backend/internal/modules/forecasting/chance.go backend/internal/compose/forecastchances.go backend/internal/modules/assurance/risk.go frontend/src/features/analytics/analytics.forecast.deals.tsx frontend/src/features/settings/settings.stages.tsx backend/internal/modules/forecasting/range.go frontend/src/features/analytics/analytics.forecast.landing.tsx -->
 # How the forecast learns
 
 The weighted forecast counts each open deal at a probability. This page says
@@ -48,6 +48,28 @@ risks, only the one with the most effect counts.
 **Deals behind the weighted figure**, under the forecast's answer, lists each
 open deal. It shows the probability typed on its stage and the closed deals
 behind it. It shows the probability used, any risk, and the weighted amount.
+
+## The range beside the landing
+
+The **Landing** card on the forecast shows a line such as "8 in 10 outcomes
+between €610k and €880k". **Expected finish** in Sales review shows the same
+line.
+
+To find the two amounts, the forecast runs the period many times. Each
+time, every open deal is won or lost at the probability the forecast uses for
+it, with its risk. Money already won is always in. In 8 of every 10 runs, the
+period ends between the two amounts. One run in 10 ends below the low amount,
+and one ends above the high amount.
+
+The range takes each probability in use as right. It does not check it. The landing
+figure is worked out in a different way, so it can sit outside the range. While
+the forecast corrects itself, a stage with few closed deals has a probability
+the forecast is not so sure of. That makes the range wider.
+
+On both cards, **Evidence** says what the range rests on. On the forecast,
+**Open** on the **Landing** card goes to **Deals behind the weighted figure**:
+the deals the range was built from, each with its probability. A frozen
+forecast keeps the range it showed that day.
 
 ## Switch it off
 
