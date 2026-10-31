@@ -135,7 +135,7 @@ type Server struct {
 	companyRollupHandlers
 	reviewAnswerHandlers
 	companyOfferedHandlers
-	strengthHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers

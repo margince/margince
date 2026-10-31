@@ -5067,6 +5067,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Đang tải các yếu tố tính điểm…",
   "lead.scoreNoFactors": "Chưa có yếu tố nào được tính vào điểm này.",
   "lead.scoreSources": "{count} hoạt động",
+  "lead.scoreSourcesHead": "Hoạt động phía sau yếu tố này",
+  "lead.scoreSourceNoSubject": "Không có tiêu đề",
   "lead.factor.decision_maker_title": "Chức danh có quyền quyết định",
   "lead.factor.reply": "Lead đã trả lời",
   "lead.factor.meeting_held": "Đã họp",

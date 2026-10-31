@@ -46090,6 +46090,9 @@ type LeadScoreFactor struct {
 	// blended into an auto-captured signal (AC-S7a).
 	SignalKind *LeadManualSignalKind `json:"signal_kind,omitempty"`
 
+	// SourceActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `source_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	SourceActivities *[]ActivityReference `json:"source_activities,omitempty"`
+
 	// SourceActivityIds The activities behind a behavioral factor, re-read through the CALLER's scope (ADR-0105 §3).
 	SourceActivityIds *[]openapi_types.UUID `json:"source_activity_ids,omitempty"`
 }
