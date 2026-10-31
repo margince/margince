@@ -18799,6 +18799,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.tooFew": "Đánh dấu ít nhất hai liên hệ.",
   "contactCase.notConnected":
     "Một số liên hệ đã đánh dấu không được liên kết với các liên hệ còn lại như bản trùng. Đánh dấu thêm các liên hệ ở giữa, hoặc bỏ đánh dấu chúng.",
+  "contactCase.pairOnly":
+    "Ở đây bạn chỉ gộp được một cặp, và một trong hai liên hệ phải là của bạn. Hãy đánh dấu một cặp như vậy.",
   "contactCase.noOwner": "Chọn người chịu trách nhiệm liên hệ còn lại.",
   "contactCase.ownerLabel": "Người chịu trách nhiệm",
   "contactCase.ownerHint":

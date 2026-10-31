@@ -124,7 +124,7 @@ func archiveCompanyTx(
 	if err := companyArchiveAllowed(ctx, tx, id); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if _, err := readCompany(ctx, tx, id, storekit.LiveOnly, active); err != nil {
+	if _, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return crmcontracts.Company{}, err
 	}
 

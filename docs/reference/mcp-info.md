@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 11 |
 | Tool catalog | 139.4 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36763 |
+| Approx. wire tokens | 36781 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 30.1 KB | 21% | **No**: a result's shape, never listed to a model |
+| Output schemas | 30.2 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 34.9 KB | 25% | Yes, every step |
 | Input schemas | 65.3 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
@@ -2906,6 +2906,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "can_merge": {
+                "type": "boolean"
+              },
               "candidate_id": {
                 "type": "string"
               },
@@ -2941,11 +2944,15 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
                 },
                 "type": "array"
               },
+              "keep_id": {
+                "type": "string"
+              },
               "other_record_id": {
                 "type": "string"
               }
             },
             "required": [
+              "can_merge",
               "candidate_id",
               "confidence",
               "evidence",

@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ActorNameColumn answers "who acted" over ActorNameJoins. Only one of the two
@@ -79,22 +80,43 @@ func (a Attribution) Wire() *crmcontracts.PrincipalAttribution {
 	return out
 }
 
-// CreatorsTx is who created each named record of one type: its earliest create
-// audit row. A record with no surviving create row is absent from the result,
-// and a caller reads that as unknown, never as the system. The caller has
-// already read the records; this admits nothing on its own.
+// FirstCreateSQL is the create audit row a record's creator is read from. It is
+// the earliest, with the id breaking a tie, so a replayed create never changes
+// who made the record. Both arguments are SQL expressions, never request text.
+//
+// The instant is found first, by the index's own order. One sort over both
+// columns cannot stop early and reads the record's whole history.
+func FirstCreateSQL(entityType, entityID string) string {
+	createOf := func(alias string) string {
+		return alias + `.entity_type = ` + entityType + ` AND ` + alias + `.entity_id = ` + entityID +
+			` AND ` + alias + `.action = 'create'`
+	}
+	return `SELECT c.id, c.actor_type, c.actor_id, c.on_behalf_of, c.passport_id, c.occurred_at
+		  FROM audit_log c
+		 WHERE ` + createOf("c") + `
+		   AND c.occurred_at = (SELECT f.occurred_at FROM audit_log f WHERE ` + createOf("f") + `
+		                         ORDER BY f.occurred_at LIMIT 1)
+		 ORDER BY c.id LIMIT 1`
+}
+
+// creatorsSQL probes each named record once, so its cost follows the page size
+// and never the length of a record's history.
+var creatorsSQL = `
+		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
+		       ` + ActorNameColumn + `, obo.display_name, oc.client_name
+		FROM unnest($2::uuid[]) AS named(id)
+		CROSS JOIN LATERAL (` + FirstCreateSQL("$1", "named.id") + `) a` + ActorNameJoins + AgentClientNameJoin
+
+// CreatorsTx is who created each named record of one type, read from
+// FirstCreateSQL. A record with no surviving create row is absent from the
+// result, and a caller reads that as unknown, never as the system. The caller
+// has already read the records; this admits nothing on its own.
 func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []ids.UUID) (map[ids.UUID]Attribution, error) {
 	out := make(map[ids.UUID]Attribution, len(entityIDs))
 	if len(entityIDs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (a.entity_id)
-		       a.entity_id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
-		       `+ActorNameColumn+`, obo.display_name, oc.client_name
-		FROM audit_log a`+ActorNameJoins+AgentClientNameJoin+`
-		WHERE a.entity_type = $1 AND a.entity_id = ANY($2) AND a.action = 'create'
-		ORDER BY a.entity_id, a.occurred_at, a.id`, entityType, entityIDs)
+	rows, err := tx.Query(ctx, creatorsSQL, entityType, entityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("auditattribution: reading creators: %w", err)
 	}
@@ -113,3 +135,38 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	}
 	return out, nil
 }
+
+// StampCreators sets on each row of a page who created it, in one statement.
+// Which agents act for a colleague is that colleague's personal data. So only a
+// human session reads it, as only a human reads the record History. A withheld
+// row gets none: whose agent wrote hidden content is part of that content.
+func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, page []T,
+	id func(T) ids.UUID, withheld func(T) bool, set func(*T, *crmcontracts.PrincipalAttribution),
+) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return nil
+	}
+	readable := make([]ids.UUID, 0, len(page))
+	for i := range page {
+		if !withheld(page[i]) {
+			readable = append(readable, id(page[i]))
+		}
+	}
+	creators, err := CreatorsTx(ctx, tx, entityType, readable)
+	if err != nil {
+		return err
+	}
+	for i := range page {
+		if creator, found := creators[id(page[i])]; found {
+			wire := creator.Wire()
+			// A passport id names a credential, and a record read needs only its tool.
+			wire.PassportId = nil
+			set(&page[i], wire)
+		}
+	}
+	return nil
+}
+
+// NoneWithheld is the withheld answer for a record type a reader sees whole or
+// not at all.
+func NoneWithheld[T any](T) bool { return false }

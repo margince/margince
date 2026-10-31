@@ -425,11 +425,9 @@ func readDedupeCandidate(ctx context.Context, tx pgx.Tx, id ids.UUID) (DedupeCan
 // get filed against something?" A caller reaching for the paged list to answer
 // that would have to walk pages looking for its own id.
 //
-// The permission check and the visibility clause are the LIST's own, called
-// here rather than restated: a pair surfaces only when both sides are visible
-// to the caller, because the evidence snapshot quotes both records, so naming a
-// pair is a read of them. Two spellings of that rule would eventually disagree,
-// and the one that drifted would be the one leaking a record's existence.
+// The permission check, the visibility clause and the merge flags are the
+// LIST's own. A pair surfaces only when the caller sees both sides, because its
+// evidence quotes both records. A second spelling would drift and leak a record.
 //
 // A non-nil only keeps just those pair ids, so a write can ask after the pairs
 // it filed itself.
@@ -448,15 +446,19 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		return nil, nil
 	}
 	args := []any{dispositionOpen, id}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	authority, err := dedupeSideWritableColumns(ctx, arg, true)
+	if err != nil {
+		return nil, err
+	}
 	query := fmt.Sprintf(`
 		SELECT id, entity_type, coalesce(left_contact_id, left_company_id, left_lead_id),
 		       coalesce(right_contact_id, right_company_id, right_lead_id),
-		       confidence, evidence, disposition, disposed_by, disposed_at, created_at
+		       confidence, evidence, disposition, disposed_by, disposed_at, created_at, %s
 		  FROM dedupe_candidate
 		 WHERE disposition = $1 AND archived_at IS NULL
-		   AND (%s = $2 OR %s = $2)`, side.left, side.right)
-	visClause, err := dedupeVisibilityClause(ctx,
-		func(v any) int { args = append(args, v); return len(args) }, true)
+		   AND (%s = $2 OR %s = $2)`, authority, side.left, side.right)
+	visClause, err := dedupeVisibilityClause(ctx, arg, true)
 	if err != nil {
 		return nil, err
 	}
@@ -464,11 +466,9 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		query += " AND " + visClause
 	}
 	if only != nil {
-		args = append(args, only)
-		query += fmt.Sprintf(" AND id = ANY($%d)", len(args))
+		query += fmt.Sprintf(" AND id = ANY($%d)", arg(only))
 	}
-	args = append(args, openCandidatesNamingLimit)
-	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", len(args))
+	query += fmt.Sprintf(" ORDER BY confidence DESC, id DESC LIMIT $%d", arg(openCandidatesNamingLimit))
 
 	var rows []DedupeCandidateRow
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -479,10 +479,13 @@ func (s *Store) OpenCandidatesNaming(ctx context.Context, entityType string, id 
 		defer res.Close()
 		for res.Next() {
 			var r DedupeCandidateRow
+			var writers PairWriters
 			if err := res.Scan(&r.ID, &r.EntityType, &r.LeftID, &r.RightID, &r.Confidence,
-				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt); err != nil {
+				&r.Evidence, &r.Disposition, &r.DisposedBy, &r.DisposedAt, &r.CreatedAt,
+				&writers.Left, &writers.Right); err != nil {
 				return err
 			}
+			r.pairAuthority(writers)
 			rows = append(rows, r)
 		}
 		return res.Err()

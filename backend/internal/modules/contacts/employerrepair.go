@@ -81,7 +81,7 @@ func (s *Store) reconcileContactEmployerTx(ctx context.Context, tx pgx.Tx, id id
 	if err != nil || held {
 		return false, err
 	}
-	contact, err := readContact(ctx, tx, id, storekit.LiveOnly, nil)
+	contact, err := readContactRow(ctx, tx, id, storekit.LiveOnly, nil)
 	if err != nil {
 		return false, err
 	}

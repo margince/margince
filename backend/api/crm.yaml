@@ -39040,7 +39040,7 @@ components:
         merge_mode:
           type: string
           enum: [ordinary, delegated, pair, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.'
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -41580,6 +41580,16 @@ components:
         strength: { allOf: [ { $ref: '#/components/schemas/RelationshipStrength' } ], readOnly: true, description: 'Deterministic relationship-strength (features/07 §4). Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.' }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          readOnly: true
+          description: |
+            Who created the contact, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -42309,6 +42319,16 @@ components:
             `listCompanies` and `getCompany`; write responses omit it.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          readOnly: true
+          description: |
+            Who created the company, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -44611,7 +44631,8 @@ components:
             Who created the contact, from its earliest create audit row: for an agent, the
             colleague it worked for and the tool it was typed through, each when the row
             records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -48656,6 +48677,16 @@ components:
             discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        created_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          readOnly: true
+          description: |
+            Who created the deal, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -51202,7 +51233,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         web_form:
           allOf: [{ $ref: '#/components/schemas/WebFormSubmission' }]
           readOnly: true
