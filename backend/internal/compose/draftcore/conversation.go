@@ -25,7 +25,7 @@ type Turn struct {
 	// own voice rather than from which way it travelled. A colleague's mail can
 	// arrive inbound, and direction alone calls that the counterparty's.
 	ByColleague bool
-	At        time.Time
+	At          time.Time
 	// DateOnly says At is a day entry's anchor, so only its date is known.
 	DateOnly bool
 	Subject  string
