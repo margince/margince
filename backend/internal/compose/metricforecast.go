@@ -43,7 +43,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	called, err := reportingCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
+	called, err := forecastCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -89,9 +89,10 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
 }
 
-// reportingCallSeen is the call GET /forecast shows this seat, by the same
+// forecastCallSeen is the call GET /forecast shows this seat, by the same
 // rule. A call covers every pipeline, so a reading of one pipeline has none.
-func reportingCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (*int64, error) {
+// The reporting landing and a live share both read the call through it.
+func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (*int64, error) {
 	if onePipeline {
 		return nil, nil
 	}

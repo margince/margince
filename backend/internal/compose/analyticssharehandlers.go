@@ -198,7 +198,8 @@ func (h analyticsShareHandlers) serveSnapshot(
 	out.Readings.SelfCorrecting = frame.SelfCorrecting
 	out.Readings.ContributionsLimited = &frozen.Limited
 	out.Withheld = shared.Withheld
-	return nil
+	out.Readings.Landing, err = frozenShareLanding(ctx, tx, share.Scope, shared.Readings, frame)
+	return err
 }
 
 // serveLive re-runs the reading under this caller's grants.
@@ -222,11 +223,53 @@ func (h analyticsShareHandlers) serveLive(
 	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
 	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
 	out.Withheld = assembly.Limited
+	// The landing GET /forecast gives this reader, with the call only where
+	// the reader may see it.
+	called, err := forecastCallSeen(ctx, tx, h.forecast, period, share.Scope, false)
+	if err != nil {
+		return err
+	}
+	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, called)
+	if err != nil {
+		return err
+	}
+	out.Readings.Landing = &landing
 	return nil
 }
 
+// frozenShareLanding is a snapshot's landing over the rows this reader may
+// read: the frozen measure, and the frozen call only where the reader may see
+// it. A reader who may not falls back as GET /forecast does.
+func frozenShareLanding(
+	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, readings forecasting.Readings, frame shareFrame,
+) (*crmcontracts.ForecastLanding, error) {
+	if frame.LandingMeasure == nil {
+		return nil, nil
+	}
+	measure := forecasting.ForwardMeasure(*frame.LandingMeasure)
+	if frame.ForwardMeasure != nil {
+		measure = forecasting.ForwardMeasure(*frame.ForwardMeasure)
+	}
+	var call *int64
+	if frame.LandingCallMinor != nil {
+		mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
+		if err != nil {
+			return nil, err
+		}
+		if mayAssert {
+			call = frame.LandingCallMinor
+		}
+	}
+	landing, err := forecasting.ProjectLanding(readings, measure, call)
+	if err != nil {
+		return nil, err
+	}
+	wire := forecasting.LandingToWire(landing)
+	return &wire, nil
+}
+
 // snapshotFrame reads the period, zone and currency a frozen state was computed
-// under, and the instant it describes.
+// under, the instant it describes and the landing it froze.
 //
 // Read from the snapshot rather than carried on the share row: they are the
 // snapshot's own facts, and copying them onto the share at issue time would be
@@ -238,6 +281,12 @@ type shareFrame struct {
 	// SelfCorrecting is whether the frozen chances moved with recorded
 	// outcomes; nil on a snapshot frozen before it was kept.
 	SelfCorrecting *bool
+	// ForwardMeasure is the setting; LandingMeasure is the measure the landing
+	// used, and LandingCallMinor the call it used. LandingMeasure is nil on a
+	// snapshot frozen before the landing was kept.
+	ForwardMeasure   *string
+	LandingMeasure   *string
+	LandingCallMinor *int64
 }
 
 // The timezone is JOINed from the setting row rather than read through
@@ -251,12 +300,14 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 	var zoneName string
 	if err := tx.QueryRow(ctx, `
 		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
-		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting
+		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting,
+		       s.forward_measure, s.landing_measure, s.landing_call_minor
 		FROM forecast_snapshot s
 		LEFT JOIN setting st ON st.key = 'installation.timezone'
 		WHERE s.id = $1`, id).Scan(
 		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
-		&zoneName, &out.SelfCorrecting); err != nil {
+		&zoneName, &out.SelfCorrecting,
+		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor); err != nil {
 		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
 	}
 	zone, err := time.LoadLocation(zoneName)
