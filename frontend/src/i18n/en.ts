@@ -16924,9 +16924,10 @@ export const en = {
   // record to delete — the rep is taking a message back before it goes, and
   // "withdraw" is the only one of the three that says so.
   "nav.scheduled": "Scheduled messages",
-  "sched.sub":
-    "Your scheduled messages that have not been sent yet. Only you can see them.",
-  "sched.empty": "No scheduled messages yet.",
+  "sched.sub": "Only you can see these messages.",
+  "sched.empty": "No messages scheduled.",
+  "sched.write": "Write a message",
+  "sched.writeHow": "Open a contact and choose Email.",
   "sched.group.held": "Held for your action",
   "sched.group.waiting": "Scheduled",
   "sched.group.waitingEmpty": "No messages scheduled.",
