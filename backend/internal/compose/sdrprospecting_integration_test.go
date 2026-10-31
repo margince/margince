@@ -229,8 +229,8 @@ func TestWeeklyOutcomesLeaveAWeekWithNoCohortEmpty(t *testing.T) {
 	service := newReportingService(e.Pool, func() time.Time { return now })
 	admin := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll)
 	interval := crmcontracts.ReportingWindow{StartAt: now.AddDate(0, 0, -28), EndAt: now}
-	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open",
-		Metrics: []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
+	metrics := []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held"}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open", Metrics: metrics, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
 	result, err := service.Evaluate(admin, selection)
 	if err != nil {
 		t.Fatal(err)

@@ -100,7 +100,7 @@ func (h sdrSummaryHandlers) ListSdrUpcomingMeetings(w http.ResponseWriter, r *ht
 			return apperrors.ErrPermissionDenied
 		}
 		var err error
-		if out.Window, err = requestedWindow(ctx, tx, params, after != nil, out.AsOf); err != nil {
+		if out.Window, err = requestedWindow(ctx, tx, params.WindowStart, params.WindowEnd, after != nil, out.AsOf); err != nil {
 			return err
 		}
 		out.Rows, out.NextCursor, err = readUpcomingMeetingPage(ctx, tx, requested, out.Window, after, limit)
@@ -117,21 +117,21 @@ func (h sdrSummaryHandlers) ListSdrUpcomingMeetings(w http.ResponseWriter, r *ht
 // request names it, so every page holds the population the summary counted.
 // A named window must be one a summary could declare: it starts no later than
 // now and ends where its start says. A cursor is only read inside one.
-func requestedWindow(ctx context.Context, tx pgx.Tx, params crmcontracts.ListSdrUpcomingMeetingsParams, paging bool, at time.Time) (crmcontracts.SdrUpcomingWindow, error) {
-	if params.WindowStart == nil && params.WindowEnd == nil {
+func requestedWindow(ctx context.Context, tx pgx.Tx, start, end *time.Time, paging bool, at time.Time) (crmcontracts.SdrUpcomingWindow, error) {
+	if start == nil && end == nil {
 		if paging {
 			return crmcontracts.SdrUpcomingWindow{}, httperr.Validation("window_start", "required", "Send the window the first page was read in with its cursor.")
 		}
 		return upcomingWindow(ctx, tx, at)
 	}
-	if params.WindowStart == nil || params.WindowEnd == nil || params.WindowStart.After(at) {
+	if start == nil || end == nil || start.After(at) {
 		return crmcontracts.SdrUpcomingWindow{}, httperr.Validation("window_start", "invalid", "Send the summary's upcoming window, start and end, as it was given.")
 	}
-	window, err := upcomingWindow(ctx, tx, params.WindowStart.UTC())
+	window, err := upcomingWindow(ctx, tx, start.UTC())
 	if err != nil {
 		return window, err
 	}
-	if !window.EndAt.Equal(*params.WindowEnd) {
+	if !window.EndAt.Equal(*end) {
 		return window, httperr.Validation("window_end", "invalid", "Send the summary's upcoming window, start and end, as it was given.")
 	}
 	return window, nil
