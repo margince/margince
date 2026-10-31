@@ -73,16 +73,16 @@ export function ForecastAnswer({
 }>) {
   const t = useT();
   const currency = readings.base_currency;
-  // The sentence carries the amount in FULL — it is read once, at prose width,
-  // and a call somebody authored to the cent is a number they should meet as
-  // they wrote it. The slots below carry the same figures compactly, because a
-  // slot is a hundred points wide and a full amount clips there.
+  // The sentence carries the amount in full. It is read once, at prose width.
+  // A call somebody authored to the cent is a number they should meet as they
+  // wrote it. The slots below carry the same figures compactly, because a slot
+  // is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
     formatMoneyOrAbsent(minor ?? null, currency, locale);
-  // Compact, and a WORD where the pair cannot be said as money at all: a slot
-  // is about a hundred points wide, and one compared across a row must not
-  // answer with a glyph. The landing cards at the end of this strip answer the
-  // same way, so the row reads as one comparison.
+  // Compact, and a word where the pair cannot be said as money at all. A slot
+  // is about a hundred points wide. One compared across a row must not answer
+  // with a glyph. The landing cards at the end of this strip answer the same
+  // way, so the row reads as one comparison.
   const slot = (minor: number | null | undefined) =>
     formatMoneyOrWord(
       minor,
@@ -185,7 +185,7 @@ export function ForecastAnswer({
         </Callout>
       )}
 
-      {/* EVERY slot declares the narrow shape, the landing pair included: the
+      {/* Every slot declares the narrow shape, the landing pair included: the
           fold is the strip's, so a card that did not declare it would keep its
           box while the rows beside it lost theirs.
 
