@@ -15,6 +15,7 @@ import {
   metric,
   overviewRoutes,
   teamReview,
+  twoPipelines,
 } from "./analytics.overview.fixtures";
 import {
   backlogFindings,
@@ -186,6 +187,8 @@ const NO_MONEY = "Prospecting figures are counts and carry no money.";
 const NO_TARGET_HERE = "Team prospecting shows no target.";
 const QUARTERS = "Sales review reads quarters; this frame is a week.";
 const WORKFLOW = "The SDR workflow does not change Sales review.";
+const PIPELINE_ONLY =
+  "Only Sales review takes a pipeline; the others read none.";
 
 export const OVERVIEW_SCENARIOS = {
   populated: {
@@ -735,6 +738,18 @@ export const OVERVIEW_SCENARIOS = {
       sales: sales(legacy(quarterSales())),
       prospecting: { excluded: SALES_ONLY },
       team: { excluded: SALES_ONLY },
+    },
+  },
+  twoPipelines: {
+    about:
+      "Two pipelines, so a pipeline chosen on Sales review can be lost on a switch of view.",
+    views: {
+      sales: sales(quarterSales(), {
+        pipelines: twoPipelines,
+        template: "sdr",
+      }),
+      prospecting: { excluded: PIPELINE_ONLY },
+      team: { excluded: PIPELINE_ONLY },
     },
   },
   noForecast: {

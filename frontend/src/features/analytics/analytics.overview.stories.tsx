@@ -230,3 +230,4 @@ export const SalesReviewLegacyLanding: Story = scenario(
   "sales",
 );
 export const SalesReviewNoForecast: Story = scenario("noForecast", "sales");
+export const SalesReviewTwoPipelines: Story = scenario("twoPipelines", "sales");

@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { removeStored, STORAGE_KEYS } from "../../lib/storage";
+import { forgetSeat } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogFindings } from "./analytics.overview.scenariodata";
 import {
@@ -21,7 +22,7 @@ import * as stories from "./analytics.overview.stories";
 import { openOverview, readings } from "./analytics.overview.testkit";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
@@ -57,6 +58,7 @@ const CENSUS: Readonly<Record<string, string>> = {
   landingBases: "S",
   legacyLanding: "S",
   noForecast: "S",
+  twoPipelines: "S",
 };
 const LETTER: Readonly<Record<OverviewView, string>> = {
   sales: "S",
@@ -276,6 +278,16 @@ const SIGNATURES: Readonly<
   landingBases: { sales: shows("Won + confirmed commit") },
   legacyLanding: { sales: shows("Basis not recorded") },
   noForecast: { sales: shows("Unavailable") },
+  twoPipelines: {
+    sales: async () => {
+      const user = userEvent.setup({ delay: null });
+      await user.click(screen.getByRole("combobox", { name: "Pipeline" }));
+      const listbox = await screen.findByRole("listbox");
+      expect(
+        within(listbox).getByRole("option", { name: "Renewals" }),
+      ).toBeVisible();
+    },
+  },
 };
 
 describe("each census pair", () => {

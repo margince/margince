@@ -431,6 +431,34 @@ export const ADMIN_GRANTS: GrantSpec = {
  * Every read the Overview makes but the evaluation, which the caller answers
  * by its query. `template` is the framework the workspace runs.
  */
+const SALES_PIPELINE = {
+  id: "sales",
+  name: "Sales",
+  is_default: true,
+  position: 0,
+  stages: [],
+};
+
+/** A second pipeline beside the default one, so a choice between them shows. */
+export const RENEWALS_PIPELINE = {
+  id: "renewals",
+  name: "Renewals",
+  is_default: false,
+  position: 1,
+  stages: [],
+};
+
+function pipelinePage(pipelines: readonly (typeof SALES_PIPELINE)[]) {
+  return jsonResponse({
+    data: pipelines,
+    page: { next_cursor: null, has_more: false },
+  });
+}
+
+/** `GET /pipelines` with the default pipeline and Renewals beside it. */
+export const twoPipelines = () =>
+  pipelinePage([SALES_PIPELINE, RENEWALS_PIPELINE]);
+
 export function overviewRoutes(
   over: Readonly<{
     seat?: Seat;
@@ -442,6 +470,7 @@ export function overviewRoutes(
     team?: () => Response | Promise<Response>;
     worklist?: () => Response | Promise<Response>;
     handoffs?: () => Response | Promise<Response>;
+    pipelines?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
   const seat = over.seat ?? "leader";
@@ -458,19 +487,7 @@ export function overviewRoutes(
           ...reportingStoryFramework,
           definition: { ...reportingStoryFramework.definition, template },
         })),
-    "GET /pipelines": () =>
-      jsonResponse({
-        data: [
-          {
-            id: "sales",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages: [],
-          },
-        ],
-        page: { next_cursor: null, has_more: false },
-      }),
+    "GET /pipelines": over.pipelines ?? (() => pipelinePage([SALES_PIPELINE])),
     "GET /forecast/assurance/exceptions":
       over.checks ?? (() => jsonResponse({ data: [] })),
     "GET /analytics/sdr-summary":
