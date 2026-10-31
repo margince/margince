@@ -14,9 +14,7 @@ package gates
 // the whole index.
 //
 // The default is what makes the rule unconditional. A rule held by the call
-// sites is held until a writer, an import path or a fixture does not know it.
-// The list of tables missing it grew from five to twelve while the issue
-// behind this gate was open.
+// sites lasts until a writer, an import path or a fixture does not know it.
 //
 // The corpus derives from the head catalog, so a new table arrives failing
 // until it carries the default or a waiver.
@@ -30,6 +28,18 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
+
+// uuidV7Default is the whole default a key carries, not a substring of one.
+const uuidV7Default = "uuidv7()"
+
+// defaultMintsV7 reports whether this default mints a v7 for every insert.
+//
+// The whole default has to be the call. `coalesce(gen_random_uuid(), uuidv7())`
+// names uuidv7 and never returns one, since coalesce takes the first non-null,
+// so a containment test would admit a column that mints v4.
+func defaultMintsV7(def string) bool {
+	return strings.TrimSpace(def) == uuidV7Default
+}
 
 // uuidKeyLine reads a catalog line for a uuid `id` column, capturing its table
 // and its default.
@@ -70,7 +80,7 @@ func TestEveryUUIDKeyDefaultsToV7(t *testing.T) {
 	}
 	sort.Strings(tables)
 	for _, table := range tables {
-		if strings.Contains(defaults[table], "uuidv7()") || mintsItsOwnKey.Waived(t, table) {
+		if defaultMintsV7(defaults[table]) || mintsItsOwnKey.Waived(t, table) {
 			continue
 		}
 		t.Errorf("%s.id has no uuidv7() default (def=%s), so a caller that passes nothing, or "+
@@ -93,6 +103,10 @@ func TestTheUUIDKeyReaderSeesEachShape(t *testing.T) {
 		{"public.deal.name text NOT NULL gen=- def=-", false, ""},
 		{"public.river_job.id bigint NOT NULL gen=- def=nextval('x')", false, ""},
 		{"public.contact.contact_id uuid NOT NULL gen=- def=-", false, ""},
+		{
+			"public.x.id uuid NOT NULL gen=- def=coalesce(gen_random_uuid(), uuidv7())", true,
+			"coalesce(gen_random_uuid(), uuidv7())",
+		},
 	} {
 		m := uuidKeyLine.FindStringSubmatch(c.line)
 		if (m != nil) != c.want {
@@ -101,6 +115,27 @@ func TestTheUUIDKeyReaderSeesEachShape(t *testing.T) {
 		}
 		if m != nil && strings.TrimSpace(m[2]) != c.defText {
 			t.Errorf("the reader read %q's default as %q, want %q", c.line, m[2], c.defText)
+		}
+	}
+}
+
+// A default that merely NAMES uuidv7 does not mint one, which is the reading
+// this gate has to refuse.
+func TestOnlyAWholeV7CallMintsTheKey(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		def  string
+		want bool
+	}{
+		{"uuidv7()", true},
+		{" uuidv7() ", true},
+		{"-", false},
+		{"gen_random_uuid()", false},
+		{"coalesce(gen_random_uuid(), uuidv7())", false},
+		{"coalesce(uuidv7(), gen_random_uuid())", false},
+	} {
+		if got := defaultMintsV7(c.def); got != c.want {
+			t.Errorf("defaultMintsV7(%q) = %v, want %v", c.def, got, c.want)
 		}
 	}
 }
