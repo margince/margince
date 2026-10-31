@@ -39,9 +39,9 @@ type TaskBacklog interface {
 	// the store's due order, each with the position after it. more says the
 	// window holds tasks past the batch.
 	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Positioned[Task], more bool, err error)
-	// DealsWithTaskDue names which of these deals have a task of the window
-	// that the lane would show as about the deal.
-	DealsWithTaskDue(ctx context.Context, window TaskWindow, deals []ids.UUID) (map[ids.UUID]bool, error)
+	// TasksOnDeals reads every task of the window filed under any of these
+	// deals, drawn as the lane draws them.
+	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that

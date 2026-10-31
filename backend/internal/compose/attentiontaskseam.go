@@ -207,35 +207,30 @@ func (t attentionTasks) TasksAfter(
 	return out, page.HasMore, nil
 }
 
-// DealsWithTaskDue names which of these deals have an open task of the window,
-// under the lane's own narrowing (openTasksDueBy), whose row the lane files
-// under the deal (primaryLink).
-func (t attentionTasks) DealsWithTaskDue(
+// TasksOnDeals reads every open task of the window filed under any of these
+// deals, under the lane's own narrowing (openTasksDueBy). The service judges
+// which of them stand in for their deal.
+func (t attentionTasks) TasksOnDeals(
 	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
-) (map[ids.UUID]bool, error) {
-	due := map[ids.UUID]bool{}
+) ([]attention.Task, error) {
 	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
 	if !ok || len(deals) == 0 {
-		return due, nil
-	}
-	asked := map[ids.UUID]bool{}
-	for _, deal := range deals {
-		asked[deal] = true
+		return nil, nil
 	}
 	page := reminderPage
 	in.LinkedToDeals, in.Limit = deals, &page
+	reader := reminderReaderFor(ctx, window.Scope)
+	var tasks []attention.Task
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
 			return nil, err
 		}
 		for _, row := range rows {
-			if kind, id := primaryLink(row); kind == string(entityDeal) && asked[id] {
-				due[id] = true
-			}
+			tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
 		}
 		if !next.HasMore {
-			return due, nil
+			return tasks, nil
 		}
 		in.Cursor = &next.NextCursor
 	}

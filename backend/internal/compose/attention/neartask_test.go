@@ -4,6 +4,7 @@
 package attention
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -77,4 +78,38 @@ func TestTheNearTaskCarriesTheDealsGrounds(t *testing.T) {
 		}
 	}
 	t.Fatalf("the task row lost the deal's ground: %+v", rows[0].item.Because)
+}
+
+// tasksOnDeals is a task backlog that answers the same tasks for every read.
+type tasksOnDeals struct {
+	windowRecorder
+	tasks []Task
+}
+
+func (b *tasksOnDeals) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
+	return b.tasks, nil
+}
+
+// The tail judges each task it reads by the ranked page's rule, so a task the
+// store returns undated, or due past the window, leaves its deal at risk.
+func TestTheTailJudgesATaskAsTheRankedPageDoes(t *testing.T) {
+	near, undated, later := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	onDeal := func(deal ids.UUID, due *time.Time) Task {
+		return Task{ID: ids.NewV7(), Subject: "Chase", DueAt: due, LinkType: string(subjectDeal), LinkID: deal}
+	}
+	backlog := &tasksOnDeals{tasks: []Task{
+		onDeal(near, new(rankInstant.AddDate(0, 0, 2))),
+		onDeal(undated, nil),
+		onDeal(later, new(rankInstant.AddDate(0, 0, 8))),
+	}}
+	s := (&Service{}).WithTaskBacklog(backlog)
+
+	got, err := s.dealsWithNearTask(t.Context(), rankInstant, []ids.UUID{near, undated, later})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got[near] || got[undated] || got[later] {
+		t.Fatalf("deals with a near task = %v, want only %v", got, near)
+	}
 }

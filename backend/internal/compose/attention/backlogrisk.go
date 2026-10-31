@@ -84,7 +84,7 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 
 // dealsElsewhere are the deals the at-risk tail never serves as at risk. Step
 // B leaves out a deal any waiting card names under this page's narrowing, or
-// any task due within nearTaskDays under the task lane's. Step E leaves out a
+// that has a near task under the task lane's (dealsWithNearTask). Step E leaves out a
 // deal a ranked row above reports (dealsReported). The tail and the Done check
 // both ask it.
 func (s *Service) dealsElsewhere(
@@ -105,14 +105,36 @@ func (s *Service) dealsElsewhere(
 		maps.Copy(elsewhere, waiting)
 	}
 	if s.backlog.tasks != nil {
-		near := TaskWindow{AsOf: asOf, Until: nearTaskCutoff(asOf), Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
-		tasked, err := s.backlog.tasks.DealsWithTaskDue(ctx, near, deals)
+		tasked, err := s.dealsWithNearTask(ctx, asOf, deals)
 		if err != nil {
 			return nil, err
 		}
 		maps.Copy(elsewhere, tasked)
 	}
 	return elsewhere, nil
+}
+
+// dealsWithNearTask are the deals whose task, read past the lane's cap, would
+// absorb the deal's at-risk row on the ranked page. Each task is drawn and
+// judged by the ranked page's own rule (absorbsRisk).
+func (s *Service) dealsWithNearTask(ctx context.Context, asOf time.Time, deals []ids.UUID) (map[ids.UUID]bool, error) {
+	near := TaskWindow{AsOf: asOf, Until: nearTaskCutoff(asOf), Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
+	tasks, err := s.backlog.tasks.TasksOnDeals(ctx, near, deals)
+	if err != nil {
+		return nil, err
+	}
+	zone := s.backlog.zone
+	if zone == nil {
+		zone = time.UTC
+	}
+	items := plannedItems(tasks, asOf, near.Until, zone)
+	tasked := map[ids.UUID]bool{}
+	for _, row := range appendLane(nil, sourceTask, &items, asOf, classifyTask) {
+		if absorbsRisk(row, asOf) {
+			tasked[ids.UUID(row.item.Subject.Id)] = true
+		}
+	}
+	return tasked, nil
 }
 
 // riskInTail is, for a Done check, the asked deals this scope's tail would

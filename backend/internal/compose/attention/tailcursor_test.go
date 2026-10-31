@@ -28,7 +28,7 @@ func (w *windowRecorder) TasksAfter(_ context.Context, window TaskWindow, _ stri
 	return nil, false, nil
 }
 
-func (w *windowRecorder) DealsWithTaskDue(context.Context, TaskWindow, []ids.UUID) (map[ids.UUID]bool, error) {
+func (w *windowRecorder) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
 	return nil, nil
 }
 

@@ -139,10 +139,11 @@ The `deal_at_risk` source is read on below the ranked rows to its end, in every 
   deals closes that gap, but made the first page 10% slower at p50 on a team page and 3% on a seat's own page.
 - Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
   out of the tail (`dealsReported` in `attention/backlogrisk.go`).
-- Step B for tasks: `DealsWithTaskDue` (`compose/attentiontaskseam.go`) asks which deals have an open task due
-  within `nearTaskDays`, under the task lane's narrowing (`openTasksDueBy`) and filed under the deal by the lane's
-  link rule (`primaryLink`). The ranked rows apply it to the task lane's own rows; when that lane was cut, a ranked
-  deal whose near task lies past the cap is still shown as at risk.
+- Step B for tasks: `TasksOnDeals` (`compose/attentiontaskseam.go`) reads the open tasks filed under the batch's
+  deals and due within `nearTaskDays`, under the task lane's narrowing (`openTasksDueBy`). `dealsWithNearTask`
+  draws each as the lane does and asks the ranked rows' own rule, `absorbsRisk`. The ranked rows apply that rule to
+  the task lane's own rows. When that lane was cut, a ranked deal whose near task lies past the cap is still shown
+  as at risk, and the task comes later in the tail.
 - Step F: the tail reads the reader's Done marks for its rows, and `dropDone` applies the came-back rule to each
   row's own dates. `MarkRowsDone` finds a tail deal through `riskInTail`.
 
