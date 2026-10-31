@@ -399,8 +399,8 @@ func explainWithheldOwners(ctx context.Context, tx pgx.Tx, out *reporting.Evalua
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
 // is that colleague's number, however old. It answers only the reader's own
-// rows, which the export prints, as the live per-deal rows do. limited says
-// the switch narrowed them, as ForecastReaderContributions says it.
+// rows, which the export prints, as the live per-deal rows do. limited says at
+// least one row was withheld, as ForecastReaderContributions says it.
 func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) (visible []SharedContribution, limited bool, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
@@ -424,7 +424,7 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 			own = append(own, row)
 		}
 	}
-	return own, true, nil
+	return own, len(own) < len(rows), nil
 }
 
 // readerOwnsRow is the per-deal row rule while the switch is off: a row stays
@@ -436,8 +436,8 @@ func readerOwnsRow(ctx context.Context, owner ids.UUID) bool {
 // ForecastReaderContributions narrows the forecast's per-deal rows to what this
 // reader may see one by one. While the switch is off a row names a seat. So
 // only the reader's own deals stay, with no owner on them, as evidence does.
-// The HTTP door and the forecast tool both ask it. limited says the switch
-// narrowed the rows, which both doors tell their reader.
+// The HTTP door and the forecast tool both ask it. limited says at least one
+// row was withheld, which both doors tell their reader.
 func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) (visible []forecasting.Contribution, limited bool, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
@@ -452,5 +452,5 @@ func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecast
 		row.Owner = ""
 		out = append(out, row)
 	}
-	return out, true, nil
+	return out, len(out) < len(rows), nil
 }
