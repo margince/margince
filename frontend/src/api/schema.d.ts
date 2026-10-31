@@ -41347,12 +41347,12 @@ export interface components {
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
             /**
              * Format: int64
-             * @description `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. One finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+             * @description `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
              */
             range_low_minor?: number;
             /**
              * Format: int64
-             * @description `forecast_landing` only: the high end of the central 80% of finishes. One finish in ten falls above it.
+             * @description `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
              */
             range_high_minor?: number;
         };
@@ -42265,12 +42265,12 @@ export interface components {
             self_correcting?: boolean;
             /**
              * Format: int64
-             * @description The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+             * @description The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
              */
             range_low_minor?: number;
             /**
              * Format: int64
-             * @description The high end of the central 80% of finishes: one finish in ten falls above it. Present together with `range_low_minor`.
+             * @description The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
              */
             range_high_minor?: number;
             /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */

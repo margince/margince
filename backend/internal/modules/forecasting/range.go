@@ -13,15 +13,18 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"math/rand/v2"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // RangeVersion names the range rules. It is frozen with every snapshot, and a
 // change to how a range is drawn bumps it.
-const RangeVersion = "forecast_range_v1"
+const RangeVersion = "forecast_range_v2"
 
 // RangeQuantiles names how the low and high ends are read from the outcomes.
 // Each end is the smallest finish whose share of outcomes at or below it
@@ -31,7 +34,7 @@ const RangeQuantiles = "nearest_rank"
 const (
 	rangeLowQuantile  = 0.1
 	rangeHighQuantile = 0.9
-	// Up to this many open deals every outcome is enumerated.
+	// Up to this many undecided deals with no posterior, every outcome is enumerated.
 	rangeExactMaxDeals = 12
 	rangeBatchRuns     = 1000
 	rangeMaxRuns       = 20000
@@ -40,9 +43,9 @@ const (
 	rangeSettledShare = 0.005
 )
 
-// Range is the central 80% of outcomes: one in ten finishes falls below
-// LowMinor and one in ten above HighMinor. Runs counts the outcomes enumerated
-// or simulated.
+// Range is the central 80% of outcomes: at most one finish in ten falls below
+// LowMinor, and at most one in ten above HighMinor. Runs counts the outcomes
+// enumerated or simulated.
 type Range struct {
 	LowMinor  int64
 	HighMinor int64
@@ -69,42 +72,54 @@ type rangeStage struct {
 // always in; each open deal with a base amount is won or lost by its chance.
 // A stage's chance is drawn once per run from its beta posterior, so deals in
 // one stage share the draw. A row with no evidence count has no posterior.
-// The seed is InputFingerprint and RangeVersion, so row order changes nothing.
-func ForecastRange(rows []Contribution) Range {
-	won, stages := rangeInputs(rows)
-	open := 0
+// False when the money could pass values.MaxExactInteger: then no range is drawn.
+func ForecastRange(rows []Contribution) (Range, bool) {
+	won, stages, ok := rangeInputs(rows)
+	if !ok {
+		return Range{}, false
+	}
+	open, spread := 0, false
 	for _, stage := range stages {
 		open += len(stage.deals)
+		spread = spread || stage.strength > 0
 	}
+	// Enumeration knows no posterior, so it only stands in for a simulation
+	// that would draw none.
 	var out Range
-	if open <= rangeExactMaxDeals {
+	if !spread && open <= rangeExactMaxDeals {
 		out = exactRange(stages)
 	} else {
-		out = simulatedRange(stages, rangeRand(rows))
+		out = simulatedRange(stages, rangeRand(won, stages))
 	}
 	out.LowMinor += won
 	out.HighMinor += won
-	return out
+	return out, true
 }
 
 // rangeInputs sums the won money and groups the open deals by the stage chance
-// they share, both in deal order.
-func rangeInputs(rows []Contribution) (int64, []rangeStage) {
+// they share, both in deal order. A deal at 0% or 100% is decided in every run,
+// so it is left out or counted as won. False when won plus every open amount
+// passes values.MaxExactInteger; below it no partial sum can overflow.
+func rangeInputs(rows []Contribution) (int64, []rangeStage, bool) {
 	ordered := slices.SortedFunc(slices.Values(rows), func(a, b Contribution) int {
 		return strings.Compare(a.DealID, b.DealID)
 	})
-	var won int64
+	var won, ceiling int64
 	index := map[string]int{}
 	var stages []rangeStage
 	for _, row := range ordered {
-		if row.BaseMinor == nil {
+		if row.BaseMinor == nil || (!row.InWon && !row.InOpen) {
 			continue
 		}
-		if row.InWon {
+		var err error
+		if ceiling, err = addMinor(ceiling, *row.BaseMinor); err != nil || ceiling > values.MaxExactInteger {
+			return 0, nil, false
+		}
+		if row.InWon || row.StageProbability >= 100 {
 			won += *row.BaseMinor
 			continue
 		}
-		if !row.InOpen {
+		if row.StageProbability <= 0 {
 			continue
 		}
 		key, strength := rangeStageKey(row)
@@ -122,7 +137,7 @@ func rangeInputs(rows []Contribution) (int64, []rangeStage) {
 			baseMinor: *row.BaseMinor, percent: row.StageProbability, effect: effect,
 		})
 	}
-	return won, stages
+	return won, stages, true
 }
 
 // rangeStageKey is the group a deal's chance is drawn in, and the posterior's
@@ -245,10 +260,18 @@ func settledEnd(previous, next int64) bool {
 	return math.Abs(float64(next-previous)) < rangeSettledShare*scale
 }
 
-// rangeRand seeds the simulation from the contributions and the range rules,
-// so one forecast always draws the same range.
-func rangeRand(rows []Contribution) *rand.Rand {
-	digest := sha256.Sum256([]byte(InputFingerprint(rows) + "|" + RangeVersion))
+// rangeRand seeds the simulation from what it decides and the range rules. So
+// one forecast always draws the same range, and a decided deal moves nothing.
+func rangeRand(won int64, stages []rangeStage) *rand.Rand {
+	material := fmt.Appendf(nil, "%s|%d\n", RangeVersion, won)
+	for _, stage := range stages {
+		material = fmt.Appendf(material, "%g|%g", stage.chance, stage.strength)
+		for _, deal := range stage.deals {
+			material = fmt.Appendf(material, "|%d:%d:%g", deal.baseMinor, deal.percent, deal.effect)
+		}
+		material = append(material, '\n')
+	}
+	digest := sha256.Sum256(material)
 	return rand.New(rand.NewPCG(binary.BigEndian.Uint64(digest[:8]), binary.BigEndian.Uint64(digest[8:16]))) // #nosec G404 -- a reproducible simulation, not a secret
 }
 

@@ -13689,7 +13689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
   "forecast.range": "8 von 10 Ergebnissen zwischen {low} und {high}",
   "forecast.rangeBasis":
-    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Ein Ergebnis von zehn liegt unter der Spanne, eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
+    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Höchstens ein Ergebnis von zehn liegt unter der Spanne und höchstens eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingRecordsDetail":
     "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",

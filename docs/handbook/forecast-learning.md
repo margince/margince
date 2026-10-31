@@ -57,9 +57,9 @@ line.
 
 To find the two amounts, the forecast runs the period many times. Each
 time, every open deal is won or lost at the probability the forecast uses for
-it, with its risk. Money already won is always in. In 8 of every 10 runs, the
-period ends between the two amounts. One run in 10 ends below the low amount,
-and one ends above the high amount.
+it, with its risk. Money already won is always in. In at least 8 of every 10 runs,
+the period ends between the two amounts. At most one run in 10 ends below the low
+amount, and at most one ends above the high amount.
 
 The range takes each probability in use as right. It does not check it. The landing
 figure is worked out in a different way, so it can sit outside the range. While

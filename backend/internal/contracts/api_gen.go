@@ -42943,10 +42943,10 @@ type ForecastReadings struct {
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
 
-	// RangeHighMinor The high end of the central 80% of finishes: one finish in ten falls above it. Present together with `range_low_minor`.
+	// RangeHighMinor The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 
-	// RangeLowMinor The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+	// RangeLowMinor The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
 	RangeLowMinor *int64 `json:"range_low_minor,omitempty"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -52618,10 +52618,10 @@ type ReportingMetric struct {
 	Id          ReportingMetricID    `json:"id"`
 	Numerator   *float64             `json:"numerator,omitempty"`
 
-	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. One finish in ten falls above it.
+	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 
-	// RangeLowMinor `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. One finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+	// RangeLowMinor `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
 	RangeLowMinor *int64   `json:"range_low_minor,omitempty"`
 	Target        *float64 `json:"target,omitempty"`
 	TargetActual  *float64 `json:"target_actual,omitempty"`
