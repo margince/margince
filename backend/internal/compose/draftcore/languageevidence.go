@@ -82,11 +82,14 @@ func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time, zone 
 	return LanguageEvidence(Conversation(activities, nil, now, zone, len(activities)), "")
 }
 
-// evidenceRank orders evidence: the addressee's inbound mail, other inbound
-// mail, then everything else.
+// evidenceRank orders evidence: the addressee's mail, other mail they wrote,
+// then everything else. Who wrote it, never which way it went.
+//
+// A colleague writing from one of our own domains arrives inbound. Ranked by
+// direction, their mail was a sample of the counterparty's language.
 func evidenceRank(turn Turn, addressee string) int {
 	switch {
-	case turn.Direction != string(crmcontracts.ActivityDirectionInbound):
+	case turn.ByColleague || turn.Direction != string(crmcontracts.ActivityDirectionInbound):
 		return 2
 	case addressee != "" && turn.SenderID == addressee:
 		return 0
