@@ -15,7 +15,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -26,7 +25,7 @@ const mailChangeLimit = 8
 // The preview value kinds the email renders in a form of its own.
 const (
 	previewValueMoney       = "money"
-	previewValueUnavailable = approvalplan.MaskedKind
+	previewValueUnavailable = "unavailable_name"
 	previewValueLifecycle   = "lifecycle"
 	previewValueExecution   = "execution"
 )

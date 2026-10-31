@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -72,16 +73,16 @@ func maskForViewer(ctx context.Context, approval crmcontracts.Approval, preview 
 		return apperrors.ErrPermissionDenied
 	}
 	masked := viewerMaskedFields(viewer, approval, preview, touched)
-	maskChanges(preview.Changes, masked)
+	maskChanges(ctx, preview.Changes, masked)
 	if hasDetails {
-		maskDetails(*preview.Details, masked)
+		maskDetails(ctx, *preview.Details, masked)
 	}
 	if hasRows {
 		for i := range *preview.ImportRows {
 			row := &(*preview.ImportRows)[i]
 			rowMasked := auth.MaskedFields(viewer, row.Object, true)
-			maskChanges(row.Changes, rowMasked)
-			maskDetails(row.Details, rowMasked)
+			maskChanges(ctx, row.Changes, rowMasked)
+			maskDetails(ctx, row.Details, rowMasked)
 		}
 	}
 	return nil
@@ -114,16 +115,19 @@ func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approv
 	return masked
 }
 
-func maskChanges(changes []crmcontracts.ApprovalPreviewChange, masked []string) {
+// maskChanges and maskDetails tell the approvals service each value they
+// replace, so the staged call that repeats it stays behind too.
+func maskChanges(ctx context.Context, changes []crmcontracts.ApprovalPreviewChange, masked []string) {
 	for i := range changes {
 		if slices.Contains(masked, changes[i].Field) {
+			approvals.RecordMasked(ctx)
 			changes[i].Before = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
 			changes[i].After = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
 		}
 	}
 }
 
-func maskDetails(details []crmcontracts.ApprovalPreviewDetail, masked []string) {
+func maskDetails(ctx context.Context, details []crmcontracts.ApprovalPreviewDetail, masked []string) {
 	isMasked := func(field string) bool { return slices.Contains(masked, field) }
 	named := namedFieldGroups(details)
 	for i := range details {
@@ -132,6 +136,7 @@ func maskDetails(details []crmcontracts.ApprovalPreviewDetail, masked []string) 
 			sources = append(sources, named[i])
 		}
 		if slices.ContainsFunc(sources, isMasked) {
+			approvals.RecordMasked(ctx)
 			details[i].Value = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
 		}
 	}

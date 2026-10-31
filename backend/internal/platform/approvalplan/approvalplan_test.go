@@ -29,26 +29,16 @@ func TestOnlyAReadyPreviewOfAKnownVersionShowsItsPlan(t *testing.T) {
 }
 
 func TestAPreviewThatHeldAValueBackWithholdsTheStagedCall(t *testing.T) {
-	masked := crmcontracts.ApprovalPreviewValue{Kind: MaskedKind}
-	shown := crmcontracts.ApprovalPreviewValue{Kind: "text", Text: "Harbor"}
-	ready := func(changes []crmcontracts.ApprovalPreviewChange, details []crmcontracts.ApprovalPreviewDetail) *crmcontracts.ApprovalPreview {
-		return &crmcontracts.ApprovalPreview{Version: 2, State: "ready", Changes: changes, Details: &details}
+	ready := &crmcontracts.ApprovalPreview{Version: 2, State: "ready"}
+	if (PreviewRead{Preview: ready}).PayloadWithheld() {
+		t.Error("a ready preview that held nothing back withholds the staged call")
 	}
-	if HeldBack(ready([]crmcontracts.ApprovalPreviewChange{{Field: "name", Before: shown, After: shown}}, nil)) {
-		t.Error("a preview that held nothing back reads as holding a value back")
-	}
-	if !HeldBack(ready(nil, []crmcontracts.ApprovalPreviewDetail{{Field: "to", Value: masked}})) {
-		t.Error("a masked detail is not read as held back")
-	}
-	if !HeldBack(ready([]crmcontracts.ApprovalPreviewChange{{Field: "email", Before: masked, After: masked}}, nil)) {
-		t.Error("a masked change is not read as held back")
-	}
-	if !(PreviewRead{Preview: ready(nil, nil), HeldBack: true}).PayloadWithheld() {
+	if !(PreviewRead{Preview: ready, HeldBack: true}).PayloadWithheld() {
 		t.Error("a ready preview that held a value back leaves the staged call on the approval")
 	}
 }
 
-func TestOnlyADecidersStaleOrIncompleteProposalKeepsItsStagedCall(t *testing.T) {
+func TestOnlyADecidersProposalThatIsNotReadyKeepsItsStagedCall(t *testing.T) {
 	for _, tc := range []struct {
 		state        string
 		builtAsAgent bool
@@ -60,7 +50,7 @@ func TestOnlyADecidersStaleOrIncompleteProposalKeepsItsStagedCall(t *testing.T) 
 		{"incomplete", false, false},
 		{"stale", true, true},
 		{"incomplete", true, true},
-		{"unavailable", false, true},
+		{"unavailable", false, false},
 		{"unavailable", true, true},
 		{NeedsWiderSight, false, true},
 		{"a_state_added_later", false, true},

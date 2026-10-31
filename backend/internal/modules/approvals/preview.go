@@ -115,14 +115,14 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 	return nil
 }
 
-// proposalPreview also answers whether the preview held a value back, read
-// before a preview that is not ready is cleared.
+// proposalPreview also answers whether the build masked a value for the reader.
 func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (preview *crmcontracts.ApprovalPreview, heldBack bool, err error) {
-	preview, err = s.preview(s.withPreviewEffect(ctx, subject), proposal)
+	recording, masked := withMaskRecorder(s.withPreviewEffect(ctx, subject))
+	preview, err = s.preview(recording, proposal)
 	if err != nil || preview == nil {
 		return preview, false, err
 	}
-	heldBack = approvalplan.HeldBack(preview)
+	heldBack = masked.Load()
 	defer func() {
 		if preview.State != "ready" {
 			preview.Changes = []crmcontracts.ApprovalPreviewChange{}

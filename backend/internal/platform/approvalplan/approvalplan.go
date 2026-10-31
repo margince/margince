@@ -6,11 +6,7 @@
 // cards read it, so no surface shows what another holds back.
 package approvalplan
 
-import (
-	"slices"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-)
+import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 // Withheld reports a preview that shows nothing of the plan: one in a version
 // no reader knows, or in any state but ready.
@@ -24,24 +20,20 @@ const stateReady = "ready"
 // reader cannot open.
 const NeedsWiderSight = "needs_wider_sight"
 
-// MaskedKind is the value kind a preview shows for a value this reader's role
-// masks, or one it may not name.
-const MaskedKind = "unavailable_name"
-
 // PreviewRead is one preview as the approvals service read it.
 type PreviewRead struct {
 	Preview *crmcontracts.ApprovalPreview
 	// BuiltAsAgent says the preview was read as the agent that runs the effect.
 	BuiltAsAgent bool
-	// HeldBack is HeldBack read off the preview before any clearing.
+	// HeldBack says the build replaced a value the reader's role masks.
 	HeldBack bool
 }
 
 // PayloadWithheld reports an approval whose staged call, summary and evidence
-// must stay behind. Only a stale or incomplete proposal its decider runs keeps
-// them: its decider's own read stands behind them. An agent wrote its staged
-// call with its own sight, and an unavailable preview may be the reader's lack
-// of access.
+// must stay behind. A stale, incomplete or unavailable proposal its decider
+// runs keeps them. Its reader already writes the target and reads every cited
+// activity, or the approval would not be listed for them. An agent wrote its
+// staged call with its own sight, so its proposal keeps nothing unless ready.
 func (read PreviewRead) PayloadWithheld() bool {
 	preview := read.Preview
 	if preview == nil {
@@ -53,37 +45,9 @@ func (read PreviewRead) PayloadWithheld() bool {
 	switch preview.State {
 	case stateReady:
 		return false
-	case "stale", "incomplete":
+	case "stale", "incomplete", "unavailable":
 		return read.BuiltAsAgent
 	default:
 		return true
 	}
-}
-
-// HeldBack reports a preview that shows a value as masked or unnamed, which
-// the staged call would repeat. Read it before a preview is cleared.
-func HeldBack(preview *crmcontracts.ApprovalPreview) bool {
-	if preview == nil {
-		return false
-	}
-	values := []crmcontracts.ApprovalPreviewValue{}
-	collect := func(changes []crmcontracts.ApprovalPreviewChange, details []crmcontracts.ApprovalPreviewDetail) {
-		for _, change := range changes {
-			values = append(values, change.Before, change.After)
-		}
-		for _, detail := range details {
-			values = append(values, detail.Value)
-		}
-	}
-	if preview.Details != nil {
-		collect(preview.Changes, *preview.Details)
-	} else {
-		collect(preview.Changes, nil)
-	}
-	if preview.ImportRows != nil {
-		for _, row := range *preview.ImportRows {
-			collect(row.Changes, row.Details)
-		}
-	}
-	return slices.ContainsFunc(values, func(value crmcontracts.ApprovalPreviewValue) bool { return value.Kind == MaskedKind })
 }

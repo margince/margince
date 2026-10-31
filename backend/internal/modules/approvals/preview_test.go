@@ -209,16 +209,29 @@ func TestProgressionPreviewRequiresItsOriginalDestinationPin(t *testing.T) {
 	}
 }
 
+// stalePreviewWithAnUnnamedValue answers a stale preview showing one value as
+// unavailable_name, and tells the recorder it masked it when masked is true.
+func stalePreviewWithAnUnnamedValue(masked bool) func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+	return func(ctx context.Context, _ crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		if masked {
+			RecordMasked(ctx)
+		}
+		details := []crmcontracts.ApprovalPreviewDetail{{Field: "to", Value: crmcontracts.ApprovalPreviewValue{Kind: "unavailable_name"}}}
+		return &crmcontracts.ApprovalPreview{Version: 2, State: "stale", Changes: []crmcontracts.ApprovalPreviewChange{}, Details: &details}, nil
+	}
+}
+
+func stagedEmailRow() []crmcontracts.Approval {
+	change := map[string]any{"to": []any{"buyer@masked.test"}}
+	summary := "Write to buyer@masked.test"
+	return []crmcontracts.Approval{{Kind: "send_email", Status: crmcontracts.ApprovalStatusPending, ProposedChange: &change, Summary: &summary}}
+}
+
 // A preview that is not ready is cleared before it leaves the service. A value
 // it masked must still keep the staged call back.
 func TestAMaskedValueKeepsTheStagedCallBackAfterThePreviewIsCleared(t *testing.T) {
-	svc := NewService(nil).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-		details := []crmcontracts.ApprovalPreviewDetail{{Field: "to", Value: crmcontracts.ApprovalPreviewValue{Kind: "unavailable_name"}}}
-		return &crmcontracts.ApprovalPreview{Version: 2, State: "stale", Changes: []crmcontracts.ApprovalPreviewChange{}, Details: &details}, nil
-	})
-	change := map[string]any{"to": []any{"buyer@masked.test"}}
-	summary := "Write to buyer@masked.test"
-	rows := []crmcontracts.Approval{{Kind: "send_email", Status: crmcontracts.ApprovalStatusPending, ProposedChange: &change, Summary: &summary}}
+	svc := NewService(nil).WithPreview(stalePreviewWithAnUnnamedValue(true))
+	rows := stagedEmailRow()
 	if err := svc.readDecisionContext(context.Background(), rows, []row{{Kind: "send_email"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -227,6 +240,19 @@ func TestAMaskedValueKeepsTheStagedCallBackAfterThePreviewIsCleared(t *testing.T
 	}
 	if rows[0].ProposedChange != nil || rows[0].Summary != nil {
 		t.Fatalf("the staged call kept a masked value: %+v %v", rows[0].ProposedChange, rows[0].Summary)
+	}
+}
+
+// An archived seat shows as unavailable_name with nothing masked. The staged
+// call of a stale proposal its decider runs then stays on the approval.
+func TestAnUnnamedValueThatNoMaskHidKeepsTheStagedCall(t *testing.T) {
+	svc := NewService(nil).WithPreview(stalePreviewWithAnUnnamedValue(false))
+	rows := stagedEmailRow()
+	if err := svc.readDecisionContext(context.Background(), rows, []row{{Kind: "send_email"}}); err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].ProposedChange == nil || rows[0].Summary == nil {
+		t.Fatal("an unnamed value with no mask took the staged call away")
 	}
 }
 
