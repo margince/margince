@@ -89,6 +89,21 @@ describe("DecisionCard — what the reader is being asked", () => {
     ).toBeInTheDocument();
   });
 
+  // A preview that needs wider sight arrives with no staged call and no
+  // summary: the server keeps both back. The card still renders and says so.
+  it("renders an approval whose plan the server held back", () => {
+    const withheld = approval({
+      preview: { version: 2, state: "needs_wider_sight", changes: [] },
+    });
+    delete withheld.summary;
+    delete withheld.proposed_change;
+    render(card({ approval: withheld }));
+    expect(screen.queryByText("Re: kickoff")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This proposal carries nothing to read."),
+    ).toBeInTheDocument();
+  });
+
   // The subject is the headline, so a second "Subject: Re: kickoff" row would put
   // the same string on the card twice and leave the reader working out that the
   // two lines are one fact.

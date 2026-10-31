@@ -163,16 +163,16 @@ func TestEveryApprovalKindIsPreviewedAsThePrincipalThatRunsIt(t *testing.T) {
 }
 
 // A kind cannot be exercised through the service without a database, so this
-// census reads the dispatch source: only readAs builds a preview, nothing
-// returns before it asks who runs the effect, only read hands it the
-// approvals module's answer, and the service is wired to read.
+// census reads the dispatch source. Only readAs builds a preview, and nothing
+// returns before it asks who runs the effect. Only read hands it the approvals
+// module's answer, and the service is wired to read.
 func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
 	fset := token.NewFileSet()
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	wired := 0
+	wired, built := 0, 0
 	for _, name := range files {
 		if strings.HasSuffix(name, "_test.go") {
 			continue
@@ -196,6 +196,7 @@ func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
 				}
 				switch selector.Sel.Name {
 				case "buildPreview":
+					built++
 					if fn.Name.Name != "readAs" {
 						t.Errorf("%s: %s builds a preview outside the dispatch", fset.Position(selector.Pos()), fn.Name.Name)
 					}
@@ -210,6 +211,9 @@ func TestOnlyTheDispatchBuildsAnApprovalPreview(t *testing.T) {
 				assertNothingReturnsBeforeTheEffect(t, fset, fn)
 			}
 		}
+	}
+	if built != 1 {
+		t.Errorf("the dispatch builds a preview %d times, want once in readAs", built)
 	}
 	if wired != 1 {
 		t.Errorf("the approvals service is wired to a preview %d times, want once through read", wired)

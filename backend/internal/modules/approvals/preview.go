@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,18 +107,12 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 			return err
 		}
 		rows[i].Preview = preview
-		if PreviewWithholdsPlan(preview) {
+		if approvalplan.PayloadWithheld(preview, s.runsAsAgent(stagedByRow(subjects[i]))) {
 			// The staged call and its summary say what the preview held back.
 			rows[i].ProposedChange, rows[i].Evidence, rows[i].Summary = nil, nil, nil
 		}
 	}
 	return nil
-}
-
-// PreviewWithholdsPlan reports a preview that shows nothing of the plan. Every
-// surface that reads an approval then withholds the plan too.
-func PreviewWithholdsPlan(preview *crmcontracts.ApprovalPreview) bool {
-	return preview != nil && ((preview.Version != 1 && preview.Version != 2) || preview.State != "ready")
 }
 
 func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
@@ -197,7 +192,7 @@ func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID 
 
 // PreviewNeedsWiderSight is the state of a preview whose effect touches a
 // record the viewer cannot open. It shows nothing of the plan.
-const PreviewNeedsWiderSight = "needs_wider_sight"
+const PreviewNeedsWiderSight = approvalplan.NeedsWiderSight
 
 const (
 	previewIncomplete       = "incomplete"

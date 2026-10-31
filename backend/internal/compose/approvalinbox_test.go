@@ -50,38 +50,25 @@ func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 	}
 }
 
-// A member with nothing to say is ABSENT. `omitempty` cannot drop a struct, so
-// carrying these as values would publish 00000000-0000-… on every proposal that
-// has none — and a caller reading decided_by would be told a nobody answered it.
-// A preview that keeps the plan from its reader keeps the staged document and
-// its evidence back too. A ready preview shows all three.
-func TestReadApprovalWithholdsTheStagedDocumentWhenThePreviewDoes(t *testing.T) {
-	for _, tc := range []struct {
-		state    string
-		version  int
-		withheld bool
-	}{
-		{previewReadyState, 2, false},
-		{approvals.PreviewNeedsWiderSight, 2, true},
-		{previewIncompleteState, 1, true},
-		{previewReadyState, 9, true},
-	} {
-		staged := stagedFixture()
-		staged.Preview = &crmcontracts.ApprovalPreview{Version: tc.version, State: tc.state, Changes: []crmcontracts.ApprovalPreviewChange{}}
-		read := stagedActionFrom(staged, true)
-		if shown := read.ProposedChange != nil || read.Evidence != nil; shown == tc.withheld {
-			t.Errorf("%s v%d: proposed_change %s, evidence %v, want withheld=%v", tc.state, tc.version, read.ProposedChange, read.Evidence, tc.withheld)
-		}
-		if read.Summary == "" || read.Preview == nil {
-			t.Errorf("%s v%d: the answer lost its summary or its preview", tc.state, tc.version)
-		}
+// read_approval answers the staged document and its evidence as the approvals
+// wire carries them, so it withholds what every other surface does.
+func TestReadApprovalAnswersTheStagedDocumentTheWireCarries(t *testing.T) {
+	carried := stagedFixture()
+	carried.Preview = &crmcontracts.ApprovalPreview{Version: 2, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{}}
+	if read := stagedActionFrom(carried, true); read.ProposedChange == nil || read.Evidence == nil || read.Preview == nil {
+		t.Errorf("a carried staged document went missing: %+v", read)
 	}
-	undecided := stagedActionFrom(stagedFixture(), true)
-	if undecided.ProposedChange == nil || undecided.Evidence == nil {
-		t.Error("an approval with no preview lost its staged document")
+	withheld := stagedFixture()
+	withheld.Preview = &crmcontracts.ApprovalPreview{Version: 2, State: approvals.PreviewNeedsWiderSight, Changes: []crmcontracts.ApprovalPreviewChange{}}
+	withheld.ProposedChange, withheld.Evidence, withheld.Summary = nil, nil, nil
+	if read := stagedActionFrom(withheld, true); read.ProposedChange != nil || read.Evidence != nil || read.Summary != "" || read.Preview == nil {
+		t.Errorf("read_approval answers more than the wire carries: %+v", read)
 	}
 }
 
+// A member with nothing to say is ABSENT. `omitempty` cannot drop a struct.
+// As values these would publish a zero UUID on every proposal that has none.
+// A caller reading decided_by would then be told a nobody answered it.
 func TestAnAbsentIdIsAbsentAndNotAZeroUUID(t *testing.T) {
 	encoded, err := json.Marshal(stagedActionFrom(stagedFixture(), true))
 	if err != nil {

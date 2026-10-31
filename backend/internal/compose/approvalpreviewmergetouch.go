@@ -9,9 +9,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// mergeScopeTouches lists the records a merge's details quote by text alone:
-// moved signals, files and relationships, and the records its notices,
-// commitments and handoffs are about.
+// mergeScopeTouches lists the records a merge's details quote by text alone.
+// Those are moved signals, files and relationships, and the records its
+// notices, commitments and handoffs are about.
 func mergeScopeTouches(scope contacts.MergeSurvivorship) map[string][]ids.UUID {
 	touched := map[string][]ids.UUID{}
 	add := func(entityType string, id ids.UUID) {

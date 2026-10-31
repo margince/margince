@@ -180,11 +180,7 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		out.TargetLabel = *a.TargetLabel
 	}
 	out.Preview = a.Preview
-	// The staged document and its evidence are the plan a withheld preview
-	// keeps from this reader, so they stay behind with it.
-	if agents.PreviewWithholdsPlan(a.Preview) {
-		return out
-	}
+	// The approvals wire already leaves out a plan its preview withholds.
 	out.ProposedChange = stagedPayload(a.ProposedChange)
 	out.Evidence = stagedEvidence(a.Evidence)
 	return out

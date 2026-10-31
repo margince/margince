@@ -78,6 +78,7 @@ func TestAnAgentsMailKeepsTheAddressesTheApproversRoleMasks(t *testing.T) {
 	if value := promotionDetailValue(t, preview, "to"); value.Kind != previewValueUnavailable || value.Text != "" {
 		t.Fatalf("a masked address reaches the approver: %+v", value)
 	}
+	s.requireWireWithholdsPlan(id, "buyer@masked.test")
 }
 
 // Whatever the agent's build reads through the reader's names and records
