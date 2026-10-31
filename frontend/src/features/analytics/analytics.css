@@ -140,8 +140,7 @@
   --ghostEdge: var(--borderControl);
   box-shadow: var(--shadow-rest);
 }
-/* The page Reports opens is where the reader is, drawn as a set toggle is. */
+/* While its page is open, Reports holds the strong edge. */
 .analytics-tab-verbs .btn-ghost[aria-current="page"] {
-  border-color: var(--borderStrong);
-  background: var(--bgChip);
+  --ghostEdge: var(--borderStrong);
 }
