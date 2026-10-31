@@ -12,7 +12,7 @@ import {
   type ReportingEvaluation,
   reportingPeriodLabel,
 } from "./reporting.model";
-import { useMetricNames } from "./reporting.queries";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 
 // This month's targets as a strip of their own under the week's figure. They
 // name their own month, so a week is never read against a month's target.
@@ -24,6 +24,7 @@ export function MonthlyTargets({
   const t = useT();
   const { locale } = useLocale();
   const metricName = useMetricNames();
+  const catalog = useReportingCatalog();
   const readsTargets = useCan("sales_target", "read");
   const canSet = useCanWrite("sales_target", "create");
   const { context } = evaluation;
@@ -36,12 +37,28 @@ export function MonthlyTargets({
   const held = evaluation.metrics.filter(
     (metric) => metric.target != null && !metric.coverage.withheld,
   );
+  // A hidden figure may hide its target too, so a target is only said to be
+  // missing when no figure that takes one is hidden.
+  const hidden = evaluation.metrics.filter(
+    (metric) =>
+      metric.coverage.withheld &&
+      (metric.target != null ||
+        catalog.data?.metrics.some(
+          (definition) =>
+            definition.id === metric.id && definition.supports_target,
+        )),
+  );
   return (
     <div className="analytics-hero-aside">
       <p className="t-label">
         {t("analytics.overview.monthlyTitle", { month })}
       </p>
-      {held.length === 0 ? (
+      {hidden.map((metric) => (
+        <p key={metric.id} className="t-caption">
+          {metricName(metric.id)}: {t("analytics.prospect.withheld")}
+        </p>
+      ))}
+      {held.length === 0 && hidden.length === 0 ? (
         <p className="t-caption">
           {t("analytics.overview.noMonthlyTarget")}.
           {canSet && (

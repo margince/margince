@@ -88,6 +88,44 @@ describe("My prospecting's results", () => {
     expect(screen.queryByText(/\b2 of 8\b/)).toBeNull();
   });
 
+  it("says hidden targets are hidden, never that none is set", async () => {
+    const hidden = { coverage: { status: "ok", withheld: true } } as const;
+    open(
+      ADDRESS,
+      weekAnd(
+        prospectingEvaluation([
+          metric("meetings_held", null, hidden),
+          metric("accepted_opportunities", null, hidden),
+        ]),
+      ),
+      { seat: "sdr" },
+    );
+    const lead = await results();
+    expect(lead.getByText("Meetings held: Hidden from you")).toBeVisible();
+    expect(lead.getByText("Accepted handoffs: Hidden from you")).toBeVisible();
+    expect(lead.queryByText(/No monthly target set/)).toBeNull();
+    expect(lead.queryByRole("link", { name: "Set targets" })).toBeNull();
+  });
+
+  it("shows a hidden target beside one it may read", async () => {
+    open(
+      ADDRESS,
+      weekAnd(
+        prospectingEvaluation([
+          metric("meetings_held", 4, { target: 24, target_actual: 18 }),
+          metric("accepted_opportunities", null, {
+            coverage: { status: "ok", withheld: true },
+          }),
+        ]),
+      ),
+      { seat: "sdr" },
+    );
+    const lead = await results();
+    expect(lead.getByText("Meetings held: 18 of 24")).toBeVisible();
+    expect(lead.getByText("Accepted handoffs: Hidden from you")).toBeVisible();
+    expect(lead.queryByText(/No monthly target set/)).toBeNull();
+  });
+
   it("agrees with its last week, and leaves a week with no reading empty", async () => {
     open(
       ADDRESS,
