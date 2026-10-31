@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { formatDecimal } from "../../format/format";
-import { removeStored, STORAGE_KEYS } from "../../lib/storage";
+import { forgetSeat } from "../../lib/storage";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,
@@ -33,7 +33,7 @@ import {
 // operands, and the period stands apart from its cutoff.
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;

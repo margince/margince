@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { removeStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
+import { forgetSeat, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
 import {
@@ -23,7 +23,7 @@ import {
 } from "./analytics.overview.testkit";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;

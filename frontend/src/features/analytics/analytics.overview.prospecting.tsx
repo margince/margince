@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { UseQueryResult } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -18,17 +18,20 @@ import { openAnalyticsSection } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { scopeKey } from "./analytics.context";
 import {
   NeedsYourAction,
   useSdrSummary,
   WaitingOnOthers,
 } from "./analytics.outcomes.sdr";
 import { targetCard } from "./analytics.outcomes.targets";
+import { outboundDials } from "./analytics.overview.context";
 import {
   MetricReading,
   metricOf,
   OverviewLinks,
   OverviewSaveActions,
+  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -91,7 +94,6 @@ export function MyProspecting({
   const zone = useRecordZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
   const filters = useOverviewFilters([], "this_week");
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const readsLeads = useCan("lead", "read");
   const summary = useSdrSummary(self?.id ?? "", !!self?.id && readsLeads);
   const { metrics, blocks: sdrBlocks } = viewRequest(
@@ -113,6 +115,9 @@ export function MyProspecting({
   const query = useReportingEvaluation(
     selection,
     !!self?.id && validDates && metrics.length > 0,
+  );
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
   );
   if (!self?.id) {
     return (
@@ -160,12 +165,10 @@ export function MyProspecting({
             onChange: (from, through) => {
               filters.setStart(from);
               filters.setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
             if (next.period !== filters.period) filters.setPeriod(next.period);
-            setEvidence(null);
           }}
         />
       </FilterBar>
@@ -182,7 +185,7 @@ export function MyProspecting({
                 evaluation={evaluation}
                 workflow={workflow}
                 upcoming={summary.data?.upcoming_meetings}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
               />
               <OpeningSummary
                 sentences={prospectingSummary(
@@ -198,7 +201,7 @@ export function MyProspecting({
                   key={JSON.stringify(evidence)}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
             </>
@@ -217,6 +220,17 @@ export function MyProspecting({
         />
       )}
       <OverviewLinks
+        dials={outboundDials(
+          "prospecting",
+          {
+            // The reader's own work, never a colleague's or a team's.
+            scope: scopeKey(self),
+            period: filters.period,
+            from: filters.period === "custom" ? filters.start : undefined,
+            through: filters.period === "custom" ? filters.end : undefined,
+          },
+          scopeKey(context.default_scope),
+        )}
         sections={[
           { section: "sdr", label: t("reporting.sdr") },
           { section: "leads", label: t("reporting.leads") },

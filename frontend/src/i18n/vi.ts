@@ -7027,6 +7027,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kế hoạch đã chạy và các dòng dùng để đối chiếu con số này",
   "analytics.reportDeals": "Deal đang mở theo giai đoạn",
   "analytics.sections": "Mục phân tích",
+  "analytics.scopeRefused": "Liên kết này nêu số liệu bạn không mở được",
+  "analytics.scopeRefusedBody":
+    "Liên kết hỏi về đồng nghiệp hoặc nhóm nằm ngoài phạm vi bạn được xem. Sẽ không có gì hiển thị thay thế cho đến khi bạn chọn.",
+  "analytics.scopeRefusedUse": "Xem {scope}",
   "analytics.sectionForecast": "Dự báo",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Tổng quan",
@@ -7049,6 +7053,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.notComparedDetail": "Ghi chú bên dưới giải thích lý do",
   "analytics.overview.saveView": "Lưu chế độ xem",
   "analytics.overview.templates": "Mẫu báo cáo",
+  "analytics.overview.saveViewNote":
+    "Lưu sẽ thêm một báo cáo trong Báo cáo. Tổng quan vẫn giữ nguyên.",
+  "analytics.overview.pipelineGone":
+    "Chế độ xem này nêu một pipeline bạn không mở được",
+  "analytics.overview.pipelineGoneBody":
+    "Pipeline có thể đã được lưu trữ hoặc không được chia sẻ với bạn. Hãy chọn một pipeline để xem số liệu.",
+  "analytics.overview.pipelineDefault": "Dùng pipeline mặc định",
+  "analytics.overview.pipelineAll": "Dùng tất cả pipeline",
   "analytics.overview.salesNothing":
     "Không có kiểm tra dự báo nào đang mở cho phạm vi này.",
   "analytics.overview.quarterOnlyTitle": "Kết quả dự kiến tính cho quý này",
@@ -7635,6 +7647,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.makeup": "Cơ cấu của kỳ",
   "forecast.alreadyWon": "Đã chốt",
   "forecast.updateCall": "Cập nhật dự báo",
+  "forecast.mismatch.pipeline": "Dự báo tính mọi pipeline",
+  "forecast.mismatch.pipelineBody":
+    "Số liệu bạn vừa xem chỉ tính một pipeline. Dự báo không thu hẹp về một pipeline, nên sẽ tính nhiều giao dịch hơn số liệu đó.",
+  "forecast.mismatch.allPipelines": "Xem tất cả pipeline",
+  "forecast.mismatch.period": "Dự báo đọc tuần, tháng hoặc quý này",
+  "forecast.mismatch.periodBody":
+    "Số liệu bạn vừa xem thuộc một kỳ khác. Hãy chọn một kỳ mà dự báo đọc được.",
+  "forecast.mismatch.quarter": "Xem quý này",
   "forecast.callExplains":
     "Nhập tổng số tiền dự kiến chốt trong kỳ này, gồm cả doanh số đã chốt.",
   "forecast.expectedTotal": "Tổng dự kiến cho kỳ này",

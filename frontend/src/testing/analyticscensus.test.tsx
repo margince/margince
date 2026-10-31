@@ -23,11 +23,11 @@ import {
   startingMovement,
   teamEvaluation,
 } from "../features/analytics/analytics.overview.testkit";
-import { removeStored, STORAGE_KEYS } from "../lib/storage";
+import { forgetSeat } from "../lib/storage";
 import { jsonResponse } from "./story-utils";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;

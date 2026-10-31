@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -15,12 +15,15 @@ import {
   formatNumber,
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import {
+  analyticsSectionHref,
+  openAnalyticsSection,
+} from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { replaceDial } from "../../lib/urlstate";
+import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import {
@@ -34,11 +37,16 @@ import {
   salesBoardBlocks,
 } from "./analytics.overview.board";
 import {
+  type OverviewDials,
+  outboundDials,
+} from "./analytics.overview.context";
+import {
   MetricReading,
   metricOf,
   OverviewLinks,
   OverviewSaveActions,
   readingValue,
+  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { SinceLastReview } from "./analytics.overview.since";
 import { periodCaption } from "./analytics.period";
@@ -75,6 +83,7 @@ export function SalesReview(
   props: Readonly<{
     catalog: Catalog;
     scope: AnalyticsScope;
+    defaultScope: AnalyticsScope;
     switcher: ReactNode;
     scopeControl: ReactNode;
     emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
@@ -94,6 +103,7 @@ export function SalesReview(
 function SalesReviewBody({
   catalog,
   scope,
+  defaultScope,
   switcher,
   scopeControl,
   emptyNotice,
@@ -101,6 +111,7 @@ function SalesReviewBody({
 }: Readonly<{
   catalog: Catalog;
   scope: AnalyticsScope;
+  defaultScope: AnalyticsScope;
   switcher: ReactNode;
   scopeControl: ReactNode;
   emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
@@ -110,8 +121,8 @@ function SalesReviewBody({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
+  const [params] = useUrlParams();
   const filters = useOverviewFilters(pipelines, "this_quarter");
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const { metrics, blocks } = viewRequest("sales", catalog, filters.period);
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
@@ -124,18 +135,30 @@ function SalesReviewBody({
     blocks: salesBoardBlocks(blocks),
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
+  // A pipeline the address names and this reader cannot open is said, never
+  // swapped for the default one.
+  const named = params.get("pipeline");
+  const pipelineGone =
+    !!named && named !== "all" && !pipelines.some(({ id }) => id === named);
   const query = useReportingEvaluation(
     selection,
-    validDates && metrics.length > 0,
+    validDates && metrics.length > 0 && !pipelineGone,
   );
   const attention = useAttentionList(scope, false);
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
+  );
+  const doors = outboundDials(
+    "sales",
+    answeredDials(selection, filters.start, filters.end),
+    scopeKey(defaultScope),
+  );
   const apply = (next: ReportingSelection) => {
     if (next.period !== filters.period) filters.setPeriod(next.period);
     if (next.pipeline_id !== selection.pipeline_id)
       filters.setPipelineId(next.pipeline_id ?? "");
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
-    setEvidence(null);
   };
   return (
     <>
@@ -166,7 +189,6 @@ function SalesReviewBody({
             onChange: (from, through) => {
               filters.setStart(from);
               filters.setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
@@ -175,11 +197,16 @@ function SalesReviewBody({
               filters.setPipelineId(next.pipeline_id ?? "");
             if (next.close_window !== filters.closeWindow)
               filters.setCloseWindow(next.close_window);
-            setEvidence(null);
           }}
         />
       </FilterBar>
-      {problemCodeOf(query.error) === "reporting_interval_invalid" ? (
+      {pipelineGone ? (
+        <PipelineGone
+          defaultPipeline={
+            pipelines.find((pipeline) => pipeline.is_default) ?? pipelines[0]
+          }
+        />
+      ) : problemCodeOf(query.error) === "reporting_interval_invalid" ? (
         <ErrorLine error={query.error} />
       ) : (
         <QueryGate query={query} pendingLabel={t("analytics.overview.sales")}>
@@ -194,18 +221,22 @@ function SalesReviewBody({
                 )}
                 onApply={apply}
               />
-              <SalesHero evaluation={evaluation} onEvidence={setEvidence} />
-              <SalesReadings evaluation={evaluation} onEvidence={setEvidence} />
+              <SalesHero evaluation={evaluation} onEvidence={openEvidence} />
+              <SalesReadings
+                evaluation={evaluation}
+                onEvidence={openEvidence}
+                forecastHref={analyticsSectionHref("forecast", doors)}
+              />
               <div className="analytics-pair">
                 <BoardChart
                   evaluation={evaluation}
                   kind="stage_distribution"
-                  onEvidence={setEvidence}
+                  onEvidence={openEvidence}
                 />
                 <BoardChart
                   evaluation={evaluation}
                   kind="owner_attainment"
-                  onEvidence={setEvidence}
+                  onEvidence={openEvidence}
                 />
               </div>
               {evidence && (
@@ -213,7 +244,7 @@ function SalesReviewBody({
                   key={JSON.stringify(evidence)}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
             </>
@@ -226,6 +257,7 @@ function SalesReviewBody({
           items={attention.items}
           state={attention.state}
           emptyLabel={t("analytics.overview.salesNothing")}
+          dials={findingDials(doors)}
         />
         {query.data && (
           <OpeningSummary
@@ -241,6 +273,7 @@ function SalesReviewBody({
         after={attention.state}
       />
       <OverviewLinks
+        dials={doors}
         sections={[
           { section: "forecast", label: t("analytics.sectionForecast") },
           { section: "pipeline", label: t("analytics.sectionPipeline") },
@@ -251,15 +284,45 @@ function SalesReviewBody({
   );
 }
 
+// The question Sales review answered, defaults spelled out: the default
+// pipeline by its id, and every pipeline as `all`.
+function answeredDials(
+  selection: ReportingSelection,
+  from: string,
+  through: string,
+): OverviewDials {
+  const custom = selection.period === "custom";
+  return {
+    scope: scopeKey(selection.scope),
+    pipeline: selection.pipeline_id ?? "all",
+    period: selection.period,
+    from: custom ? from : undefined,
+    through: custom ? through : undefined,
+    close: selection.close_window,
+  };
+}
+
+// The findings are read for the scope over every pipeline, so a door to one
+// carries the scope alone and the page it opens reads what the list read.
+function findingDials(doors: UrlParams): UrlParams {
+  const scope = doors.get("scope");
+  return new Map([
+    ["overview", "sales"],
+    ...(scope ? [["scope", scope] as const] : []),
+  ]);
+}
+
 // The expected finish with its basis, and the modelled finish beside it. Then
 // the shortfall, coverage with both operands, the win rate and open pipeline.
 // Every figure is the server's; the page only formats.
 function SalesReadings({
   evaluation,
   onEvidence,
+  forecastHref,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  forecastHref: string;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -273,7 +336,11 @@ function SalesReadings({
   const openCount = open?.coverage.eligible_count;
   return (
     <StatStrip label={t("analytics.overview.readings")}>
-      <ExpectedFinish evaluation={evaluation} money={money} />
+      <ExpectedFinish
+        evaluation={evaluation}
+        money={money}
+        forecastHref={forecastHref}
+      />
       {landing?.value != null && (
         <ModelRangeCard
           label={t("forecast.model.quarter")}
@@ -341,9 +408,11 @@ function unpricedOf(basis: Basis | undefined): number {
 function ExpectedFinish({
   evaluation,
   money,
+  forecastHref,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   money: (value: number | undefined) => string;
+  forecastHref: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -375,11 +444,7 @@ function ExpectedFinish({
           </>
         )
       }
-      onOpen={
-        landing.value != null
-          ? () => openAnalyticsSection("forecast")
-          : undefined
-      }
+      href={landing.value != null ? forecastHref : undefined}
     />
   );
 }
@@ -536,6 +601,39 @@ function TargetSetup() {
             : "analytics.overview.targetWho",
         )}
       </p>
+    </Callout>
+  );
+}
+
+// The address names a pipeline this reader cannot open: archived, removed or
+// never theirs. Nothing is read until they choose one the page can answer,
+// and the choice is written out so it stays theirs.
+function PipelineGone({
+  defaultPipeline,
+}: Readonly<{ defaultPipeline: Pipeline | undefined }>) {
+  const t = useT();
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("analytics.overview.pipelineGone")}
+      actions={
+        <>
+          {defaultPipeline && (
+            <Button onClick={() => replaceDial("pipeline", defaultPipeline.id)}>
+              {t("analytics.overview.pipelineDefault")}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            onClick={() => replaceDial("pipeline", "all")}
+          >
+            {t("analytics.overview.pipelineAll")}
+          </Button>
+        </>
+      }
+    >
+      <p>{t("analytics.overview.pipelineGoneBody")}</p>
     </Callout>
   );
 }

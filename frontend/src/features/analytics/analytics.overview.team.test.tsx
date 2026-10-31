@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { removeStored, STORAGE_KEYS } from "../../lib/storage";
+import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import {
   openOverview as open,
@@ -17,7 +17,7 @@ import {
 } from "./analytics.overview.testkit";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;

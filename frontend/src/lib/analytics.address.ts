@@ -9,8 +9,8 @@
 // from, and reaching `analytics.tsx` for that one function would pull every
 // report card and its queries into the morning's bundle.
 
-import { navigate } from "./router";
-import { currentParams } from "./urlstate";
+import { navigate, routeHash } from "./router";
+import { currentParams, hashWithParams, type UrlParams } from "./urlstate";
 
 // A SECTION is what the address names and what the tabs choose between; a
 // REPORT is one result inside it. They were the same thing while every section
@@ -108,6 +108,18 @@ export function openAnalyticsSection(section: Section): void {
   const params = new Map(currentParams());
   params.delete("view");
   navigate({ screen: "analytics", id: section }, params);
+}
+
+/**
+ * The address of one section asked with exactly `dials`, for a door that
+ * carries the question it was read under rather than whatever the bar holds.
+ * A link, so a modified click opens it in a new tab.
+ */
+export function analyticsSectionHref(
+  section: Section,
+  dials: UrlParams,
+): string {
+  return hashWithParams(routeHash({ screen: "analytics", id: section }), dials);
 }
 
 /**

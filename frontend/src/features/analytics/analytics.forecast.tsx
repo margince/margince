@@ -2,7 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, SegmentedControl, StatCard } from "../../design-system/atoms";
+import {
+  Button,
+  PendingBody,
+  SegmentedControl,
+  StatCard,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
@@ -20,11 +25,19 @@ import {
 } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import {
+  currentParams,
+  replaceDial,
+  replaceParams,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
+import { forecastFit, periodDial } from "./analytics.forecast.fit";
 import {
   LandingCard,
   ModelRangeCard,
@@ -59,7 +72,17 @@ export function ForecastView({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const [period, setPeriod] = useState<ForecastPeriod>("quarter");
+  const [params] = useUrlParams();
+  // The window and the pipeline come from the address, so a door from the
+  // Overview opens on the question its figure answered.
+  const named = params.get("pipeline");
+  const pipelines = usePipelines(!!named && named !== "all");
+  const fit = forecastFit(
+    params.get("period"),
+    named,
+    pipelines.isError ? null : pipelines.data,
+  );
+  const period = fit.kind === "fits" ? fit.period : "quarter";
   // Whether the call editor is open. Held here rather than in the editor,
   // because the verb that opens it stands in the toolbar beside the period it
   // files against, outside the read the editor needs.
@@ -70,7 +93,21 @@ export function ForecastView({
 
   // The same read the morning's pipeline counter makes, through the same key:
   // two surfaces asking what the pipeline is worth must not get two answers.
-  const readings = useForecastReadings(selection.scope, period);
+  const readings = useForecastReadings(
+    fit.kind === "fits" ? selection.scope : undefined,
+    period,
+  );
+  if (fit.kind !== "fits")
+    return (
+      <div className="analytics-stack">
+        <FilterBar label={t("analytics.filters")}>{scopeControl}</FilterBar>
+        {fit.kind === "pending" ? (
+          <PendingBody label={t("analytics.sectionForecast")} />
+        ) : (
+          <ForecastMismatch kind={fit.kind} />
+        )}
+      </div>
+    );
 
   return (
     <div className="analytics-stack">
@@ -94,7 +131,7 @@ export function ForecastView({
           label={t("forecast.period")}
           options={FORECAST_PERIODS}
           value={period}
-          onChange={setPeriod}
+          onChange={choosePeriod}
           labels={{
             quarter: t("forecast.period.quarter"),
             month: t("forecast.period.month"),
@@ -175,6 +212,49 @@ export function ForecastView({
         )}
       </QueryGate>
     </div>
+  );
+}
+
+// A window is a dial every Analytics tab reads. Custom dates belong to
+// another window, so they go with the change.
+function choosePeriod(period: ForecastPeriod): void {
+  const next = new Map(currentParams());
+  next.set("period", periodDial(period));
+  next.delete("from");
+  next.delete("through");
+  replaceParams(next);
+}
+
+// What the forecast cannot narrow to, said before any figure, with the one
+// question it can answer instead. Nothing wider is shown until it is chosen.
+function ForecastMismatch({ kind }: Readonly<{ kind: "period" | "pipeline" }>) {
+  const t = useT();
+  return kind === "pipeline" ? (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("forecast.mismatch.pipeline")}
+      actions={
+        <Button onClick={() => replaceDial("pipeline", "all")}>
+          {t("forecast.mismatch.allPipelines")}
+        </Button>
+      }
+    >
+      <p>{t("forecast.mismatch.pipelineBody")}</p>
+    </Callout>
+  ) : (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("forecast.mismatch.period")}
+      actions={
+        <Button onClick={() => choosePeriod("quarter")}>
+          {t("forecast.mismatch.quarter")}
+        </Button>
+      }
+    >
+      <p>{t("forecast.mismatch.periodBody")}</p>
+    </Callout>
   );
 }
 

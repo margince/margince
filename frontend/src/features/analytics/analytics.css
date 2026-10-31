@@ -30,6 +30,11 @@
 .analytics-body {
   margin-top: var(--space-4);
 }
+/* Holds the Overview's way back to the control a reader left through, and
+   adds no box: its children keep the body's column and gap. */
+.analytics-overview {
+  display: contents;
+}
 
 /* The aside over a readings strip says how to read it, so it sits on the
    strip's top edge at a label's distance, not flush against the panes. */

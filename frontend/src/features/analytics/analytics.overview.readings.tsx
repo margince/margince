@@ -3,14 +3,17 @@
 
 import { type ReactNode, useState } from "react";
 import { ActionRow } from "../../design-system/actionrow";
+import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import {
+  analyticsSectionHref,
   openAnalyticsSection,
   type Section,
 } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
+import type { UrlParams } from "../../lib/urlstate";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -104,22 +107,45 @@ export function MetricReading({
   );
 }
 
-/** The deeper pages a view leads to, after its own readings and lists. */
+/**
+ * The evidence a reader opened, for as long as the question it was read from
+ * stands. A changed selection closes it, so a drawer never lists one
+ * question's records under another's figures.
+ */
+export function useSelectionEvidence(question: string) {
+  const [held, setHeld] = useState<Readonly<{
+    question: string;
+    reference: ReportingEvidenceRef;
+  }> | null>(null);
+  const evidence = held?.question === question ? held.reference : null;
+  const openEvidence = (reference: ReportingEvidenceRef) =>
+    setHeld({ question, reference });
+  const closeEvidence = () => setHeld(null);
+  return { evidence, openEvidence, closeEvidence };
+}
+
+/**
+ * The deeper pages a view leads to, after its own readings and lists. Each
+ * is a link carrying the view's question, so the page it opens answers the
+ * same one and a modified click opens it in a new tab.
+ */
 export function OverviewLinks({
   sections,
+  dials,
 }: Readonly<{
   sections: readonly Readonly<{ section: Section; label: string }>[];
+  dials: UrlParams;
 }>) {
   return (
     <ActionRow>
       {sections.map(({ section, label }) => (
-        <Button
+        <AppLink
           key={section}
-          variant="ghost"
-          onClick={() => openAnalyticsSection(section)}
+          className="btn btn-ghost"
+          href={analyticsSectionHref(section, dials)}
         >
           {label}
-        </Button>
+        </AppLink>
       ))}
     </ActionRow>
   );
@@ -148,6 +174,7 @@ export function OverviewSaveActions({
       {saving && selection && (
         <SaveReportingDialog
           selection={selection}
+          note={t("analytics.overview.saveViewNote")}
           onClose={() => setSaving(false)}
           onSaved={(report) => {
             setSaving(false);

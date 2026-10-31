@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
 import { Popover } from "../../design-system/popover";
 import { QueryStates } from "../../design-system/querystates";
@@ -19,6 +20,7 @@ import {
   ReviewActionsContext,
   useReviewActions,
 } from "../../lib/reviewactions";
+import { replaceDial } from "../../lib/urlstate";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -68,7 +70,9 @@ export function AnalyticsScreen({
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
   const context = useAnalyticsContext();
-  const { selection, selectScope } = useAnalyticsSelection(context.data);
+  const { selection, selectScope, refusedScope } = useAnalyticsSelection(
+    context.data,
+  );
 
   const { route, section, tabs, setup, library, holding } =
     useAnalyticsSections(context.data?.default_scope.kind);
@@ -134,6 +138,11 @@ export function AnalyticsScreen({
         <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
           {holding ? (
             <PendingBody label={t("analytics.sections")} />
+          ) : refusedScope && context.data ? (
+            <ScopeRefused
+              fallback={context.data.default_scope}
+              allowed={context.data.allowed_scopes}
+            />
           ) : (
             <SectionBody
               section={section}
@@ -151,6 +160,40 @@ export function AnalyticsScreen({
         </ReviewActionsContext>
       </div>
     </div>
+  );
+}
+
+// The address names a population this reader may not choose: a link from a
+// colleague who sees more, or a grant withdrawn since. Nothing is read until
+// the reader takes the population they do have.
+function ScopeRefused({
+  fallback,
+  allowed,
+}: Readonly<{
+  fallback: components["schemas"]["AnalyticsScope"];
+  allowed: readonly components["schemas"]["AnalyticsScope"][];
+}>) {
+  const t = useT();
+  // Named when it can be, so a page that opens on a remembered question
+  // when the address is bare still opens on the population this button says.
+  const named = allowed.some((scope) => scopeKey(scope) === scopeKey(fallback));
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("analytics.scopeRefused")}
+      actions={
+        <Button
+          onClick={() =>
+            replaceDial("scope", named ? scopeKey(fallback) : undefined)
+          }
+        >
+          {t("analytics.scopeRefusedUse", { scope: fallback.label })}
+        </Button>
+      }
+    >
+      <p>{t("analytics.scopeRefusedBody")}</p>
+    </Callout>
   );
 }
 

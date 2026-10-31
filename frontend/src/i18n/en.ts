@@ -7226,6 +7226,10 @@ export const en = {
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
+  "analytics.scopeRefused": "This link names figures you cannot open",
+  "analytics.scopeRefusedBody":
+    "It asks about a colleague or a team outside what you may see. Nothing is shown in its place until you choose.",
+  "analytics.scopeRefusedUse": "Show {scope}",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Overview",
@@ -7248,6 +7252,14 @@ export const en = {
   "analytics.overview.notComparedDetail": "The note below says why",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
+  "analytics.overview.saveViewNote":
+    "Saving adds a report under Reports. Overview stays as it is.",
+  "analytics.overview.pipelineGone":
+    "This view names a pipeline you cannot open",
+  "analytics.overview.pipelineGoneBody":
+    "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
+  "analytics.overview.pipelineDefault": "Use the default pipeline",
+  "analytics.overview.pipelineAll": "Use all pipelines",
   "analytics.overview.salesNothing":
     "No forecast check is open for this scope.",
   "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
@@ -7836,6 +7848,14 @@ export const en = {
   "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.updateCall": "Update forecast",
+  "forecast.mismatch.pipeline": "The forecast covers every pipeline",
+  "forecast.mismatch.pipelineBody":
+    "The figure you came from counts one pipeline. The forecast cannot narrow to one, so it would count more deals than that figure.",
+  "forecast.mismatch.allPipelines": "Show all pipelines",
+  "forecast.mismatch.period": "The forecast reads this week, month or quarter",
+  "forecast.mismatch.periodBody":
+    "The figure you came from covers another period. Choose one the forecast reads.",
+  "forecast.mismatch.quarter": "Show this quarter",
   "forecast.callExplains":
     "Enter the total you expect to win this period, including sales already won.",
   "forecast.expectedTotal": "Expected total for this period",

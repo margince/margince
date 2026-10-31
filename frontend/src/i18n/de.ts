@@ -7208,6 +7208,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
+  "analytics.scopeRefused":
+    "Dieser Link nennt Zahlen, die du nicht öffnen kannst",
+  "analytics.scopeRefusedBody":
+    "Er fragt nach einem Teammitglied oder einem Team außerhalb dessen, was du sehen darfst. Bis du wählst, wird nichts an seiner Stelle gezeigt.",
+  "analytics.scopeRefusedUse": "{scope} zeigen",
   "analytics.sectionForecast": "Prognose",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Überblick",
@@ -7232,6 +7237,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
+  "analytics.overview.saveViewNote":
+    "Speichern legt einen Bericht unter Berichte an. Die Übersicht bleibt, wie sie ist.",
+  "analytics.overview.pipelineGone":
+    "Diese Ansicht nennt eine Pipeline, die du nicht öffnen kannst",
+  "analytics.overview.pipelineGoneBody":
+    "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
+  "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
+  "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
   "analytics.overview.salesNothing":
     "Für diesen Bereich ist keine Prognoseprüfung offen.",
   "analytics.overview.quarterOnlyTitle":
@@ -7834,6 +7847,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
   "forecast.updateCall": "Einschätzung aktualisieren",
+  "forecast.mismatch.pipeline": "Die Prognose umfasst jede Pipeline",
+  "forecast.mismatch.pipelineBody":
+    "Die Zahl, von der du kommst, zählt eine Pipeline. Die Prognose kann nicht auf eine eingrenzen und würde mehr Deals zählen als diese Zahl.",
+  "forecast.mismatch.allPipelines": "Alle Pipelines zeigen",
+  "forecast.mismatch.period":
+    "Die Prognose liest diese Woche, diesen Monat oder dieses Quartal",
+  "forecast.mismatch.periodBody":
+    "Die Zahl, von der du kommst, gilt für einen anderen Zeitraum. Wähle einen, den die Prognose liest.",
+  "forecast.mismatch.quarter": "Dieses Quartal zeigen",
   "forecast.callExplains":
     "Gib den erwarteten Gesamtumsatz für diesen Zeitraum ein, einschließlich bereits gewonnener Deals.",
   "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",

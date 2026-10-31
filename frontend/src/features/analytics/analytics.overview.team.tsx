@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { SegmentedControl, StatCard } from "../../design-system/atoms";
@@ -16,12 +16,14 @@ import { formatDuration, formatHours, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
-import type { AnalyticsScope } from "./analytics.context";
+import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { outboundDials, TEAM_PERIODS } from "./analytics.overview.context";
 import { QualificationNote } from "./analytics.overview.prospecting";
 import {
   MetricReading,
   OverviewLinks,
   OverviewSaveActions,
+  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { MemberTable, ReasonList } from "./analytics.overview.team.members";
 import { periodCaption } from "./analytics.period";
@@ -39,14 +41,6 @@ type Framework = components["schemas"]["ReportingFramework"];
 type Review = components["schemas"]["SdrTeamReview"];
 type Handoffs = components["schemas"]["SdrTeamHandoffs"];
 
-// The periods the team review reads. A team is coached week by week, and a
-// month is the longest span its handoff rounds stay comparable over.
-const TEAM_PERIODS = [
-  "this_week",
-  "last_week",
-  "this_month",
-  "last_month",
-] as const;
 type TeamPeriod = (typeof TEAM_PERIODS)[number];
 
 function teamPeriod(value: string | null | undefined): TeamPeriod {
@@ -95,12 +89,14 @@ export function useSdrTeamReview(
 export function TeamProspecting({
   catalog,
   scope,
+  defaultScope,
   workflow,
   switcher,
   scopeControl,
 }: Readonly<{
   catalog: Catalog;
   scope: AnalyticsScope;
+  defaultScope: AnalyticsScope;
   workflow: UseQueryResult<Framework>;
   switcher: ReactNode;
   scopeControl: ReactNode;
@@ -109,7 +105,6 @@ export function TeamProspecting({
   const { locale } = useLocale();
   const [params] = useUrlParams();
   const period = teamPeriod(params.get("period"));
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const { metrics, blocks } = presetRequest("team", catalog);
   // Both reads take this one scope, so the figures and the feedback below
   // them always describe the same members.
@@ -127,6 +122,9 @@ export function TeamProspecting({
     team !== undefined && metrics.length > 0,
   );
   const review = useSdrTeamReview(team, period);
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
+  );
   const handoffWorkflow =
     (workflow.data?.definition.template ??
       (review.data?.workflow === "handoff" ? "sdr" : undefined)) === "sdr";
@@ -149,10 +147,7 @@ export function TeamProspecting({
           label={t("reporting.period")}
           options={TEAM_PERIODS}
           value={period}
-          onChange={(next) => {
-            replaceDial("period", next);
-            setEvidence(null);
-          }}
+          onChange={(next) => replaceDial("period", next)}
           labels={{
             this_week: t("reporting.this_week"),
             last_week: t("reporting.last_week"),
@@ -167,7 +162,8 @@ export function TeamProspecting({
           review={review}
           handoffWorkflow={handoffWorkflow}
           evidence={evidence}
-          onEvidence={setEvidence}
+          onEvidence={openEvidence}
+          onCloseEvidence={closeEvidence}
         />
       ) : (
         <Callout
@@ -179,6 +175,11 @@ export function TeamProspecting({
         </Callout>
       )}
       <OverviewLinks
+        dials={outboundDials(
+          "team",
+          { scope: scopeKey(scope), period },
+          scopeKey(defaultScope),
+        )}
         sections={[
           { section: "sdr", label: t("reporting.sdr") },
           { section: "leads", label: t("reporting.leads") },
@@ -194,13 +195,15 @@ function TeamBody({
   review,
   handoffWorkflow,
   evidence,
-  onEvidence: setEvidence,
+  onEvidence,
+  onCloseEvidence,
 }: Readonly<{
   query: ReturnType<typeof useReportingEvaluation>;
   review: ReturnType<typeof useSdrTeamReview>;
   handoffWorkflow: boolean;
   evidence: ReportingEvidenceRef | null;
-  onEvidence: (reference: ReportingEvidenceRef | null) => void;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
+  onCloseEvidence: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -225,19 +228,19 @@ function TeamBody({
                     evaluation={evaluation}
                     id={id}
                     detail={span}
-                    onEvidence={setEvidence}
+                    onEvidence={onEvidence}
                   />
                 ))}
                 <MetricReading
                   evaluation={evaluation}
                   id="leads_promoted"
                   detail={span}
-                  onEvidence={setEvidence}
+                  onEvidence={onEvidence}
                 />
                 <MetricReading
                   evaluation={evaluation}
                   id="leads_awaiting_response"
-                  onEvidence={setEvidence}
+                  onEvidence={onEvidence}
                 />
               </StatStrip>
               <p className="t-caption">{t("analytics.team.countedOnce")}</p>
@@ -246,7 +249,7 @@ function TeamBody({
                   key={JSON.stringify(evidence)}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={onCloseEvidence}
                 />
               )}
             </>

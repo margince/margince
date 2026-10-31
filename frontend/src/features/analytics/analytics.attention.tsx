@@ -3,7 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Button } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
@@ -12,12 +12,13 @@ import {
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
-  openAnalyticsSection,
+  analyticsSectionHref,
   type Section,
 } from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
 import { isEntityKind } from "../../lib/entity";
 import { useMemberNames } from "../../lib/membernames";
+import { type UrlParams, useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
 import { useDataCoverage } from "./analytics.coverage";
 import { useInputChecks } from "./analytics.forecast.review";
@@ -55,17 +56,22 @@ export type AttentionState = "pending" | "failed" | "ready";
 /**
  * The findings as one panel. Given `state`, the panel always draws. It then
  * says whether the list is loading, could not be read, or holds nothing.
+ * Each finding links to its section asked with `dials`, the question the
+ * list was read under; without them a link carries the address as it stands.
  */
 export function AttentionPanel({
   items,
   state,
   emptyLabel,
+  dials,
 }: Readonly<{
   items: readonly AttentionItem[];
   state?: AttentionState;
   emptyLabel?: string;
+  dials?: UrlParams;
 }>) {
   const t = useT();
+  const [params] = useUrlParams();
   if (items.length === 0 && state === undefined) {
     return null;
   }
@@ -100,9 +106,12 @@ export function AttentionPanel({
             )}
             <p className="t-caption">{item.detail}</p>
           </div>
-          <Button onClick={() => openAnalyticsSection(item.section)}>
+          <AppLink
+            className="btn btn-ghost"
+            href={analyticsSectionHref(item.section, dials ?? params)}
+          >
             {item.action}
-          </Button>
+          </AppLink>
         </PanelRow>
       ))}
     </Panel>
