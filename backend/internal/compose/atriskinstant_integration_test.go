@@ -81,12 +81,13 @@ func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
 	at := clocktest.Now(t).Truncate(time.Microsecond)
 	clock := func() time.Time { return at }
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	today := installationDay(t, e, at)
 	for i := range slippingScanLimit + 1 {
 		id := e.SeedDeal(t, fmt.Sprintf("Swept %d", i), pipeline, stage, &e.Rep1)
-		e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, id, at.AddDate(0, 0, -(10+i)).Format(time.DateOnly))
+		e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, id, today.AddDate(0, 0, -(10+i)).Format(time.DateOnly))
 	}
 	owner := ids.From[ids.UserKind](e.Rep1)
-	amount, currency, closes := int64(90000000), "EUR", at.AddDate(0, 0, 3)
+	amount, currency, closes := int64(90000000), "EUR", today.AddDate(0, 0, 3)
 	row, err := e.Deals.WithClock(clock).CreateDeal(ctx, deals.CreateDealInput{
 		Name: "Briefed past the sweep", PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &closes, Source: "manual",
@@ -99,7 +100,7 @@ func TestDoneRefusesADealTheBriefRowReportsAbove(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Past its close now, so it is at risk and sorts after every swept deal.
-	e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, briefed, at.AddDate(0, 0, -1).Format(time.DateOnly))
+	e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, briefed, today.AddDate(0, 0, -1).Format(time.DateOnly))
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), clock)
 	asBrief := false
 	for cursor := ""; ; {
