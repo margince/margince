@@ -70,8 +70,8 @@ func TestSenderLinesEndAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
 	}
 }
 
-// An Outlook block that follows the stored envelope is quoted, for the text a
-// proof hashes as for every other reader of the sender's own words.
+// An Outlook block that follows the stored envelope is quoted. The text a proof
+// hashes ends there, as every other reader's does.
 func TestCurrentMessageEndsAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
 	if got := textlang.CurrentMessage(outlookBlockBody); strings.Contains(got, "Head of Sales") {
 		t.Fatalf("CurrentMessage kept the quoted signature: %q", got)
