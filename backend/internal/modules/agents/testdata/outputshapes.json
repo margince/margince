@@ -5734,6 +5734,35 @@
           "fx_missing_count": {
             "type": "integer"
           },
+          "landing": {
+            "type": "object",
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "caveat": {
+                "type": "string"
+              },
+              "measure": {
+                "type": "string"
+              },
+              "remaining_minor": {
+                "type": "integer"
+              },
+              "system_minor": {
+                "type": "integer"
+              },
+              "won_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "measure",
+              "remaining_minor",
+              "won_minor"
+            ]
+          },
           "open_minor": {
             "type": "integer"
           },

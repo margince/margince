@@ -22,7 +22,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,6 +45,28 @@ func TestTheHTTPDoorAndTheToolStateOneRange(t *testing.T) {
 		*overTool.RangeLowMinor != *overHTTP.RangeLowMinor || *overTool.RangeHighMinor != *overHTTP.RangeHighMinor {
 		t.Fatalf("the tool's range %v..%v differs from the HTTP door's %d..%d",
 			overTool.RangeLowMinor, overTool.RangeHighMinor, *overHTTP.RangeLowMinor, *overHTTP.RangeHighMinor)
+	}
+}
+
+// One deal worth 1,000,000 at the typed 20%, under the weighted measure, lands
+// at 200,000. The tool states the landing the HTTP door states.
+func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
+	f := newStageCohortFixture(t)
+	today := clocktest.Now(t)
+	f.openDeal(t, f.stage(0), today)
+	weighted := string(forecasting.MeasureWeighted)
+	if err := config.Save(reportingActor(f.env), StoredConfig(f.env.Pool), identity.ForecastForwardMeasure, weighted); err != nil {
+		t.Fatal(err)
+	}
+
+	overHTTP, overTool := f.forecastOverHTTP(t, today), f.forecastOverTool(t, today)
+	if overHTTP.Landing == nil || string(overHTTP.Landing.Measure) != weighted || overHTTP.Landing.AmountMinor != 200_000 {
+		t.Fatalf("GET /forecast landing %+v, want 200,000 by the weighted measure", overHTTP.Landing)
+	}
+	door, tool := overHTTP.Landing, overTool.Landing
+	if tool == nil || tool.AmountMinor != door.AmountMinor || tool.Measure != string(door.Measure) ||
+		tool.WonMinor != door.WonMinor || tool.RemainingMinor != door.RemainingMinor {
+		t.Fatalf("the tool's landing %+v differs from the HTTP door's %+v", tool, door)
 	}
 }
 

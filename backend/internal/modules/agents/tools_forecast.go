@@ -132,6 +132,10 @@ type ForecastReadingsResult struct {
 	// figures above.
 	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
 
+	// Landing is where the period finishes, the answer GET /forecast gives. The
+	// range below sits beside it. Absent for managed teams, as on the endpoint.
+	Landing *ForecastLandingResult `json:"landing,omitempty"`
+
 	// SelfCorrecting says whether chances moved with recorded outcomes.
 	SelfCorrecting *bool `json:"self_correcting,omitempty"`
 	// RangeLowMinor and RangeHighMinor bound the central 80% of finishes under
@@ -143,6 +147,17 @@ type ForecastReadingsResult struct {
 	// the installation switched off individual performance.
 	Contributions        []ForecastContributionResult `json:"contributions,omitempty"`
 	ContributionsLimited *bool                        `json:"contributions_limited,omitempty"`
+}
+
+// ForecastLandingResult mirrors ForecastLanding on GET /forecast. A manager's
+// call has no split, so RemainingMinor is zero there and SystemMinor is set.
+type ForecastLandingResult struct {
+	AmountMinor    int64   `json:"amount_minor"`
+	Measure        string  `json:"measure"`
+	WonMinor       int64   `json:"won_minor"`
+	RemainingMinor int64   `json:"remaining_minor"`
+	SystemMinor    *int64  `json:"system_minor,omitempty"`
+	Caveat         *string `json:"caveat,omitempty"`
 }
 
 // ForecastSignalResult mirrors one ForecastRiskSignal on GET /forecast.

@@ -91,35 +91,19 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 					return err
 				}
 			}
-			mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
+			called, err := addForecastAssertions(ctx, tx, store, period, resolved, baseCurrency, &out)
 			if err != nil {
 				return err
 			}
-			if !mayAssert {
+			// The endpoint answers managed teams before it projects a landing.
+			if resolved.Kind == forecasting.ScopeManagedTeams {
 				return nil
 			}
-			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+			landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, called)
 			if err != nil {
 				return err
 			}
-			out.Snapshots = forecastSnapshotRefsToTool(refs)
-			call, err := store.CurrentCallTx(ctx, tx, period, resolved)
-			switch {
-			case err == nil:
-				rendered := forecastCallToTool(call)
-				if err := addCallReview(ctx, tx, rendered, call); err != nil {
-					return err
-				}
-				encoded, err := json.Marshal(rendered)
-				if err != nil {
-					return fmt.Errorf("compose: rendering the standing call: %w", err)
-				}
-				out.CurrentCall = encoded
-			case forecasting.IsNoStandingCall(err):
-				// Nobody has called this period. A real answer, left absent.
-			default:
-				return err
-			}
+			out.Landing = forecastLandingToTool(landing)
 			return nil
 		})
 		if err != nil {
@@ -127,6 +111,56 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 		}
 		return json.Marshal(out)
 	}
+}
+
+// addForecastAssertions adds the snapshots and the standing call, which only a
+// seat that may assert about the population sees. called is the call's amount,
+// nil when this seat sees none, as the endpoint's landing takes it.
+func addForecastAssertions(
+	ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period,
+	resolved forecasting.Scope, baseCurrency string, out *agents.ForecastReadingsResult,
+) (called *int64, err error) {
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
+	if err != nil || !mayAssert {
+		return nil, err
+	}
+	refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+	if err != nil {
+		return nil, err
+	}
+	out.Snapshots = forecastSnapshotRefsToTool(refs)
+	call, err := store.CurrentCallTx(ctx, tx, period, resolved)
+	switch {
+	case err == nil:
+		rendered := forecastCallToTool(call)
+		if err := addCallReview(ctx, tx, rendered, call); err != nil {
+			return nil, err
+		}
+		encoded, err := json.Marshal(rendered)
+		if err != nil {
+			return nil, fmt.Errorf("compose: rendering the standing call: %w", err)
+		}
+		out.CurrentCall = encoded
+		return &call.AmountMinor, nil
+	case forecasting.IsNoStandingCall(err):
+		// Nobody has called this period. A real answer, left absent.
+		return called, nil
+	default:
+		return nil, err
+	}
+}
+
+// forecastLandingToTool is the endpoint's landing in the tool's shape.
+func forecastLandingToTool(in crmcontracts.ForecastLanding) *agents.ForecastLandingResult {
+	out := &agents.ForecastLandingResult{
+		AmountMinor: in.AmountMinor, Measure: string(in.Measure),
+		WonMinor: in.WonMinor, RemainingMinor: in.RemainingMinor, SystemMinor: in.SystemMinor,
+	}
+	if in.Caveat != nil {
+		caveat := string(*in.Caveat)
+		out.Caveat = &caveat
+	}
+	return out
 }
 
 // forecastAsOf reads the day to answer for, refusing a malformed one by name
