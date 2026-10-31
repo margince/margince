@@ -132,6 +132,29 @@ describe("each Overview view keeps its own question", () => {
     expect(lastSales(asked).get("pipeline_id")).toBe("sales");
   });
 
+  it("brings custom dates back after a switch, and carries them out", async () => {
+    const user = userEvent.setup({ delay: null });
+    open(
+      "#/analytics/overview?overview=sales&period=custom&from=2026-10-01&through=2026-10-15",
+      answer,
+      TWO,
+    );
+    await readings();
+    await user.click(await view("Team prospecting"));
+    expect(window.location.hash).not.toContain("from=");
+    await user.click(await view("Sales review"));
+    await readings();
+    const pipeline = await screen.findByRole("link", { name: "Pipeline" });
+    expect(dialsOfLink(pipeline)).toEqual({
+      overview: "sales",
+      pipeline: "sales",
+      period: "custom",
+      from: "2026-10-01",
+      through: "2026-10-15",
+      close: "all_open",
+    });
+  });
+
   it("keeps the team view's period apart from Sales review's", async () => {
     const user = userEvent.setup({ delay: null });
     open("#/analytics/overview?overview=team", answer, TWO);
