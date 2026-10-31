@@ -105,7 +105,21 @@ type Handlers struct {
 	baseline BaselineFunc
 	// stageChances serves the stage-chances read; see stagechances.go.
 	stageChances StageChancesFunc
+	// readerRows narrows per-deal rows to what the reader may see one by one.
+	readerRows ReaderRowsFunc
 	now          func() time.Time
+}
+
+// ReaderRowsFunc narrows the per-deal rows of a reading to what the reader may
+// see one by one. Injected, because the installation's individual-performance
+// rule lives in the composition layer.
+type ReaderRowsFunc func(ctx context.Context, tx pgx.Tx, rows []Contribution) ([]Contribution, error)
+
+// WithReaderRows narrows the rows GET /forecast?contributions=true returns.
+// Unbound, the door refuses to return rows at all.
+func (h Handlers) WithReaderRows(narrow ReaderRowsFunc) Handlers {
+	h.readerRows = narrow
+	return h
 }
 
 // WithCallBaseline keeps a baseline with every call recorded through these
@@ -169,7 +183,14 @@ func (h Handlers) GetForecast(
 		out.ScopeLimited = &assembly.Limited
 		out.SelfCorrecting = &assembly.SelfCorrecting
 		if params.Contributions != nil && *params.Contributions {
-			rows := ContributionsToWire(readings.Contributions)
+			if h.readerRows == nil {
+				return errors.New("forecasting: no reader lens is bound, so per-deal rows cannot be narrowed")
+			}
+			visible, err := h.readerRows(ctx, tx, readings.Contributions)
+			if err != nil {
+				return err
+			}
+			rows := ContributionsToWire(visible)
 			out.Contributions = &rows
 		}
 		holds, err := h.holds(ctx, tx, scope)

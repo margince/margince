@@ -424,3 +424,24 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 	}
 	return nil
 }
+
+// ForecastReaderContributions narrows the forecast's per-deal rows to what this
+// reader may see one by one. While the switch is off a row names a seat, so
+// only the reader's own deals stay, with no owner on them, as evidence keeps
+// only the reader's rows. The HTTP door and the forecast tool both ask it.
+func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) ([]forecasting.Contribution, error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return rows, err
+	}
+	out := make([]forecasting.Contribution, 0, len(rows))
+	for _, row := range rows {
+		owner, err := ids.Parse(row.Owner)
+		if err != nil || !auth.MayMeasureSeat(ctx, false, owner) {
+			continue
+		}
+		row.Owner = ""
+		out = append(out, row)
+	}
+	return out, nil
+}
