@@ -7033,8 +7033,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.expectedFinish": "Kết quả dự kiến",
   "analytics.overview.quarterOnly": "Chỉ quý này",
   "analytics.overview.finishBasis": "Cuối quý tài chính này, theo {basis}",
-  "analytics.overview.noTargetRate":
-    "Chưa đặt mục tiêu doanh số, nên tỷ lệ thắng hiển thị ở đây",
+  "analytics.overview.winRateBasis": "Trên các deal đã chốt trong kỳ này",
+  "analytics.overview.summary": "Tóm tắt",
   "analytics.overview.notCompared": "Chưa so sánh",
   "analytics.overview.notComparedDetail": "Ghi chú bên dưới giải thích lý do",
   "analytics.overview.covers": "Bao phủ {ratio}× của {remaining} còn phải chốt",

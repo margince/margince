@@ -21,6 +21,11 @@ import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { rangeOf } from "./analytics.forecast.landing";
 import {
+  BoardChart,
+  SalesHero,
+  salesBoardBlocks,
+} from "./analytics.overview.board";
+import {
   MetricReading,
   metricOf,
   OverviewLinks,
@@ -35,7 +40,6 @@ import {
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingCompactAmount,
-  reportingPeriodLabel,
 } from "./reporting.model";
 import {
   customInterval,
@@ -109,8 +113,7 @@ function SalesReviewBody({
     target_basis: filters.targetBasis,
     close_window: filters.closeWindow,
     metrics,
-    // The charts are Performance's; the opening page asks for figures alone.
-    blocks: [],
+    blocks: salesBoardBlocks(blocks),
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   const query = useReportingEvaluation(
@@ -175,7 +178,6 @@ function SalesReviewBody({
           {(evaluation) => (
             <>
               {emptyNotice(evaluation.context.scope_holds_deals)}
-              <SalesReadings evaluation={evaluation} onEvidence={setEvidence} />
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}
@@ -184,13 +186,20 @@ function SalesReviewBody({
                 )}
                 onApply={apply}
               />
-              <OpeningSummary
-                sentences={salesReviewSummary(evaluation, {
-                  t,
-                  plural,
-                  locale,
-                })}
-              />
+              <SalesHero evaluation={evaluation} onEvidence={setEvidence} />
+              <SalesReadings evaluation={evaluation} onEvidence={setEvidence} />
+              <div className="analytics-pair">
+                <BoardChart
+                  evaluation={evaluation}
+                  kind="stage_distribution"
+                  onEvidence={setEvidence}
+                />
+                <BoardChart
+                  evaluation={evaluation}
+                  kind="owner_attainment"
+                  onEvidence={setEvidence}
+                />
+              </div>
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
@@ -203,12 +212,20 @@ function SalesReviewBody({
           )}
         </QueryGate>
       )}
-      {/* Its sources are its own, so a failed evaluation leaves it standing. */}
-      <AttentionPanel
-        items={attention.items}
-        state={attention.state}
-        emptyLabel={t("analytics.overview.salesNothing")}
-      />
+      <div className="analytics-pair">
+        {/* Its sources are its own, so a failed evaluation leaves it standing. */}
+        <AttentionPanel
+          items={attention.items}
+          state={attention.state}
+          emptyLabel={t("analytics.overview.salesNothing")}
+        />
+        {query.data && (
+          <OpeningSummary
+            title={t("analytics.overview.summary")}
+            sentences={salesReviewSummary(query.data, { t, plural, locale })}
+          />
+        )}
+      </div>
       <SinceLastReview
         catalog={catalog}
         scope={selection.scope}
@@ -226,8 +243,9 @@ function SalesReviewBody({
   );
 }
 
-// Sales won, the expected finish, the gap to target and the open pipeline. With
-// no target to compare against, the gap's place goes to the closed win rate.
+// The expected finish, the gap to target, the closed win rate and the open
+// pipeline. Sales won leads the page above them. With no target there is no
+// gap to show, and the note above the page says how to get one.
 function SalesReadings({
   evaluation,
   onEvidence,
@@ -256,16 +274,6 @@ function SalesReadings({
   const openCount = open?.coverage.eligible_count;
   return (
     <StatStrip label={t("analytics.overview.readings")}>
-      <MetricReading
-        evaluation={evaluation}
-        id="bookings_won"
-        detail={reportingPeriodLabel(
-          context.interval,
-          context.timezone,
-          locale,
-        )}
-        onEvidence={onEvidence}
-      />
       <StatCard
         narrow="row"
         label={t("analytics.overview.expectedFinish")}
@@ -300,16 +308,16 @@ function SalesReadings({
       />
       {compared ? (
         <GapReading comparison={comparison} money={money} />
-      ) : metricOf(evaluation, "closed_win_rate") &&
-        (!comparison || comparison.status === "no_target") ? (
+      ) : (
+        comparison && comparison.status !== "no_target" && <NotCompared />
+      )}
+      {metricOf(evaluation, "closed_win_rate") && (
         <MetricReading
           evaluation={evaluation}
           id="closed_win_rate"
-          detail={t("analytics.overview.noTargetRate")}
+          detail={t("analytics.overview.winRateBasis")}
           onEvidence={onEvidence}
         />
-      ) : (
-        <NotCompared />
       )}
       <MetricReading
         evaluation={evaluation}

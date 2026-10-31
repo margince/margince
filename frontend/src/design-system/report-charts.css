@@ -195,10 +195,10 @@
   height: 65%;
   background: var(--accent);
 }
+/* The "view as table" fold sits right under its chart with no rule of its
+   own: the card's foot below it already draws the only line needed there. */
 .report-chart-data {
-  margin-top: var(--space-5);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
+  margin-top: var(--space-3);
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
