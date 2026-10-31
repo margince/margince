@@ -243,14 +243,16 @@ func meetingCandidatesSQL(asOf, window, reader, held string) string {
 // contact merged away counts as its survivor, as the statement's recipients do.
 // Each arm keeps only terms the statement's own test also holds. A contact's
 // history is read once, from its earliest candidate, not once per meeting.
+// Each meeting's attendees are looked up by its id, never by a scan of every
+// link and participant.
 func meetingNeedSQL() string {
 	return threadNeedSQL(followUpCandidates) + `
 	 UNION SELECT later.id FROM (
 	        SELECT COALESCE(named.merged_into_id, named.id) AS contact_id, min(c.follow_from) AS since
 	          FROM ` + followUpCandidates + ` c
-	          JOIN (SELECT l.activity_id, l.contact_id FROM activity_link l WHERE l.contact_id IS NOT NULL
-	                UNION ALL SELECT p.activity_id, p.contact_id FROM activity_participant p
-	                 WHERE p.contact_id IS NOT NULL AND p.user_id IS NULL) met ON met.activity_id = c.id
+	          CROSS JOIN LATERAL (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = c.id AND l.contact_id IS NOT NULL
+	                UNION ALL SELECT p.contact_id FROM activity_participant p
+	                 WHERE p.activity_id = c.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL) met
 	          JOIN contact named ON named.id = met.contact_id
 	         GROUP BY 1) recipient
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL

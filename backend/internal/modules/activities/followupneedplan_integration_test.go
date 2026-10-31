@@ -74,13 +74,16 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 		t.Fatalf("running the meeting follow-up read: %v", err)
 	}
 	var peak, gated, gatedByID float64
+	var peakStep planNode
 	decodePlan(t, raw).walk(func(n planNode) {
 		if n.SubplanName != "CTE "+followUpReadable {
 			return
 		}
 		gated += n.ActualLoops
 		n.walk(func(step planNode) {
-			peak = max(peak, step.ActualRows*step.ActualLoops)
+			if rows := step.ActualRows * step.ActualLoops; rows > peak {
+				peak, peakStep = rows, step
+			}
 			if step.Alias == "readable" && strings.Contains(step.IndexCond, "ANY") {
 				gatedByID++
 			}
@@ -92,7 +95,8 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 	// No step of the gated set may yield more rows than there are links and
 	// participants: one that does joined the history once per meeting.
 	if peak > relations {
-		t.Errorf("a step of the gated set yields %.0f rows, more than the %.0f links and participants on record", peak, relations)
+		t.Errorf("a step of the gated set yields %.0f rows, more than the %.0f links and participants on record: %s %s, %.0f rows over %.0f loops",
+			peak, relations, peakStep.NodeType, peakStep.Alias, peakStep.ActualRows, peakStep.ActualLoops)
 	}
 	if gatedByID == 0 {
 		t.Errorf("the content gate walks activity instead of looking up the ids the read needs")
