@@ -95,14 +95,11 @@ export function ProspectingResults({
   );
   const metric = outcome ? metricOf(evaluation, outcome) : undefined;
   const chart = outcome ? outcomeWeeks(weeks.data, outcome) : undefined;
-  const opens =
-    metric?.value != null && readingState(metric) !== "failed" && !!outcome;
   return (
     <Panel
       title={t("analytics.prospect.results")}
       flatHead
       titleAction={
-        opens &&
         metric && (
           <Button variant="link" onClick={() => onEvidence(metric.evidence)}>
             {t("reporting.viewRecords")}
@@ -240,12 +237,9 @@ export function ProspectingReadings({
               : undefined
         }
         // A zero opens its empty population, so the reader sees where held
-        // meetings are counted from.
-        onOpen={
-          held && (heldState === "value" || heldState === "zero")
-            ? () => onEvidence(held.evidence)
-            : undefined
-        }
+        // meetings are counted from; a failed or hidden one says why.
+        opens="records"
+        onOpen={held ? () => onEvidence(held.evidence) : undefined}
       />
       <StatCard
         narrow="row"
@@ -259,11 +253,8 @@ export function ProspectingReadings({
             )}
           </>
         }
-        onOpen={
-          response?.value != null
-            ? () => onEvidence(response.evidence)
-            : undefined
-        }
+        opens="records"
+        onOpen={response ? () => onEvidence(response.evidence) : undefined}
       />
       <UpcomingReading summary={summary} />
     </StatStrip>

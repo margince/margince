@@ -1482,7 +1482,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.data": "Als Tabelle anzeigen",
   "reporting.evidence": "Belege",
   "reporting.evidenceStale":
-    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und öffne die Belege dann noch einmal.",
+    "Die Zahlen haben sich geändert, nachdem diese Seite geladen wurde. Die Datensätze können daher von der geöffneten Zahl abweichen. Lies die Zahlen mit „Erneut versuchen“ neu und öffne die Datensätze dann noch einmal.",
+  "reporting.evidenceReadAt":
+    "Zahlen gelesen am {at}, in {currency}. Die Datensätze erscheinen im Stand von damals.",
+  "reporting.evidenceFrozenAt":
+    "Snapshot gespeichert am {at}, in {currency}. Die Datensätze erscheinen im Stand von damals.",
+  "reporting.evidenceZero":
+    "Nichts zählt zu dieser Zahl, daher erscheinen keine Datensätze. Die Zahl ist eine gemessene Null.",
+  "reporting.evidenceWithheld":
+    "Diese Zahl ist für dich verborgen, daher erscheinen weder ihre Datensätze noch deren Anzahl.",
+  "reporting.evidenceUnavailable":
+    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Versuch es erneut, um sie noch einmal zu lesen.",
   "reporting.exportStale":
     "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
@@ -3409,6 +3419,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Beleg",
   "stat.evidence.rests": "Worauf das beruht",
   "stat.open": "Öffnen",
+  "stat.records": "Datensätze anzeigen",
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
@@ -7220,6 +7231,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.sales": "Vertriebsüberblick",
   "analytics.overview.prospecting": "Meine Akquise",
   "analytics.overview.readings": "Wichtigste Kennzahlen",
+  "analytics.overview.charts": "Diagramme",
   "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
   "analytics.overview.coverage": "Deckung",
   "analytics.overview.allOpen": "Gesamte offene Pipeline",
@@ -7249,9 +7261,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
+  "analytics.overview.targetWhoShort":
+    "Das können meist Admins oder die Vertriebsleitung.",
   "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
   "analytics.overview.historyStarts":
     "Der Vergleich beginnt nach einer zweiten passenden Erfassung.",
+  "analytics.overview.historyFrom":
+    "Die Historie beginnt am {date}. Die Bewegung erscheint nach der nächsten Erfassung am {next}.",
+  "analytics.overview.historyNext":
+    "Die Historie beginnt mit der nächsten Erfassung am {next}. Die Bewegung erscheint, sobald eine zweite folgt.",
   "analytics.overview.noMovement":
     "Die offene Pipeline hat sich zwischen den beiden Erfassungen nicht bewegt.",
   "analytics.overview.partlyHidden":

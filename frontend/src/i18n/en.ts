@@ -1413,7 +1413,17 @@ export const en = {
   "reporting.data": "View chart as table",
   "reporting.evidence": "Evidence",
   "reporting.evidenceStale":
-    "The figures changed after this report loaded. Retry to reload the report, then open the evidence again.",
+    "The figures changed after this page loaded, so the records may differ from the figure you opened. Retry to read the figures again, then open the records.",
+  "reporting.evidenceReadAt":
+    "Figures read {at}, in {currency}. The records are listed as they stood then.",
+  "reporting.evidenceFrozenAt":
+    "Snapshot saved {at}, in {currency}. The records are listed as they stood then.",
+  "reporting.evidenceZero":
+    "Nothing counted toward this figure, so no records are listed. The figure is a measured zero.",
+  "reporting.evidenceWithheld":
+    "This figure is hidden from you, so its records and their count are not shown.",
+  "reporting.evidenceUnavailable":
+    "This figure could not be read, so there are no records to list. Retry to read it again.",
   "reporting.exportStale":
     "The figures changed after this report loaded. Retry to reload the report, then export it again.",
   "reporting.details": "Details",
@@ -3355,6 +3365,7 @@ export const en = {
   "stat.evidence": "Evidence",
   "stat.evidence.rests": "What this rests on",
   "stat.open": "Open",
+  "stat.records": "View records",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
@@ -7237,6 +7248,7 @@ export const en = {
   "analytics.overview.sales": "Sales review",
   "analytics.overview.prospecting": "My prospecting",
   "analytics.overview.readings": "Opening readings",
+  "analytics.overview.charts": "Charts",
   "analytics.overview.expectedFinish": "Expected finish",
   "analytics.overview.coverage": "Coverage",
   "analytics.overview.allOpen": "All open pipeline",
@@ -7263,9 +7275,15 @@ export const en = {
   "analytics.overview.setTarget": "Set targets",
   "analytics.overview.targetWho":
     "A colleague who manages targets, most often an admin or a sales manager, can set one.",
+  "analytics.overview.targetWhoShort":
+    "An admin or a sales manager can usually set one.",
   "analytics.overview.sinceTitle": "Since the last capture",
   "analytics.overview.historyStarts":
     "Comparison starts after a second compatible capture.",
+  "analytics.overview.historyFrom":
+    "History starts {date}. Movement shows after the next capture, {next}.",
+  "analytics.overview.historyNext":
+    "History starts with the next capture, {next}. Movement shows once a second one follows.",
   "analytics.overview.noMovement":
     "The open pipeline did not move between the two captures.",
   "analytics.overview.partlyHidden": "Part of this figure is hidden from you",

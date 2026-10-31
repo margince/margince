@@ -52,6 +52,7 @@ export function SalesReadings({
       <CoverageReading
         comparison={metricOf(evaluation, "forecast_landing")?.target_comparison}
         money={money}
+        onEvidence={onEvidence}
       />
       {metricOf(evaluation, "closed_win_rate") ? (
         <MetricReading
@@ -123,9 +124,11 @@ function ExpectedFinish({
 function CoverageReading({
   comparison,
   money,
+  onEvidence,
 }: Readonly<{
   comparison: Comparison | undefined;
   money: (value: number | undefined) => string;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -141,6 +144,8 @@ function CoverageReading({
         })}
       />
     );
+  // The numerator's deals: the open pipeline eligible to close this quarter.
+  const numerator = comparison?.operands?.open_pipeline;
   if (comparison?.status !== "compared" || comparison.coverage == null)
     return (
       <NotCompared
@@ -162,6 +167,8 @@ function CoverageReading({
         open: money(comparison.open_pipeline),
         remaining: money(comparison.remaining),
       })}
+      opens="records"
+      onOpen={numerator ? () => onEvidence(numerator) : undefined}
     />
   );
 }
@@ -200,10 +207,6 @@ export function OpenPipelineLine({
   const at = formatDateAbbrev(context.state_at, locale, context.timezone);
   const count = open.coverage.eligible_count;
   const reason = open.coverage.status !== "ok" && open.coverage.reason;
-  const opens =
-    open.value != null &&
-    open.coverage.status !== "no_data" &&
-    open.coverage.status !== "failed";
   return (
     <p className="analytics-open-line">
       <span className="analytics-attention-title">
@@ -228,11 +231,9 @@ export function OpenPipelineLine({
           .filter(Boolean)
           .join(" · ")}
       </span>{" "}
-      {opens && (
-        <Button variant="link" onClick={() => onEvidence(open.evidence)}>
-          {t("reporting.viewRecords")}
-        </Button>
-      )}
+      <Button variant="link" onClick={() => onEvidence(open.evidence)}>
+        {t("reporting.viewRecords")}
+      </Button>
     </p>
   );
 }

@@ -58,8 +58,9 @@ export function readingValue(
 }
 
 /**
- * One headline metric as a reading. The card opens the records behind it; a
- * figure with no records, or one that failed, has no door.
+ * One headline metric as a reading. The card opens the shared evidence for
+ * it: the records behind a figure, the empty population behind a measured
+ * zero, or why a failed or hidden figure has none.
  */
 export function MetricReading({
   evaluation,
@@ -78,12 +79,6 @@ export function MetricReading({
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const metric = metricOf(evaluation, id);
-  const status = metric?.coverage.status;
-  const opens =
-    metric &&
-    status !== "no_data" &&
-    status !== "failed" &&
-    metric.value != null;
   return (
     <StatCard
       narrow="row"
@@ -102,7 +97,8 @@ export function MetricReading({
           )}
         </>
       }
-      onOpen={opens ? () => onEvidence(metric.evidence) : undefined}
+      opens="records"
+      onOpen={metric ? () => onEvidence(metric.evidence) : undefined}
     />
   );
 }

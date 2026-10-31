@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
@@ -24,6 +23,7 @@ import {
   WaitingDrawer,
 } from "./analytics.overview.team.drawers";
 import { figureWithheld } from "./analytics.overview.team.members";
+import { useSelectionHeld } from "./reporting.evidence";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,
@@ -92,13 +92,16 @@ export function TeamStanding({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
-  const [reasons, setReasons] = useState<Decided | null>(null);
-  const [waiting, setWaiting] = useState(false);
+  // The population a bottleneck opens, held for this review's question only,
+  // as the evidence of a reading is.
+  const opened = useSelectionHeld<Decided | "waiting">(
+    JSON.stringify([scope, review.interval]),
+  );
   const evaluation = readings.data;
   const rows = useBottlenecks(review, readings, {
     evidence: onEvidence,
-    reasons: setReasons,
-    waiting: () => setWaiting(true),
+    reasons: opened.open,
+    waiting: () => opened.open("waiting"),
   });
   // Nothing waits only when every input was read. A hidden, failed or pending
   // input is a row of its own, and a handoff team needs its handoffs read.
@@ -127,21 +130,17 @@ export function TeamStanding({
           <p>{t("analytics.team.nothingWaits")}</p>
         </PanelBody>
       )}
-      {reasons && review.handoffs && (
+      {opened.held && opened.held !== "waiting" && review.handoffs && (
         <ReasonsDrawer
-          outcome={reasons}
+          outcome={opened.held}
           review={review}
           handoffs={review.handoffs}
           zone={zone}
-          onClose={() => setReasons(null)}
+          onClose={opened.close}
         />
       )}
-      {waiting && (
-        <WaitingDrawer
-          scope={scope}
-          review={review}
-          onClose={() => setWaiting(false)}
-        />
+      {opened.held === "waiting" && (
+        <WaitingDrawer scope={scope} review={review} onClose={opened.close} />
       )}
     </Panel>
   );

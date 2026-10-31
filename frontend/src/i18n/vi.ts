@@ -1452,7 +1452,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.data": "Xem biểu đồ dạng bảng",
   "reporting.evidence": "Bằng chứng",
   "reporting.evidenceStale":
-    "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi mở lại phần bằng chứng.",
+    "Số liệu đã thay đổi sau khi tải trang này, nên các hồ sơ có thể khác với số liệu bạn đã mở. Chọn Thử lại để đọc lại số liệu, rồi mở lại các hồ sơ.",
+  "reporting.evidenceReadAt":
+    "Số liệu được đọc lúc {at}, theo {currency}. Các hồ sơ được liệt kê như tại thời điểm đó.",
+  "reporting.evidenceFrozenAt":
+    "Ảnh chụp được lưu lúc {at}, theo {currency}. Các hồ sơ được liệt kê như tại thời điểm đó.",
+  "reporting.evidenceZero":
+    "Không có gì được tính vào số liệu này, nên không có hồ sơ nào được liệt kê. Số liệu này là số 0 đã đo.",
+  "reporting.evidenceWithheld":
+    "Số liệu này bị ẩn với bạn, nên các hồ sơ và số lượng của chúng không được hiển thị.",
+  "reporting.evidenceUnavailable":
+    "Không đọc được số liệu này, nên không có hồ sơ nào để liệt kê. Hãy thử lại để đọc lại.",
   "reporting.exportStale":
     "Số liệu đã thay đổi sau khi tải báo cáo này. Chọn Thử lại để tải lại báo cáo, rồi xuất lại.",
   "reporting.details": "Chi tiết",
@@ -3305,6 +3315,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Bằng chứng",
   "stat.evidence.rests": "Cơ sở của số liệu này",
   "stat.open": "Mở",
+  "stat.records": "Xem hồ sơ",
   "co.strip.fin.neverInvoiced": "Chưa xuất hóa đơn",
   "co.strip.fin.noConnection": "Chưa kết nối kế toán",
   "co.strip.fin.unmapped": "Chưa khớp khách hàng",
@@ -7038,6 +7049,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.sales": "Rà soát bán hàng",
   "analytics.overview.prospecting": "Tìm kiếm khách hàng của tôi",
   "analytics.overview.readings": "Chỉ số chính",
+  "analytics.overview.charts": "Biểu đồ",
   "analytics.overview.expectedFinish": "Kết quả dự kiến",
   "analytics.overview.coverage": "Độ bao phủ",
   "analytics.overview.allOpen": "Toàn bộ pipeline mở",
@@ -7064,9 +7076,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.setTarget": "Đặt mục tiêu",
   "analytics.overview.targetWho":
     "Một đồng nghiệp quản lý mục tiêu, thường là quản trị viên hoặc quản lý bán hàng, có thể đặt mục tiêu.",
+  "analytics.overview.targetWhoShort":
+    "Thường quản trị viên hoặc quản lý bán hàng có thể đặt mục tiêu.",
   "analytics.overview.sinceTitle": "Kể từ lần ghi nhận trước",
   "analytics.overview.historyStarts":
     "Việc so sánh bắt đầu sau lần ghi nhận phù hợp thứ hai.",
+  "analytics.overview.historyFrom":
+    "Lịch sử bắt đầu từ {date}. Biến động sẽ hiển thị sau lần ghi nhận tiếp theo, {next}.",
+  "analytics.overview.historyNext":
+    "Lịch sử bắt đầu với lần ghi nhận tiếp theo, {next}. Biến động sẽ hiển thị khi có lần thứ hai.",
   "analytics.overview.noMovement":
     "Pipeline đang mở không thay đổi giữa hai lần ghi nhận.",
   "analytics.overview.partlyHidden": "Một phần số liệu này bị ẩn với bạn",

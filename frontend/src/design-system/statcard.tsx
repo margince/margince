@@ -127,6 +127,7 @@ export function StatCard({
   meter,
   narrow,
   peek,
+  opens = "page",
 }: Readonly<{
   label: string;
   value: string;
@@ -143,6 +144,9 @@ export function StatCard({
   // The card goes to that record's page, which a reader can open in a new tab.
   // A card given both draws the link.
   href?: string;
+  // What the door does: go to a page ("Open →"), or list the records behind
+  // the figure in place ("View records"). Two actions, so two words.
+  opens?: "page" | "records";
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
@@ -259,17 +263,23 @@ export function StatCard({
           competed with the label for the first glance. */}
       {(href || onOpen) && (
         <span className="stat-card-foot">
-          {/* THE DOOR SAYS "Open", ALWAYS. One word for one control: a caller
-              naming its own destination gave the product several spellings of
-              the same door, and the reading a door belongs to is already said
-              beside it. Which reading it opens reaches a screen reader as this
+          {/* THE DOOR SAYS "Open", or "View records" for the records in place.
+              One word per action: a caller naming its own destination gave the
+              product several spellings of the same door, and the reading a door
+              belongs to is already said beside it. Which reading it opens reaches a screen reader as this
               door's DESCRIPTION — folded into the NAME it read "Open Open
               pipeline", so it is `aria-describedby` and never the word. */}
           <Door href={href} onOpen={onOpen} describedBy={labelId}>
-            <span className="stat-card-open-word">{t("stat.open")}</span>
-            <span className="stat-card-arrow" aria-hidden="true">
-              {"\u2192"}
-            </span>
+            {opens === "records" && !href ? (
+              <span className="stat-card-open-word">{t("stat.records")}</span>
+            ) : (
+              <>
+                <span className="stat-card-open-word">{t("stat.open")}</span>
+                <span className="stat-card-arrow" aria-hidden="true">
+                  {"\u2192"}
+                </span>
+              </>
+            )}
           </Door>
         </span>
       )}
