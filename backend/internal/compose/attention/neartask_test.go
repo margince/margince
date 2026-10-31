@@ -90,7 +90,7 @@ func (b *tasksOnDeals) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) ([]
 	return b.tasks, nil
 }
 
-// The tail judges each task it reads by the ranked page's rule, so a task the
+// The tail judges each task it reads by the ranked page's rule. A task the
 // store returns undated, or due past the window, leaves its deal at risk.
 func TestTheTailJudgesATaskAsTheRankedPageDoes(t *testing.T) {
 	near, undated, later := ids.NewV7(), ids.NewV7(), ids.NewV7()

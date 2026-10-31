@@ -252,8 +252,8 @@ func dropDealsAlreadyInHand(rows []ranked, asOf time.Time) []ranked {
 // deal's at-risk row.
 const nearTaskDays = 7
 
-// absorbsRisk says whether a row stands in for its deal's at-risk row: a
-// waiting card about the deal, or a task about it due within nearTaskDays.
+// absorbsRisk says whether a row stands in for its deal's at-risk row. Two
+// kinds do: a waiting card about the deal, and a task about it due soon.
 func absorbsRisk(row ranked, asOf time.Time) bool {
 	if row.item.Subject == nil || row.item.Subject.Type != subjectDeal {
 		return false
