@@ -237,7 +237,6 @@
 }
 .compose-reasons > .disclosure-summary {
   inline-size: fit-content;
-  gap: var(--space-1);
   color: var(--textSecondary);
   font: var(--fontBodySmall);
   font-weight: var(--fontWeightMedium);
@@ -245,16 +244,15 @@
 .compose-reasons > .disclosure-summary > .disclosure-label {
   flex: none;
 }
-.compose-reasons > .disclosure-body {
+.compose-reasons-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-top: var(--space-2);
-  padding: var(--space-3);
+  padding: var(--padCard);
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
-.compose-reasons .chips {
+.compose-reasons-card .chips {
   margin: 0;
 }
 
