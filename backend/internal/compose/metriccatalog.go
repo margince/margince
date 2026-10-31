@@ -112,7 +112,10 @@ type metricEvaluator struct {
 }
 
 // forecastCapture holds the forecast reading of one evaluation.
-type forecastCapture struct{ operands *reporting.ForecastOperands }
+type forecastCapture struct {
+	operands *reporting.ForecastOperands
+	basis    *crmcontracts.ReportingForecastBasis
+}
 
 func (metricEvaluator) MetricVersions(metrics []crmcontracts.ReportingMetricID) reporting.MetricVersions {
 	out := reporting.MetricVersions{}
@@ -176,6 +179,12 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			out.Forecast = e.compared.operands
 			if out.Forecast != nil && read > len(facts) {
 				out.Forecast.ColleagueWithheld = true
+			}
+			landing := &out.Result.Metrics[len(out.Result.Metrics)-1]
+			// The split into won and still to come is one colleague's figure
+			// whenever the comparison is withheld for that reason.
+			if landing.Value != nil && out.Forecast != nil && !out.Forecast.ColleagueWithheld {
+				landing.ForecastBasis = e.compared.basis
 			}
 		}
 	}

@@ -52454,8 +52454,11 @@ type ReportingContext struct {
 	EvaluatedAt       time.Time        `json:"evaluated_at"`
 
 	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
-	FiscalYearStartMonth  *int                 `json:"fiscal_year_start_month,omitempty"`
-	FrameworkRevision     int64                `json:"framework_revision"`
+	FiscalYearStartMonth *int  `json:"fiscal_year_start_month,omitempty"`
+	FrameworkRevision    int64 `json:"framework_revision"`
+
+	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
+	Horizon               *ReportingWindow     `json:"horizon,omitempty"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
 	PeriodKind            string               `json:"period_kind"`
@@ -52603,6 +52606,35 @@ type ReportingExecutionList struct {
 	NextCursor *string              `json:"next_cursor,omitempty"`
 }
 
+// ReportingForecastBasis `forecast_landing` only: what the landing and its range rest on, the same answer
+// GET /forecast gives. Absent where no landing is shown, and on editions captured before
+// the field existed; a reader then says the basis is unknown and never guesses one.
+//
+// The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+// plus each priced eligible open deal won or lost by its chance in use. It is not the
+// landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+// `priced_count` and by `fx_missing_count`.
+type ReportingForecastBasis struct {
+	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+	CallMinor *int64 `json:"call_minor,omitempty"`
+
+	// EligibleCount Deals the forecast considered, priced or not.
+	EligibleCount int64 `json:"eligible_count"`
+
+	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
+	FxMissingCount int64 `json:"fx_missing_count"`
+
+	// Landing Where the period finishes if nothing changes, and what that answer rests on.
+	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+	Landing ForecastLanding `json:"landing"`
+
+	// Period The fiscal quarter the landing and the range project, half-open.
+	Period ReportingWindow `json:"period"`
+
+	// PricedCount How many of them carried an amount; an unpriced deal adds nothing to the range.
+	PricedCount int64 `json:"priced_count"`
+}
+
 // ReportingFramework defines model for ReportingFramework.
 type ReportingFramework struct {
 	Definition  ReportingFrameworkInput `json:"definition"`
@@ -52628,8 +52660,18 @@ type ReportingMetric struct {
 	Coverage    ReportingCoverage    `json:"coverage"`
 	Denominator *float64             `json:"denominator,omitempty"`
 	Evidence    ReportingEvidenceRef `json:"evidence"`
-	Id          ReportingMetricID    `json:"id"`
-	Numerator   *float64             `json:"numerator,omitempty"`
+
+	// ForecastBasis `forecast_landing` only: what the landing and its range rest on, the same answer
+	// GET /forecast gives. Absent where no landing is shown, and on editions captured before
+	// the field existed; a reader then says the basis is unknown and never guesses one.
+	//
+	// The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+	// plus each priced eligible open deal won or lost by its chance in use. It is not the
+	// landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+	// `priced_count` and by `fx_missing_count`.
+	ForecastBasis *ReportingForecastBasis `json:"forecast_basis,omitempty"`
+	Id            ReportingMetricID       `json:"id"`
+	Numerator     *float64                `json:"numerator,omitempty"`
 
 	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
@@ -52644,10 +52686,12 @@ type ReportingMetric struct {
 	// what is left to win. Present only on the `forecast_landing` metric.
 	// Every amount is in minor units of the context currency.
 	//
-	// - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-	// - `remaining` is `target` minus `won`, never below zero.
-	// - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-	//   expected to close in the quarter, over what is left to win.
+	// - `gap` is `target` minus `landing`, the projected shortfall: positive is
+	//   short, negative is ahead.
+	// - `remaining` is `target` minus `won`, the sales still to win, never below
+	//   zero. It is a different figure from `gap`.
+	// - `open_pipeline` is the open deals eligible to close in the quarter, not
+	//   every open deal. `coverage` is `open_pipeline` divided by `remaining`.
 	//
 	// `won` and `open_pipeline` come from the same forecast reading as
 	// `landing`, so a won deal is never counted twice. A manager call is a
@@ -52972,10 +53016,12 @@ type ReportingTarget struct {
 // what is left to win. Present only on the `forecast_landing` metric.
 // Every amount is in minor units of the context currency.
 //
-//   - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-//   - `remaining` is `target` minus `won`, never below zero.
-//   - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-//     expected to close in the quarter, over what is left to win.
+//   - `gap` is `target` minus `landing`, the projected shortfall: positive is
+//     short, negative is ahead.
+//   - `remaining` is `target` minus `won`, the sales still to win, never below
+//     zero. It is a different figure from `gap`.
+//   - `open_pipeline` is the open deals eligible to close in the quarter, not
+//     every open deal. `coverage` is `open_pipeline` divided by `remaining`.
 //
 // `won` and `open_pipeline` come from the same forecast reading as
 // `landing`, so a won deal is never counted twice. A manager call is a

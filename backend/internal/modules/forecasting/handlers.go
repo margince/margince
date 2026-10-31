@@ -270,14 +270,15 @@ func LandingFor(
 	if err != nil {
 		return crmcontracts.ForecastLanding{}, err
 	}
-	return landingToWire(landing), nil
+	return LandingToWire(landing), nil
 }
 
-// landingToWire maps a projection onto the wire shape.
+// LandingToWire maps a projection onto the wire shape. The reporting metric
+// calls it too, so both state one landing.
 //
 // The caveat is omitted rather than sent empty when there is none: an empty
 // string would render as a warning that says nothing.
-func landingToWire(in Landing) crmcontracts.ForecastLanding {
+func LandingToWire(in Landing) crmcontracts.ForecastLanding {
 	out := crmcontracts.ForecastLanding{
 		AmountMinor:    in.AmountMinor,
 		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),

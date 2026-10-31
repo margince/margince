@@ -83,6 +83,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 			return nil, crmcontracts.ReportingCoverage{}, err
 		}
 		e.compared.operands = operands
+		e.compared.basis = reportingForecastBasis(period, readings, landing, called)
 	}
 	for i := range facts {
 		if facts[i].SourceType == reportingForecastProjection {
@@ -267,6 +268,19 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 		out.Operands.QualifiedOpenPipeline = &qualified
 	}
 	return out
+}
+
+// reportingForecastBasis is what the landing and its range rest on, in the shape
+// GET /forecast gives the landing.
+func reportingForecastBasis(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, called *int64) *crmcontracts.ReportingForecastBasis {
+	return &crmcontracts.ReportingForecastBasis{
+		Landing:        forecasting.LandingToWire(landing),
+		Period:         crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
+		CallMinor:      called,
+		EligibleCount:  int64(readings.EligibleCount),
+		PricedCount:    int64(readings.PricedCount),
+		FxMissingCount: int64(readings.FxMissingCount),
+	}
 }
 
 // guardForecastOperands marks what the comparison may not show. One is a
