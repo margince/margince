@@ -104,7 +104,7 @@ func employerDomainsVisible(ctx context.Context, tx pgx.Tx, f employerDomainFact
 }
 
 // promotionEmployerFacts are what the promotion's employer decision reads.
-// Domain is nil when the decision is settled without the address.
+// Domain is nil when a linked company settles it without the address.
 type promotionEmployerFacts struct {
 	Format        string               `json:"format"`
 	LinkedCompany *ids.UUID            `json:"linked_company"`
@@ -120,7 +120,7 @@ func (s *Store) promotionEmployerFactsTx(ctx context.Context, tx pgx.Tx, lead cr
 	if lead.CompanyId != nil {
 		facts.LinkedCompany = new(ids.UUID(*lead.CompanyId))
 	}
-	if facts.LinkedCompany != nil || facts.TypedName == "" || createCompany || lead.Email == nil {
+	if facts.LinkedCompany != nil || lead.Email == nil {
 		return facts, nil
 	}
 	domain, err := s.employerDomainFactsTx(ctx, tx, string(*lead.Email))
@@ -128,9 +128,9 @@ func (s *Store) promotionEmployerFactsTx(ctx context.Context, tx pgx.Tx, lead cr
 	return facts, err
 }
 
-// digest binds the employer facts and the evidence a promotion records. The
-// trigger is in it because evidence of a booking can also be a held meeting.
-func (f promotionEmployerFacts) digest(trigger string, evidence *ids.ActivityID) (string, error) {
+// digest binds the employer facts, the evidence and the contact a promotion
+// lands on. The trigger is in it because a held meeting also proves a booking.
+func (f promotionEmployerFacts) digest(trigger string, evidence *ids.ActivityID, target ids.ContactID) (string, error) {
 	if f.Domain != nil {
 		domain := *f.Domain
 		domain.Owners = slices.Clone(domain.Owners)
@@ -141,9 +141,13 @@ func (f promotionEmployerFacts) digest(trigger string, evidence *ids.ActivityID)
 		promotionEmployerFacts
 		Trigger  string    `json:"trigger"`
 		Evidence *ids.UUID `json:"evidence"`
+		Target   *ids.UUID `json:"merge_into"`
 	}{promotionEmployerFacts: f, Trigger: trigger}
 	if evidence != nil {
 		pinned.Evidence = &evidence.UUID
+	}
+	if !target.IsZero() {
+		pinned.Target = &target.UUID
 	}
 	raw, err := json.Marshal(pinned)
 	if err != nil {
@@ -170,26 +174,69 @@ func (s *Store) PromotionContextDigestTx(ctx context.Context, tx pgx.Tx, id ids.
 	if err != nil {
 		return "", err
 	}
+	target, err := s.leadPromotionTarget(ctx, tx, lead)
+	if err != nil {
+		return "", err
+	}
 	facts, err := s.promotionEmployerFactsTx(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
 		return "", err
 	}
-	return facts.digest(in.Trigger, evidence)
+	return facts.digest(in.Trigger, evidence, target)
 }
 
-// refuseMovedPromotionContext compares an approval's released digest with the
-// facts read under the lead lock. A promotion no approval released is not checked.
-func refuseMovedPromotionContext(ctx context.Context, id ids.LeadID, facts promotionEmployerFacts, trigger string, evidence *ids.ActivityID) error {
-	released, ok := auth.ReleasedRecordContext(ctx, leadEntity, id.UUID)
-	if !ok {
-		return nil
-	}
-	current, err := facts.digest(trigger, evidence)
+// lockedPromotionEmployer is promotionEmployer for the write. It holds the rows
+// the facts are read from, reads them again, and refuses an approval whose digest
+// they no longer match.
+//
+// Lock order, all FOR SHARE: the lead, the companies holding its mail domain,
+// their company_domain rows, the domain's admission row. Company writers also
+// lock a company before its domains. A claim between the two reads is refused.
+func (s *Store) lockedPromotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, in PromoteLeadInput, candidate ids.ContactID) (EmployerChoice, string, error) {
+	read, err := s.promotionEmployerFactsTx(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
-		return err
+		return EmployerChoice{}, "", err
+	}
+	if err := lockEmployerDomainRows(ctx, tx, read.Domain); err != nil {
+		return EmployerChoice{}, "", err
+	}
+	employer, typed, facts, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
+	if err != nil {
+		return EmployerChoice{}, "", err
+	}
+	released, ok := auth.ReleasedRecordContext(ctx, leadEntity, ids.UUID(lead.Id))
+	if !ok {
+		return employer, typed, nil
+	}
+	current, err := facts.digest(in.Trigger, in.EvidenceActivityID, candidate)
+	if err != nil {
+		return EmployerChoice{}, "", err
 	}
 	if current != released {
-		return auth.ReleasedContextMoved()
+		return EmployerChoice{}, "", auth.ReleasedContextMoved()
+	}
+	return employer, typed, nil
+}
+
+func lockEmployerDomainRows(ctx context.Context, tx pgx.Tx, domain *employerDomainFacts) error {
+	if domain == nil || domain.Domain == "" {
+		return nil
+	}
+	companies := make([]ids.UUID, 0, len(domain.Owners))
+	for _, owner := range domain.Owners {
+		companies = append(companies, owner.CompanyID)
+	}
+	for _, held := range []struct {
+		statement string
+		arg       any
+	}{
+		{`SELECT id FROM company WHERE id = ANY($1) ORDER BY id FOR SHARE`, companies},
+		{`SELECT id FROM company_domain WHERE company_id = ANY($1) AND archived_at IS NULL ORDER BY id FOR SHARE`, companies},
+		{`SELECT id FROM company_domain_disposition WHERE domain = $1 FOR SHARE`, domain.Domain},
+	} {
+		if _, err := tx.Exec(ctx, held.statement, held.arg); err != nil {
+			return fmt.Errorf("contacts: holding the rows a promotion's employer reads: %w", err)
+		}
 	}
 	return nil
 }

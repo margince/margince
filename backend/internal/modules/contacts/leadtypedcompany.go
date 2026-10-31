@@ -30,14 +30,18 @@ func (s *Store) promotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontra
 		CompanyName: lead.CompanyName, CompanyID: idArg[ids.CompanyKind](lead.CompanyId),
 		Role: lead.Title, Source: lead.Source,
 	}
-	if choice.CompanyID != nil || !choice.named() || createsCompany {
+	if choice.CompanyID != nil || !choice.named() {
 		return choice, "", facts, nil
 	}
+	// The writer takes these domains as they are, so it decides on the facts
+	// the approval's digest was compared against.
 	if facts.Domain != nil {
-		domains, err := employerDomainsVisible(ctx, tx, *facts.Domain)
-		if err != nil || len(domains) > 0 {
+		if choice.Domains, err = employerDomainsVisible(ctx, tx, *facts.Domain); err != nil {
 			return choice, "", facts, err
 		}
+	}
+	if createsCompany || len(choice.Domains) > 0 {
+		return choice, "", facts, nil
 	}
 	choice.CompanyName = nil
 	return choice, facts.TypedName, facts, nil

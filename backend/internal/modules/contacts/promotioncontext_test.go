@@ -19,9 +19,16 @@ func reviewedPromotionFacts() promotionEmployerFacts {
 	}
 }
 
-func mustDigest(t *testing.T, facts promotionEmployerFacts, trigger string, evidence *ids.ActivityID) string {
+// reviewedPromotion is the rest of what a promotion's digest covers.
+type reviewedPromotion struct {
+	trigger  string
+	evidence *ids.ActivityID
+	target   ids.ContactID
+}
+
+func mustDigest(t *testing.T, facts promotionEmployerFacts, p reviewedPromotion) string {
 	t.Helper()
-	digest, err := facts.digest(trigger, evidence)
+	digest, err := facts.digest(p.trigger, p.evidence, p.target)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,29 +37,29 @@ func mustDigest(t *testing.T, facts promotionEmployerFacts, trigger string, evid
 
 func TestEveryFactThePromotionDecidesOnMovesTheDigest(t *testing.T) {
 	evidence := ids.From[ids.ActivityKind](ids.MustParse("0192f3a0-0000-7000-8000-0000000000e1"))
-	reviewed := mustDigest(t, reviewedPromotionFacts(), "meeting_booked", &evidence)
-	changes := map[string]func(f *promotionEmployerFacts, trigger *string, evidence **ids.ActivityID){
-		"format":         func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Format = "employer.v2" },
-		"linked company": func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.LinkedCompany = new(ids.NewV7()) },
-		"create company": func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.CreateCompany = true },
-		"typed name":     func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.TypedName = "Northwind Ltd" },
-		"address unread": func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain = nil },
-		"host":           func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain.Host = "northwind.test" },
-		"registrable":    func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain.Domain = "" },
-		"consumer":       func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain.Consumer = true },
-		"suppressed":     func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain.Suppressed = true },
-		"company taken":  func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) { f.Domain.Owners = f.Domain.Owners[:1] },
-		"owner reassigned": func(f *promotionEmployerFacts, _ *string, _ **ids.ActivityID) {
-			f.Domain.Owners[1].OwnerID = new(ids.NewV7())
-		},
-		"trigger":  func(_ *promotionEmployerFacts, trigger *string, _ **ids.ActivityID) { *trigger = "meeting_held" },
-		"evidence": func(_ *promotionEmployerFacts, _ *string, evidence **ids.ActivityID) { *evidence = nil },
+	asReviewed := func() reviewedPromotion { return reviewedPromotion{trigger: "meeting_booked", evidence: &evidence} }
+	reviewed := mustDigest(t, reviewedPromotionFacts(), asReviewed())
+	changes := map[string]func(f *promotionEmployerFacts, p *reviewedPromotion){
+		"format":           func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Format = "employer.v2" },
+		"linked company":   func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.LinkedCompany = new(ids.NewV7()) },
+		"create company":   func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.CreateCompany = true },
+		"typed name":       func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.TypedName = "Northwind Ltd" },
+		"address unread":   func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain = nil },
+		"host":             func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Host = "northwind.test" },
+		"registrable":      func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Domain = "" },
+		"consumer":         func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Consumer = true },
+		"suppressed":       func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Suppressed = true },
+		"company taken":    func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Owners = f.Domain.Owners[:1] },
+		"owner reassigned": func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Domain.Owners[1].OwnerID = new(ids.NewV7()) },
+		"trigger":          func(_ *promotionEmployerFacts, p *reviewedPromotion) { p.trigger = "meeting_held" },
+		"evidence":         func(_ *promotionEmployerFacts, p *reviewedPromotion) { p.evidence = nil },
+		"merge target":     func(_ *promotionEmployerFacts, p *reviewedPromotion) { p.target = ids.New[ids.ContactKind]() },
 	}
 	for name, change := range changes {
 		t.Run(name, func(t *testing.T) {
-			facts, trigger, cited := reviewedPromotionFacts(), "meeting_booked", &evidence
-			change(&facts, &trigger, &cited)
-			if mustDigest(t, facts, trigger, cited) == reviewed {
+			facts, promotion := reviewedPromotionFacts(), asReviewed()
+			change(&facts, &promotion)
+			if mustDigest(t, facts, promotion) == reviewed {
 				t.Errorf("changing the %s left the digest as reviewed", name)
 			}
 		})
@@ -63,7 +70,8 @@ func TestTheOrderOwnersAreReadInLeavesTheDigest(t *testing.T) {
 	facts := reviewedPromotionFacts()
 	reversed := reviewedPromotionFacts()
 	reversed.Domain.Owners[0], reversed.Domain.Owners[1] = reversed.Domain.Owners[1], reversed.Domain.Owners[0]
-	if mustDigest(t, facts, "human_qualify", nil) != mustDigest(t, reversed, "human_qualify", nil) {
+	qualified := reviewedPromotion{trigger: "human_qualify"}
+	if mustDigest(t, facts, qualified) != mustDigest(t, reversed, qualified) {
 		t.Error("the same owners read in another order moved the digest")
 	}
 	if facts.Domain.Owners[0].CompanyID != reviewedPromotionFacts().Domain.Owners[0].CompanyID {

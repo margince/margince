@@ -37,8 +37,8 @@ func (s *Service) stagedContextDigest(ctx context.Context, tx pgx.Tx, in StageIn
 	return pin(ctx, tx, in.TargetID, in.ProposedChange)
 }
 
-// checkContextPin refuses an approval whose context moved since staging. A row
-// with no digest was staged before its kind had a pin, so it refuses too.
+// checkContextPin refuses an approval whose context moved since it was pinned.
+// Redemption also refuses a row with no digest, which no approval should leave.
 func (s *Service) checkContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 	pin, ok := s.contextPins[a.Kind]
 	if !ok {
@@ -55,4 +55,44 @@ func (s *Service) checkContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 		return auth.ReleasedContextMoved()
 	}
 	return nil
+}
+
+// previewContextPin checks the pin of a row a human is reading. A pending row
+// staged before its kind had a pin is pinned now, on the context the human sees.
+func (s *Service) previewContextPin(ctx context.Context, tx pgx.Tx, a row) error {
+	if _, ok := s.contextPins[a.Kind]; ok && a.ContextDigest == nil && a.Status == statusPending {
+		return s.storeContextDigest(ctx, tx, a)
+	}
+	return s.checkContextPin(ctx, tx, a)
+}
+
+// pinDecidedContext pins the payload an approval releases, inside the decision.
+// An edit can change what the payload reads, so an edited row is pinned again.
+func (s *Service) pinDecidedContext(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, edited bool) error {
+	if len(s.contextPins) == 0 {
+		return nil
+	}
+	a, err := get(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if _, ok := s.contextPins[a.Kind]; !ok {
+		return nil
+	}
+	if a.ContextDigest != nil && !edited {
+		return s.checkContextPin(ctx, tx, a)
+	}
+	return s.storeContextDigest(ctx, tx, a)
+}
+
+func (s *Service) storeContextDigest(ctx context.Context, tx pgx.Tx, a row) error {
+	if a.TargetID == nil {
+		return auth.ReleasedContextMoved()
+	}
+	digest, err := s.contextPins[a.Kind](ctx, tx, *a.TargetID, a.ProposedChange)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `UPDATE approval SET context_digest = $2 WHERE id = $1`, a.ID, digest)
+	return err
 }

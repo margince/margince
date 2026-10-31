@@ -117,10 +117,10 @@ func (p *pinnedPromotion) release(id ids.ApprovalID) error {
 		p.t.Fatal(err)
 	}
 	input, err := promotionApprovalInput(proposal)
-	if err != nil {
-		p.t.Fatal(err)
+	if err != nil || proposal.DiffHash == nil {
+		p.t.Fatalf("reading the released call: %v", err)
 	}
-	released, _, _, err := agents.RedeemAndMark(p.agent, approvalsAdapter{svc: p.svc}, id, operationPromoteLead, p.hash)
+	released, _, _, err := agents.RedeemAndMark(p.agent, approvalsAdapter{svc: p.svc}, id, operationPromoteLead, *proposal.DiffHash)
 	if err != nil {
 		return err
 	}
@@ -231,19 +231,62 @@ func TestAPromotionStaysReadyAcrossReadersAndUnrelatedChanges(t *testing.T) {
 	})
 }
 
-func TestAPromotionStagedBeforeThePinReadsStaleAndTheRetryRestagesIt(t *testing.T) {
+// A row staged before the pin is pinned when a human first reads it, on the
+// context that human sees, and then promotes as approved.
+func TestAPromotionStagedBeforeThePinIsPinnedWhenFirstRead(t *testing.T) {
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")
 		old := p.stage()
 		p.e.WsExec(t, `UPDATE approval SET context_digest = NULL WHERE id = $1`, old.UUID)
-		if state := p.preview(p.decider, old).State; state != "stale" {
-			t.Fatalf("preview of a row with no digest = %s, want stale", state)
+		p.requireReady(p.decider, old, contacts.ContactEmployerCreateEffect)
+		if p.e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND context_digest IS NOT NULL`, old.UUID) != 1 {
+			t.Fatal("reading the row did not pin its context")
 		}
-		fresh := p.stage()
-		if fresh == old {
-			t.Fatal("the retry rejoined the row with no digest")
+		if err := p.approve(old); err != nil {
+			t.Fatal(err)
 		}
-		p.requireReady(p.decider, fresh, contacts.ContactEmployerCreateEffect)
+		if err := p.release(old); err != nil {
+			t.Fatalf("releasing the row pinned on first read: %v", err)
+		}
+	})
+}
+
+func TestAPromotionIsNotRedeemedOnceAContactTakesTheLeadsAddress(t *testing.T) {
+	eachPromotionDoor(t, func(t *testing.T, rest bool) {
+		p := newPinnedPromotion(t, rest, "human_qualify")
+		id := p.stage()
+		if err := p.approve(id); err != nil {
+			t.Fatal(err)
+		}
+		// The writers refuse a contact a live lead's address, so the address
+		// arrives the way an older capture left it: on the row directly.
+		holder := p.e.SeedContact(t, "Pat Elsewhere", nil)
+		p.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, position, source, captured_by)
+		               VALUES ($1, $2, true, 1, 'manual', 'human:x')`, holder, "pat@"+p.domain)
+		requireSkew(t, "redeeming after a contact took the lead's address", p.release(id))
+		p.requireUnpromoted(id)
+	})
+}
+
+// An edit that changes what the promotion reads is pinned on the edited payload.
+func TestAnEditedPromotionRedeemsOnTheContextOfTheEdit(t *testing.T) {
+	eachPromotionDoor(t, func(t *testing.T, rest bool) {
+		p := newPinnedPromotion(t, rest, "human_qualify")
+		id := p.stage()
+		edited := fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify","evidence_note":"Asked for a call"}`, p.lead.UUID)
+		if rest {
+			edited = `{"operation":"PromoteLead","body":{"trigger":"human_qualify","create_company":true}}`
+		}
+		before := p.e.WsScalar(t, `SELECT context_digest FROM approval WHERE id = $1`, id.UUID)
+		if _, err := p.svc.DecideEdited(p.decider, id, json.RawMessage(edited)); err != nil {
+			t.Fatal(err)
+		}
+		if after := p.e.WsScalar(t, `SELECT context_digest FROM approval WHERE id = $1`, id.UUID); (after != before) != rest {
+			t.Fatalf("digest before %s and after %s the edit, want it moved only by create_company", before, after)
+		}
+		if err := p.release(id); err != nil {
+			t.Fatalf("releasing the edited promotion: %v", err)
+		}
 	})
 }
 

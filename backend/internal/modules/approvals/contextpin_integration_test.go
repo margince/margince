@@ -20,20 +20,23 @@ import (
 )
 
 // A kind with a context pin refuses redemption and decision when the digest
-// moved. It also refuses a row staged before the pin, which carries none.
+// moved. A pending row staged before the pin is pinned when decided instead,
+// while an approved row with no digest still refuses to redeem.
 func TestAContextPinRefusesARowWhoseContextMovedOrWasNeverPinned(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		mutate  func(e *stagingEnv, t *testing.T, digest *string, rows []ids.UUID)
 		refused bool
+		// decidable is whether the pending row may still be approved.
+		decidable bool
 	}{
-		{"the context held", func(*stagingEnv, *testing.T, *string, []ids.UUID) {}, false},
-		{"the context moved", func(_ *stagingEnv, _ *testing.T, digest *string, _ []ids.UUID) { *digest = "context-after" }, true},
+		{"the context held", func(*stagingEnv, *testing.T, *string, []ids.UUID) {}, false, true},
+		{"the context moved", func(_ *stagingEnv, _ *testing.T, digest *string, _ []ids.UUID) { *digest = "context-after" }, true, false},
 		{"staged before the pin", func(e *stagingEnv, t *testing.T, _ *string, rows []ids.UUID) {
 			if _, err := e.owner.Exec(context.Background(), `UPDATE approval SET context_digest = NULL WHERE id = ANY($1)`, rows); err != nil {
 				t.Fatal(err)
 			}
-		}, true},
+		}, true, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupStaging(t)
@@ -62,8 +65,11 @@ func TestAContextPinRefusesARowWhoseContextMovedOrWasNeverPinned(t *testing.T) {
 				t.Errorf("redeeming = %v, want refused=%t", err, tc.refused)
 			}
 			_, err = e.svc.Decide(e.asHumanWith(tagDeciderPerms()), pending, true, nil)
-			if errors.Is(err, apperrors.ErrVersionSkew) != tc.refused || (!tc.refused && err != nil) {
-				t.Errorf("deciding = %v, want refused=%t", err, tc.refused)
+			if errors.Is(err, apperrors.ErrVersionSkew) == tc.decidable || (tc.decidable && err != nil) {
+				t.Errorf("deciding = %v, want decidable=%t", err, tc.decidable)
+			}
+			if tc.decidable && e.count(t, `SELECT count(*) FROM approval WHERE id = $1 AND context_digest = $2`, pending.UUID, current) != 1 {
+				t.Error("the decided row does not carry the context it was decided on")
 			}
 		})
 	}

@@ -123,7 +123,7 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		if err := checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record"); err != nil {
 			return err
 		}
-		return s.checkContextPin(ctx, tx, subject)
+		return s.previewContextPin(ctx, tx, subject)
 	})
 	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 		preview.State = "stale"

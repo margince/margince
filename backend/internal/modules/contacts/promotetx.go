@@ -58,11 +58,8 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	employer, typed, facts, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
+	employer, typed, err := s.lockedPromotionEmployer(ctx, tx, lead, in, candidate)
 	if err != nil {
-		return PromoteOutcome{}, err
-	}
-	if err := refuseMovedPromotionContext(ctx, id, facts, in.Trigger, evidence); err != nil {
 		return PromoteOutcome{}, err
 	}
 	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, employer, by, candidate, lanes, in.intoCandidate, &out.Merged)
