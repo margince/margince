@@ -39131,7 +39131,11 @@ components:
         pair_id: { type: string, format: uuid }
         left_id: { type: string, format: uuid }
         right_id: { type: string, format: uuid }
-        confidence: { type: number, minimum: 0, maximum: 1 }
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 'A weight that ranks pairs, not the chance that the two are one person. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.'
         status: { type: string, enum: [open, not_a_duplicate], description: '`not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.' }
         evidence: { type: array, items: { $ref: '#/components/schemas/DedupeEvidence' } }
         can_dismiss:
@@ -69092,7 +69096,7 @@ components:
       properties:
         field:
           type: string
-          enum: [display_name, legal_name, full_name, email, phone, matched_lane, channel_identity]
+          enum: [display_name, legal_name, full_name, email, phone, matched_lane, channel_identity, linkedin, domain]
           description: 'Which attribute was compared. Mirrors the detector''s own vocabulary, held by a gate that fails in both directions — a field missing here reaches a reader as a database column name, and one listed here that nothing writes is a word the client translates for nothing.'
         left_value: { type: [string, 'null'] }
         right_value: { type: [string, 'null'] }

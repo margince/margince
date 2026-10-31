@@ -27051,6 +27051,7 @@ export interface components {
             left_id: string;
             /** Format: uuid */
             right_id: string;
+            /** @description A weight that ranks pairs, not the chance that the two are one person. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised. */
             confidence: number;
             /**
              * @description `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
@@ -51288,7 +51289,7 @@ export interface components {
              * @description Which attribute was compared. Mirrors the detector's own vocabulary, held by a gate that fails in both directions — a field missing here reaches a reader as a database column name, and one listed here that nothing writes is a word the client translates for nothing.
              * @enum {string}
              */
-            field: "display_name" | "legal_name" | "full_name" | "email" | "phone" | "matched_lane" | "channel_identity";
+            field: "display_name" | "legal_name" | "full_name" | "email" | "phone" | "matched_lane" | "channel_identity" | "linkedin" | "domain";
             left_value?: string | null;
             right_value?: string | null;
             /**

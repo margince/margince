@@ -106,8 +106,9 @@ export function pairLocked(
 }
 
 /**
- * The members ticked when the review opens. In `pair` mode it is the offered
- * pair. Otherwise it is a walk over open pairs from `startId`.
+ * The members ticked when the review opens: one pair, never a chain. In `pair`
+ * mode it is the offered pair. Otherwise it is `startId` and its strongest open
+ * pair, because A matching B and B matching C says nothing about A and C.
  */
 export function defaultSelection(
   contactCase: ContactCase,
@@ -115,32 +116,22 @@ export function defaultSelection(
 ): readonly string[] {
   const ids = new Set(contactCase.members.map((member) => member.id));
   const start = ids.has(startId) ? startId : contactCase.anchor_id;
-  return offeredPair(contactCase, start) ?? walkOpenPairs(contactCase, start);
+  return offeredPair(contactCase, start) ?? strongestPair(contactCase, start);
 }
 
-/**
- * A walk over open pairs from `start`. It skips a member that someone marked
- * as not the same as a member already taken, so it never crosses a dismissed
- * pair. It is always connected, which the server requires.
- */
-function walkOpenPairs(
+function strongestPair(
   contactCase: ContactCase,
   start: string,
 ): readonly string[] {
   const ids = new Set(contactCase.members.map((member) => member.id));
-  const taken: string[] = [start];
-  const queue = [start];
-  for (let at = queue.shift(); at !== undefined; at = queue.shift()) {
-    for (const edge of contactCase.edges) {
-      const next = edge.status === "open" ? otherEnd(edge, at) : undefined;
-      if (!next || !ids.has(next) || taken.includes(next)) continue;
-      const refused = dismissedWith(contactCase, next);
-      if (taken.some((id) => refused.includes(id))) continue;
-      taken.push(next);
-      queue.push(next);
-    }
+  let best: Edge | undefined;
+  for (const edge of contactCase.edges) {
+    const other = edge.status === "open" ? otherEnd(edge, start) : undefined;
+    if (!other || !ids.has(other)) continue;
+    if (!best || edge.confidence > best.confidence) best = edge;
   }
-  return taken;
+  const other = best && otherEnd(best, start);
+  return other ? [start, other] : [start];
 }
 
 /** Whether the ticked members are joined by open pairs among themselves. */
