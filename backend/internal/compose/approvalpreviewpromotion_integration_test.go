@@ -162,3 +162,55 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 		})
 	}
 }
+
+// An agent's staged promotion cites no activity. The preview shows the
+// engagement the promotion will rest on, and is not ready when the lead has none.
+func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testing.T) {
+	for _, tc := range []struct {
+		name, trigger string
+		wantReady     bool
+	}{{"a meeting the lead held", "meeting_held", true}, {"a reply the lead never sent", "inbound_reply", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			perms := integration.AdminPerms
+			perms.Objects = maps.Clone(perms.Objects)
+			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+			ctx := e.As(e.AdminUser, nil, perms)
+			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Mona Met"), Email: new("mona@example.test"), Source: "manual"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			meeting := ids.NewV7()
+			e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email)
+			             VALUES ($1, 'meeting', 'Intro call', 'held', now(), 'manual', 'human:x', 'mona@example.test')`, meeting)
+			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
+			raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":%q}`, lead.Id, tc.trigger))
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc := NewApprovalsService(e.DB())
+			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
+			if err != nil {
+				t.Fatal(err)
+			}
+			proposal, err := svc.GetWire(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			preview := proposal.Preview
+			if preview == nil || (preview.State == previewReadyState) != tc.wantReady {
+				t.Fatalf("preview of a %s promotion: %+v, want ready=%t", tc.trigger, preview, tc.wantReady)
+			}
+			if !tc.wantReady {
+				return
+			}
+			evidence := false
+			for _, detail := range *preview.Details {
+				evidence = evidence || detail.Field == "promotion_evidence"
+			}
+			if !evidence {
+				t.Errorf("the ready preview names no evidence, though the promotion records the held meeting: %+v", *preview.Details)
+			}
+		})
+	}
+}

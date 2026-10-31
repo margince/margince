@@ -66534,7 +66534,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Trigger not allowed (e.g. cold-outbound-no-reply does not promote). */
+            /**
+             * @description Trigger not allowed (e.g. cold-outbound-no-reply does not promote). A trigger other
+             *     than `human_qualify` also needs live engagement linked to this lead that shows it: an
+             *     inbound email the lead sent for `inbound_reply`, a held meeting the lead was on for
+             *     `meeting_held`, and a booked or held meeting the lead was on for `meeting_booked`. A cited `evidence.activity_id` that is not such an
+             *     activity answers code `evidence_does_not_show_trigger` naming `evidence.activity_id`.
+             *     With no activity cited, the promotion records the lead's strongest such activity, and
+             *     a lead with none answers the same code naming `trigger`.
+             */
             422: {
                 headers: {
                     [name: string]: unknown;
