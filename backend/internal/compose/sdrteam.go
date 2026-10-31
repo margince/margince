@@ -105,6 +105,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 	if err != nil {
 		return out, err
 	}
+	out.Workflow, out.WithheldFigures = figures.workflow, readerWithheldFigures(ctx, figures.workflow)
 	if owners.IndividualOff {
 		out.MembersWithheld = true
 		// One figure a lone colleague makes up withholds the whole review.
@@ -117,8 +118,7 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 			return out, err
 		}
 	}
-	out.Workflow, out.Meetings, out.Handoffs = figures.workflow, figures.meetings, figures.handoffs
-	out.WithheldFigures = readerWithheldFigures(ctx, out.Workflow)
+	out.Meetings, out.Handoffs = figures.meetings, figures.handoffs
 	if owners.IndividualOff {
 		return out, nil
 	}

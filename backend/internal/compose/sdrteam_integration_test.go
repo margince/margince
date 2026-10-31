@@ -203,7 +203,7 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	}
 	// To Rep1 the same total minus their own is the second SDR's figure.
 	mine := f.review(f.as(e.Rep1), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
-	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 {
+	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 || mine.Workflow != crmcontracts.SdrTeamReviewWorkflowHandoff {
 		t.Fatalf("a total one colleague makes up is withheld: %+v", mine)
 	}
 }
