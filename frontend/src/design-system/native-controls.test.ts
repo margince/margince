@@ -302,8 +302,7 @@ function findNativeControls(path: string, text: string): string[] {
       // those would report a line the reader cannot find.
       const cooked = node.text;
       // Both scans below open on a `<`, so a string without one holds no hit.
-      // Skipping it is what keeps the census inside its time limit: most of the
-      // tree's strings are copy and contract text with no markup in them.
+      // Most strings are copy or contract text, and skip the line arithmetic.
       if (cooked.includes("<")) {
         const spansLines = /\n/.test(node.getText(source));
         const start = source.getLineAndCharacterOfPosition(
@@ -314,8 +313,8 @@ function findNativeControls(path: string, text: string): string[] {
           1 +
           (spansLines ? (cooked.slice(0, index).match(/\n/g) ?? []).length : 0);
         for (const [tag, inString] of tagInString) {
-          // EVERY occurrence, not the first: a template rendering the same tag
-          // twice on different lines used to report one line and drop the rest.
+          // Every occurrence, not the first: a tag a template renders twice
+          // reports both of its lines.
           for (const m of cooked.matchAll(inString)) {
             found.push(`${lineAt(m.index)}: <${tag}> inside a string`);
           }
@@ -340,9 +339,8 @@ function findNativeControls(path: string, text: string): string[] {
 
 describe("no product surface renders a browser-drawn dropdown, date or time field", () => {
   // The census reads and parses the whole tree, so its cost grows with the
-  // tree. A declaration file emits no code and cannot render a control, so it
-  // is not read: the generated contract types alone were a tenth of every node
-  // the scan visited.
+  // tree. A declaration file emits no code, so it cannot render a control and
+  // is not read. The generated contract types are a tenth of the scan's nodes.
   const census = [
     ...filesUnder(srcDir),
     ...extensionFrontendFiles(extensionsDir),
@@ -366,7 +364,7 @@ describe("no product surface renders a browser-drawn dropdown, date or time fiel
   // The scan is split into slices, each a test with its own time limit. One
   // test over the whole tree ran out its 60s on a CI runner, and the tree only
   // grows. A file keeps its slice from run to run, so a finding names a stable
-  // test, and the slices together read every file in the census.
+  // test. Together the slices read every file in the census.
   const slices = 4;
   it.each(Array.from({ length: slices }, (_, slice) => slice))(
     "finds no native select, option, optgroup, date or time field (slice %i)",
