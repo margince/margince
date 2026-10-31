@@ -111,7 +111,7 @@ func (f LeadPartnerFilter) clauses(ctx context.Context, arg func(any) int) ([]st
 // readablePartnerClause holds the lead's partner company to the rows the
 // caller may open, by the predicate auth.VisibleSubset applies to the read.
 func readablePartnerClause(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.Allows(ctx, companyEntity, principal.ActionRead) {
+	if !auth.ReadGranted(ctx, companyEntity) {
 		return "false", nil
 	}
 	scope, err := auth.ScopeClauseFor(ctx, companyEntity, "pc", arg)
@@ -119,7 +119,7 @@ func readablePartnerClause(ctx context.Context, arg func(any) int) (string, erro
 		return "", err
 	}
 	if scope == "" {
-		return "true", nil
+		return sqlAlwaysVisible, nil
 	}
 	return "EXISTS (SELECT 1 FROM company pc WHERE pc.id = lead.partner_company_id AND " + scope + ")", nil
 }
