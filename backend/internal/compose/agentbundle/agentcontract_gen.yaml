@@ -18080,6 +18080,11 @@ components:
         start: {type: integer, minimum: 0}
         end: {type: integer, minimum: 1}
         sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+        cut:
+          type: integer
+          minimum: 0
+          description: >-
+            How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
       additionalProperties: false
     SignalEvidence:
       type: object

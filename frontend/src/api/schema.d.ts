@@ -39940,6 +39940,8 @@ export interface components {
             start: number;
             end: number;
             sha256: string;
+            /** @description How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named. */
+            cut?: number;
         };
         SignalEvidence: {
             source_quote?: components["schemas"]["SourceQuoteProof"];
