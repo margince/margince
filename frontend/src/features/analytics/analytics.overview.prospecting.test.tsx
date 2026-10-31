@@ -307,7 +307,33 @@ describe("My prospecting's next moves", () => {
     });
     expect(open_.getAttribute("href")).toContain("/leads/");
     expect(moves.getAllByText("Overdue")[0]).toBeVisible();
-    expect(moves.getByText("2 more in your Worklist")).toBeVisible();
+    expect(moves.getByText("All 5 items in your Worklist")).toBeVisible();
+  });
+
+  it("says the day's whole total when a card folds several items", async () => {
+    const folded = {
+      ...workRows[2],
+      id: "work-folded",
+      title: undefined,
+      batch: { key: "likely_automated", count: 8 },
+    } as (typeof workRows)[number];
+    open(ADDRESS, weekAnd(prospectingEvaluation()), {
+      seat: "sdr",
+      worklist: () =>
+        jsonResponse(
+          workday(week.clock, [workRows[0], workRows[1], folded], {
+            summary: { urgent: 1, due: 2, lower_priority: 0, total: 10 },
+          }),
+        ),
+    });
+    const moves = within(
+      await screen.findByRole("region", { name: "Do next" }),
+    );
+    expect(
+      await moves.findByText("All 10 items in your Worklist"),
+    ).toBeVisible();
+    expect(moves.queryByText(/more in your Worklist/)).toBeNull();
+    expect(moves.queryByText(/^7 /)).toBeNull();
   });
 
   it("reaches a concrete task from the page in two presses", async () => {

@@ -51,9 +51,11 @@ export function DoNext() {
       footer={
         state === "ready" || state === "unavailable" ? (
           <AppLink href={worklist}>
+            {/* The total counts the day's items, and one card can fold several,
+                so it is said whole rather than less the cards drawn here. */}
             {total > items.length
-              ? plural("analytics.doNext.more", total - items.length, {
-                  count: formatNumber(total - items.length, locale),
+              ? plural("analytics.doNext.all", total, {
+                  count: formatNumber(total, locale),
                 })
               : t("analytics.sdrOpenWorklist")}
           </AppLink>

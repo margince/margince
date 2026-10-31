@@ -211,7 +211,7 @@ const SIGNATURES: Readonly<
 > = {
   populated: {
     sales: shows("3.6×"),
-    prospecting: shows("2 more in your Worklist"),
+    prospecting: shows("All 5 items in your Worklist"),
     team: shows("Wrong territory"),
   },
   trueZero: {
@@ -258,7 +258,7 @@ const SIGNATURES: Readonly<
   },
   individualPerformanceOff: {
     sales: lacks("Maya"),
-    prospecting: shows("2 more in your Worklist"),
+    prospecting: shows("All 5 items in your Worklist"),
     team: shows(
       "Individual performance is off, so no member’s figures are shown.",
     ),
@@ -269,7 +269,7 @@ const SIGNATURES: Readonly<
   },
   largeBacklog: {
     sales: shows("All open checks: 24 findings · 7 deals"),
-    prospecting: shows("207 more in your Worklist"),
+    prospecting: shows("All 210 items in your Worklist"),
   },
   readOnlyReviewer: {
     sales: async () => {
