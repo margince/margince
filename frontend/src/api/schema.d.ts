@@ -10256,7 +10256,7 @@ export interface paths {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: string;
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -10458,8 +10458,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Whether the contacts and companies in a payload are already records here.
-         * @description The answer the `resolve_entities` agent tool gives, run by the same tool on both
+         * Find out whether a contact or company is already a record here, before creating one.
+         * @description Ask this before creating a contact or company from a name, email, phone or domain,
+         *     such as one from a conference list or a signature.
+         *     The answer the `resolve_entities` agent tool gives, run by the same tool on both
          *     doors. Each candidate is matched by its keys (email, phone, domain) and its name;
          *     only a match on a unique key can be acted on alone. A POST because a batch of
          *     candidates does not fit a query string. It reads and stores nothing.
@@ -71263,7 +71265,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: string;
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };

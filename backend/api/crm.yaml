@@ -16004,7 +16004,21 @@ paths:
       - name: report
         in: path
         required: true
-        schema: { type: string }
+        schema:
+          type: string
+          enum:
+            - activities-by-kind
+            - deals-by-stage
+            - forecast
+            - leads-by-status
+            - meeting-conversion
+            - open-deals-per-company
+            - pipeline-current
+            - project-commitments
+            - projects-by-phase
+            - projects-gone-quiet
+            - stage-age
+            - win-loss
         description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
         examples:
           prebuilt: { value: open-deals-per-company }
@@ -16308,8 +16322,10 @@ paths:
       tags: [Search]
       operationId: resolveEntities
       security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
-      summary: Whether the contacts and companies in a payload are already records here.
+      summary: Find out whether a contact or company is already a record here, before creating one.
       description: |
+        Ask this before creating a contact or company from a name, email, phone or domain,
+        such as one from a conference list or a signature.
         The answer the `resolve_entities` agent tool gives, run by the same tool on both
         doors. Each candidate is matched by its keys (email, phone, domain) and its name;
         only a match on a unique key can be acted on alone. A POST because a batch of
