@@ -123,8 +123,8 @@ func TestThisWeekAtMondayMidnightIsAnEmptyWeekInTheCutoffsMonth(t *testing.T) {
 }
 
 // The cutoff ends what was measured; the horizon is the whole period named.
-// A fiscal year from February puts 20 Oct in Q3, which opens in summer time
-// and closes in winter time, so its end is 23:00Z, not 22:00Z. The week
+// A fiscal year from February puts 20 Oct in Q3. That quarter opens in summer
+// time and closes in winter time, so its end is 23:00Z, not 22:00Z. The week
 // holds the clock change too.
 func TestTheHorizonRunsPastTheCutoffToThePeriodsOwnEnd(t *testing.T) {
 	berlin := Calendar{Timezone: "Europe/Berlin", Currency: "EUR", FiscalStartMonth: 2}

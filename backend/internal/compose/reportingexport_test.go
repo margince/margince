@@ -69,8 +69,8 @@ func TestReportingCSVNamesARetiredMetricAsGone(t *testing.T) {
 	}
 }
 
-// A landing by the manager's call keeps its basis in the file: the measure,
-// the split, the records' own projection, the call and the modelled range.
+// A landing by the manager's call keeps its basis in the file. That is the
+// measure, the split, the records' projection, the call and the range.
 // A legacy reading with no basis writes no measure row at all.
 func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	landing := float64(19_000)

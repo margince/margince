@@ -72,8 +72,8 @@ func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
 }
 
 // The reporting metric states the landing, its basis and its range as
-// GET /forecast states them, and its context names the whole quarter apart
-// from the cutoff its actuals run through.
+// GET /forecast states them. Its context names the whole quarter apart from
+// the cutoff its actuals run through.
 func TestTheReportingLandingStatesTheBasisAndRangeTheForecastStates(t *testing.T) {
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)
