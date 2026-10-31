@@ -2145,6 +2145,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `technical_lookup_cache_expires_after_creation`: `CHECK ((expires_at > fetched_at))`
 - `technical_lookup_cache_kind_check`: `CHECK ((record_kind = ANY (ARRAY['mx', 'txt', 'dmarc', 'dkim', 'address', 'cname', 'reverse', 'certlog'])))`
 
 **Indexes**

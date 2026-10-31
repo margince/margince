@@ -177,8 +177,9 @@ func TestAnExpiredPreferenceTokenStillWithdraws(t *testing.T) {
 	seedSubjectAddress(t, e)
 	var legacy string
 	if err := e.owner.QueryRow(context.Background(),
-		`INSERT INTO preference_token (contact_id, token, expires_at, revoked_at, revoked_reason)
-		 VALUES ($1, 'pref_legacy_expired', now() - interval '400 days', now() - interval '300 days', 'rotated')
+		`INSERT INTO preference_token (contact_id, token, created_at, expires_at, revoked_at, revoked_reason)
+		 VALUES ($1, 'pref_legacy_expired', now() - interval '500 days',
+		         now() - interval '400 days', now() - interval '300 days', 'rotated')
 		 RETURNING token`, e.contact).Scan(&legacy); err != nil {
 		t.Fatalf("seeding the legacy token: %v", err)
 	}
