@@ -18523,6 +18523,27 @@ func (e SdrHandoffSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for SdrMeetingRecordType.
+const (
+	SdrMeetingRecordTypeCompany SdrMeetingRecordType = "company"
+	SdrMeetingRecordTypeContact SdrMeetingRecordType = "contact"
+	SdrMeetingRecordTypeLead    SdrMeetingRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SdrMeetingRecordType enum.
+func (e SdrMeetingRecordType) Valid() bool {
+	switch e {
+	case SdrMeetingRecordTypeCompany:
+		return true
+	case SdrMeetingRecordTypeContact:
+		return true
+	case SdrMeetingRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrSummaryWorkflow.
 const (
 	SdrSummaryWorkflowHandoff       SdrSummaryWorkflow = "handoff"
@@ -18568,6 +18589,24 @@ func (e SdrTeamReviewWorkflow) Valid() bool {
 	case SdrTeamReviewWorkflowHandoff:
 		return true
 	case SdrTeamReviewWorkflowQualification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrUpcomingMeetingStartsPrecision.
+const (
+	SdrUpcomingMeetingStartsPrecisionDay     SdrUpcomingMeetingStartsPrecision = "day"
+	SdrUpcomingMeetingStartsPrecisionInstant SdrUpcomingMeetingStartsPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the SdrUpcomingMeetingStartsPrecision enum.
+func (e SdrUpcomingMeetingStartsPrecision) Valid() bool {
+	switch e {
+	case SdrUpcomingMeetingStartsPrecisionDay:
+		return true
+	case SdrUpcomingMeetingStartsPrecisionInstant:
 		return true
 	default:
 		return false
@@ -24313,9 +24352,49 @@ func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ListSdrWaitingHandoffsParamsState.
+const (
+	ListSdrWaitingHandoffsParamsStateReturned ListSdrWaitingHandoffsParamsState = "returned"
+	ListSdrWaitingHandoffsParamsStateWaiting  ListSdrWaitingHandoffsParamsState = "waiting"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrWaitingHandoffsParamsState enum.
+func (e ListSdrWaitingHandoffsParamsState) Valid() bool {
+	switch e {
+	case ListSdrWaitingHandoffsParamsStateReturned:
+		return true
+	case ListSdrWaitingHandoffsParamsStateWaiting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSdrUpcomingMeetingsParamsScopeKind.
+const (
+	ListSdrUpcomingMeetingsParamsScopeKindOwner     ListSdrUpcomingMeetingsParamsScopeKind = "owner"
+	ListSdrUpcomingMeetingsParamsScopeKindTeam      ListSdrUpcomingMeetingsParamsScopeKind = "team"
+	ListSdrUpcomingMeetingsParamsScopeKindWorkspace ListSdrUpcomingMeetingsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrUpcomingMeetingsParamsScopeKind enum.
+func (e ListSdrUpcomingMeetingsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSdrUpcomingMeetingsParamsScopeKindOwner:
+		return true
+	case ListSdrUpcomingMeetingsParamsScopeKindTeam:
+		return true
+	case ListSdrUpcomingMeetingsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetSdrTeamReviewParamsScopeKind.
 const (
 	GetSdrTeamReviewParamsScopeKindManagedTeams GetSdrTeamReviewParamsScopeKind = "managed_teams"
+	GetSdrTeamReviewParamsScopeKindOwner        GetSdrTeamReviewParamsScopeKind = "owner"
 	GetSdrTeamReviewParamsScopeKindTeam         GetSdrTeamReviewParamsScopeKind = "team"
 	GetSdrTeamReviewParamsScopeKindWorkspace    GetSdrTeamReviewParamsScopeKind = "workspace"
 )
@@ -24324,6 +24403,8 @@ const (
 func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsScopeKindManagedTeams:
+		return true
+	case GetSdrTeamReviewParamsScopeKindOwner:
 		return true
 	case GetSdrTeamReviewParamsScopeKindTeam:
 		return true
@@ -54004,6 +54085,16 @@ type SdrHandoffTotals struct {
 	Waiting int `json:"waiting"`
 }
 
+// SdrMeetingRecord The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
+type SdrMeetingRecord struct {
+	Id    openapi_types.UUID   `json:"id"`
+	Label string               `json:"label"`
+	Type  SdrMeetingRecordType `json:"type"`
+}
+
+// SdrMeetingRecordType defines model for SdrMeetingRecord.Type.
+type SdrMeetingRecordType string
+
 // SdrSummary defines model for SdrSummary.
 type SdrSummary struct {
 	// AsOf The instant both counts were read at.
@@ -54013,8 +54104,11 @@ type SdrSummary struct {
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
-	// UpcomingMeetings Booked meetings that start after `as_of`, credited to the scope.
+	// UpcomingMeetings Booked meetings that have not happened by `as_of` and start before `upcoming_window.end_at`, credited to the scope.
 	UpcomingMeetings *int `json:"upcoming_meetings,omitempty"`
+
+	// UpcomingWindow The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+	UpcomingWindow *SdrUpcomingWindow `json:"upcoming_window,omitempty"`
 
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
 	Workflow SdrSummaryWorkflow `json:"workflow"`
@@ -54104,9 +54198,59 @@ type SdrTeamReviewMembershipBasis string
 // SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 type SdrTeamReviewWorkflow string
 
+// SdrUpcomingMeeting defines model for SdrUpcomingMeeting.
+type SdrUpcomingMeeting struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Record The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
+	Record *SdrMeetingRecord `json:"record,omitempty"`
+
+	// Restricted The seat may read the meeting but none of the records it is linked to, so `record` is absent.
+	Restricted bool `json:"restricted"`
+
+	// StartsAt The meeting's start.
+	StartsAt time.Time `json:"starts_at"`
+
+	// StartsPrecision `day` when only the day is known; `starts_at` is then midday of that day, in UTC.
+	StartsPrecision SdrUpcomingMeetingStartsPrecision `json:"starts_precision"`
+
+	// Title The meeting's subject. A meeting whose subject the seat may not read is neither counted nor listed.
+	Title string `json:"title"`
+}
+
+// SdrUpcomingMeetingStartsPrecision `day` when only the day is known; `starts_at` is then midday of that day, in UTC.
+type SdrUpcomingMeetingStartsPrecision string
+
+// SdrUpcomingMeetingPage defines model for SdrUpcomingMeetingPage.
+type SdrUpcomingMeetingPage struct {
+	AsOf time.Time `json:"as_of"`
+
+	// NextCursor Absent on the last page.
+	NextCursor *string              `json:"next_cursor,omitempty"`
+	Rows       []SdrUpcomingMeeting `json:"rows"`
+
+	// Window The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+	Window SdrUpcomingWindow `json:"window"`
+}
+
+// SdrUpcomingWindow The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+type SdrUpcomingWindow struct {
+	// EndAt Midnight at the start of the fourteenth day after today, in `timezone`. A meeting that starts at or after it is not counted.
+	EndAt time.Time `json:"end_at"`
+
+	// StartAt Equal to `as_of`: a meeting that has already happened is not upcoming.
+	StartAt time.Time `json:"start_at"`
+
+	// Timezone The reporting zone the days are counted in.
+	Timezone string `json:"timezone"`
+}
+
 // SdrWaitingHandoff defines model for SdrWaitingHandoff.
 type SdrWaitingHandoff struct {
-	Id        openapi_types.UUID   `json:"id"`
+	Id openapi_types.UUID `json:"id"`
+
+	// Reason Why the recipient sent it back, from the reason catalog. Only on a `returned` row.
+	Reason    *string              `json:"reason,omitempty"`
 	Recipient *SdrHandoffRecipient `json:"recipient,omitempty"`
 
 	// Restricted The seat may not read the prospect, so `subject` is absent.
@@ -62138,6 +62282,9 @@ type ListSdrWaitingHandoffsParams struct {
 	// ScopeId The owner or team named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
+	// State `waiting`: submitted and not yet decided. `returned`: sent back to the submitter.
+	State *ListSdrWaitingHandoffsParamsState `form:"state,omitempty" json:"state,omitempty"`
+
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
@@ -62146,12 +62293,31 @@ type ListSdrWaitingHandoffsParams struct {
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
 type ListSdrWaitingHandoffsParamsScopeKind string
 
+// ListSdrWaitingHandoffsParamsState defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParamsState string
+
+// ListSdrUpcomingMeetingsParams defines parameters for ListSdrUpcomingMeetings.
+type ListSdrUpcomingMeetingsParams struct {
+	// ScopeKind Whose meetings to list. Omitted means the seat's own default population.
+	ScopeKind *ListSdrUpcomingMeetingsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListSdrUpcomingMeetingsParamsScopeKind defines parameters for ListSdrUpcomingMeetings.
+type ListSdrUpcomingMeetingsParamsScopeKind string
+
 // GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
 type GetSdrTeamReviewParams struct {
-	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews one seat's own work, which My prospecting reads for the reader.
 	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
-	// ScopeId The team named by `scope_kind`.
+	// ScopeId The team or owner named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
 	// Period The period, in the installation's reporting zone.
@@ -81990,6 +82156,9 @@ type ServerInterface interface {
 	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
 	// (GET /analytics/sdr-summary/handoffs)
 	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
+	// The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+	// (GET /analytics/sdr-summary/meetings)
+	ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request, params ListSdrUpcomingMeetingsParams)
 	// How a team's handoffs ended and what still waits, for coaching.
 	// (GET /analytics/sdr-team)
 	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
@@ -85296,6 +85465,12 @@ func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, par
 // The handoffs waiting on somebody else, oldest wait first, one page at a time.
 // (GET /analytics/sdr-summary/handoffs)
 func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+// (GET /analytics/sdr-summary/meetings)
+func (_ Unimplemented) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request, params ListSdrUpcomingMeetingsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96042,6 +96217,19 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 		return
 	}
 
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -96070,6 +96258,84 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSdrUpcomingMeetings operation middleware
+func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSdrUpcomingMeetingsParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSdrUpcomingMeetings(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132153,6 +132419,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary/meetings", wrapper.ListSdrUpcomingMeetings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)

@@ -29922,9 +29922,11 @@ paths:
         target time is configured anywhere, so only the age is given.
 
         `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
-        that have not happened by `as_of`, credited by the
-        meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
-        read activities.
+        that have not happened by `as_of` and start inside `upcoming_window`: today and the
+        thirteen days after it, in the installation's reporting zone. They are credited by the
+        meeting credit rule the held-meetings reading uses. `GET /analytics/sdr-summary/meetings`
+        lists the same meetings in the same window. Both are absent for a seat that may not read
+        activities.
 
         Both counts are one statement each over the scope, never a read per row. The scope is
         checked as every analytics read checks it: an owner or team the seat may not measure
@@ -29957,9 +29959,11 @@ paths:
       summary: The handoffs waiting on somebody else, oldest wait first, one page at a time.
       description: |
         The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
-        current wait began and then by id. A prospect the seat may not read is listed as
-        `restricted` with no name and no id. A handoff carries no deal while it waits, so no
-        deal field is ever part of a row.
+        current wait began and then by id. With `state=returned` they are the rows behind
+        `SdrSummary.handoffs.returned` instead: sent back and waiting on their submitter, each
+        aged from its return and carrying the reason given. A prospect the seat may not read is
+        listed as `restricted` with no name and no id. A handoff carries no deal while it waits,
+        so no deal field is ever part of a row.
       x-agent-access: human-only
       parameters:
         - name: scope_kind
@@ -29970,6 +29974,10 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The owner or team named by `scope_kind`.
+        - name: state
+          in: query
+          schema: { type: string, enum: [waiting, returned], default: waiting }
+          description: '`waiting`: submitted and not yet decided. `returned`: sent back to the submitter.'
         - name: cursor
           in: query
           schema: { type: string }
@@ -29983,6 +29991,44 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SdrWaitingHandoffPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/sdr-summary/meetings:
+    get:
+      tags: [Reports]
+      operationId: listSdrUpcomingMeetings
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+      description: |
+        The same meetings `upcoming_meetings` counts, in the same scope and `window`, ordered by
+        start and then by id, so the pages together hold exactly that count. The title is read
+        under the meeting's own field mask, and the linked record under that record's row scope
+        and field mask.
+      x-agent-access: human-only
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace] }
+          description: Whose meetings to list. Omitted means the seat's own default population.
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: The owner or team named by `scope_kind`.
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: Opaque position from a previous page's `next_cursor`.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 10 }
+      responses:
+        '200':
+          description: One page of upcoming meetings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SdrUpcomingMeetingPage' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -30021,12 +30067,12 @@ paths:
       parameters:
         - name: scope_kind
           in: query
-          schema: { type: string, enum: [team, workspace, managed_teams] }
-          description: Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
+          schema: { type: string, enum: [team, workspace, managed_teams, owner] }
+          description: Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews one seat's own work, which My prospecting reads for the reader.
         - name: scope_id
           in: query
           schema: { type: string, format: uuid }
-          description: The team named by `scope_kind`.
+          description: The team or owner named by `scope_kind`.
         - name: period
           in: query
           schema: { type: string, enum: [this_week, last_week, this_month, last_month], default: this_week }
@@ -55785,7 +55831,49 @@ components:
         upcoming_meetings:
           type: integer
           minimum: 0
-          description: Booked meetings that start after `as_of`, credited to the scope.
+          description: Booked meetings that have not happened by `as_of` and start before `upcoming_window.end_at`, credited to the scope.
+        upcoming_window: { $ref: '#/components/schemas/SdrUpcomingWindow' }
+    SdrUpcomingWindow:
+      type: object
+      additionalProperties: false
+      required: [start_at, end_at, timezone]
+      description: The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+      properties:
+        start_at: { type: string, format: date-time, description: 'Equal to `as_of`: a meeting that has already happened is not upcoming.' }
+        end_at: { type: string, format: date-time, description: 'Midnight at the start of the fourteenth day after today, in `timezone`. A meeting that starts at or after it is not counted.' }
+        timezone: { type: string, description: The reporting zone the days are counted in. }
+    SdrUpcomingMeeting:
+      type: object
+      additionalProperties: false
+      required: [id, starts_at, starts_precision, title, restricted]
+      properties:
+        id: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time, description: The meeting's start. }
+        starts_precision: { type: string, enum: [instant, day], description: '`day` when only the day is known; `starts_at` is then midday of that day, in UTC.' }
+        title: { type: string, description: 'The meeting''s subject. A meeting whose subject the seat may not read is neither counted nor listed.' }
+        restricted: { type: boolean, description: 'The seat may read the meeting but none of the records it is linked to, so `record` is absent.' }
+        record: { $ref: '#/components/schemas/SdrMeetingRecord' }
+    SdrMeetingRecord:
+      type: object
+      additionalProperties: false
+      required: [type, id, label]
+      description: The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
+      properties:
+        type: { type: string, enum: [lead, contact, company] }
+        id: { type: string, format: uuid }
+        label: { type: string }
+    SdrUpcomingMeetingPage:
+      type: object
+      additionalProperties: false
+      required: [as_of, window, rows]
+      properties:
+        as_of: { type: string, format: date-time }
+        window: { $ref: '#/components/schemas/SdrUpcomingWindow' }
+        rows:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/SdrUpcomingMeeting' }
+        next_cursor: { type: string, description: Absent on the last page. }
     SdrHandoffTotals:
       type: object
       additionalProperties: false
@@ -55811,6 +55899,7 @@ components:
         subject: { $ref: '#/components/schemas/SdrHandoffSubject' }
         submitter_id: { type: string, format: uuid, description: Who submitted the current round. }
         recipient: { $ref: '#/components/schemas/SdrHandoffRecipient' }
+        reason: { type: string, description: 'Why the recipient sent it back, from the reason catalog. Only on a `returned` row.' }
     SdrHandoffSubject:
       type: object
       additionalProperties: false

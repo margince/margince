@@ -9,7 +9,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -78,29 +76,21 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
-	limit := sdrHandoffPageDefault
-	if params.Limit != nil {
-		limit = *params.Limit
-	}
-	if limit < 1 || limit > sdrHandoffPageMax {
-		httperr.Write(w, r, httperr.Validation("limit", "out_of_range", fmt.Sprintf("Ask for 1 to %d handoffs a page.", sdrHandoffPageMax)))
+	limit, after, err := sdrPageDials(params.Limit, params.Cursor)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
-	var after *storekit.Cursor
-	if params.Cursor != nil && *params.Cursor != "" {
-		position, err := storekit.DecodeCursor(*params.Cursor)
-		if err != nil {
-			httperr.Write(w, r, err)
-			return
-		}
-		after = &position
+	status := contacts.HandoffSubmitted
+	if params.State != nil && *params.State == crmcontracts.ListSdrWaitingHandoffsParamsStateReturned {
+		status = contacts.HandoffRecycled
 	}
 	out := crmcontracts.SdrWaitingHandoffPage{Rows: []crmcontracts.SdrWaitingHandoff{}}
 	ctx := r.Context()
-	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out.AsOf = h.now().UTC()
-		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, out.AsOf, after, limit)
+		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, handoffPage{status: status, at: out.AsOf, after: after, limit: limit})
 		return err
 	})
 	if err != nil {
@@ -133,11 +123,15 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 		out.Handoffs = &totals
 	}
 	if weekly.MayReadMeetings(ctx) {
-		upcoming, err := readUpcomingMeetings(ctx, tx, requested, at)
+		window, err := upcomingWindow(ctx, tx, at)
 		if err != nil {
 			return out, err
 		}
-		out.UpcomingMeetings = &upcoming
+		upcoming, err := readUpcomingMeetings(ctx, tx, requested, window)
+		if err != nil {
+			return out, err
+		}
+		out.UpcomingMeetings, out.UpcomingWindow = &upcoming, &window
 	}
 	return out, nil
 }
@@ -162,34 +156,16 @@ func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	return out, err
 }
 
-// readUpcomingMeetings counts the open customer meetings that have not taken
-// place yet, credited to the scope by the rule the held-meetings reading uses.
-func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) (int, error) {
+// readUpcomingMeetings counts the meetings listUpcomingMeetings lists, by the
+// one predicate both read.
+func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedScope, window crmcontracts.SdrUpcomingWindow) (int, error) {
 	var b reportingBindings
-	_, credited, err := analyticsPopulationExpression(ctx, tx, requested, "credit.id", b.arg, unownedIsExcluded)
+	where, err := upcomingMeetingSQL(ctx, tx, requested, window, &b)
 	if err != nil {
 		return 0, err
 	}
-	population := sqlUnnarrowed
-	if credited != "" {
-		population = "EXISTS (SELECT 1 FROM " + storekit.MeetingCreditedSeatsSQL("a") + " WHERE " + credited + ")"
-	}
-	visible, err := auth.ActivityContentClause(ctx, "a", b.arg)
-	if err != nil {
-		return 0, err
-	}
-	fieldScope, _, err := reportingFieldScope(ctx, string(recordTypeActivity), "a", reportingMeetingFields(), &b)
-	if err != nil {
-		return 0, err
-	}
-	upcoming, err := activities.UpcomingMeetingClause(ctx, at, b.arg)
-	if err != nil {
-		return 0, err
-	}
-	query := `SELECT count(*) FROM activity a WHERE a.kind='meeting' AND ` + upcoming + `
- AND ` + population + ` AND ` + orUnnarrowed(visible) + ` AND ` + fieldScope
 	var count int
-	err = tx.QueryRow(ctx, query, b.values...).Scan(&count)
+	err = tx.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE `+where, b.values...).Scan(&count)
 	return count, err
 }
 
@@ -200,10 +176,20 @@ func cycleByAsOf(b *reportingBindings, at time.Time) string {
 	return b.add(at) + ">=cycle.occurred_at -- occurred_at raw: a handoff event's instant, not an activity day\n"
 }
 
-// readWaitingHandoffs reads one page of waiting handoffs, oldest wait first.
+// handoffPage is one page of open handoffs in one status: submitted and
+// waiting on a recipient, or recycled and waiting on the submitter.
+type handoffPage struct {
+	status string
+	at     time.Time
+	after  *storekit.Cursor
+	limit  int
+}
+
+// readWaitingHandoffs reads one page of open handoffs, oldest wait first.
 // The prospect's name is read under the prospect's own row scope and field
 // mask, so a prospect the seat may not read comes back restricted.
-func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time, after *storekit.Cursor, limit int) ([]crmcontracts.SdrWaitingHandoff, *string, error) {
+func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScope, p handoffPage) ([]crmcontracts.SdrWaitingHandoff, *string, error) {
+	at, after, limit := p.at, p.after, p.limit
 	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
 		return nil, nil, err
 	}
@@ -230,14 +216,15 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	}
 	subject := "CASE WHEN h.lead_id IS NOT NULL AND " + leadVisible + " THEN 'lead' WHEN h.contact_id IS NOT NULL AND " + contactVisible + " THEN 'contact' END"
 	query := `SELECT h.id,cycle.occurred_at,cycle.submitter_id_at_change,
- (SELECT count(*) FROM sdr_handoff_event s WHERE s.handoff_id=h.id AND s.to_status=h.status)>1,
+ (SELECT count(*) FROM sdr_handoff_event s WHERE s.handoff_id=h.id AND s.to_status=` + b.add(contacts.HandoffSubmitted) + `)>1,
  sv.kind,CASE sv.kind WHEN 'lead' THEN l.id WHEN 'contact' THEN c.id END,
  CASE sv.kind WHEN 'lead' THEN ` + label + ` WHEN 'contact' THEN c.full_name ELSE '' END,
- h.assigned_to,COALESCE(r.display_name,''),COALESCE(` + identity.LiveMemberSQL("r") + `,false)
+ h.assigned_to,COALESCE(r.display_name,''),COALESCE(` + identity.LiveMemberSQL("r") + `,false),reason.label
  ` + handoffCycleSQL + `
  LEFT JOIN lead l ON l.id=h.lead_id LEFT JOIN contact c ON c.id=h.contact_id
+ LEFT JOIN sdr_handoff_reason reason ON reason.id=h.reason_id AND h.status=` + b.add(contacts.HandoffRecycled) + `
  CROSS JOIN LATERAL (SELECT ` + subject + ` AS kind) sv
- WHERE h.status=` + b.add(contacts.HandoffSubmitted) + ` AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population) + page + `
+ WHERE h.status=` + b.add(p.status) + ` AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population) + page + `
  ORDER BY cycle.occurred_at,h.id LIMIT ` + b.add(limit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
@@ -283,7 +270,7 @@ func scanWaitingHandoff(row pgx.CollectableRow) (crmcontracts.SdrWaitingHandoff,
 	var subjectType *string
 	var label, recipientLabel string
 	var active bool
-	if err := row.Scan(&out.Id, &out.WaitingSince, &submitter, &out.Resubmitted, &subjectType, &subjectID, &label, &recipient, &recipientLabel, &active); err != nil {
+	if err := row.Scan(&out.Id, &out.WaitingSince, &submitter, &out.Resubmitted, &subjectType, &subjectID, &label, &recipient, &recipientLabel, &active, &out.Reason); err != nil {
 		return out, err
 	}
 	if submitter != nil {

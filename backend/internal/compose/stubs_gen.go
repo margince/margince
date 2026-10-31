@@ -539,6 +539,10 @@ func (stubs) ListSdrWaitingHandoffs(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "ListSdrWaitingHandoffs")
 }
 
+func (stubs) ListSdrUpcomingMeetings(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSdrUpcomingMeetingsParams) {
+	httperr.NotImplemented(w, r, "ListSdrUpcomingMeetings")
+}
+
 func (stubs) GetSdrTeamReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrTeamReviewParams) {
 	httperr.NotImplemented(w, r, "GetSdrTeamReview")
 }
