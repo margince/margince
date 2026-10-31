@@ -23,8 +23,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.restoreSourceAndDate":
     "Den Quellenverweis wiederherstellen und das erzeugte Benachrichtigungsdatum entfernen.",
   "worklist.relationships.optional": "Optionale Kontaktpflege",
-  "worklist.relationships.optionalDetail":
-    "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
   "worklist.relationships.show": "Anzeigen",
   "worklist.relationships.loading":
     "Suche nach Kontakten, die still geworden sind…",
@@ -17486,11 +17484,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
-  "worklist.bandClear.now":
-    "Keine dringenden Einträge. Weitere Arbeit steht unten.",
-  "worklist.bandClear.build_pipeline": "Keine Akquise-Arbeit offen.",
-  "worklist.bandClear.keep_momentum": "Keine vereinbarte Arbeit stagniert.",
-  "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
@@ -17720,8 +17713,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
   "worklist.view.total.system_one": "{count} ungelöstes Problem",
   "worklist.view.total.system_other": "{count} ungelöste Probleme",
-  "worklist.filter.linked.urgent":
-    "Es werden nur dringende Einträge angezeigt: Jemand wartet, oder eine Zusage droht gebrochen zu werden.",
+  "worklist.filter.linked.urgent": "Nur dringende Arbeit.",
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
   "worklist.filter.linked.changed_since_brief":
