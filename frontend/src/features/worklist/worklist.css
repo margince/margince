@@ -297,19 +297,18 @@
 
 /* THE INSET THE PANEL PAYS FOR, on the blocks that are its direct children.
    `PanelRow` carries the panel's own margin and these do not, so a band
-   heading and an empty band's sentence began a full --padPanel to the left of
+   heading began a full --padPanel to the left of
    every row they stand over — lines that read as having escaped the card. They
    stay direct children because a `PanelBody` around them would draw the
    panel's seam hairline between a heading and the rows it heads, which is the
    one place panel.css says a rule must never fall. */
-.worklist-band,
-.worklist-band-clear {
+.worklist-band {
   padding-inline: var(--padPanel);
 }
 
 /* The band heading, above its own <ol>. The page draws one list per band, so
    the heading is a sibling of the list rather than a child of its first item —
-   which is what lets a band with no rows draw a heading and a line saying so.
+   which keeps each band's rows under their own heading.
    The first heading needs no gap above it. */
 .worklist-band {
   display: flex;
@@ -355,10 +354,6 @@
   padding-inline: var(--padPanel);
 }
 
-/* What an empty band says. */
-.worklist-band-clear {
-  margin: 0;
-}
 
 /* The rank reads as a marker beside the row rather than as part of the
    sentence, so it is set at a fixed width: a two-digit number must not shift

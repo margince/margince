@@ -30,8 +30,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.restoreSourceAndDate":
     "Khôi phục liên kết nguồn và xóa ngày thông báo được tạo tự động.",
   "worklist.relationships.optional": "Kết nối lại tùy chọn",
-  "worklist.relationships.optionalDetail":
-    "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
   "worklist.relationships.show": "Hiển thị",
   "worklist.relationships.loading": "Đang tìm các liên hệ đã im lặng…",
   "worklist.relationships.none": "Hiện không có ai im lặng.",
@@ -17039,13 +17037,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Tìm khách hàng mới",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Xem lại",
-  "worklist.bandClear.now":
-    "Không có việc khẩn cấp. Các việc còn lại ở bên dưới.",
-  "worklist.bandClear.build_pipeline":
-    "Không có việc tìm khách hàng mới nào đang chờ.",
-  "worklist.bandClear.keep_momentum":
-    "Mọi việc đã thống nhất đều đang được tiến hành.",
-  "worklist.bandClear.review": "Không có gì cần xem lại.",
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
@@ -17272,8 +17263,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} quyết định đang chờ",
   "worklist.view.total.system_one": "{count} sự cố chưa xử lý",
   "worklist.view.total.system_other": "{count} sự cố chưa xử lý",
-  "worklist.filter.linked.urgent":
-    "Chỉ hiển thị việc khẩn cấp: có ai đó đang chờ, hoặc một cam kết sắp bị lỡ.",
+  "worklist.filter.linked.urgent": "Chỉ hiển thị việc khẩn cấp.",
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi việc trừ các phê duyệt đã có trong Bản tin sáng.",
   "worklist.filter.linked.changed_since_brief":
