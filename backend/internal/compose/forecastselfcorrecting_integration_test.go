@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/assurance"
@@ -278,8 +279,9 @@ func (f *stageCohortFixture) lose(t *testing.T, deal ids.DealID) {
 
 // A signal earns an effect only from frozen forecasts whose deals then closed.
 // Ten frozen with the customer quiet were lost and ten frozen without it won,
-// so quiet lowers the odds. A deal still open, and a row frozen under other
-// signal rules, count for nothing. A signal frozen on no deal stays at 1.
+// so quiet lowers the odds. A deal still open, one lost after the cutoff, and a
+// row frozen under other signal rules count for nothing. A signal frozen on no
+// deal stays at 1.
 func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
@@ -300,15 +302,21 @@ func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	f.freezeSignals(t, []forecasting.Contribution{
 		{DealID: calm[0].String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
 	}, forecasting.TriggerRecheck, "v0")
+	lateLoss := f.deal(t, f.env.Rep1, s0)
+	f.freezeSignals(t, []forecasting.Contribution{
+		{DealID: lateLoss.String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
+	}, forecasting.TriggerPeriodClose, assurance.RiskSignalsVersion)
 	for i := range quiet {
 		f.lose(t, quiet[i])
 		f.win(t, calm[i])
 	}
+	cutoff := f.at
+	f.lose(t, lateLoss)
 
 	var effects map[string]float64
 	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
-		effects, err = forecastRiskEffects(f.writer, tx)
+		effects, err = forecastRiskEffects(f.writer, tx, cutoff)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -351,4 +359,75 @@ func (f *stageCohortFixture) win(t *testing.T, deal ids.DealID) {
 		t.Fatal(err)
 	}
 	f.at = f.at.Add(time.Hour)
+}
+
+// A deal won before the cutoff and reopened after it still counts as won: the
+// evidence reads how each deal stood at the cutoff.
+func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0, s1 := f.stage(0), f.stage(1)
+	var won []ids.DealID
+	for range 20 {
+		won = append(won, f.deal(t, f.env.Rep1, s0, f.won))
+	}
+	cutoff := f.at
+	for _, deal := range won[:10] {
+		if _, err := f.store.AdvanceDeal(f.writer, deal, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](s1)}); err != nil {
+			t.Fatalf("reopening: %v", err)
+		}
+		f.at = f.at.Add(time.Hour)
+	}
+
+	var evidence map[string]forecasting.StageEvidence
+	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+		var err error
+		evidence, err = forecastStageEvidence(f.writer, tx, cutoff)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := evidence[s0.String()]; got.Resolved != 20 || got.WonShare != 1 {
+		t.Fatalf("first stage evidence %+v, want 20 resolved and all won as they stood at the cutoff", got)
+	}
+}
+
+// The stuck pace learns from recorded stints only, and an archived win still
+// counts. Five won deals meet the floor; one of them archived keeps it met,
+// and one whose move predates provenance takes it below.
+func TestTheStuckPaceReadsRecordedStintsAndKeepsArchivedWins(t *testing.T) {
+	for name, tc := range map[string]struct {
+		archive, forget bool
+		paced           bool
+	}{
+		"an archived win counts":       {archive: true, paced: true},
+		"a legacy move does not count": {forget: true, paced: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newStageCohortFixture(t)
+			s0 := f.stage(0)
+			var won []ids.DealID
+			for range 5 {
+				won = append(won, f.deal(t, f.env.Rep1, s0, f.won))
+			}
+			if tc.archive {
+				if _, err := f.env.owner.Exec(context.Background(), `UPDATE deal SET archived_at = now() WHERE id = $1`, won[0].UUID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.forget {
+				f.forgetProvenance(t, won[0], &s0)
+			}
+			var pace map[string]time.Duration
+			if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+				var err error
+				pace, err = deals.StuckAfter(f.writer, tx, f.env.pipeline, analyticsquery.PercentileSampleFloor)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if _, ok := pace[s0.String()]; ok != tc.paced {
+				t.Fatalf("first stage paced = %v, want %v", ok, tc.paced)
+			}
+		})
+	}
 }

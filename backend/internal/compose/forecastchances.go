@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -57,7 +58,7 @@ func readForecastChanceModel(ctx context.Context, tx pgx.Tx, period forecasting.
 	if out.Stages, err = forecastStageEvidence(system, tx, out.Cutoff); err != nil {
 		return forecastChanceModel{}, err
 	}
-	if out.Effects, err = forecastRiskEffects(system, tx); err != nil {
+	if out.Effects, err = forecastRiskEffects(system, tx, out.Cutoff); err != nil {
 		return forecastChanceModel{}, err
 	}
 	return out, nil
@@ -89,12 +90,21 @@ func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceMo
 	return nil
 }
 
+// forecastStandingSQL is a deal's latest stage move before the cutoff, in the
+// order moves were written: how the deal stood then. A reopen after the cutoff
+// leaves the earlier close standing. Columns: semantic, at.
+func forecastStandingSQL(deal, cutoff string) string {
+	return `SELECT x.semantic_at_change AS semantic, x.changed_at AS at FROM deal_stage_history x
+		 WHERE x.deal_id = ` + deal + ` AND x.changed_at < ` + cutoff + `
+		 ORDER BY ` + weekly.StageMoveOrder("x") + ` DESC LIMIT 1`
+}
+
 // forecastStageEntriesSQL is each deal's first recorded entry into an open
-// stage in the two years before the cutoff, with how it ended. Only moves made
-// in this installation count; imported moves and moves saved before their
-// origin was kept do not. A later move into another pipeline ends
-// the entry open. Archived deals count by how they closed.
-const forecastStageEntriesSQL = `
+// stage in the two years before the cutoff, with how it stood at the cutoff.
+// Only moves made in this installation start an entry; imported moves and
+// moves saved before their origin was kept do not. A later move into another
+// pipeline ends the entry open. Archived deals count by how they closed.
+var forecastStageEntriesSQL = `
 	WITH entry AS (
 		SELECT DISTINCT ON (h.deal_id, h.to_stage_id)
 		       h.deal_id, h.to_stage_id AS stage_id, h.pipeline_id_at_change AS pipeline_id, h.changed_at
@@ -105,19 +115,19 @@ const forecastStageEntriesSQL = `
 		 ORDER BY h.deal_id, h.to_stage_id, h.changed_at, COALESCE(h.write_seq, 0), h.id
 	)
 	SELECT e.stage_id,
-	       CASE WHEN closed.status IS NULL THEN 0 WHEN closed.status = 'won' THEN 1 ELSE 2 END,
+	       CASE WHEN closed.semantic IS NULL THEN 0 WHEN closed.semantic = 'won' THEN 1 ELSE 2 END,
 	       greatest(extract(epoch FROM COALESCE(closed.at, left_pipeline.at, $2) - e.changed_at) / 86400, 0)
 	  FROM entry e
-	  JOIN deal d ON d.id = e.deal_id
 	  LEFT JOIN LATERAL (
 		SELECT min(x.changed_at) AS at FROM deal_stage_history x
 		 WHERE x.deal_id = e.deal_id AND x.changed_at > e.changed_at AND x.changed_at < $2
 		   AND x.pipeline_id_at_change IS NOT NULL AND x.pipeline_id_at_change <> e.pipeline_id
 	  ) left_pipeline ON true
+	  LEFT JOIN LATERAL (` + forecastStandingSQL("e.deal_id", "$2") + `) standing ON true
 	  LEFT JOIN LATERAL (
-		SELECT d.status, d.closed_at AS at
-		 WHERE d.status IN ('won', 'lost') AND d.closed_at < $2
-		   AND (left_pipeline.at IS NULL OR d.closed_at <= left_pipeline.at)
+		SELECT standing.semantic, standing.at
+		 WHERE standing.semantic IN ('won', 'lost')
+		   AND (left_pipeline.at IS NULL OR standing.at <= left_pipeline.at)
 	  ) closed ON true`
 
 // forecastStageEvidence reads every open stage's recorded entries and
@@ -151,21 +161,23 @@ func forecastStageEvidence(ctx context.Context, tx pgx.Tx, cutoff time.Time) (ma
 }
 
 // forecastSettledSignalsSQL reads each deal a forecast froze open with signals
-// and that closed later. It answers the last such forecast's signals and
-// whether the deal was won. Only signals of the current rules are pooled.
-const forecastSettledSignalsSQL = `
-	SELECT DISTINCT ON (c.deal_id) c.risk_signals, d.status = 'won'
+// before the cutoff, and that stood closed at the cutoff after it. It answers
+// the last such forecast's signals and whether the deal was won. Only signals
+// of the current rules are pooled.
+var forecastSettledSignalsSQL = `
+	SELECT DISTINCT ON (c.deal_id) c.risk_signals, standing.semantic = 'won'
 	  FROM forecast_contribution c
 	  JOIN forecast_snapshot s ON s.id = c.snapshot_id
-	  JOIN deal d ON d.id = c.deal_id
+	  CROSS JOIN LATERAL (` + forecastStandingSQL("c.deal_id", "$2") + `) standing
 	 WHERE c.in_open AND c.risk_signals IS NOT NULL AND s.risk_signals_version = $1
-	   AND d.status IN ('won', 'lost') AND d.closed_at > s.taken_at
+	   AND s.taken_at < $2
+	   AND standing.semantic IN ('won', 'lost') AND standing.at > s.taken_at
 	 ORDER BY c.deal_id, s.taken_at DESC, s.id DESC`
 
-// forecastRiskEffects tallies settled frozen deals per signal and answers each
-// signal's shrunk odds ratio. With no settled deal every effect is 1.
-func forecastRiskEffects(ctx context.Context, tx pgx.Tx) (map[string]float64, error) {
-	rows, err := tx.Query(ctx, forecastSettledSignalsSQL, assurance.RiskSignalsVersion)
+// forecastRiskEffects tallies frozen deals settled by the cutoff per signal
+// and answers each signal's shrunk odds ratio. With none, every effect is 1.
+func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]float64, error) {
+	rows, err := tx.Query(ctx, forecastSettledSignalsSQL, assurance.RiskSignalsVersion, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the settled forecast signals: %w", err)
 	}
