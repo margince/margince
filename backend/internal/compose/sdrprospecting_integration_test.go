@@ -159,8 +159,8 @@ func TestSdrReturnedHandoffsCarryTheirReason(t *testing.T) {
 	}
 }
 
-// A seat reviews its own handoff rounds; a rep who sees only their own records
-// cannot review a colleague's.
+// A seat reviews its own handoff rounds. Nobody else may name that seat, not a
+// team manager and not a seat that may measure everyone.
 func TestSdrTeamReviewReadsOneSeatsOwnRounds(t *testing.T) {
 	f := newSdrTeamFixture(t)
 	e := f.e
@@ -181,12 +181,28 @@ func TestSdrTeamReviewReadsOneSeatsOwnRounds(t *testing.T) {
 	if cohort.Rounds != 3 || cohort.Accepted != 1 || cohort.Recycled != 1 || cohort.Waiting != 1 {
 		t.Fatalf("the seat's three rounds: one accepted, one sent back, one open, read %+v", cohort)
 	}
-	reader := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)
-	kind := crmcontracts.GetSdrTeamReviewParamsScopeKindOwner
-	colleague := openapi_types.UUID(f.second)
-	w := httptest.NewRecorder()
-	newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return f.now }).GetSdrTeamReview(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(reader), crmcontracts.GetSdrTeamReviewParams{ScopeKind: &kind, ScopeId: &colleague})
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("a rep asking for a colleague's own review gets %d, want 404", w.Code)
+	for _, refused := range []struct {
+		name   string
+		reader context.Context
+	}{
+		{"a rep naming a colleague", sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeOwn)},
+		{"a team manager naming a teammate", sectionsReader(e, f.manager, []ids.UUID{e.Team1}, principal.RowScopeTeam)},
+		{"an unbounded seat naming another owner", sectionsReader(e, f.manager, []ids.UUID{e.Team1}, principal.RowScopeAll)},
+	} {
+		if code := f.ownReviewCode(refused.reader, f.second); code != http.StatusNotFound {
+			t.Fatalf("%s gets %d for another seat's own review, want 404", refused.name, code)
+		}
 	}
+	if code := f.ownReviewCode(sectionsReader(e, f.second, []ids.UUID{e.Team1}, principal.RowScopeOwn), f.second); code != http.StatusOK {
+		t.Fatalf("a seat reading its own review gets %d", code)
+	}
+}
+
+// ownReviewCode asks for owner's own review as reader and returns the status.
+func (f *sdrTeamFixture) ownReviewCode(reader context.Context, owner ids.UUID) int {
+	kind := crmcontracts.GetSdrTeamReviewParamsScopeKindOwner
+	id := openapi_types.UUID(owner)
+	w := httptest.NewRecorder()
+	newSdrSummaryHandlers(InstallationDB(f.e.Pool), func() time.Time { return f.now }).GetSdrTeamReview(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(reader), crmcontracts.GetSdrTeamReviewParams{ScopeKind: &kind, ScopeId: &id})
+	return w.Code
 }

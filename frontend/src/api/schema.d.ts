@@ -85581,7 +85581,7 @@ export interface operations {
     getSdrTeamReview: {
         parameters: {
             query?: {
-                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews one seat's own work, which My prospecting reads for the reader. */
+                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews the requesting seat's own work, which My prospecting reads; any other owner is 404, whatever the seat may measure. */
                 scope_kind?: "team" | "workspace" | "managed_teams" | "owner";
                 /** @description The team or owner named by `scope_kind`. */
                 scope_id?: string;

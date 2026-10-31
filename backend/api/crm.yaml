@@ -30068,7 +30068,7 @@ paths:
         - name: scope_kind
           in: query
           schema: { type: string, enum: [team, workspace, managed_teams, owner] }
-          description: Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews one seat's own work, which My prospecting reads for the reader.
+          description: Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews the requesting seat's own work, which My prospecting reads; any other owner is 404, whatever the seat may measure.
         - name: scope_id
           in: query
           schema: { type: string, format: uuid }

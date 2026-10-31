@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -76,6 +78,9 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
 		return out, err
 	}
+	if err := ownReviewOnly(ctx, requested); err != nil {
+		return out, err
+	}
 	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
 		return out, err
@@ -120,6 +125,21 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	}
 	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at)
 	return out, err
+}
+
+// ownReviewOnly admits an owner review only of the requesting seat itself.
+// The review names each handoff round of the one seat, so a manager or an
+// unbounded seat naming another owner would read one colleague's work. The
+// refusal is a 404, as every analytics scope refusal is.
+func ownReviewOnly(ctx context.Context, requested RequestedScope) error {
+	if requested.Kind != ScopeKindOwner {
+		return nil
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || requested.ID == nil || *requested.ID != actor.UserID {
+		return fmt.Errorf("an owner review reads only your own work: %w", apperrors.ErrNotFound)
+	}
+	return nil
 }
 
 // sdrTeamFigures are a review's team figures, with the seats behind each one

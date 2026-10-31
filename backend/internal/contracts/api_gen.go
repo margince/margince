@@ -62314,7 +62314,7 @@ type ListSdrUpcomingMeetingsParamsScopeKind string
 
 // GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
 type GetSdrTeamReviewParams struct {
-	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews one seat's own work, which My prospecting reads for the reader.
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews the requesting seat's own work, which My prospecting reads; any other owner is 404, whatever the seat may measure.
 	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
 	// ScopeId The team or owner named by `scope_kind`.
