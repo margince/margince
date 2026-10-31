@@ -105,7 +105,6 @@ func TestTheTailJudgesATaskAsTheRankedPageDoes(t *testing.T) {
 	s := (&Service{}).WithTaskBacklog(backlog)
 
 	got, err := s.dealsWithNearTask(t.Context(), rankInstant, []ids.UUID{near, undated, later})
-
 	if err != nil {
 		t.Fatal(err)
 	}
