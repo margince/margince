@@ -108,8 +108,10 @@ Each Payload form field keeps the name you give it. Name them `email`, `full_nam
 Also called: Payload, form builder, Payload forms.
 
 ### How does Margince keep spam out?
-Margince takes a post only from a website on the form's list, or with the form's secret. It also drops a post that fills the hidden `_mrg_hp` field, or one sent under three seconds after the page opened. Too many posts from one place in a minute are refused. A post the hidden checks drop still gets the usual answer, so a bot cannot learn which check stopped it.
+Margince takes a post only from a website on the form's list, or with the form's secret. It also drops a post that fills the hidden `_mrg_hp` field. It drops one sent under three seconds after the page first opened in that browser tab. Too many posts from one place in a minute are refused. A post the hidden checks drop still gets the usual answer, so a bot cannot learn which check stopped it.
 Also called: spam, bots, junk leads.
+
+A prospect who sends, goes back and sends again keeps the first time, so the second message lands. That needs a browser that lets the page store it. In a browser that blocks this, a second send within three seconds of going back is still dropped. The code on your page does not update itself. Copy the **Code to paste** again when it changes.
 
 ### How do I ask for consent?
 To ask for consent, edit the form and tick **Require consent before a submission is taken**. Type the text beside the tick box in **Consent wording**, and the version of your privacy policy if you have one. A post without the box ticked is refused. The note on each lead keeps the wording and the version, above the quote, as a record of what the prospect agreed to.
