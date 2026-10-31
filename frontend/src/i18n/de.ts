@@ -1381,7 +1381,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.regressed": "Zurückgegangen",
   "reporting.cohortOutcome.left_pipeline": "Andere Pipeline",
   "reporting.cohortOutcome.unresolved": "Noch offen",
-  "reporting.cohortOutcome.history_partial": "Nächster Wechsel importiert oder unbekannt",
+  "reporting.cohortOutcome.history_partial":
+    "Nächster Wechsel importiert oder unbekannt",
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",

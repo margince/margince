@@ -1353,7 +1353,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.regressed": "Đã lùi lại",
   "reporting.cohortOutcome.left_pipeline": "Pipeline khác",
   "reporting.cohortOutcome.unresolved": "Vẫn đang mở",
-  "reporting.cohortOutcome.history_partial": "Lần chuyển tiếp theo được nhập hoặc không rõ",
+  "reporting.cohortOutcome.history_partial":
+    "Lần chuyển tiếp theo được nhập hoặc không rõ",
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
