@@ -148,9 +148,9 @@ describe("depth", () => {
       // failed this morning is a verdict rather than something that is still on.
       // A flat dot is what says so.
       "src/app/agentrail.css: box-shadow: 0 0 6px -1px var(--arTone)",
-      // Not a shadow at all: a phone sheet's sticky action row stops at the
-      // sheet's padding, and its own ground cast downward fills that padding
-      // so text scrolling under the row does not show beneath the buttons.
+      // Not a shadow at all. A phone sheet's sticky action row stops at the
+      // sheet's padding. Its own ground, cast downward, fills that padding, so
+      // text scrolling under the row does not show beneath the buttons.
       "src/design-system/atoms.css: box-shadow: 0 var(--space-6) 0 var(--ground)",
       // The ring separating two overlapping faces, in the colour of the surface
       // behind them. A shadow rather than a border so a stacked face stays the
