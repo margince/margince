@@ -4112,8 +4112,14 @@ public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_deal_id_id_key UNIQUE (deal_id, id)
 public.deal_stage_history.deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE SET NULL (from_stage_id)
+public.deal_stage_history.deal_stage_history_import_run_pairing CHECK (
+CASE provenance
+    WHEN 'imported'::text THEN (import_run_id IS NOT NULL)
+    ELSE (import_run_id IS NULL)
+END)
 public.deal_stage_history.deal_stage_history_lost_reason_code_fkey FOREIGN KEY (lost_reason_code_at_change) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
+public.deal_stage_history.deal_stage_history_provenance_check CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded'::text, 'imported'::text]))))
 public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))))
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
@@ -4123,9 +4129,11 @@ public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.fx_date_at_change date gen=- def=-
 public.deal_stage_history.fx_rate_at_change numeric gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.import_run_id uuid gen=- def=-
 public.deal_stage_history.lost_reason_code_at_change text gen=- def=-
 public.deal_stage_history.owner_id_at_change uuid gen=- def=-
 public.deal_stage_history.pipeline_id_at_change uuid gen=- def=-
+public.deal_stage_history.provenance text gen=- def=-
 public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.semantic_at_change text gen=- def=-
 public.deal_stage_history.to_position_at_change integer gen=- def=-
