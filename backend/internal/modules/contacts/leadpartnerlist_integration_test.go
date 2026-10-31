@@ -5,8 +5,8 @@
 
 package contacts
 
-// A lead that names its referring partner when it is created, and the lead
-// list narrowed to a partner's referrals or to the ones awaiting acceptance.
+// A lead names its referring partner when it is created. The lead list
+// narrows to a partner's referrals, or to the ones awaiting acceptance.
 
 import (
 	"context"
