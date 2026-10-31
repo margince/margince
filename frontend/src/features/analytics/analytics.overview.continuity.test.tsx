@@ -93,6 +93,10 @@ function dialsOfLink(link: HTMLElement): Record<string, string> {
 const view = (name: string) => screen.findByRole("button", { name });
 
 async function chooseAllPipelines(user: ReturnType<typeof userEvent.setup>) {
+  // Sales review keeps the pipeline behind Filters.
+  const filters = screen.queryByRole("button", { name: "Filters" });
+  if (filters?.getAttribute("aria-expanded") === "false")
+    await user.click(filters);
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Pipeline" }),
@@ -116,9 +120,7 @@ describe("each Overview view keeps its own question", () => {
 
     await waitFor(() => expect(window.location.hash).toContain("pipeline=all"));
     await readings();
-    expect(
-      screen.getByRole("combobox", { name: "Pipeline" }),
-    ).toHaveTextContent("All pipelines");
+    expect(screen.getByText("Pipeline: All pipelines")).toBeVisible();
     expect(lastSales(asked).has("pipeline_id")).toBe(false);
   });
 
@@ -365,10 +367,11 @@ describe("every way out of Overview carries its question", () => {
       checks: () => jsonResponse({ data: backlogFindings(clock) }),
     });
     await readings();
-    const review = (await screen.findAllByRole("link", { name: "Review" }))[0];
+    const review = (await screen.findAllByRole("link", { name: "Answer" }))[0];
     expect(dialsOfLink(review)).toEqual({
       overview: "sales",
       scope: `team:${TEAM.id}`,
+      finding: backlogFindings(clock)[0]?.id,
     });
     const row = review.closest(".analytics-attention-row");
     if (!(row instanceof HTMLElement)) throw new Error("a finding has a row");
@@ -488,6 +491,7 @@ describe("Save view", () => {
     );
     await readings();
 
+    await user.click(screen.getByRole("button", { name: "More" }));
     await user.click(screen.getByRole("button", { name: "Save view" }));
     expect(
       await screen.findByText(
@@ -570,7 +574,11 @@ describe("doors to setup and templates", () => {
   it("opens Report templates as a link for the view's scope", async () => {
     open("#/analytics", answer, TWO);
     await readings();
-    const templates = screen.getByRole("link", { name: "Report templates" });
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole("button", { name: "More" }));
+    const templates = await screen.findByRole("link", {
+      name: "Report templates",
+    });
     expect(dialsOfLink(templates)).toEqual({ scope: `team:${TEAM.id}` });
     expect(fireEvent.click(templates, { ctrlKey: true })).toBe(true);
   });

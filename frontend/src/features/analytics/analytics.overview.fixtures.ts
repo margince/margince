@@ -419,6 +419,12 @@ const READS: GrantSpec = {
   pipeline: ["read"],
 };
 
+/** A reader who may also see how far the input check read each source. */
+export const COVERAGE_GRANTS: GrantSpec = {
+  ...READS,
+  data_coverage: ["read"],
+};
+
 /** Who may change what the Overview's setup notes are about. */
 export const ADMIN_GRANTS: GrantSpec = {
   ...READS,
@@ -466,6 +472,7 @@ export function overviewRoutes(
     grants?: GrantSpec;
     summary?: () => Response | Promise<Response>;
     checks?: () => Response | Promise<Response>;
+    coverage?: () => Response | Promise<Response>;
     framework?: () => Response | Promise<Response>;
     team?: () => Response | Promise<Response>;
     worklist?: () => Response | Promise<Response>;
@@ -490,6 +497,14 @@ export function overviewRoutes(
     "GET /pipelines": over.pipelines ?? (() => pipelinePage([SALES_PIPELINE])),
     "GET /forecast/assurance/exceptions":
       over.checks ?? (() => jsonResponse({ data: [] })),
+    "GET /analytics/coverage":
+      over.coverage ??
+      (() =>
+        jsonResponse({
+          run_id: "00000000-0000-4000-8000-0000000000c1",
+          as_of: interval.end_at,
+          sources: [],
+        })),
     "GET /analytics/sdr-summary":
       over.summary ??
       (() =>

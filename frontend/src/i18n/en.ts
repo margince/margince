@@ -7241,15 +7241,10 @@ export const en = {
   "analytics.overview.coverage": "Coverage",
   "analytics.overview.allOpen": "All open pipeline",
   "analytics.overview.openClosing": "Open pipeline closing this quarter",
-  "analytics.overview.shortfall": "Projected shortfall",
-  "analytics.overview.surplus": "Projected surplus",
-  "analytics.overview.shortfallOperands":
-    "Target {target} − expected finish {landing}",
   "analytics.overview.quarterOnly": "This quarter only",
   "analytics.overview.winRateBasis": "Of the deals closed in this period",
   "analytics.overview.summary": "Summary",
   "analytics.overview.notCompared": "Not compared",
-  "analytics.overview.notComparedDetail": "The note below says why",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
   "analytics.overview.saveViewNote":
@@ -19323,6 +19318,69 @@ export const en = {
   "sharedMergeReviews.switch": "Owners merge duplicates",
   "sharedMergeReviews.readOnly": "An admin changes this setting.",
   "sharedMergeReviews.notSaved": "Setting was not saved.",
+  "review.findingGone":
+    "This finding is no longer open. It was answered or withdrawn after the link was made.",
+  "review.onlyType": "Showing only: {finding}.",
+  "review.showAll": "Show every finding",
+  "review.readOnly": "Read only",
+  "analytics.hero.attainment": "Sales won against the quarter’s target",
+  "analytics.hero.attained": "{percent}% of the {target} target",
+  "analytics.hero.remaining": "{amount} still to win",
+  "analytics.hero.shortfall":
+    "Projected shortfall {amount}, from an expected finish of {landing}",
+  "analytics.hero.surplus":
+    "Projected surplus {amount}, from an expected finish of {landing}",
+  "analytics.hero.prior": "Same point of the previous period: {amount}",
+  "analytics.hero.noPrior":
+    "No comparison with the previous period: there is not enough history yet.",
+  "analytics.overview.more": "More",
+  "analytics.overview.filtersToggle": "Filters",
+  "analytics.overview.chipPipeline": "Pipeline: {name}",
+  "analytics.overview.chipClose": "Closing: {window}",
+  "analytics.overview.winRate": "Closed win rate",
+  "analytics.overview.coverageNotCompared": "The target note above says why",
+  "analytics.intervention.scope":
+    "These checks cover every pipeline and close date in this scope.",
+  "analytics.intervention.viewAll": "View all checks",
+  "analytics.intervention.review": "Review {subject}",
+  "analytics.intervention.reviewFinding": "Review a forecast check",
+  "analytics.intervention.answer": "Answer",
+  "analytics.intervention.open": "Open",
+  "analytics.intervention.unassigned": "Unassigned",
+  "analytics.intervention.since": "Found {date}",
+  "analytics.intervention.findings_one": "{count} finding",
+  "analytics.intervention.findings_other": "{count} findings",
+  "analytics.intervention.deals_one": "{count} deal",
+  "analytics.intervention.deals_other": "{count} deals",
+  "analytics.intervention.other_one": "{count} not about a deal",
+  "analytics.intervention.other_other": "{count} not about a deal",
+  "analytics.intervention.allChecks": "All open checks: {counts}",
+  "analytics.intervention.show": "Show",
+  "analytics.intervention.maintenance": "Connection maintenance",
+  "analytics.intervention.maintenanceBody_one":
+    "1 data source could not be read in the last check.",
+  "analytics.intervention.maintenanceBody_other":
+    "{count} data sources could not be read in the last check.",
+  "analytics.decision.composition": "What the expected finish is made of",
+  "analytics.decision.won": "Won",
+  "analytics.decision.included":
+    "Counts {priced} of the {eligible} open deals the forecast considered.",
+  "analytics.decision.excluded": "Left out: {parts}.",
+  "analytics.decision.unpriced_one": "{count} deal with no amount",
+  "analytics.decision.unpriced_other": "{count} deals with no amount",
+  "analytics.decision.fx_one": "{count} deal with no exchange rate",
+  "analytics.decision.fx_other": "{count} deals with no exchange rate",
+  "reporting.writtenChecksFailed":
+    "The open checks could not be read, so nothing is said here about what needs attention.",
+  "reporting.writtenChecksNone": "No open checks need an answer.",
+  "reporting.writtenChecks_one":
+    "{count} open check on {deals} needs an answer.",
+  "reporting.writtenChecks_other":
+    "{count} open checks on {deals} need an answer.",
+  "reporting.writtenChecksOnly_one": "{count} open check needs an answer.",
+  "reporting.writtenChecksOnly_other": "{count} open checks need an answer.",
+  "reporting.writtenChecksDeals_one": "{count} deal",
+  "reporting.writtenChecksDeals_other": "{count} deals",
 } as const;
 
 export type MessageKey = keyof typeof en;

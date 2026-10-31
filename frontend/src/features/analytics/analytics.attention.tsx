@@ -174,7 +174,7 @@ export function useAttentionList(
   // A disabled query still hands back what it cached, so a grant withdrawn
   // mid-session is checked here as well as at the request.
   const items: AttentionItem[] = [];
-  const findings = (canReadForecast && checks.data) || [];
+  const findings = (canReadForecast && checks.data?.data) || [];
   const owners = useMemberNames(
     findings.flatMap((check) => check.owner_id ?? []),
   );
@@ -234,7 +234,9 @@ export function useAttentionList(
   return { items, state: attentionState(canReadForecast, checks) };
 }
 
-function attentionState(
+// Whether the findings list is loading, failed or answered; a reader without
+// the forecast grant has nothing to wait for.
+export function attentionState(
   reads: boolean,
   checks: Readonly<{ isPending: boolean; isError: boolean }>,
 ): AttentionState {

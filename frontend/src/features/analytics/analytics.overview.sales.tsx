@@ -4,31 +4,18 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { Button, StatCard } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
-import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { StatStrip } from "../../design-system/statstrip";
-import {
-  formatDateAbbrev,
-  formatDecimal,
-  formatNumber,
-} from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
-import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import {
-  landingBasisLines,
-  ModelRangeCard,
-  rangeOf,
-} from "./analytics.forecast.landing";
 import {
   BoardChart,
   SalesHero,
@@ -39,25 +26,27 @@ import {
   outboundDials,
   scopeDials,
 } from "./analytics.overview.context";
+import { DecisionSummary } from "./analytics.overview.decision";
+import { HeroAside } from "./analytics.overview.hero";
 import {
-  MetricReading,
-  metricOf,
-  OverviewLinks,
-  OverviewSaveActions,
-  readingValue,
-} from "./analytics.overview.readings";
+  InterventionPanel,
+  useInterventions,
+} from "./analytics.overview.interventions";
+import { metricOf, OverviewLinks } from "./analytics.overview.readings";
+import { SalesHeader } from "./analytics.overview.salesheader";
+import {
+  OpenPipelineLine,
+  SalesReadings,
+} from "./analytics.overview.salesreadings";
 import { SinceLastReview } from "./analytics.overview.since";
 import { periodCaption } from "./analytics.period";
 import {
   ReportingEvidenceDrawer,
   useSelectionEvidence,
 } from "./reporting.evidence";
-import { ReportingFilters } from "./reporting.filters";
-import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingCompactAmount,
+import type {
+  ReportingEvaluation,
+  ReportingSelection,
 } from "./reporting.model";
 import {
   customInterval,
@@ -65,15 +54,10 @@ import {
   validDateRange,
 } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
-import { ComparisonState } from "./reporting.targetcomparison";
 import { viewRequest } from "./reporting.views";
-import { OpeningSummary, salesReviewSummary } from "./reporting.written";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Pipeline = components["schemas"]["Pipeline"];
-type Comparison = NonNullable<
-  ReportingEvaluation["metrics"][number]["target_comparison"]
->;
 
 /**
  * Sales review: where the selected population stands this fiscal quarter, in
@@ -116,7 +100,6 @@ function SalesReviewBody({
   pipelines: readonly Pipeline[];
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const [params] = useUrlParams();
@@ -142,7 +125,6 @@ function SalesReviewBody({
     selection,
     validDates && metrics.length > 0 && !pipelineGone,
   );
-  const attention = useAttentionList(scope, false);
   const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
     JSON.stringify(selection),
   );
@@ -157,54 +139,55 @@ function SalesReviewBody({
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
   };
+  const checks = useInterventions(scope);
+  const invalid = problemCodeOf(query.error) === "reporting_interval_invalid";
+  // The evaluation the page draws below its readings; a cached answer to a
+  // question the page no longer asks is never drawn.
+  const answered = pipelineGone || query.isError ? undefined : query.data;
+  const forecastHref = analyticsSectionHref("forecast", doors);
+  const targetSetup = (
+    <TargetSetup
+      href={analyticsSectionHref("targets", scopeDials(scopeKey(scope)))}
+    />
+  );
   return (
     <>
-      <FilterBar
-        label={t("analytics.filters")}
-        actions={
-          <OverviewSaveActions
-            selection={
-              query.data ? { ...query.data.selection, blocks } : undefined
-            }
-            scope={scopeKey(scope)}
-          />
-        }
+      <SalesHeader
+        selection={selection}
+        pipelines={pipelines}
+        switcher={switcher}
+        scopeControl={scopeControl}
+        dates={{
+          from: filters.start,
+          through: filters.end,
+          onChange: (from, through) => {
+            filters.setStart(from);
+            filters.setEnd(through);
+          },
+        }}
         caption={
           validDates
             ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
-      >
-        {switcher}
-        {scopeControl}
-        <ReportingFilters
-          selection={selection}
-          showScope={false}
-          showTargets={false}
-          dates={{
-            from: filters.start,
-            through: filters.end,
-            onChange: (from, through) => {
-              filters.setStart(from);
-              filters.setEnd(through);
-            },
-          }}
-          onChange={(next) => {
-            if (next.period !== filters.period) filters.setPeriod(next.period);
-            if (next.pipeline_id !== selection.pipeline_id)
-              filters.setPipelineId(next.pipeline_id ?? "");
-            if (next.close_window !== filters.closeWindow)
-              filters.setCloseWindow(next.close_window);
-          }}
-        />
-      </FilterBar>
+        evaluation={query.data}
+        saved={query.data ? { ...query.data.selection, blocks } : undefined}
+        scope={scopeKey(scope)}
+        onChange={(next) => {
+          if (next.period !== filters.period) filters.setPeriod(next.period);
+          if (next.pipeline_id !== selection.pipeline_id)
+            filters.setPipelineId(next.pipeline_id ?? "");
+          if (next.close_window !== filters.closeWindow)
+            filters.setCloseWindow(next.close_window);
+        }}
+      />
       {pipelineGone ? (
         <PipelineGone
           defaultPipeline={
             pipelines.find((pipeline) => pipeline.is_default) ?? pipelines[0]
           }
         />
-      ) : problemCodeOf(query.error) === "reporting_interval_invalid" ? (
+      ) : invalid ? (
         <ErrorLine error={query.error} />
       ) : (
         <QueryGate query={query} pendingLabel={t("analytics.overview.sales")}>
@@ -218,61 +201,80 @@ function SalesReviewBody({
                   (metric) => metric.id === "forecast_landing",
                 )}
                 onApply={apply}
-                targetsHref={analyticsSectionHref(
-                  "targets",
-                  scopeDials(scopeKey(scope)),
-                )}
               />
-              <SalesHero evaluation={evaluation} onEvidence={openEvidence} />
+              <SalesHero
+                evaluation={evaluation}
+                onEvidence={openEvidence}
+                aside={
+                  <HeroAside
+                    evaluation={evaluation}
+                    onApply={apply}
+                    targetSetup={targetSetup}
+                  />
+                }
+              />
               <SalesReadings
                 evaluation={evaluation}
                 onEvidence={openEvidence}
-                forecastHref={analyticsSectionHref("forecast", doors)}
+                forecastHref={forecastHref}
               />
-              <div className="analytics-pair">
-                <BoardChart
-                  evaluation={evaluation}
-                  kind="stage_distribution"
-                  onEvidence={openEvidence}
-                />
-                <BoardChart
-                  evaluation={evaluation}
-                  kind="owner_attainment"
-                  onEvidence={openEvidence}
-                />
-              </div>
-              {evidence && (
-                <ReportingEvidenceDrawer
-                  key={JSON.stringify(evidence)}
-                  evaluation={evaluation}
-                  reference={evidence}
-                  onClose={closeEvidence}
-                />
-              )}
             </>
           )}
         </QueryGate>
       )}
+      {/* One place for the action list, so it never moves while the figures
+          load; its sources are its own, so a failed evaluation leaves it. */}
       <div className="analytics-pair">
-        {/* Its sources are its own, so a failed evaluation leaves it standing. */}
-        <AttentionPanel
-          items={attention.items}
-          state={attention.state}
-          emptyLabel={t("analytics.overview.salesNothing")}
-          dials={findingDials(doors)}
-        />
-        {query.data && (
-          <OpeningSummary
-            title={t("analytics.overview.summary")}
-            sentences={salesReviewSummary(query.data, { t, plural, locale })}
+        {answered && (
+          <DecisionSummary
+            evaluation={answered}
+            checks={{
+              state: checks.state,
+              findings: checks.list?.totals?.findings,
+              deals: checks.list?.totals?.deals,
+            }}
+            forecastHref={forecastHref}
+            onEvidence={openEvidence}
           />
         )}
+        <InterventionPanel
+          interventions={checks}
+          dials={findingDials(doors)}
+          emptyLabel={t("analytics.overview.salesNothing")}
+        />
       </div>
+      {/* Below the decision and the actions: today's stock by stage, and the
+          permitted per-person analysis, alphabetical. */}
+      {answered && (
+        <>
+          <OpenPipelineLine evaluation={answered} onEvidence={openEvidence} />
+          <div className="analytics-pair">
+            <BoardChart
+              evaluation={answered}
+              kind="stage_distribution"
+              onEvidence={openEvidence}
+            />
+            <BoardChart
+              evaluation={answered}
+              kind="owner_attainment"
+              onEvidence={openEvidence}
+            />
+          </div>
+          {evidence && (
+            <ReportingEvidenceDrawer
+              key={JSON.stringify(evidence)}
+              evaluation={answered}
+              reference={evidence}
+              onClose={closeEvidence}
+            />
+          )}
+        </>
+      )}
       <SinceLastReview
         catalog={catalog}
         scope={selection.scope}
         pipelineId={selection.pipeline_id}
-        after={attention.state}
+        after={checks.state}
       />
       <OverviewLinks
         dials={doors}
@@ -314,271 +316,41 @@ function findingDials(doors: UrlParams): UrlParams {
   ]);
 }
 
-// The expected finish with its basis, and the modelled finish beside it. Then
-// the shortfall, coverage with both operands, the win rate and open pipeline.
-// Every figure is the server's; the page only formats.
-function SalesReadings({
-  evaluation,
-  onEvidence,
-  forecastHref,
-}: Readonly<{
-  evaluation: ReportingEvaluation;
-  onEvidence: (reference: ReportingEvidenceRef) => void;
-  forecastHref: string;
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const { context } = evaluation;
-  const landing = metricOf(evaluation, "forecast_landing");
-  const comparison = landing?.target_comparison;
-  const money = (value: number | undefined) =>
-    reportingCompactAmount(value, context.currency, context.currency, locale);
-  const open = metricOf(evaluation, "open_pipeline");
-  const openCount = open?.coverage.eligible_count;
-  return (
-    <StatStrip label={t("analytics.overview.readings")}>
-      <ExpectedFinish
-        evaluation={evaluation}
-        money={money}
-        forecastHref={forecastHref}
-      />
-      {landing?.value != null && (
-        <ModelRangeCard
-          label={t("forecast.model.quarter")}
-          range={rangeOf(landing.range_low_minor, landing.range_high_minor)}
-          wonMinor={landing.forecast_basis?.landing.won_minor}
-          unpriced={unpricedOf(landing.forecast_basis)}
-          fxMissing={landing.forecast_basis?.fx_missing_count ?? 0}
-          money={money}
-        />
-      )}
-      {comparison && <TargetReadings comparison={comparison} money={money} />}
-      {metricOf(evaluation, "closed_win_rate") && (
-        <MetricReading
-          evaluation={evaluation}
-          id="closed_win_rate"
-          detail={t("analytics.overview.winRateBasis")}
-          onEvidence={onEvidence}
-        />
-      )}
-      <MetricReading
-        evaluation={evaluation}
-        id="open_pipeline"
-        // Never the coverage numerator: that counts only the deals eligible
-        // to close in the quarter.
-        label={t(
-          context.close_interval
-            ? "analytics.overview.openClosing"
-            : "analytics.overview.allOpen",
-        )}
-        // Today's stock, dated, so a past period never reads it as its own.
-        detail={
-          openCount != null
-            ? plural("reporting.openPipelineBasis", openCount, {
-                count: formatNumber(openCount, locale),
-                at: formatDateAbbrev(
-                  context.state_at,
-                  locale,
-                  context.timezone,
-                ),
-              })
-            : t("reporting.openPipelineAsOf", {
-                at: formatDateAbbrev(
-                  context.state_at,
-                  locale,
-                  context.timezone,
-                ),
-              })
-        }
-        onEvidence={onEvidence}
-      />
-    </StatStrip>
-  );
-}
-
-type Basis = NonNullable<
-  ReportingEvaluation["metrics"][number]["forecast_basis"]
->;
-
-function unpricedOf(basis: Basis | undefined): number {
-  return basis ? basis.eligible_count - basis.priced_count : 0;
-}
-
-// The landing and the two lines that say what it counts. A figure with no
-// basis says it is unknown rather than borrowing one.
-function ExpectedFinish({
-  evaluation,
-  money,
-  forecastHref,
-}: Readonly<{
-  evaluation: ReportingEvaluation;
-  money: (value: number | undefined) => string;
-  forecastHref: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const landing = metricOf(evaluation, "forecast_landing");
-  if (!landing)
-    return (
-      <StatCard
-        narrow="row"
-        label={t("analytics.overview.expectedFinish")}
-        value={t("analytics.overview.quarterOnly")}
-      />
-    );
-  const basis = landing.forecast_basis;
-  const lines =
-    landing.value == null
-      ? undefined
-      : landingBasisLines(basis?.landing, basis?.call_minor, money, t);
-  return (
-    <StatCard
-      narrow="row"
-      label={t("analytics.overview.expectedFinish")}
-      value={readingValue(landing, evaluation, t, locale)}
-      tone={lines?.warning ? "warning" : undefined}
-      detail={
-        lines && (
-          <>
-            <span>{lines.basis}</span>
-            {lines.beside && <span>{lines.beside}</span>}
-          </>
-        )
-      }
-      href={landing.value != null ? forecastHref : undefined}
-    />
-  );
-}
-
-// The quarter against its target: the projected shortfall (target minus the
-// landing) and coverage of what is still to win (target minus won). The two
-// are different figures, and a state that compares nothing says why.
-function TargetReadings({
-  comparison,
-  money,
-}: Readonly<{
-  comparison: Comparison;
-  money: (value: number | undefined) => string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (comparison.status === "no_target") return null;
-  if (
-    comparison.status !== "compared" &&
-    comparison.status !== "target_reached"
-  )
-    return <NotCompared />;
-  const { gap } = comparison;
-  return (
-    <>
-      {/* A comparison without its gap names no gap, rather than a zero one. */}
-      {gap == null ? (
-        <NotCompared detail={t("analytics.overview.gapMissing")} />
-      ) : (
-        <StatCard
-          narrow="row"
-          label={t(
-            gap < 0
-              ? "analytics.overview.surplus"
-              : "analytics.overview.shortfall",
-          )}
-          value={money(Math.abs(gap))}
-          detail={t("analytics.overview.shortfallOperands", {
-            target: money(comparison.target),
-            landing: money(comparison.landing),
-          })}
-        />
-      )}
-      {comparison.status === "target_reached" ? (
-        <StatCard
-          narrow="row"
-          label={t("analytics.overview.coverage")}
-          value={t("reporting.compare.reached")}
-          detail={t("reporting.compare.remainingBasis", {
-            won: money(comparison.won),
-            target: money(comparison.target),
-          })}
-        />
-      ) : comparison.coverage == null ? (
-        <NotCompared />
-      ) : (
-        <StatCard
-          narrow="row"
-          label={t("analytics.overview.coverage")}
-          value={t("reporting.compare.ratio", {
-            ratio: formatDecimal(comparison.coverage, locale, 1),
-          })}
-          detail={t("reporting.compare.coverageBasis", {
-            open: money(comparison.open_pipeline),
-            remaining: money(comparison.remaining),
-          })}
-        />
-      )}
-    </>
-  );
-}
-
-function NotCompared({ detail }: Readonly<{ detail?: string }>) {
-  const t = useT();
-  return (
-    <StatCard
-      narrow="row"
-      label={t("reporting.compare.gap")}
-      value={t("analytics.overview.notCompared")}
-      detail={detail ?? t("analytics.overview.notComparedDetail")}
-    />
-  );
-}
-
-// What the quarter's comparison cannot say, and the one step that lets it.
+// A period other than this quarter has no expected finish to compare, and
+// the one step that gives it one. The comparison's own states are explained
+// in the hero, beside the attainment they affect.
 function QuarterNotes({
   evaluation,
   period,
   offersLanding,
   onApply,
-  targetsHref,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   period: ReportingSelection["period"];
   offersLanding: boolean;
   onApply: (selection: ReportingSelection) => void;
-  targetsHref: string;
 }>) {
   const t = useT();
-  const comparison = metricOf(
-    evaluation,
-    "forecast_landing",
-  )?.target_comparison;
-  if (!comparison) {
-    if (!offersLanding || period === "this_quarter") return null;
-    return (
-      <Callout
-        tone="info"
-        kind="standing"
-        title={t("analytics.overview.quarterOnlyTitle")}
-        actions={
-          <Button
-            onClick={() =>
-              onApply({ ...evaluation.selection, period: "this_quarter" })
-            }
-          >
-            {t("reporting.compare.apply.period")}
-          </Button>
-        }
-      >
-        <p>{t("analytics.overview.quarterOnlyBody")}</p>
-      </Callout>
-    );
-  }
-  if (
-    comparison.status === "compared" ||
-    comparison.status === "target_reached"
-  )
-    return null;
-  if (comparison.status === "no_target")
-    return <TargetSetup href={targetsHref} />;
-  return <ComparisonState comparison={comparison} onApply={onApply} />;
+  if (metricOf(evaluation, "forecast_landing")?.target_comparison) return null;
+  if (!offersLanding || period === "this_quarter") return null;
+  return (
+    <Callout
+      tone="info"
+      kind="standing"
+      title={t("analytics.overview.quarterOnlyTitle")}
+      actions={
+        <Button
+          onClick={() =>
+            onApply({ ...evaluation.selection, period: "this_quarter" })
+          }
+        >
+          {t("reporting.compare.apply.period")}
+        </Button>
+      }
+    >
+      <p>{t("analytics.overview.quarterOnlyBody")}</p>
+    </Callout>
+  );
 }
 
 // Who can give the quarter a target. A reader who may not set one is told who

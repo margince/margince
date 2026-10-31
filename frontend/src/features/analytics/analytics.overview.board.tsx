@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
@@ -44,23 +45,32 @@ const drawn = (chart: ReportingChart | undefined): chart is ReportingChart =>
   chart.points.length > 0 &&
   chart.coverage.status !== "no_data";
 
+// A running total that never leaves zero, in either period, is a blank box:
+// the figure and its explanation say it better alone.
+const moves = (chart: ReportingChart): boolean =>
+  chart.points.some((point) => !!point.value || !!point.comparison);
+
 /**
  * Sales won as the page's lead: the figure, the period it covers and the door
- * to its deals, beside the running total that reached it.
+ * to its deals, beside the running total that reached it. `aside` stands
+ * under the figure: the target it is read against, and the period before.
  */
 export function SalesHero({
   evaluation,
   onEvidence,
+  aside,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   onEvidence: (reference: ReportingEvidenceRef) => void;
+  aside?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const { context } = evaluation;
   const won = metricOf(evaluation, "bookings_won");
-  const trend = chartOf(evaluation, "bookings_trend");
+  const found = chartOf(evaluation, "bookings_trend");
+  const trend = drawn(found) && moves(found) ? found : undefined;
   const opens =
     won?.value != null &&
     won.coverage.status !== "no_data" &&
@@ -102,13 +112,15 @@ export function SalesHero({
                 {t("reporting.viewRecords")}
               </Button>
             )}
+            {aside}
           </div>
-          {drawn(trend) && (
+          {trend && (
             <div className="analytics-hero-chart">
               <ChartBody
                 chart={trend}
                 evaluation={evaluation}
                 onEvidence={onEvidence}
+                trendSize="compact"
               />
             </div>
           )}

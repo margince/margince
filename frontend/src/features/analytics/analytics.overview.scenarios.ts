@@ -9,6 +9,7 @@ import type { ReportingFixtureFrame } from "../../testing/reporting.fixtures";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import {
   ADMIN_GRANTS,
+  COVERAGE_GRANTS,
   compared,
   isMovement,
   landingBasis,
@@ -18,7 +19,7 @@ import {
   twoPipelines,
 } from "./analytics.overview.fixtures";
 import {
-  backlogFindings,
+  backlogList,
   boardCharts,
   bookingsTrend,
   framed,
@@ -183,6 +184,8 @@ function legacy(evaluation: ReportingEvaluation): ReportingEvaluation {
 
 const SALES_ONLY = "Only Sales review reads the forecast landing.";
 const NO_ACTION_LIST = "Team prospecting has no action list.";
+const SALES_ONLY_CHECKS =
+  "Forecast checks are listed on Sales review, not on My prospecting.";
 const NO_MONEY = "Prospecting figures are counts and carry no money.";
 const NO_TARGET_HERE = "Team prospecting shows no target.";
 const QUARTERS = "Sales review reads quarters; this frame is a week.";
@@ -399,7 +402,22 @@ export const OVERVIEW_SCENARIOS = {
             metric("open_pipeline", 136_000_000),
           ],
         }),
-        { checks: unavailable },
+        {
+          checks: unavailable,
+          grants: COVERAGE_GRANTS,
+          coverage: json({
+            run_id: "00000000-0000-4000-8000-0000000000c1",
+            as_of: quarterClock,
+            sources: [
+              { source: "mail", state: "unavailable" },
+              {
+                source: "calendar",
+                state: "checked",
+                checked_through: quarterClock,
+              },
+            ],
+          }),
+        },
       ),
       prospecting: prospecting(
         prospectingOn(week, [
@@ -506,13 +524,24 @@ export const OVERVIEW_SCENARIOS = {
     about: "24 open review findings on 7 deals, and a long SDR queue.",
     views: {
       sales: sales(quarterSales(), {
-        checks: json({ data: backlogFindings(quarterClock) }),
+        checks: json(backlogList(quarterClock)),
       }),
       prospecting: prospecting(prospectingOn(week), {
         worklist: day(workRows, {
           summary: { urgent: 1, due: 38, lower_priority: 171, total: 210 },
         }),
       }),
+      team: { excluded: NO_ACTION_LIST },
+    },
+  },
+  readOnlyReviewer: {
+    about:
+      "A reviewer who may read every check and answer none of them, on the backlog.",
+    views: {
+      sales: sales(quarterSales(), {
+        checks: json(backlogList(quarterClock, "read")),
+      }),
+      prospecting: { excluded: SALES_ONLY_CHECKS },
       team: { excluded: NO_ACTION_LIST },
     },
   },

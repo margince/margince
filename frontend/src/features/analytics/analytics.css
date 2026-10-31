@@ -124,7 +124,14 @@
   gap: var(--space-1);
 }
 .analytics-hero-value {
-  font: var(--fontDisplayLarge);
+  font: var(--fontDisplayFigure);
+}
+/* Under the figure: the target it is read against, and the period before. */
+.analytics-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
 }
 /* A grid track never shrinks below its content, so the chart is let shrink. */
 .analytics-hero-chart {
@@ -148,4 +155,38 @@
 /* While its page is open, Reports holds the strong edge. */
 .analytics-tab-verbs .btn-ghost[aria-current="page"] {
   --ghostEdge: var(--borderStrong);
+}
+
+/* The active filters, always in view beside the control that changes them. */
+.analytics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--controlHeight);
+}
+
+/* The summary's sentences, one per line, each opening what it rests on. */
+.analytics-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.analytics-decision-link {
+  text-align: start;
+  white-space: normal;
+}
+.analytics-composition {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+/* All open pipeline, the secondary reading over the stock charts. */
+.analytics-open-line {
+  margin: 0;
 }

@@ -102,11 +102,16 @@ describe("Sales review", () => {
   it("leads with sales won and states the quarter's position in readings and words", async () => {
     open("#/analytics", bySeat("leader"));
     const strip = await readings();
-    expect(screen.getByRole("heading", { name: "Sales won" })).toBeVisible();
-    expect(screen.getByText("€420k")).toBeVisible();
+    const hero = within(screen.getByRole("region", { name: "Sales won" }));
+    expect(hero.getByText("€420k")).toBeVisible();
     expect(strip.queryByText("€420k")).toBeNull();
     expect(strip.getByText("€760k")).toBeVisible();
-    expect(strip.getByText("€40k")).toBeVisible();
+    // The shortfall stands beside target progress, not as a reading.
+    expect(
+      hero.getByText(
+        "Projected shortfall €40k, from an expected finish of €760k",
+      ),
+    ).toBeVisible();
     expect(strip.getByText("3.6×")).toBeVisible();
     expect(
       strip.getByText(
@@ -268,6 +273,12 @@ describe("Sales review", () => {
     );
     const deal = await screen.findByRole("link", { name: "Northstar rollout" });
     expect(deal.getAttribute("href")).toBe("/#/deals/deal-x1");
+    expect(deal.closest("p")?.textContent).toBe("Review Northstar rollout");
+    // The row opens its own finding in the review, never the deal's company.
+    const door = screen.getByRole("link", { name: "Answer" });
+    expect(door.getAttribute("href")).toMatch(
+      /^\/#\/analytics\/forecast\?.*finding=x1/,
+    );
     // Back returns to this address, and the address holds the whole review.
     expect(window.location.hash).toContain("overview=sales");
     expect(window.location.hash).toContain("pipeline=all");
@@ -308,7 +319,7 @@ describe("Sales review", () => {
     // The withheld figure is never stated as the whole in words.
     expect(screen.queryByText(/Won in/)).toBeNull();
     expect(
-      screen.getByText("Imported deals have no stage history before March."),
+      screen.getByText(/Imported deals have no stage history before March\./),
     ).toBeInTheDocument();
   });
 
@@ -485,10 +496,11 @@ describe("Sales review gap", () => {
         : salesEvaluation({ comparison: withoutGap }),
     );
     const strip = await readings();
-    expect(strip.getByText("Not compared")).toBeVisible();
+    const hero = within(screen.getByRole("region", { name: "Sales won" }));
     expect(
-      strip.getByText("The comparison came back without a gap."),
+      hero.getByText("The comparison came back without a gap."),
     ).toBeVisible();
+    expect(hero.queryByText(/Projected/)).toBeNull();
     expect(strip.queryByText("€0")).toBeNull();
   });
 });

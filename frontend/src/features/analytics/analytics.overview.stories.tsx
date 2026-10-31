@@ -168,6 +168,10 @@ export const MyProspectingNoActionableWork: Story = scenario(
   "prospecting",
 );
 export const SalesReviewLargeBacklog: Story = scenario("largeBacklog", "sales");
+export const SalesReviewReadOnlyReviewer: Story = scenario(
+  "readOnlyReviewer",
+  "sales",
+);
 export const MyProspectingLargeBacklog: Story = scenario(
   "largeBacklog",
   "prospecting",

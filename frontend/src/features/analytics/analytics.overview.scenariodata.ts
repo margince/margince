@@ -368,7 +368,10 @@ const DEALS = [
  * next step and an economic buyer. The priced ones also passed their close
  * date. The unpriced ones are committed without an amount. Two have no owner.
  */
-export function backlogFindings(clock: string): InputCheck[] {
+export function backlogFindings(
+  clock: string,
+  mode: "answer" | "read" = "answer",
+): InputCheck[] {
   return DEALS.flatMap(([name, amount, owner], index) => {
     const subjectID = `40000000-0000-4000-8000-00000000000${index + 1}`;
     const types =
@@ -390,9 +393,54 @@ export function backlogFindings(clock: string): InputCheck[] {
         first_seen_at: "2026-10-12T02:00:00Z",
         last_seen_at: clock,
         inputs_changed: false,
+        destination: { screen: "forecast_review", mode },
       }),
     );
   });
+}
+
+type CheckList = Readonly<{
+  data: InputCheck[];
+  groups: NonNullable<components["schemas"]["InputCheckGroup"]>[];
+  totals: components["schemas"]["InputCheckTotals"];
+}>;
+
+const PRICED = 4_800_000 + 3_600_000 + 2_900_000 + 2_200_000;
+
+/**
+ * The backlog as listInputChecks answers it: the findings, and the groups the
+ * server counts over all of them, written out from `DEALS` by hand. Each
+ * deal counts once per group, and its amount once.
+ */
+export function backlogList(
+  clock: string,
+  mode: "answer" | "read" = "answer",
+): CheckList {
+  const destination = { screen: "forecast_review", mode } as const;
+  const eur = (amount: number) => [{ currency: "EUR", amount_minor: amount }];
+  const group = (
+    type: string,
+    deals: number,
+    exposure: { currency: string; amount_minor: number }[],
+  ) => ({
+    type,
+    findings: deals,
+    deals,
+    other_findings: 0,
+    exposure,
+    destination,
+  });
+  return {
+    data: backlogFindings(clock, mode),
+    groups: [
+      group("no_economic_buyer", 7, eur(PRICED)),
+      group("close_past", 4, eur(PRICED)),
+      group("no_next_step", 7, eur(PRICED)),
+      group("close_pushed", 3, eur(4_800_000 + 3_600_000 + 2_900_000)),
+      group("commit_unpriced", 3, []),
+    ],
+    totals: { findings: 24, deals: 7, other_findings: 0 },
+  };
 }
 
 /** Handoffs waiting on others: one resubmitted, one on an inactive seat. */

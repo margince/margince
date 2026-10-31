@@ -62,6 +62,15 @@ async function card(label: string) {
   return within(section);
 }
 
+// The modelled finish, its own reading in the summary panel.
+async function modelCard() {
+  return within(
+    await screen.findByRole("region", { name: "Modelled quarter finish" }),
+  );
+}
+
+const hero = () => within(screen.getByRole("region", { name: "Sales won" }));
+
 const money = (minor: number | undefined) =>
   reportingCompactAmount(minor, "EUR", "EUR", "en");
 
@@ -74,7 +83,7 @@ describe("the expected finish beside the modelled finish", () => {
     expect(
       finish.getByText(`Manager’s call ${money(190_000_000)}, not added`),
     ).toBeVisible();
-    const model = await card("Modelled quarter finish");
+    const model = await modelCard();
     expect(
       model.getByText(`${money(140_000_000)} to ${money(260_000_000)}`),
     ).toBeVisible();
@@ -107,7 +116,7 @@ describe("the expected finish beside the modelled finish", () => {
         ({ range_low_minor: _low, range_high_minor: _high, ...each }) => each,
       ),
     });
-    const model = await card("Modelled quarter finish");
+    const model = await modelCard();
     expect(model.getByText("No range")).toBeVisible();
     expect(
       model.getByText("No modelled range was drawn for this period."),
@@ -201,11 +210,10 @@ describe("one quarter landed three ways", () => {
       expect(screen.queryByText(money(29_000))).toBeNull();
       if (!target) return;
       // Left to win stays target minus won; the shortfall follows the landing.
-      const shortfall = await card("Projected shortfall");
-      expect(shortfall.getByText(money(20_000 - amount))).toBeVisible();
+      expect(hero().getByText(`${money(10_000)} still to win`)).toBeVisible();
       expect(
-        shortfall.getByText(
-          `Target ${money(20_000)} − expected finish ${money(amount)}`,
+        hero().getByText(
+          `Projected shortfall ${money(20_000 - amount)}, from an expected finish of ${money(amount)}`,
         ),
       ).toBeVisible();
       const coverage = await card("Coverage");
@@ -235,18 +243,23 @@ describe("coverage against what is still to win", () => {
         `${money(eligible)} eligible to close this quarter / ${money(remaining)} still to win`,
       ),
     ).toBeVisible();
-    const open = await card("All open pipeline");
-    expect(open.getByText(money(520_000_000))).toBeVisible();
-    // Today's stock, dated with the cutoff, never the period's own pipeline.
-    expect(open.getByText("Open deals: 61 · as of 31 Oct 2026")).toBeVisible();
-    expect((await readings()).queryByText("Open pipeline")).toBeNull();
+    // All open pipeline is the secondary reading over the stock charts:
+    // today's stock, dated with the cutoff, never the coverage numerator.
+    expect(
+      screen.getByText(`All open pipeline: ${money(520_000_000)}`),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Open deals: 61 · as of 31 Oct 2026"),
+    ).toBeVisible();
+    expect((await readings()).queryByText(/open pipeline/i)).toBeNull();
   });
 
   it("reads a target already passed as reached and its surplus, never as an endless ratio", async () => {
     openScenario("targetReached");
     expect((await card("Coverage")).getByText("Target reached")).toBeVisible();
-    const surplus = await card("Projected surplus");
-    expect(surplus.getByText(money(16_000_000))).toBeVisible();
+    expect(
+      hero().getByText(/^Projected surplus €160k, from an expected finish/),
+    ).toBeVisible();
     expect(screen.queryByText(/Infinity|NaN/)).toBeNull();
   });
 
@@ -262,10 +275,11 @@ describe("coverage against what is still to win", () => {
           comparison: { status, target_metric: "bookings_won" },
         }),
       );
-      const strip = await readings();
-      expect(strip.getByText("Not compared")).toBeVisible();
-      expect(strip.queryByText("Coverage")).toBeNull();
-      expect(strip.queryByText(/Infinity|NaN|×/)).toBeNull();
+      const coverage = await card("Coverage");
+      expect(coverage.getByText("Not compared")).toBeVisible();
+      expect((await readings()).queryByText(/Infinity|NaN|×/)).toBeNull();
+      // The hero states why, once, beside the attainment it affects.
+      expect(hero().queryByText(/still to win/)).toBeNull();
     },
   );
 });

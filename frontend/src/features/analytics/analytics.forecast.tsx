@@ -180,7 +180,7 @@ export function ForecastView({
                     : null
                 }
               >
-                <ForecastReview />
+                <ForecastReview scope={selection.scope} />
               </CallEditorProvider>
               <EvidenceReceipt
                 title={t("forecast.receipt")}

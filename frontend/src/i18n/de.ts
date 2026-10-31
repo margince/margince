@@ -7225,16 +7225,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.allOpen": "Gesamte offene Pipeline",
   "analytics.overview.openClosing":
     "Offene Pipeline mit Abschluss in diesem Quartal",
-  "analytics.overview.shortfall": "Erwartete Lücke",
-  "analytics.overview.surplus": "Erwarteter Überschuss",
-  "analytics.overview.shortfallOperands":
-    "Ziel {target} − erwartetes Ergebnis {landing}",
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
   "analytics.overview.winRateBasis":
     "Von den in diesem Zeitraum abgeschlossenen Deals",
   "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
-  "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
   "analytics.overview.saveViewNote":
@@ -19509,4 +19504,72 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sharedMergeReviews.switch": "Verantwortliche führen zusammen",
   "sharedMergeReviews.readOnly": "Diese Einstellung ändert ein Admin.",
   "sharedMergeReviews.notSaved": "Einstellung wurde nicht gespeichert.",
+  "review.findingGone":
+    "Dieser Befund ist nicht mehr offen. Er wurde beantwortet oder zurückgezogen, nachdem der Link entstand.",
+  "review.onlyType": "Nur angezeigt: {finding}.",
+  "review.showAll": "Alle Befunde zeigen",
+  "review.readOnly": "Nur lesen",
+  "analytics.hero.attainment":
+    "Gewonnener Umsatz im Vergleich zum Quartalsziel",
+  "analytics.hero.attained": "{percent} % des Ziels von {target}",
+  "analytics.hero.remaining": "Noch {amount} zu gewinnen",
+  "analytics.hero.shortfall":
+    "Erwartete Lücke {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.surplus":
+    "Erwarteter Überschuss {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
+  "analytics.hero.noPrior":
+    "Kein Vergleich mit der Vorperiode: Es gibt noch zu wenig Verlauf.",
+  "analytics.overview.more": "Mehr",
+  "analytics.overview.filtersToggle": "Filter",
+  "analytics.overview.chipPipeline": "Pipeline: {name}",
+  "analytics.overview.chipClose": "Abschluss: {window}",
+  "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
+  "analytics.overview.coverageNotCompared":
+    "Der Hinweis zum Ziel oben sagt, warum",
+  "analytics.intervention.scope":
+    "Diese Prüfungen umfassen jede Pipeline und jedes Abschlussdatum in diesem Bereich.",
+  "analytics.intervention.viewAll": "Alle Prüfungen ansehen",
+  "analytics.intervention.review": "{subject} prüfen",
+  "analytics.intervention.reviewFinding": "Eine Prognoseprüfung ansehen",
+  "analytics.intervention.answer": "Beantworten",
+  "analytics.intervention.open": "Öffnen",
+  "analytics.intervention.unassigned": "Nicht zugewiesen",
+  "analytics.intervention.since": "Gefunden am {date}",
+  "analytics.intervention.findings_one": "{count} Befund",
+  "analytics.intervention.findings_other": "{count} Befunde",
+  "analytics.intervention.deals_one": "{count} Deal",
+  "analytics.intervention.deals_other": "{count} Deals",
+  "analytics.intervention.other_one": "{count} ohne Deal",
+  "analytics.intervention.other_other": "{count} ohne Deal",
+  "analytics.intervention.allChecks": "Alle offenen Prüfungen: {counts}",
+  "analytics.intervention.show": "Zeigen",
+  "analytics.intervention.maintenance": "Wartung der Verbindungen",
+  "analytics.intervention.maintenanceBody_one":
+    "1 Datenquelle konnte bei der letzten Prüfung nicht gelesen werden.",
+  "analytics.intervention.maintenanceBody_other":
+    "{count} Datenquellen konnten bei der letzten Prüfung nicht gelesen werden.",
+  "analytics.decision.composition":
+    "Woraus sich der erwartete Abschluss zusammensetzt",
+  "analytics.decision.won": "Gewonnen",
+  "analytics.decision.included":
+    "Zählt {priced} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
+  "analytics.decision.excluded": "Nicht enthalten: {parts}.",
+  "analytics.decision.unpriced_one": "{count} Deal ohne Betrag",
+  "analytics.decision.unpriced_other": "{count} Deals ohne Betrag",
+  "analytics.decision.fx_one": "{count} Deal ohne Wechselkurs",
+  "analytics.decision.fx_other": "{count} Deals ohne Wechselkurs",
+  "reporting.writtenChecksFailed":
+    "Die offenen Prüfungen konnten nicht gelesen werden. Darum steht hier nichts dazu, was Aufmerksamkeit braucht.",
+  "reporting.writtenChecksNone": "Keine offene Prüfung braucht eine Antwort.",
+  "reporting.writtenChecks_one":
+    "{count} offene Prüfung zu {deals} braucht eine Antwort.",
+  "reporting.writtenChecks_other":
+    "{count} offene Prüfungen zu {deals} brauchen eine Antwort.",
+  "reporting.writtenChecksOnly_one":
+    "{count} offene Prüfung braucht eine Antwort.",
+  "reporting.writtenChecksOnly_other":
+    "{count} offene Prüfungen brauchen eine Antwort.",
+  "reporting.writtenChecksDeals_one": "{count} Deal",
+  "reporting.writtenChecksDeals_other": "{count} Deals",
 };

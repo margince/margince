@@ -45,6 +45,7 @@ const CENSUS: Readonly<Record<string, string>> = {
   individualPerformanceOff: "SPT",
   noActionableWork: "SP",
   largeBacklog: "SP",
+  readOnlyReviewer: "S",
   modelCommitDivergence: "S",
   coverageNumerator: "S",
   cutoffVersusHorizon: "S",
@@ -225,10 +226,13 @@ const SIGNATURES: Readonly<
   },
   limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
   partialValuation: {
-    sales: shows("1 open deal in NOK has no exchange rate to EUR."),
+    sales: shows(/1 open deal in NOK has no exchange rate to EUR\./),
   },
   sourceUnavailable: {
-    sales: shows("Could not be calculated"),
+    sales: async () => {
+      await shows("Could not be calculated")();
+      await shows("Connection maintenance")();
+    },
     prospecting: shows(
       "Some of your work could not be read, so this list may be missing items.",
     ),
@@ -251,8 +255,19 @@ const SIGNATURES: Readonly<
     prospecting: shows("Nothing needs you right now"),
   },
   largeBacklog: {
-    sales: shows("24 forecast checks to answer"),
+    sales: shows("All open checks: 24 findings · 7 deals"),
     prospecting: shows("Items to do: 210. Urgent: 1."),
+  },
+  readOnlyReviewer: {
+    sales: async () => {
+      const list = within(
+        await screen.findByRole("region", { name: "Needs your attention" }),
+      );
+      expect(await list.findAllByRole("link", { name: "Open" })).toHaveLength(
+        3,
+      );
+      expect(list.queryByRole("link", { name: "Answer" })).toBeNull();
+    },
   },
   modelCommitDivergence: { sales: shows("Modelled quarter finish") },
   coverageNumerator: { sales: shows("38.8×") },
@@ -281,6 +296,7 @@ const SIGNATURES: Readonly<
   twoPipelines: {
     sales: async () => {
       const user = userEvent.setup({ delay: null });
+      await user.click(screen.getByRole("button", { name: "Filters" }));
       await user.click(screen.getByRole("combobox", { name: "Pipeline" }));
       const listbox = await screen.findByRole("listbox");
       expect(
