@@ -142,32 +142,16 @@ func previewReferences(approval crmcontracts.Approval, preview *crmcontracts.App
 	if approval.TargetEntityType != nil && approval.TargetEntityId != nil {
 		out.add(*approval.TargetEntityType, ids.UUID(*approval.TargetEntityId))
 	}
-	value := func(v *crmcontracts.ApprovalPreviewValue) {
-		if v != nil && v.EntityType != nil && v.EntityId != nil {
-			out.add(*v.EntityType, ids.UUID(*v.EntityId))
-		}
-	}
-	changes := func(list []crmcontracts.ApprovalPreviewChange) {
-		for i := range list {
-			value(&list[i].Before)
-			value(&list[i].After)
-		}
-	}
-	details := func(list []crmcontracts.ApprovalPreviewDetail) {
-		for i := range list {
-			value(&list[i].Value)
-		}
-	}
-	changes(preview.Changes)
+	out.addChanges(preview.Changes)
 	if preview.Details != nil {
-		details(*preview.Details)
+		out.addDetails(*preview.Details)
 	}
 	if preview.ImportRows != nil {
 		for i := range *preview.ImportRows {
 			row := &(*preview.ImportRows)[i]
-			value(row.Target)
-			changes(row.Changes)
-			details(row.Details)
+			out.addValue(row.Target)
+			out.addChanges(row.Changes)
+			out.addDetails(row.Details)
 		}
 	}
 	if preview.Evidence != nil {
@@ -178,6 +162,25 @@ func previewReferences(approval crmcontracts.Approval, preview *crmcontracts.App
 		}
 	}
 	return out
+}
+
+func (t *previewTouched) addValue(value *crmcontracts.ApprovalPreviewValue) {
+	if value != nil && value.EntityType != nil && value.EntityId != nil {
+		t.add(*value.EntityType, ids.UUID(*value.EntityId))
+	}
+}
+
+func (t *previewTouched) addChanges(changes []crmcontracts.ApprovalPreviewChange) {
+	for i := range changes {
+		t.addValue(&changes[i].Before)
+		t.addValue(&changes[i].After)
+	}
+}
+
+func (t *previewTouched) addDetails(details []crmcontracts.ApprovalPreviewDetail) {
+	for i := range details {
+		t.addValue(&details[i].Value)
+	}
 }
 
 func (r approvalPreviewReader) viewerOpensPreview(ctx context.Context, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) (bool, error) {

@@ -78,7 +78,7 @@ func TestLegacyStageProposalsCannotPresentUnpinnedEffectsAsReady(t *testing.T) {
 			svc := NewService(nil).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
 				return &crmcontracts.ApprovalPreview{Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "stage_id"}}}, nil
 			})
-			preview, err := svc.proposalPreview(context.Background(), row{Kind: kind}, crmcontracts.Approval{Kind: kind})
+			preview, _, err := svc.proposalPreview(context.Background(), row{Kind: kind}, crmcontracts.Approval{Kind: kind})
 			if err != nil || preview.State != "incomplete" || len(preview.Changes) != 0 {
 				t.Fatalf("legacy preview: %+v, %v", preview, err)
 			}
@@ -95,7 +95,7 @@ func TestUnavailablePreviewDoesNotPublishAnExecutableComparison(t *testing.T) {
 				Effects: &[]string{"start_project_delivery"},
 			}, nil
 		})
-		preview, err := svc.proposalPreview(context.Background(), row{}, crmcontracts.Approval{})
+		preview, _, err := svc.proposalPreview(context.Background(), row{}, crmcontracts.Approval{})
 		if err != nil || preview.State != state || len(preview.Changes) != 0 || preview.Effects != nil {
 			t.Fatalf("unavailable comparison: %+v, %v", preview, err)
 		}
@@ -206,5 +206,44 @@ func TestProgressionPreviewRequiresItsOriginalDestinationPin(t *testing.T) {
 	subject.CoTargetVersion = nil
 	if previewCoTargetPinned(subject, proposal) {
 		t.Fatal("legacy proposal without a stage pin appears ready")
+	}
+}
+
+// A preview that is not ready is cleared before it leaves the service. A value
+// it masked must still keep the staged call back.
+func TestAMaskedValueKeepsTheStagedCallBackAfterThePreviewIsCleared(t *testing.T) {
+	svc := NewService(nil).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		details := []crmcontracts.ApprovalPreviewDetail{{Field: "to", Value: crmcontracts.ApprovalPreviewValue{Kind: "unavailable_name"}}}
+		return &crmcontracts.ApprovalPreview{Version: 2, State: "stale", Changes: []crmcontracts.ApprovalPreviewChange{}, Details: &details}, nil
+	})
+	change := map[string]any{"to": []any{"buyer@masked.test"}}
+	summary := "Write to buyer@masked.test"
+	rows := []crmcontracts.Approval{{Kind: "send_email", Status: crmcontracts.ApprovalStatusPending, ProposedChange: &change, Summary: &summary}}
+	if err := svc.readDecisionContext(context.Background(), rows, []row{{Kind: "send_email"}}); err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].Preview == nil || rows[0].Preview.Details != nil {
+		t.Fatalf("the stale preview was not cleared: %+v", rows[0].Preview)
+	}
+	if rows[0].ProposedChange != nil || rows[0].Summary != nil {
+		t.Fatalf("the staged call kept a masked value: %+v %v", rows[0].ProposedChange, rows[0].Summary)
+	}
+}
+
+// A committed verdict whose context could not be read gets an unavailable
+// preview, and nothing of its plan beside it.
+func TestACommittedVerdictWithoutContextCarriesNoPlan(t *testing.T) {
+	svc := NewService(nil).WithPreview(func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
+		return nil, errors.New("the preview reader is down")
+	})
+	summary := "Write to the buyer"
+	subject := row{Kind: "send_email", Status: "pending", ProposedChange: json.RawMessage(`{"to":["buyer@example.test"]}`), Summary: &summary}
+	rows := []crmcontracts.Approval{wire(subject, svc.now())}
+	svc.readCommittedContext(context.Background(), rows, []row{subject})
+	if rows[0].Preview == nil || rows[0].Preview.State != "unavailable" {
+		t.Fatalf("the fallback preview = %+v", rows[0].Preview)
+	}
+	if rows[0].ProposedChange != nil || rows[0].Summary != nil || rows[0].Evidence != nil {
+		t.Fatalf("the fallback still carries the plan: %+v %v %v", rows[0].ProposedChange, rows[0].Summary, rows[0].Evidence)
 	}
 }

@@ -50,19 +50,34 @@ func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 	}
 }
 
-// read_approval answers the staged document and its evidence as the approvals
-// wire carries them, so it withholds what every other surface does.
-func TestReadApprovalAnswersTheStagedDocumentTheWireCarries(t *testing.T) {
-	carried := stagedFixture()
-	carried.Preview = &crmcontracts.ApprovalPreview{Version: 2, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{}}
-	if read := stagedActionFrom(carried, true); read.ProposedChange == nil || read.Evidence == nil || read.Preview == nil {
-		t.Errorf("a carried staged document went missing: %+v", read)
+// read_approval keeps a withheld plan back on its own, even from a wire that
+// still carries it: the staged document, its evidence and the summary. A ready
+// preview, and an approval with no preview, show all three.
+func TestReadApprovalWithholdsTheStagedDocumentWhenThePreviewDoes(t *testing.T) {
+	for _, tc := range []struct {
+		state    string
+		version  int
+		withheld bool
+	}{
+		{previewReadyState, 2, false},
+		{approvals.PreviewNeedsWiderSight, 2, true},
+		{previewUnavailableState, 1, true},
+		{previewIncompleteState, 1, true},
+		{previewReadyState, 9, true},
+	} {
+		staged := stagedFixture()
+		staged.Preview = &crmcontracts.ApprovalPreview{Version: tc.version, State: tc.state, Changes: []crmcontracts.ApprovalPreviewChange{}}
+		read := stagedActionFrom(staged, true)
+		if shown := read.ProposedChange != nil || read.Evidence != nil || read.Summary != ""; shown == tc.withheld {
+			t.Errorf("%s v%d: proposed_change %s, evidence %v, summary %q, want withheld=%v", tc.state, tc.version, read.ProposedChange, read.Evidence, read.Summary, tc.withheld)
+		}
+		if read.Preview == nil {
+			t.Errorf("%s v%d: the answer lost its preview", tc.state, tc.version)
+		}
 	}
-	withheld := stagedFixture()
-	withheld.Preview = &crmcontracts.ApprovalPreview{Version: 2, State: approvals.PreviewNeedsWiderSight, Changes: []crmcontracts.ApprovalPreviewChange{}}
-	withheld.ProposedChange, withheld.Evidence, withheld.Summary = nil, nil, nil
-	if read := stagedActionFrom(withheld, true); read.ProposedChange != nil || read.Evidence != nil || read.Summary != "" || read.Preview == nil {
-		t.Errorf("read_approval answers more than the wire carries: %+v", read)
+	undecided := stagedActionFrom(stagedFixture(), true)
+	if undecided.ProposedChange == nil || undecided.Evidence == nil || undecided.Summary == "" {
+		t.Error("an approval with no preview lost its staged document")
 	}
 }
 

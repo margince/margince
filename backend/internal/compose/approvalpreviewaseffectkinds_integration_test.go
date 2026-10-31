@@ -22,7 +22,7 @@ import (
 )
 
 // stageCall stages one call as proposer: the agent through its gate, or a
-// member in person, whose proposal carries no passport.
+// member directly, whose proposal carries no passport.
 func (s *promotionSight) stageCall(proposer context.Context, in approvals.StageInput, payload string) ids.ApprovalID {
 	s.t.Helper()
 	change, hash, err := diffhash.Canonical([]byte(payload))
@@ -73,7 +73,7 @@ func (s *promotionSight) deal(name string, owner ids.UUID) ids.UUID {
 	return ids.UUID(deal.Id)
 }
 
-// newKindSight seats Rep1's agent, and Rep1 in person as the approver who
+// newKindSight seats Rep1's agent, and Rep1 directly as the approver who
 // opens every record the agent can. Rep2 is the colleague who cannot.
 func newKindSight(t *testing.T) *promotionSight {
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
@@ -205,8 +205,8 @@ func TestAnAgentsMergeWaitsForAnApproverWhoCanOpenWhatMoves(t *testing.T) {
 }
 
 // The approver opens a company the agent cannot. The agent's update could not
-// run, so it is not shown as ready. The same update proposed by its member in
-// person runs as its decider, and is.
+// run, so it is not shown as ready. The same update proposed by its member
+// directly runs as its decider, and is.
 func TestAnUpdateIsPreviewedAsWhoeverRunsIt(t *testing.T) {
 	s := newPromotionSight(t, "rep", approverIsAdmin, "admin")
 	deal := s.deal("Harbor expansion", s.e.Rep1)

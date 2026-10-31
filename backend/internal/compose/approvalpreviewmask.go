@@ -31,8 +31,8 @@ var previewDetailSources = map[string][]string{
 	"merge_address":              {fieldEmail, fieldPhone, previewFieldPhones},
 }
 
-// previewAddressDetails repeat a person's address, whichever record holds it,
-// so a mask on a contact's or a lead's email reaches them.
+// previewAddressDetails repeat an email address, so a mask on a contact's or a
+// lead's email reaches them.
 var previewAddressDetails = []string{
 	"to", "cc", "bcc", "intended_attendee", "confirmation_recipient", "relink_participant_address",
 	"merge_participant_address", "merge_confirmation", "merge_draft_to", "merge_draft_cc", "merge_draft_bcc",
@@ -87,8 +87,8 @@ func maskForViewer(ctx context.Context, approval crmcontracts.Approval, preview 
 	return nil
 }
 
-// viewerMaskedFields is every field the viewer's role masks on the target or
-// on any object the preview read. Only the target, which the viewer may decide,
+// viewerMaskedFields collects the fields the viewer's role masks on the target
+// and on the objects the preview read. Only the target, which the viewer may decide,
 // lifts a mask conditioned on write authority.
 func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approval, preview *crmcontracts.ApprovalPreview, touched *previewTouched) []string {
 	var masked []string
@@ -106,8 +106,8 @@ func viewerMaskedFields(viewer principal.Principal, approval crmcontracts.Approv
 			masked = append(masked, auth.MaskedFields(viewer, object, false)...)
 		}
 	}
-	for _, person := range []string{string(recordTypeContact), string(recordTypeLead)} {
-		if slices.Contains(auth.MaskedFields(viewer, person, false), fieldEmail) {
+	for _, holder := range []string{string(recordTypeContact), string(recordTypeLead)} {
+		if slices.Contains(auth.MaskedFields(viewer, holder, false), fieldEmail) {
 			masked = append(masked, previewAddressDetails...)
 		}
 	}

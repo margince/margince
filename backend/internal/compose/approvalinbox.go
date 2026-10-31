@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -161,7 +162,9 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		ExpiresAt:      a.ExpiresAt,
 		DecidedAt:      a.DecidedAt,
 	}
-	if a.Summary != nil {
+	// A withheld plan stays behind here too, whatever the wire carried.
+	withheld := approvalplan.Withheld(a.Preview)
+	if a.Summary != nil && !withheld {
 		out.Summary = *a.Summary
 	}
 	if a.DiffHash != nil {
@@ -180,7 +183,9 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		out.TargetLabel = *a.TargetLabel
 	}
 	out.Preview = a.Preview
-	// The approvals wire already leaves out a plan its preview withholds.
+	if withheld {
+		return out
+	}
 	out.ProposedChange = stagedPayload(a.ProposedChange)
 	out.Evidence = stagedEvidence(a.Evidence)
 	return out

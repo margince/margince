@@ -65,7 +65,7 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 		}
 		proposal.ProposedChange = &change
 	}
-	preview, err := s.proposalPreview(ctx, a, proposal)
+	preview, _, err := s.proposalPreview(ctx, a, proposal)
 	if err != nil {
 		return err
 	}
@@ -102,12 +102,12 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 		return nil
 	}
 	for i := range rows {
-		preview, err := s.proposalPreview(ctx, subjects[i], rows[i])
+		preview, heldBack, err := s.proposalPreview(ctx, subjects[i], rows[i])
 		if err != nil {
 			return err
 		}
 		rows[i].Preview = preview
-		if approvalplan.PayloadWithheld(preview, s.runsAsAgent(stagedByRow(subjects[i]))) {
+		if (approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(stagedByRow(subjects[i])), HeldBack: heldBack}).PayloadWithheld() {
 			// The staged call and its summary say what the preview held back.
 			rows[i].ProposedChange, rows[i].Evidence, rows[i].Summary = nil, nil, nil
 		}
@@ -115,11 +115,14 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 	return nil
 }
 
-func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-	preview, err := s.preview(s.withPreviewEffect(ctx, subject), proposal)
+// proposalPreview also answers whether the preview held a value back, read
+// before a preview that is not ready is cleared.
+func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (preview *crmcontracts.ApprovalPreview, heldBack bool, err error) {
+	preview, err = s.preview(s.withPreviewEffect(ctx, subject), proposal)
 	if err != nil || preview == nil {
-		return preview, err
+		return preview, false, err
 	}
+	heldBack = approvalplan.HeldBack(preview)
 	defer func() {
 		if preview.State != "ready" {
 			preview.Changes = []crmcontracts.ApprovalPreviewChange{}
@@ -130,10 +133,10 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 	}()
 	if !previewCoTargetPinned(subject, proposal) {
 		preview.State = previewIncomplete
-		return preview, nil
+		return preview, heldBack, nil
 	}
 	if _, contextPinned := s.contextPins[subject.Kind]; subject.CoTargetVersion == nil && !contextPinned {
-		return preview, nil
+		return preview, heldBack, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record"); err != nil {
@@ -143,9 +146,9 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 	})
 	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 		preview.State = "stale"
-		return preview, nil
+		return preview, heldBack, nil
 	}
-	return preview, err
+	return preview, heldBack, err
 }
 
 func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
