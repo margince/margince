@@ -100,7 +100,7 @@ func TestThePartnerStageListKeepsEveryPartnerWhereItStood(t *testing.T) {
 	}
 
 	// Down past the partner lead files too, which come after the stage list.
-	if _, err := dbmigrate.Down(ctx, conn, core, 4); err != nil {
+	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1793397379"), 4); err != nil {
 		t.Fatalf("rolling the stage list back: %v", err)
 	}
 	var role *string

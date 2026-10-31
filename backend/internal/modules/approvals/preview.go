@@ -116,11 +116,14 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 		preview.State = previewIncomplete
 		return preview, nil
 	}
-	if subject.CoTargetVersion == nil {
+	if _, contextPinned := s.contextPins[subject.Kind]; subject.CoTargetVersion == nil && !contextPinned {
 		return preview, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record")
+		if err := checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record"); err != nil {
+			return err
+		}
+		return s.previewContextPin(ctx, tx, subject)
 	})
 	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 		preview.State = "stale"

@@ -1163,6 +1163,7 @@ public.approval.co_target_entity_id uuid gen=- def=-
 public.approval.co_target_entity_type text gen=- def=-
 public.approval.co_target_version bigint gen=- def=-
 public.approval.consumed_at timestamp with time zone gen=- def=-
+public.approval.context_digest text gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-
 public.approval.decided_by uuid gen=- def=-
