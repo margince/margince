@@ -12,19 +12,24 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -250,6 +255,83 @@ func (f *stageCohortFixture) lose(t *testing.T, deal ids.DealID) {
 	t.Helper()
 	reason := "price"
 	if _, err := f.store.AdvanceDeal(f.writer, deal, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](f.lost), LostReason: &reason}); err != nil {
+		t.Fatal(err)
+	}
+	f.at = f.at.Add(time.Hour)
+}
+
+// A signal earns an effect only from frozen forecasts whose deals then closed.
+// Ten frozen with the customer quiet were lost and ten frozen without it won,
+// so quiet lowers the odds. A deal still open, and a row frozen under other
+// signal rules, count for nothing. A signal frozen on no deal stays at 1.
+func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0 := f.stage(0)
+	var quiet, calm []ids.DealID
+	for range 10 {
+		quiet = append(quiet, f.deal(t, f.env.Rep1, s0))
+		calm = append(calm, f.deal(t, f.env.Rep1, s0))
+	}
+	rows := make([]forecasting.Contribution, 0, 20)
+	for i := range quiet {
+		rows = append(rows,
+			forecasting.Contribution{DealID: quiet[i].String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
+			forecasting.Contribution{DealID: calm[i].String(), InOpen: true, Signals: []string{}})
+	}
+	stillOpen := f.deal(t, f.env.Rep1, s0)
+	rows = append(rows, forecasting.Contribution{DealID: stillOpen.String(), InOpen: true, Signals: []string{assurance.SignalQuiet}})
+	f.freezeSignals(t, rows, forecasting.TriggerDaily, assurance.RiskSignalsVersion)
+	f.freezeSignals(t, []forecasting.Contribution{
+		{DealID: calm[0].String(), InOpen: true, Signals: []string{assurance.SignalQuiet}},
+	}, forecasting.TriggerRecheck, "v0")
+	for i := range quiet {
+		f.lose(t, quiet[i])
+		f.win(t, calm[i])
+	}
+
+	var effects map[string]float64
+	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+		var err error
+		effects, err = forecastRiskEffects(f.writer, tx)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	want := forecasting.RiskEffect(forecasting.RiskTally{PresentLost: 10, AbsentWon: 10})
+	if got := effects[assurance.SignalQuiet]; math.Abs(got-want) > 1e-12 || got >= 1 {
+		t.Fatalf("quiet effect = %v, want %v from ten lost against ten won", got, want)
+	}
+	if got := effects[assurance.SignalStuck]; got != 1 {
+		t.Fatalf("stuck effect = %v, want 1: no frozen deal carried it", got)
+	}
+}
+
+// freezeSignals takes a daily snapshot of the rows through the snapshot writer.
+func (f *stageCohortFixture) freezeSignals(t *testing.T, rows []forecasting.Contribution, trigger, version string) {
+	t.Helper()
+	period, err := forecasting.ResolvePeriod(forecasting.PeriodQuarter, f.at, 1, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := newForecastStoreFor(f.env.Pool)
+	if err := store.InTx(f.writer, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Trigger: trigger, BaseCurrency: "EUR", TakenAt: f.at,
+			Readings: forecasting.Readings{Contributions: rows}, RiskSignalsVersion: version,
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("freezing the signals: %v", err)
+	}
+	f.at = f.at.Add(time.Hour)
+}
+
+// win closes a deal won by hand.
+func (f *stageCohortFixture) win(t *testing.T, deal ids.DealID) {
+	t.Helper()
+	reason := "purchase_order"
+	if _, err := f.store.AdvanceDeal(f.writer, deal, deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](f.won), WonWithoutContractReason: &reason}); err != nil {
 		t.Fatal(err)
 	}
 	f.at = f.at.Add(time.Hour)
