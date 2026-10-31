@@ -27,7 +27,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	scope := forecasting.Scope{Kind: string(frame.Scope.Kind), ID: (*ids.UUID)(frame.Scope.Id)}
-	deals, _, withheld, err := forecastDealsForPipeline(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
+	assembly, err := assembleForecast(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
 	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
 		// The landing alone is withheld; the evaluation's other figures stand.
 		if e.compared != nil {
@@ -38,10 +38,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	readings, err := forecasting.Compute(period, period.LocalDay(frame.EvaluatedAt), deals)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
+	readings, withheld := assembly.Readings, assembly.Limited
 	measure, err := ForecastForwardMeasure(ctx, tx)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err

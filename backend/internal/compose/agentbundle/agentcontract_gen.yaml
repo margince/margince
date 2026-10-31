@@ -7744,6 +7744,11 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+        - name: contributions
+          in: query
+          schema: {type: boolean, default: false}
+          description: >-
+            Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
       responses:
         '200':
           description: The readings for that period.
@@ -20213,6 +20218,88 @@ components:
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
         qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+        self_correcting:
+          type: boolean
+          description: >-
+            Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed.
+        contributions_limited:
+          type: boolean
+          description: >-
+            True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+        contributions:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastContribution'}
+          description: >-
+            Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
+      additionalProperties: false
+    ForecastContribution:
+      type: object
+      description: >-
+        One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
+      required: [deal_id, deal_name, chance_in_use, applied_probability, weighted_minor, in_won, in_open, in_evidence, in_best_case, signals]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid}
+        stage_id: {type: string, format: uuid}
+        category: {type: string}
+        base_minor:
+          type: integer
+          format: int64
+          description: The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+        exclusion_reason:
+          type: string
+          enum: [unpriced, fx_missing]
+          description: Why a deal in the reading contributes no money.
+        weighted_minor: {type: integer, format: int64}
+        in_won: {type: boolean}
+        in_open: {type: boolean}
+        in_evidence: {type: boolean}
+        in_best_case: {type: boolean}
+        typed_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance typed on the deal's stage, in percent.
+        chance_in_use:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >-
+            The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
+        evidence_n:
+          type: integer
+          minimum: 0
+          description: >-
+            How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
+        signals:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastRiskSignal'}
+          description: >-
+            Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
+        effect:
+          type: number
+          format: double
+          description: >-
+            The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+        applied_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance in use with `effect` applied to its odds, in percent.
+      additionalProperties: false
+    ForecastRiskSignal:
+      type: object
+      description: >-
+        One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+      required: [code]
+      properties:
+        code: {type: string, enum: [close_pushed, no_next_step, quiet, stuck]}
+        days: {type: integer, minimum: 0}
+        count: {type: integer, minimum: 0}
+        stage_id: {type: string, format: uuid}
+        close_passed: {type: boolean}
+        closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
     ForecastQualifiedReadings:
       type: object
@@ -20496,7 +20583,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
+          description: >-
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -20524,7 +20613,7 @@ components:
             Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, qualification]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, qualification]
       additionalProperties: false
     ForecastCall:
       type: object

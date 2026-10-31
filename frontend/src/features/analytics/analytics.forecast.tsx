@@ -23,6 +23,7 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
+import { ForecastDeals } from "./analytics.forecast.deals";
 import {
   LandingCard,
   RecordsLandingCard,
@@ -116,6 +117,7 @@ export function ForecastView({
             ) : null}
             {emptyNotice?.(data.scope_holds_deals)}
             <ForecastAnswer readings={data} locale={locale} />
+            <ForecastDeals scope={selection.scope} period={period} />
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}

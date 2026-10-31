@@ -127,6 +127,9 @@ func readEnquiry(fields []Field, fieldMap map[string]string) Enquiry {
 		if i >= maxFields {
 			break
 		}
+		// Postgres text cannot store a NUL byte, and no visitor means one. It is
+		// dropped here, before anything is written, so a lead never lands without its note.
+		f.Name, f.Value = strings.ReplaceAll(f.Name, "\x00", ""), strings.ReplaceAll(f.Value, "\x00", "")
 		if strings.HasPrefix(f.Name, controlPrefix) {
 			e.controls[f.Name] = f.Value
 			continue

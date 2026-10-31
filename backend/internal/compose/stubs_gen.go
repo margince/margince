@@ -2111,6 +2111,10 @@ func (stubs) RevokeForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "RevokeForecastShare")
 }
 
+func (stubs) GetForecastStageChances(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastStageChances")
+}
+
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
 	httperr.NotImplemented(w, r, "ListFxRates")
 }

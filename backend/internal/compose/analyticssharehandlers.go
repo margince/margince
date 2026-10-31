@@ -17,6 +17,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -150,7 +151,7 @@ func (h analyticsShareHandlers) resolveForReader(
 	if err != nil {
 		return Share{}, nil, err
 	}
-	if err := requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
+	if rows, err = requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
 		return Share{}, nil, err
 	}
 	return share, rows, nil
@@ -182,6 +183,7 @@ func (h analyticsShareHandlers) serveSnapshot(
 	out.AsOf = &frame.TakenAt
 	out.Readings = forecasting.ReadingsToWire(
 		frame.Period, share.Scope, shared.Readings, frame.BaseCurrency, frame.TakenAt)
+	out.Readings.SelfCorrecting = frame.SelfCorrecting
 	out.Withheld = shared.Withheld
 	return nil
 }
@@ -199,17 +201,14 @@ func (h analyticsShareHandlers) serveLive(
 	// the resolver hands it straight back. Taking the returned one anyway keeps
 	// one answer to "which population" rather than two spellings that could
 	// drift.
-	deals, resolved, limited, err := ForecastDeals(ctx, tx, period, share.Scope, at, baseCurrency)
+	assembly, err := ForecastAssemble(ctx, tx, period, share.Scope, at, baseCurrency)
 	if err != nil {
 		return err
 	}
-	share.Scope = resolved
-	readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-	if err != nil {
-		return err
-	}
-	out.Readings = forecasting.ReadingsToWire(period, share.Scope, readings, baseCurrency, at)
-	out.Withheld = limited
+	share.Scope = assembly.Scope
+	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
+	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
+	out.Withheld = assembly.Limited
 	return nil
 }
 
@@ -223,6 +222,9 @@ type shareFrame struct {
 	Period       forecasting.Period
 	BaseCurrency string
 	TakenAt      time.Time
+	// SelfCorrecting is whether the frozen chances moved with recorded
+	// outcomes; nil on a snapshot frozen before it was kept.
+	SelfCorrecting *bool
 }
 
 // The timezone is JOINed from the setting row rather than read through
@@ -236,12 +238,12 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 	var zoneName string
 	if err := tx.QueryRow(ctx, `
 		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
-		       COALESCE(st.value #>> '{}', 'UTC')
+		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting
 		FROM forecast_snapshot s
 		LEFT JOIN setting st ON st.key = 'installation.timezone'
 		WHERE s.id = $1`, id).Scan(
 		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
-		&zoneName); err != nil {
+		&zoneName, &out.SelfCorrecting); err != nil {
 		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
 	}
 	zone, err := time.LoadLocation(zoneName)
@@ -334,6 +336,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 	w http.ResponseWriter, r *http.Request, token string,
 ) {
 	var rows []SharedContribution
+	var frame shareFrame
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		share, frozen, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
@@ -346,13 +349,14 @@ func (h analyticsShareHandlers) ExportForecastShare(
 			return apperrors.ErrNotFound
 		}
 		rows = frozen
-		return nil
+		frame, err = snapshotFrame(ctx, tx, *share.SnapshotID)
+		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(rows, frame.SelfCorrecting)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -384,11 +388,15 @@ var shareExportColumns = []string{
 	"deal_id", "deal_name", "owner_id", "amount_minor", "currency",
 	"base_minor", "effective_close_date", "category",
 	"in_won", "in_open", "exclusion_reason",
+	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
+	"self_correcting", "risk_signal_facts",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
 // csvCell every other export in this package uses.
-func shareRowsCSV(rows []SharedContribution) ([]byte, error) {
+// selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
+// to some rows still says which definition they were frozen under.
+func shareRowsCSV(rows []SharedContribution, selfCorrecting *bool) ([]byte, error) {
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
 	if err := out.Write(shareExportColumns); err != nil {
@@ -401,6 +409,9 @@ func shareRowsCSV(rows []SharedContribution) ([]byte, error) {
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
 			csvCell(row.Category), csvCell(row.InWon), csvCell(row.InOpen),
 			csvCell(row.ExclusionReason),
+			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
+			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
+			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)

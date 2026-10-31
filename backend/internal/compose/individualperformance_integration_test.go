@@ -274,8 +274,8 @@ func (e *forecastEnv) exportShare(reader context.Context, t *testing.T, token st
 }
 
 // A frozen company forecast's CSV lists each deal's owner. With the switch off
-// it keeps the reader's own and names no colleague, on the same resolver the
-// screen reads through.
+// it lists only the reader's own deals, on the same resolver the screen reads
+// through.
 func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) {
 	e := setupForecast(t)
 	members := e.addMembers(t, e.Team2, "two@forecast.test", "three@forecast.test")
@@ -307,6 +307,9 @@ func TestIndividualPerformanceOffClearsColleaguesFromAShareExport(t *testing.T) 
 		if strings.Contains(body, colleague.String()) {
 			t.Errorf("with the switch off the export names colleague %s", colleague)
 		}
+	}
+	if strings.Contains(body, "Theirs") || strings.Count(body, "\n") != 2 {
+		t.Errorf("with the switch off the export lists a colleague's deal, want the header and the reader's own row:\n%s", body)
 	}
 }
 

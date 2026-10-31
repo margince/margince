@@ -918,6 +918,62 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
+  "reporting.movement.record_changed":
+    "Tỷ lệ thay đổi theo kết quả đã ghi nhận",
+  "installationSettings.selfCorrectingTitle": "Dự báo",
+  "installationSettings.selfCorrecting": "Cho dự báo tự điều chỉnh",
+  "installationSettings.selfCorrectingHint":
+    "Mỗi giai đoạn bắt đầu với tỷ lệ bạn đã nhập. Khi các giao dịch được ghi nhận từ một giai đoạn kết thúc, dự báo dịch tỷ lệ của giai đoạn đó về phía kết quả thực tế, coi tỷ lệ bạn nhập như 20 giao dịch. Các lần chuyển giai đoạn do nhập dữ liệu không bao giờ được tính.",
+  "installationSettings.selfCorrectingOn":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đang dùng của giai đoạn, và theo tín hiệu rủi ro khi các dự báo đã chốt cho thấy tác động của nó.",
+  "installationSettings.selfCorrectingOff":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đã nhập cho giai đoạn, như trước đây.",
+  "stage.chance.noEvidence":
+    "Đã nhập {typed} · Chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
+  "stage.chance.off": "Dự báo dùng {typed} đã nhập: tự điều chỉnh đang tắt",
+  "forecast.deals.title": "Các giao dịch tạo nên con số có trọng số",
+  "forecast.deals.open": "Xem từng giao dịch đang mở và tỷ lệ của nó",
+  "forecast.deals.introOn":
+    "Mỗi giao dịch được tính theo tỷ lệ đang dùng của giai đoạn, điều chỉnh theo tín hiệu rủi ro mạnh nhất khi các dự báo đã kết thúc cho thấy tác động của nó.",
+  "forecast.deals.introOff":
+    "Mỗi giao dịch được tính theo tỷ lệ đã nhập cho giai đoạn. Tự điều chỉnh đang tắt.",
+  "forecast.deals.none":
+    "Không có giao dịch đang mở nào dự kiến kết thúc trong kỳ này.",
+  "forecast.deals.typed": "Đã nhập {percent}",
+  "forecast.deals.uses": "dùng {percent}",
+  "stage.chance.withEvidence_other":
+    "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
+  "stage.chance.withEvidence_one":
+    "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
+  "forecast.deals.recorded_other": "{count} kết quả đã ghi nhận",
+  "forecast.deals.recorded_one": "{count} kết quả đã ghi nhận",
+  "forecast.deals.afterRisk": "{percent} sau rủi ro",
+  "forecast.deals.colDeal": "Giao dịch",
+  "forecast.deals.colSignals": "Tín hiệu rủi ro",
+  "forecast.deals.colAmount": "Giá trị",
+  "forecast.deals.colWeighted": "Có trọng số",
+  "forecast.signal.close_pushed": "Ngày chốt liên tục dời",
+  "forecast.signal.no_next_step": "Chưa đặt bước tiếp theo",
+  "forecast.signal.quiet": "Khách hàng im lặng",
+  "forecast.signal.stuck": "Ở giai đoạn quá lâu",
+  "forecast.signal.stuckIn_one": "Đứng yên {count} ngày ở {stage}",
+  "forecast.signal.stuckDays_one": "Đứng yên {count} ngày ở giai đoạn này",
+  "forecast.signal.closeMoved_one": "Ngày chốt đã dời {count} lần",
+  "forecast.signal.noReply_one": "Không có phản hồi trong {count} ngày",
+  "forecast.signal.closesNoMeeting_one":
+    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
+  "forecast.deals.limited":
+    "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
+  "forecast.signal.closesNoMeeting_other":
+    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa có cuộc họp",
+  "forecast.signal.closesToday": "Chốt hôm nay, chưa có cuộc họp",
+  "forecast.signal.noReply_other": "Không có phản hồi trong {count} ngày",
+  "forecast.signal.closeMoved_other": "Ngày chốt đã dời {count} lần",
+  "forecast.signal.closePassed": "Đã quá ngày chốt",
+  "forecast.signal.stuckDays_other": "Đứng yên {count} ngày ở giai đoạn này",
+  "forecast.signal.stuckIn_other": "Đứng yên {count} ngày ở {stage}",
   "reporting.movement.won": "Thắng",
   "reporting.movement.lost": "Thua",
   "reporting.movement.reopened_or_archived": "Mở lại hoặc lưu trữ",
@@ -2008,6 +2064,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
+  "systemJob.forecast_chances": "Tỷ lệ giai đoạn dự báo",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
   "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
