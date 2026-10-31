@@ -9,7 +9,6 @@ import type { components } from "../../api/schema";
 import {
   type ReportingFixtureFrame,
   reportingFixtureFrames,
-  reportingStoryEvaluation,
 } from "../../testing/reporting.fixtures";
 import {
   metric,
@@ -87,12 +86,65 @@ const QUARTER_TREND = [
   ["31 Oct", "2026-10-31T16:00:00Z", 42_000_000],
 ] as const;
 
-/** The stage and team charts of the shared story evaluation. */
-export function boardCharts(): Chart[] {
-  return reportingStoryEvaluation.charts.filter(
-    (chart) =>
-      chart.kind === "stage_distribution" || chart.kind === "owner_attainment",
-  );
+/** The instant some hours after another, in the API's format. */
+export function hoursAfter(instant: string, hours: number): string {
+  return new Date(Date.parse(instant) + hours * 3_600_000).toISOString();
+}
+
+const okCoverage = { status: "ok", withheld: false } as const;
+
+/** Open pipeline by stage at the frame's clock, and won by owner in its target window. */
+export function boardCharts(frame: ReportingFixtureFrame): Chart[] {
+  const stage = (key: string, label: string, value: number): Point => ({
+    key,
+    label,
+    value,
+    status: "ok",
+    evidence: {
+      metric: "open_pipeline",
+      context_id: "state",
+      group_key: `stage:${key}`,
+    },
+  });
+  const owner = (key: string, label: string, value: number): Point => ({
+    key,
+    label,
+    value,
+    target: 40_000_000,
+    status: "ok",
+    evidence: {
+      metric: "bookings_won",
+      context_id: "target",
+      group_key: `owner:${key}`,
+    },
+  });
+  return [
+    {
+      kind: "stage_distribution",
+      metric: "open_pipeline",
+      context_id: "state",
+      unit: "EUR",
+      coverage: okCoverage,
+      state_at: frame.clock,
+      points: [
+        stage("discovery", "Discovery", 34_000_000),
+        stage("proposal", "Proposal", 58_000_000),
+        stage("negotiation", "Negotiation", 44_000_000),
+      ],
+    },
+    {
+      kind: "owner_attainment",
+      metric: "bookings_won",
+      context_id: "target",
+      unit: "EUR",
+      coverage: okCoverage,
+      interval: frame.targetInterval,
+      points: [
+        owner("maya", "Maya", 24_000_000),
+        owner("sam", "Sam", 18_000_000),
+      ],
+    },
+  ];
 }
 
 /** Sales review on the quarter-cutoff clock, with its trend drawn. */
@@ -102,16 +154,29 @@ export function quarterSales(
   const frame = frames.quarterCutoff;
   return framed(
     salesEvaluation({
-      charts: [bookingsTrend(frame, QUARTER_TREND), ...boardCharts()],
+      charts: [bookingsTrend(frame, QUARTER_TREND), ...boardCharts(frame)],
       ...over,
     }),
     frame,
   );
 }
 
-/** The movement read on the quarter-cutoff clock, before a second capture. */
-export function quarterMovement(): ReportingEvaluation {
-  return framed(startingMovement(), frames.quarterCutoff);
+/** The movement read on a frame's clock, tried then and before a second capture. */
+export function movementOn(frame: ReportingFixtureFrame): ReportingEvaluation {
+  const starting = startingMovement();
+  return framed(
+    {
+      ...starting,
+      charts: starting.charts.map((chart) => ({
+        ...chart,
+        capture_status: {
+          last_attempt_at: frame.clock,
+          next_capture_at: hoursAfter(frame.clock, 13),
+        },
+      })),
+    },
+    frame,
+  );
 }
 
 /** My prospecting on a frame, with the given metrics. */
@@ -131,15 +196,23 @@ export function teamOn(
   return framed(metrics ? { ...week, metrics } : week, frame);
 }
 
-/** A team review for a frame's week, read at its clock. */
+/** A team review for a frame's week, read at its clock, waits begun in it. */
 export function teamReviewOn(
   frame: ReportingFixtureFrame,
   over: Parameters<typeof teamReview>[0] = {},
 ) {
+  const base = teamReview();
   return teamReview({
     as_of: frame.clock,
     interval: frame.interval,
     observed_through: frame.clock,
+    members: base.members.map((member, index) => ({
+      ...member,
+      oldest_waiting_since: hoursAfter(
+        frame.interval.start_at,
+        30 + 24 * index,
+      ),
+    })),
     ...over,
   });
 }

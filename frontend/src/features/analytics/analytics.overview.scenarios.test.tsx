@@ -3,21 +3,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogFindings } from "./analytics.overview.scenariodata";
 import {
-  ANALYTICS_STATES,
   isSetup,
   OVERVIEW_SCENARIOS,
   OVERVIEW_VIEWS,
+  type OverviewView,
   overviewAddress,
   type ScenarioName,
   scenarioStoryName,
 } from "./analytics.overview.scenarios";
-import * as stories from "./analytics.overview.scenarios.stories";
+import * as stories from "./analytics.overview.stories";
 import { openOverview, readings } from "./analytics.overview.testkit";
 
 const originalFetch = globalThis.fetch;
@@ -28,35 +28,96 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-const names = Object.keys(OVERVIEW_SCENARIOS) as ScenarioName[];
-const pairs = names.flatMap((name) =>
-  OVERVIEW_VIEWS.map((view) => ({
-    name,
+// Every scenario the Overview must keep, typed apart from the map: S, P and T
+// name the views it applies to. The first twelve are the states every view
+// keeps apart.
+const CENSUS: Readonly<Record<string, string>> = {
+  populated: "SPT",
+  trueZero: "SPT",
+  noTarget: "SP",
+  wrongTargetScope: "S",
+  notEnoughHistory: "S",
+  limitedImportHistory: "ST",
+  partialValuation: "S",
+  sourceUnavailable: "SPT",
+  tooFewObservations: "SPT",
+  individualPerformanceOff: "SPT",
+  noActionableWork: "SP",
+  largeBacklog: "SP",
+  modelCommitDivergence: "S",
+  coverageNumerator: "S",
+  cutoffVersusHorizon: "S",
+  fiscalQuarter: "S",
+  weekAcrossMonths: "PT",
+  titleOnlyWork: "P",
+  handoffWorkflow: "PT",
+  qualificationWorkflow: "PT",
+  weakNoHandoffTable: "T",
+  targetReached: "S",
+  noForecast: "S",
+};
+const LETTER: Readonly<Record<OverviewView, string>> = {
+  sales: "S",
+  prospecting: "P",
+  team: "T",
+};
+
+// The story names the catalog had before the scenario map, kept as aliases.
+const ALIASES = [
+  "SalesReview",
+  "SalesReviewDark",
+  "SalesReviewOnAPhone",
+  "SalesReviewWithoutATarget",
+  "SalesReviewWithAFailedFigure",
+  "MyProspecting",
+  "MyProspectingDark",
+  "MyProspectingOnAPhone",
+  "MyProspectingWithoutHandoffs",
+  "MyProspectingWithNothingYet",
+  "TeamProspecting",
+  "TeamProspectingDark",
+  "TeamProspectingOnAPhone",
+  "TeamProspectingWithIndividualPerformanceOff",
+  "TeamProspectingWithoutHandoffs",
+];
+
+const censusPairs = Object.entries(CENSUS).flatMap(([name, views]) =>
+  OVERVIEW_VIEWS.filter((view) => views.includes(LETTER[view])).map((view) => ({
+    name: name as ScenarioName,
     view,
-    pair: OVERVIEW_SCENARIOS[name].views[view],
   })),
-);
-const setups = pairs.flatMap(({ name, view, pair }) =>
-  isSetup(pair) ? [{ name, view, setup: pair }] : [],
 );
 
 describe("the Overview scenario map", () => {
-  it("names a scenario for every state a view must keep apart", () => {
-    for (const state of ANALYTICS_STATES) expect(names).toContain(state);
-  });
-
-  it("gives every excluded pair its reason", () => {
-    for (const { pair } of pairs) {
-      if (!isSetup(pair)) expect(pair.excluded.length).toBeGreaterThan(10);
+  it("holds exactly the census scenarios, each on the views it names", () => {
+    expect(Object.keys(OVERVIEW_SCENARIOS).sort()).toEqual(
+      Object.keys(CENSUS).sort(),
+    );
+    for (const [name, views] of Object.entries(CENSUS)) {
+      const scenario = OVERVIEW_SCENARIOS[name as ScenarioName];
+      const applied = OVERVIEW_VIEWS.filter((view) =>
+        isSetup(scenario.views[view]),
+      )
+        .map((view) => LETTER[view])
+        .join("");
+      expect(applied, name).toBe(views);
     }
   });
 
-  it("has one story per applicable pair, and no story for an excluded one", () => {
-    const expected = setups.map(({ name, view }) =>
+  it("gives every excluded pair its reason", () => {
+    for (const scenario of Object.values(OVERVIEW_SCENARIOS)) {
+      for (const pair of Object.values(scenario.views)) {
+        if (!isSetup(pair)) expect(pair.excluded.length).toBeGreaterThan(10);
+      }
+    }
+  });
+
+  it("has one story per census pair, and otherwise only the old names", () => {
+    const expected = censusPairs.map(({ name, view }) =>
       scenarioStoryName(name, view),
     );
     const exported = Object.keys(stories).filter((key) => key !== "default");
-    expect(exported.sort()).toEqual(expected.sort());
+    expect(exported.sort()).toEqual([...expected, ...ALIASES].sort());
   });
 
   it("puts at least 20 findings on at most 8 deals in the backlog", () => {
@@ -84,6 +145,26 @@ describe("the Overview scenario map", () => {
     expect(open?.value).not.toBe(eligible);
   });
 
+  it("reads every Sales review chart and movement on the scenario's own clock", () => {
+    for (const { name, view } of censusPairs) {
+      const pair = OVERVIEW_SCENARIOS[name].views[view];
+      if (view !== "sales" || !isSetup(pair)) continue;
+      const headline = pair.answer(new URL("http://localhost/evaluate"));
+      const movement = pair.answer(
+        new URL("http://localhost/evaluate?blocks=pipeline_movement"),
+      );
+      const { evaluated_at: clock, interval } = headline.context;
+      expect(movement.context.evaluated_at, name).toBe(clock);
+      for (const chart of [...headline.charts, ...movement.charts]) {
+        if (chart.state_at) expect(chart.state_at, name).toBe(clock);
+        if (chart.capture_status)
+          expect(chart.capture_status.last_attempt_at, name).toBe(clock);
+        if (chart.interval)
+          expect(chart.interval.start_at, name).toBe(interval.start_at);
+      }
+    }
+  });
+
   it("frames a fiscal quarter off January, a week across months and a clock change", () => {
     const { fiscalQuarter, weekAcrossMonths, weekWithClockChange } =
       reportingFixtureFrames;
@@ -106,13 +187,111 @@ describe("the Overview scenario map", () => {
   });
 });
 
-describe("each applicable pair", () => {
-  it.each(
-    setups.map(
-      ({ name, view, setup }) => [`${name} on ${view}`, view, setup] as const,
+type Signature = () => Promise<unknown>;
+const shows =
+  (text: string | RegExp): Signature =>
+  async () =>
+    expect((await screen.findAllByText(text))[0]).toBeVisible();
+const lacks =
+  (text: string): Signature =>
+  async () =>
+    expect(screen.queryByText(text)).toBeNull();
+
+// What each pair must put on the screen beyond its readings.
+const SIGNATURES: Readonly<
+  Record<string, Partial<Record<OverviewView, Signature>>>
+> = {
+  populated: {
+    sales: shows(/Covers 3\.6× of/),
+    prospecting: shows("Items to do: 5. Urgent: 1."),
+    team: shows("Wrong territory"),
+  },
+  trueZero: {
+    sales: shows(/Covers 0(\.0)?× of/),
+    prospecting: shows("Nothing needs you right now"),
+    team: shows(/Of the 0 rounds/),
+  },
+  noTarget: {
+    sales: shows("No sales target for this quarter"),
+    prospecting: shows("No monthly target set"),
+  },
+  wrongTargetScope: { sales: shows("Pick one team to compare with a target") },
+  notEnoughHistory: {
+    sales: shows("Comparison starts after a second compatible capture."),
+  },
+  limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
+  partialValuation: {
+    sales: shows("1 open deal in NOK has no exchange rate to EUR."),
+  },
+  sourceUnavailable: {
+    sales: shows("Could not be calculated"),
+    prospecting: shows(
+      "Some of your work could not be read, so this list may be missing items.",
     ),
-  )("%s opens on its readings", async (_label, view, setup) => {
-    openOverview(overviewAddress(view), setup.answer, setup.routes);
-    expect(await readings()).toBeDefined();
+    team: shows("Retry"),
+  },
+  tooFewObservations: {
+    sales: shows("Too few observations"),
+    prospecting: shows("Too few observations"),
+    team: shows("A small sample"),
+  },
+  individualPerformanceOff: {
+    sales: lacks("Maya"),
+    prospecting: shows("Items to do: 5. Urgent: 1."),
+    team: shows(
+      "Individual performance is off, so no member’s figures are shown.",
+    ),
+  },
+  noActionableWork: {
+    sales: shows("No forecast check is open for this scope."),
+    prospecting: shows("Nothing needs you right now"),
+  },
+  largeBacklog: {
+    sales: shows("24 forecast checks to answer"),
+    prospecting: shows("Items to do: 210. Urgent: 1."),
+  },
+  modelCommitDivergence: { sales: shows(/8 in 10 outcomes between/) },
+  coverageNumerator: { sales: shows(/Covers 38\.8× of/) },
+  cutoffVersusHorizon: { sales: shows(/Results through/) },
+  fiscalQuarter: { sales: shows(/Results through/) },
+  weekAcrossMonths: {
+    prospecting: shows(/Monthly targets, .*Oct/),
+    team: shows("Wrong territory"),
+  },
+  titleOnlyWork: {
+    prospecting: shows("Call Nordhafen Logistik back about the fleet trial"),
+  },
+  handoffWorkflow: {
+    prospecting: shows(/Casey Closer can no longer act/),
+    team: shows("Wrong territory"),
+  },
+  qualificationWorkflow: {
+    prospecting: shows("Meetings coming up"),
+    team: shows(/does not use SDR handoffs/),
+  },
+  weakNoHandoffTable: { team: shows("Members") },
+  targetReached: { sales: shows("Target reached") },
+  noForecast: { sales: shows("Unavailable") },
+};
+
+describe("each census pair", () => {
+  it("has a signature", () => {
+    for (const { name, view } of censusPairs)
+      expect(SIGNATURES[name]?.[view], `${name} on ${view}`).toBeDefined();
   });
+
+  it.each(
+    censusPairs.map(
+      ({ name, view }) => [`${name} on ${view}`, name, view] as const,
+    ),
+  )(
+    "%s opens on its readings and shows what it is about",
+    async (_label, name, view) => {
+      const pair = OVERVIEW_SCENARIOS[name].views[view];
+      if (!isSetup(pair)) throw new Error(`${name} excludes ${view}`);
+      openOverview(overviewAddress(view), pair.answer, pair.routes);
+      expect(await readings()).toBeDefined();
+      await SIGNATURES[name]?.[view]?.();
+    },
+  );
 });

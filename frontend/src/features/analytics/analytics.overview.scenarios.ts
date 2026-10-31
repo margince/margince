@@ -5,8 +5,10 @@
 // scenario answers all three views: a setup, or the reason the pair says
 // nothing. Stories and tests read this one map, so they describe one server.
 
+import type { ReportingFixtureFrame } from "../../testing/reporting.fixtures";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import {
+  ADMIN_GRANTS,
   compared,
   isMovement,
   metric,
@@ -19,8 +21,8 @@ import {
   bookingsTrend,
   framed,
   frames,
+  movementOn,
   prospectingOn,
-  quarterMovement,
   quarterSales,
   teamOn,
   teamReviewOn,
@@ -45,22 +47,6 @@ export type OverviewSetup = Readonly<{
 }>;
 type Pair = OverviewSetup | Readonly<{ excluded: string }>;
 
-/** The states every figure and view must keep apart. */
-export const ANALYTICS_STATES = [
-  "populated",
-  "trueZero",
-  "noTarget",
-  "wrongTargetScope",
-  "notEnoughHistory",
-  "limitedImportHistory",
-  "partialValuation",
-  "sourceUnavailable",
-  "tooFewObservations",
-  "individualPerformanceOff",
-  "noActionableWork",
-  "largeBacklog",
-] as const;
-
 export type OverviewScenario = Readonly<{
   about: string;
   views: Readonly<Record<OverviewView, Pair>>;
@@ -74,29 +60,6 @@ const quarterClock = frames.quarterCutoff.clock;
 const week = frames.weekAcrossMonths;
 const dstWeek = frames.weekWithClockChange;
 
-// Sales review answers its movement read apart from its headline read.
-function sales(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
-  const movement = quarterMovement();
-  return {
-    answer: (url) => (isMovement(url) ? movement : evaluation),
-    routes,
-  };
-}
-
-function prospecting(
-  evaluation: ReportingEvaluation,
-  routes: Routes = {},
-): Pair {
-  return { answer: () => evaluation, routes: { seat: "sdr", ...routes } };
-}
-
-function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
-  return {
-    answer: () => evaluation,
-    routes: { template: "sdr", ...routes },
-  };
-}
-
 const json =
   (body: unknown, status = 200) =>
   () =>
@@ -108,7 +71,22 @@ const handoffRows = json({
   as_of: week.clock,
   rows: waitingHandoffs(week.clock),
 });
-const summary = (workflow: "handoff" | "qualification") =>
+type Waits = Readonly<{
+  waiting: number;
+  blocked: number;
+  returned: number;
+  upcoming: number;
+}>;
+const NOTHING_WAITS: Waits = {
+  waiting: 0,
+  blocked: 0,
+  returned: 0,
+  upcoming: 0,
+};
+const summary = (
+  workflow: "handoff" | "qualification",
+  waits: Waits = { waiting: 3, blocked: 1, returned: 1, upcoming: 4 },
+) =>
   json({
     as_of: week.clock,
     scope: { kind: "owner", id: "00000000-0000-4000-8000-0000000000a1" },
@@ -116,16 +94,57 @@ const summary = (workflow: "handoff" | "qualification") =>
     ...(workflow === "handoff"
       ? {
           handoffs: {
-            waiting: 3,
+            waiting: waits.waiting,
             unassigned: 0,
-            blocked: 1,
-            returned: 1,
-            oldest_waiting_since: "2026-10-26T08:30:00Z",
+            blocked: waits.blocked,
+            returned: waits.returned,
+            ...(waits.waiting > 0
+              ? { oldest_waiting_since: "2026-10-26T08:30:00Z" }
+              : {}),
           },
         }
       : {}),
-    upcoming_meetings: 4,
+    upcoming_meetings: waits.upcoming,
   });
+
+// Sales review answers its movement read apart from its headline read, both on
+// one clock.
+function sales(
+  evaluation: ReportingEvaluation,
+  routes: Routes = {},
+  frame: ReportingFixtureFrame = frames.quarterCutoff,
+): Pair {
+  const movement = movementOn(frame);
+  return {
+    answer: (url) => (isMovement(url) ? movement : evaluation),
+    routes,
+  };
+}
+
+// My prospecting reads its summary, waiting handoffs and day on the week's
+// clock unless a scenario says otherwise.
+function prospecting(
+  evaluation: ReportingEvaluation,
+  routes: Routes = {},
+): Pair {
+  return {
+    answer: () => evaluation,
+    routes: {
+      seat: "sdr",
+      summary: summary("handoff"),
+      handoffs: handoffRows,
+      worklist: day(),
+      ...routes,
+    },
+  };
+}
+
+function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
+  return {
+    answer: () => evaluation,
+    routes: { template: "sdr", team: json(teamReviewOn(dstWeek)), ...routes },
+  };
+}
 
 // A team in qualification mode: the review has no handoffs, so its members
 // carry nothing but meetings and zeros in the handoff columns.
@@ -202,7 +221,8 @@ export const OVERVIEW_SCENARIOS = {
         }),
       ),
       prospecting: prospecting(prospectingOn(week, zeroWeek()), {
-        worklist: day(workRows.slice(0, 2)),
+        worklist: day([]),
+        summary: summary("handoff", NOTHING_WAITS),
       }),
       team: team(teamOn(dstWeek, zeroWeek()), {
         team: json(
@@ -230,7 +250,9 @@ export const OVERVIEW_SCENARIOS = {
   noTarget: {
     about: "No target is set for the quarter or the month.",
     views: {
-      sales: sales(quarterSales({ comparison: noTarget })),
+      sales: sales(quarterSales({ comparison: noTarget }), {
+        grants: ADMIN_GRANTS,
+      }),
       prospecting: prospecting(
         prospectingOn(week, [
           metric("meetings_held", 3),
@@ -274,7 +296,7 @@ export const OVERVIEW_SCENARIOS = {
             bookingsTrend(frames.quarterCutoff, [
               ["31 Oct", quarterClock, 42_000_000],
             ]),
-            ...boardCharts(),
+            ...boardCharts(frames.quarterCutoff),
           ],
         }),
       ),
@@ -294,7 +316,7 @@ export const OVERVIEW_SCENARIOS = {
               ["25 Oct", "2026-10-25T23:00:00Z", 30_500_000],
               ["31 Oct", quarterClock, 42_000_000],
             ]),
-            ...boardCharts(),
+            ...boardCharts(frames.quarterCutoff),
           ],
         }),
       ),
@@ -422,7 +444,7 @@ export const OVERVIEW_SCENARIOS = {
             bookingsTrend(frames.quarterCutoff, [
               ["31 Oct", quarterClock, 42_000_000],
             ]),
-            ...boardCharts().map((chart) =>
+            ...boardCharts(frames.quarterCutoff).map((chart) =>
               chart.kind === "owner_attainment"
                 ? {
                     ...chart,
@@ -447,7 +469,10 @@ export const OVERVIEW_SCENARIOS = {
     about: "Every source was read and nothing needs anyone.",
     views: {
       sales: sales(quarterSales(), { checks: json({ data: [] }) }),
-      prospecting: prospecting(prospectingOn(week), { worklist: day([]) }),
+      prospecting: prospecting(prospectingOn(week), {
+        worklist: day([]),
+        summary: summary("handoff", NOTHING_WAITS),
+      }),
       team: { excluded: NO_ACTION_LIST },
     },
   },
@@ -544,11 +569,13 @@ export const OVERVIEW_SCENARIOS = {
                 ["4 Oct", "2026-10-04T22:00:00Z", 35_500_000],
                 ["20 Oct", frames.fiscalQuarter.clock, 42_000_000],
               ]),
-              ...boardCharts(),
+              ...boardCharts(frames.fiscalQuarter),
             ],
           }),
           frames.fiscalQuarter,
         ),
+        {},
+        frames.fiscalQuarter,
       ),
       prospecting: { excluded: QUARTERS },
       team: { excluded: QUARTERS },
