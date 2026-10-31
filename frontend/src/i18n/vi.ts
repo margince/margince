@@ -30,8 +30,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.restoreSourceAndDate":
     "Khôi phục liên kết nguồn và xóa ngày thông báo được tạo tự động.",
   "worklist.relationships.optional": "Kết nối lại tùy chọn",
-  "worklist.relationships.optionalDetail":
-    "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
   "worklist.relationships.show": "Hiển thị",
   "worklist.relationships.loading": "Đang tìm các liên hệ đã im lặng…",
   "worklist.relationships.none": "Hiện không có ai im lặng.",
@@ -2967,6 +2965,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.kind.projectStakeholder": "Bên liên quan dự án",
   "rel.kind.projectCompany": "Công ty trong dự án",
   "rel.kind.partnerOf": "Đối tác của",
+  "rel.kind.referred": "Đã giới thiệu",
   "rel.kind.referredBy": "Được giới thiệu từ",
   "rel.kind.coSellWith": "Bán chung với",
   "rel.kind.worksWith": "Làm việc cùng",
@@ -9335,7 +9334,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.markRead": "Đánh dấu đã đọc",
   "notifications.markAllFailed": "Không thể đánh dấu các thông báo là đã đọc",
   "notifications.markReadFailed": "Không thể đánh dấu thông báo đó là đã đọc",
-  "notifications.new": "Mới",
+  "notifications.unread": "Chưa đọc",
   "notifications.byAgent": "Do trợ lý AI tạo",
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",
@@ -15334,6 +15333,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "tiêu credit bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
+  "consent.preset.label": "Quyền của trợ lý",
+  "consent.preset.readDraft": "Đọc và soạn nháp",
+  "consent.preset.full": "Trợ lý đầy đủ",
+  "consent.preset.custom": "Tự chọn",
   "consent.pickOne": "Chọn ít nhất một quyền, hoặc từ chối.",
   "consent.offline":
     "Ứng dụng giữ kết nối và tự gia hạn quyền truy cập mà không hỏi lại, cho đến khi bạn thu hồi.",
@@ -16584,8 +16587,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // l\u1ea7n g\u1eedi n\u00e0o \u0111\u1ec3 hu\u1ef7 v\u00e0 kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o \u0111\u1ec3 xo\u00e1 \u2014 ng\u01b0\u1eddi vi\u1ebft l\u1ea5y tin nh\u1eafn
   // v\u1ec1 tr\u01b0\u1edbc khi n\u00f3 \u0111i.
   "nav.scheduled": "Tin nhắn đã lên lịch",
-  "sched.sub": "Các tin nhắn đã hẹn giờ nhưng chưa gửi. Chỉ bạn xem được.",
-  "sched.empty": "Chưa có tin nhắn đã lên lịch nào.",
+  "sched.sub": "Chỉ bạn thấy được các tin nhắn này.",
+  "sched.empty": "Chưa lên lịch tin nhắn nào.",
+  "sched.write": "Viết tin nhắn",
+  "sched.writeHow": "Mở một liên hệ và chọn Email.",
   "sched.group.held": "Đang chờ bạn xử lý",
   "sched.group.waiting": "Đã hẹn giờ",
   "sched.group.waitingEmpty": "Chưa hẹn giờ tin nhắn nào.",
@@ -17035,13 +17040,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Tìm khách hàng mới",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Xem lại",
-  "worklist.bandClear.now":
-    "Không có việc khẩn cấp. Các việc còn lại ở bên dưới.",
-  "worklist.bandClear.build_pipeline":
-    "Không có việc tìm khách hàng mới nào đang chờ.",
-  "worklist.bandClear.keep_momentum":
-    "Mọi việc đã thống nhất đều đang được tiến hành.",
-  "worklist.bandClear.review": "Không có gì cần xem lại.",
   "worklist.disposition.verb.snooze": "Tạm hoãn",
   "worklist.disposition.snoozeForDays_one": "Tạm hoãn {value} ngày",
   "worklist.disposition.snoozeForDays_other": "Tạm hoãn {value} ngày",
@@ -17268,8 +17266,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} quyết định đang chờ",
   "worklist.view.total.system_one": "{count} sự cố chưa xử lý",
   "worklist.view.total.system_other": "{count} sự cố chưa xử lý",
-  "worklist.filter.linked.urgent":
-    "Chỉ hiển thị việc khẩn cấp: có ai đó đang chờ, hoặc một cam kết sắp bị lỡ.",
+  "worklist.filter.linked.urgent": "Chỉ hiển thị việc khẩn cấp.",
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi việc trừ các phê duyệt đã có trong Bản tin sáng.",
   "worklist.filter.linked.changed_since_brief":
@@ -18909,10 +18906,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.field.phone": "Điện thoại",
   "contactCase.field.matchedOn": "Trùng theo",
   "contactCase.field.chatAccount": "Tài khoản chat",
+  "contactCase.field.linkedin": "LinkedIn",
+  "contactCase.field.domain": "Tên miền",
   "contactCase.field.other": "Thông tin",
   "contactCase.evidence.title": "Vì sao giống nhau",
   "contactCase.evidence.pair": "{left} và {right}",
-  "contactCase.evidence.match": "Trùng {percent}",
   "contactCase.evidence.different": "Người khác nhau",
   "contactCase.preview.title": "Kết quả khi gộp",
   "contactCase.preview.keeps":

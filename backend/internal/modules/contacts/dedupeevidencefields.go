@@ -26,6 +26,8 @@ func DedupeEvidenceFields() []string {
 		fieldPhone,
 		fieldMatchedLane,
 		fieldChannelIdentity,
+		fieldLinkedin,
+		laneDomain,
 	}
 	slices.Sort(fields)
 	return fields

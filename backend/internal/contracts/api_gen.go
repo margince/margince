@@ -2696,9 +2696,11 @@ func (e AttentionItemSource) Valid() bool {
 const (
 	AttentionPairEvidenceFieldChannelIdentity AttentionPairEvidenceField = "channel_identity"
 	AttentionPairEvidenceFieldDisplayName     AttentionPairEvidenceField = "display_name"
+	AttentionPairEvidenceFieldDomain          AttentionPairEvidenceField = "domain"
 	AttentionPairEvidenceFieldEmail           AttentionPairEvidenceField = "email"
 	AttentionPairEvidenceFieldFullName        AttentionPairEvidenceField = "full_name"
 	AttentionPairEvidenceFieldLegalName       AttentionPairEvidenceField = "legal_name"
+	AttentionPairEvidenceFieldLinkedin        AttentionPairEvidenceField = "linkedin"
 	AttentionPairEvidenceFieldMatchedLane     AttentionPairEvidenceField = "matched_lane"
 	AttentionPairEvidenceFieldPhone           AttentionPairEvidenceField = "phone"
 )
@@ -2710,11 +2712,15 @@ func (e AttentionPairEvidenceField) Valid() bool {
 		return true
 	case AttentionPairEvidenceFieldDisplayName:
 		return true
+	case AttentionPairEvidenceFieldDomain:
+		return true
 	case AttentionPairEvidenceFieldEmail:
 		return true
 	case AttentionPairEvidenceFieldFullName:
 		return true
 	case AttentionPairEvidenceFieldLegalName:
+		return true
+	case AttentionPairEvidenceFieldLinkedin:
 		return true
 	case AttentionPairEvidenceFieldMatchedLane:
 		return true
@@ -37565,7 +37571,9 @@ type ContactCaseEdge struct {
 	// route. True with write access to both ends, or to one end: then that end is the one
 	// merged away and `keep_id` names the end that survives. `policy_enabled` does not
 	// widen it further.
-	CanMerge   bool             `json:"can_merge"`
+	CanMerge bool `json:"can_merge"`
+
+	// Confidence A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.
 	Confidence float32          `json:"confidence"`
 	Evidence   []DedupeEvidence `json:"evidence"`
 
