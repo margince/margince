@@ -18913,10 +18913,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.field.phone": "Điện thoại",
   "contactCase.field.matchedOn": "Trùng theo",
   "contactCase.field.chatAccount": "Tài khoản chat",
+  "contactCase.field.linkedin": "LinkedIn",
+  "contactCase.field.domain": "Tên miền",
   "contactCase.field.other": "Thông tin",
   "contactCase.evidence.title": "Vì sao giống nhau",
   "contactCase.evidence.pair": "{left} và {right}",
-  "contactCase.evidence.match": "Trùng {percent}",
   "contactCase.evidence.different": "Người khác nhau",
   "contactCase.preview.title": "Kết quả khi gộp",
   "contactCase.preview.keeps":

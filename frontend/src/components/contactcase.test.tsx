@@ -96,7 +96,7 @@ describe("which members the review ticks", () => {
       await screen.findByRole("checkbox", { name: /Mira Kovac\b/ }),
     ).toBeChecked();
     expect(member(/Mira Kovač/)).toBeChecked();
-    expect(member(/M\. Kovac/)).toBeChecked();
+    expect(member(/M\. Kovac/)).not.toBeChecked();
     // Dana is linked to Cleo, and was marked as a different person from Ana.
     expect(member(/Mira Kovacs/)).not.toBeChecked();
     expect(member(/Mira Kovacs/)).toBeDisabled();
@@ -105,13 +105,23 @@ describe("which members the review ticks", () => {
     ).toBeInTheDocument();
   });
 
-  it("walks open pairs only, and keeps the walk connected", () => {
+  it("ticks one pair and never a chain of pairs", () => {
     const one = contactCase();
-    expect(defaultSelection(one, ANA)).toEqual([ANA, BEN, CLEO]);
-    // From Dana, Cleo and Ben come in; Ana was marked as different from Dana.
-    expect(defaultSelection(one, DANA)).toEqual([DANA, CLEO, BEN]);
+    // Ana–Ben and Ben–Cleo are open, but nothing pairs Ana with Cleo.
+    expect(defaultSelection(one, ANA)).toEqual([ANA, BEN]);
+    // Ben's strongest open pair is Ana (0.92), not Cleo (0.81).
+    expect(defaultSelection(one, BEN)).toEqual([BEN, ANA]);
+    // Dana's only open pair is Cleo; the Ana–Dana pair was marked different.
+    expect(defaultSelection(one, DANA)).toEqual([DANA, CLEO]);
     expect(isConnected(one, [ANA, CLEO])).toBe(false);
     expect(isConnected(one, [ANA, BEN, CLEO])).toBe(true);
+  });
+
+  it("ticks only the start when it has no open pair", () => {
+    const one = contactCase({
+      edges: contactCase().edges.filter((edge) => edge.pair_id === "p4"),
+    });
+    expect(defaultSelection(one, ANA)).toEqual([ANA]);
   });
 });
 
@@ -261,15 +271,15 @@ describe("who may own the remaining contact", () => {
     const offered = within(await screen.findByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).toEqual(["Ana Owner", "Ben Seller", "Cleo Reader"]);
+    expect(offered).toEqual(["Ana Owner", "Ben Seller"]);
     await user.keyboard("{Escape}");
 
     await user.click(member(/M\. Kovac/));
     await user.click(owner);
-    const left = within(await screen.findByRole("listbox"))
+    const widened = within(await screen.findByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(left).toEqual(["Ana Owner", "Ben Seller"]);
+    expect(widened).toEqual(["Ana Owner", "Ben Seller", "Cleo Reader"]);
   });
 
   it("follows the kept record until the reviewer picks an owner", async () => {
@@ -280,6 +290,7 @@ describe("who may own the remaining contact", () => {
     const user = userEvent.setup();
     mount();
     const owner = await screen.findByRole("combobox", { name: /Owner/ });
+    await user.click(member(/M\. Kovac/));
     await user.click(screen.getByRole("radio", { name: /Mira Kovač/ }));
     expect(owner).toHaveTextContent("Ben Seller");
 
@@ -332,8 +343,9 @@ describe("the preview", () => {
     const user = userEvent.setup();
     mount();
     await user.click(
-      await screen.findByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("checkbox", { name: /M\. Kovac/ }),
     );
+    await user.click(screen.getByRole("button", { name: "Preview merge" }));
     const preview = await screen.findByTestId("contact-case-preview");
     expect(within(preview).getByText("Cleo Reader, can view")).toBeVisible();
     expect(
