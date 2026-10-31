@@ -206,7 +206,7 @@ it("tells a captured file from an upload and says where it came from", async () 
 });
 
 // A Docs or Drive link a mail mentioned is a row with no bytes. Its name opens
-// the address in a new tab, and an address that is not web falls back to the
+// the address in a new tab. An address that is not web falls back to the
 // download route, so no scheme such as javascript: becomes an href.
 it("opens a document link in a new tab instead of downloading it", async () => {
   const link = (id: string, filename: string, url: string): DealDocument => {
