@@ -220,6 +220,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const readings = day.readings;
   const calendar = calendarDay(day);
   const meetings = meetingsReading(day, calendar);
+  // Meetings booked by hand still count while the calendar cannot be read, so
+  // the figure is a minimum and the line says how to make it whole.
+  const calendarCut = calendar.state === "counted" && day.calendar === "unreadable";
   const soonest = soonestLeadDeadline(day);
   const blocking = decisionsBlocking(day);
   // A lane that never ANSWERED is the case the per-category narrowing does not
@@ -274,6 +277,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           warning={meetings.unready !== null && meetings.unready > 0}
           floor={
             scopeCut ||
+            calendarCut ||
             day.reach?.find((entry) => entry.source === "meeting")
               ?.more_available ||
             day.sources_unavailable.some(
@@ -285,7 +289,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           basis={
             calendar.state === "quiet"
               ? nextMeetingLine(calendar.next, locale, t, viewerZone())
-              : meetingsDetail(meetings, locale, t, plural)
+              : calendarCut
+                ? t("brief.readings.calendarUnreadableWhy")
+                : meetingsDetail(meetings, locale, t, plural)
           }
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
