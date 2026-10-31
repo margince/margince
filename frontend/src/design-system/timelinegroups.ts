@@ -89,9 +89,9 @@ function bulkMembership(entries: readonly TimelineEntry[]): Set<string> {
 }
 
 // foldKeyOf is the key this entry folds under, or nothing for a single row. A
-// bulk key folds it when the run is large enough to have no other reading, or
-// when THIS message carries the sender's own List-Unsubscribe attestation. One
-// attested message does not speak for every same-subject message that day.
+// bulk key folds it when the run is too large to read any other way. It also
+// folds a message that carries its sender's own List-Unsubscribe attestation.
+// One attested message does not speak for every same-subject message that day.
 function foldKeyOf(
   entry: TimelineEntry,
   bulk: ReadonlySet<string>,
