@@ -479,3 +479,28 @@ func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
 		t.Fatal("prospecting filter disagrees with planned lead work")
 	}
 }
+
+// A contact case carries no verb, because it settles in its own review. It
+// still counts when the exact decisions total is missing. The lane raises it
+// only for its owners, so the viewer's right to merge it whole does not decide.
+func TestTheDecisionCountKeepsEveryContactCaseItsLaneRaised(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("mergeable", "contact_case", withCase(true)),
+			item("too-large", "contact_case", withCase(false)),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 2 {
+		t.Errorf("counted %d decisions, want both cases the lane raised", got.Review)
+	}
+}
+
+func withCase(canMerge bool) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.ContactCase = &crmcontracts.AttentionContactCase{CanMerge: canMerge}
+	}
+}

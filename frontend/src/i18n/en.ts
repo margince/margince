@@ -19,8 +19,6 @@ export const en = {
   "homeRepair.reason.restoreSourceAndDate":
     "Restore the source link and remove the generated notification date.",
   "worklist.relationships.optional": "Optional reconnections",
-  "worklist.relationships.optionalDetail":
-    "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
   "worklist.relationships.show": "Show",
   "worklist.relationships.loading": "Looking for contacts who went quiet…",
   "worklist.relationships.none": "Nobody has gone quiet right now.",
@@ -2964,6 +2962,7 @@ export const en = {
   "rel.kind.projectStakeholder": "Project stakeholder",
   "rel.kind.projectCompany": "Company on project",
   "rel.kind.partnerOf": "Partner of",
+  "rel.kind.referred": "Referred",
   "rel.kind.referredBy": "Referred by",
   "rel.kind.coSellWith": "Co-sell with",
   "rel.kind.worksWith": "Works with",
@@ -9621,7 +9620,7 @@ export const en = {
   "notifications.markRead": "Mark read",
   "notifications.markAllFailed": "Nothing was marked read",
   "notifications.markReadFailed": "That notice was not marked read",
-  "notifications.new": "New",
+  "notifications.unread": "Unread",
   "notifications.byAgent": "By an agent",
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
@@ -16925,9 +16924,10 @@ export const en = {
   // record to delete — the rep is taking a message back before it goes, and
   // "withdraw" is the only one of the three that says so.
   "nav.scheduled": "Scheduled messages",
-  "sched.sub":
-    "Your scheduled messages that have not been sent yet. Only you can see them.",
-  "sched.empty": "No scheduled messages yet.",
+  "sched.sub": "Only you can see these messages.",
+  "sched.empty": "No messages scheduled.",
+  "sched.write": "Write a message",
+  "sched.writeHow": "Open a contact and choose Email.",
   "sched.group.held": "Held for your action",
   "sched.group.waiting": "Scheduled",
   "sched.group.waitingEmpty": "No messages scheduled.",
@@ -17350,10 +17350,6 @@ export const en = {
   // A band holding nothing, said rather than left out. Each says what is
   // absent, because "nothing here" four times over tells a reader less than
   // one line naming what they are clear of.
-  "worklist.bandClear.now": "No urgent items. Remaining work is below.",
-  "worklist.bandClear.build_pipeline": "No prospecting work waiting.",
-  "worklist.bandClear.keep_momentum": "No agreed work is drifting.",
-  "worklist.bandClear.review": "Nothing to review.",
   "worklist.disposition.verb.snooze": "Snooze",
   "worklist.disposition.snoozeForDays_one": "Snooze for {value} day",
   "worklist.disposition.snoozeForDays_other": "Snooze for {value} days",
@@ -17576,8 +17572,7 @@ export const en = {
   "worklist.view.total.decisions_other": "{count} outstanding decisions",
   "worklist.view.total.system_one": "{count} unresolved issue",
   "worklist.view.total.system_other": "{count} unresolved issues",
-  "worklist.filter.linked.urgent":
-    "Showing only urgent items: someone waiting, or a commitment about to break.",
+  "worklist.filter.linked.urgent": "Showing urgent work only.",
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
   "worklist.filter.linked.changed_since_brief":

@@ -23,8 +23,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "homeRepair.reason.restoreSourceAndDate":
     "Den Quellenverweis wiederherstellen und das erzeugte Benachrichtigungsdatum entfernen.",
   "worklist.relationships.optional": "Optionale Kontaktpflege",
-  "worklist.relationships.optionalDetail":
-    "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
   "worklist.relationships.show": "Anzeigen",
   "worklist.relationships.loading":
     "Suche nach Kontakten, die still geworden sind…",
@@ -3054,6 +3052,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
   "rel.kind.projectCompany": "Unternehmen im Projekt",
   "rel.kind.partnerOf": "Partner von",
+  "rel.kind.referred": "Hat empfohlen",
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Selling mit",
   "rel.kind.worksWith": "Arbeitet mit",
@@ -9596,7 +9595,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
   "notifications.markReadFailed":
     "Diese Benachrichtigung wurde nicht als gelesen markiert",
-  "notifications.new": "Neu",
+  "notifications.unread": "Ungelesen",
   "notifications.byAgent": "Von einem Agenten",
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",
@@ -17021,9 +17020,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Chronik, also gibt es keinen Versand abzubrechen und keinen Datensatz zu
   // löschen — die Nachricht wird zurückgenommen, bevor sie geht.
   "nav.scheduled": "Geplante Nachrichten",
-  "sched.sub":
-    "Deine geplanten Nachrichten, die noch nicht gesendet wurden. Nur du kannst sie sehen.",
-  "sched.empty": "Noch keine geplanten Nachrichten.",
+  "sched.sub": "Nur du siehst diese Nachrichten.",
+  "sched.empty": "Keine Nachrichten geplant.",
+  "sched.write": "Nachricht schreiben",
+  "sched.writeHow": "Öffne einen Kontakt und wähle E-Mail.",
   "sched.group.held": "Zurückgehalten, wartet auf dich",
   "sched.group.waiting": "Geplant",
   "sched.group.waitingEmpty": "Keine Nachrichten geplant.",
@@ -17486,11 +17486,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
-  "worklist.bandClear.now":
-    "Keine dringenden Einträge. Weitere Arbeit steht unten.",
-  "worklist.bandClear.build_pipeline": "Keine Akquise-Arbeit offen.",
-  "worklist.bandClear.keep_momentum": "Keine vereinbarte Arbeit stagniert.",
-  "worklist.bandClear.review": "Nichts zu prüfen.",
   "worklist.disposition.verb.snooze": "Zurückstellen",
   "worklist.disposition.snoozeForDays_one": "{value} Tag zurückstellen",
   "worklist.disposition.snoozeForDays_other": "{value} Tage zurückstellen",
@@ -17720,8 +17715,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
   "worklist.view.total.system_one": "{count} ungelöstes Problem",
   "worklist.view.total.system_other": "{count} ungelöste Probleme",
-  "worklist.filter.linked.urgent":
-    "Es werden nur dringende Einträge angezeigt: Jemand wartet, oder eine Zusage droht gebrochen zu werden.",
+  "worklist.filter.linked.urgent": "Nur dringende Arbeit.",
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
   "worklist.filter.linked.changed_since_brief":

@@ -238,12 +238,11 @@ describe("NotificationBell", () => {
     const [bare, sentence] = await screen.findAllByRole("listitem");
     expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
     expect(within(bare).getByText(fields)).toBeTruthy();
-    // A subject that is a sentence is still the headline, untouched.
+    // A sentence heads its row; the raw pairs after it are only detail.
     expect(
-      within(sentence).getByText(
-        "Update a deal, setting amount_minor: amount_minor=100",
-      ),
+      within(sentence).getByText("Update a deal, setting amount_minor"),
     ).toBeTruthy();
+    expect(within(sentence).getByText("amount_minor=100")).toBeTruthy();
     expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
   });
 
@@ -309,8 +308,8 @@ describe("NotificationBell", () => {
     await user.click(await screen.findByRole("button", { name: /waiting/i }));
 
     const items = await screen.findAllByRole("listitem");
-    expect(within(items[0] as HTMLElement).getByText("New")).not.toBeNull();
-    expect(within(items[1] as HTMLElement).queryByText("New")).toBeNull();
+    expect(within(items[0] as HTMLElement).getByText("Unread")).not.toBeNull();
+    expect(within(items[1] as HTMLElement).queryByText("Unread")).toBeNull();
   });
 
   it("settles what the reader could see, and the count goes with it", async () => {
@@ -359,7 +358,7 @@ describe("NotificationBell", () => {
     await waitFor(() =>
       expect(
         within(screen.getAllByRole("listitem")[0] as HTMLElement).queryByText(
-          "New",
+          "Unread",
         ),
       ).toBeNull(),
     );
@@ -514,7 +513,7 @@ describe("NotificationBell", () => {
     // The row stays unsettled, so the verb is still there to press again.
     expect(
       within(screen.getAllByRole("listitem")[0] as HTMLElement).getByText(
-        "New",
+        "Unread",
       ),
     ).not.toBeNull();
   });
