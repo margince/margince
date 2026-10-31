@@ -166,8 +166,7 @@ and in the Worklist.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
 - A deal at risk with a task due within 7 days shows once, as that task with the risk on it.
-- Work for current customers comes before prospecting. A lead with no reply target shows "no
-  response target set", with no made-up deadline.
+- Work for current customers comes before prospecting.
 - A close date Margince set for now asks you to confirm the forecast; it is not a customer promise.
   See [Close dates Margince sets](the-pipeline.md#close-dates-margince-sets).
 
