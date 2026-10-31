@@ -127,3 +127,26 @@ func TestLanguageEvidenceSkipsAColleaguesOwnInboundMail(t *testing.T) {
 		t.Fatalf("language evidence leads with %v, want their words first", got)
 	}
 }
+
+// One answer for whose word a turn is, so two readers cannot disagree. A
+// colleague writing from one of our own domains arrives inbound, and that is
+// the case direction alone gets wrong.
+func TestATurnSaysWhoseWordItIs(t *testing.T) {
+	t.Parallel()
+	in := string(crmcontracts.ActivityDirectionInbound)
+	out := string(crmcontracts.ActivityDirectionOutbound)
+	for _, c := range []struct {
+		name  string
+		turn  draftcore.Turn
+		their bool
+	}{
+		{"their inbound mail", draftcore.Turn{Direction: in}, true},
+		{"our colleague's inbound mail", draftcore.Turn{Direction: in, ByColleague: true}, false},
+		{"our outbound mail", draftcore.Turn{Direction: out}, false},
+		{"a row naming no direction", draftcore.Turn{}, false},
+	} {
+		if got := c.turn.TheirWord(); got != c.their {
+			t.Errorf("%s: TheirWord() = %v, want %v", c.name, got, c.their)
+		}
+	}
+}

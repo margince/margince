@@ -48,6 +48,14 @@ func TurnText(body string) string {
 	return textlang.MessageOpening(body, TurnTextRunes)
 }
 
+// TheirWord says the other side wrote this turn.
+//
+// One answer, so a reader never recombines the voice and the transport and
+// reaches a different verdict from its neighbour.
+func (t Turn) TheirWord() bool {
+	return !t.ByColleague && t.Direction == string(crmcontracts.ActivityDirectionInbound)
+}
+
 // Conversation folds newest-first activities into at most limit turns. It
 // decides which rows a draft reads and how much of each. The reply drafter
 // hands it a thread. The contact and lead drafters hand it recent activity.

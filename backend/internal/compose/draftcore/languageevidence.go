@@ -89,7 +89,7 @@ func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time, zone 
 // direction, their mail was a sample of the counterparty's language.
 func evidenceRank(turn Turn, addressee string) int {
 	switch {
-	case turn.ByColleague || turn.Direction != string(crmcontracts.ActivityDirectionInbound):
+	case !turn.TheirWord():
 		return 2
 	case addressee != "" && turn.SenderID == addressee:
 		return 0
