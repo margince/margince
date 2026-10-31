@@ -23,11 +23,13 @@ import {
   MetricReading,
   OverviewLinks,
   OverviewSaveActions,
-  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { MemberTable, ReasonList } from "./analytics.overview.team.members";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import {
   type ReportingEvidenceRef,
   type ReportingSelection,
@@ -89,14 +91,12 @@ export function useSdrTeamReview(
 export function TeamProspecting({
   catalog,
   scope,
-  defaultScope,
   workflow,
   switcher,
   scopeControl,
 }: Readonly<{
   catalog: Catalog;
   scope: AnalyticsScope;
-  defaultScope: AnalyticsScope;
   workflow: UseQueryResult<Framework>;
   switcher: ReactNode;
   scopeControl: ReactNode;
@@ -137,6 +137,7 @@ export function TeamProspecting({
             selection={
               query.data ? { ...query.data.selection, blocks } : undefined
             }
+            scope={scopeKey(scope)}
           />
         }
         caption={periodCaption(query.data, locale, t)}
@@ -175,11 +176,7 @@ export function TeamProspecting({
         </Callout>
       )}
       <OverviewLinks
-        dials={outboundDials(
-          "team",
-          { scope: scopeKey(scope), period },
-          scopeKey(defaultScope),
-        )}
+        dials={outboundDials("team", { scope: scopeKey(scope), period })}
         sections={[
           { section: "sdr", label: t("reporting.sdr") },
           { section: "leads", label: t("reporting.leads") },

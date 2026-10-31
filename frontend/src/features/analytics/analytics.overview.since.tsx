@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
 import type { components } from "../../api/schema";
 import { EmptyState } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -10,10 +9,12 @@ import { useT } from "../../i18n";
 import type { AttentionState } from "./analytics.attention";
 import { ChartContext } from "./reporting.chartcontext";
 import { ChartPanel } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import type {
   ReportingEvaluation,
-  ReportingEvidenceRef,
   ReportingSelection,
 } from "./reporting.model";
 import { useReportingEvaluation } from "./reporting.queries";
@@ -35,24 +36,27 @@ export function SinceLastReview({
   after: AttentionState;
 }>) {
   const t = useT();
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const offered = catalog.metrics.some(
     (metric) =>
       metric.id === "open_pipeline" &&
       metric.blocks.includes("pipeline_movement"),
   );
+  const selection: ReportingSelection = {
+    scope,
+    pipeline_id: pipelineId,
+    period: "this_quarter",
+    target_basis: "fiscal_quarter",
+    // Captures hold the deals expected to close this quarter.
+    close_window: "fiscal_quarter",
+    metrics: ["open_pipeline"],
+    blocks: ["pipeline_movement"],
+  };
   const query = useReportingEvaluation(
-    {
-      scope,
-      pipeline_id: pipelineId,
-      period: "this_quarter",
-      target_basis: "fiscal_quarter",
-      // Captures hold the deals expected to close this quarter.
-      close_window: "fiscal_quarter",
-      metrics: ["open_pipeline"],
-      blocks: ["pipeline_movement"],
-    },
+    selection,
     offered && after !== "pending",
+  );
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
   );
   if (!offered) return null;
   return (
@@ -69,14 +73,14 @@ export function SinceLastReview({
                 chart={chart}
                 wide
                 evaluation={evaluation}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
               />
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
             </>

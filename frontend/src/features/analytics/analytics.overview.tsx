@@ -163,7 +163,6 @@ function OverviewBoard({
         key={view}
         catalog={catalog}
         scope={scope}
-        defaultScope={context.default_scope}
         workflow={framework}
         switcher={switcher}
         scopeControl={scopeControl}
@@ -174,7 +173,6 @@ function OverviewBoard({
       key={view}
       catalog={catalog}
       scope={scope}
-      defaultScope={context.default_scope}
       switcher={switcher}
       scopeControl={scopeControl}
       emptyNotice={emptyNotice}

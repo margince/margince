@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
@@ -15,10 +16,7 @@ import {
   formatNumber,
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import {
-  analyticsSectionHref,
-  openAnalyticsSection,
-} from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
@@ -39,6 +37,7 @@ import {
 import {
   type OverviewDials,
   outboundDials,
+  scopeDials,
 } from "./analytics.overview.context";
 import {
   MetricReading,
@@ -46,11 +45,13 @@ import {
   OverviewLinks,
   OverviewSaveActions,
   readingValue,
-  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { SinceLastReview } from "./analytics.overview.since";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
 import {
   type ReportingEvaluation,
@@ -83,7 +84,6 @@ export function SalesReview(
   props: Readonly<{
     catalog: Catalog;
     scope: AnalyticsScope;
-    defaultScope: AnalyticsScope;
     switcher: ReactNode;
     scopeControl: ReactNode;
     emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
@@ -103,7 +103,6 @@ export function SalesReview(
 function SalesReviewBody({
   catalog,
   scope,
-  defaultScope,
   switcher,
   scopeControl,
   emptyNotice,
@@ -111,7 +110,6 @@ function SalesReviewBody({
 }: Readonly<{
   catalog: Catalog;
   scope: AnalyticsScope;
-  defaultScope: AnalyticsScope;
   switcher: ReactNode;
   scopeControl: ReactNode;
   emptyNotice: (holdsDeals: boolean | undefined) => ReactNode;
@@ -151,7 +149,6 @@ function SalesReviewBody({
   const doors = outboundDials(
     "sales",
     answeredDials(selection, filters.start, filters.end),
-    scopeKey(defaultScope),
   );
   const apply = (next: ReportingSelection) => {
     if (next.period !== filters.period) filters.setPeriod(next.period);
@@ -169,6 +166,7 @@ function SalesReviewBody({
             selection={
               query.data ? { ...query.data.selection, blocks } : undefined
             }
+            scope={scopeKey(scope)}
           />
         }
         caption={
@@ -220,6 +218,10 @@ function SalesReviewBody({
                   (metric) => metric.id === "forecast_landing",
                 )}
                 onApply={apply}
+                targetsHref={analyticsSectionHref(
+                  "targets",
+                  scopeDials(scopeKey(scope)),
+                )}
               />
               <SalesHero evaluation={evaluation} onEvidence={openEvidence} />
               <SalesReadings
@@ -535,11 +537,13 @@ function QuarterNotes({
   period,
   offersLanding,
   onApply,
+  targetsHref,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   period: ReportingSelection["period"];
   offersLanding: boolean;
   onApply: (selection: ReportingSelection) => void;
+  targetsHref: string;
 }>) {
   const t = useT();
   const comparison = metricOf(
@@ -572,13 +576,15 @@ function QuarterNotes({
     comparison.status === "target_reached"
   )
     return null;
-  if (comparison.status === "no_target") return <TargetSetup />;
+  if (comparison.status === "no_target")
+    return <TargetSetup href={targetsHref} />;
   return <ComparisonState comparison={comparison} onApply={onApply} />;
 }
 
 // Who can give the quarter a target. A reader who may not set one is told who
-// can, rather than shown a button the server would refuse.
-function TargetSetup() {
+// can, rather than shown a button the server would refuse. `href` opens the
+// targets for the scope the comparison was about.
+function TargetSetup({ href }: Readonly<{ href: string }>) {
   const t = useT();
   const canSet = useCanWrite("sales_target", "create");
   return (
@@ -588,9 +594,9 @@ function TargetSetup() {
       title={t("reporting.compare.no_target")}
       actions={
         canSet ? (
-          <Button onClick={() => openAnalyticsSection("targets")}>
+          <AppLink className="btn btn-ghost" href={href}>
             {t("analytics.overview.setTarget")}
-          </Button>
+          </AppLink>
         ) : undefined
       }
     >

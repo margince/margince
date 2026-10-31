@@ -8,12 +8,12 @@ import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import {
   analyticsSectionHref,
-  openAnalyticsSection,
   type Section,
 } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import type { UrlParams } from "../../lib/urlstate";
+import { scopeDials } from "./analytics.overview.context";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -108,23 +108,6 @@ export function MetricReading({
 }
 
 /**
- * The evidence a reader opened, for as long as the question it was read from
- * stands. A changed selection closes it, so a drawer never lists one
- * question's records under another's figures.
- */
-export function useSelectionEvidence(question: string) {
-  const [held, setHeld] = useState<Readonly<{
-    question: string;
-    reference: ReportingEvidenceRef;
-  }> | null>(null);
-  const evidence = held?.question === question ? held.reference : null;
-  const openEvidence = (reference: ReportingEvidenceRef) =>
-    setHeld({ question, reference });
-  const closeEvidence = () => setHeld(null);
-  return { evidence, openEvidence, closeEvidence };
-}
-
-/**
  * The deeper pages a view leads to, after its own readings and lists. Each
  * is a link carrying the view's question, so the page it opens answers it.
  * A modified click opens it in a new tab.
@@ -152,12 +135,14 @@ export function OverviewLinks({
 }
 
 /**
- * Save view and Report templates, the same pair on both views. Saving keeps
+ * Save view and Report templates, the same pair on every view. Saving keeps
  * the view's selection, charts included, as a report the editor can revise.
+ * The templates open for the view's own `scope`.
  */
 export function OverviewSaveActions({
   selection,
-}: Readonly<{ selection: ReportingSelection | undefined }>) {
+  scope,
+}: Readonly<{ selection: ReportingSelection | undefined; scope: string }>) {
   const t = useT();
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
@@ -168,9 +153,12 @@ export function OverviewSaveActions({
           {t("analytics.overview.saveView")}
         </Button>
       )}
-      <Button variant="ghost" onClick={() => openAnalyticsSection("reports")}>
+      <AppLink
+        className="btn btn-ghost"
+        href={analyticsSectionHref("reports", scopeDials(scope))}
+      >
         {t("analytics.overview.templates")}
-      </Button>
+      </AppLink>
       {saving && selection && (
         <SaveReportingDialog
           selection={selection}

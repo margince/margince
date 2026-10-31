@@ -11,10 +11,12 @@ import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
 import { ForecastShareActions } from "./analytics.share";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import {
   type ReportingEvaluation,
-  type ReportingEvidenceRef,
   type ReportingSelection,
   reportingQuery,
 } from "./reporting.model";
@@ -25,7 +27,6 @@ export function ReportingForecastGraphs({
   const t = useT();
   const showCharts = useCan("report_definition", "read");
   const [snapshot, setSnapshot] = useState("latest");
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const selection: ReportingSelection = {
     scope: { ...scope, id: scope.id ?? undefined },
     period: "this_quarter",
@@ -45,6 +46,9 @@ export function ReportingForecastGraphs({
       );
     },
   });
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
+  );
   const evaluated = showCharts ? query.data : undefined;
   return (
     <div className="reporting-results">
@@ -74,14 +78,14 @@ export function ReportingForecastGraphs({
             <>
               <ReportingCharts
                 evaluation={evaluation}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
               />
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
             </>

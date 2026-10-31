@@ -168,23 +168,28 @@ describe("where a question is remembered", () => {
 });
 
 describe("the question a door out of a view carries", () => {
-  it("spells defaults out and leaves the reader's default scope to every section", () => {
+  it("spells every default out, the scope included", () => {
+    // A copied link opened by a reader with another default must still name
+    // this population.
     expect(
       Object.fromEntries(
-        outboundDials(
-          "sales",
-          { scope: "team:t-1", pipeline: "sales", period: "this_quarter" },
-          "team:t-1",
-        ),
+        outboundDials("sales", {
+          scope: "team:t-1",
+          pipeline: "sales",
+          period: "this_quarter",
+        }),
       ),
-    ).toEqual({ overview: "sales", pipeline: "sales", period: "this_quarter" });
+    ).toEqual({
+      overview: "sales",
+      scope: "team:t-1",
+      pipeline: "sales",
+      period: "this_quarter",
+    });
   });
 
   it("keeps My prospecting on the reader's own records", () => {
     expect(
-      outboundDials("prospecting", { scope: `owner:${ANNA}` }, "team:t-1").get(
-        "scope",
-      ),
+      outboundDials("prospecting", { scope: `owner:${ANNA}` }).get("scope"),
     ).toBe(`owner:${ANNA}`);
   });
 });

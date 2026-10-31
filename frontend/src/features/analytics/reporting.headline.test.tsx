@@ -183,7 +183,7 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
     </StoryProviders>,
   );
-  await userEvent.setup().click(screen.getByRole("button", { name: "Open" }));
+  await userEvent.setup().click(screen.getByRole("link", { name: "Open" }));
   expect(onEvidence).not.toHaveBeenCalled();
   expect(window.location.hash).toMatch(/^#\/analytics\/forecast/);
 });

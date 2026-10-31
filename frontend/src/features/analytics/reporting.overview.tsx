@@ -17,13 +17,13 @@ import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
-import type {
-  ReportingEvidenceRef,
-  ReportingSelection,
-} from "./reporting.model";
+import type { ReportingSelection } from "./reporting.model";
 import {
   useReportingCatalog,
   useReportingEvaluation,
@@ -166,7 +166,6 @@ function OverviewBody({
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const shape = VIEW_SHAPE[view];
   const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
@@ -186,6 +185,8 @@ function OverviewBody({
   const validPeriod = validDates && metrics.length > 0;
   const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
+  const { evidence, openEvidence, closeEvidence } =
+    useSelectionEvidence(contextKey);
   const invalidSelection =
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
@@ -224,7 +225,6 @@ function OverviewBody({
             onChange: (from, through) => {
               setStart(from);
               setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
@@ -240,7 +240,6 @@ function OverviewBody({
               setTargetBasis(next.target_basis);
             if (next.close_window !== closeWindow)
               setCloseWindow(next.close_window);
-            setEvidence(null);
           }}
         />
       </FilterBar>
@@ -259,7 +258,7 @@ function OverviewBody({
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
                 onApplySelection={(next) => {
                   // The server named the selection; the page only moves its
                   // dials to it.
@@ -268,7 +267,6 @@ function OverviewBody({
                     setPipelineId(next.pipeline_id ?? "");
                   if (scopeKey(next.scope) !== scopeKey(scope))
                     replaceDial("scope", scopeKey(next.scope));
-                  setEvidence(null);
                 }}
               />
               {evidence && (
@@ -276,7 +274,7 @@ function OverviewBody({
                   key={`${contextKey}:${JSON.stringify(evidence)}`}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
               {saving && (

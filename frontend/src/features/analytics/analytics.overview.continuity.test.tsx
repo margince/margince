@@ -24,8 +24,8 @@ import {
   rememberedContext,
   rememberView,
 } from "./analytics.overview.context";
-import { useSelectionEvidence } from "./analytics.overview.readings";
 import { backlogFindings } from "./analytics.overview.scenariodata";
+import { isSetup, OVERVIEW_SCENARIOS } from "./analytics.overview.scenarios";
 import {
   ADMIN_GRANTS,
   type AskedRequest,
@@ -40,6 +40,7 @@ import {
   teamEvaluation,
   twoPipelines,
 } from "./analytics.overview.testkit";
+import { useSelectionEvidence } from "./reporting.evidence";
 import type { ReportingEvaluation } from "./reporting.model";
 
 const READER = meFixture({}).user.id;
@@ -147,6 +148,7 @@ describe("each Overview view keeps its own question", () => {
     const pipeline = await screen.findByRole("link", { name: "Pipeline" });
     expect(dialsOfLink(pipeline)).toEqual({
       overview: "sales",
+      scope: `team:${TEAM.id}`,
       pipeline: "sales",
       period: "custom",
       from: "2026-10-01",
@@ -295,6 +297,7 @@ describe("every way out of Overview carries its question", () => {
     const door = await expectedFinishDoor();
     expect(dialsOfLink(door)).toEqual({
       overview: "sales",
+      scope: `team:${TEAM.id}`,
       pipeline: "sales",
       period: "this_quarter",
       close: "all_open",
@@ -348,6 +351,7 @@ describe("every way out of Overview carries its question", () => {
     const pipeline = await screen.findByRole("link", { name: "Pipeline" });
     expect(dialsOfLink(pipeline)).toEqual({
       overview: "sales",
+      scope: `team:${TEAM.id}`,
       pipeline: "all",
       period: "this_quarter",
       close: "all_open",
@@ -362,7 +366,10 @@ describe("every way out of Overview carries its question", () => {
     });
     await readings();
     const review = (await screen.findAllByRole("link", { name: "Review" }))[0];
-    expect(dialsOfLink(review)).toEqual({ overview: "sales" });
+    expect(dialsOfLink(review)).toEqual({
+      overview: "sales",
+      scope: `team:${TEAM.id}`,
+    });
     const row = review.closest(".analytics-attention-row");
     if (!(row instanceof HTMLElement)) throw new Error("a finding has a row");
     const record = within(row)
@@ -501,5 +508,70 @@ describe("Save view", () => {
       },
     });
     expect(posted[0]).not.toHaveProperty("selection.pipeline_id");
+  });
+});
+
+describe("a copied link", () => {
+  it("answers for the population it names, never the opener's default", async () => {
+    const asked = open(
+      `#/analytics/overview?overview=sales&scope=owner:${SELF}`,
+      answer,
+      TWO,
+    );
+    await readings();
+    expect(lastSales(asked).get("scope_kind")).toBe("owner");
+    expect(lastSales(asked).get("scope_id")).toBe(SELF);
+  });
+
+  it("is refused to a second reader who may not see its team, instead of showing their own", async () => {
+    open("#/analytics", answer, TWO);
+    const door = (await readings()).getByRole("link", {
+      description: "Expected finish",
+    });
+    const href = door.getAttribute("href") ?? "";
+    cleanup();
+
+    const asked = open(href.slice(href.indexOf("#")), answer, {
+      ...TWO,
+      seat: "sdr",
+    });
+    expect(
+      await screen.findByText("This link names figures you cannot open"),
+    ).toBeVisible();
+    expect(forecastAsked(asked)).toHaveLength(0);
+  });
+});
+
+describe("doors to setup and templates", () => {
+  const noTarget = OVERVIEW_SCENARIOS.noTarget.views.prospecting;
+
+  it("opens the target form on the reader's own records from My prospecting", async () => {
+    if (!isSetup(noTarget)) throw new Error("noTarget draws My prospecting");
+    const user = userEvent.setup({ delay: null });
+    open("#/analytics/overview?overview=prospecting", noTarget.answer, {
+      ...noTarget.routes,
+      seat: "leader",
+      grants: ADMIN_GRANTS,
+    });
+    const setTargets = await screen.findByRole("link", {
+      name: "Set targets",
+    });
+    expect(dialsOfLink(setTargets)).toEqual({ scope: `owner:${SELF}` });
+    // Not prevented: a modified click is the browser's, a new tab.
+    expect(fireEvent.click(setTargets, { metaKey: true })).toBe(true);
+
+    await user.click(setTargets);
+    await user.click(await screen.findByRole("button", { name: "Set target" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Riley Rep")).toBeVisible();
+    expect(within(dialog).queryByText("DACH")).toBeNull();
+  });
+
+  it("opens Report templates as a link for the view's scope", async () => {
+    open("#/analytics", answer, TWO);
+    await readings();
+    const templates = screen.getByRole("link", { name: "Report templates" });
+    expect(dialsOfLink(templates)).toEqual({ scope: `team:${TEAM.id}` });
+    expect(fireEvent.click(templates, { ctrlKey: true })).toBe(true);
   });
 });

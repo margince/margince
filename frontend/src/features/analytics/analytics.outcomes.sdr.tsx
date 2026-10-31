@@ -5,6 +5,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import {
   Panel,
@@ -20,7 +21,7 @@ import { isMessageKey, type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import { listReadState } from "../../lib/worklist.listread";
 import { worklistDayOptions } from "../../lib/worklistday";
 import {
@@ -362,9 +363,12 @@ export function NeedsYourAction({ locale }: Readonly<{ locale: Locale }>) {
     <Panel
       title={t("analytics.sdrNeedsYou")}
       actions={
-        <Button onClick={() => navigate({ screen: "worklist" })}>
+        <AppLink
+          className="btn btn-ghost"
+          href={routeHash({ screen: "worklist" })}
+        >
           {t("analytics.sdrOpenWorklist")}
-        </Button>
+        </AppLink>
       }
     >
       <PanelBody>

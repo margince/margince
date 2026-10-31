@@ -1,18 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { api } from "../../api/client";
 import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { ChartPanel, pageCharts } from "./reporting.charts";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
-import type { CardChoice } from "./reporting.layout";
 import {
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingQuery,
-} from "./reporting.model";
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
+import type { CardChoice } from "./reporting.layout";
+import { type ReportingSelection, reportingQuery } from "./reporting.model";
 
 /**
  * One chart before it is added, evaluated as the report would be: the same
@@ -23,13 +21,15 @@ export function CardPreview({
   choice,
 }: Readonly<{ selection: ReportingSelection; choice: CardChoice }>) {
   const t = useT();
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const previewed: ReportingSelection = {
     ...selection,
     layout: undefined,
     blocks: [choice.kind],
     metrics: choice.metric ? [choice.metric] : selection.metrics,
   };
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(previewed),
+  );
   const query = useQuery({
     queryKey: ["reporting-card-preview", previewed],
     queryFn: async () =>
@@ -58,14 +58,14 @@ export function CardPreview({
           chart={chart}
           wide
           evaluation={evaluation}
-          onEvidence={setEvidence}
+          onEvidence={openEvidence}
         />
       ))}
       {evidence && (
         <ReportingEvidenceDrawer
           evaluation={evaluation}
           reference={evidence}
-          onClose={() => setEvidence(null)}
+          onClose={closeEvidence}
         />
       )}
     </div>

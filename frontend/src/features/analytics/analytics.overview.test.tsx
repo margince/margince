@@ -160,7 +160,7 @@ describe("Sales review", () => {
     const strip = await readings();
     expect(strip.getByText("Closed win rate")).toBeVisible();
     expect(strip.queryByText("Gap to target")).toBeNull();
-    expect(screen.getByRole("button", { name: "Set targets" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Set targets" })).toBeVisible();
     expect(screen.getByText(/No sales target is set for/)).toBeVisible();
   });
 

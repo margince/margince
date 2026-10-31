@@ -243,20 +243,23 @@ function withView(
 }
 
 /**
- * The dials a door out of a view carries: its question as answered. The
- * defaults are spelled out, so the destination cannot read another default.
- * The reader's default scope is left out, because every section reads it.
+ * The dials a door out of a view carries: its question as answered. Every
+ * default is spelled out, the scope included. A copied link opened by someone
+ * else must answer for this population, never for that reader's default.
  */
 export function outboundDials(
   view: OverviewView,
   answered: OverviewDials,
-  defaultScope: string,
 ): Map<string, string> {
   const dials = new Map<string, string>([[OVERVIEW_DIAL, view]]);
   for (const dial of CONTEXT_DIALS) {
     const value = answered[dial];
-    if (value && !(dial === "scope" && value === defaultScope))
-      dials.set(dial, value);
+    if (value) dials.set(dial, value);
   }
   return dials;
+}
+
+/** The scope alone, for a door to a section that reads nothing else. */
+export function scopeDials(scope: string): Map<string, string> {
+  return new Map([["scope", scope]]);
 }

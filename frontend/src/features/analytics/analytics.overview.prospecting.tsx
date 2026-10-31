@@ -4,7 +4,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { Button, StatCard } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
+import { StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
@@ -14,7 +15,7 @@ import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
@@ -25,16 +26,18 @@ import {
   WaitingOnOthers,
 } from "./analytics.outcomes.sdr";
 import { targetCard } from "./analytics.outcomes.targets";
-import { outboundDials } from "./analytics.overview.context";
+import { outboundDials, scopeDials } from "./analytics.overview.context";
 import {
   MetricReading,
   metricOf,
   OverviewLinks,
   OverviewSaveActions,
-  useSelectionEvidence,
 } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import {
+  ReportingEvidenceDrawer,
+  useSelectionEvidence,
+} from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
 import {
   type ReportingEvaluation,
@@ -144,6 +147,7 @@ export function MyProspecting({
                 ? { ...query.data.selection, blocks: sdrBlocks }
                 : undefined
             }
+            scope={scopeKey(self)}
           />
         }
         caption={
@@ -195,7 +199,10 @@ export function MyProspecting({
                   { t, plural, locale },
                 )}
               />
-              <MonthlyTargets evaluation={evaluation} />
+              <MonthlyTargets
+                evaluation={evaluation}
+                ownScope={scopeKey(self)}
+              />
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
@@ -220,17 +227,13 @@ export function MyProspecting({
         />
       )}
       <OverviewLinks
-        dials={outboundDials(
-          "prospecting",
-          {
-            // The reader's own work, never a colleague's or a team's.
-            scope: scopeKey(self),
-            period: filters.period,
-            from: filters.period === "custom" ? filters.start : undefined,
-            through: filters.period === "custom" ? filters.end : undefined,
-          },
-          scopeKey(context.default_scope),
-        )}
+        dials={outboundDials("prospecting", {
+          // The reader's own work, never a colleague's or a team's.
+          scope: scopeKey(self),
+          period: filters.period,
+          from: filters.period === "custom" ? filters.start : undefined,
+          through: filters.period === "custom" ? filters.end : undefined,
+        })}
         sections={[
           { section: "sdr", label: t("reporting.sdr") },
           { section: "leads", label: t("reporting.leads") },
@@ -351,9 +354,11 @@ function ProspectingReadings({
 
 // This month's targets, named by their own month so a week's figure is never
 // read against a month's target.
+// `ownScope` is the reader's own records, which the target form opens on.
 function MonthlyTargets({
   evaluation,
-}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  ownScope,
+}: Readonly<{ evaluation: ReportingEvaluation; ownScope: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const metricName = useMetricNames();
@@ -379,9 +384,12 @@ function MonthlyTargets({
             title={t("analytics.overview.noMonthlyTarget")}
             actions={
               canSet ? (
-                <Button onClick={() => openAnalyticsSection("targets")}>
+                <AppLink
+                  className="btn btn-ghost"
+                  href={analyticsSectionHref("targets", scopeDials(ownScope))}
+                >
                   {t("analytics.overview.setTarget")}
-                </Button>
+                </AppLink>
               ) : undefined
             }
           >
@@ -469,12 +477,12 @@ export function QualificationNote() {
     <p className="t-caption">
       {t("analytics.overview.noHandoffs")}{" "}
       {canEdit ? (
-        <Button
-          variant="link"
-          onClick={() => openAnalyticsSection("definitions")}
+        <AppLink
+          className="btn btn-link"
+          href={analyticsSectionHref("definitions", new Map())}
         >
           {t("analytics.overview.changeWorkflow")}
-        </Button>
+        </AppLink>
       ) : (
         t("analytics.overview.workflowWho")
       )}

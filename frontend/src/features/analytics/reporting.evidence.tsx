@@ -1,6 +1,6 @@
 import "./reporting.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
@@ -390,4 +390,21 @@ function MetricDefinition({
       </p>
     </Popover>
   );
+}
+
+/**
+ * The evidence a reader opened, for as long as the question it was read from
+ * stands. A changed selection closes it, so a drawer never lists one
+ * question's records under another's figures.
+ */
+export function useSelectionEvidence(question: string) {
+  const [held, setHeld] = useState<Readonly<{
+    question: string;
+    reference: ReportingEvidenceRef;
+  }> | null>(null);
+  const evidence = held?.question === question ? held.reference : null;
+  const openEvidence = (reference: ReportingEvidenceRef) =>
+    setHeld({ question, reference });
+  const closeEvidence = () => setHeld(null);
+  return { evidence, openEvidence, closeEvidence };
 }
