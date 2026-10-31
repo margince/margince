@@ -152,12 +152,15 @@ function Composition({
           },
         ]}
       />
-      <p className="t-caption">
-        {t("analytics.decision.included", {
-          priced: formatNumber(basis.priced_count, locale),
-          eligible: formatNumber(basis.eligible_count, locale),
-        })}
-      </p>
+      {/* The server's count; an edition captured without it states none. */}
+      {basis.included_count != null && (
+        <p className="t-caption">
+          {t("analytics.decision.included", {
+            included: formatNumber(basis.included_count, locale),
+            eligible: formatNumber(basis.eligible_count, locale),
+          })}
+        </p>
+      )}
       {left.length > 0 && (
         <p className="t-caption">
           {t("analytics.decision.excluded", { parts: left.join(", ") })}

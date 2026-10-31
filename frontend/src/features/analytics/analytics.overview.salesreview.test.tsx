@@ -15,7 +15,15 @@ import {
   overviewAddress,
   type ScenarioName,
 } from "./analytics.overview.scenarios.fixtures";
-import { openOverview, readings } from "./analytics.overview.testkit";
+import {
+  isMovement,
+  landingBasis,
+  metric,
+  openOverview,
+  readings,
+  salesEvaluation,
+  startingMovement,
+} from "./analytics.overview.testkit";
 
 // Sales review's first screen and its action list: the controls, the lead
 // figure with its target, three readings, the summary and the top findings.
@@ -209,7 +217,107 @@ describe("the summary", () => {
   });
 });
 
+describe("a reader who may not read forecast checks", () => {
+  it("says the checks are not theirs to see, and the summary says nothing about them", async () => {
+    const pair = OVERVIEW_SCENARIOS.populated.views.sales;
+    if (!isSetup(pair)) throw new Error("populated draws Sales review");
+    openOverview(overviewAddress("sales"), pair.answer, {
+      ...pair.routes,
+      grants: {
+        report_definition: ["read"],
+        reporting_framework: ["read"],
+        sales_target: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+        pipeline: ["read"],
+      },
+    });
+    const list = await actionList();
+    expect(
+      await list.findByText("Forecast checks are not available to you."),
+    ).toBeVisible();
+    expect(
+      list.queryByText("No forecast check is open for this scope."),
+    ).toBeNull();
+    const summary = within(screen.getByRole("region", { name: "Summary" }));
+    expect(summary.queryByText(/open checks?/)).toBeNull();
+  });
+});
+
+describe("the composition of the expected finish", () => {
+  it("counts only the priced deals the totals hold, and names those left out", async () => {
+    openOverview(overviewAddress("sales"), (url) =>
+      isMovement(url)
+        ? startingMovement()
+        : salesEvaluation({
+            metrics: [
+              metric("bookings_won", 42_000_000),
+              metric("forecast_landing", 76_000_000, {
+                forecast_basis: landingBasis(
+                  { won: 42_000_000, remaining: 34_000_000 },
+                  {
+                    eligible_count: 18,
+                    priced_count: 17,
+                    fx_missing_count: 2,
+                    included_count: 15,
+                  },
+                ),
+              }),
+            ],
+          }),
+    );
+    const summary = within(
+      await screen.findByRole("region", { name: "Summary" }),
+    );
+    expect(
+      await summary.findByText(
+        "Counts 15 of the 18 open deals the forecast considered.",
+      ),
+    ).toBeVisible();
+    expect(
+      summary.getByText(
+        "Left out: 1 deal with no amount, 2 deals with no exchange rate.",
+      ),
+    ).toBeVisible();
+  });
+});
+
 describe("individual performance off", () => {
+  it("keeps the owner on each action row while the owner chart names nobody", async () => {
+    const pair = OVERVIEW_SCENARIOS.individualPerformanceOff.views.sales;
+    if (!isSetup(pair)) throw new Error("the scenario draws Sales review");
+    openOverview(overviewAddress("sales"), pair.answer, {
+      ...pair.routes,
+      checks: () =>
+        new Response(
+          JSON.stringify(
+            backlogList(reportingFixtureFrames.quarterCutoff.clock),
+          ),
+          { headers: { "Content-Type": "application/json" } },
+        ),
+    });
+    const routed = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.includes("/users/names")) return routed(input, init);
+      const data = new URL(url, "http://localhost").searchParams
+        .getAll("id")
+        .map((id) => ({ id, display_name: `Owner ${id.slice(-2)}` }));
+      return Promise.resolve(
+        new Response(JSON.stringify({ data }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }) as typeof fetch;
+    const list = await actionList();
+    // Responsibility for a finding is not a performance comparison.
+    expect(await list.findAllByText(/^Owner a1 · Found/)).toHaveLength(3);
+    const chart = within(
+      screen.getByRole("region", { name: "Sales won by team member" }),
+    );
+    expect(chart.queryByText(/Owner a/)).toBeNull();
+  });
+
   it("shows no team member's name in the owner chart or anywhere on the page", async () => {
     openScenario("individualPerformanceOff");
     await readings();

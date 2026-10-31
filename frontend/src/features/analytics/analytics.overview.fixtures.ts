@@ -171,6 +171,7 @@ export function landingBasis(
     eligible_count: 18,
     priced_count: 18,
     fx_missing_count: 0,
+    included_count: 18,
     ...over,
   };
 }

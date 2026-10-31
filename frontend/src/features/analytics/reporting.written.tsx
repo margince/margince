@@ -28,7 +28,7 @@ export type LinkedSentence = Readonly<{ text: string; link?: SentenceLink }>;
 
 /** What the summary knows of the open checks: read, failed, or still coming. */
 export type ChecksReading = Readonly<{
-  state: "pending" | "failed" | "ready";
+  state: "pending" | "failed" | "ready" | "not_permitted";
   findings?: number;
   deals?: number;
 }>;
@@ -255,7 +255,8 @@ function checksSentence(
   checks: ChecksReading | undefined,
   words: Words,
 ): string | null {
-  if (!checks || checks.state === "pending") return null;
+  if (!checks || checks.state === "pending" || checks.state === "not_permitted")
+    return null;
   if (checks.state === "failed")
     return words.t("reporting.writtenChecksFailed");
   const findings = checks.findings ?? 0;

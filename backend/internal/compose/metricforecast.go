@@ -292,6 +292,8 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 // reportingForecastBasis is what the landing and its range rest on, in the shape
 // GET /forecast gives the landing.
 func reportingForecastBasis(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, called *int64) *crmcontracts.ReportingForecastBasis {
+	// A deal with no rate is priced but left out of every total.
+	included := int64(readings.PricedCount - readings.FxMissingCount)
 	return &crmcontracts.ReportingForecastBasis{
 		Landing:        forecasting.LandingToWire(landing),
 		Period:         crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
@@ -299,6 +301,7 @@ func reportingForecastBasis(period forecasting.Period, readings forecasting.Read
 		EligibleCount:  int64(readings.EligibleCount),
 		PricedCount:    int64(readings.PricedCount),
 		FxMissingCount: int64(readings.FxMissingCount),
+		IncludedCount:  &included,
 	}
 }
 

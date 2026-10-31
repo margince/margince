@@ -274,7 +274,7 @@ function SalesReviewBody({
         catalog={catalog}
         scope={selection.scope}
         pipelineId={selection.pipeline_id}
-        after={checks.state}
+        after={checks.state === "not_permitted" ? "ready" : checks.state}
       />
       <OverviewLinks
         dials={doors}

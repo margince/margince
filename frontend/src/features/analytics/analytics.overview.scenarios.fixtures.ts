@@ -222,7 +222,7 @@ export const OVERVIEW_SCENARIOS = {
             metric("forecast_landing", 0, {
               forecast_basis: landingBasis(
                 { won: 0, remaining: 0 },
-                { eligible_count: 0, priced_count: 0 },
+                { eligible_count: 0, priced_count: 0, included_count: 0 },
               ),
               range_low_minor: 0,
               range_high_minor: 0,
@@ -562,6 +562,7 @@ export const OVERVIEW_SCENARIOS = {
                   call_minor: 190_000_000,
                   eligible_count: 12,
                   priced_count: 11,
+                  included_count: 11,
                 },
               ),
               range_low_minor: 140_000_000,

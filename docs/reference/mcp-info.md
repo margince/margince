@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 156.7 KB |
+| Tool catalog | 157.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41439 |
+| Approx. wire tokens | 41659 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 47.0 KB | 30% | **No**: a result's shape, never listed to a model |
+| Output schemas | 47.9 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
 | Input schemas | 65.5 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.4 KB** | **64%** | **the recurring cost** |
+| **Description + input schema** | **100.4 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -7617,6 +7617,21 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
               "currency": {
                 "type": "string"
               },
+              "destination": {
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "screen": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "screen"
+                ],
+                "type": "object"
+              },
               "first_seen_at": {
                 "type": "string"
               },
@@ -7734,6 +7749,67 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "fx_missing_count": {
           "type": "integer"
+        },
+        "groups": {
+          "items": {
+            "properties": {
+              "deals": {
+                "type": "integer"
+              },
+              "destination": {
+                "properties": {
+                  "mode": {
+                    "type": "string"
+                  },
+                  "screen": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "screen"
+                ],
+                "type": "object"
+              },
+              "exposure": {
+                "items": {
+                  "properties": {
+                    "amount_minor": {
+                      "type": "integer"
+                    },
+                    "currency": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "amount_minor",
+                    "currency"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "findings": {
+                "type": "integer"
+              },
+              "other_findings": {
+                "type": "integer"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "deals",
+              "destination",
+              "exposure",
+              "findings",
+              "other_findings",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "landing": {
           "properties": {
@@ -7901,6 +7977,25 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "timezone": {
           "type": "string"
+        },
+        "totals": {
+          "properties": {
+            "deals": {
+              "type": "integer"
+            },
+            "findings": {
+              "type": "integer"
+            },
+            "other_findings": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "deals",
+            "findings",
+            "other_findings"
+          ],
+          "type": "object"
         },
         "weighted_minor": {
           "type": "integer"

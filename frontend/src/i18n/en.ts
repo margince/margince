@@ -19364,7 +19364,7 @@ export const en = {
   "analytics.decision.composition": "What the expected finish is made of",
   "analytics.decision.won": "Won",
   "analytics.decision.included":
-    "Counts {priced} of the {eligible} open deals the forecast considered.",
+    "Counts {included} of the {eligible} open deals the forecast considered.",
   "analytics.decision.excluded": "Left out: {parts}.",
   "analytics.decision.unpriced_one": "{count} deal with no amount",
   "analytics.decision.unpriced_other": "{count} deals with no amount",
@@ -19381,6 +19381,8 @@ export const en = {
   "reporting.writtenChecksOnly_other": "{count} open checks need an answer.",
   "reporting.writtenChecksDeals_one": "{count} deal",
   "reporting.writtenChecksDeals_other": "{count} deals",
+  "analytics.intervention.notPermitted":
+    "Forecast checks are not available to you.",
 } as const;
 
 export type MessageKey = keyof typeof en;

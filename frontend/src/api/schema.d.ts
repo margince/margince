@@ -41490,6 +41490,11 @@ export interface components {
              * @description Priced deals with no exchange rate to the base currency, left out of every total.
              */
             fx_missing_count: number;
+            /**
+             * Format: int64
+             * @description The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
+             */
+            included_count?: number;
         };
         /**
          * @description Coverage over the deals the qualified forecast keeps, beside the
@@ -85037,8 +85042,8 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["InputCheck"][];
                         /** @description The same findings grouped by type, in the order each type first appears in `data`. Counted over the whole list this caller may see, never a page of it. */
-                        groups?: components["schemas"]["InputCheckGroup"][];
-                        totals?: components["schemas"]["InputCheckTotals"];
+                        groups: components["schemas"]["InputCheckGroup"][];
+                        totals: components["schemas"]["InputCheckTotals"];
                     };
                 };
             };

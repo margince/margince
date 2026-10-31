@@ -19553,7 +19553,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Woraus sich der erwartete Abschluss zusammensetzt",
   "analytics.decision.won": "Gewonnen",
   "analytics.decision.included":
-    "Zählt {priced} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
+    "Zählt {included} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
   "analytics.decision.excluded": "Nicht enthalten: {parts}.",
   "analytics.decision.unpriced_one": "{count} Deal ohne Betrag",
   "analytics.decision.unpriced_other": "{count} Deals ohne Betrag",
@@ -19572,4 +19572,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} offene Prüfungen brauchen eine Antwort.",
   "reporting.writtenChecksDeals_one": "{count} Deal",
   "reporting.writtenChecksDeals_other": "{count} Deals",
+  "analytics.intervention.notPermitted":
+    "Prognoseprüfungen stehen dir nicht zur Verfügung.",
 };

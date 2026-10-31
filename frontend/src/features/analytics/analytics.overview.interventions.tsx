@@ -38,7 +38,9 @@ export const INTERVENTIONS_ID = "analytics-interventions";
 export type Interventions = Readonly<{
   // The whole list the reader may see, with the server's groups and totals.
   list: CheckList | undefined;
-  state: AttentionState;
+  // `not_permitted`: the reader may not read forecast checks, so nothing is
+  // known about them, which is different from none being open.
+  state: AttentionState | "not_permitted";
   // Sources the last check could not read: maintenance, never a sales row.
   unreadSources: number;
 }>;
@@ -60,7 +62,9 @@ export function useInterventions(scope: AnalyticsScope): Interventions {
     // A disabled query still hands back what it cached, so a grant withdrawn
     // mid-session is checked here as well as at the request.
     list: canReadForecast ? checks.data : undefined,
-    state: attentionState(canReadForecast, checks),
+    state: canReadForecast
+      ? attentionState(canReadForecast, checks)
+      : "not_permitted",
     unreadSources: unread.length,
   };
 }
@@ -104,7 +108,12 @@ export function InterventionPanel({
         <PanelBody>
           {/* The checks read every pipeline and close date of the scope. */}
           <p className="t-caption">{t("analytics.intervention.scope")}</p>
-          {findings.length === 0 && (
+          {state === "not_permitted" && (
+            <p className="t-caption">
+              {t("analytics.intervention.notPermitted")}
+            </p>
+          )}
+          {findings.length === 0 && state !== "not_permitted" && (
             <SurfaceState
               state={
                 state === "pending"

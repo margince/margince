@@ -19031,7 +19031,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.decision.composition": "Kết quả dự kiến gồm những gì",
   "analytics.decision.won": "Đã thắng",
   "analytics.decision.included":
-    "Tính {priced} trong {eligible} deal đang mở mà dự báo đã xét.",
+    "Tính {included} trong {eligible} deal đang mở mà dự báo đã xét.",
   "analytics.decision.excluded": "Không tính: {parts}.",
   "analytics.decision.unpriced_one": "{count} deal không có giá trị",
   "analytics.decision.unpriced_other": "{count} deal không có giá trị",
@@ -19048,4 +19048,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.writtenChecksOnly_other": "{count} kiểm tra đang mở cần trả lời.",
   "reporting.writtenChecksDeals_one": "{count} deal khác nhau",
   "reporting.writtenChecksDeals_other": "{count} deal khác nhau",
+  "analytics.intervention.notPermitted":
+    "Bạn không có quyền xem các kiểm tra dự báo.",
 };

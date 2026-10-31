@@ -52709,6 +52709,9 @@ type ReportingForecastBasis struct {
 	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
 	FxMissingCount int64 `json:"fx_missing_count"`
 
+	// IncludedCount The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
+	IncludedCount *int64 `json:"included_count,omitempty"`
+
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`

@@ -7822,7 +7822,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, groups, totals]
                 properties:
                   data:
                     type: array
@@ -19397,6 +19397,12 @@ components:
           format: int64
           minimum: 0
           description: Priced deals with no exchange rate to the base currency, left out of every total.
+        included_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
     ReportingQualifiedCoverage:
       type: object
       additionalProperties: false
