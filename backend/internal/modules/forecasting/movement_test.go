@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 )
@@ -119,6 +120,33 @@ func TestAStageWeightChangeMovesTheWeightedReading(t *testing.T) {
 		t.Errorf("a probability change landed in %q, want %q", got, BucketStageWeight)
 	}
 	reconciles(t, m)
+}
+
+// A chance that moves while the deal stays in its stage is the record moving,
+// not a stage move; so is a risk effect that moves on its own.
+func TestAChanceMovedWithoutAStageMoveIsARecordChange(t *testing.T) {
+	t.Parallel()
+	was := open("d1", 10_000)
+	was.StageID = "s1"
+	moved := was
+	moved.StageProbability, moved.WeightedMinor = 62, 6_200
+	half := 0.5
+	risky := was
+	risky.Effect, risky.WeightedMinor = &half, 3_300
+	for name, now := range map[string]Contribution{"chance": moved, "effect": risky} {
+		m := Classify(ReadingWeighted, side(DefinitionVersion, was), side(DefinitionVersion, now))
+		row := bucketOf(t, m, "d1")
+		if row.Bucket != BucketRecordChanged || !slices.Contains(row.Causes, BucketRecordChanged) {
+			t.Errorf("%s: bucket %q causes %v, want %q", name, row.Bucket, row.Causes, BucketRecordChanged)
+		}
+		reconciles(t, m)
+	}
+	staged := moved
+	staged.StageID = "s2"
+	m := Classify(ReadingWeighted, side(DefinitionVersion, was), side(DefinitionVersion, staged))
+	if got := bucketOf(t, m, "d1").Bucket; got != BucketStageWeight {
+		t.Errorf("a stage move landed in %q, want %q", got, BucketStageWeight)
+	}
 }
 
 // The escape cases. Each one silently breaks the identity if it is not handled,
@@ -274,7 +302,7 @@ func TestEveryBucketNameIsDrawn(t *testing.T) {
 	}
 	for _, name := range []string{
 		BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-		BucketStageWeight, BucketWon, BucketLost, BucketArchived, BucketFx,
+		BucketStageWeight, BucketRecordChanged, BucketWon, BucketLost, BucketArchived, BucketFx,
 		BucketDefinition, BucketModel,
 	} {
 		if !drawn[name] {

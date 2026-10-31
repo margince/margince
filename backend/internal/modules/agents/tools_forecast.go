@@ -33,6 +33,8 @@ type ForecastRequest struct {
 	AsOf      string   `json:"as_of"`
 	ScopeKind string   `json:"scope_kind"`
 	ScopeID   ids.UUID `json:"scope_id"`
+	// Contributions asks for the per-deal rows behind the readings.
+	Contributions bool `json:"contributions"`
 }
 
 // ForecastReader answers the readings for one period and scope, shaped as the
@@ -60,7 +62,8 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
 			"as_of":{"type":"string","format":"date","description":"Which period to read, by naming a day inside it. Omit for the current one."},
 			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Whose forecast. Omit for this caller's own default population; a wider one is refused."},
-			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject."}},
+			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject."},
+			"contributions":{"type":"boolean","description":"Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastReadingsResult](),
 	}
@@ -128,6 +131,33 @@ type ForecastReadingsResult struct {
 	// reviews, which means no qualified reading exists, not that it equals the
 	// figures above.
 	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+
+	// SelfCorrecting says whether chances moved with recorded outcomes.
+	SelfCorrecting *bool `json:"self_correcting,omitempty"`
+	// Contributions are the per-deal rows, present only when asked for.
+	Contributions []ForecastContributionResult `json:"contributions,omitempty"`
+}
+
+// ForecastContributionResult mirrors one ForecastContribution on GET /forecast.
+type ForecastContributionResult struct {
+	DealID             string   `json:"deal_id"`
+	DealName           string   `json:"deal_name"`
+	OwnerID            *string  `json:"owner_id,omitempty"`
+	StageID            *string  `json:"stage_id,omitempty"`
+	Category           *string  `json:"category,omitempty"`
+	BaseMinor          *int64   `json:"base_minor,omitempty"`
+	ExclusionReason    *string  `json:"exclusion_reason,omitempty"`
+	WeightedMinor      int64    `json:"weighted_minor"`
+	InWon              bool     `json:"in_won"`
+	InOpen             bool     `json:"in_open"`
+	InEvidence         bool     `json:"in_evidence"`
+	InBestCase         bool     `json:"in_best_case"`
+	TypedProbability   *int     `json:"typed_probability,omitempty"`
+	ChanceInUse        int      `json:"chance_in_use"`
+	EvidenceN          *int     `json:"evidence_n,omitempty"`
+	Signals            []string `json:"signals"`
+	Effect             *float64 `json:"effect,omitempty"`
+	AppliedProbability int      `json:"applied_probability"`
 }
 
 // ForecastQualifiedResult mirrors the qualified readings on GET /forecast.

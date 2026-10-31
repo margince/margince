@@ -219,9 +219,9 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
 	return forecasting.NewHandlers(
 		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
+		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
-	).WithCallBaseline(ForecastCallBaseline)
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances)
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {

@@ -2067,6 +2067,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",

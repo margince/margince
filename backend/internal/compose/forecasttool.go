@@ -72,17 +72,20 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			deals, resolved, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+			assembly, err := ForecastAssemble(ctx, tx, period, scope, at, baseCurrency)
 			if err != nil {
 				return err
 			}
-			readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-			if err != nil {
-				return err
-			}
+			resolved := assembly.Scope
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
-			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
+			out = forecastToolResult(period, resolved, assembly.Readings, baseCurrency, at, assembly.Limited)
+			out.SelfCorrecting = &assembly.SelfCorrecting
+			if req.Contributions {
+				if out.Contributions, err = forecastContributionsToTool(assembly.Readings.Contributions); err != nil {
+					return err
+				}
+			}
 			mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
 			if err != nil {
 				return err
@@ -194,6 +197,20 @@ func forecastToolResult(
 		}
 	}
 	return out
+}
+
+// forecastContributionsToTool renders the per-deal rows through the HTTP
+// door's own renderer, so the tool and the endpoint return the same rows.
+func forecastContributionsToTool(in []forecasting.Contribution) ([]agents.ForecastContributionResult, error) {
+	encoded, err := json.Marshal(forecasting.ContributionsToWire(in))
+	if err != nil {
+		return nil, fmt.Errorf("compose: rendering the forecast contributions: %w", err)
+	}
+	out := []agents.ForecastContributionResult{}
+	if err := json.Unmarshal(encoded, &out); err != nil {
+		return nil, fmt.Errorf("compose: rendering the forecast contributions: %w", err)
+	}
+	return out, nil
 }
 
 // forecastSnapshotRefsToTool renders the period's snapshot handles. Empty, never

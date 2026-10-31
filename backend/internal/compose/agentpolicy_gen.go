@@ -420,6 +420,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/forecast/shared/{token}":                                       {Op: "openForecastShare", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/forecast/shared/{token}/export.csv":                            {Op: "exportForecastShare", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/forecast/shares":                                               {Op: "listForecastShares", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/forecast/stage-chances":                                        {Op: "getForecastStageChances", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/fx-rates":                                                      {Op: "listFxRates", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/fx-rates/currencies":                                           {Op: "listFxRateCurrencies", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/imports":                                                       {Op: "listImportRuns", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

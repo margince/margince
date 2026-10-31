@@ -199,17 +199,14 @@ func (h analyticsShareHandlers) serveLive(
 	// the resolver hands it straight back. Taking the returned one anyway keeps
 	// one answer to "which population" rather than two spellings that could
 	// drift.
-	deals, resolved, limited, err := ForecastDeals(ctx, tx, period, share.Scope, at, baseCurrency)
+	assembly, err := ForecastAssemble(ctx, tx, period, share.Scope, at, baseCurrency)
 	if err != nil {
 		return err
 	}
-	share.Scope = resolved
-	readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-	if err != nil {
-		return err
-	}
-	out.Readings = forecasting.ReadingsToWire(period, share.Scope, readings, baseCurrency, at)
-	out.Withheld = limited
+	share.Scope = assembly.Scope
+	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
+	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
+	out.Withheld = assembly.Limited
 	return nil
 }
 

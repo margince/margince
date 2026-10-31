@@ -1301,6 +1301,14 @@
           ],
           "default": "commit_evidence"
         },
+        "forecast_self_correcting": {
+          "description": "Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "geocode_backfill_interval_seconds": {
           "description": "Seconds between the sweeps that add missing map points, or 0 for off.",
           "type": [

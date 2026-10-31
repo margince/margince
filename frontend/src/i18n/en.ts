@@ -1989,6 +1989,7 @@ export const en = {
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
+  "systemJob.forecast_chances": "Forecast stage rates",
   "systemJob.assurance_freshness": "Forecast check freshness",
   "systemJob.forecast_call_baseline": "Forecast call baseline",
   "systemJob.ai_activity": "AI activity record",

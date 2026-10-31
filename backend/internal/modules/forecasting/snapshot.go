@@ -40,7 +40,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v2"
+const DefinitionVersion = "forecast_v3"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -73,6 +73,19 @@ type NewSnapshot struct {
 	// QualifiedPolicyVersion is the viability policy the qualified readings
 	// applied, empty while qualification was off.
 	QualifiedPolicyVersion string
+	// SelfCorrecting, EvidenceCutoff and RiskSignalsVersion are the basis the
+	// chances stood on. A nil SelfCorrecting stores NULL: not recorded.
+	SelfCorrecting     *bool
+	EvidenceCutoff     *time.Time
+	RiskSignalsVersion string
+}
+
+// StampChances records on a snapshot the basis its readings' chances stood on.
+// Every snapshot writer calls it with the assembly its readings came from.
+func (s *NewSnapshot) StampChances(from Assembly) {
+	s.SelfCorrecting = new(from.SelfCorrecting)
+	s.EvidenceCutoff = new(from.EvidenceCutoff)
+	s.RiskSignalsVersion = from.RiskSignalsVersion
 }
 
 // TakeSnapshot freezes one set of readings, with the rows they were summed
@@ -168,6 +181,7 @@ func (s *Store) writeContributions(
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"qualification", "audit_id", "approval_id", "captured_by",
+			"typed_probability", "evidence_n", "risk_signals", "risk_effect",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -203,6 +217,7 @@ func (s *Store) writeContributions(
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
+				row.TypedProbability, row.EvidenceN, row.Signals, row.Effect,
 			}, nil
 		}))
 	if err != nil {
@@ -290,7 +305,8 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
 		       effective_close_date, close_provisional, category, stage_probability,
 		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
-		       exclusion_reason, qualification, audit_id, approval_id
+		       exclusion_reason, qualification, audit_id, approval_id,
+		       stage_id, typed_probability, evidence_n, risk_signals, risk_effect
 		FROM forecast_contribution
 		WHERE snapshot_id = $1
 		ORDER BY deal_id`, id)
@@ -306,10 +322,15 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		var currency, category, exclusion, qualification *string
 		var probability *int
 		var weighted *int64
+		var stage *ids.UUID
 		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
 			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
-			&exclusion, &qualification, &c.AuditID, &c.ApprovalID)
+			&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
+			&stage, &c.TypedProbability, &c.EvidenceN, &c.Signals, &c.Effect)
+		if stage != nil {
+			c.StageID = stage.String()
+		}
 		c.DealID = dealID.String()
 		if owner != nil {
 			c.Owner = owner.String()

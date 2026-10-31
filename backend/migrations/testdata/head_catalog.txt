@@ -4586,9 +4586,12 @@ public.forecast_contribution.created_at timestamp with time zone NOT NULL gen=- 
 public.forecast_contribution.currency currency_code gen=- def=-
 public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
+public.forecast_contribution.evidence_n integer gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
+public.forecast_contribution.forecast_contribution_base_minor_js_safe CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))
+public.forecast_contribution.forecast_contribution_evidence_n_is_a_tally CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
@@ -4596,7 +4599,10 @@ public.forecast_contribution.forecast_contribution_probability_is_a_percent CHEC
 public.forecast_contribution.forecast_contribution_qualification_check CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible'::text, 'excluded'::text, 'unsupported'::text, 'unknown'::text]))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_risk_effect_positive CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_risk_signals_known CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed'::text, 'no_next_step'::text, 'quiet'::text, 'stuck'::text])))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.forecast_contribution.forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))
 public.forecast_contribution.forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
@@ -4610,9 +4616,12 @@ public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.qualification text gen=- def=-
+public.forecast_contribution.risk_effect numeric gen=- def=-
+public.forecast_contribution.risk_signals text[] gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
+public.forecast_contribution.typed_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
 public.forecast_contribution.version bigint NOT NULL gen=- def=1
@@ -4633,6 +4642,7 @@ public.forecast_snapshot.confirmed_date_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.evidence_cutoff timestamp with time zone gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
@@ -4646,6 +4656,7 @@ public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipelin
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
 public.forecast_snapshot.forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
+public.forecast_snapshot.forecast_snapshot_risk_signals_version_present CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text])))
@@ -4664,8 +4675,10 @@ public.forecast_snapshot.pipeline_id uuid gen=- def=-
 public.forecast_snapshot.population_fingerprint text NOT NULL gen=- def=''::text
 public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.qualified_policy_version text gen=- def=-
+public.forecast_snapshot.risk_signals_version text gen=- def=-
 public.forecast_snapshot.scope_id uuid gen=- def=-
 public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-
+public.forecast_snapshot.self_correcting boolean gen=- def=-
 public.forecast_snapshot.taken_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_snapshot.trigger text NOT NULL gen=- def=-
 public.forecast_snapshot.updated_at timestamp with time zone NOT NULL gen=- def=now()

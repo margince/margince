@@ -11302,6 +11302,48 @@ func (e ForecastCallScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastContributionExclusionReason.
+const (
+	ForecastContributionExclusionReasonFxMissing ForecastContributionExclusionReason = "fx_missing"
+	ForecastContributionExclusionReasonUnpriced  ForecastContributionExclusionReason = "unpriced"
+)
+
+// Valid indicates whether the value is a known member of the ForecastContributionExclusionReason enum.
+func (e ForecastContributionExclusionReason) Valid() bool {
+	switch e {
+	case ForecastContributionExclusionReasonFxMissing:
+		return true
+	case ForecastContributionExclusionReasonUnpriced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastContributionSignals.
+const (
+	ForecastContributionSignalsClosePushed ForecastContributionSignals = "close_pushed"
+	ForecastContributionSignalsNoNextStep  ForecastContributionSignals = "no_next_step"
+	ForecastContributionSignalsQuiet       ForecastContributionSignals = "quiet"
+	ForecastContributionSignalsStuck       ForecastContributionSignals = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastContributionSignals enum.
+func (e ForecastContributionSignals) Valid() bool {
+	switch e {
+	case ForecastContributionSignalsClosePushed:
+		return true
+	case ForecastContributionSignalsNoNextStep:
+		return true
+	case ForecastContributionSignalsQuiet:
+		return true
+	case ForecastContributionSignalsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
@@ -11376,6 +11418,7 @@ const (
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
+	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -11402,6 +11445,8 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
+	case ForecastMovementBucketNameRecordChanged:
+		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
 	case ForecastMovementBucketNameStageWeight:
@@ -11423,6 +11468,7 @@ const (
 	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
 	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
 	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
+	ForecastMovementDealCausesRecordChanged      ForecastMovementDealCauses = "record_changed"
 	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
 	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
 	ForecastMovementDealCausesWon                ForecastMovementDealCauses = "won"
@@ -11446,6 +11492,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesPushedOut:
 		return true
 	case ForecastMovementDealCausesQualification:
+		return true
+	case ForecastMovementDealCausesRecordChanged:
 		return true
 	case ForecastMovementDealCausesReopenedOrArchived:
 		return true
@@ -42706,6 +42754,49 @@ type ForecastCallBaseline string
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
 
+// ForecastContribution One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
+type ForecastContribution struct {
+	// AppliedProbability The chance in use with `effect` applied to its odds, in percent.
+	AppliedProbability int `json:"applied_probability"`
+
+	// BaseMinor The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+	BaseMinor *int64  `json:"base_minor,omitempty"`
+	Category  *string `json:"category,omitempty"`
+
+	// ChanceInUse The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
+	ChanceInUse int                `json:"chance_in_use"`
+	DealId      openapi_types.UUID `json:"deal_id"`
+	DealName    string             `json:"deal_name"`
+
+	// Effect The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+	Effect *float64 `json:"effect,omitempty"`
+
+	// EvidenceN How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
+	EvidenceN *int `json:"evidence_n,omitempty"`
+
+	// ExclusionReason Why a deal in the reading contributes no money.
+	ExclusionReason *ForecastContributionExclusionReason `json:"exclusion_reason,omitempty"`
+	InBestCase      bool                                 `json:"in_best_case"`
+	InEvidence      bool                                 `json:"in_evidence"`
+	InOpen          bool                                 `json:"in_open"`
+	InWon           bool                                 `json:"in_won"`
+	OwnerId         *openapi_types.UUID                  `json:"owner_id,omitempty"`
+
+	// Signals Risk signals on an open deal: the close date moved more than twice in 90 days, no next step, the customer quiet past the viability threshold, or longer in the stage than nine in ten won deals stayed. Empty while self-correction is off.
+	Signals []ForecastContributionSignals `json:"signals"`
+	StageId *openapi_types.UUID           `json:"stage_id,omitempty"`
+
+	// TypedProbability The chance typed on the deal's stage, in percent.
+	TypedProbability *int  `json:"typed_probability,omitempty"`
+	WeightedMinor    int64 `json:"weighted_minor"`
+}
+
+// ForecastContributionExclusionReason Why a deal in the reading contributes no money.
+type ForecastContributionExclusionReason string
+
+// ForecastContributionSignals defines model for ForecastContribution.Signals.
+type ForecastContributionSignals string
+
 // ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
 type ForecastEnforcementPreview struct {
 	// Digest Names the policy version and every open deal's treatment this preview counted.
@@ -42763,12 +42854,14 @@ type ForecastMovementReading string
 
 // ForecastMovementBucket defines model for ForecastMovementBucket.
 type ForecastMovementBucket struct {
-	AmountMinor int64                      `json:"amount_minor"`
-	DealCount   int                        `json:"deal_count"`
-	Name        ForecastMovementBucketName `json:"name"`
+	AmountMinor int64 `json:"amount_minor"`
+	DealCount   int   `json:"deal_count"`
+
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName defines model for ForecastMovementBucket.Name.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -42816,11 +42909,14 @@ type ForecastQualifiedReadings struct {
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
-	AsOf               time.Time     `json:"as_of"`
-	BaseCurrency       string        `json:"base_currency"`
-	BestCaseMinor      int64         `json:"best_case_minor"`
-	ConfirmedDateCount int           `json:"confirmed_date_count"`
-	CurrentCall        *ForecastCall `json:"current_call,omitempty"`
+	AsOf               time.Time `json:"as_of"`
+	BaseCurrency       string    `json:"base_currency"`
+	BestCaseMinor      int64     `json:"best_case_minor"`
+	ConfirmedDateCount int       `json:"confirmed_date_count"`
+
+	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
+	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
+	CurrentCall   *ForecastCall           `json:"current_call,omitempty"`
 
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
@@ -42856,6 +42952,9 @@ type ForecastReadings struct {
 
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
+
+	// SelfCorrecting Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed.
+	SelfCorrecting *bool `json:"self_correcting,omitempty"`
 
 	// Snapshots The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
 	Snapshots *[]ForecastSnapshotRef `json:"snapshots,omitempty"`
@@ -42910,6 +43009,32 @@ type ForecastSnapshotRef struct {
 
 // ForecastSnapshotRefTrigger Why it was taken.
 type ForecastSnapshotRefTrigger string
+
+// ForecastStageChance defines model for ForecastStageChance.
+type ForecastStageChance struct {
+	ChanceInUse int `json:"chance_in_use"`
+
+	// EvidenceN Recorded entries into this stage that have closed won or lost.
+	EvidenceN        int                `json:"evidence_n"`
+	StageId          openapi_types.UUID `json:"stage_id"`
+	TypedProbability int                `json:"typed_probability"`
+
+	// WonPercent The estimated share of those deals that end won. Absent when none closed.
+	WonPercent *int `json:"won_percent,omitempty"`
+}
+
+// ForecastStageChances defines model for ForecastStageChances.
+type ForecastStageChances struct {
+	// EvidenceCutoff The start of today in the installation's zone. No outcome after it counts.
+	EvidenceCutoff time.Time `json:"evidence_cutoff"`
+
+	// PriorStrength How many closed deals the typed chance counts as.
+	PriorStrength int `json:"prior_strength"`
+
+	// SelfCorrecting The installation setting `forecast_self_correcting`. False means every chance in use is the typed one.
+	SelfCorrecting bool                  `json:"self_correcting"`
+	Stages         []ForecastStageChance `json:"stages"`
+}
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
@@ -44632,6 +44757,14 @@ type InstallationSettings struct {
 	// added to what is already won; with no current call the read falls back to
 	// `commit_evidence` and says so in the landing's `caveat`.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
+
+	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
+	// toward the outcomes of deals recorded entering it in the last two years, weighted
+	// against the typed chance as if that were 20 deals; imported and older moves without
+	// a recorded origin count for nothing. A risk signal changes a deal's weight only
+	// after settled frozen forecasts show its effect. Off, every forecast surface weights
+	// a deal by its stage's typed chance.
+	ForecastSelfCorrecting bool `json:"forecast_self_correcting"`
 
 	// IndividualPerformance Show individual performance. On by default. Off, reports, analytics questions,
 	// forecasts and forecast shares, targets, evidence, editions and their exports, and
@@ -57036,6 +57169,9 @@ type UpdateInstallationSettingsRequest struct {
 	// at once and re-means no stored row.
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
 
+	// ForecastSelfCorrecting Let the forecast correct itself. Omit to leave it unchanged. Each change is audited.
+	ForecastSelfCorrecting *bool `json:"forecast_self_correcting,omitempty"`
+
 	// GeocodeBackfillIntervalSeconds Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.
 	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty"`
 
@@ -64845,6 +64981,9 @@ type GetForecastParams struct {
 
 	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Contributions Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
+	Contributions *bool `form:"contributions,omitempty" json:"contributions,omitempty"`
 }
 
 // GetForecastParamsPeriod defines parameters for GetForecast.
@@ -82824,6 +82963,9 @@ type ServerInterface interface {
 	// Close a share link before it expires.
 	// (DELETE /forecast/shares/{id})
 	RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The chance the forecast uses for each open stage, and the evidence behind it.
+	// (GET /forecast/stage-chances)
+	GetForecastStageChances(w http.ResponseWriter, r *http.Request)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -87306,6 +87448,12 @@ func (_ Unimplemented) CreateForecastShare(w http.ResponseWriter, r *http.Reques
 // Close a share link before it expires.
 // (DELETE /forecast/shares/{id})
 func (_ Unimplemented) RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The chance the forecast uses for each open stage, and the evidence behind it.
+// (GET /forecast/stage-chances)
+func (_ Unimplemented) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112070,6 +112218,19 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "contributions" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contributions", r.URL.Query(), &params.Contributions, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contributions"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contributions", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecast(w, r, params)
 	}))
@@ -112627,6 +112788,26 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RevokeForecastShare(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastStageChances operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastStageChances(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132945,6 +133126,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/forecast/shares/{id}", wrapper.RevokeForecastShare)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/stage-chances", wrapper.GetForecastStageChances)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)

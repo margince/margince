@@ -70,7 +70,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-28 columns · primary key `(id)` · referenced by 0 foreign keys
+32 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -78,13 +78,14 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `amount_minor` | `bigint` |  |  |
 | `approval_id` | `uuid` |  |  |
 | `audit_id` | `uuid` |  |  |
-| `base_minor` | `bigint` |  |  |
+| `base_minor` | `bigint` |  | The deal's amount in the base currency. |
 | `category` | `text` |  |  |
 | `close_provisional` | `boolean`, default `false` | yes |  |
 | `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes |  |
 | `effective_close_date` | `date` |  |  |
-| `exclusion_reason` | `text` |  | One of `unpriced`, `fx_missing`, `out_of_period`, `not_eligible`. |
+| `evidence_n` | `integer` |  | How many recorded deals that entered this stage in the last two years have closed. |
+| `exclusion_reason` | `text` |  | Why a deal in the reading contributes no money. |
 | `fx_date` | `date` |  |  |
 | `fx_rate` | `numeric(20,10)` |  |  |
 | `in_best_case` | `boolean`, default `false` | yes |  |
@@ -94,9 +95,12 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `in_won` | `boolean`, default `false` | yes |  |
 | `owner_id` | `uuid` |  |  |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
+| `risk_effect` | `numeric` |  |  |
+| `risk_signals` | `text[]` |  |  |
 | `snapshot_id` | `uuid` | yes | Points at `forecast_snapshot.id`. |
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
+| `typed_probability` | `integer` |  | The chance typed on the deal's stage, in percent. |
 | `weighted_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -113,11 +117,16 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 - `forecast_contribution_amount_currency_pair`: `CHECK (((amount_minor IS NULL) = (currency IS NULL)))`
 - `forecast_contribution_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
+- `forecast_contribution_base_minor_js_safe`: `CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))`
+- `forecast_contribution_evidence_n_is_a_tally`: `CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))`
 - `forecast_contribution_exclusion_reason_check`: `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
 - `forecast_contribution_probability_is_a_percent`: `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
 - `forecast_contribution_qualification_check`: `CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible', 'excluded', 'unsupported', 'unknown']))))`
 - `forecast_contribution_rate_dated`: `CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))`
 - `forecast_contribution_rate_positive`: `CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))`
+- `forecast_contribution_risk_effect_positive`: `CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric)))`
+- `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
+- `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base`: `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
@@ -136,7 +145,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-29 columns · primary key `(id)` · referenced by 2 foreign keys
+32 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -147,6 +156,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
 | `eligible_count` | `integer` | yes |  |
+| `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
 | `forward_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
 | `fx_missing_count` | `integer` | yes |  |
@@ -159,8 +169,10 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `population_fingerprint` | `text`, default `''::text` | yes |  |
 | `priced_count` | `integer` | yes |  |
 | `qualified_policy_version` | `text` |  |  |
+| `risk_signals_version` | `text` |  |  |
 | `scope_id` | `uuid` |  |  |
 | `scope_kind` | `text` | yes | One of `workspace`, `team`, `owner`. |
+| `self_correcting` | `boolean` |  |  |
 | `taken_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `trigger` | `text` | yes | One of `daily`, `call`, `period_close`, `recheck`. |
 | `weighted_minor` | `bigint` | yes |  |
@@ -187,6 +199,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_period_ordered`: `CHECK ((period_end >= period_start))`
 - `forecast_snapshot_qualified_policy_present`: `CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> '')))`
 - `forecast_snapshot_readings_not_negative`: `CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))`
+- `forecast_snapshot_risk_signals_version_present`: `CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> '')))`
 - `forecast_snapshot_scope_id_matches_kind`: `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_snapshot_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `forecast_snapshot_trigger_check`: `CHECK ((trigger = ANY (ARRAY['daily', 'call', 'period_close', 'recheck'])))`
