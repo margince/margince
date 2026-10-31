@@ -31,7 +31,12 @@ type ScoreRow = Readonly<{
 export function ScorecardPanel({
   scorecard,
   weekStart,
-}: Readonly<{ scorecard: Scorecard | undefined; weekStart: string }>) {
+  meetingsWithheld = false,
+}: Readonly<{
+  scorecard: Scorecard | undefined;
+  weekStart: string;
+  meetingsWithheld?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // A review written before scorecards existed carries none, and draws none.
@@ -40,7 +45,12 @@ export function ScorecardPanel({
   if (!lead && !deal) return null;
   const n = (value: number) => formatNumber(value, locale);
   const rows = [
-    ...(lead ? leadRows(lead, t, n) : []),
+    // A withheld meeting figure is a zero that says nothing, so its row goes.
+    ...(lead
+      ? leadRows(lead, t, n).filter(
+          (row) => !(meetingsWithheld && MEETING_ROWS.has(row.key)),
+        )
+      : []),
     ...(deal ? dealRows(deal, t, n) : []),
   ];
   return (
@@ -81,6 +91,8 @@ export function ScorecardPanel({
   );
 }
 
+const MEETING_ROWS = new Set(["meetings", "partial"]);
+
 function leadRows(
   block: LeadBlock,
   t: Translator,
@@ -100,24 +112,17 @@ function leadRows(
       value: n(block.breached),
       basis: responseBasis(block, t, n),
     },
-    // The meeting figures are absent together for a seat that may not read
-    // activities, and then no meeting row is drawn.
-    ...(block.meetings_held === undefined
-      ? []
-      : [
-          {
-            key: "meetings",
-            label: t("brief.weekly.scorecard.meetingsHeld"),
-            value: n(block.meetings_held),
-            basis: t("brief.weekly.scorecard.meetingsBasis", {
-              booked: n(block.meetings_booked ?? 0),
-              noShow: n(block.meetings_no_show ?? 0),
-            }),
-          },
-        ]),
+    {
+      key: "meetings",
+      label: t("brief.weekly.scorecard.meetingsHeld"),
+      value: n(block.meetings_held),
+      basis: t("brief.weekly.scorecard.meetingsBasis", {
+        booked: n(block.meetings_booked),
+        noShow: n(block.meetings_no_show),
+      }),
+    },
     // Only when non-zero: it says the counts above are a floor.
-    ...(block.meetings_partial_history !== undefined &&
-    block.meetings_partial_history > 0
+    ...(block.meetings_partial_history > 0
       ? [
           {
             key: "partial",

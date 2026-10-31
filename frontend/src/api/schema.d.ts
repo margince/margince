@@ -49532,6 +49532,12 @@ export interface components {
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in the team's counts and each member's row reads zero and says nothing,
+             *     and no member carries a meetings pattern. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             /** Format: uuid */
             id: string;
@@ -49650,10 +49656,8 @@ export interface components {
             leads_routed: number;
             leads_answered_in_target: number;
             leads_breached: number;
-            /** @description Absent when the seat may not read activities, since a meeting is an activity. */
-            meetings_held?: number;
-            /** @description Absent when the seat may not read activities, since a meeting is an activity. */
-            meetings_with_next_step?: number;
+            meetings_held: number;
+            meetings_with_next_step: number;
             commitments_due: number;
             commitments_kept: number;
         };
@@ -49665,8 +49669,7 @@ export interface components {
             display_name: string;
             deals_won: number;
             leads_breached: number;
-            /** @description Absent when the seat may not read activities, since a meeting is an activity. */
-            meetings_held?: number;
+            meetings_held: number;
             commitments_due: number;
             commitments_kept: number;
             /** @description Commitments they asked for help on. */
@@ -49884,19 +49887,17 @@ export interface components {
              *     never from its current status. A meeting booked Monday and held Friday counts in both
              *     this and `meetings_held`, which is what a funnel means; counting the current column
              *     would report no bookings at all for the week it was booked in.
-             *
-             *     Absent when the seat may not read activities, since a meeting is an activity. The three other meeting fields are absent with it.
              */
-            meetings_booked?: number;
-            meetings_held?: number;
-            meetings_no_show?: number;
+            meetings_booked: number;
+            meetings_held: number;
+            meetings_no_show: number;
             /**
              * @description Meetings whose only history row was invented from their current state when the history
              *     table was introduced. They cannot say when they were booked, so they are reported as
              *     partial coverage rather than counted. A non-zero value means the three counts above
              *     are a floor, and a reader should say so.
              */
-            meetings_partial_history?: number;
+            meetings_partial_history: number;
         };
         /** @description Whether deals moved forward, and whether they are in a state anybody could work. */
         WeeklyScorecardDealBlock: {
@@ -50006,6 +50007,12 @@ export interface components {
          *     which is why they are stored rather than recomputed.
          */
         WeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in this review, its prior week and its scorecard reads zero and says
+             *     nothing, and the narrative and learnings read as not run. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             /** Format: uuid */
             id: string;
             /**
@@ -50289,17 +50296,16 @@ export interface components {
             /** @description And the ones whose target ran out. */
             leads_breached: number;
             /**
-             * @description Meetings that actually happened. Absent when the seat may not read activities, since a meeting is an activity. A booking cancelled or no-showed is not a meeting the
+             * @description Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
              *     week can be judged by, and counting it would credit a conversation that never occurred.
              */
-            meetings_held?: number;
+            meetings_held: number;
             /**
              * @description Of those, meetings with a readable task explicitly linked through source_activity_id
              *     and created between the meeting and the week closing. Never greater than
              *     `meetings_held`. Missing linkage does not prove that no follow-up happened.
-             *     Absent with `meetings_held`.
              */
-            meetings_with_next_step?: number;
+            meetings_with_next_step: number;
         };
         /**
          * @description One deal the week is about, FROZEN. Every word was written when the review was, so a deal

@@ -77,16 +77,20 @@ describe("the weekly scorecard", () => {
     ).toBeTruthy();
   });
 
-  it("draws no meeting row for a seat that may not read activities", () => {
-    const {
-      meetings_booked,
-      meetings_held,
-      meetings_no_show,
-      meetings_partial_history,
-      ...withheld
-    } = leadBlock;
+  it("draws no meeting row when the review withholds the meetings", () => {
     render(
-      <ScorecardPanel scorecard={{ lead: withheld }} weekStart="2026-06-01" />,
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            meetings_booked: 0,
+            meetings_held: 0,
+            meetings_no_show: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+        meetingsWithheld
+      />,
     );
     expect(
       screen.queryByText(en["brief.weekly.scorecard.meetingsHeld"]),

@@ -336,27 +336,27 @@ function bothBlocks() {
   return { lead, deal };
 }
 
-// A seat that may not read activities. The server sends the lead block
-// without its meeting figures, and the panel draws no meeting row at all.
+// A seat that may not read activities. The server sends the meeting figures as
+// zeros and says they are withheld, so the panel draws no meeting row.
 export const ScorecardMeetingsWithheld: Story = {
-  render: () => {
-    const { lead, deal } = bothBlocks();
-    const {
-      meetings_booked: _booked,
-      meetings_held: _held,
-      meetings_no_show: _noShow,
-      meetings_partial_history: _partial,
-      ...withheld
-    } = lead;
-    return frozen(
-      <InTheWeeksPanel>
-        <ScorecardPanel
-          scorecard={{ lead: withheld, deal }}
-          weekStart="2026-06-01"
-        />
-      </InTheWeeksPanel>,
-    )();
-  },
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel
+        scorecard={{
+          ...bothBlocks(),
+          lead: {
+            ...bothBlocks().lead,
+            meetings_booked: 0,
+            meetings_held: 0,
+            meetings_no_show: 0,
+            meetings_partial_history: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+        meetingsWithheld
+      />
+    </InTheWeeksPanel>,
+  ),
 };
 
 // A clean week and an empty one. Every lead that arrived got a recorded first

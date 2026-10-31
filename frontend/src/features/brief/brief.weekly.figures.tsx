@@ -103,15 +103,15 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
       figure: "meetings",
       count: (c) => c.meetings_with_next_step,
       share: (c) => ({
-        filled: c.meetings_with_next_step ?? 0,
-        total: c.meetings_held ?? 0,
+        filled: c.meetings_with_next_step,
+        total: c.meetings_held,
       }),
       shown: (c) =>
         c.meetings_held === 0
           ? t("brief.weekly.noMeetings")
           : t("brief.weekly.ofMeetings", {
-              withStep: n(c.meetings_with_next_step ?? 0),
-              held: n(c.meetings_held ?? 0),
+              withStep: n(c.meetings_with_next_step),
+              held: n(c.meetings_held),
             }),
     },
     {
@@ -135,11 +135,14 @@ const HEADLINE = ["won", "commitments", "leads", "meetings"];
 
 /**
  * Only the figures the review carries. An older one has no tasks. One read by
- * a seat that may not read activities has no meetings.
+ * a seat that may not read activities has its meetings withheld, and their
+ * zeros say nothing.
  */
 function carried(review: WeeklyReview, t: Translator, locale: Locale) {
   return weekFigures(t, locale).filter(
-    (figure) => figure.count(review.counts) !== undefined,
+    (figure) =>
+      figure.count(review.counts) !== undefined &&
+      !(review.meetings_withheld && figure.figure === "meetings"),
   );
 }
 

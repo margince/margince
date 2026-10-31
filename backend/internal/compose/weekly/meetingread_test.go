@@ -43,12 +43,15 @@ func TestARepWeekWithoutActivityReadCarriesNoMeetingFigure(t *testing.T) {
 	review := repWeekWithMeetings()
 	withholdReviewMeetings(&review)
 	wire := reviewToWire(review)
-	if wire.Counts.MeetingsHeld != nil || wire.Counts.MeetingsWithNextStep != nil {
-		t.Errorf("the counts carry meetings %v and %v, want both absent",
+	if wire.MeetingsWithheld == nil || !*wire.MeetingsWithheld {
+		t.Error("the review does not say its meeting figures are withheld")
+	}
+	if wire.Counts.MeetingsHeld != 0 || wire.Counts.MeetingsWithNextStep != 0 {
+		t.Errorf("the counts carry meetings %d and %d, want both zero",
 			wire.Counts.MeetingsHeld, wire.Counts.MeetingsWithNextStep)
 	}
 	lead := wire.Scorecard.Lead
-	if lead.MeetingsBooked != nil || lead.MeetingsHeld != nil || lead.MeetingsNoShow != nil || lead.MeetingsPartialHistory != nil {
+	if lead.MeetingsBooked+lead.MeetingsHeld+lead.MeetingsNoShow+lead.MeetingsPartialHistory != 0 {
 		t.Errorf("the scorecard's lead block carries a meeting figure: %+v", lead)
 	}
 	if wire.Narrative != nil || wire.NarratedAt != nil {
@@ -73,12 +76,15 @@ func TestATeamWeekWithoutActivityReadCarriesNoMeetingFigureOrPattern(t *testing.
 	}
 	withholdTeamMeetings(&review)
 	wire := teamReviewToWire(review)
-	if wire.Counts.MeetingsHeld != nil || wire.Counts.MeetingsWithNextStep != nil || wire.Counts.DealsWon != 1 {
-		t.Errorf("team counts = %+v, want the meetings absent and deals won kept", wire.Counts)
+	if wire.MeetingsWithheld == nil || !*wire.MeetingsWithheld {
+		t.Error("the team week does not say its meeting figures are withheld")
+	}
+	if wire.Counts.MeetingsHeld != 0 || wire.Counts.MeetingsWithNextStep != 0 || wire.Counts.DealsWon != 1 {
+		t.Errorf("team counts = %+v, want the meetings zero and deals won kept", wire.Counts)
 	}
 	for _, rep := range wire.Reps {
-		if rep.MeetingsHeld != nil {
-			t.Errorf("%s carries %d meetings, want none", rep.DisplayName, *rep.MeetingsHeld)
+		if rep.MeetingsHeld != 0 {
+			t.Errorf("%s carries %d meetings, want none", rep.DisplayName, rep.MeetingsHeld)
 		}
 		for _, p := range rep.Patterns {
 			if string(p.Kind) == FocusMeetingsWithoutNextStep {

@@ -55998,12 +55998,8 @@ type TeamWeeklyCounts struct {
 	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
 	LeadsBreached         int `json:"leads_breached"`
 	LeadsRouted           int `json:"leads_routed"`
-
-	// MeetingsHeld Absent when the seat may not read activities, since a meeting is an activity.
-	MeetingsHeld *int `json:"meetings_held,omitempty"`
-
-	// MeetingsWithNextStep Absent when the seat may not read activities, since a meeting is an activity.
-	MeetingsWithNextStep *int `json:"meetings_with_next_step,omitempty"`
+	MeetingsHeld          int `json:"meetings_held"`
+	MeetingsWithNextStep  int `json:"meetings_with_next_step"`
 
 	// RepsCounted Members whose week was read and totalled.
 	RepsCounted int `json:"reps_counted"`
@@ -56121,9 +56117,7 @@ type TeamWeeklyRep struct {
 	// HelpRequested Commitments they asked for help on.
 	HelpRequested int `json:"help_requested"`
 	LeadsBreached int `json:"leads_breached"`
-
-	// MeetingsHeld Absent when the seat may not read activities, since a meeting is an activity.
-	MeetingsHeld *int `json:"meetings_held,omitempty"`
+	MeetingsHeld  int `json:"meetings_held"`
 
 	// Patterns Every rule that fired for this rep, in the order a lead raises them. The first is
 	// the focus. A snapshot frozen before the list existed reads its focus as the one
@@ -56172,6 +56166,11 @@ type TeamWeeklyReview struct {
 	GeneratedAt    time.Time          `json:"generated_at"`
 	Id             openapi_types.UUID `json:"id"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in the team's counts and each member's row reads zero and says nothing,
+	// and no member carries a meetings pattern. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
 
 	// Members Every live member of the team that week, including those whose own week could not be
 	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
@@ -58804,6 +58803,11 @@ type WeeklyReview struct {
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in this review, its prior week and its scorecard reads zero and says
+	// nothing, and the narrative and learnings read as not run. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
+
 	// NarratedAt When a narrative pass last ran, null when none has. A reader showing a review with
 	// no sentence must consult this before saying "a quiet week": without it, a week
 	// nobody narrated and a week with nothing to say look identical.
@@ -58895,15 +58899,14 @@ type WeeklyReviewCounts struct {
 	// LeadsRouted Inbound leads routed to this rep during the week.
 	LeadsRouted int `json:"leads_routed"`
 
-	// MeetingsHeld Meetings that actually happened. Absent when the seat may not read activities, since a meeting is an activity. A booking cancelled or no-showed is not a meeting the
+	// MeetingsHeld Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
 	// week can be judged by, and counting it would credit a conversation that never occurred.
-	MeetingsHeld *int `json:"meetings_held,omitempty"`
+	MeetingsHeld int `json:"meetings_held"`
 
 	// MeetingsWithNextStep Of those, meetings with a readable task explicitly linked through source_activity_id
 	// and created between the meeting and the week closing. Never greater than
 	// `meetings_held`. Missing linkage does not prove that no follow-up happened.
-	// Absent with `meetings_held`.
-	MeetingsWithNextStep *int `json:"meetings_with_next_step,omitempty"`
+	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
 	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
@@ -59207,18 +59210,16 @@ type WeeklyScorecardLeadBlock struct {
 	// never from its current status. A meeting booked Monday and held Friday counts in both
 	// this and `meetings_held`, which is what a funnel means; counting the current column
 	// would report no bookings at all for the week it was booked in.
-	//
-	// Absent when the seat may not read activities, since a meeting is an activity. The three other meeting fields are absent with it.
-	MeetingsBooked *int `json:"meetings_booked,omitempty"`
-	MeetingsHeld   *int `json:"meetings_held,omitempty"`
-	MeetingsNoShow *int `json:"meetings_no_show,omitempty"`
+	MeetingsBooked int `json:"meetings_booked"`
+	MeetingsHeld   int `json:"meetings_held"`
+	MeetingsNoShow int `json:"meetings_no_show"`
 
 	// MeetingsPartialHistory Meetings whose only history row was invented from their current state when the history
 	// table was introduced. They cannot say when they were booked, so they are reported as
 	// partial coverage rather than counted. A non-zero value means the three counts above
 	// are a floor, and a reader should say so.
-	MeetingsPartialHistory *int `json:"meetings_partial_history,omitempty"`
-	Promoted               int  `json:"promoted"`
+	MeetingsPartialHistory int `json:"meetings_partial_history"`
+	Promoted               int `json:"promoted"`
 }
 
 // WorkEvidenceBasis A recommendation's scoped source and classification. Known request kinds

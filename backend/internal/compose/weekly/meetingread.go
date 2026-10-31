@@ -53,11 +53,3 @@ func withholdTeamMeetings(review *TeamReview) {
 		rep.FocusKind, rep.FocusLabel = rep.Patterns[0].Kind, rep.Patterns[0].Label
 	}
 }
-
-// meetingFigure puts a meeting count on the wire, or leaves it absent.
-func meetingFigure(n int, withheld bool) *int {
-	if withheld {
-		return nil
-	}
-	return &n
-}

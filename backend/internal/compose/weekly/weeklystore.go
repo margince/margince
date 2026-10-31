@@ -42,8 +42,8 @@ type Review struct {
 	AsOf           time.Time
 	Counts         Counts
 	Deals          []DealLine
-	// MeetingsWithheld marks a week read by a seat that may not read meetings:
-	// the meeting figures are zero here and absent on the wire.
+	// MeetingsWithheld marks a week read by a seat that may not read meetings.
+	// Its meeting figures are zero, and the wire says they are withheld.
 	MeetingsWithheld bool
 	// Narrative is the sentence a model wrote about the week, empty when none
 	// did. NarratedAt is what tells "no pass ran" from "a pass ran and found
