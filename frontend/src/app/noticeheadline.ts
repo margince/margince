@@ -2,29 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Translator } from "../i18n";
-
-// The staged-change summary joins `field=value` pairs with ", " (summaryFields
-// in the server's compose/agentsummary.go). noticeheadline.test.ts holds this
-// pattern against the server's own output.
-export const FIELD_PAIRS = /^[a-z][a-z0-9_]*=[^,]*(, [a-z][a-z0-9_]*=[^,]*)*$/;
+import { splitStagedSummary } from "../lib/stagedsummary";
 
 /**
  * What a notice is headed with.
  *
- * An approval notice carries the staged change's summary as its subject. With
- * no sentence in front, that is only the change's fields, which tell a reader
- * nothing unopened. The row is then headed by what the notice is, with the
- * fields kept as detail.
+ * An approval notice carries the staged change's summary as its subject: a
+ * sentence, then the change's raw field pairs. The sentence heads the row and
+ * the pairs stay as detail. With no sentence, the row is headed by what the
+ * notice is.
  */
 export function noticeHeadline(
   notice: Readonly<{ kind: string; subject: string }>,
   t: Translator,
 ): { headline: string; detail?: string } {
-  if (notice.kind !== "approval_pending" || !FIELD_PAIRS.test(notice.subject)) {
+  if (notice.kind !== "approval_pending") {
     return { headline: notice.subject };
   }
-  return {
-    headline: t("notifications.class.approval_pending.label"),
-    detail: notice.subject,
-  };
+  const { sentence, fields } = splitStagedSummary(notice.subject);
+  const headline = sentence ?? t("notifications.class.approval_pending.label");
+  return fields ? { headline, detail: fields } : { headline };
 }

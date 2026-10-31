@@ -9333,7 +9333,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.markRead": "Đánh dấu đã đọc",
   "notifications.markAllFailed": "Không thể đánh dấu các thông báo là đã đọc",
   "notifications.markReadFailed": "Không thể đánh dấu thông báo đó là đã đọc",
-  "notifications.new": "Mới",
+  "notifications.unread": "Chưa đọc",
   "notifications.byAgent": "Do trợ lý AI tạo",
   "notifications.empty":
     "Chưa có thông báo nào. Những gì cần báo cho bạn sẽ hiển thị ở đây.",

@@ -9594,7 +9594,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
   "notifications.markReadFailed":
     "Diese Benachrichtigung wurde nicht als gelesen markiert",
-  "notifications.new": "Neu",
+  "notifications.unread": "Ungelesen",
   "notifications.byAgent": "Von einem Agenten",
   "notifications.empty":
     "Bisher ist nichts eingegangen. Was das Produkt dir mitteilt, erscheint hier.",

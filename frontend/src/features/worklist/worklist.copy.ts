@@ -15,6 +15,7 @@ import {
 import { ENTITY, recordRoute } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
+import { splitStagedSummary } from "../../lib/stagedsummary";
 import { caseHref } from "../privacy/privacy.caselink";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { nonBuyerRequest } from "./worklist.eyebrow";
@@ -308,6 +309,13 @@ export function briefContextTitle(item: WorklistItem): string | undefined {
     : undefined;
 }
 
+// An approval's title is the staged summary: its sentence, then raw field
+// pairs. The row reads the sentence; one with none falls to the source title.
+function readableTitle(item: WorklistItem): string | undefined {
+  if (item.source !== "approval" || !item.title) return item.title;
+  return splitStagedSummary(item.title).sentence;
+}
+
 export function itemTitle(
   item: WorklistItem,
   t: T,
@@ -342,14 +350,15 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  if (item.title) {
+  const sentence = readableTitle(item);
+  if (sentence) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot
     // be told apart or put in order, and the lead's name is already on the row
     // — it was only the sentence that discarded it.
-    return named && !item.title.includes(named)
-      ? `${item.title} · ${named}`
-      : item.title;
+    return named && !sentence.includes(named)
+      ? `${sentence} · ${named}`
+      : sentence;
   }
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
