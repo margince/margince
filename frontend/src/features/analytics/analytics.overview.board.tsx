@@ -67,7 +67,6 @@ export function SalesHero({
     won.coverage.status !== "failed";
   return (
     <Panel
-      className="analytics-hero"
       title={metricName("bookings_won")}
       titleAction={
         trend && <ChartDetails chart={trend} evaluation={evaluation} />

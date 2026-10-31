@@ -121,6 +121,10 @@
 .analytics-hero-value {
   font: var(--fontDisplayLarge);
 }
+/* A grid track never shrinks below its content, so the chart is let shrink. */
+.analytics-hero-chart {
+  min-width: 0;
+}
 .analytics-hero-body > :only-child {
   grid-column: 1 / -1;
 }
@@ -134,12 +138,10 @@
    an edge rather than as words in the row. */
 .analytics-tab-verbs .btn-ghost {
   --ghostEdge: var(--borderControl);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-rest);
 }
-.analytics-tab-verbs .btn-ghost:hover {
-  background: var(--bgHover);
-}
+/* The page Reports opens is where the reader is, drawn as a set toggle is. */
 .analytics-tab-verbs .btn-ghost[aria-current="page"] {
-  background: var(--bgInset);
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
 }
