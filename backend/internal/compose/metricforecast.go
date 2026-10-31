@@ -43,14 +43,9 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	var called *int64
-	if frame.PipelineId == nil {
-		call, err := e.forecast.CurrentCallTx(ctx, tx, period, scope)
-		if err == nil {
-			called = &call.AmountMinor
-		} else if !forecasting.IsNoStandingCall(err) {
-			return nil, crmcontracts.ReportingCoverage{}, err
-		}
+	called, err := reportingCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	landing, err := forecasting.ProjectLanding(readings, measure, called)
 	if err != nil {
@@ -92,6 +87,23 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 	}
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
+}
+
+// reportingCallSeen is the call GET /forecast shows this seat, by the same
+// rule. A call covers every pipeline, so a reading of one pipeline has none.
+func reportingCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (*int64, error) {
+	if onePipeline {
+		return nil, nil
+	}
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
+	if err != nil {
+		return nil, err
+	}
+	call, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
+	if err != nil || call == nil {
+		return nil, err
+	}
+	return &call.AmountMinor, nil
 }
 
 func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
