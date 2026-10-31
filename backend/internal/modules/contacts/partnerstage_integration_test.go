@@ -5,9 +5,9 @@
 
 package contacts
 
-// The partner stage list against Postgres: what the catalog refuses, a partner
-// moving on a ladder an administrator reshaped, the activation rule, the
-// filters that read a stage's meaning, and a partner holding several kinds.
+// The partner stage list against Postgres. The tests cover what the catalog
+// refuses, a partner on a reshaped ladder, and the activation rule. They also
+// cover the meaning filters and a partner holding several kinds.
 
 import (
 	"context"

@@ -7,13 +7,12 @@ package compose
 // and won activates that partner.
 //
 // The trigger is the event, so every path that wins a deal reaches it. It
-// reads the win from the payload, as the commission accrual does: attribution
-// can be edited after the win, and the payload says what was true at the win.
-// Only `sourced` activates; help on a running deal (`influenced`) never does.
+// reads the win from the payload, as the commission accrual does. Attribution
+// can change after the win, and the payload says what was true at the win.
+// Only `sourced` activates. Help on a running deal (`influenced`) never does.
 //
-// A replay changes nothing: activation is stamped once, and a partner already
-// activated is left as it is. Its own group, because a wedged accrual must not
-// hold an activation back, nor the other way round.
+// A replay changes nothing, because activation is stamped once. It has its
+// own group, so a wedged accrual never holds an activation back.
 
 import (
 	"context"

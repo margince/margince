@@ -5,15 +5,11 @@
 
 package gates
 
-// The partner kinds and stage meanings are spelled in the contract and again
-// in places no generated type reaches: the MCP tool's input schema, the
-// migration CHECK on partner_kinds, the frontend label maps, and the refusal
-// messages that name the allowed words. Each copy is held equal to the
-// contract both ways, so a kind added to one and not the others fails here
-// instead of reaching a caller as a refusal of a valid word.
-//
-// The approval decoder and the store checks call the generated Valid(), so
-// they are not copies and are not listed.
+// The partner kinds and stage meanings are spelled in the contract. Some
+// places no generated type reaches spell them again. These are the MCP tool's
+// input schema, the partner_kinds CHECK, the frontend label maps and refusal
+// messages. Each copy is held equal to the contract both ways. A kind added to
+// one copy alone fails here, not as a refusal of a valid word.
 
 import (
 	"os"
@@ -39,8 +35,8 @@ func wordsIn(list string) []string {
 	return slices.Compact(out)
 }
 
-// vocabularyCopy is one place a contract enum is spelled again: the file, the
-// pattern whose first group holds the list, and how the list is read.
+// vocabularyCopy is one place a contract enum is spelled again. It names the
+// file, the pattern whose first group holds the list, and how to read it.
 type vocabularyCopy struct {
 	file    string
 	pattern *regexp.Regexp

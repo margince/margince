@@ -27,7 +27,13 @@ import (
 // two surfaces read one mapping rather than each keeping their own.
 // codeRequired is the contract's machine code for a missing required field —
 // one spelling across every refusal in this module that means "you left it out".
-const codeRequired = "required"
+const (
+	codeRequired = "required"
+	// codeInvalidValue and codeInvalidKey are the field codes for a value
+	// outside its vocabulary and a catalog key of the wrong shape.
+	codeInvalidValue = "invalid_value"
+	codeInvalidKey   = "invalid_key"
+)
 
 type RequiredFieldError struct{ Field string }
 

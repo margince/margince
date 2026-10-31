@@ -172,10 +172,9 @@ func scanPartnerPage(row pgx.Row, sorted *storekit.ListSort) (partnerRow, ids.UU
 	return out, id, key, err
 }
 
-// partnerListWhere builds the WHERE fragments for the partner list: the
-// kind, stage and cert-status filters, the keyset cursor, and the company's own row scope
-// (a partner row is a read of its company, so the company scope bounds
-// the list).
+// partnerListWhere builds the `WHERE` fragments for the partner list. They are
+// the kind, stage and cert-status filters, the keyset cursor, and the
+// company's row scope. A partner row is a read of its company.
 func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 	where := []string{livePartnerSQL("p")}
 	program := partnerProgramFilter{Kind: in.PartnerKind, Stage: in.RelationshipStage, Meaning: in.StageMeaning}

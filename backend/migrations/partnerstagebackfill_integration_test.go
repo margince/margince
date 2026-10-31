@@ -15,11 +15,11 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
-// The stage list replaces the fixed stage vocabulary without moving a partner:
-// each keeps its stage, its role becomes its first kind, and a partner already
-// active or dormant carries the basis "activated before the rule existed" with
-// no date, because nobody recorded one. No row's version or updated_at moves,
-// because nobody edited it.
+// The stage list replaces the fixed stage vocabulary without moving a partner.
+// Each keeps its stage, and its role becomes its first kind. A partner already
+// active or dormant carries the basis "activated before the rule existed". It
+// has no date, because nobody recorded one. No row's version or updated_at
+// moves, because nobody edited it.
 func TestThePartnerStageListKeepsEveryPartnerWhereItStood(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

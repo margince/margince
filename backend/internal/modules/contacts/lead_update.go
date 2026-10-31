@@ -237,22 +237,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.EnsureIfMatch(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// A client-supplied reference to a row-scoped record is a read of it.
-	// No same-company check: a lead's company is an optional link a human
-	// confirms, not an anchor a project must share (Note PROJ-DDL-N-4).
-	if in.ProjectID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
-			return crmcontracts.Lead{}, err
-		}
-	}
-	in, err = settleOriginHint(ctx, tx, current, in)
+	in, err = admitLeadReferences(ctx, tx, current, in)
 	if err != nil {
 		return crmcontracts.Lead{}, err
-	}
-	if in.Origin != nil {
-		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
-			return crmcontracts.Lead{}, err
-		}
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
@@ -307,6 +294,28 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		return crmcontracts.Lead{}, err
 	}
 	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// admitLeadReferences checks the project and origin a patch names, and
+// settles an importer's origin wording. A client-supplied reference to a
+// row-scoped record is a read of it. No same-company check: a lead's company is
+// an optional link a human confirms (Note PROJ-DDL-N-4).
+func admitLeadReferences(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, in UpdateLeadInput) (UpdateLeadInput, error) {
+	if in.ProjectID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
+			return in, err
+		}
+	}
+	in, err := settleOriginHint(ctx, tx, current, in)
+	if err != nil {
+		return in, err
+	}
+	if in.Origin != nil {
+		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
+			return in, err
+		}
+	}
+	return in, nil
 }
 
 // reviewTouchedLeadIdentity re-asks the near-match question after a rename or

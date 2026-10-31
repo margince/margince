@@ -24,9 +24,8 @@ import (
 
 const leadPartnerField = "partner_company_id"
 
-// PartnerLeadAcceptedError refuses a second acceptance, or a change of partner
-// on a lead already accepted for one: the stamp names the partner it was given
-// for.
+// PartnerLeadAcceptedError refuses a second acceptance. It also refuses a new
+// partner on an accepted lead, because the stamp names the partner it was for.
 type PartnerLeadAcceptedError struct{ code string }
 
 func (e *PartnerLeadAcceptedError) Error() string {
@@ -150,9 +149,9 @@ func (s *Store) AcceptPartnerLead(ctx context.Context, id ids.LeadID) (crmcontra
 	return out, err
 }
 
-// acceptablePartnerLead answers the partner a lead may be accepted for, or why
-// it may not be: no partner, a lead that left the open ladder, a stamp already
-// given, or a partner company the caller may not write.
+// acceptablePartnerLead answers the partner a lead may be accepted for, or
+// why not. The lead may name no partner, have left the open ladder, or carry a
+// stamp already. The caller may also be unable to write the partner company.
 func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, stored *ids.UUID) (ids.CompanyID, error) {
 	switch {
 	case current.PartnerAcceptedAt != nil:

@@ -4,8 +4,8 @@
 package contacts
 
 // Activating a partner: the stamp that lets it stand on a stage meaning active.
-// Two doors reach it, an accepted partner lead and a won deal the partner
-// sourced, and both go through activatePartnerTx, the one writer of the stamp.
+// An accepted partner lead and a won deal the partner sourced both reach it.
+// Both go through activatePartnerTx, the one writer of the stamp.
 
 import (
 	"context"
@@ -23,6 +23,8 @@ import (
 
 // The bases a door stamps, as partner_activation_basis_check names them.
 const (
+	// eventKeyPartner is the company.updated delta key a partner change rides.
+	eventKeyPartner        = "partner"
 	activationLeadAccepted = "lead_accepted"
 	activationCustomerWon  = "customer_won"
 )
@@ -78,8 +80,8 @@ func activatePartnerTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, 
 		return false, err
 	}
 	return true, storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-		ChangedFields: map[string]any{eventKeyDelta: map[string]any{"partner": map[string]any{
-			"activation_basis": ev.basis, "relationship_stage": row.RelationshipStage,
+		ChangedFields: map[string]any{eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
+			"activation_basis": ev.basis, partnerFieldStage: row.RelationshipStage,
 		}}},
 	})
 }

@@ -47,7 +47,7 @@ func partnerKindsOf(in UpsertPartnerInput) ([]string, error) {
 	}
 	for _, kind := range kinds {
 		if !crmcontracts.PartnerKind(kind).Valid() {
-			return nil, httperr.Validation(partnerFieldKinds, "invalid_value",
+			return nil, httperr.Validation(partnerFieldKinds, codeInvalidValue,
 				"partner_kinds holds only hosting, consulting, strategic or referral; implementation work is not a partner kind")
 		}
 	}
@@ -56,8 +56,7 @@ func partnerKindsOf(in UpsertPartnerInput) ([]string, error) {
 }
 
 // legacyPartnerRole is the deprecated single role a sorted list of kinds reads
-// as: its first kind the old role could name, or nil for a referral-only
-// partner.
+// as. It is the first kind the old role could name, or nil for referral only.
 func legacyPartnerRole(kinds []string) *string {
 	for _, kind := range kinds {
 		if slices.Contains(legacyPartnerRoles, kind) {

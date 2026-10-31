@@ -8,8 +8,8 @@ import { useLeadPartnerRow } from "./leadpartner";
 import type { Lead } from "./leads";
 import { jsonResponse, lead, render } from "./leads.testkit";
 
-// A lead's "Referred by partner" row: shown once a partner exists, the verb
-// that accepts the lead for its partner, and the stamp that replaces it.
+// A lead's "Referred by partner" row. It shows once a partner exists, offers
+// the verb that accepts the lead, and shows the stamp that replaces it.
 
 afterEach(() => {
   cleanup();

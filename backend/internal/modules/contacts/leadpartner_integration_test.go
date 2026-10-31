@@ -5,8 +5,8 @@
 
 package contacts
 
-// A lead a partner referred, and the acceptance that activates the partner:
-// the stamp, the move to the first active stage, the refusals, and who may.
+// A lead a partner referred, and the acceptance that activates the partner.
+// The tests cover the stamp, the stage move, the refusals, and who may accept.
 
 import (
 	"context"

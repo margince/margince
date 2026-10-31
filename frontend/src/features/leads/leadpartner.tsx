@@ -16,8 +16,8 @@ import { usePartnerCompanyOptions } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
 import type { Lead, LeadWriter } from "./leads";
 
-// Accepting a partner's lead is what activates the partner, so the verb waits
-// for a partner on the lead and for a seat that may change partners.
+// Accepting a partner's lead activates the partner. So the verb waits for a
+// partner on the lead and for a seat that may change partners.
 function AcceptForPartner({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
   const queryClient = useQueryClient();

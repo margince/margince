@@ -33,8 +33,7 @@ func (f partnerProgramFilter) empty() bool {
 }
 
 // check refuses a kind or meaning outside its vocabulary, naming the caller's
-// own parameter: a filter nothing can match is a client mistake, not an empty
-// page.
+// own parameter. A filter nothing can match is a client mistake.
 func (f partnerProgramFilter) check(kindField, meaningField string) error {
 	if f.Kind != nil && !crmcontracts.PartnerKind(*f.Kind).Valid() {
 		return httperr.Validation(kindField, "not_a_known_value",

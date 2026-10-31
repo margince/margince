@@ -5,8 +5,8 @@
 
 package integration
 
-// The first customer a partner sourced and won activates it, through the real
-// win, the envelope the win put in the outbox, and the real consumer.
+// The first customer a partner sourced and won activates it. The tests drive
+// the real win, the envelope it put in the outbox, and the real consumer.
 
 import (
 	"context"

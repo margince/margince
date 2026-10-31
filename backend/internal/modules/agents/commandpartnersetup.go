@@ -55,9 +55,9 @@ func (r *setUpPartnerResolver) Subject(ctx context.Context, cmd SetUpPartnerComm
 }
 
 // Guards refuses before anything is staged what the write would refuse
-// afterwards. Those are an unseen company, a company another system holds, a
-// missing grant, an unwritable company, a live program, and a stage the
-// program cannot start on.
+// afterwards. That is an unseen company, a company another system holds, or a
+// missing grant. It is also an unwritable company, a live program, or a stage
+// the program cannot start on.
 func (r *setUpPartnerResolver) Guards(ctx context.Context, cmd SetUpPartnerCommand) error {
 	if err := r.company.refuse(ctx, cmd.CompanyID); err != nil {
 		return err

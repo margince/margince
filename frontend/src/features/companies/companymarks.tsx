@@ -53,11 +53,10 @@ export function partnerMarkText(company: Company, t: Translator): string {
 
 /**
  * What the company is to the business: a customer, a partner, or both on one
- * record. Customer reads the relationship type, not the lifecycle, because a
- * partner that also buys from us stays a customer whatever stage it is in. It
- * is left out where the lifecycle chip beside it already names the customer
- * relationship, so the head never reads "Customer" twice or "Former customer"
- * against "Customer".
+ * record. Customer reads the relationship type, not the lifecycle. A partner
+ * that also buys from us stays a customer whatever stage it is in. The mark is
+ * left out where the lifecycle chip already names the customer relationship.
+ * So the head never reads "Customer" twice, or "Former customer" against it.
  */
 export function CompanyRoleMarks({ company }: Readonly<{ company: Company }>) {
   const t = useT();

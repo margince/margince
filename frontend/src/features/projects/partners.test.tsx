@@ -16,10 +16,10 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { PartnersScreen, PartnerTab } from "./partners";
 
-// Partner tab (company 360) + #/partners list (P-6): the Partner tab treats
-// GET /companies/{id}/partner's 404 as "not a partner yet" (an honest
-// empty state + setup form), never as an error; the list reads GET /partners
-// with kind, stage and cert filters and a row click goes to that company's 360.
+// The Partner tab on a company and the #/partners list. The tab reads a 404
+// from GET /companies/{id}/partner as "not a partner yet" and shows the set-up
+// form, never an error. The list reads GET /partners with kind, stage and cert
+// filters, and a row click opens that company.
 
 afterEach(() => {
   cleanup();
@@ -374,11 +374,9 @@ describe("PartnerTab — the margin tier", () => {
   });
 });
 
-// The columns picker also offers a "Partner kinds"/"Certification status"
-// checkbox (one per column, sharing the column header text), so a plain name
-// match is ambiguous — each click is scoped to the filter menu, which names
-// the step it is on: "Filter" while listing attributes, the attribute once one
-// is picked.
+// The columns picker offers a checkbox per column under the header's text, so
+// a plain name match is ambiguous. Each click is scoped to the filter menu. The
+// menu is named "Filter" while it lists attributes, then by the attribute.
 async function openFilterMenu(): Promise<HTMLElement> {
   await userEvent.click(screen.getByRole("button", { name: "Filter" }));
   return screen.getByRole("group", { name: "Filter" });

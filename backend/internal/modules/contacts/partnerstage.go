@@ -4,9 +4,9 @@
 package contacts
 
 // Partner stages are the ladder an installation keeps for its partner
-// programmes (partner_stage). Each stage names one of six fixed meanings, and
-// every rule and filter reads the meaning, so an administrator may rename,
-// reorder and add stages without changing what the product does.
+// programmes (partner_stage). Each stage names one of six fixed meanings. Every
+// rule and filter reads the meaning, so renaming or adding stages changes no
+// behaviour.
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func (e *PartnerStageMeaningError) Error() string {
 
 // FieldFault names the meaning as the invalid input.
 func (e *PartnerStageMeaningError) FieldFault() (field, code, message string) {
-	return partnerStageMeaningField, "invalid_value", e.Error()
+	return partnerStageMeaningField, codeInvalidValue, e.Error()
 }
 
 // ListPartnerStages answers the whole ladder, retired stages included, so a
@@ -115,7 +115,7 @@ func (s *Store) CreatePartnerStage(ctx context.Context, in CreatePartnerStageInp
 	}
 	if !partnerStageKeyShape.MatchString(key) {
 		return crmcontracts.PartnerStage{}, &values.ParseError{
-			Field: leadOriginKeyField, Code: "invalid_key",
+			Field: leadOriginKeyField, Code: codeInvalidKey,
 			Message: "key must start with a letter and hold only lowercase letters, digits and underscores",
 		}
 	}
@@ -157,11 +157,8 @@ func (s *Store) UpdatePartnerStage(ctx context.Context, id ids.UUID, in UpdatePa
 	if err := auth.Require(ctx, leadVocabularyObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.PartnerStage{}, err
 	}
-	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
-		return crmcontracts.PartnerStage{}, &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelNotEmpty}
-	}
-	if in.Meaning != nil && !in.Meaning.Valid() {
-		return crmcontracts.PartnerStage{}, &PartnerStageMeaningError{}
+	if err := checkPartnerStagePatch(in); err != nil {
+		return crmcontracts.PartnerStage{}, err
 	}
 	var out crmcontracts.PartnerStage
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -172,9 +169,7 @@ func (s *Store) UpdatePartnerStage(ctx context.Context, id ids.UUID, in UpdatePa
 		if err := refuseStageMeaningChange(before, in); err != nil {
 			return err
 		}
-		stillCandidate := (in.Active == nil || *in.Active) &&
-			(in.Meaning == nil || *in.Meaning == crmcontracts.PartnerStageMeaningCandidate)
-		if !stillCandidate {
+		if in.removesCandidate() {
 			if err := refuseLastCandidateStage(ctx, tx, before); err != nil {
 				return err
 			}
@@ -200,10 +195,10 @@ func (s *Store) UpdatePartnerStage(ctx context.Context, id ids.UUID, in UpdatePa
 	return out, err
 }
 
-// partnerCountsForCaller replaces each stage's partner_count with the live
-// partners of companies this caller may read, and drops it for a seat that may
-// not read partners and companies: the count is a reading of the register. The
-// refusals that rest on use are decided before this, from every partner.
+// partnerCountsForCaller sets each stage's partner_count to the live partners
+// of companies this caller may read. A seat that may not read partners and
+// companies gets no count, because the count reads the register. The refusals
+// that rest on use are decided before this, from every partner.
 func partnerCountsForCaller(ctx context.Context, tx pgx.Tx, stages []crmcontracts.PartnerStage) error {
 	if !auth.ReadGranted(ctx, partnerMaskObject) || !auth.ReadGranted(ctx, companyEntity) {
 		for i := range stages {
@@ -275,8 +270,28 @@ func (s *Store) DeletePartnerStage(ctx context.Context, id ids.UUID) error {
 	})
 }
 
-// refuseStageMeaningChange keeps the meaning of a stage partners stand on: a
-// partner on a candidate stage must not become active by an edit to the list.
+// checkPartnerStagePatch refuses a blank label or an unknown meaning before
+// any row is locked.
+func checkPartnerStagePatch(in UpdatePartnerStageInput) error {
+	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
+		return &values.ParseError{Field: leadOriginLabelField, Code: codeRequired, Message: msgLabelNotEmpty}
+	}
+	if in.Meaning != nil && !in.Meaning.Valid() {
+		return &PartnerStageMeaningError{}
+	}
+	return nil
+}
+
+// removesCandidate answers whether the patch retires the stage or gives it a
+// meaning other than candidate, so the last candidate check must run.
+func (in UpdatePartnerStageInput) removesCandidate() bool {
+	retires := in.Active != nil && !*in.Active
+	remeans := in.Meaning != nil && *in.Meaning != crmcontracts.PartnerStageMeaningCandidate
+	return retires || remeans
+}
+
+// refuseStageMeaningChange keeps the meaning of a stage partners stand on. An
+// edit to the list must not make a candidate partner active.
 func refuseStageMeaningChange(before crmcontracts.PartnerStage, in UpdatePartnerStageInput) error {
 	if in.Meaning == nil || *in.Meaning == before.Meaning || *before.PartnerCount == 0 {
 		return nil
@@ -285,9 +300,9 @@ func refuseStageMeaningChange(before crmcontracts.PartnerStage, in UpdatePartner
 }
 
 // refuseLastCandidateStage refuses to take away the only active candidate
-// stage, which defaultPartnerStageTx starts every new programme on. Two writers
-// each retiring a different candidate would both see the other still active,
-// so every such write takes one lock first and counts under it.
+// stage, which every new programme starts on. Two writers retiring different
+// candidates would each see the other still active. So each such write takes
+// one lock first and counts under it.
 func refuseLastCandidateStage(ctx context.Context, tx pgx.Tx, stage crmcontracts.PartnerStage) error {
 	if !stage.Active || stage.Meaning != crmcontracts.PartnerStageMeaningCandidate {
 		return nil
@@ -331,8 +346,8 @@ func announcePartnerStageChange(ctx context.Context, tx pgx.Tx, auditID ids.UUID
 		crmcontracts.InternalEventReportingChanged{Object: partnerStageObject, Action: action})
 }
 
-// lockPartnerStage takes the row FOR UPDATE and reads it, so a patch or a
-// delete decided from the read cannot be overtaken by a concurrent writer.
+// lockPartnerStage takes the row FOR UPDATE and reads it. A patch or delete
+// decided from the read then cannot be overtaken by a concurrent writer.
 func lockPartnerStage(ctx context.Context, tx pgx.Tx, id ids.UUID) (storekit.RowLock, crmcontracts.PartnerStage, error) {
 	lock, err := storekit.LockRow(ctx, tx, partnerStageTable, id, storekit.NoArchiveColumn)
 	if err != nil {

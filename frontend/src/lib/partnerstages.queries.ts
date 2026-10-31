@@ -32,8 +32,8 @@ export const KIND_LABELS: Record<PartnerKind, MessageKey> = {
 };
 
 // The ordered lists come from the label maps, which the generated contract
-// types hold complete: a value the contract adds and a map lacks fails the
-// build, and backend/gates/partnervocabulary_test.go holds the maps both ways.
+// types hold complete. A value the contract adds and a map lacks fails the
+// build. backend/gates/partnervocabulary_test.go holds the maps both ways.
 function keysOf<K extends string>(record: Record<K, unknown>): K[] {
   return Object.keys(record).filter((key): key is K => key in record);
 }
@@ -60,8 +60,8 @@ export function usePartnerStages(enabled = true) {
 }
 
 /**
- * The stages a partner may move to: the active ones in ladder order, plus the
- * stage it stands on when that one was retired, so the picker can show it.
+ * The stages a partner may move to: the active ones in ladder order. The
+ * stage it stands on is added when it was retired, so the picker can show it.
  */
 export function assignableStages(
   stages: readonly PartnerStage[] | undefined,
@@ -192,8 +192,8 @@ export function useSwapPartnerStages() {
 
 /**
  * The partner companies a record may name, as picker options. It reads the
- * companies carrying the partner relationship type, which holds exactly the
- * live programmes, under the key the deal form's partner picker shares.
+ * companies carrying the partner relationship type, which are the live
+ * programmes. The deal form's partner picker shares its query key.
  */
 export function usePartnerCompanyOptions(enabled = true) {
   return useQuery({
