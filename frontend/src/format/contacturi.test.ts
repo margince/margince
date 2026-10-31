@@ -77,6 +77,9 @@ describe("messengerUris", () => {
     expect(messengerUris("+39 06 1234567")?.whatsapp).toBe(
       "https://wa.me/39061234567",
     );
+    expect(messengerUris("+49 30 1234(0)567")?.whatsapp).toBe(
+      "https://wa.me/493012340567",
+    );
     expect(messengerUris("+49 30\n1234567")).toBeNull();
   });
 

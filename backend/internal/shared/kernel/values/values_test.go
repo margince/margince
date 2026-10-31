@@ -64,6 +64,7 @@ func TestParsePhone(t *testing.T) {
 		{in: "+49 (0) 30 1234567", want: "+49301234567"},
 		{in: "0084(0)912 345 678", want: "+84912345678"},
 		{in: "+39 06 1234567", want: "+39061234567"},
+		{in: "+49 30 1234(0)567", want: "+493012340567"},
 		{in: "(0)30 1234567", code: "phone_needs_country_code"},
 		{in: "030 12345678", code: "phone_needs_country_code"},
 		{in: "+0 123456789", code: "phone_malformed"},

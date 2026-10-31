@@ -46,14 +46,14 @@ export function telUri(number: string): string | null {
 
 // Declared mirror of values.ParsePhone in backend/internal/shared/kernel/values/phone.go:
 // its trunk mark, its separators, its "00" for "+", and E164Pattern.
-const NATIONAL_TRUNK_MARK = "(0)";
+const NATIONAL_TRUNK_MARK = /^(\+|00)([0-9]{1,3})[ \t.\-/]*\(0\)/;
 const PHONE_SEPARATORS = /[ \t().\-/]/g;
 const E164 = /^\+([1-9]\d{7,14})$/;
 
 function e164Digits(number: string): string | undefined {
   const cleaned = number
     .trim()
-    .replaceAll(NATIONAL_TRUNK_MARK, "")
+    .replace(NATIONAL_TRUNK_MARK, "$1$2")
     .replace(PHONE_SEPARATORS, "");
   const plus = cleaned.startsWith("00") ? `+${cleaned.slice(2)}` : cleaned;
   return E164.exec(plus)?.[1];

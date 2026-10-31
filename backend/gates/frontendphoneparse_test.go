@@ -64,20 +64,26 @@ func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
 	compareTrunkMark(t, source, body)
 }
 
-// compareTrunkMark holds the bracketed trunk zero to one rule on both sides. The
-// browser drops the same mark, and drops it before the separators take its brackets.
+// compareTrunkMark holds the bracketed trunk zero to one rule on both sides: the
+// same anchored pattern, applied before the separators take its brackets.
 func compareTrunkMark(t *testing.T, source, e164DigitsBody string) {
 	t.Helper()
-	mark := values.NationalTrunkMark
-	if got, err := values.ParsePhone("+49 " + mark + " 30 123456"); err != nil || got.String() != "+4930123456" {
-		t.Errorf("ParsePhone keeps the trunk zero in %q (got %q, %v); it must drop values.NationalTrunkMark", "+49 "+mark+" 30 123456", got, err)
+	for raw, want := range map[string]string{"+49 (0) 30 123456": "+4930123456", "+49 30 1234(0)56": "+49301234056"} {
+		if got, err := values.ParsePhone(raw); err != nil || got.String() != want {
+			t.Errorf("ParsePhone(%q) = %q, %v; want %q: only the mark right after the country code goes", raw, got, err, want)
+		}
 	}
-	if declared := tsStringConst(source, "NATIONAL_TRUNK_MARK"); !slices.Equal(declared, []string{mark}) {
-		t.Errorf("%s: NATIONAL_TRUNK_MARK reads %q, values.NationalTrunkMark is %q. Change the side that moved", frontendContactURI, declared, mark)
+	markBody, markFlags := tsRegexLiteral(t, source, "NATIONAL_TRUNK_MARK")
+	if strings.ContainsAny(markFlags, "gy") {
+		t.Errorf("%s: NATIONAL_TRUNK_MARK carries flags %q; the mark is anchored once at the start. Drop them", frontendContactURI, markFlags)
 	}
-	dropped := regexp.MustCompile(`\.replaceAll\(\s*NATIONAL_TRUNK_MARK\s*,\s*""\s*\)\s*\.replace\(\s*PHONE_SEPARATORS\b`)
+	goMark := withoutCaptures(t, "values.NationalTrunkMarkPattern", values.NationalTrunkMarkPattern)
+	if tsMark := withoutCaptures(t, frontendContactURI+" NATIONAL_TRUNK_MARK", markBody); goMark != tsMark {
+		t.Errorf("trunk mark drifted: values.NationalTrunkMarkPattern reads %s, %s NATIONAL_TRUNK_MARK reads %s. Change the side that moved", goMark, frontendContactURI, tsMark)
+	}
+	dropped := regexp.MustCompile(`\.replace\(\s*NATIONAL_TRUNK_MARK\s*,\s*"\$1\$2"\s*\)\s*\.replace\(\s*PHONE_SEPARATORS\b`)
 	if !dropped.MatchString(e164DigitsBody) {
-		t.Errorf("%s: e164Digits no longer drops NATIONAL_TRUNK_MARK before PHONE_SEPARATORS, and ParsePhone does. Restore `.replaceAll(NATIONAL_TRUNK_MARK, \"\").replace(PHONE_SEPARATORS, …)`", frontendContactURI)
+		t.Errorf("%s: e164Digits no longer drops NATIONAL_TRUNK_MARK before PHONE_SEPARATORS, and ParsePhone does. Restore `.replace(NATIONAL_TRUNK_MARK, \"$1$2\").replace(PHONE_SEPARATORS, …)`", frontendContactURI)
 	}
 }
 
