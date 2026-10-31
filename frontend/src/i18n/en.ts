@@ -7289,6 +7289,8 @@ export const en = {
   "analytics.prospect.failedDetail":
     "The source did not answer. Try again later.",
   "analytics.prospect.basisAccepted": "Handoffs accepted into a deal, {period}",
+  "analytics.prospect.noArrivals":
+    "No lead arrived {period}, so none could be qualified",
   "analytics.prospect.basisQualified":
     "Of {arrived} leads that arrived {period}",
   "analytics.prospect.weeksFailed": "The recent weeks could not be read.",

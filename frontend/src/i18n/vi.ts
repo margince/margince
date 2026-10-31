@@ -7090,6 +7090,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nguồn dữ liệu không phản hồi. Hãy thử lại sau.",
   "analytics.prospect.basisAccepted":
     "Bàn giao được chấp nhận thành cơ hội, {period}",
+  "analytics.prospect.noArrivals":
+    "Không có lead nào đến trong {period}, nên chưa thể đủ điều kiện",
   "analytics.prospect.basisQualified":
     "Trong số {arrived} lead đến trong {period}",
   "analytics.prospect.weeksFailed": "Không đọc được các tuần gần đây.",

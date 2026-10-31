@@ -77,6 +77,28 @@ describe("My prospecting's results", () => {
     expect(lead.getByText(/^Of 11 leads that arrived /)).toBeVisible();
   });
 
+  it("names no qualified figure for a week nobody arrived in, as its column does", async () => {
+    open(
+      ADDRESS,
+      weekAnd(
+        prospectingEvaluation([
+          metric("leads_promoted", 0, { denominator: 0 }),
+        ]),
+        prospectingWeeks(week, "leads_promoted", [1, 2, 0, 4, 2, null]),
+      ),
+      { seat: "sdr", template: "sales" },
+    );
+    const lead = await results();
+    expect(
+      lead.getByText("—", { selector: ".analytics-hero-value" }),
+    ).toBeVisible();
+    expect(lead.getByText(/^No lead arrived /)).toBeVisible();
+    const columns = await lead.findAllByRole("button", {
+      name: /, Leads qualified: /,
+    });
+    expect(columns.at(-1)).toHaveAccessibleName(/: —$/);
+  });
+
   it("dates the week's figure and the month's targets apart, and divides neither by the other", async () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();

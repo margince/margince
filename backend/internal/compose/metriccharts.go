@@ -116,7 +116,7 @@ func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 
 // weeklyEmptyIsZero names the metrics whose week with no facts is a measured
 // zero, each with the reason. Every other metric leaves such a week without a
-// value: leads qualified counts the leads that arrived that week, and a week
+// value. Leads qualified counts the leads that arrived that week, so a week
 // nobody arrived in has no one to count.
 var weeklyEmptyIsZero = map[crmcontracts.ReportingMetricID]string{
 	reportingMeetingsHeld:          "the reader reads every held meeting in the interval, so a week with none held is zero",

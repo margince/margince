@@ -7278,6 +7278,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
   "analytics.prospect.basisAccepted":
     "Als Deal angenommene Übergaben, {period}",
+  "analytics.prospect.noArrivals":
+    "{period} ist kein Lead eingegangen, also konnte keiner qualifiziert werden",
   "analytics.prospect.basisQualified":
     "Von {arrived} Leads, die {period} eingegangen sind",
   "analytics.prospect.weeksFailed":

@@ -86,7 +86,6 @@ export function ProspectingResults({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const metricName = useMetricNames();
   const { context } = evaluation;
   const period = reportingPeriodLabel(
     context.interval,
@@ -114,25 +113,11 @@ export function ProspectingResults({
         <div className="analytics-hero-body">
           <div className="analytics-hero-figure">
             {outcome ? (
-              <>
-                <p className="t-label">{metricName(outcome)}</p>
-                <p className="analytics-hero-value t-num">
-                  {figureText(metric, evaluation, t, locale)}
-                </p>
-                <p className="t-caption">
-                  {outcome === "leads_promoted" && metric?.denominator != null
-                    ? t("analytics.prospect.basisQualified", {
-                        arrived: formatNumber(metric.denominator, locale),
-                        period,
-                      })
-                    : t("analytics.prospect.basisAccepted", { period })}
-                </p>
-                {metric?.coverage.withheld && metric.value != null && (
-                  <p className="t-caption">
-                    {t("analytics.overview.partlyHidden")}
-                  </p>
-                )}
-              </>
+              <OutcomeFigure
+                outcome={outcome}
+                evaluation={evaluation}
+                period={period}
+              />
             ) : (
               <WorkflowUnknown
                 state={workflowState}
@@ -156,6 +141,43 @@ export function ProspectingResults({
         </div>
       </PanelBody>
     </Panel>
+  );
+}
+
+// The outcome's figure and what it counts. With no lead arrived there is no
+// cohort to count, as the week's column says too, so no figure stands for one.
+function OutcomeFigure({
+  outcome,
+  evaluation,
+  period,
+}: Readonly<{
+  outcome: ProspectingOutcome;
+  evaluation: ReportingEvaluation;
+  period: string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const metricName = useMetricNames();
+  const metric = metricOf(evaluation, outcome);
+  const noCohort = outcome === "leads_promoted" && metric?.denominator === 0;
+  let basis = t("analytics.prospect.basisAccepted", { period });
+  if (noCohort) basis = t("analytics.prospect.noArrivals", { period });
+  else if (outcome === "leads_promoted" && metric?.denominator != null)
+    basis = t("analytics.prospect.basisQualified", {
+      arrived: formatNumber(metric.denominator, locale),
+      period,
+    });
+  return (
+    <>
+      <p className="t-label">{metricName(outcome)}</p>
+      <p className="analytics-hero-value t-num">
+        {noCohort ? "—" : figureText(metric, evaluation, t, locale)}
+      </p>
+      <p className="t-caption">{basis}</p>
+      {metric?.coverage.withheld && metric.value != null && (
+        <p className="t-caption">{t("analytics.overview.partlyHidden")}</p>
+      )}
+    </>
   );
 }
 
