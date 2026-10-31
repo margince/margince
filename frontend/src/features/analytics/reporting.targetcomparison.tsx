@@ -180,13 +180,16 @@ function stateKey(comparison: Comparison): StateKey | null {
   }
 }
 
-// Why the quarter has no comparison, and what would give it one.
+// Why the quarter has no comparison, and what would give it one. `compact`
+// says it in one line beside its fix, for a lead with no height to spare.
 export function ComparisonState({
   comparison,
   onApply,
+  compact = false,
 }: Readonly<{
   comparison: Comparison;
   onApply?: (selection: ReportingSelection) => void;
+  compact?: boolean;
 }>) {
   const t = useT();
   const key = stateKey(comparison);
@@ -195,10 +198,19 @@ export function ComparisonState({
   const why = comparison.incompatibility;
   const apply =
     supported && onApply && why && why !== "currency" ? (
-      <Button onClick={() => onApply(supported)}>
+      <Button
+        variant={compact ? "link" : undefined}
+        onClick={() => onApply(supported)}
+      >
         {t(`reporting.compare.apply.${why}`)}
       </Button>
     ) : undefined;
+  if (compact)
+    return (
+      <p className="reporting-compare-note">
+        {t(`reporting.compare.${key}`)} {apply}
+      </p>
+    );
   return (
     <Callout
       tone={comparison.status === "no_target" ? "info" : "warning"}

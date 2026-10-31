@@ -44,7 +44,7 @@
   height: 238px;
 }
 .report-chart-line[data-size="compact"] {
-  height: 150px;
+  height: 130px;
 }
 .report-chart-line svg {
   position: absolute;
@@ -115,6 +115,18 @@
   color: var(--textSecondary);
   font: var(--fontBodySmall);
   font-variant-numeric: tabular-nums;
+}
+/* Compact: the reading under the pointer sits at the end of the legend line
+   rather than on a line of its own. */
+.report-chart[data-size="compact"] {
+  position: relative;
+}
+.report-chart[data-size="compact"] .report-chart-focus {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  min-height: 0;
+  margin: 0;
 }
 .report-chart-rows {
   list-style: none;

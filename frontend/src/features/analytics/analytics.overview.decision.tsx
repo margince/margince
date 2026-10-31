@@ -50,7 +50,7 @@ export function DecisionSummary({
     checks,
   );
   return (
-    <Panel title={t("analytics.overview.summary")}>
+    <Panel title={t("analytics.overview.summary")} flatHead>
       <PanelBody>
         <ul className="analytics-decision">
           {sentences.map((sentence) => (
@@ -122,6 +122,8 @@ function Composition({
   const money = (value: number) =>
     reportingCompactAmount(value, currency, currency, locale);
   const { won_minor: won, remaining_minor: remaining } = basis.landing;
+  // Two empty parts draw an empty track; the readings already say zero.
+  if (won + remaining <= 0) return null;
   const { unpriced, fx } = leftOut(basis);
   const left = [
     unpriced > 0 &&
@@ -146,7 +148,7 @@ function Composition({
           },
           {
             key: "remaining",
-            label: t(`forecast.basis.${basis.landing.measure}`),
+            label: t(`analytics.decision.part.${basis.landing.measure}`),
             value: remaining,
             amount: money(remaining),
           },

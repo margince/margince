@@ -7062,8 +7062,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnlyBody":
     "Kết quả dự kiến và khoảng cách đến mục tiêu được tính cho quý tài chính hiện tại. Chọn quý này để xem.",
   "analytics.overview.setTarget": "Đặt mục tiêu",
-  "analytics.overview.setTargetBody":
-    "Đặt mục tiêu doanh số cho quý này để xem khoảng cách và mức bao phủ.",
   "analytics.overview.targetWho":
     "Một đồng nghiệp quản lý mục tiêu, thường là quản trị viên hoặc quản lý bán hàng, có thể đặt mục tiêu.",
   "analytics.overview.sinceTitle": "Kể từ lần ghi nhận trước",
@@ -18997,15 +18995,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.surplus":
     "Vượt dự kiến {amount}, theo kết quả dự kiến {landing}",
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
-  "analytics.hero.noPrior":
-    "Chưa so sánh với kỳ trước: chưa đủ dữ liệu lịch sử.",
+  "analytics.hero.noPrior": "Chưa có kỳ trước để so sánh.",
   "analytics.overview.more": "Thêm",
   "analytics.overview.filtersToggle": "Bộ lọc",
   "analytics.overview.chipPipeline": "Pipeline đang chọn: {name}",
   "analytics.overview.chipClose": "Chốt: {window}",
   "analytics.overview.winRate": "Tỷ lệ thắng đã đóng",
   "analytics.overview.coverageNotCompared":
-    "Ghi chú về mục tiêu ở trên giải thích lý do",
+    "Ghi chú dưới doanh số đã thắng giải thích lý do",
   "analytics.intervention.scope":
     "Các kiểm tra này bao gồm mọi pipeline và ngày chốt trong phạm vi này.",
   "analytics.intervention.viewAll": "Xem mọi kiểm tra",
@@ -19050,4 +19047,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.writtenChecksDeals_other": "{count} deal khác nhau",
   "analytics.intervention.notPermitted":
     "Bạn không có quyền xem các kiểm tra dự báo.",
+  "analytics.decision.part.commit_evidence": "Cam kết đã xác nhận",
+  "analytics.decision.part.weighted": "Deal đang mở theo trọng số",
 };

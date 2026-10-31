@@ -87,13 +87,13 @@
    it is answered on the right, and the door drops under the words on a phone. */
 .analytics-attention-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 .analytics-attention-text {
-  flex: 1 1 16rem;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .analytics-attention-title {
@@ -113,7 +113,7 @@
    running total that reached it in the room beside it. */
 .analytics-hero-body {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
+  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: var(--space-6);
 }
@@ -163,7 +163,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--controlHeight);
 }
 
 /* The summary's sentences, one per line, each opening what it rests on. */
@@ -189,4 +188,18 @@
 /* All open pipeline, the secondary reading over the stock charts. */
 .analytics-open-line {
   margin: 0;
+}
+
+/* Sales review's lead row: the outcome and its trend, and the three readings
+   stacked beside them. Under 1100px the readings go under the lead. */
+.analytics-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  align-items: stretch;
+  gap: var(--gapCards);
+}
+@media (max-width: 1100px) {
+  .analytics-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

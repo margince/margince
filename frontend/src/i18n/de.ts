@@ -7247,8 +7247,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnlyBody":
     "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
   "analytics.overview.setTarget": "Ziele setzen",
-  "analytics.overview.setTargetBody":
-    "Setze ein Umsatzziel für dieses Quartal, um Abstand und Abdeckung zu sehen.",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
   "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
@@ -19518,15 +19516,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.surplus":
     "Erwarteter Überschuss {amount}, bei einem erwarteten Abschluss von {landing}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
-  "analytics.hero.noPrior":
-    "Kein Vergleich mit der Vorperiode: Es gibt noch zu wenig Verlauf.",
+  "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
   "analytics.overview.filtersToggle": "Filter",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Abschluss: {window}",
   "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
   "analytics.overview.coverageNotCompared":
-    "Der Hinweis zum Ziel oben sagt, warum",
+    "Der Hinweis unter dem gewonnenen Umsatz sagt, warum",
   "analytics.intervention.scope":
     "Diese Prüfungen umfassen jede Pipeline und jedes Abschlussdatum in diesem Bereich.",
   "analytics.intervention.viewAll": "Alle Prüfungen ansehen",
@@ -19574,4 +19571,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.writtenChecksDeals_other": "{count} Deals",
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
+  "analytics.decision.part.commit_evidence": "Bestätigter Commit",
+  "analytics.decision.part.weighted": "Gewichtete offene Deals",
 };

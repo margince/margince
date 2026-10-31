@@ -7261,8 +7261,6 @@ export const en = {
   "analytics.overview.quarterOnlyBody":
     "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
   "analytics.overview.setTarget": "Set targets",
-  "analytics.overview.setTargetBody":
-    "Set a sales target for this quarter to see the gap and the coverage.",
   "analytics.overview.targetWho":
     "A colleague who manages targets, most often an admin or a sales manager, can set one.",
   "analytics.overview.sinceTitle": "Since the last capture",
@@ -19331,14 +19329,13 @@ export const en = {
   "analytics.hero.surplus":
     "Projected surplus {amount}, from an expected finish of {landing}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
-  "analytics.hero.noPrior":
-    "No comparison with the previous period: there is not enough history yet.",
+  "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
   "analytics.overview.filtersToggle": "Filters",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Closing: {window}",
   "analytics.overview.winRate": "Closed win rate",
-  "analytics.overview.coverageNotCompared": "The target note above says why",
+  "analytics.overview.coverageNotCompared": "The note under Sales won says why",
   "analytics.intervention.scope":
     "These checks cover every pipeline and close date in this scope.",
   "analytics.intervention.viewAll": "View all checks",
@@ -19383,6 +19380,8 @@ export const en = {
   "reporting.writtenChecksDeals_other": "{count} deals",
   "analytics.intervention.notPermitted":
     "Forecast checks are not available to you.",
+  "analytics.decision.part.commit_evidence": "Confirmed commit",
+  "analytics.decision.part.weighted": "Weighted open deals",
 } as const;
 
 export type MessageKey = keyof typeof en;

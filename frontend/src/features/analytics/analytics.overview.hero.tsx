@@ -45,7 +45,9 @@ export function HeroAside({
   )
     target = <TargetProgress evaluation={evaluation} comparison={comparison} />;
   else if (comparison)
-    target = <ComparisonState comparison={comparison} onApply={onApply} />;
+    target = (
+      <ComparisonState comparison={comparison} onApply={onApply} compact />
+    );
   return (
     <div className="analytics-hero-aside">
       {target}

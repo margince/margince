@@ -189,3 +189,10 @@
   max-inline-size: 72ch;
   margin-block: 0 var(--space-3);
 }
+
+/* A comparison state in one line, its fix beside it. */
+.reporting-compare-note {
+  margin: 0;
+  color: var(--warningText);
+  font: var(--fontBodySmall);
+}

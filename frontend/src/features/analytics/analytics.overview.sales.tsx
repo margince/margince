@@ -202,22 +202,26 @@ function SalesReviewBody({
                 )}
                 onApply={apply}
               />
-              <SalesHero
-                evaluation={evaluation}
-                onEvidence={openEvidence}
-                aside={
-                  <HeroAside
-                    evaluation={evaluation}
-                    onApply={apply}
-                    targetSetup={targetSetup}
-                  />
-                }
-              />
-              <SalesReadings
-                evaluation={evaluation}
-                onEvidence={openEvidence}
-                forecastHref={forecastHref}
-              />
+              {/* The lead and its three readings share one row, so the
+                  decision and the first action still fit the first screen. */}
+              <div className="analytics-lead">
+                <SalesHero
+                  evaluation={evaluation}
+                  onEvidence={openEvidence}
+                  aside={
+                    <HeroAside
+                      evaluation={evaluation}
+                      onApply={apply}
+                      targetSetup={targetSetup}
+                    />
+                  }
+                />
+                <SalesReadings
+                  evaluation={evaluation}
+                  onEvidence={openEvidence}
+                  forecastHref={forecastHref}
+                />
+              </div>
             </>
           )}
         </QueryGate>
@@ -356,30 +360,19 @@ function QuarterNotes({
 // Who can give the quarter a target. A reader who may not set one is told who
 // can, rather than shown a button the server would refuse. `href` opens the
 // targets for the scope the comparison was about.
+// One line in the lead, beside the figure it would compare.
 function TargetSetup({ href }: Readonly<{ href: string }>) {
   const t = useT();
   const canSet = useCanWrite("sales_target", "create");
   return (
-    <Callout
-      tone="info"
-      kind="standing"
-      title={t("reporting.compare.no_target")}
-      actions={
-        canSet ? (
-          <AppLink className="btn btn-ghost" href={href}>
-            {t("analytics.overview.setTarget")}
-          </AppLink>
-        ) : undefined
-      }
-    >
-      <p>
-        {t(
-          canSet
-            ? "analytics.overview.setTargetBody"
-            : "analytics.overview.targetWho",
-        )}
-      </p>
-    </Callout>
+    <p className="reporting-compare-note">
+      {t("reporting.compare.no_target")}{" "}
+      {canSet ? (
+        <AppLink href={href}>{t("analytics.overview.setTarget")}</AppLink>
+      ) : (
+        t("analytics.overview.targetWho")
+      )}
+    </p>
   );
 }
 

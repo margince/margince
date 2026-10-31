@@ -164,7 +164,7 @@ describe("the action list", () => {
     openScenario("largeBacklog");
     const list = await actionList();
     await list.findAllByText(/^Review\b/);
-    for (const facts of list.getAllByText(/^(Unassigned|Found) /))
+    for (const facts of list.getAllByText(/ · (Unassigned|Found) /))
       expect(facts.textContent).not.toMatch(/Due/);
     expect(list.getAllByText(/Found 12 Oct/).length).toBeGreaterThan(0);
   });
@@ -311,7 +311,7 @@ describe("individual performance off", () => {
     }) as typeof fetch;
     const list = await actionList();
     // Responsibility for a finding is not a performance comparison.
-    expect(await list.findAllByText(/^Owner a1 · Found/)).toHaveLength(3);
+    expect(await list.findAllByText(/ · Owner a1 · Found/)).toHaveLength(3);
     const chart = within(
       screen.getByRole("region", { name: "Sales won by team member" }),
     );

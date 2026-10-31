@@ -7,7 +7,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { metricOf, readingValue } from "./analytics.overview.readings";
 import { ChartBody } from "./reporting.chartbody";
-import { ChartContext, ChartDetails } from "./reporting.chartcontext";
+import { ChartDetails } from "./reporting.chartcontext";
 import { ChartPanel } from "./reporting.charts";
 import {
   type ReportingBlockKind,
@@ -78,10 +78,12 @@ export function SalesHero({
   return (
     <Panel
       title={metricName("bookings_won")}
+      // One line of head and no foot: the header's caption already names the
+      // period, and the first screen has no height to spare.
+      flatHead
       titleAction={
         trend && <ChartDetails chart={trend} evaluation={evaluation} />
       }
-      footer={trend && <ChartContext chart={trend} evaluation={evaluation} />}
     >
       <PanelBody>
         <div className="analytics-hero-body">

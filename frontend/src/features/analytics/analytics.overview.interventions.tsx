@@ -97,41 +97,46 @@ export function InterventionPanel({
     <div id={INTERVENTIONS_ID} tabIndex={-1}>
       <Panel
         title={t("analytics.attention")}
+        flatHead
         footer={
-          findings.length > 0 && (
-            <AppLink href={forecast()}>
-              {t("analytics.intervention.viewAll")}
-            </AppLink>
-          )
+          <>
+            {/* The checks read every pipeline and close date of the scope. */}
+            <p className="t-caption">{t("analytics.intervention.scope")}</p>
+            {findings.length > 0 && (
+              <AppLink href={forecast()}>
+                {t("analytics.intervention.viewAll")}
+              </AppLink>
+            )}
+          </>
         }
       >
-        <PanelBody>
-          {/* The checks read every pipeline and close date of the scope. */}
-          <p className="t-caption">{t("analytics.intervention.scope")}</p>
-          {state === "not_permitted" && (
-            <p className="t-caption">
-              {t("analytics.intervention.notPermitted")}
-            </p>
-          )}
-          {findings.length === 0 && state !== "not_permitted" && (
-            <SurfaceState
-              state={
-                state === "pending"
-                  ? "loading"
-                  : state === "failed"
-                    ? "unavailable"
-                    : "empty"
-              }
-              emptyLabel={emptyLabel}
-              loadingLabel={t("analytics.attention")}
-            >
-              {null}
-            </SurfaceState>
-          )}
-          {state === "failed" && findings.length > 0 && (
-            <p className="t-caption">{t("analytics.attentionIncomplete")}</p>
-          )}
-        </PanelBody>
+        {(findings.length === 0 || state === "failed") && (
+          <PanelBody>
+            {state === "not_permitted" && (
+              <p className="t-caption">
+                {t("analytics.intervention.notPermitted")}
+              </p>
+            )}
+            {findings.length === 0 && state !== "not_permitted" && (
+              <SurfaceState
+                state={
+                  state === "pending"
+                    ? "loading"
+                    : state === "failed"
+                      ? "unavailable"
+                      : "empty"
+                }
+                emptyLabel={emptyLabel}
+                loadingLabel={t("analytics.attention")}
+              >
+                {null}
+              </SurfaceState>
+            )}
+            {state === "failed" && findings.length > 0 && (
+              <p className="t-caption">{t("analytics.attentionIncomplete")}</p>
+            )}
+          </PanelBody>
+        )}
         <FindingRows
           findings={findings.slice(0, NAMED)}
           href={(id) => forecast(["finding", id])}
@@ -182,9 +187,11 @@ function FindingRows({
         <p className="analytics-attention-title">
           <VerbAndObject check={check} />
         </p>
-        <p className="t-caption">{t(checkLabel(check.type))}</p>
         <p className="t-caption">
-          {findingFacts(check, owners, t, locale, zone)}
+          {[
+            t(checkLabel(check.type)),
+            findingFacts(check, owners, t, locale, zone),
+          ].join(" · ")}
         </p>
       </div>
       <AppLink className="btn btn-ghost" href={href(check.id)}>

@@ -98,7 +98,7 @@ function chartX(index: number, count: number, width: number) {
   return 56 + (index / Math.max(1, count - 1)) * (width - 76);
 }
 // The plot's height in viewBox units, mirrored by `.report-chart-line`.
-const LINE_HEIGHT = { default: 238, compact: 150 } as const;
+const LINE_HEIGHT = { default: 238, compact: 130 } as const;
 
 function chartY(value: number, scale: number, height: number) {
   return height - 40 - (value / scale) * (height - 64);
@@ -146,7 +146,7 @@ export function CumulativeChart({
     readings.length - 1,
   ]);
   return (
-    <figure className="report-chart" aria-labelledby={title}>
+    <figure className="report-chart" data-size={size} aria-labelledby={title}>
       <figcaption id={title} className="sr-only">
         {label}
       </figcaption>

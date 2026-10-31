@@ -1,10 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import {
-  backlogList,
-  quarterSales,
-} from "../src/features/analytics/analytics.overview.scenariodata";
 import { de } from "../src/i18n/de";
-import { reportingFixtureFrames } from "../src/testing/reporting.fixtures";
+import { reportingStoryEvaluation } from "../src/testing/reporting.fixtures";
 import { mockApi } from "./seed";
 
 /**
@@ -15,16 +11,86 @@ import { mockApi } from "./seed";
  */
 
 const VIEWPORT = { width: 1366, height: 768 };
-const clock = reportingFixtureFrames.quarterCutoff.clock;
 
-async function openSalesReview(page: Page) {
+// A quarter with a target it is short of, built from the story evaluation.
+const QUARTER = {
+  ...reportingStoryEvaluation,
+  metrics: [
+    ...reportingStoryEvaluation.metrics,
+    {
+      id: "forecast_landing" as const,
+      version: "1",
+      unit: "EUR",
+      value: 76_000_000,
+      coverage: { status: "ok" as const, withheld: false },
+      evidence: { metric: "forecast_landing" as const, context_id: "interval" },
+      target_comparison: {
+        status: "compared" as const,
+        target_metric: "bookings_won" as const,
+        target: 80_000_000,
+        landing: 76_000_000,
+        won: 42_000_000,
+        gap: 4_000_000,
+        remaining: 38_000_000,
+        open_pipeline: 136_000_000,
+        coverage: 3.58,
+      },
+    },
+  ],
+};
+
+const finding = (id: string, type: string, deal: string, label: string) => ({
+  id,
+  type,
+  subject_kind: "deal",
+  subject_id: deal,
+  subject: { type: "deal", id: deal, label },
+  severity: "high",
+  affected_minor: 4_800_000,
+  currency: "EUR",
+  status: "open",
+  first_seen_at: "2026-10-12T02:00:00Z",
+  last_seen_at: "2026-10-31T02:00:00Z",
+  inputs_changed: false,
+  destination: { screen: "forecast_review", mode: "answer" },
+});
+
+// Three findings on two deals, as listInputChecks answers them.
+const CHECKS = {
+  data: [
+    finding("f-1", "close_past", "d-1", "Harbourline depot retrofit"),
+    finding("f-2", "no_next_step", "d-1", "Harbourline depot retrofit"),
+    finding("f-3", "close_past", "d-2", "Quayside fleet tools"),
+  ],
+  groups: [
+    {
+      type: "close_past",
+      findings: 2,
+      deals: 2,
+      other_findings: 0,
+      exposure: [{ currency: "EUR", amount_minor: 9_600_000 }],
+      destination: { screen: "forecast_review", mode: "answer" },
+    },
+    {
+      type: "no_next_step",
+      findings: 1,
+      deals: 1,
+      other_findings: 0,
+      exposure: [{ currency: "EUR", amount_minor: 4_800_000 }],
+      destination: { screen: "forecast_review", mode: "answer" },
+    },
+  ],
+  totals: { findings: 3, deals: 2, other_findings: 0 },
+};
+
+async function openSalesReview(page: Page, evaluation: unknown = QUARTER) {
   await page.setViewportSize(VIEWPORT);
   await mockApi(page);
   await page.route(/\/v1\/analytics\/evaluate/, (route) =>
-    route.fulfill({ json: quarterSales() }),
+    route.fulfill({ json: evaluation }),
   );
   await page.route(/\/v1\/forecast\/assurance\/exceptions/, (route) =>
-    route.fulfill({ json: backlogList(clock) }),
+    route.fulfill({ json: CHECKS }),
   );
   await page.goto("/#/analytics/overview?overview=sales", {
     waitUntil: "networkidle",
@@ -113,31 +179,20 @@ test("the question, the lead, three readings, the summary and the first action f
 test("a quarter with nothing won keeps its explanation and actions, with no blank chart", async ({
   page,
 }) => {
-  await page.setViewportSize(VIEWPORT);
-  await mockApi(page);
-  await page.route(/\/v1\/analytics\/evaluate/, (route) =>
-    route.fulfill({
-      json: quarterSales({
-        charts: quarterSales().charts.map((chart) =>
-          chart.kind === "bookings_trend"
-            ? {
-                ...chart,
-                points: chart.points.map((point) => ({
-                  ...point,
-                  value: 0,
-                  comparison: null,
-                })),
-              }
-            : chart,
-        ),
-      }),
-    }),
-  );
-  await page.route(/\/v1\/forecast\/assurance\/exceptions/, (route) =>
-    route.fulfill({ json: backlogList(clock) }),
-  );
-  await page.goto("/#/analytics/overview?overview=sales", {
-    waitUntil: "networkidle",
+  await openSalesReview(page, {
+    ...QUARTER,
+    charts: QUARTER.charts.map((chart) =>
+      chart.kind === "bookings_trend"
+        ? {
+            ...chart,
+            points: chart.points.map((point) => ({
+              ...point,
+              value: 0,
+              comparison: null,
+            })),
+          }
+        : chart,
+    ),
   });
   const hero = page.locator("section.panel", {
     has: page.locator(".analytics-hero-body"),

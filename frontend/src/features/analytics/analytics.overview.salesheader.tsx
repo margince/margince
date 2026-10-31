@@ -54,12 +54,21 @@ export function SalesHeader({
     <FilterBar
       label={t("analytics.filters")}
       quiet
-      caption={caption}
-      actions={
-        <OverflowMenu label={t("analytics.overview.more")}>
-          <OverviewSaveActions selection={saved} scope={scope} />
-          {evaluation && <ReportingExportButton evaluation={evaluation} />}
-        </OverflowMenu>
+      // The active filters lead the line that says what the figures cover.
+      caption={
+        <span className="analytics-chips">
+          <Badge>
+            {t("analytics.overview.chipPipeline", {
+              name: pipeline?.name ?? t("reporting.allPipelines"),
+            })}
+          </Badge>
+          <Badge>
+            {t("analytics.overview.chipClose", {
+              window: t(`reporting.${selection.close_window}`),
+            })}
+          </Badge>
+          <span>{caption}</span>
+        </span>
       }
     >
       {switcher}
@@ -80,18 +89,10 @@ export function SalesHeader({
         {t("analytics.overview.filtersToggle")}
         <ExpanderChevron />
       </Button>
-      <span className="analytics-chips">
-        <Badge>
-          {t("analytics.overview.chipPipeline", {
-            name: pipeline?.name ?? t("reporting.allPipelines"),
-          })}
-        </Badge>
-        <Badge>
-          {t("analytics.overview.chipClose", {
-            window: t(`reporting.${selection.close_window}`),
-          })}
-        </Badge>
-      </span>
+      <OverflowMenu label={t("analytics.overview.more")}>
+        <OverviewSaveActions selection={saved} scope={scope} />
+        {evaluation && <ReportingExportButton evaluation={evaluation} />}
+      </OverflowMenu>
       {open && (
         <ReportingFilters
           selection={selection}
