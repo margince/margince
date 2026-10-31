@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // CurrentLeadEngagementClause keeps qualification advice tied to its source event.
@@ -16,10 +17,10 @@ import (
 func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity lead_source WHERE lead_source.id = ` + source + `
- AND lead_source.restricted_at IS NULL AND ` + sourceWithinHorizonSQL("lead_source", asOf, arg) + `
+ AND lead_source.restricted_at IS NULL AND ` + SourceWithinHorizonSQL("lead_source", asOf, arg) + `
  AND ((lead_source.kind IN ('email','message') AND lead_source.direction = 'inbound'
  AND ` + occurredday.BegunSQL("lead_source", instant) + ` AND NOT ` + AnsweredSQL("lead_source", instant) + `)
- OR (lead_source.kind = 'meeting' AND (lead_source.meeting_status IN ('booked','held') OR lead_source.meeting_status IS NULL))))`
+ OR (lead_source.kind = 'meeting' AND ` + relstrength.MeetingCountsSQL("lead_source") + `)))`
 }
 
 // TaskDueSQL removes a generated notification timestamp from deadline reads.

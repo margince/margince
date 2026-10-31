@@ -194,7 +194,7 @@ func recomputeUnderOverrideTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID,
 
 // leadBehavioralSignals derives the §3.1 signal rows from the lead's
 // linked activities: an inbound email is a reply, a meeting counts by
-// its recorded status.
+// what meetingProof says it proves.
 func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]BehavioralSignal, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.meeting_status, ''), a.occurred_at
@@ -215,13 +215,11 @@ func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([
 			return nil, err
 		}
 		var signalKind string
-		switch {
+		switch proof, proves := meetingProof(meetingStatus); {
 		case kind == "email" && direction == "inbound":
 			signalKind = "reply"
-		case kind == "meeting" && meetingStatus == "held":
-			signalKind = "meeting_held"
-		case kind == "meeting" && meetingStatus == "booked":
-			signalKind = "meeting_booked"
+		case kind == "meeting" && proves:
+			signalKind = string(proof)
 		default:
 			continue
 		}

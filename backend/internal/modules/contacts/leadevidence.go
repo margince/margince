@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -16,25 +17,24 @@ import (
 )
 
 // leadEvidenceTriggerSQL is the trigger an activity row `a` proves.
-const leadEvidenceTriggerSQL = `(CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'
-	                                 WHEN a.kind = 'meeting' THEN 'meeting_booked'
-	                                 ELSE 'inbound_reply' END)`
+var leadEvidenceTriggerSQL = `(CASE WHEN a.kind = 'meeting' THEN ` + meetingProofSQL("a") + ` ELSE '` + string(TriggerInboundReply) + `' END)`
 
 // leadEvidenceOrderSQL puts the strongest engagement first: a held meeting,
 // then a booked one, then a reply, each newest first.
-const leadEvidenceOrderSQL = ` ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
-	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1`
+var leadEvidenceOrderSQL = ` ORDER BY CASE ` + leadEvidenceTriggerSQL + ` WHEN '` + string(TriggerMeetingHeld) + `' THEN 0
+	                WHEN '` + string(TriggerMeetingBooked) + `' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1`
 
 // leadEvidenceFromSQL is the engagement that can qualify the lead leadRef
-// names: a live inbound email or a meeting not called off, linked to that lead.
-// The lead itself must have taken part. The lead read offers it and the
-// promotion requires it, so the two agree.
-func leadEvidenceFromSQL(leadRef string) string {
+// names: a live inbound email or a meeting that proves engagement, linked to
+// that lead. The lead itself must have taken part, and it must fall inside the
+// waiting horizon the Worklist keeps lead engagement current by. The lead read
+// offers it and the promotion requires it, so the two agree.
+func leadEvidenceFromSQL(leadRef string, asOf time.Time, arg func(any) int) string {
 	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	  WHERE l.lead_id = ` + leadRef + ` AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	  WHERE l.lead_id = ` + leadRef + ` AND a.restricted_at IS NULL
+	    AND ` + storekit.SourceWithinHorizonSQL("a", asOf, arg) + `
 	    AND ((a.kind = 'email' AND a.direction = 'inbound')
-	         OR (a.kind = 'meeting'
-	             AND (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))))
+	         OR (a.kind = 'meeting' AND ` + meetingProofSQL("a") + ` IS NOT NULL))
 	    AND ` + leadTookPartSQL(leadRef)
 }
 
@@ -54,11 +54,12 @@ func leadTookPartSQL(leadRef string) string {
 	                SELECT 1 FROM activity_participant sender WHERE sender.activity_id = a.id AND sender.role = 'from')))))`
 }
 
-// leadQualificationEvidenceSQL is the lead read's qualification_evidence column.
-func leadQualificationEvidenceSQL() string {
+// leadQualificationEvidenceSQL is the lead read's qualification_evidence
+// column, as of the read's pinned instant.
+func leadQualificationEvidenceSQL(asOf time.Time, arg func(any) int) string {
 	return `(SELECT jsonb_build_object('trigger', ` + leadEvidenceTriggerSQL + `,
 	                           'activity_id', a.id, 'occurred_at', a.occurred_at, 'occurred_precision', a.occurred_precision)
-	   ` + leadEvidenceFromSQL("lead.id") + leadEvidenceOrderSQL + `)`
+	   ` + leadEvidenceFromSQL("lead.id", asOf, arg) + leadEvidenceOrderSQL + `)`
 }
 
 // evidenceProving maps each engagement trigger to the read's triggers that
@@ -84,7 +85,7 @@ func (e *PromoteEvidenceError) Error() string {
 	if e.Cited {
 		return fmt.Sprintf("the cited activity is not live engagement on this lead that shows %s", e.Trigger)
 	}
-	return fmt.Sprintf("this lead has no live engagement that shows %s; cite it, or qualify it as human_qualify", e.Trigger)
+	return fmt.Sprintf("this lead has no live engagement inside the waiting horizon that shows %s; cite it, or qualify it as human_qualify", e.Trigger)
 }
 
 // FieldFault names the evidence when the caller cited some, and the trigger
@@ -126,7 +127,8 @@ func matchingEvidence(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteL
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	lead, shows := arg(id), arg(evidenceProving[PromoteTrigger(in.Trigger)])
-	q := fmt.Sprintf(`SELECT a.id %s AND %s = ANY($%d)`, leadEvidenceFromSQL(fmt.Sprintf("$%d", lead)), leadEvidenceTriggerSQL, shows)
+	from := leadEvidenceFromSQL(fmt.Sprintf("$%d", lead), slaNow(ctx), arg)
+	q := fmt.Sprintf(`SELECT a.id %s AND %s = ANY($%d)`, from, leadEvidenceTriggerSQL, shows)
 	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
 		return ids.ActivityID{}, false, err

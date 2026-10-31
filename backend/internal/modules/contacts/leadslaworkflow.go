@@ -137,7 +137,7 @@ func (leadStatusLadder) IdempotencyKey(ev workflow.Event) string {
 }
 
 // ladderStepFor reads one touch as the step it earns: an inbound reply or a
-// booked/held meeting is engagement; any other outbound touch is contact. A
+// meeting meetingProof counts is engagement; any other outbound touch is contact. A
 // system-captured outbound with no prior inbound — a cold sequence mail — is
 // still contact: we reached out, whoever pressed send.
 //
@@ -150,7 +150,7 @@ func (leadStatusLadder) IdempotencyKey(ev workflow.Event) string {
 // engagement: writing about a lead is not the lead writing back.
 func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 	switch {
-	case t.direction == "inbound", t.kind == "meeting" && (t.meetingStatus == "booked" || t.meetingStatus == "held"):
+	case t.direction == "inbound", t.kind == "meeting" && meetingProves(t.meetingStatus):
 		return LeadStatusEngaged, true
 	case t.direction == touchOutbound, humanLoggedNote(t):
 		return LeadStatusContacted, true

@@ -9,6 +9,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -19,6 +22,8 @@ import (
 type evidenceSeed struct {
 	kind, direction, meetingStatus string
 	archived                       bool
+	// at is when it happened; zero is the database's now.
+	at time.Time
 }
 
 var (
@@ -43,12 +48,16 @@ func (e *promoteConsentEnv) seedEvidenceFrom(t *testing.T, lead *ids.LeadID, see
 	if lead != nil {
 		leadID = &lead.UUID
 	}
+	var at *time.Time
+	if !seed.at.IsZero() {
+		at = &seed.at
+	}
 	e.mustExec(t,
 		`INSERT INTO activity (id, kind, subject, direction, meeting_status, occurred_at, source, captured_by, archived_at,
 		                       counterparty_email)
-		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), now(), 'manual', 'human:x', CASE WHEN $5 THEN now() END,
+		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), coalesce($8, now()), 'manual', 'human:x', CASE WHEN $5 THEN now() END,
 		         coalesce(NULLIF($6, ''), (SELECT email FROM lead WHERE id = $7)))`,
-		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived, counterparty, leadID)
+		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived, counterparty, leadID, at)
 	if lead != nil {
 		e.mustExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, id, *lead)
 	}
@@ -161,6 +170,17 @@ func TestAPromotionRecordsTheLeadsOwnEvidence(t *testing.T) {
 			t.Errorf("audit evidence = %q, want the held meeting %s", got, meeting)
 		}
 	})
+	t.Run("a meeting with no recorded status proves a booking", func(t *testing.T) {
+		e := setupPromoteConsent(t)
+		lead := e.seedLead(t, "unrecorded@evidence.test")
+		meeting := e.seedEvidence(t, &lead, evidenceSeed{kind: "meeting"})
+		if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: string(TriggerMeetingBooked)}); err != nil {
+			t.Fatalf("promote as meeting_booked on a captured meeting with no status: %v", err)
+		}
+		if got := e.promotedEvidence(t, lead); got != meeting.String() {
+			t.Errorf("audit evidence = %q, want the unrecorded meeting %s", got, meeting)
+		}
+	})
 	t.Run("a human's judgement needs none", func(t *testing.T) {
 		e := setupPromoteConsent(t)
 		lead := e.seedLead(t, "human@evidence.test")
@@ -234,6 +254,89 @@ func TestAPromotionWaitsForAConcurrentChangeToItsEvidence(t *testing.T) {
 			}
 			if _, refused := errors.AsType[*PromoteEvidenceError](<-done); !refused {
 				t.Errorf("the promotion recorded evidence %s while it was %s", reply, name)
+			}
+		})
+	}
+}
+
+// Engagement older than the waiting horizon no longer qualifies a lead. The read
+// stops offering it, and a promotion that must find it on the lead is refused.
+func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
+	asOf := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	previous := leadSLAClock
+	leadSLAClock = func() time.Time { return asOf }
+	t.Cleanup(func() { leadSLAClock = previous })
+	horizon := storekit.DefaultWaitingHorizonDays * 24 * time.Hour
+	for _, tc := range []struct {
+		name    string
+		age     time.Duration
+		offered bool
+	}{{"inside the horizon", horizon - time.Hour, true}, {"outside the horizon", horizon + time.Hour, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			lead := e.seedLead(t, "aged@evidence.test")
+			e.seedEvidence(t, &lead, evidenceSeed{kind: "email", direction: "inbound", at: asOf.Add(-tc.age)})
+			read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (read.QualificationEvidence != nil) != tc.offered {
+				t.Errorf("a reply %s old: the read offers %+v, want offered=%t", tc.age, read.QualificationEvidence, tc.offered)
+			}
+			_, _, err = e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: string(TriggerInboundReply)})
+			refusal, refused := errors.AsType[*PromoteEvidenceError](err)
+			if refused == tc.offered || (!refused && err != nil) {
+				t.Fatalf("promote on a reply %s old: %v, want refused=%t", tc.age, err, !tc.offered)
+			}
+			if !refused {
+				return
+			}
+			if field, _, _ := refusal.FieldFault(); field != fieldTrigger {
+				t.Errorf("the refusal names %q, want %q", field, fieldTrigger)
+			}
+		})
+	}
+}
+
+// One meeting reads the same to the lead's evidence, its score and its status
+// ladder, whatever its recorded status, through each reader's own query.
+func TestEvidenceScoringAndTheLadderReadAMeetingAlike(t *testing.T) {
+	for status, want := range map[string]PromoteTrigger{
+		"": TriggerMeetingBooked, "booked": TriggerMeetingBooked, "held": TriggerMeetingHeld, "canceled": "", "no_show": "",
+	} {
+		t.Run("status "+status, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			lead := e.seedLead(t, "alike@evidence.test")
+			e.seedEvidence(t, &lead, evidenceSeed{kind: "meeting", meetingStatus: status})
+			read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var offered PromoteTrigger
+			if read.QualificationEvidence != nil {
+				offered = PromoteTrigger(read.QualificationEvidence.Trigger)
+			}
+			var scored PromoteTrigger
+			var touches []leadResponseTouch
+			if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+				signals, err := leadBehavioralSignals(e.ctx, tx, lead)
+				if len(signals) == 1 {
+					scored = PromoteTrigger(signals[0].Kind)
+				}
+				if err != nil {
+					return err
+				}
+				touches, err = leadTouchesFor(e.ctx, tx, lead, endOfTime)
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if len(touches) != 1 {
+				t.Fatalf("the ladder read %d touches, want the one meeting", len(touches))
+			}
+			step, engaged := ladderStepFor(touches[0])
+			if offered != want || scored != want || engaged != (want != "") || (engaged && step != LeadStatusEngaged) {
+				t.Errorf("evidence %q, score signal %q, ladder engaged=%t; want %q from all three", offered, scored, engaged, want)
 			}
 		})
 	}

@@ -30,7 +30,8 @@ import (
 // derives them has no store in hand; tests pin it.
 var leadSLAClock = time.Now
 
-// slaNowKey carries the instant ONE list read judges SLA state against.
+// slaNowKey carries the instant one list read judges SLA state and the age of
+// qualification evidence against.
 type slaNowKey struct{}
 
 // withPinnedSLANow fixes the SLA instant for everything built from ctx, so the

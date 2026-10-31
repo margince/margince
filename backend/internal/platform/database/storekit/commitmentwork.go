@@ -129,11 +129,13 @@ func taskSourcesOf(currency taskCurrency) []string {
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
- AND ` + sourceWithinHorizonSQL("current_source", asOf, arg) + `
+ AND ` + SourceWithinHorizonSQL("current_source", asOf, arg) + `
  AND ` + occurredday.BegunSQL("current_source", instant) + `)`
 }
 
-func sourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) string {
+// SourceWithinHorizonSQL admits a live row whose own time falls inside the
+// waiting horizon. alias is a compile-time literal.
+func SourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return alias + `.archived_at IS NULL AND ` + occurredday.FromSQL(alias, instant+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
 }
