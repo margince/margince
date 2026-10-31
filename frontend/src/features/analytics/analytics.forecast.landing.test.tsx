@@ -291,4 +291,9 @@ describe("rangeOf", () => {
     expect(rangeOf(610_00, undefined)).toBeUndefined();
     expect(rangeOf(undefined, 880_00)).toBeUndefined();
   });
+
+  it("draws no range when nothing is left to decide", () => {
+    expect(rangeOf(0, 0)).toBeUndefined();
+    expect(rangeOf(420_00, 420_00)).toBeUndefined();
+  });
 });

@@ -19,6 +19,8 @@ export function rangeOf(
   highMinor: number | undefined,
 ): ForecastRange | undefined {
   if (lowMinor === undefined || highMinor === undefined) return undefined;
+  // Equal ends mean nothing is left to decide, and the landing already says it.
+  if (lowMinor === highMinor) return undefined;
   return { lowMinor, highMinor };
 }
 
