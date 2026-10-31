@@ -79,6 +79,9 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
   // filter page heads itself (headsItself), and the shell's subtitle goes
   // with the heading it hangs on.
   filters: "filters.subtitle",
+  // A scheduled send holds unsent words and blind copies, and only the one who
+  // scheduled it can read it; the page states that once.
+  scheduled: "sched.sub",
 };
 
 // Off-rail screens (reached from Settings or from the surface that created the

@@ -16587,7 +16587,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // l\u1ea7n g\u1eedi n\u00e0o \u0111\u1ec3 hu\u1ef7 v\u00e0 kh\u00f4ng c\u00f3 b\u1ea3n ghi n\u00e0o \u0111\u1ec3 xo\u00e1 \u2014 ng\u01b0\u1eddi vi\u1ebft l\u1ea5y tin nh\u1eafn
   // v\u1ec1 tr\u01b0\u1edbc khi n\u00f3 \u0111i.
   "nav.scheduled": "Tin nhắn đã lên lịch",
-  "sched.empty": "Chưa có tin nhắn nào được lên lịch.",
+  "sched.sub": "Chỉ bạn thấy được các tin nhắn này.",
+  "sched.empty": "Chưa lên lịch tin nhắn nào.",
   "sched.write": "Viết tin nhắn",
   "sched.writeHow": "Mở một liên hệ và chọn Email.",
   "sched.group.held": "Đang chờ bạn xử lý",

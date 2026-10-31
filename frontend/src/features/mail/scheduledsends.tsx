@@ -16,6 +16,7 @@ import { formatNumber } from "../../format/format";
 import { formatCountdown, useNow } from "../../format/now";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useMailboxConnected } from "../../lib/connectors";
 import { problemMessageOf } from "../../lib/problem";
 import "./scheduledsends.css";
 // The queue behind "send later", and the reason it has to exist: a rep who can
@@ -92,6 +93,27 @@ function QueueToolbar({
   );
 }
 
+// One line for the whole page. With a mailbox to send from it also offers the
+// way to start, which is the contact the message goes to.
+function EmptyQueue() {
+  const t = useT();
+  if (!useMailboxConnected()) {
+    return <EmptyState>{t("sched.empty")}</EmptyState>;
+  }
+  return (
+    <EmptyState
+      title={t("sched.empty")}
+      action={
+        <AppLink className="btn btn-primary" href="#/contacts">
+          {t("sched.write")}
+        </AppLink>
+      }
+    >
+      {t("sched.writeHow")}
+    </EmptyState>
+  );
+}
+
 export function ScheduledSendsScreen() {
   const t = useT();
   const plural = usePlural();
@@ -137,10 +159,8 @@ export function ScheduledSendsScreen() {
   );
 
   return (
-    // No heading of its own: the shell's PageTitle names this page from
-    // OFF_RAIL_TITLE_KEYS and prints its subtitle from PAGE_SUB_KEYS, and a
-    // second h1 here would leave a screen reader picking between two page
-    // titles.
+    // No h1 of its own: the shell's PageTitle names this page and prints its
+    // subtitle, and a second h1 would leave two page titles.
     <div className="wrap">
       {skew && (
         <QueueSkewNotice message={skew} onReload={() => void query.refetch()} />
@@ -148,18 +168,7 @@ export function ScheduledSendsScreen() {
       <WriteRefused titleKey="sched.writeFailed" message={writeError} />
       <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
-          // One line for the whole page and the way to start: a message is
-          // written from the contact it goes to, so the verb opens Contacts.
-          <EmptyState
-            title={t("sched.empty")}
-            action={
-              <AppLink className="btn btn-primary" href="#/contacts">
-                {t("sched.write")}
-              </AppLink>
-            }
-          >
-            {t("sched.writeHow")}
-          </EmptyState>
+          <EmptyQueue />
         ) : (
           query.data && (
             <div className="arrive-stack">
