@@ -17,7 +17,20 @@ import (
 )
 
 func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
-	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeLead) || approval.TargetEntityId == nil || approval.TargetVersion == nil || approval.ProposedChange == nil {
+	if approval.TargetVersion == nil {
+		return contacts.PromoteLeadInput{}, apperrors.ErrInvalidArgument
+	}
+	in, err := promotionRequestInput(approval)
+	if err != nil {
+		return in, err
+	}
+	in.IfVersion = new(int64(*approval.TargetVersion))
+	return in, nil
+}
+
+// promotionRequestInput reads the promotion either door staged, without the version pin.
+func promotionRequestInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
+	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeLead) || approval.TargetEntityId == nil || approval.ProposedChange == nil {
 		return contacts.PromoteLeadInput{}, apperrors.ErrInvalidArgument
 	}
 	var in contacts.PromoteLeadInput
@@ -41,7 +54,6 @@ func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLea
 		}
 		in.Trigger, in.EvidenceNote = req.Trigger, req.EvidenceNote
 	}
-	in.IfVersion = new(int64(*approval.TargetVersion))
 	return in, nil
 }
 

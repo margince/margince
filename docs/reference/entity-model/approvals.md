@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-35 columns · primary key `(id)` · referenced by 4 foreign keys
+36 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,6 +17,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `co_target_entity_type` | `text` |  |  |
 | `co_target_version` | `bigint` |  |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
+| `context_digest` | `text` |  |  |
 | `decided_at` | `timestamp with time zone` |  |  |
 | `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `decided_by_system` | `boolean`, default `false` | yes |  |

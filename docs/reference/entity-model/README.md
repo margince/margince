@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 339 |
-| Columns | 4045 |
+| Columns | 4048 |
 | Foreign keys | 560 |
 | Owning areas | 37 |
 
@@ -169,7 +169,7 @@ erDiagram
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
 | [`app_user`](identity.md#app_user) | identity | 34 | 146 |
-| [`approval`](approvals.md#approval) | approvals | 35 | 4 |
+| [`approval`](approvals.md#approval) | approvals | 36 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -290,7 +290,7 @@ erDiagram
 | [`deal_room_session`](dealrooms.md#deal_room_session) | dealrooms | 10 | 0 |
 | [`deal_room_thread`](dealrooms.md#deal_room_thread) | dealrooms | 16 | 1 |
 | [`deal_stage_evidence`](deals.md#deal_stage_evidence) | deals | 19 | 1 |
-| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 23 | 2 |
+| [`deal_stage_history`](deals.md#deal_stage_history) | deals | 25 | 2 |
 | [`deal_status_card`](compose.md#deal_status_card) | compose | 6 | 0 |
 | [`deal_suggestion`](deals.md#deal_suggestion) | deals | 21 | 1 |
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |

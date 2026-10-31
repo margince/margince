@@ -41208,8 +41208,9 @@ export interface components {
              *     instant. Every member is in exactly one outcome, so the counts add
              *     up to `observations`. `unresolved` members have not reached an
              *     outcome yet and are never counted as lost; `history_partial`
-             *     members have a move recorded before Margince kept the stage order,
-             *     so the direction of that move is unknown.
+             *     members left by a move an import brought in, which does not show
+             *     how the team sells, or by a move recorded before Margince kept the
+             *     stage order, so its direction is unknown.
              */
             outcomes?: components["schemas"]["ReportingCohortCount"][];
             /**
@@ -49575,7 +49576,7 @@ export interface components {
          * @description One stage where the rep converts differently from the team. Entries and conversions are
          *     attributed to the owner at the time of each move. "Converted" is a later move to a won
          *     stage or to a later stage, compared by the stage order as it was configured when the
-         *     week was assembled.
+         *     week was assembled. Moves an import brought in neither enter nor convert a deal.
          */
         TeamWeeklyFunnelDeviation: {
             /** Format: uuid */

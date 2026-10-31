@@ -112,6 +112,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		}
 		where = append(where, entityWhere...)
 	}
+	if in.LinkedToDeals != nil {
+		where = append(where, sprintf(
+			"EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id AND on_deal.deal_id = ANY ($%d::uuid[]))",
+			arg(in.LinkedToDeals)))
+	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}

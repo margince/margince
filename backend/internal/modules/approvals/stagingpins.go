@@ -88,3 +88,30 @@ func resolveCoTargetVersion(ctx context.Context, tx pgx.Tx, in StageInput) (vers
 	}
 	return current, true, nil
 }
+
+// stagingPins are the pins one staging takes. A nil version or an empty
+// context digest is a pin the staging does not carry.
+type stagingPins struct {
+	target, coTarget *int64
+	context          string
+}
+
+func (s *Service) resolveStagingPins(ctx context.Context, tx pgx.Tx, in StageInput) (stagingPins, error) {
+	var pins stagingPins
+	current, pinned, err := resolveTargetVersion(ctx, tx, in)
+	if err != nil {
+		return pins, err
+	}
+	if pinned {
+		pins.target = &current
+	}
+	coVersion, coPinned, err := resolveCoTargetVersion(ctx, tx, in)
+	if err != nil {
+		return pins, err
+	}
+	if coPinned {
+		pins.coTarget = &coVersion
+	}
+	pins.context, err = s.stagedContextDigest(ctx, tx, in)
+	return pins, err
+}
