@@ -448,7 +448,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `audit_id` | `uuid` | yes |  |
 | `created_by` | `text` | yes |  |
 | `kind` | `text` | yes | One of `address`, `domain`. |

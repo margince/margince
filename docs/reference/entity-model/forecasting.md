@@ -52,7 +52,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `context_key` | `text` | yes |  |
 | `failure` | `text` |  |  |
 | `last_attempt_at` | `timestamp with time zone` | yes |  |
