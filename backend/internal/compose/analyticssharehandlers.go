@@ -17,6 +17,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -381,6 +382,7 @@ var shareExportColumns = []string{
 	"deal_id", "deal_name", "owner_id", "amount_minor", "currency",
 	"base_minor", "effective_close_date", "category",
 	"in_won", "in_open", "exclusion_reason",
+	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
@@ -398,6 +400,8 @@ func shareRowsCSV(rows []SharedContribution) ([]byte, error) {
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
 			csvCell(row.Category), csvCell(row.InWon), csvCell(row.InOpen),
 			csvCell(row.ExclusionReason),
+			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
+			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)

@@ -192,6 +192,14 @@ type SharedContribution struct {
 	InWon           bool
 	InOpen          bool
 	ExclusionReason string
+	// What the deal's weight was made of when frozen; nil on a row frozen
+	// before it was kept.
+	WeightedMinor    *int64
+	TypedProbability *int
+	ChanceInUse      *int
+	EvidenceN        *int
+	Signals          []string
+	Effect           *float64
 }
 
 // SharedSnapshotRows reads the per-deal rows behind a shared headline, under
@@ -216,7 +224,9 @@ func SharedSnapshotRows(
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.deal_id, d.name, c.owner_id, c.amount_minor, c.currency,
 		       c.base_minor, c.effective_close_date, c.category,
-		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, '')
+		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, ''),
+		       c.weighted_minor, c.typed_probability, c.stage_probability, c.evidence_n,
+		       c.risk_signals, c.risk_effect
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
 		WHERE c.snapshot_id = $1 AND %s
@@ -231,7 +241,8 @@ func SharedSnapshotRows(
 		var currency, category *string
 		err := row.Scan(&c.DealID, &c.DealName, &c.Owner, &c.AmountMinor, &currency,
 			&c.BaseMinor, &c.EffectiveClose, &category,
-			&c.InWon, &c.InOpen, &c.ExclusionReason)
+			&c.InWon, &c.InOpen, &c.ExclusionReason,
+			&c.WeightedMinor, &c.TypedProbability, &c.ChanceInUse, &c.EvidenceN, &c.Signals, &c.Effect)
 		if currency != nil {
 			c.Currency = *currency
 		}
