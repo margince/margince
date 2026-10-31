@@ -163,7 +163,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
 | `overridecategory_test.go` | H3 | A rep's override names a category from the same closed vocabulary the send engine resolves against — commsauthz.Categories() — and the communication\_override\_category CHECK constraint restates that vocabulary by hand, because SQL cannot call the Go package. |
 | `partialindexinference_test.go` | H1 | An upsert onto a partial unique index repeats that index's predicate. |
-| `partnervocabulary_test.go` | H3 | The partner kinds and stage meanings are spelled in the contract and again in places no generated type reaches: the MCP tool's input schema, the migration CHECK on partner\_kinds, the frontend label maps, and the refusal messages that name the allowed words. |
+| `partnervocabulary_test.go` | H3 | Every copy of the partner kinds and stage meanings matches the contract. |
 | `personalpurgewindow_test.go` | H3 | The page that names a deletion date and the sweep that carries it out must read the same window, or the product promises a date it does not keep. |
 | `phonee164_test.go` | H2 | contact\_phone's E.164 rule is one rule, spelled on both sides of the wire. |
 | `planprosebounds_test.go` | H3 | A plan's prose columns are bounded twice, and the two numbers must agree. |

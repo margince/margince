@@ -5,11 +5,11 @@
 
 package gates
 
-// The partner kinds and stage meanings are spelled in the contract. Some
-// places no generated type reaches spell them again. These are the MCP tool's
-// input schema, the partner_kinds CHECK, the frontend label maps and refusal
-// messages. Each copy is held equal to the contract both ways. A kind added to
-// one copy alone fails here, not as a refusal of a valid word.
+// Every copy of the partner kinds and stage meanings matches the contract.
+// The copies sit where no generated type reaches: the MCP tool's input schema,
+// the partner_kinds CHECK, the frontend label maps and refusal messages. Each
+// is held equal to the contract both ways. A kind added to one copy alone
+// fails here, not as a refusal of a valid word.
 
 import (
 	"os"
