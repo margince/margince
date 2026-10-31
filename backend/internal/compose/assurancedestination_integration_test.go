@@ -126,3 +126,30 @@ func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
 		t.Errorf("no_next_step groups as %+v, want 1 finding on 1 deal", step)
 	}
 }
+
+// The merged reader keeps the contract's order: severity, then money at stake,
+// and only then recency. A bigger, older finding ranks above a smaller one
+// seen last night.
+func TestMergedFindingsRankByMoneyBeforeRecency(t *testing.T) {
+	e := setupForecast(t)
+	big, small := int64(9_000_000), int64(1_000_000)
+	older := e.seedOpenDeal(t, "Harbourline depot retrofit", 20, &e.Rep1, &big, nil)
+	newer := e.seedOpenDeal(t, "Quayside fleet tools", 20, &e.Rep1, &small, nil)
+	olderFinding := e.seedFinding(t, "close_past", older, big)
+	newerFinding := e.seedFinding(t, "close_past", newer, small)
+	if _, err := e.owner.Exec(t.Context(), `UPDATE assurance_exception SET first_seen_at = now() - interval '30 days',
+		last_seen_at = CASE id WHEN $1 THEN now() - interval '20 days' ELSE now() END
+		WHERE id IN ($1, $2)`,
+		olderFinding, newerFinding); err != nil {
+		t.Fatal(err)
+	}
+
+	list := e.listInputChecks(e.answeringRepCtx(e.Rep1), t)
+
+	if len(list.Data) != 2 {
+		t.Fatalf("the list holds %d findings, want 2", len(list.Data))
+	}
+	if got := list.Data[0].Id.String(); got != olderFinding.String() {
+		t.Errorf("the first finding is %s, want the larger older one %s", got, olderFinding)
+	}
+}
