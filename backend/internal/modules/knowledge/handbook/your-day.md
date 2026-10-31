@@ -165,6 +165,8 @@ and in the Worklist.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
+- A deal at risk with a task about it due within 7 days shows as one row: the task, with the deal's
+  risk on it. A task due later, or with no date, leaves the deal on its own row.
 - Work for current customers comes before prospecting. A lead with no reply target shows "no
   response target set", with no made-up deadline.
 - A close date Margince set for now asks you to confirm the forecast; it is not a customer promise.

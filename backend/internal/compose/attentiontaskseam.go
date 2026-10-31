@@ -207,6 +207,40 @@ func (t attentionTasks) TasksAfter(
 	return out, page.HasMore, nil
 }
 
+// DealsWithTaskDue names which of these deals have an open task of the window,
+// under the lane's own narrowing (openTasksDueBy), whose row the lane files
+// under the deal (primaryLink).
+func (t attentionTasks) DealsWithTaskDue(
+	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	due := map[ids.UUID]bool{}
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	if !ok || len(deals) == 0 {
+		return due, nil
+	}
+	asked := map[ids.UUID]bool{}
+	for _, deal := range deals {
+		asked[deal] = true
+	}
+	page := reminderPage
+	in.LinkedToDeals, in.Limit = deals, &page
+	for {
+		rows, next, err := t.listTaskPage(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			if kind, id := primaryLink(row); kind == string(entityDeal) && asked[id] {
+				due[id] = true
+			}
+		}
+		if !next.HasMore {
+			return due, nil
+		}
+		in.Cursor = &next.NextCursor
+	}
+}
+
 // RemindersForViewer reads every due reminder of the reader's through the
 // store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
 // makes, following its cursor. All of them, because the badge counts all.

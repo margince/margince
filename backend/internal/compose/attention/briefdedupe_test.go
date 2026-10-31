@@ -453,7 +453,7 @@ func TestSeveralFoldedRowsAheadOfASurvivorStillLandOnIt(t *testing.T) {
 //
 // THE defect that made this fold run last. A deal can be both in the night's
 // brief and carrying an unanswered message. The at-risk row took the brief's id;
-// dropDealsAlreadyWaiting then deleted that row, because one unanswered message
+// dropDealsAlreadyInHand then deleted that row, because one unanswered message
 // is one row; and the waiting row that absorbs it inherits the deal's figures
 // and reasons but not the brief's id. The entry vanished from the page, and with
 // it the act, set-aside and dismiss verbs that answer the night — which the
@@ -465,7 +465,7 @@ func TestTheBriefsVerbsSurviveTheRowTheyWereAttachedTo(t *testing.T) {
 	deal, briefItem := ids.NewV7(), ids.NewV7()
 	waiting := waitingRowAbout(deal)
 
-	rows := dropDealsAlreadyWaiting([]ranked{atRiskRow(deal), waiting})
+	rows := dropDealsAlreadyInHand([]ranked{atRiskRow(deal), waiting}, time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC))
 	rows = foldBriefIntoRisk(append(rows, rankedBriefRow(briefItem, deal)))
 
 	var carrier *ranked
