@@ -24,15 +24,19 @@ may_call:
   - find_records
   - resolve_entities
 
+# The two figures are seed-specific, so an answer that carries both was read
+# from the deals and not recalled.
 must_mention:
   - "68[.,' ’]?500"
+  - "56[.,' ’]?000"
+  - "12[.,' ’]?500"
 
 must_not_mention:
   - "6[.,' ’]?850[.,' ’]?000"
   - "685[.,' ’]?000"
 
 judge:
-  - "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator), taken from readings it made, and may also give each deal's own value, 56,000 and 12,500 EUR. Answer no if it gives a different total, quotes a figure in minor units as if it were money, or gives no total."
+  - "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator) and each deal's own value, 56,000 EUR for Körber Sensorik Rollout and 12,500 EUR for Rheinufer Netzmodernisierung. Answer no if it gives a different total or a different value for either deal, quotes a figure in minor units as if it were money, or gives no total."
 
 runs: 3
 pass_at: 2

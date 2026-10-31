@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer names Dom Digital Rahmenvertrag and provides a link to its deal page at /#/deals/{uuid}, satisfying all criterion requirements.",
-  "model": "claude-haiku-4-5-20251001",
-  "criterion": "Criterion 1. The earliest close date in the workspace belongs to Dom Digital Rahmenvertrag. The answer names that deal and gives a link whose path is a deal's page in the app. Answer no if it names a different deal, names it without a link, or gives a link that is not a deal page.",
-  "answer": "Dom Digital Rahmenvertrag closes first. Open it here: http://localhost:8084/#/deals/3f2b8c1e-5a7d-4e90-9b1c-2d4f6a8e0c13"
-}

@@ -1752,13 +1752,13 @@
       "case": "case66_what_are_these_two_worth",
       "number": 1,
       "name": "Add the two deals in money, not in minor units",
-      "statement": "The answer gives 68,500 EUR from readings it made. It does not report a minor-unit figure as money."
+      "statement": "The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money."
     },
     {
       "case": "case67_where_do_i_open_it",
       "number": 1,
-      "name": "Give a link to the deal that closes first",
-      "statement": "The answer names the deal with the earliest close date and gives the link to its page in the app."
+      "name": "Give a link to the named deal",
+      "statement": "The answer gives a link to the named deal's page in the app."
     },
     {
       "case": "case6_ask_the_company",

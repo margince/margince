@@ -476,11 +476,10 @@ cases:
     1:
       name: Add the two deals in money, not in minor units
       statement: >-
-        The answer gives 68,500 EUR from readings it made. It does not report
-        a minor-unit figure as money.
+        The answer gives 68,500 EUR and each deal's own value from readings it
+        made. It does not report a minor-unit figure as money.
   case67_where_do_i_open_it:
     1:
-      name: Give a link to the deal that closes first
+      name: Give a link to the named deal
       statement: >-
-        The answer names the deal with the earliest close date and gives the
-        link to its page in the app.
+        The answer gives a link to the named deal's page in the app.

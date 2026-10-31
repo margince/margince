@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer names the correct deal but explicitly states it cannot provide a link, violating the criterion's requirement for a link to the deal page.",
-  "model": "claude-haiku-4-5-20251001",
-  "criterion": "Criterion 1. The earliest close date in the workspace belongs to Dom Digital Rahmenvertrag. The answer names that deal and gives a link whose path is a deal's page in the app. Answer no if it names a different deal, names it without a link, or gives a link that is not a deal page.",
-  "answer": "Dom Digital Rahmenvertrag closes first, on its stated close date. I can't give you a link to it."
-}

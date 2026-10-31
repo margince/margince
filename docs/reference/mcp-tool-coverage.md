@@ -68,7 +68,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ |
 | Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ |
 | What are these two deals worth together | Add the two deals in money, not in minor units | ✅ | ✅ |
-| Where do I open it | Give a link to the deal that closes first | ✅ | ✅ |
+| Where do I open it | Give a link to the named deal | ✅ | ✅ |
 
 ---
 
@@ -227,8 +227,8 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
 | [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
-| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Give a link to the deal that closes first | `find_records` or `read_forecast` or `read_record` |
-| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Give a link to the deal that closes first | `find_records` or `read_forecast` or `read_record` |
+| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
+| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 
@@ -308,8 +308,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case63_is_she_already_here` | 1 | Is this contact already here is the identify engine | The question is whether a named contact already exists, so the assistant resolves the entity rather than ranking records by words and leaving the decision to the reader. |
 | `case64_catch_me_up_and_the_brief` | 1 | Catch-up and the brief each use their own view | What has been happening on a record and what is in the morning brief are two views of read_context, and the assistant asks for each rather than answering both from a record search. |
 | `case65_clear_out_the_dead_deals` | 1 | Ask before archiving what the user did not name | The user names no deal, so the model chooses which ones are dead. It names them and asks for a yes before it archives or closes any, because an archive runs at once and cannot be undone from the conversation. |
-| `case66_what_are_these_two_worth` | 1 | Add the two deals in money, not in minor units | The answer gives 68,500 EUR from readings it made. It does not report a minor-unit figure as money. |
-| `case67_where_do_i_open_it` | 1 | Give a link to the deal that closes first | The answer names the deal with the earliest close date and gives the link to its page in the app. |
+| `case66_what_are_these_two_worth` | 1 | Add the two deals in money, not in minor units | The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money. |
+| `case67_where_do_i_open_it` | 1 | Give a link to the named deal | The answer gives a link to the named deal's page in the app. |
 | `case6_ask_the_company` | 1 | The past cases are found without being named | The question describes what happened and names no account, so working out which accounts it happened to is the test. |
 | `case6_ask_the_company` | 3 | The record's date wins over the prose recalling it | Where a note's prose and the record it recalls disagree about when something happened, the answer carries the date the record holds. |
 | `case6_ask_the_company` | 5 | The disagreement between note and record is pointed out | The answer says that the note and the record do not agree, rather than picking one and leaving the reader unaware there was a conflict. |

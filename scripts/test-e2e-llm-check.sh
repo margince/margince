@@ -1022,7 +1022,7 @@ judges "$c66" case66 adds-in-money 0 "!the judge says NO"
 judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1."
 
 c67="case67-where-do-i-open-it.yaml"
-judges "$c67" case67 links-the-first-deal 0 "!the judge says NO"
+judges "$c67" case67 links-the-named-deal 0 "!the judge says NO"
 judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
 
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
