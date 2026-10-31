@@ -121,7 +121,29 @@ func ReadSharedSnapshot(
 	); err != nil {
 		return SharedSnapshot{}, fmt.Errorf("compose: re-summing a shared snapshot: %w", err)
 	}
+	if r.Range, err = sharedSnapshotRange(ctx, tx, visible, args); err != nil {
+		return SharedSnapshot{}, err
+	}
 	return SharedSnapshot{Readings: r, Withheld: withheld}, nil
+}
+
+// sharedSnapshotRange draws the range again over the frozen rows this
+// recipient may read, under the predicate the totals were summed under. The
+// stored range covers rows the recipient may not see, so it is never served.
+func sharedSnapshotRange(ctx context.Context, tx pgx.Tx, visible string, args []any) (*forecasting.Range, error) {
+	rows, err := tx.Query(ctx, fmt.Sprintf(`
+		SELECT %s
+		FROM forecast_contribution c
+		JOIN deal d ON d.id = c.deal_id
+		WHERE c.snapshot_id = $1 AND %s`, forecasting.ContributionColumns("c"), visible), args...)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading a shared snapshot's rows for its range: %w", err)
+	}
+	contributions, err := pgx.CollectRows(rows, forecasting.CollectContribution)
+	if err != nil {
+		return nil, fmt.Errorf("compose: collecting a shared snapshot's rows for its range: %w", err)
+	}
+	return new(forecasting.ForecastRange(contributions)), nil
 }
 
 // sharedVisibilityClause is what a share recipient may read of a frozen

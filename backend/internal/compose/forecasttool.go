@@ -193,6 +193,9 @@ func forecastToolResult(
 		id := scope.ID.String()
 		out.ScopeID = &id
 	}
+	if in.Range != nil {
+		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
+	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &agents.ForecastQualifiedResult{
 			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,

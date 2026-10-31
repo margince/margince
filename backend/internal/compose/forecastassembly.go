@@ -49,6 +49,7 @@ func assembleForecast(
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
+	readings.Range = new(forecasting.ForecastRange(readings.Contributions))
 	out := forecasting.Assembly{
 		Readings: readings, Scope: resolved, Limited: limited,
 		SelfCorrecting: model.SelfCorrecting, EvidenceCutoff: model.Cutoff,

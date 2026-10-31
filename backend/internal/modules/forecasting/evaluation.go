@@ -20,7 +20,7 @@ import (
 // EvaluationVersion names the rules Evaluate scores by. Bump it when a metric,
 // an exclusion or a window rule changes. Two reports with one version and one
 // dataset digest are then the same report.
-const EvaluationVersion = "forecast_evaluation_v1"
+const EvaluationVersion = "forecast_evaluation_v2"
 
 // The labels a report row carries. An observed row scores a figure that was
 // frozen when its snapshot was taken. A backtest row scores a figure computed
@@ -30,12 +30,25 @@ const (
 	LabelBacktest = "backtest"
 )
 
-// The methods compared. The first two are the readings every snapshot froze;
-// the third is the trivial candidate, fitted on the training window only.
+// The methods compared. Stage weighting weights each open deal by its typed
+// chance; self-correcting weighting by its chance in use with the risk effect.
+// The range is the central 80% interval each snapshot froze. The candidate is
+// the trivial one, fitted on the training window only.
 const (
 	MethodStageWeighting = "stage_weighting"
+	MethodSelfCorrecting = "self_correcting_weighting"
 	MethodCommitEvidence = "commit_evidence"
+	MethodRange          = "range_central_80"
 	MethodOpenClosure    = "candidate_open_closure"
+)
+
+// How much recorded evidence a vintage's open deals stood on. Sufficient means
+// at least half of them stood in stages with PriorStrength or more resolved
+// outcomes; thin means some evidence but less; none means no evidence at all.
+const (
+	EvidenceSufficient = "sufficient"
+	EvidenceThin       = "thin"
+	EvidenceNone       = "none"
 )
 
 // The chronological windows, by the local day a snapshot was taken.
@@ -135,6 +148,7 @@ type EvaluationRow struct {
 	Window   string `json:"window"`
 	Currency string `json:"currency"`
 	Horizon  string `json:"horizon"`
+	Evidence string `json:"evidence_sufficiency"`
 	// NotScored says why the row has no scores, such as a candidate that had
 	// no training data for this bucket.
 	NotScored string `json:"not_scored,omitempty"`
@@ -145,8 +159,9 @@ type EvaluationRow struct {
 	// Vintages whose readings left priced or converted money out.
 	UnpricedVintages int          `json:"unpriced_vintages"`
 	FxGapVintages    int          `json:"fx_gap_vintages"`
-	Money            *MoneyError  `json:"money,omitempty"`
-	Calibration      *Calibration `json:"calibration,omitempty"`
+	Money            *MoneyError    `json:"money,omitempty"`
+	Calibration      *Calibration   `json:"calibration,omitempty"`
+	Interval         *IntervalScore `json:"interval,omitempty"`
 	bucket           int
 }
 

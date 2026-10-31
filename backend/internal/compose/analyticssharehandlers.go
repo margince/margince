@@ -337,6 +337,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 ) {
 	var rows []SharedContribution
 	var frame shareFrame
+	var drawn *forecasting.Range
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		share, frozen, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
@@ -349,6 +350,11 @@ func (h analyticsShareHandlers) ExportForecastShare(
 			return apperrors.ErrNotFound
 		}
 		rows = frozen
+		shared, err := ReadSharedSnapshot(ctx, tx, *share.SnapshotID)
+		if err != nil {
+			return err
+		}
+		drawn = shared.Readings.Range
 		frame, err = snapshotFrame(ctx, tx, *share.SnapshotID)
 		return err
 	}); err != nil {
@@ -356,7 +362,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 		return
 	}
 
-	body, err := shareRowsCSV(rows, frame.SelfCorrecting)
+	body, err := shareRowsCSV(rows, frame.SelfCorrecting, drawn)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -389,14 +395,19 @@ var shareExportColumns = []string{
 	"base_minor", "effective_close_date", "category",
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
-	"self_correcting", "risk_signal_facts",
+	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
 // csvCell every other export in this package uses.
 // selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
-// to some rows still says which definition they were frozen under.
-func shareRowsCSV(rows []SharedContribution, selfCorrecting *bool) ([]byte, error) {
+// to some rows still says which definition they were frozen under. drawn is the
+// range the shared headline shows this reader, repeated the same way.
+func shareRowsCSV(rows []SharedContribution, selfCorrecting *bool, drawn *forecasting.Range) ([]byte, error) {
+	var low, high *int64
+	if drawn != nil {
+		low, high = &drawn.LowMinor, &drawn.HighMinor
+	}
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
 	if err := out.Write(shareExportColumns); err != nil {
@@ -411,7 +422,7 @@ func shareRowsCSV(rows []SharedContribution, selfCorrecting *bool) ([]byte, erro
 			csvCell(row.ExclusionReason),
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
 			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
-			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts),
+			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)

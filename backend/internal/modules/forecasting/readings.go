@@ -122,6 +122,10 @@ type Readings struct {
 
 	// Qualified is nil unless the caller qualified the deals.
 	Qualified *QualifiedReadings
+
+	// Range is the central 80% of finishes under the chances in use, set by
+	// the assembler. Nil on a reading nobody drew one for.
+	Range *Range
 }
 
 // Contribution is one deal's part in one set of readings, with the membership

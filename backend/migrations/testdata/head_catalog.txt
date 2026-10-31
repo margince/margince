@@ -4657,6 +4657,13 @@ public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= 
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
 public.forecast_snapshot.forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text)))
+public.forecast_snapshot.forecast_snapshot_range_high_minor_js_safe CHECK (((range_high_minor >= '-9007199254740991'::bigint) AND (range_high_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_range_low_minor_js_safe CHECK (((range_low_minor >= '-9007199254740991'::bigint) AND (range_low_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_range_ordered CHECK (((range_low_minor IS NULL) OR ((range_low_minor >= 0) AND (range_low_minor <= range_high_minor))))
+public.forecast_snapshot.forecast_snapshot_range_quantiles_known CHECK (((range_quantiles IS NULL) OR (range_quantiles = 'nearest_rank'::text)))
+public.forecast_snapshot.forecast_snapshot_range_runs_counted CHECK (((range_runs IS NULL) OR (range_runs >= 1)))
+public.forecast_snapshot.forecast_snapshot_range_version_present CHECK (((range_version IS NULL) OR (btrim(range_version) <> ''::text)))
+public.forecast_snapshot.forecast_snapshot_range_whole CHECK ((((range_low_minor IS NULL) = (range_high_minor IS NULL)) AND ((range_low_minor IS NULL) = (range_runs IS NULL)) AND ((range_low_minor IS NULL) = (range_quantiles IS NULL)) AND ((range_low_minor IS NULL) = (range_version IS NULL))))
 public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
 public.forecast_snapshot.forecast_snapshot_risk_signals_version_present CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
@@ -4677,6 +4684,11 @@ public.forecast_snapshot.pipeline_id uuid gen=- def=-
 public.forecast_snapshot.population_fingerprint text NOT NULL gen=- def=''::text
 public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.qualified_policy_version text gen=- def=-
+public.forecast_snapshot.range_high_minor bigint gen=- def=-
+public.forecast_snapshot.range_low_minor bigint gen=- def=-
+public.forecast_snapshot.range_quantiles text gen=- def=-
+public.forecast_snapshot.range_runs integer gen=- def=-
+public.forecast_snapshot.range_version text gen=- def=-
 public.forecast_snapshot.risk_signals_version text gen=- def=-
 public.forecast_snapshot.scope_id uuid gen=- def=-
 public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-

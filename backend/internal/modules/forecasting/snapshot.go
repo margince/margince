@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -315,62 +316,14 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		return snapshotSide{}, err
 	}
 
-	rows, err := tx.Query(ctx, `
-		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
-		       effective_close_date, close_provisional, category, stage_probability,
-		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
-		       exclusion_reason, qualification, audit_id, approval_id,
-		       stage_id, typed_probability, evidence_n, risk_signal_facts, risk_effect
-		FROM forecast_contribution
-		WHERE snapshot_id = $1
-		ORDER BY deal_id`, id)
+	rows, err := tx.Query(ctx, `SELECT `+ContributionColumns("c")+`
+		FROM forecast_contribution c
+		WHERE c.snapshot_id = $1
+		ORDER BY c.deal_id`, id)
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: reading the snapshot's contributions: %w", err)
 	}
-	defer rows.Close()
-
-	out.Contributions, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (Contribution, error) {
-		var c Contribution
-		var dealID ids.UUID
-		var owner *ids.UUID
-		var currency, category, exclusion, qualification *string
-		var probability *int
-		var weighted *int64
-		var stage *ids.UUID
-		var facts []byte
-		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
-			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
-			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
-			&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
-			&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
-		if err == nil && facts != nil {
-			err = json.Unmarshal(facts, &c.Signals)
-		}
-		if stage != nil {
-			c.StageID = stage.String()
-		}
-		c.DealID = dealID.String()
-		if owner != nil {
-			c.Owner = owner.String()
-		}
-		if currency != nil {
-			c.Currency = *currency
-		}
-		if category != nil {
-			c.Category = *category
-		}
-		if exclusion != nil {
-			c.ExclusionReason = *exclusion
-		}
-		if probability != nil {
-			c.StageProbability = *probability
-		}
-		c.Qualification = viability.Qualification(derefString(qualification))
-		if weighted != nil {
-			c.WeightedMinor = *weighted
-		}
-		return c, err
-	})
+	out.Contributions, err = pgx.CollectRows(rows, CollectContribution)
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
@@ -475,4 +428,67 @@ func sameID(a, b *ids.UUID) bool {
 		return a == b
 	}
 	return *a == *b
+}
+
+// contributionColumns is the frozen contribution columns CollectContribution
+// scans, in its order.
+var contributionColumns = strings.Fields(strings.ReplaceAll(`deal_id, owner_id, amount_minor, currency, base_minor,
+effective_close_date, close_provisional, category, stage_probability,
+weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
+exclusion_reason, qualification, audit_id, approval_id,
+stage_id, typed_probability, evidence_n, risk_signal_facts, risk_effect`, ",", " "))
+
+// ContributionColumns lists the frozen contribution columns under a table
+// alias, for a SELECT that CollectContribution scans. A frozen share reads its
+// rows through the same pair, so the two cannot come to read a row two ways.
+func ContributionColumns(alias string) string {
+	qualified := make([]string, len(contributionColumns))
+	for i, column := range contributionColumns {
+		qualified[i] = alias + "." + column
+	}
+	return strings.Join(qualified, ", ")
+}
+
+// CollectContribution scans one row read with ContributionColumns.
+func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
+	var c Contribution
+	var dealID ids.UUID
+	var owner *ids.UUID
+	var currency, category, exclusion, qualification *string
+	var probability *int
+	var weighted *int64
+	var stage *ids.UUID
+	var facts []byte
+	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
+		&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
+		&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
+		&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
+		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+	if err == nil && facts != nil {
+		err = json.Unmarshal(facts, &c.Signals)
+	}
+	if stage != nil {
+		c.StageID = stage.String()
+	}
+	c.DealID = dealID.String()
+	if owner != nil {
+		c.Owner = owner.String()
+	}
+	if currency != nil {
+		c.Currency = *currency
+	}
+	if category != nil {
+		c.Category = *category
+	}
+	if exclusion != nil {
+		c.ExclusionReason = *exclusion
+	}
+	if probability != nil {
+		c.StageProbability = *probability
+	}
+	c.Qualification = viability.Qualification(derefString(qualification))
+	if weighted != nil {
+		c.WeightedMinor = *weighted
+	}
+	return c, err
 }
