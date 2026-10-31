@@ -16,7 +16,11 @@ import {
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDuration, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatDuration,
+  formatNumber,
+} from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
@@ -152,11 +156,12 @@ function MyLeads({
                   value={leadReading(result, id, t, locale)}
                 />
               ))}
-              {upcoming != null && (
+              {upcoming != null && summary?.upcoming_window && (
                 <StatCard
                   narrow="row"
                   label={t("analytics.prospect.upcoming")}
                   value={formatNumber(upcoming, locale)}
+                  detail={upcomingThrough(summary.upcoming_window, t, locale)}
                 />
               )}
             </StatStrip>
@@ -165,6 +170,24 @@ function MyLeads({
       </PanelBody>
     </Panel>
   );
+}
+
+/**
+ * The window a booked-meetings count covers, in the words every view that
+ * shows the count uses.
+ */
+export function upcomingThrough(
+  window: NonNullable<SdrSummary["upcoming_window"]>,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  return t("analytics.prospect.upcomingThrough", {
+    date: formatDateAbbrev(
+      new Date(Date.parse(window.end_at) - 1).toISOString(),
+      locale,
+      window.timezone,
+    ),
+  });
 }
 
 function leadReading(
@@ -204,7 +227,11 @@ export function WaitingOnOthers({
 }>) {
   const t = useT();
   const asOf = Date.parse(summary.as_of);
-  const rows = useHandoffPages(self, "waiting", totals.waiting > 0);
+  const rows = useHandoffPages(
+    { kind: "owner", id: self },
+    "waiting",
+    totals.waiting > 0,
+  );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
     <Panel title={t("analytics.sdrWaiting")}>
@@ -272,7 +299,7 @@ export function WaitingOnOthers({
   );
 }
 
-function WaitingRow({
+export function WaitingRow({
   row,
   asOf,
   locale,
@@ -359,7 +386,7 @@ function ReturnedHandoffs({
   locale,
 }: Readonly<{ self: string; locale: Locale }>) {
   const t = useT();
-  const rows = useHandoffPages(self, "returned", true);
+  const rows = useHandoffPages({ kind: "owner", id: self }, "returned", true);
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   const asOf = Date.parse(rows.data?.pages[0]?.as_of ?? "");
   return (
@@ -376,13 +403,28 @@ function ReturnedHandoffs({
   );
 }
 
-function useHandoffPages(
-  self: string,
+/**
+ * Whose open handoffs to list: one seat, a team, or the whole company. No
+ * kind is the seat's own default population, which My teams is.
+ */
+export type HandoffScope = Readonly<{
+  kind?: "owner" | "team" | "workspace";
+  id?: string;
+}>;
+
+/** The open handoffs of a scope in one state, one page at a time. */
+export function useHandoffPages(
+  scope: HandoffScope,
   state: "waiting" | "returned",
   enabled: boolean,
 ) {
   return useInfiniteQuery({
-    queryKey: ["sdr-summary", self, "handoffs", state],
+    queryKey: [
+      "sdr-summary",
+      scope.id ?? scope.kind ?? "default",
+      "handoffs",
+      state,
+    ],
     enabled,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam, signal }) =>
@@ -390,8 +432,8 @@ function useHandoffPages(
         await api.GET("/analytics/sdr-summary/handoffs", {
           params: {
             query: {
-              scope_kind: "owner",
-              scope_id: self,
+              ...(scope.kind ? { scope_kind: scope.kind } : {}),
+              ...(scope.id ? { scope_id: scope.id } : {}),
               state,
               ...(pageParam ? { cursor: pageParam } : {}),
             },
@@ -403,7 +445,7 @@ function useHandoffPages(
   });
 }
 
-function MoreRows({
+export function MoreRows({
   rows,
 }: Readonly<{ rows: ReturnType<typeof useHandoffPages> }>) {
   const t = useT();

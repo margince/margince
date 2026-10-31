@@ -15,6 +15,7 @@ import {
   landingBasis,
   metric,
   overviewRoutes,
+  teamHandoffs,
   teamReview,
   twoPipelines,
   upcomingWindow,
@@ -175,12 +176,19 @@ function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
   };
 }
 
-// A team in qualification mode: the review has no handoffs, so its members
-// carry nothing but meetings and zeros in the handoff columns.
+// A team in qualification mode: the review has no handoffs, and its members
+// carry qualified and unanswered leads, with a monthly target for one of them.
 const qualificationReview = teamReviewOn(dstWeek, {
   workflow: "qualification",
   handoffs: undefined,
-  members: teamReview().members.map((member) => ({
+  member_targets: {
+    metric: "leads_promoted",
+    window: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
+  },
+  members: teamReview().members.map((member, index) => ({
     ...member,
     submitted: 0,
     accepted: 0,
@@ -188,7 +196,25 @@ const qualificationReview = teamReviewOn(dstWeek, {
     recycled: 0,
     waiting: 0,
     oldest_waiting_since: undefined,
+    ...(index === 0 ? { target: { value: 8, actual: 5 } } : {}),
   })),
+});
+
+// A handoff team whose most common return recorded no reason.
+const handoffReview = teamReviewOn(dstWeek, {
+  handoffs: teamHandoffs({
+    outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 3 },
+    reasons: [
+      { outcome: "recycled", label: "", given: false, count: 2 },
+      { outcome: "rejected", label: "Wrong territory", given: true, count: 1 },
+      {
+        outcome: "recycled",
+        label: "Needs more qualification",
+        given: true,
+        count: 1,
+      },
+    ],
+  }),
 });
 
 const noTarget = {
@@ -213,7 +239,8 @@ const NO_ACTION_LIST = "Team prospecting has no action list.";
 const SALES_ONLY_CHECKS =
   "Forecast checks are listed on Sales review, not on My prospecting.";
 const NO_MONEY = "Prospecting figures are counts and carry no money.";
-const NO_TARGET_HERE = "Team prospecting shows no target.";
+const NO_TARGET_HERE =
+  "Team prospecting holds members against their own targets, not a team target.";
 const QUARTERS = "Sales review reads quarters; this frame is a week.";
 const WORKFLOW = "The SDR workflow does not change Sales review.";
 const PIPELINE_ONLY =
@@ -513,7 +540,21 @@ export const OVERVIEW_SCENARIOS = {
           template: "sales",
         },
       ),
-      team: team(teamOn(dstWeek), { team: json(teamReviewOn(dstWeek)) }),
+      team: team(teamOn(dstWeek), {
+        team: json(
+          teamReviewOn(dstWeek, {
+            handoffs: teamHandoffs({
+              cohort: {
+                rounds: 3,
+                accepted: 1,
+                rejected: 0,
+                recycled: 1,
+                waiting: 1,
+              },
+            }),
+          }),
+        ),
+      }),
     },
   },
   individualPerformanceOff: {
@@ -712,7 +753,7 @@ export const OVERVIEW_SCENARIOS = {
         summary: summary("handoff"),
         handoffs: handoffRows,
       }),
-      team: team(teamOn(dstWeek), { team: json(teamReviewOn(dstWeek)) }),
+      team: team(teamOn(dstWeek), { team: json(handoffReview) }),
     },
   },
   qualificationWorkflow: {
@@ -731,7 +772,8 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   weakNoHandoffTable: {
-    about: "A qualification team whose member table has no qualified column.",
+    about:
+      "A qualification team: the member table once had no qualified column, and now leads with it.",
     views: {
       sales: { excluded: WORKFLOW },
       prospecting: {
@@ -860,7 +902,8 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   readingsWithheld: {
-    about: "Held meetings and unanswered leads are hidden from this reader.",
+    about:
+      "Held meetings and unanswered leads are hidden from this reader, in the readings and in every member's row.",
     views: {
       sales: { excluded: "Sales review has its own withheld owner chart." },
       prospecting: prospecting(
@@ -876,9 +919,34 @@ export const OVERVIEW_SCENARIOS = {
           }),
         ]),
       ),
-      team: {
-        excluded: "Team prospecting withholds by member, not by figure.",
-      },
+      team: team(
+        teamOn(dstWeek, [
+          metric("meetings_held", null, {
+            coverage: { status: "ok", withheld: true },
+          }),
+          metric("accepted_opportunities", 3),
+          metric("leads_promoted", 5),
+          metric("leads_awaiting_response", null, {
+            coverage: { status: "ok", withheld: true },
+          }),
+        ]),
+        {
+          team: json(
+            teamReviewOn(dstWeek, {
+              meetings: undefined,
+              withheld_figures: ["meetings", "leads"],
+              members: teamReview().members.map(
+                ({
+                  meetings_held: _m,
+                  qualified: _q,
+                  unanswered: _u,
+                  ...row
+                }) => row,
+              ),
+            }),
+          ),
+        },
+      ),
     },
   },
 } as const satisfies Record<string, OverviewScenario>;

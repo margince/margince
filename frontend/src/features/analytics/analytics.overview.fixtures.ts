@@ -278,6 +278,35 @@ export function teamEvaluation(): ReportingEvaluation {
 
 type TeamReview = components["schemas"]["SdrTeamReview"];
 
+type TeamHandoffs = components["schemas"]["SdrTeamHandoffs"];
+
+/** The DACH team's handoffs this week: six rounds, one still waiting. */
+export function teamHandoffs(over: Partial<TeamHandoffs> = {}): TeamHandoffs {
+  return {
+    outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },
+    cohort: {
+      rounds: 6,
+      accepted: 3,
+      rejected: 1,
+      recycled: 1,
+      waiting: 1,
+      median_decision_hours: 20,
+    },
+    waiting: { waiting: 2, unassigned: 0, blocked: 1, returned: 1 },
+    reasons: [
+      { outcome: "rejected", label: "Wrong territory", given: true, count: 1 },
+      {
+        outcome: "recycled",
+        label: "Needs more qualification",
+        given: true,
+        count: 1,
+      },
+    ],
+    unattributed: 0,
+    ...over,
+  };
+}
+
 /** The DACH team's handoff review: two SDRs, one round still waiting. */
 export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
   return {
@@ -290,29 +319,16 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
     small_sample_below: 5,
     membership_basis: "current",
     meetings: { held: 7, limited_history: false },
-    handoffs: {
-      outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },
-      cohort: {
-        rounds: 4,
-        accepted: 2,
-        rejected: 1,
-        recycled: 0,
-        waiting: 1,
-        median_decision_hours: 20,
-      },
-      waiting: { waiting: 2, unassigned: 0, blocked: 1, returned: 1 },
-      reasons: [
-        { outcome: "rejected", label: "Wrong territory", count: 1 },
-        { outcome: "recycled", label: "Needs more qualification", count: 1 },
-      ],
-      unattributed: 0,
-    },
+    handoffs: teamHandoffs(),
     members_withheld: false,
+    withheld_figures: [],
     members: [
       {
         id: SELF,
         label: "Riley Rep",
         meetings_held: 4,
+        qualified: 3,
+        unanswered: 1,
         submitted: 4,
         accepted: 2,
         rejected: 1,
@@ -324,6 +340,8 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         id: "00000000-0000-4000-8000-0000000000a2",
         label: "Sam SDR",
         meetings_held: 4,
+        qualified: 2,
+        unanswered: 1,
         submitted: 2,
         accepted: 1,
         rejected: 0,

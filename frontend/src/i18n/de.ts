@@ -7339,36 +7339,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.chooseTeamBody":
     "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
   "analytics.team.todaysMembers":
-    "Diese Zahlen folgen dem heutigen Team. Ein Mitglied, das gegangen ist, nimmt seine früheren Übergaben mit.",
-  "analytics.team.countedOnce":
-    "Jede Zahl zählt die Arbeit des Teams einmal. Ein Termin mit mehreren Mitgliedern ist hier ein Termin.",
-  "analytics.team.feedback": "Rückmeldung zu Übergaben",
+    "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
   "analytics.team.withheld":
     "Die Einzelleistung ist ausgeschaltet, und diese Zahlen würden die Arbeit eines einzelnen Teammitglieds zeigen.",
-  "analytics.team.decided": "Entscheidungen in diesem Zeitraum",
   "analytics.team.submitted": "Übergeben",
-  "analytics.team.submittedDetail":
-    "Übergaberunden, erneute Übergaben eingeschlossen",
   "analytics.team.accepted": "Angenommen",
-  "analytics.team.acceptedDetail":
-    "Jeder Deal einmal, gutgeschrieben dem Mitglied, das übergeben hat",
   "analytics.team.returned": "Zurückgegeben",
-  "analytics.team.returnedDetail": "Zurückgeschickt für einen neuen Versuch",
   "analytics.team.rejected": "Abgelehnt",
-  "analytics.team.rejectedDetail": "Endgültig abgelehnt",
   "analytics.team.cohort_one":
     "Von {count} Runde aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
   "analytics.team.cohort_other":
     "Von {count} Runden aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
   "analytics.team.medianDecision":
     "Die Hälfte war innerhalb von {hours} entschieden.",
-  "analytics.team.smallSampleTitle": "Eine kleine Stichprobe",
-  "analytics.team.smallSample":
-    "Weniger als {below} Runden sind zu wenige für einen Vergleich. Lies die Anzahl, keine Quote. Nichts hier sagt, wie viel jemand gearbeitet hat.",
-  "analytics.team.waitingNow_one":
-    "{count} Übergabe wartet gerade auf eine Entscheidung.",
-  "analytics.team.waitingNow_other":
-    "{count} Übergaben warten gerade auf eine Entscheidung.",
   "analytics.team.blocked_one":
     "{count} davon wartet auf jemanden, der nicht mehr handeln kann.",
   "analytics.team.blocked_other":
@@ -7379,7 +7362,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Übergabe-Ereignisse wurden erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt sie.",
   "analytics.team.reasons": "Genannte Gründe",
   "analytics.team.reason": "Grund",
-  "analytics.team.outcome": "Ergebnis",
   "analytics.team.count": "Anzahl",
   "analytics.team.membersWithheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
@@ -7393,6 +7375,79 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Termin mit mehreren Mitgliedern zählt in jeder ihrer Zeilen. Die Zeilen können daher zusammen mehr ergeben als das Team.",
   "analytics.team.truncated":
     "Das Team hat mehr Mitglieder, als diese Tabelle zeigt.",
+  "analytics.team.standing": "Wo das Team steht",
+  "analytics.team.acceptedRate":
+    "{rate} dieser {rounds} Runden wurden angenommen.",
+  "analytics.team.tooFewForRate":
+    "Weniger als {below} sind zu wenige für eine Quote, darum steht hier keine.",
+  "analytics.team.qualifiedOf_one":
+    "{qualified} von {count} Lead aus diesem Zeitraum ist bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
+  "analytics.team.qualifiedOf_other":
+    "{qualified} von {count} Leads aus diesem Zeitraum sind bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
+  "analytics.team.qualifiedRate": "Das sind {rate} der eingegangenen Leads.",
+  "analytics.team.waitingRow_one":
+    "{count} Übergabe wartet auf eine Entscheidung",
+  "analytics.team.waitingRow_other":
+    "{count} Übergaben warten auf eine Entscheidung",
+  "analytics.team.waitingBasis": "Wartet jetzt",
+  "analytics.team.returnedRow_one":
+    "{count} Übergabe wurde in diesem Zeitraum zurückgegeben",
+  "analytics.team.returnedRow_other":
+    "{count} Übergaben wurden in diesem Zeitraum zurückgegeben",
+  "analytics.team.rejectedRow_one":
+    "{count} Übergabe wurde in diesem Zeitraum abgelehnt",
+  "analytics.team.rejectedRow_other":
+    "{count} Übergaben wurden in diesem Zeitraum abgelehnt",
+  "analytics.team.decidedBasis":
+    "In diesem Zeitraum entschieden, egal wann übergeben",
+  "analytics.team.mostOften": "Am häufigsten: {reason}",
+  "analytics.team.unansweredRow_one":
+    "{count} Lead wartet noch auf eine erste Antwort",
+  "analytics.team.unansweredRow_other":
+    "{count} Leads warten noch auf eine erste Antwort",
+  "analytics.team.unansweredBasis":
+    "In diesem Zeitraum geschrieben, noch ohne Antwort",
+  "analytics.team.unansweredHidden":
+    "Leads, die auf eine Antwort warten, sind für dich verborgen.",
+  "analytics.team.unansweredFailed":
+    "Leads, die auf eine Antwort warten, konnten nicht gelesen werden.",
+  "analytics.team.handoffsHidden": "Übergaben sind für dich verborgen.",
+  "analytics.team.hiddenBasis":
+    "Deine Rolle umfasst das nicht. Das heißt nicht, dass es null ist.",
+  "analytics.team.nothingWaits":
+    "In diesem Zeitraum wartet nichts auf das Team.",
+  "analytics.team.showHandoffs": "Übergaben zeigen",
+  "analytics.team.showReasons": "Gründe zeigen",
+  "analytics.team.showLeads": "Leads zeigen",
+  "analytics.team.reasonsReturned": "Warum Übergaben zurückgegeben wurden",
+  "analytics.team.reasonsRejected": "Warum Übergaben abgelehnt wurden",
+  "analytics.team.reasonsBasis":
+    "Entscheidungen vom {span}, egal wann übergeben: insgesamt {total}.",
+  "analytics.team.noReason": "Kein Grund erfasst",
+  "analytics.team.reasonsCut":
+    "Nur die 50 häufigsten Gründe stehen hier, darum ergeben sie weniger als die Summe.",
+  "analytics.team.waitingTitle": "Übergaben, die auf eine Entscheidung warten",
+  "analytics.team.waitingListBasis":
+    "Wartet jetzt, die älteste zuerst. Jede Zeile nennt den Interessenten und auf wen er wartet.",
+  "analytics.team.qualified": "Qualifiziert",
+  "analytics.team.unanswered": "Unbeantwortet",
+  "analytics.team.target": "Monatsziel",
+  "analytics.team.targetOf": "{actual} von {target}",
+  "analytics.team.noTarget": "Kein Ziel",
+  "analytics.team.qualificationBasis":
+    "Qualifiziert zählt die Leads aus diesem Zeitraum, die bisher qualifiziert sind. Unbeantwortet zählt die Leads, die in diesem Zeitraum geschrieben haben und noch keine Antwort haben. Beide zählen für das Teammitglied, das heute für den Lead verantwortlich ist, ein neu zugewiesener Lead also beim neuen.",
+  "analytics.team.handoffBasis":
+    "Übergeben, zurückgegeben und abgelehnt zählen, was in diesem Zeitraum geschah. Angenommen zählt jeden Deal einmal, im Zeitraum seiner ersten Annahme. Wartet jetzt gilt für heute. Alles zählt für das Teammitglied, das damals übergeben hat.",
+  "analytics.team.targetBasis":
+    "Ziele gelten pro Monat. Jedes vergleicht die bisher qualifizierten Leads vom {month} mit dem eigenen Ziel des Mitglieds.",
+  "analytics.team.meetingsHidden": "Termine sind für dich verborgen.",
+  "analytics.team.leadsHidden":
+    "Qualifizierte und unbeantwortete Leads sind für dich verborgen.",
+  "analytics.team.targetsHidden": "Ziele sind für dich verborgen.",
+  "analytics.team.rowsNotTeam":
+    "Die Zeilen müssen nicht die Zahlen des Teams ergeben. Ein Lead, für den niemand verantwortlich ist, steht in keiner Zeile.",
+  "analytics.team.notARanking":
+    "Die Zeilen stehen nach Namen, nicht als Rangliste. Eine kleine Zahl sagt nichts darüber, wie viel jemand gearbeitet hat.",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",

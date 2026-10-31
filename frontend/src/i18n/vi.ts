@@ -7147,33 +7147,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.team.chooseTeamBody":
     "Tìm kiếm khách hàng của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm kiếm khách hàng của tôi.",
   "analytics.team.todaysMembers":
-    "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo các bàn giao trước đây của họ.",
-  "analytics.team.countedOnce":
-    "Mỗi số liệu tính công việc của nhóm một lần. Một cuộc họp có nhiều thành viên tham dự được tính là một cuộc họp.",
-  "analytics.team.feedback": "Phản hồi về bàn giao",
+    "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo những gì họ đã làm trước đây, và thành viên mới mang theo phần của họ.",
   "analytics.team.withheld":
     "Hiệu suất cá nhân đang tắt, và các số liệu này sẽ cho thấy công việc của một đồng nghiệp.",
-  "analytics.team.decided": "Quyết định trong kỳ này",
   "analytics.team.submitted": "Đã bàn giao",
-  "analytics.team.submittedDetail": "Các vòng bàn giao, kể cả bàn giao lại",
   "analytics.team.accepted": "Được chấp nhận",
-  "analytics.team.acceptedDetail":
-    "Mỗi deal một lần, ghi công cho thành viên bàn giao",
   "analytics.team.returned": "Được trả lại",
-  "analytics.team.returnedDetail": "Gửi lại để bàn giao lần nữa",
   "analytics.team.rejected": "Bị từ chối",
-  "analytics.team.rejectedDetail": "Từ chối hẳn",
   "analytics.team.cohort_one":
     "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
   "analytics.team.cohort_other":
     "Trong {count} vòng bàn giao của kỳ này: {accepted} được chấp nhận, {returned} được trả lại, {rejected} bị từ chối và {waiting} vẫn đang chờ.",
   "analytics.team.medianDecision":
     "Một nửa được quyết định trong vòng {hours}.",
-  "analytics.team.smallSampleTitle": "Mẫu nhỏ",
-  "analytics.team.smallSample":
-    "Ít hơn {below} vòng là quá ít để so sánh. Hãy đọc số lượng, không phải tỷ lệ. Không có gì ở đây cho biết ai đã làm việc chăm chỉ đến đâu.",
-  "analytics.team.waitingNow_one": "{count} bàn giao đang chờ quyết định.",
-  "analytics.team.waitingNow_other": "{count} bàn giao đang chờ quyết định.",
   "analytics.team.blocked_one":
     "{count} trong số đó chờ một thành viên không còn xử lý được.",
   "analytics.team.blocked_other":
@@ -7184,7 +7170,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} sự kiện bàn giao được ghi trước khi lưu thành viên bàn giao, nên không dòng thành viên nào tính các sự kiện này.",
   "analytics.team.reasons": "Lý do được nêu",
   "analytics.team.reason": "Lý do",
-  "analytics.team.outcome": "Kết quả",
   "analytics.team.count": "Số lượng",
   "analytics.team.membersWithheld":
     "Hiệu suất cá nhân đang tắt, nên không hiển thị số liệu của từng thành viên.",
@@ -7198,6 +7183,73 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một cuộc họp có nhiều thành viên tham dự được tính trong dòng của từng thành viên, nên tổng các dòng có thể lớn hơn của nhóm.",
   "analytics.team.truncated":
     "Nhóm có nhiều thành viên hơn số dòng trong bảng này.",
+  "analytics.team.standing": "Nhóm đang ở đâu",
+  "analytics.team.acceptedRate":
+    "{rate} trong {rounds} vòng này được chấp nhận.",
+  "analytics.team.tooFewForRate":
+    "Ít hơn {below} là quá ít để tính tỷ lệ, nên không hiển thị tỷ lệ.",
+  "analytics.team.qualifiedOf_one":
+    "{qualified} trong {count} lead đến trong kỳ này đã đủ điều kiện. Các lead còn lại vẫn đang mở hoặc đã bị loại.",
+  "analytics.team.qualifiedOf_other":
+    "{qualified} trong {count} lead đến trong kỳ này đã đủ điều kiện. Các lead còn lại vẫn đang mở hoặc đã bị loại.",
+  "analytics.team.qualifiedRate": "Tức là {rate} số lead đã đến.",
+  "analytics.team.waitingRow_one": "{count} bàn giao đang chờ quyết định",
+  "analytics.team.waitingRow_other": "{count} bàn giao đang chờ quyết định",
+  "analytics.team.waitingBasis": "Đang chờ lúc này",
+  "analytics.team.returnedRow_one": "{count} bàn giao bị trả lại trong kỳ này",
+  "analytics.team.returnedRow_other":
+    "{count} bàn giao bị trả lại trong kỳ này",
+  "analytics.team.rejectedRow_one": "{count} bàn giao bị từ chối trong kỳ này",
+  "analytics.team.rejectedRow_other":
+    "{count} bàn giao bị từ chối trong kỳ này",
+  "analytics.team.decidedBasis":
+    "Được quyết định trong kỳ này, dù bàn giao lúc nào",
+  "analytics.team.mostOften": "Thường gặp nhất: {reason}",
+  "analytics.team.unansweredRow_one": "{count} lead vẫn chờ phản hồi đầu tiên",
+  "analytics.team.unansweredRow_other":
+    "{count} lead vẫn chờ phản hồi đầu tiên",
+  "analytics.team.unansweredBasis":
+    "Đã viết đến trong kỳ này, chưa có phản hồi",
+  "analytics.team.unansweredHidden":
+    "Các lead đang chờ phản hồi bị ẩn với bạn.",
+  "analytics.team.unansweredFailed":
+    "Không đọc được các lead đang chờ phản hồi.",
+  "analytics.team.handoffsHidden": "Các bàn giao bị ẩn với bạn.",
+  "analytics.team.hiddenBasis":
+    "Vai trò của bạn không bao gồm mục này. Điều này không có nghĩa là bằng không.",
+  "analytics.team.nothingWaits": "Không có gì đang chờ nhóm trong kỳ này.",
+  "analytics.team.showHandoffs": "Xem bàn giao",
+  "analytics.team.showReasons": "Xem lý do",
+  "analytics.team.showLeads": "Xem lead",
+  "analytics.team.reasonsReturned": "Vì sao bàn giao bị trả lại",
+  "analytics.team.reasonsRejected": "Vì sao bàn giao bị từ chối",
+  "analytics.team.reasonsBasis":
+    "Các quyết định trong {span}, dù bàn giao lúc nào: tổng cộng {total}.",
+  "analytics.team.noReason": "Không ghi lý do",
+  "analytics.team.reasonsCut":
+    "Chỉ liệt kê 50 lý do phổ biến nhất, nên tổng của chúng ít hơn tổng số.",
+  "analytics.team.waitingTitle": "Bàn giao đang chờ quyết định",
+  "analytics.team.waitingListBasis":
+    "Đang chờ lúc này, cũ nhất trước. Mỗi dòng nêu lead hoặc liên hệ và ai đang được chờ.",
+  "analytics.team.qualified": "Đủ điều kiện",
+  "analytics.team.unanswered": "Chưa phản hồi",
+  "analytics.team.target": "Mục tiêu tháng",
+  "analytics.team.targetOf": "{actual} trên {target}",
+  "analytics.team.noTarget": "Không có mục tiêu",
+  "analytics.team.qualificationBasis":
+    "Đủ điều kiện đếm các lead đến trong kỳ này và đã đủ điều kiện. Chưa phản hồi đếm các lead đã viết đến trong kỳ này và chưa có phản hồi. Cả hai tính cho thành viên chịu trách nhiệm lead hiện tại, nên lead được giao lại tính cho thành viên mới.",
+  "analytics.team.handoffBasis":
+    "Đã gửi, bị trả lại và bị từ chối đếm những gì xảy ra trong kỳ này. Được chấp nhận đếm mỗi deal một lần, trong kỳ nó được chấp nhận lần đầu. Đang chờ tính đến hôm nay. Mỗi mục tính cho thành viên đã bàn giao lúc đó.",
+  "analytics.team.targetBasis":
+    "Mục tiêu tính theo tháng. Mỗi mục tiêu so sánh các lead đủ điều kiện đến trong {month} với mục tiêu riêng của thành viên đó.",
+  "analytics.team.meetingsHidden": "Các cuộc họp bị ẩn với bạn.",
+  "analytics.team.leadsHidden":
+    "Lead đủ điều kiện và lead chưa phản hồi bị ẩn với bạn.",
+  "analytics.team.targetsHidden": "Mục tiêu bị ẩn với bạn.",
+  "analytics.team.rowsNotTeam":
+    "Các dòng không nhất thiết cộng lại bằng số liệu của nhóm. Lead không có ai chịu trách nhiệm không nằm ở dòng nào.",
+  "analytics.team.notARanking":
+    "Các dòng xếp theo tên, không phải bảng xếp hạng. Một con số nhỏ không nói lên ai đã làm việc chăm chỉ đến đâu.",
   "analytics.sectionPerformance": "Hiệu suất",
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",

@@ -5,18 +5,20 @@ import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { SegmentedControl, StatCard } from "../../design-system/atoms";
+import { Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { OverflowMenu } from "../../design-system/overflowmenu";
 import { QueryGate } from "../../design-system/querystates";
+import { Select } from "../../design-system/select";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDuration, formatHours, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import type { HandoffScope } from "./analytics.outcomes.sdr";
 import { outboundDials, TEAM_PERIODS } from "./analytics.overview.context";
 import { QualificationNote } from "./analytics.overview.prospecting";
 import {
@@ -24,12 +26,17 @@ import {
   OverviewLinks,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
-import { MemberTable, ReasonList } from "./analytics.overview.team.members";
+import { MemberTable } from "./analytics.overview.team.members";
+import {
+  TeamStanding,
+  useTeamSummary,
+} from "./analytics.overview.team.standing";
 import { periodCaption } from "./analytics.period";
 import {
   ReportingEvidenceDrawer,
   useSelectionEvidence,
 } from "./reporting.evidence";
+import { ReportingExportButton } from "./reporting.export";
 import {
   type ReportingEvidenceRef,
   type ReportingSelection,
@@ -41,7 +48,6 @@ import { presetRequest } from "./reporting.views";
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Framework = components["schemas"]["ReportingFramework"];
 type Review = components["schemas"]["SdrTeamReview"];
-type Handoffs = components["schemas"]["SdrTeamHandoffs"];
 
 type TeamPeriod = (typeof TEAM_PERIODS)[number];
 
@@ -132,35 +138,39 @@ export function TeamProspecting({
     <>
       <FilterBar
         label={t("analytics.filters")}
-        actions={
+        quiet
+        caption={periodCaption(query.data, locale, t)}
+      >
+        {switcher}
+        {scopeControl}
+        <Field label={t("reporting.period")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={period}
+              options={TEAM_PERIODS.map((value) => ({
+                value,
+                label: t(`reporting.${value}`),
+              }))}
+              onChange={(next) => replaceDial("period", teamPeriod(next))}
+            />
+          )}
+        </Field>
+        <OverflowMenu label={t("analytics.overview.more")}>
           <OverviewSaveActions
             selection={
               query.data ? { ...query.data.selection, blocks } : undefined
             }
             scope={scopeKey(scope)}
           />
-        }
-        caption={periodCaption(query.data, locale, t)}
-      >
-        {switcher}
-        {scopeControl}
-        <SegmentedControl
-          label={t("reporting.period")}
-          options={TEAM_PERIODS}
-          value={period}
-          onChange={(next) => replaceDial("period", next)}
-          labels={{
-            this_week: t("reporting.this_week"),
-            last_week: t("reporting.last_week"),
-            this_month: t("reporting.this_month"),
-            last_month: t("reporting.last_month"),
-          }}
-        />
+          {query.data && <ReportingExportButton evaluation={query.data} />}
+        </OverflowMenu>
       </FilterBar>
       {team ? (
         <TeamBody
           query={query}
           review={review}
+          team={team}
           handoffWorkflow={handoffWorkflow}
           evidence={evidence}
           onEvidence={openEvidence}
@@ -186,10 +196,12 @@ export function TeamProspecting({
   );
 }
 
-// The team's readings, then its handoff feedback and members.
+// The team's outcomes, then where it stands and what holds it up, then its
+// members. The readings lead with the workflow's own outcome.
 function TeamBody({
   query,
   review,
+  team,
   handoffWorkflow,
   evidence,
   onEvidence,
@@ -197,6 +209,7 @@ function TeamBody({
 }: Readonly<{
   query: ReturnType<typeof useReportingEvaluation>;
   review: ReturnType<typeof useSdrTeamReview>;
+  team: TeamScope;
   handoffWorkflow: boolean;
   evidence: ReportingEvidenceRef | null;
   onEvidence: (reference: ReportingEvidenceRef) => void;
@@ -204,6 +217,10 @@ function TeamBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const scope = handoffScope(team);
+  const summary = useTeamSummary(scope, true);
+  const zone = query.data?.context.timezone ?? "UTC";
+  const readings = handoffWorkflow ? HANDOFF_READINGS : QUALIFICATION_READINGS;
   return (
     <>
       <QueryGate query={query} pendingLabel={t("analytics.overview.team")}>
@@ -216,10 +233,7 @@ function TeamBody({
           return (
             <>
               <StatStrip label={t("analytics.overview.readings")}>
-                {(handoffWorkflow
-                  ? (["meetings_held", "accepted_opportunities"] as const)
-                  : (["meetings_held"] as const)
-                ).map((id) => (
+                {readings.map((id) => (
                   <MetricReading
                     key={id}
                     evaluation={evaluation}
@@ -228,19 +242,7 @@ function TeamBody({
                     onEvidence={onEvidence}
                   />
                 ))}
-                <MetricReading
-                  evaluation={evaluation}
-                  id="leads_promoted"
-                  detail={span}
-                  onEvidence={onEvidence}
-                />
-                <MetricReading
-                  evaluation={evaluation}
-                  id="leads_awaiting_response"
-                  onEvidence={onEvidence}
-                />
               </StatStrip>
-              <p className="t-caption">{t("analytics.team.countedOnce")}</p>
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
@@ -253,25 +255,34 @@ function TeamBody({
           );
         }}
       </QueryGate>
-      <QueryGate query={review} pendingLabel={t("analytics.team.feedback")}>
+      <QueryGate query={review} pendingLabel={t("analytics.team.standing")}>
         {(data) =>
           data.withheld ? (
             <SurfaceState
               state="withheld"
               emptyLabel={t("common.empty")}
-              loadingLabel={t("analytics.team.feedback")}
+              loadingLabel={t("analytics.team.standing")}
               detail={{ withheldReason: t("analytics.team.withheld") }}
             >
               {null}
             </SurfaceState>
           ) : (
             <>
-              {data.handoffs ? (
-                <HandoffFeedback review={data} handoffs={data.handoffs} />
-              ) : (
-                <QualificationNote />
+              <div className="analytics-pair analytics-pair-table">
+                <TeamStanding
+                  review={data}
+                  evaluation={query.data}
+                  summary={summary}
+                  scope={scope}
+                  zone={zone}
+                  onEvidence={onEvidence}
+                />
+                <MemberTable review={data} zone={zone} />
+              </div>
+              {data.workflow === "qualification" && <QualificationNote />}
+              {data.handoffs && data.handoffs.unattributed > 0 && (
+                <Unattributed count={data.handoffs.unattributed} />
               )}
-              <MemberTable review={data} />
             </>
           )
         }
@@ -280,101 +291,34 @@ function TeamBody({
   );
 }
 
-// How the period's handoffs ended. Decisions made in the period and the rounds
-// submitted in it are two questions, so they are two rows of figures.
-function HandoffFeedback({
-  review,
-  handoffs,
-}: Readonly<{ review: Review; handoffs: Handoffs }>) {
-  const t = useT();
+// Each figure counts the team's work once; the team's readings count a
+// meeting several members attended once.
+const HANDOFF_READINGS = [
+  "accepted_opportunities",
+  "meetings_held",
+  "leads_promoted",
+  "leads_awaiting_response",
+] as const;
+const QUALIFICATION_READINGS = [
+  "leads_promoted",
+  "meetings_held",
+  "leads_awaiting_response",
+] as const;
+
+// The handoff list's scope for a team review. My teams names no kind the list
+// takes, so it is the seat's own default there too.
+function handoffScope(team: TeamScope): HandoffScope {
+  return team.kind === "managed_teams" ? {} : { kind: team.kind, id: team.id };
+}
+
+function Unattributed({ count }: Readonly<{ count: number }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  const { outcomes, cohort, waiting } = handoffs;
-  const asOf = Date.parse(review.as_of);
-  const small = cohort.rounds < review.small_sample_below;
-  const count = (value: number) => formatNumber(value, locale);
   return (
-    <Panel title={t("analytics.team.feedback")}>
-      <PanelBody>
-        <StatStrip label={t("analytics.team.decided")}>
-          <StatCard
-            narrow="row"
-            label={t("analytics.team.submitted")}
-            value={count(outcomes.submitted)}
-            detail={t("analytics.team.submittedDetail")}
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.team.accepted")}
-            value={count(outcomes.accepted)}
-            detail={t("analytics.team.acceptedDetail")}
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.team.returned")}
-            value={count(outcomes.recycled)}
-            detail={t("analytics.team.returnedDetail")}
-          />
-          <StatCard
-            narrow="row"
-            label={t("analytics.team.rejected")}
-            value={count(outcomes.rejected)}
-            detail={t("analytics.team.rejectedDetail")}
-          />
-        </StatStrip>
-        <p>
-          {plural("analytics.team.cohort", cohort.rounds, {
-            count: count(cohort.rounds),
-            accepted: count(cohort.accepted),
-            returned: count(cohort.recycled),
-            rejected: count(cohort.rejected),
-            waiting: count(cohort.waiting),
-          })}{" "}
-          {cohort.median_decision_hours != null &&
-            t("analytics.team.medianDecision", {
-              hours: formatHours(cohort.median_decision_hours, locale),
-            })}
-        </p>
-        {small && cohort.rounds > 0 && (
-          <Callout
-            tone="info"
-            kind="standing"
-            title={t("analytics.team.smallSampleTitle")}
-          >
-            <p>
-              {t("analytics.team.smallSample", {
-                below: count(review.small_sample_below),
-              })}
-            </p>
-          </Callout>
-        )}
-        <p>
-          {plural("analytics.team.waitingNow", waiting.waiting, {
-            count: count(waiting.waiting),
-          })}{" "}
-          {waiting.oldest_waiting_since &&
-            t("analytics.sdrLongestWait", {
-              age: formatDuration(
-                asOf - Date.parse(waiting.oldest_waiting_since),
-                locale,
-              ),
-            })}{" "}
-          {waiting.blocked > 0 &&
-            plural("analytics.team.blocked", waiting.blocked, {
-              count: count(waiting.blocked),
-            })}
-        </p>
-        {handoffs.reasons.length > 0 && (
-          <ReasonList reasons={handoffs.reasons} locale={locale} />
-        )}
-        {handoffs.unattributed > 0 && (
-          <p className="t-caption">
-            {plural("analytics.team.unattributed", handoffs.unattributed, {
-              count: count(handoffs.unattributed),
-            })}
-          </p>
-        )}
-      </PanelBody>
-    </Panel>
+    <p className="t-caption">
+      {plural("analytics.team.unattributed", count, {
+        count: formatNumber(count, locale),
+      })}
+    </p>
   );
 }

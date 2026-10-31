@@ -166,8 +166,10 @@ describe("each Overview view keeps its own question", () => {
     const user = userEvent.setup({ delay: null });
     open("#/analytics/overview?overview=team", answer, TWO);
     await readings();
-    await user.click(
-      screen.getByRole("button", { name: "Last completed week" }),
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Date range" }),
+      "Last completed week",
     );
     await waitFor(() =>
       expect(window.location.hash).toContain("period=last_week"),

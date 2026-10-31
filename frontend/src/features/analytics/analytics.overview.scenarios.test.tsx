@@ -62,7 +62,7 @@ const CENSUS: Readonly<Record<string, string>> = {
   twoPipelines: "S",
   unknownWorkflow: "P",
   worklistFailed: "P",
-  readingsWithheld: "P",
+  readingsWithheld: "PT",
 };
 const LETTER: Readonly<Record<OverviewView, string>> = {
   sales: "S",
@@ -212,7 +212,7 @@ const SIGNATURES: Readonly<
   populated: {
     sales: shows("3.6×"),
     prospecting: shows("All 5 items in your Worklist"),
-    team: shows("Wrong territory"),
+    team: shows(/Most often: Wrong territory/),
   },
   trueZero: {
     sales: shows(/^0(\.0)?×$/),
@@ -254,14 +254,21 @@ const SIGNATURES: Readonly<
       await shows("Too few")();
       await shows("2 leads still waiting for a reply")();
     },
-    team: shows("A small sample"),
+    team: async () => {
+      await shows(/Fewer than 5 is too few for a rate/)();
+      expect(screen.queryByText(/% of these/)).toBeNull();
+    },
   },
   individualPerformanceOff: {
     sales: lacks("Maya"),
     prospecting: shows("All 5 items in your Worklist"),
-    team: shows(
-      "Individual performance is off, so no member’s figures are shown.",
-    ),
+    team: async () => {
+      await shows(
+        "Individual performance is off, so no member’s figures are shown.",
+      )();
+      await shows("2 handoffs wait for a decision")();
+      expect(screen.queryByText("Riley Rep")).toBeNull();
+    },
   },
   noActionableWork: {
     sales: shows("No forecast check is open for this scope."),
@@ -288,7 +295,7 @@ const SIGNATURES: Readonly<
   fiscalQuarter: { sales: shows("1 August – 31 October") },
   weekAcrossMonths: {
     prospecting: shows(/Monthly targets, .*Oct/),
-    team: shows("Wrong territory"),
+    team: shows(/Most often: Wrong territory/),
   },
   titleOnlyWork: {
     prospecting: shows("Call Nordhafen Logistik back about the fleet trial"),
@@ -298,13 +305,27 @@ const SIGNATURES: Readonly<
       await shows(/Casey Closer can no longer act/)();
       await shows(/No budget this quarter/)();
     },
-    team: shows("Wrong territory"),
+    team: shows(/Most often: No reason recorded/),
   },
   qualificationWorkflow: {
     prospecting: shows("Meetings to prepare"),
-    team: shows(/does not use SDR handoffs/),
+    team: async () => {
+      await shows(/does not use SDR handoffs/)();
+      await shows("5 of 8")();
+      await shows("No target")();
+    },
   },
-  weakNoHandoffTable: { team: shows("Members") },
+  weakNoHandoffTable: {
+    team: async () => {
+      const members = await screen.findByRole("table", { name: "Members" });
+      expect(
+        within(members).getByRole("columnheader", { name: "Qualified" }),
+      ).toBeVisible();
+      expect(
+        within(members).queryByRole("columnheader", { name: "Submitted" }),
+      ).toBeNull();
+    },
+  },
   targetReached: { sales: shows("Target reached") },
   landingBases: { sales: shows("Won + confirmed commit") },
   legacyLanding: { sales: shows("Basis not recorded") },
@@ -327,6 +348,14 @@ const SIGNATURES: Readonly<
     prospecting: async () => {
       await shows("Hidden from you")();
       await shows("The count of unanswered leads is hidden from you")();
+    },
+    team: async () => {
+      await shows("Meetings are hidden from you.")();
+      await shows("Leads waiting for a reply are hidden from you.")();
+      const members = await screen.findByRole("table", { name: "Members" });
+      expect(
+        within(members).queryByRole("columnheader", { name: "Meetings held" }),
+      ).toBeNull();
     },
   },
   twoPipelines: {

@@ -6,8 +6,9 @@ import type { components } from "../../api/schema";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { upcomingThrough } from "./analytics.outcomes.sdr";
 import {
   OutcomeWeeks,
   outcomeWeeks,
@@ -328,13 +329,7 @@ function UpcomingReading({
       narrow="row"
       label={label}
       value={formatNumber(data.upcoming_meetings, locale)}
-      detail={t("analytics.prospect.upcomingThrough", {
-        date: formatDateAbbrev(
-          new Date(Date.parse(window.end_at) - 1).toISOString(),
-          locale,
-          window.timezone,
-        ),
-      })}
+      detail={upcomingThrough(window, t, locale)}
       onOpen={() => document.getElementById(UPCOMING_LIST_ID)?.focus()}
     />
   );

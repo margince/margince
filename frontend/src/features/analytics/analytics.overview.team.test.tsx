@@ -4,15 +4,18 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import {
+  metric,
   openOverview as open,
   readings,
   SELF,
   TEAM,
   teamEvaluation,
+  teamHandoffs,
   teamReview,
 } from "./analytics.overview.testkit";
 
@@ -25,6 +28,66 @@ afterEach(() => {
 });
 
 const TEAM_ADDRESS = "#/analytics/overview?overview=team";
+const served = (review: ReturnType<typeof teamReview>) => () =>
+  jsonResponse(review);
+
+// A qualification team: Riley has a monthly target, Sam has none.
+const qualificationReview = (over: Parameters<typeof teamReview>[0] = {}) =>
+  teamReview({
+    workflow: "qualification",
+    handoffs: undefined,
+    member_targets: {
+      metric: "leads_promoted",
+      window: {
+        start_at: "2026-08-31T22:00:00Z",
+        end_at: "2026-09-30T22:00:00Z",
+      },
+    },
+    members: teamReview().members.map((member, index) => ({
+      ...member,
+      ...(index === 0 ? { target: { value: 8, actual: 5 } } : {}),
+    })),
+    ...over,
+  });
+
+const qualificationTeam = () => {
+  const base = teamEvaluation();
+  return {
+    ...base,
+    metrics: base.metrics.map((reading) =>
+      reading.id === "leads_promoted"
+        ? metric("leads_promoted", 5, { denominator: 12 })
+        : reading,
+    ),
+  };
+};
+
+async function standing() {
+  return within(
+    await screen.findByRole("region", { name: "Where the team stands" }),
+  );
+}
+
+function headers(table: HTMLElement) {
+  return within(table)
+    .getAllByRole("columnheader")
+    .map((cell) => cell.textContent);
+}
+
+function expectInOrder(elements: HTMLElement[]) {
+  for (let index = 1; index < elements.length; index++) {
+    expect(
+      elements[index - 1].compareDocumentPosition(elements[index]) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  }
+}
+
+function rowOf(text: HTMLElement): HTMLElement {
+  const row = text.closest<HTMLElement>(".analytics-attention-row");
+  if (!row) throw new Error("the text is in no bottleneck row");
+  return row;
+}
 
 describe("Team prospecting", () => {
   it("is offered to a manager and not to an SDR measuring their own work", async () => {
@@ -42,41 +105,251 @@ describe("Team prospecting", () => {
     ).toBeNull();
   });
 
-  it("shows the team's figures once, how its handoffs ended, and one row per member", async () => {
+  it("leads a handoff team with accepted opportunities and lists what holds it up", async () => {
     const asked = open(TEAM_ADDRESS, teamEvaluation, { template: "sdr" });
-    const strip = await readings();
-    expect(strip.getByText("7")).toBeVisible();
-    expect(await screen.findByText("Handoff feedback")).toBeVisible();
+    await readings();
+    // The catalog's own names, in the order the cards stand.
     expect(
-      screen.getByText(
-        /Of the 4 rounds handed on in this period: 2 accepted, 0 returned, 1 rejected and 1 still waiting\./,
-      ),
-    ).toBeVisible();
-    // Four rounds is below the comparable size, so the page says so.
-    expect(screen.getByText("A small sample")).toBeVisible();
-    expect(screen.getByText("Wrong territory")).toBeVisible();
-    const members = screen.getByRole("table", { name: "Members" });
-    const rows = within(members).getAllByRole("row");
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getByText("Riley Rep")).toBeVisible();
+      screen.getByRole("region", { name: "Opening readings" }).textContent,
+    ).toMatch(/Accepted.*Meetings held.*Leads qualified.*Leads still waiting/);
+    const panel = await standing();
     expect(
-      screen.getByText(/the rows can add up to more than the team/),
+      panel.getByText(/Of the 6 rounds handed on in this period/),
     ).toBeVisible();
-    const review = asked.find(({ url }) =>
-      url.pathname.endsWith("/analytics/sdr-team"),
-    );
-    expect(review?.url.searchParams.get("scope_kind")).toBe("team");
-    expect(review?.url.searchParams.get("period")).toBe("this_week");
+    expect(panel.getByText("2 handoffs wait for a decision")).toBeVisible();
+    expect(panel.getByText(/Most often: Wrong territory/)).toBeVisible();
+    expect(panel.getByText(/Next 14 days, through/)).toBeVisible();
     const evaluations = asked.filter(({ url }) =>
       url.pathname.endsWith("/analytics/evaluate"),
     );
     expect(evaluations).toHaveLength(1);
-    expect(evaluations[0].url.searchParams.getAll("metrics")).toEqual([
-      "meetings_held",
-      "accepted_opportunities",
-      "leads_promoted",
-      "leads_awaiting_response",
+  });
+
+  it("shows a rate only over the cohort of rounds, never over two period counts", async () => {
+    // Accepted in the period over submitted in it is 3 of 6, which is no rate:
+    // the cohort is 2 of the 8 rounds handed on.
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served(
+        teamReview({
+          handoffs: teamHandoffs({
+            cohort: {
+              rounds: 8,
+              accepted: 2,
+              rejected: 1,
+              recycled: 1,
+              waiting: 4,
+            },
+          }),
+        }),
+      ),
+    });
+    const panel = await standing();
+    expect(
+      panel.getByText(/25% of these 8 rounds were accepted\./),
+    ).toBeVisible();
+    expect(panel.queryByText(/50%/)).toBeNull();
+    expect(panel.getByText(/4 still waiting/)).toBeVisible();
+  });
+
+  it("shows no rate for a cohort below the floor", async () => {
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served(
+        teamReview({
+          handoffs: teamHandoffs({
+            cohort: {
+              rounds: 3,
+              accepted: 1,
+              rejected: 0,
+              recycled: 1,
+              waiting: 1,
+            },
+          }),
+        }),
+      ),
+    });
+    const panel = await standing();
+    expect(panel.getByText(/Fewer than 5 is too few for a rate/)).toBeVisible();
+    expect(panel.queryByText(/%/)).toBeNull();
+  });
+
+  it("opens the reasons for returns on the period's decisions, adding up to the count", async () => {
+    const user = userEvent.setup();
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served(
+        teamReview({
+          handoffs: teamHandoffs({
+            outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 3 },
+            reasons: [
+              { outcome: "recycled", label: "", given: false, count: 2 },
+              {
+                outcome: "recycled",
+                label: "Needs more qualification",
+                given: true,
+                count: 1,
+              },
+              {
+                outcome: "rejected",
+                label: "Wrong territory",
+                given: true,
+                count: 1,
+              },
+            ],
+          }),
+        }),
+      ),
+    });
+    const panel = await standing();
+    const row = rowOf(
+      panel.getByText("3 handoffs were sent back in this period"),
+    );
+    await user.click(within(row).getByRole("button", { name: "Show reasons" }));
+    const drawer = await screen.findByRole("dialog", {
+      name: "Why handoffs were sent back",
+    });
+    expect(
+      within(drawer).getByText(/whenever the handoff was handed on: 3 in all/),
+    ).toBeVisible();
+    const table = within(drawer).getByRole("table", { name: "Reasons given" });
+    const cells = within(table)
+      .getAllByRole("row")
+      .slice(1)
+      .map((line) => line.textContent);
+    expect(cells).toEqual(["No reason recorded2", "Needs more qualification1"]);
+    expect(within(drawer).queryByText("Wrong territory")).toBeNull();
+  });
+
+  it("opens the leads still owed a reply as the reading's own evidence", async () => {
+    const user = userEvent.setup();
+    const asked = open(TEAM_ADDRESS, teamEvaluation, { template: "sdr" });
+    const panel = await standing();
+    await user.click(panel.getByRole("button", { name: "Show leads" }));
+    expect(
+      asked.some(
+        ({ url }) =>
+          url.pathname.endsWith("/analytics/evidence") &&
+          url.searchParams.get("metric") === "leads_awaiting_response",
+      ),
+    ).toBe(true);
+  });
+
+  it("gives a handoff team its handoff columns, in name order, with what each counts", async () => {
+    const review = teamReview();
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served({ ...review, members: [...review.members].reverse() }),
+    });
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(headers(members)).toEqual([
+      "Member",
+      "Meetings held",
+      "Submitted",
+      "Accepted",
+      "Returned",
+      "Rejected",
+      "Waiting now",
     ]);
+    const rows = within(members).getAllByRole("row");
+    expect(within(rows[1]).getByText("Riley Rep")).toBeVisible();
+    expect(within(rows[2]).getByText("Sam SDR")).toBeVisible();
+    expect(screen.getByText(/Accepted counts each deal once/)).toBeVisible();
+    expect(screen.getByText(/not a ranking/)).toBeVisible();
+  });
+
+  it("gives a qualification team qualified leads first, and each member's own monthly target", async () => {
+    open(TEAM_ADDRESS, qualificationTeam, {
+      template: "sales",
+      team: served(qualificationReview()),
+    });
+    const strip = await readings();
+    expectInOrder([
+      strip.getByText("Leads qualified"),
+      strip.getByText("Meetings held"),
+    ]);
+    const panel = await standing();
+    expect(
+      panel.getByText(
+        /5 of the 12 leads that arrived in this period are qualified so far\..*That is 42% of the leads that arrived\./,
+      ),
+    ).toBeVisible();
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(headers(members)).toEqual([
+      "Member",
+      "Qualified",
+      "Meetings held",
+      "Unanswered",
+      "Monthly target",
+    ]);
+    const rows = within(members).getAllByRole("row");
+    expect(within(rows[1]).getByText("5 of 8")).toBeVisible();
+    expect(within(rows[2]).getByText("No target")).toBeVisible();
+    expect(screen.getByText(/Targets are monthly\./)).toBeVisible();
+    expect(screen.queryByText("Submitted")).toBeNull();
+  });
+
+  it("says which figures are hidden from the reader, and never shows them as zero", async () => {
+    const review = qualificationReview({
+      withheld_figures: ["meetings", "leads", "targets"],
+      member_targets: undefined,
+      members: teamReview().members.map(
+        ({ meetings_held: _m, qualified: _q, unanswered: _u, ...row }) => row,
+      ),
+    });
+    open(TEAM_ADDRESS, qualificationTeam, {
+      template: "sales",
+      team: served(review),
+    });
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(headers(members)).toEqual(["Member"]);
+    expect(screen.getByText("Meetings are hidden from you.")).toBeVisible();
+    expect(
+      screen.getByText("Qualified and unanswered leads are hidden from you."),
+    ).toBeVisible();
+  });
+
+  it("says handoffs are hidden from a reader without the grant", async () => {
+    const review = teamReview({
+      handoffs: undefined,
+      withheld_figures: ["handoffs", "leads"],
+      members: teamReview().members.map(
+        ({
+          submitted: _s,
+          accepted: _a,
+          rejected: _r,
+          recycled: _c,
+          waiting: _w,
+          ...row
+        }) => row,
+      ),
+    });
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served(review),
+    });
+    const panel = await standing();
+    expect(panel.getByText("Handoffs are hidden from you.")).toBeVisible();
+    const members = await screen.findByRole("table", { name: "Members" });
+    expect(headers(members)).toEqual(["Member", "Meetings held"]);
+    expect(panel.queryByText(/Nothing waits on the team/)).toBeNull();
+  });
+
+  it("names no member while individual performance is off, and keeps the bottlenecks", async () => {
+    open(TEAM_ADDRESS, teamEvaluation, {
+      template: "sdr",
+      team: served(teamReview({ members_withheld: true, members: [] })),
+    });
+    expect(
+      await screen.findByText(
+        "Individual performance is off, so no member’s figures are shown.",
+      ),
+    ).toBeVisible();
+    const panel = await standing();
+    expect(panel.getByText("2 handoffs wait for a decision")).toBeVisible();
+    expect(screen.queryByRole("table", { name: "Members" })).toBeNull();
+    expect(screen.queryByText("Riley Rep")).toBeNull();
+    expect(screen.queryByText("Sam SDR")).toBeNull();
   });
 
   it("asks both reads for the one team the scope names", async () => {
@@ -92,7 +365,6 @@ describe("Team prospecting", () => {
         url.searchParams.get("scope_kind"),
         url.searchParams.get("scope_id"),
       ]);
-    expect(scopes).toHaveLength(2);
     expect(scopes).toEqual([
       ["team", TEAM.id],
       ["team", TEAM.id],
@@ -116,62 +388,24 @@ describe("Team prospecting", () => {
     ).toBe(false);
   });
 
-  it("leaves the meetings column out when the server sends no member's meetings", async () => {
-    const review = teamReview();
+  it("withholds the figures a lone colleague makes up", async () => {
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
-      team: () =>
-        jsonResponse({
-          ...review,
+      team: served(
+        teamReview({
+          withheld: true,
+          handoffs: undefined,
           meetings: undefined,
-          members: review.members.map(
-            ({ meetings_held: _hidden, ...row }) => row,
-          ),
+          members: [],
+          members_withheld: true,
         }),
-    });
-    const members = await screen.findByRole("table", { name: "Members" });
-    expect(
-      within(members).queryByRole("columnheader", { name: "Meetings held" }),
-    ).toBeNull();
-    expect(
-      within(members).getByRole("columnheader", { name: "Submitted" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByText(/the rows can add up to more than the team/),
-    ).toBeNull();
-  });
-
-  it("names no member while individual performance is off", async () => {
-    open(TEAM_ADDRESS, teamEvaluation, {
-      template: "sdr",
-      team: () =>
-        jsonResponse(teamReview({ members_withheld: true, members: [] })),
-    });
-    expect(
-      await screen.findByText(
-        "Individual performance is off, so no member’s figures are shown.",
       ),
-    ).toBeVisible();
-    expect(screen.queryByRole("table", { name: "Members" })).toBeNull();
-  });
-
-  it("withholds the handoff figures a lone colleague makes up", async () => {
-    open(TEAM_ADDRESS, teamEvaluation, {
-      template: "sdr",
-      team: () =>
-        jsonResponse(
-          teamReview({
-            withheld: true,
-            handoffs: undefined,
-            meetings: undefined,
-            members: [],
-            members_withheld: true,
-          }),
-        ),
     });
     expect(
       await screen.findByText(/these figures would show one colleague’s work/),
     ).toBeVisible();
-    expect(screen.queryByText("Handoff feedback")).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "Where the team stands" }),
+    ).toBeNull();
   });
 });

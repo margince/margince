@@ -251,3 +251,7 @@ export const MyProspectingReadingsWithheld: Story = scenario(
   "readingsWithheld",
   "prospecting",
 );
+export const TeamProspectingReadingsWithheld: Story = scenario(
+  "readingsWithheld",
+  "team",
+);

@@ -7345,34 +7345,18 @@ export const en = {
   "analytics.team.chooseTeamBody":
     "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
   "analytics.team.todaysMembers":
-    "These figures follow today’s team. A member who left takes their past handoffs with them.",
-  "analytics.team.countedOnce":
-    "Each figure counts the team’s work once. A meeting several members attended is one meeting here.",
-  "analytics.team.feedback": "Handoff feedback",
+    "These figures follow today’s team. A member who left takes their past work with them, and one who joined brings theirs.",
   "analytics.team.withheld":
     "Individual performance is off, and these figures would show one colleague’s work.",
-  "analytics.team.decided": "Decisions in this period",
   "analytics.team.submitted": "Submitted",
-  "analytics.team.submittedDetail": "Rounds handed on, resubmissions included",
   "analytics.team.accepted": "Accepted",
-  "analytics.team.acceptedDetail":
-    "Each deal once, credited to who handed it on",
   "analytics.team.returned": "Returned",
-  "analytics.team.returnedDetail": "Sent back to try again",
   "analytics.team.rejected": "Rejected",
-  "analytics.team.rejectedDetail": "Refused for good",
   "analytics.team.cohort_one":
     "Of the {count} round handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
   "analytics.team.cohort_other":
     "Of the {count} rounds handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
   "analytics.team.medianDecision": "Half were decided within {hours}.",
-  "analytics.team.smallSampleTitle": "A small sample",
-  "analytics.team.smallSample":
-    "Fewer than {below} rounds is too few to compare. Read the counts, not a rate, and nothing here says how hard anyone worked.",
-  "analytics.team.waitingNow_one":
-    "{count} handoff is waiting for a decision now.",
-  "analytics.team.waitingNow_other":
-    "{count} handoffs are waiting for a decision now.",
   "analytics.team.blocked_one":
     "{count} of them waits on someone who can no longer act.",
   "analytics.team.blocked_other":
@@ -7383,7 +7367,6 @@ export const en = {
     "{count} handoff events were recorded before their submitter was kept, so no member’s row counts them.",
   "analytics.team.reasons": "Reasons given",
   "analytics.team.reason": "Reason",
-  "analytics.team.outcome": "Outcome",
   "analytics.team.count": "Count",
   "analytics.team.membersWithheld":
     "Individual performance is off, so no member’s figures are shown.",
@@ -7397,6 +7380,74 @@ export const en = {
     "A meeting several members attended counts in each of their rows, so the rows can add up to more than the team.",
   "analytics.team.truncated":
     "The team has more members than this table shows.",
+  "analytics.team.standing": "Where the team stands",
+  "analytics.team.acceptedRate":
+    "{rate} of these {rounds} rounds were accepted.",
+  "analytics.team.tooFewForRate":
+    "Fewer than {below} is too few for a rate, so none is shown.",
+  "analytics.team.qualifiedOf_one":
+    "{qualified} of the {count} lead that arrived in this period is qualified so far. The others are still open or were disqualified.",
+  "analytics.team.qualifiedOf_other":
+    "{qualified} of the {count} leads that arrived in this period are qualified so far. The others are still open or were disqualified.",
+  "analytics.team.qualifiedRate": "That is {rate} of the leads that arrived.",
+  "analytics.team.waitingRow_one": "{count} handoff waits for a decision",
+  "analytics.team.waitingRow_other": "{count} handoffs wait for a decision",
+  "analytics.team.waitingBasis": "Waiting now",
+  "analytics.team.returnedRow_one":
+    "{count} handoff was sent back in this period",
+  "analytics.team.returnedRow_other":
+    "{count} handoffs were sent back in this period",
+  "analytics.team.rejectedRow_one":
+    "{count} handoff was rejected in this period",
+  "analytics.team.rejectedRow_other":
+    "{count} handoffs were rejected in this period",
+  "analytics.team.decidedBasis": "Decided in this period, whenever handed on",
+  "analytics.team.mostOften": "Most often: {reason}",
+  "analytics.team.unansweredRow_one":
+    "{count} lead still waits for a first reply",
+  "analytics.team.unansweredRow_other":
+    "{count} leads still wait for a first reply",
+  "analytics.team.unansweredBasis": "Wrote in during this period, no reply yet",
+  "analytics.team.unansweredHidden":
+    "Leads waiting for a reply are hidden from you.",
+  "analytics.team.unansweredFailed":
+    "Leads waiting for a reply could not be read.",
+  "analytics.team.handoffsHidden": "Handoffs are hidden from you.",
+  "analytics.team.hiddenBasis":
+    "Your role does not include this. Nothing here says it is zero.",
+  "analytics.team.nothingWaits": "Nothing waits on the team in this period.",
+  "analytics.team.showHandoffs": "Show handoffs",
+  "analytics.team.showReasons": "Show reasons",
+  "analytics.team.showLeads": "Show leads",
+  "analytics.team.reasonsReturned": "Why handoffs were sent back",
+  "analytics.team.reasonsRejected": "Why handoffs were rejected",
+  "analytics.team.reasonsBasis":
+    "Decisions made {span}, whenever the handoff was handed on: {total} in all.",
+  "analytics.team.noReason": "No reason recorded",
+  "analytics.team.reasonsCut":
+    "Only the 50 most common reasons are listed, so they add up to less than the total.",
+  "analytics.team.waitingTitle": "Handoffs waiting for a decision",
+  "analytics.team.waitingListBasis":
+    "Waiting now, oldest first. Each row names the prospect and who it waits on.",
+  "analytics.team.qualified": "Qualified",
+  "analytics.team.unanswered": "Unanswered",
+  "analytics.team.target": "Monthly target",
+  "analytics.team.targetOf": "{actual} of {target}",
+  "analytics.team.noTarget": "No target",
+  "analytics.team.qualificationBasis":
+    "Qualified counts the leads that arrived in this period and are qualified so far. Unanswered counts the leads that wrote in during this period and have no reply yet. Both count for each lead’s owner now, so a reassigned lead counts for its new owner.",
+  "analytics.team.handoffBasis":
+    "Submitted, returned and rejected count what happened in this period. Accepted counts each deal once, in the period it was first accepted. Waiting now is as of today. Each counts for whoever handed it on at the time.",
+  "analytics.team.targetBasis":
+    "Targets are monthly. Each compares the qualified leads that arrived {month} so far with that member’s own target.",
+  "analytics.team.meetingsHidden": "Meetings are hidden from you.",
+  "analytics.team.leadsHidden":
+    "Qualified and unanswered leads are hidden from you.",
+  "analytics.team.targetsHidden": "Targets are hidden from you.",
+  "analytics.team.rowsNotTeam":
+    "The rows need not add up to the team’s figures. A lead with no owner is in no row.",
+  "analytics.team.notARanking":
+    "The rows are in name order, not a ranking. A small count says nothing about how hard anyone worked.",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",

@@ -100,6 +100,17 @@
   font-weight: var(--fontWeightMedium);
 }
 
+/* A summary beside the table it summarises: the table takes the wider
+   column, since its figures need the room. */
+.analytics-pair-table {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+@media (max-width: 1100px) {
+  .analytics-pair-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* One of a pair standing alone takes the row; a pair with neither drops out of
    the stack rather than leaving a gap. */
 .analytics-pair > :only-child {

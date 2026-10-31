@@ -20300,6 +20300,13 @@ export interface paths {
          *
          *     An event recorded before the submitter was kept with it is counted in `unattributed`, for
          *     the whole company only, and in no member's row.
+         *
+         *     A member's `qualified` and `unanswered` use the rules of the Leads qualified and Leads
+         *     still waiting for a reply readings, credited to each lead's owner now. A member's
+         *     `target` is held against the month in `member_targets`, never against a week. Each
+         *     figure needs its own grant, and the requesting reader's grants decide, never the
+         *     member's. All member figures are read in one statement per figure for the whole page of
+         *     members, and the targets in one more.
          */
         get: operations["getSdrTeamReview"];
         put?: never;
@@ -41043,7 +41050,7 @@ export interface components {
             subject?: components["schemas"]["SdrHandoffSubject"];
             /**
              * Format: uuid
-             * @description Who submitted the current round.
+             * @description Who submitted the current round. Absent while the installation shows no individual performance, unless the submitter is the reader.
              */
             submitter_id?: string;
             recipient?: components["schemas"]["SdrHandoffRecipient"];
@@ -41105,6 +41112,25 @@ export interface components {
             members: components["schemas"]["SdrTeamMember"][];
             /** @description The team has more measurable members than `members` holds. */
             members_truncated: boolean;
+            /** @description The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode. */
+            withheld_figures: ("meetings" | "handoffs" | "leads" | "targets")[];
+            member_targets?: components["schemas"]["SdrTeamMemberTargets"];
+        };
+        /** @description What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week. */
+        SdrTeamMemberTargets: {
+            /** @enum {string} */
+            metric: "leads_promoted";
+            /** @description The whole reporting month that holds the last counted instant of the period, which is the month an evaluation with `target_basis` month reads. */
+            window: components["schemas"]["ReportingWindow"];
+        };
+        SdrTeamMemberTarget: {
+            /**
+             * Format: int64
+             * @description The member's own target for `member_targets.metric` over `member_targets.window`.
+             */
+            value: number;
+            /** @description Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month. */
+            actual: number;
         };
         SdrTeamMeetings: {
             /** @description Held customer meetings in the period credited to the team, each counted once. */
@@ -41116,7 +41142,7 @@ export interface components {
             outcomes: components["schemas"]["SdrHandoffOutcomes"];
             cohort: components["schemas"]["SdrHandoffCohort"];
             waiting: components["schemas"]["SdrHandoffTotals"];
-            /** @description The reasons given for the rejections and returns in `outcomes`, most often first. */
+            /** @description Why the rejections and returns in `outcomes` were decided, most often first: decisions made in the period, not the rounds submitted in it. With no more than 50 groups, the counts of one outcome add up to its count in `outcomes`. */
             reasons: components["schemas"]["SdrHandoffReasonCount"][];
             /** @description Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them. */
             unattributed: number;
@@ -41145,21 +41171,30 @@ export interface components {
         SdrHandoffReasonCount: {
             /** @enum {string} */
             outcome: "rejected" | "recycled";
+            /** @description The reason's name. Empty when `given` is false. */
             label: string;
+            /** @description False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`. */
+            given: boolean;
             count: number;
         };
+        /** @description One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included. */
         SdrTeamMember: {
             /** Format: uuid */
             id: string;
             label: string;
             /** @description Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is. */
             meetings_held?: number;
-            submitted: number;
-            accepted: number;
-            rejected: number;
-            recycled: number;
+            /** @description Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads`. */
+            qualified?: number;
+            /** @description Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads`. */
+            unanswered?: number;
+            target?: components["schemas"]["SdrTeamMemberTarget"];
+            submitted?: number;
+            accepted?: number;
+            rejected?: number;
+            recycled?: number;
             /** @description This member's handoffs waiting on somebody else now. */
-            waiting: number;
+            waiting?: number;
             /**
              * Format: date-time
              * @description When this member's longest current wait began. Absent with nothing waiting.
