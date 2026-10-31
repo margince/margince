@@ -101,6 +101,18 @@ func TestANewProofNamesItsCutAndVerifies(t *testing.T) {
 	}
 }
 
+func TestAProofUnderAnUnknownCutVerifiesNothing(t *testing.T) {
+	body := "Thanks, I will send the signed order by Friday."
+	proof, ok := textlang.ProveSenderQuote(body, "send the signed order")
+	if !ok {
+		t.Fatal("the fixture's proof could not be made")
+	}
+	proof.Cut = textlang.QuoteCutSecondSender + 1
+	if quote, ok := textlang.VerifySenderQuote(body, proof); ok {
+		t.Fatalf("a proof under an unknown cut verified as %q", quote)
+	}
+}
+
 const outlookBlockBody = "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
 	"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
 

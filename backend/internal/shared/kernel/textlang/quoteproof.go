@@ -25,9 +25,14 @@ func ProveSenderQuote(body, quote string) (values.QuoteProof, bool) {
 
 // VerifySenderQuote checks a stored proof against the sender's own text, cut
 // the way the proof was made. A proof stored before today's cut still verifies.
+// A cut this build does not know verifies nothing.
 func VerifySenderQuote(body string, proof values.QuoteProof) (string, bool) {
-	if proof.Cut == quoteCutBeforeSecondSender {
+	switch proof.Cut {
+	case quoteCutBeforeSecondSender:
 		return values.VerifyQuote(currentMessageTo(body, provenQuoteStart), proof)
+	case QuoteCutSecondSender:
+		return values.VerifyQuote(CurrentMessage(body), proof)
+	default:
+		return "", false
 	}
-	return values.VerifyQuote(CurrentMessage(body), proof)
 }
