@@ -13,7 +13,7 @@ import (
 
 // RiskSignalsVersion names the rules RiskSignals applies. A forecast frozen
 // under another version measured other signals, so its effects are not pooled.
-const RiskSignalsVersion = "v1"
+const RiskSignalsVersion = "v2"
 
 // The risk signals a forecast weighs. Each is a fact about the deal, not a
 // finding: no review is raised for one, and a deal may carry several.
@@ -66,12 +66,21 @@ func RiskSignals(asOf time.Time, s Subject, cfg Config, stuckAfter *time.Duratio
 	if customerQuiet(s) {
 		out = append(out, RiskSignal{Code: SignalQuiet, Days: new(s.Viability.SilentDays)})
 	}
-	if stuckAfter != nil && !s.StageEnteredAt.IsZero() && asOf.Sub(s.StageEnteredAt) > *stuckAfter {
-		out = append(out, RiskSignal{
-			Code: SignalStuck, Days: new(elapsed.Days(s.StageEnteredAt, asOf, loc)), StageID: s.StageID,
-		})
+	if days, ok := stuckDays(asOf, s, stuckAfter, loc); ok {
+		out = append(out, RiskSignal{Code: SignalStuck, Days: new(days), StageID: s.StageID})
 	}
 	return out
+}
+
+// stuckDays is how many calendar days the deal has sat in its stage, when that
+// is past stuckAfter. Won deals clicked through a stage in seconds give a
+// stuckAfter near zero, so a stint shorter than one day is never stuck.
+func stuckDays(asOf time.Time, s Subject, stuckAfter *time.Duration, loc *time.Location) (int, bool) {
+	if stuckAfter == nil || s.StageEnteredAt.IsZero() || asOf.Sub(s.StageEnteredAt) <= *stuckAfter {
+		return 0, false
+	}
+	days := elapsed.Days(s.StageEnteredAt, asOf, loc)
+	return days, days >= 1
 }
 
 // closeDaysFrom is how many calendar days after asOf the close date is, nil
