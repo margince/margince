@@ -241,19 +241,23 @@ func meetingCandidatesSQL(asOf, window, reader, held string) string {
 // meetingNeedSQL names the activities the meeting statement reads: each
 // candidate, its thread, and what reached a contact it was with after it. A
 // contact merged away counts as its survivor, as the statement's recipients do.
-// Each arm keeps only terms the statement's own test also holds.
+// Each arm keeps only terms the statement's own test also holds. A contact's
+// history is read once, from its earliest candidate, not once per meeting.
 func meetingNeedSQL() string {
 	return threadNeedSQL(followUpCandidates) + `
-	 UNION SELECT later.id FROM ` + followUpCandidates + ` c
-	   JOIN (SELECT l.activity_id, l.contact_id FROM activity_link l WHERE l.contact_id IS NOT NULL
-	         UNION ALL SELECT p.activity_id, p.contact_id FROM activity_participant p
-	          WHERE p.contact_id IS NOT NULL AND p.user_id IS NULL) met ON met.activity_id = c.id
-	   JOIN contact named ON named.id = met.contact_id
+	 UNION SELECT later.id FROM (
+	        SELECT COALESCE(named.merged_into_id, named.id) AS contact_id, min(c.follow_from) AS since
+	          FROM ` + followUpCandidates + ` c
+	          JOIN (SELECT l.activity_id, l.contact_id FROM activity_link l WHERE l.contact_id IS NOT NULL
+	                UNION SELECT p.activity_id, p.contact_id FROM activity_participant p
+	                 WHERE p.contact_id IS NOT NULL AND p.user_id IS NULL) met ON met.activity_id = c.id
+	          JOIN contact named ON named.id = met.contact_id
+	         GROUP BY 1) recipient
 	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
 	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
-	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = COALESCE(named.merged_into_id, named.id)
+	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = recipient.contact_id
 	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
-	    AND later.occurred_at >= c.follow_from -- occurred_at raw: FromSQL implies it, so the set is never narrower
+	    AND later.occurred_at >= recipient.since -- occurred_at raw: FromSQL implies it, so the set is never narrower
 `
 }
 
