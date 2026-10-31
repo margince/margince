@@ -258,8 +258,7 @@ func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserve
 	}
 	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
 	defer release()
-	var asked *askInChatError
-	if errors.As(runErr, &asked) {
+	if _, asked := errors.AsType[*askInChatError](runErr); asked {
 		// Nothing ran: the call waits for the user, and its retry is the same
 		// call under the same key.
 		r.releaseUnrunKey(ctx, spec, res, attempt)

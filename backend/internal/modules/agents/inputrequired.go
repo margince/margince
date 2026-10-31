@@ -250,8 +250,8 @@ func (s *Dispatcher) withChatInput(ctx context.Context, fr framing, tool string,
 // askedInChat turns a tool's question into the input_required answer, or
 // reports that err asks nothing.
 func (s *Dispatcher) askedInChat(ctx context.Context, tool string, args json.RawMessage, err error) (inputRequiredResult, bool) {
-	var ask *askInChatError
-	if !errors.As(err, &ask) {
+	ask, asked := errors.AsType[*askInChatError](err)
+	if !asked {
 		return nil, false
 	}
 	state := callIdentity(ctx, tool, args)
