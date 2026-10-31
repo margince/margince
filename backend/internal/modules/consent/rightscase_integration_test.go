@@ -175,11 +175,11 @@ func TestTheDeadlineIsOneCalendarMonthFromReceipt(t *testing.T) {
 	// under test. Asserting a value against the code that produced it
 	// passes whatever that code does. Substituting thirty days for one calendar
 	// month left the earlier spelling of this test green.
-	// A receipt on the 31st has no same day in a shorter next month. Its
-	// deadline is that month's last day, so the day is clamped first.
+	// One month after 31 October is 30 November, never 1 December. A day the
+	// next month lacks lands on that month's last day.
 	received := cases[0].received
-	day := min(received.Day(), time.Date(received.Year(), received.Month()+2, 0, 0, 0, 0, 0, received.Location()).Day())
-	want := time.Date(received.Year(), received.Month()+1, day,
+	nextMonthEnd := time.Date(received.Year(), received.Month()+2, 0, 0, 0, 0, 0, received.Location()).Day()
+	want := time.Date(received.Year(), received.Month()+1, min(received.Day(), nextMonthEnd),
 		received.Hour(), received.Minute(), received.Second(), received.Nanosecond(),
 		received.Location())
 	if diff := cases[0].dueAt.Sub(want); diff > time.Second || diff < -time.Second {
