@@ -216,7 +216,7 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (jso
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) Check(context.Context, ids.UUID) error { return errSeamReached }
+func (seamProbeLifecycle) Check(context.Context, ids.UUID, *string) error { return errSeamReached }
 
 func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, errSeamReached

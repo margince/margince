@@ -254,8 +254,7 @@ func customerRefusalSQL(alias, asOf string) string {
 // once the customer moved the deal after it, a later silence is a new one. A
 // reminder holds at most as long as any answer may hide a finding.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
-	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
-		arg(int(assurance.MaxSuppression/(24*time.Hour))))
+	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL

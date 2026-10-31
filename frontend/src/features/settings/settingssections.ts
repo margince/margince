@@ -146,6 +146,7 @@ export const SETTINGS_SECTIONS = {
   ],
   acquisition: ["acqSources.title"],
   lossreasons: ["lossReasons.title", "lossReasons.legacyTitle"],
+  partners: ["partnerStages.title"],
   reviewtemplates: [],
   recordroles: ["recordRoles.title"],
   fields: ["cf.title", "cf.object", "cf.audit.title"],

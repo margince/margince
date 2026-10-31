@@ -2423,6 +2423,10 @@ func (stubs) ClearLeadManualSignal(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "ClearLeadManualSignal")
 }
 
+func (stubs) AcceptPartnerLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.AcceptPartnerLeadParams) {
+	httperr.NotImplemented(w, r, "AcceptPartnerLead")
+}
+
 func (stubs) PromoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PromoteLeadParams) {
 	httperr.NotImplemented(w, r, "PromoteLead")
 }
@@ -2827,6 +2831,22 @@ func (stubs) GetAgentOpenAPIDocument(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetAgentOpenAPIDocument")
 }
 
+func (stubs) ListPartnerStages(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListPartnerStages")
+}
+
+func (stubs) CreatePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreatePartnerStageParams) {
+	httperr.NotImplemented(w, r, "CreatePartnerStage")
+}
+
+func (stubs) DeletePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeletePartnerStage")
+}
+
+func (stubs) UpdatePartnerStage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdatePartnerStageParams) {
+	httperr.NotImplemented(w, r, "UpdatePartnerStage")
+}
+
 func (stubs) ListPartners(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPartnersParams) {
 	httperr.NotImplemented(w, r, "ListPartners")
 }
@@ -3173,6 +3193,22 @@ func (stubs) RestoreRecordChange(w nethttp.ResponseWriter, r *nethttp.Request, e
 
 func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.ClaimRecordParams) {
 	httperr.NotImplemented(w, r, "ClaimRecord")
+}
+
+func (stubs) WithdrawOwnershipOffer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "WithdrawOwnershipOffer")
+}
+
+func (stubs) GetOwnershipOffer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetOwnershipOffer")
+}
+
+func (stubs) OfferOwnershipTransfer(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.OfferOwnershipTransferParams) {
+	httperr.NotImplemented(w, r, "OfferOwnershipTransfer")
+}
+
+func (stubs) ListOwnershipOfferCandidates(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListOwnershipOfferCandidates")
 }
 
 func (stubs) WithdrawOwnershipRequest(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id) {

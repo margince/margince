@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 11,
     "permitted_but_never_required": 5,
-    "tokens_served_but_never_driven": 4696,
+    "tokens_served_but_never_driven": 4700,
     "use_case_cases": 35,
     "acceptance_criteria_named": 74,
     "tools_added_by_shipped_units": 0,
@@ -1716,7 +1716,7 @@
   "tools": [
     {
       "name": "read_view",
-      "tokens": 1017,
+      "tokens": 1021,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1951,7 +1951,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1791,
+      "tokens": 1836,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -2050,7 +2050,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 1291,
+      "tokens": 1342,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue",

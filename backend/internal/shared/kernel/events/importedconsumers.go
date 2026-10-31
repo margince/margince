@@ -47,6 +47,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:audit-stream":       {KeepImported, "the audit slice records every event"},
 	"cg:webhooks":           {KeepImported, "outside systems decide for themselves, and the payload says the event was imported"},
 	"cg:commissions":        {SkipImported, "a sale an import brings in was priced and paid in the system it came from"},
+	"cg:partner-activation": {SkipImported, "a sale an import brings in happened in the past, and activation is a fact of today"},
 	"cg:stage-evidence":     {SkipImported, "evidence settles what happened now, and imported history is not a new fact"},
 	"cg:deal-room-timeline": {SkipImported, "writes a note about a room that is live today"},
 	"cg:overnight-agent":    {SkipImported, "plans work against the live pipeline, and closed history is not work"},

@@ -397,7 +397,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
-| `GET /partners` | listPartners | List partner companies (companies with a partner row), filterable by role/cert status. | Read records | at once |
+| `GET /partners` | listPartners | List partner companies (companies with a partner row), filterable by kind, stage and cert status. | Read records | at once |
+| `GET /partner-stages` | listPartnerStages | List the partner stages, active and retired, in ladder order. | Read records | at once |
 
 ## Signals
 

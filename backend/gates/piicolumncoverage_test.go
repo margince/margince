@@ -241,6 +241,9 @@ var erasureColumnBaseline = map[string][]string{
 		// A key of the closed lead_origin list, which names no one. The note
 		// beside it, origin_detail, is free text and the redaction clears it.
 		"origin",
+		// The seat that accepted the lead for its partner, spelled as
+		// captured_by is: a colleague, never the lead's subject.
+		"partner_accepted_by",
 		"source",
 		"source_id",
 		"source_system",

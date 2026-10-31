@@ -14,7 +14,7 @@ import (
 )
 
 // ownershipRequestHandlers is the HTTP door onto a colleague's request to be
-// handed a contact or company.
+// handed a contact or company, and onto its owner's offer to hand it on.
 type ownershipRequestHandlers struct {
 	transfers ownershipTransfers
 }
@@ -45,7 +45,7 @@ func (h ownershipRequestHandlers) RequestOwnershipTransfer(
 }
 
 func (h ownershipRequestHandlers) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
-	out, err := h.transfers.Own(r.Context(), recordType, ids.UUID(id))
+	out, err := h.transfers.Own(r.Context(), recordType, ids.UUID(id), transferAsked)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -54,7 +54,7 @@ func (h ownershipRequestHandlers) GetOwnershipRequest(w http.ResponseWriter, r *
 }
 
 func (h ownershipRequestHandlers) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
-	if err := h.transfers.Withdraw(r.Context(), recordType, ids.UUID(id)); err != nil {
+	if err := h.transfers.Withdraw(r.Context(), recordType, ids.UUID(id), transferAsked); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -70,4 +70,70 @@ func wireOwnershipRequest(view ownershipRequestView) crmcontracts.OwnershipReque
 		Status:     crmcontracts.OwnershipRequestStatus("pending"),
 		ExpiresAt:  view.ExpiresAt,
 	}
+}
+
+// OfferOwnershipTransfer needs nothing of Idempotency-Key itself, as
+// RequestOwnershipTransfer.
+func (h ownershipRequestHandlers) OfferOwnershipTransfer(
+	w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id, _ crmcontracts.OfferOwnershipTransferParams,
+) {
+	var body crmcontracts.OwnershipOfferInput
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	note := ""
+	if body.Note != nil {
+		note = *body.Note
+	}
+	out, created, err := h.transfers.Offer(r.Context(), recordType, ids.UUID(id), ids.UUID(body.ToId), note)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	httperr.WriteJSON(w, status, wireOwnershipOffer(out))
+}
+
+func (h ownershipRequestHandlers) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+	out, err := h.transfers.Own(r.Context(), recordType, ids.UUID(id), transferOffered)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireOwnershipOffer(out))
+}
+
+func (h ownershipRequestHandlers) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+	if err := h.transfers.Withdraw(r.Context(), recordType, ids.UUID(id), transferOffered); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func wireOwnershipOffer(view ownershipRequestView) crmcontracts.OwnershipOffer {
+	return crmcontracts.OwnershipOffer{
+		ApprovalId: openapi_types.UUID(view.ApprovalID.UUID),
+		RecordType: crmcontracts.OwnershipOfferRecordType(view.Transfer.RecordType),
+		RecordId:   openapi_types.UUID(view.Transfer.RecordID),
+		ToId:       openapi_types.UUID(view.Transfer.ToID),
+		Status:     crmcontracts.OwnershipOfferStatus("pending"),
+		ExpiresAt:  view.ExpiresAt,
+	}
+}
+
+func (h ownershipRequestHandlers) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+	candidates, err := h.transfers.OfferCandidates(r.Context(), recordType, ids.UUID(id))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.OwnershipOfferCandidates{Data: make([]crmcontracts.OwnershipOfferCandidate, len(candidates))}
+	for i, candidate := range candidates {
+		out.Data[i] = crmcontracts.OwnershipOfferCandidate{Id: openapi_types.UUID(candidate.ID), DisplayName: candidate.DisplayName}
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

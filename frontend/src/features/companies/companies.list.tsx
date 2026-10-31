@@ -37,6 +37,14 @@ import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
+import {
+  KIND_LABELS,
+  MEANING_LABELS,
+  PARTNER_KINDS,
+  PARTNER_STAGE_MEANINGS,
+  usePartnerStages,
+} from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -46,6 +54,7 @@ import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
 import { displayHost } from "./companyheader";
+import { partnerMarkText } from "./companymarks";
 
 async function fetchCompaniesPage(
   query: ListQuery,
@@ -100,6 +109,41 @@ export function CompaniesScreen() {
   const ownerChips = useOwnerChips();
   const tagChips = useTagChips();
   const savedViews = useSavedViewTabs("companies");
+  // The partner dials read the partner register, which the server refuses a
+  // seat without the partner grant.
+  const readsPartners = useCan("partner", "read");
+  const stages = usePartnerStages(readsPartners).data ?? [];
+  const partnerChips: readonly ListChip[] = readsPartners
+    ? [
+        {
+          key: "partner_kind",
+          label: t("partner.kinds"),
+          allLabel: t("partner.kindsAll"),
+          options: PARTNER_KINDS.map((kind) => ({
+            value: kind,
+            label: t(KIND_LABELS[kind]),
+          })),
+        },
+        {
+          key: "partner_stage",
+          label: t("partner.stage"),
+          allLabel: t("partner.stageAll"),
+          options: stages.map((stage) => ({
+            value: stage.key,
+            label: stage.label,
+          })),
+        },
+        {
+          key: "partner_stage_meaning",
+          label: t("partner.stageMeaning"),
+          allLabel: t("partner.stageMeaningAll"),
+          options: PARTNER_STAGE_MEANINGS.map((meaning) => ({
+            value: meaning,
+            label: t(MEANING_LABELS[meaning]),
+          })),
+        },
+      ]
+    : [];
   // Beside the owner dial rather than in `chips`, because of the option labels.
   // A `chips` entry runs every label through `t()`, so its options must be
   // message keys. A size band is a numeral range that reads the same in
@@ -244,7 +288,9 @@ export function CompaniesScreen() {
                 <CellStrip>
                   {company.relationship_types.map((type) => (
                     <Badge key={type}>
-                      {t(RELATIONSHIP_TYPE_LABELS[type])}
+                      {type === "partner"
+                        ? partnerMarkText(company, t)
+                        : t(RELATIONSHIP_TYPE_LABELS[type])}
                     </Badge>
                   ))}
                 </CellStrip>
@@ -258,7 +304,7 @@ export function CompaniesScreen() {
         rowKey={(company) => company.id}
         rowRoute={(company) => ({ screen: "companies", id: company.id })}
         selection={selection}
-        dataChips={[...ownerChips, ...sizeChip, ...tagChips]}
+        dataChips={[...ownerChips, ...sizeChip, ...partnerChips, ...tagChips]}
         chips={[
           {
             key: "lifecycle",

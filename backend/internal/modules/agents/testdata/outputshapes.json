@@ -14433,6 +14433,24 @@
       "data": {
         "type": "object",
         "properties": {
+          "activated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activated_by": {
+            "type": "string"
+          },
+          "activation_basis": {
+            "type": "string"
+          },
+          "activation_deal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activation_lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "archived_at": {
             "type": "string",
             "format": "date-time"
@@ -14480,6 +14498,12 @@
           "partner_fit_score_computed": {
             "type": "integer"
           },
+          "partner_kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "partner_role": {
             "type": "string"
           },
@@ -14494,6 +14518,15 @@
             "items": {
               "type": "string"
             }
+          },
+          "stage_label": {
+            "type": "string"
+          },
+          "stage_label_key": {
+            "type": "string"
+          },
+          "stage_meaning": {
+            "type": "string"
           },
           "updated_at": {
             "type": "string",

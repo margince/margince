@@ -3327,6 +3327,18 @@ paths:
             A screen that names many companies it did not list itself, such as the deals board,
             reads them in one request instead of one each. An id the caller cannot see, or that
             is archived without `include_archived`, is simply absent from the page.
+        - name: partner_kind
+          in: query
+          schema: { $ref: '#/components/schemas/PartnerKind' }
+          description: Companies whose live partner program holds this kind. Needs the `partner` read grant (403 otherwise).
+        - name: partner_stage
+          in: query
+          schema: { type: string }
+          description: Companies whose live partner program stands on this `/partner-stages` key. Needs the `partner` read grant (403 otherwise).
+        - name: partner_stage_meaning
+          in: query
+          schema: { $ref: '#/components/schemas/PartnerStageMeaning' }
+          description: Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
         - name: source_system
           in: query
           schema: { type: string, maxLength: 128 }
@@ -5524,14 +5536,28 @@ paths:
     get:
       tags: [Partners]
       operationId: listPartners
-      summary: List partner companies (companies with a partner row), filterable by role/cert status.
+      summary: List partner companies (companies with a partner row), filterable by kind, stage and cert status.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
+        - name: partner_kind
+          in: query
+          schema: { $ref: '#/components/schemas/PartnerKind' }
+          description: Partners holding this kind, among others.
         - name: partner_role
           in: query
+          deprecated: true
           schema: { type: string, enum: [hosting, consulting, strategic] }
+          description: 'Deprecated: use `partner_kind`, which this is read as.'
+        - name: relationship_stage
+          in: query
+          schema: { type: string }
+          description: Partners on this stage key from `/partner-stages`, matched exactly.
+        - name: stage_meaning
+          in: query
+          schema: { $ref: '#/components/schemas/PartnerStageMeaning' }
+          description: Partners on any stage carrying this meaning, so "all active partners" holds however the stages are named.
         - name: cert_status
           in: query
           schema: { type: string, enum: [applied, certified, suspended] }
@@ -5547,6 +5573,92 @@ paths:
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/Partner' } }
                   page: { $ref: '#/components/schemas/PageInfo' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /partner-stages:
+    get:
+      tags: [Partners]
+      operationId: listPartnerStages
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the partner stages, active and retired, in ladder order.
+      description: |
+        The installation's partner ladder. A retired stage stays listed so the partners on it
+        still render their label.
+      responses:
+        '200':
+          description: The partner stage list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerStageListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Partners]
+      operationId: createPartnerStage
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Add a partner stage.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePartnerStageRequest' }
+      responses:
+        '201':
+          description: Created partner stage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerStage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /partner-stages/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    patch:
+      tags: [Partners]
+      operationId: updatePartnerStage
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Rename, reorder, retire or re-mean a partner stage.
+      description: |
+        409 when the change would alter the `meaning` of a stage any partner carries, archived
+        ones included, or would retire the last active stage meaning `candidate`, which every new
+        partner program starts on.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePartnerStageRequest' }
+      responses:
+        '200':
+          description: Updated partner stage.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PartnerStage' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Partners]
+      operationId: deletePartnerStage
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Remove a partner stage nothing uses.
+      description: |
+        409 when the stage is built-in, any partner (archived ones included) carries it, or it is
+        the last active stage meaning `candidate`. Retire it instead.
+      responses:
+        '204': { description: Removed. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # --------------------------- /commissions ---------------------------------
@@ -11846,6 +11958,41 @@ paths:
             The lead is not disqualified, so there is nothing to reopen, or a live lead now holds
             its email (`duplicate_email`), or a live contact does (`contact_holds_email`, with the
             details `createLead` gives).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /leads/{id}/partner-acceptance:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Leads]
+      operationId: acceptPartnerLead
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      # Human-only: accepting a partner's lead is the act that activates the
+      # partner, a commercial judgement a partner manager makes.
+      x-agent-access: human-only
+      summary: Accept a lead for the partner that referred it.
+      description: |
+        Records who accepted the lead and when. The first lead accepted for a partner activates
+        that partner: if its stage means candidate, signed or ready, it moves to the first active
+        stage meaning `active`. Needs the `partner` update grant and write access to the lead and to the
+        partner company.
+
+        Emits `lead.updated`, and `company.updated` when the partner is activated.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The accepted lead.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Lead' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The lead was already accepted for its partner (`already_accepted`).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -24720,8 +24867,9 @@ paths:
         the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
         its own audit row and updated event. A second press while a request is open answers that request
         with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
-        (take ownership instead), `already_yours_to_change`, or `owner_unavailable` (the owner is
-        suspended or has left; ask an administrator).
+        (take ownership instead), `already_yours_to_change`, `owner_unavailable` (the owner is
+        suspended or has left; ask an administrator), or `transfer_pending` (the owner has offered the
+        record to a colleague, and that offer is still open).
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -24743,7 +24891,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`).'
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `transfer_pending`).'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -24772,6 +24920,114 @@ paths:
       description: The card leaves the owner's inbox. `404` when the caller has no open request.
       responses:
         '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-offer:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: offerOwnershipTransfer
+      x-agent-access: human-only
+      # Session cookie only: giving a record away is the owner's own act.
+      security: [{ cookieAuth: [] }]
+      summary: Offer the caller's own record to a colleague.
+      description: |
+        Only the record's owner may offer it, and only while they may change it; anyone else gets
+        `403` (a manager who is not the owner reassigns the record directly). The offer is an
+        `ownership_transfer` approval in the colleague's inbox; only that colleague can accept it, and
+        it stays open for 7 days. The colleague may be any active human seat that can write and whose
+        role may read and change records of this type, inside the owner's own write scope or not,
+        because they agree to take the record; `listOwnershipOfferCandidates` names them. When they
+        accept, the record moves to them, and so do the open deals linked to it and the open tasks on it that the
+        owner holds. Each moved row gets its own audit row and updated event. A second press for the
+        same colleague answers the open offer with `200`; a new offer answers `201`. `422` with
+        `owner_not_assignable` when the colleague cannot hold the record. `409 transfer_pending` when
+        another offer or a colleague's request for this record is still open; the message names it.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnershipOfferInput' }
+      responses:
+        '200':
+          description: The offer already open for this record and colleague.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '201':
+          description: The offer is in the colleague's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Another handover of this record is open (`code`: `transfer_pending`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getOwnershipOffer
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The caller's open offer of this record.
+      responses:
+        '200':
+          description: The caller's open offer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawOwnershipOffer
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Withdraw the caller's open offer of this record.
+      description: The card leaves the colleague's inbox. `404` when the caller has no open offer.
+      responses:
+        '204': { description: The offer is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/ownership-offer/candidates:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company] }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: listOwnershipOfferCandidates
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The colleagues the caller may offer this record to.
+      description: |
+        Only the record's owner, while they may change it, reads the list; anyone else gets `403` or
+        `404`. It names every colleague `offerOwnershipTransfer` would accept for this record: an active
+        human seat that can write and whose role may read and change records of this type, inside the
+        owner's own write scope or not. The caller is left out.
+      responses:
+        '200':
+          description: The colleagues, by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OwnershipOfferCandidates' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -53005,6 +53261,9 @@ components:
             through /retention/legal-holds, never by an ordinary edit.
         # The live tags this row carries, capped, as on the other record lists.
         tags: { type: array, items: { $ref: '#/components/schemas/RowTag' } }
+        partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner company that referred this lead. Null when none did, or when the caller cannot read that company.' }
+        partner_accepted_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When someone accepted the lead for its partner. The first accepted lead activates the partner.' }
+        partner_accepted_by: { type: [string, 'null'], readOnly: true, description: 'Who accepted the lead for its partner.' }
         id: { type: string, format: uuid }
         full_name: { type: [string, 'null'] }
         email: { type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key. }
@@ -53204,6 +53463,7 @@ components:
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.' }
         status: { type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.' }
         source: { type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.' }
+        partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner that referred the lead: a live partner company the caller can read (422 `not_a_partner` otherwise). Null clears it. Refused with 409 `partner_already_accepted` once the lead was accepted for its partner.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.' }
         origin_detail: { type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`. Null clears it.' }
         score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.' }
@@ -63140,7 +63400,7 @@ components:
         ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
         partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
         forward-compatible.
-      required: [company_id, cert_status, created_at, updated_at]   # partner_role is nullable (data-model §4.3)
+      required: [company_id, cert_status, created_at, updated_at]
       properties:
         company_id: { type: string, format: uuid, description: The company this partner record extends (PK = FK). }
         masked_fields:
@@ -63152,11 +63412,31 @@ components:
             for a seat that reads partners but not their commercial terms). A named field is null
             because it is withheld, not because it is empty; absent or empty means nothing is
             withheld.
-        partner_role: { type: string, enum: [hosting, consulting, strategic], description: Functional role; implementation + dev are Margince's turf. }
+        partner_kinds:
+          type: array
+          items: { $ref: '#/components/schemas/PartnerKind' }
+          description: What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+        partner_role:
+          type: string
+          enum: [hosting, consulting, strategic]
+          deprecated: true
+          description: 'Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.'
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: The partner's margin tier; the allowed values are in the table's CHECK constraint. }
         gate_metrics: { type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).' }
-        relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit], default: research }
+        relationship_stage: { type: string, description: 'The key of the stage from `/partner-stages` the partner stands on.' }
+        stage_label: { type: string, readOnly: true, description: 'The label `/partner-stages` gives `relationship_stage`.' }
+        stage_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
+        stage_meaning: { $ref: '#/components/schemas/PartnerStageMeaning' }
+        activated_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.' }
+        activation_basis:
+          type: [string, 'null']
+          enum: [null, lead_accepted, customer_won, recorded_before_ladder]
+          readOnly: true
+          description: 'What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.'
+        activated_by: { type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.' }
+        activation_lead_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.' }
+        activation_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.' }
         partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
         partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
         partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
@@ -63172,13 +63452,26 @@ components:
 
     UpsertPartnerRequest:
       type: object
-      required: [partner_role]
+      description: |
+        Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
+        `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
       properties:
-        partner_role: { type: string, enum: [hosting, consulting, strategic] }
+        partner_kinds:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/PartnerKind' }
+          description: Every kind the partner holds; it replaces the kinds stored.
+        partner_role: { type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.' }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25] }
         gate_metrics: { type: [object, 'null'], additionalProperties: true }
-        relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit] }
+        relationship_stage:
+          type: string
+          description: |
+            An active key from `/partner-stages`, or the stage the partner already stands on (422
+            `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
+            `partner_not_activated` until the partner was activated by an accepted partner lead or
+            a won customer it sourced.
         next_step: { type: [string, 'null'] }
         next_step_due_at: { type: [string, 'null'], format: date }
         served_segments: { type: [array, 'null'], items: { type: string } }
@@ -63188,13 +63481,73 @@ components:
       description: |
         What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
         or `served_segments`: the tier is a human's choice, and the others are set after set-up.
-      required: [partner_role]
+        Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
+        program starts on the first active stage meaning `candidate`.
       additionalProperties: false
       properties:
-        partner_role: { type: string, enum: [hosting, consulting, strategic] }
-        relationship_stage: { type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit] }
+        partner_kinds:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/PartnerKind' }
+        partner_role: { type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`.' }
+        relationship_stage: { type: string, description: 'An active key from `/partner-stages`.' }
         next_step: { type: string }
         next_step_due_at: { type: string, format: date }
+
+    PartnerKind:
+      type: string
+      enum: [hosting, consulting, strategic, referral]
+      description: What a partner does with us. Implementation and development work is never a partner kind.
+
+    PartnerStageMeaning:
+      type: string
+      enum: [candidate, signed, ready, active, dormant, ended]
+      description: |
+        The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+        stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+        `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+        active and went quiet. `ended`: the partnership is over or never fit.
+
+    PartnerStage:
+      type: object
+      description: One stage of the installation's partner ladder. `key` is the value stored on `partner.relationship_stage`; `label` is what a user sees.
+      required: [id, key, label, meaning, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        key: { type: string, description: 'Stable key, the stored value. Never changes after creation.' }
+        label: { type: string }
+        label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
+        meaning: { $ref: '#/components/schemas/PartnerStageMeaning' }
+        sort_order: { type: integer, description: 'Ladder position, lowest first.' }
+        active: { type: boolean, description: 'A retired stage leaves the picker and is refused for a new move; partners on it keep it.' }
+        system: { type: boolean, readOnly: true, description: 'Built-in. Can be renamed, reordered and retired, never deleted.' }
+        partner_count: { type: integer, readOnly: true, description: 'Live partners on this stage whose company the caller may read. Absent for a caller without both the `partner` and the `company` read grant. While any partner carries the key, archived ones included, the meaning cannot change and the stage cannot be deleted (409).' }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PartnerStageListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/PartnerStage' } }
+
+    CreatePartnerStageRequest:
+      type: object
+      required: [label, meaning]
+      properties:
+        label: { type: string, minLength: 1 }
+        key: { type: string, description: 'Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique.' }
+        meaning: { $ref: '#/components/schemas/PartnerStageMeaning' }
+        sort_order: { type: integer }
+
+    UpdatePartnerStageRequest:
+      type: object
+      properties:
+        label: { type: string, minLength: 1 }
+        meaning: { $ref: '#/components/schemas/PartnerStageMeaning' }
+        sort_order: { type: integer }
+        active: { type: boolean }
 
     # ---- Per-purpose consent (ADR-0011) ----
     ConsentPurpose:
@@ -63524,6 +63877,36 @@ components:
       additionalProperties: false
       properties:
         note: { type: string, maxLength: 500, description: 'A line for the owner, shown on the card.' }
+    OwnershipOfferInput:
+      type: object
+      additionalProperties: false
+      required: [to_id]
+      properties:
+        to_id: { type: string, format: uuid, description: The colleague the record is offered to. }
+        note: { type: string, maxLength: 500, description: 'A line for the colleague, shown on the card.' }
+    OwnershipOfferCandidates:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/OwnershipOfferCandidate' }
+    OwnershipOfferCandidate:
+      type: object
+      required: [id, display_name]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+    OwnershipOffer:
+      type: object
+      required: [approval_id, record_type, record_id, to_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company] }
+        record_id: { type: string, format: uuid }
+        to_id: { type: string, format: uuid, description: The colleague the offer is put to. }
+        status: { type: string, enum: [pending] }
+        expires_at: { type: string, format: date-time }
     OwnershipRequest:
       type: object
       required: [approval_id, record_type, record_id, owner_id, status, expires_at]

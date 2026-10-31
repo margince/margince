@@ -50,6 +50,10 @@ export function worklistDayOptions(
   });
 }
 
+// The contract's largest page. Every page assembles the whole day again, so a
+// small page buys no speed, and each further page costs a full read.
+export const WORKLIST_PAGE_ROWS = 100;
+
 /** One page of the day at those dials, the request `useWorklist` makes. */
 export async function readWorklistPage(
   scope: WorklistScope,
@@ -66,7 +70,9 @@ export async function readWorklistPage(
   const whose = owner
     ? { owner, filter: wire, relationships: "omit" as const }
     : { scope, filter: wire, relationships: "omit" as const };
-  const dials = view ? { ...whose, view } : whose;
+  const dials = view
+    ? { ...whose, view, limit: WORKLIST_PAGE_ROWS }
+    : { ...whose, limit: WORKLIST_PAGE_ROWS };
   const page = unwrap(
     await api.GET("/worklist", {
       params: { query: cursor ? { ...dials, cursor } : dials },

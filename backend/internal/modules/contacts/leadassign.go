@@ -190,5 +190,5 @@ func ownershipOnlyLeadUpdate(in UpdateLeadInput) bool {
 		in.Origin == nil && in.OriginDetail == nil && in.OriginHint == "" &&
 		in.Status == nil && in.Source == nil && in.Score == nil &&
 		in.ScoreOverrideReason == nil && !in.ClearScoreOverride &&
-		in.ProjectID == nil
+		in.ProjectID == nil && in.PartnerCompanyID == nil
 }

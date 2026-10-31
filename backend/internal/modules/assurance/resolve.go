@@ -43,6 +43,10 @@ const subjectKindDeal = "deal"
 // distinct from one that is missing or out of range.
 const codeInvalid = "invalid"
 
+// codeOutOfRange refuses a moment past the ceiling, for an expiry and a
+// deferral alike.
+const codeOutOfRange = "out_of_range"
+
 // slotOutcome names the answer kind, in the one place it is spelled.
 const slotOutcome = "outcome"
 
@@ -59,6 +63,21 @@ var noExpiry *time.Time
 // made from, and "the value is correct" is a claim about a value on a day —
 // values change, and an uncapped suppression outlives the fact it rested on.
 const MaxSuppression = 90 * 24 * time.Hour
+
+// LiveRemindAtSQL is when a deferral actually comes back: the moment it named,
+// or MaxSuppression after it was given, whichever is sooner.
+//
+// Read rather than trusted, because answers written before the ceiling was
+// refused still name a moment past it. days is SQL the caller renders, so a
+// caller binds it however its own statement binds parameters.
+func LiveRemindAtSQL(answer, days string) string {
+	return "LEAST(" + answer + ".remind_at, " + answer +
+		".created_at + make_interval(days => " + days + "))"
+}
+
+// MaxSuppressionDays is MaxSuppression as the whole number of days a SQL
+// interval takes.
+func MaxSuppressionDays() int { return int(MaxSuppression / (24 * time.Hour)) }
 
 // Resolution is somebody's answer to a finding.
 type Resolution struct {
@@ -314,6 +333,15 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 				Message: "a deferral names when it comes back, or it is a dismissal",
 			}
 		}
+		// Refused rather than silently shortened, as an expiry past the ceiling
+		// is. A deferral hides the finding as an expiry does, so it cannot
+		// outlive the fact it rested on either.
+		if in.RemindAt.After(now.Add(MaxSuppression)) {
+			return nil, &values.ParseError{
+				Field: "remind_at", Code: codeOutOfRange,
+				Message: "a finding may be deferred for at most 90 days: a value that was correct in May is a claim about May",
+			}
+		}
 		return noExpiry, nil
 	}
 
@@ -335,7 +363,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	}
 	if !in.ExpiresAt.After(now) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "an expiry in the past suppresses nothing",
 		}
 	}
@@ -344,7 +372,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	// believe the finding stays hidden through the next two quarters.
 	if in.ExpiresAt.After(ceiling) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "a finding may be hidden for at most 90 days: a value that was correct in May is a claim about May",
 		}
 	}

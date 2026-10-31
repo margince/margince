@@ -136,6 +136,9 @@ func readCompany(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived stor
 	if err := attachCompanyRelationshipTypes(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := attachCompanyPartners(ctx, tx, companies); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	return companies[0], nil
 }
 

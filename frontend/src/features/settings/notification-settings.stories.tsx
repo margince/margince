@@ -143,13 +143,21 @@ export const SaveRefused: Story = {
     });
     await userEvent.click(refused);
     await userEvent.click(await body.findByRole("option", { name: "Off" }));
-    const alert = await canvas.findByRole("alert");
-    await expect(refused.getAttribute("aria-describedby")).toContain(alert.id);
+    // The page writes through the save bar, so the choice alone drafts and
+    // refuses nothing. The notice answers the write.
+    await userEvent.click(await canvas.findByRole("button", { name: "Save" }));
+    // Two notices answer one refusal: the bar summarises it, and the rows that
+    // were in the write point at the one under the list. So the story picks the
+    // notice by the reference rather than taking the only one.
+    const alerts = await canvas.findAllByRole("alert");
+    const describes = refused.getAttribute("aria-describedby") ?? "";
+    const notice = alerts.find((candidate) => describes.includes(candidate.id));
+    if (!notice) throw new Error("the refused row points at no notice");
     await expect(
       canvas
         .getByRole("combobox", { name: /Approvals waiting on you/ })
         .getAttribute("aria-describedby"),
-    ).not.toContain(alert.id);
+    ).not.toContain(notice.id);
   },
 };
 
