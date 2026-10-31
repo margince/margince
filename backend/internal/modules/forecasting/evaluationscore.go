@@ -190,9 +190,9 @@ func unscorable(method string, vintages []EvaluationVintage) string {
 
 type prediction func(EvaluationVintage) (int64, error)
 
-// configuredPrediction is won money plus the method's remaining figure:
-// open deals at typed chances, the frozen weighted figure under the chances in
-// use, or committed evidence.
+// configuredPrediction is won money plus the method's remaining figure. That
+// is the open deals at typed chances, the frozen weighted figure under the
+// chances in use, or committed evidence.
 func configuredPrediction(method string) prediction {
 	return func(v EvaluationVintage) (int64, error) {
 		readings := Readings{WonMinor: v.WonMinor, EvidenceMinor: v.Evidence, WeightedMinor: v.TypedWeighted}

@@ -5,8 +5,8 @@
 
 package compose
 
-// The forecast's range reaches every surface from the one assembler: the HTTP
-// door and the tool state one range, a snapshot freezes it, and a share draws
+// The forecast's range reaches every surface from the one assembler. The HTTP
+// door and the tool state one range, and a snapshot freezes it. A share draws
 // it again over the rows its reader may see.
 
 import (
@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// One deal worth 1,000,000 at the typed 20%: no win in eight of ten outcomes,
-// so the low end is nothing and the high end is the whole deal.
+// One deal worth 1,000,000 at the typed 20% wins in two of ten outcomes. So
+// the low end is nothing and the high end is the whole deal.
 func TestTheHTTPDoorAndTheToolStateOneRange(t *testing.T) {
 	f := newStageCohortFixture(t)
 	today := clocktest.Now(t)

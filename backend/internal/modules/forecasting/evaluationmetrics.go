@@ -92,9 +92,9 @@ type CalibrationBin struct {
 }
 
 // calibrate sums the vintages' tallies. Stage weighting bins by tenths of the
-// typed chance, self-correcting weighting by tenths of the applied chance in
-// use, and commit evidence by whether a deal was committed. The candidate and
-// the range state nothing per deal and have no calibration.
+// typed chance, and self-correcting weighting by the applied chance in use.
+// Commit evidence bins by whether a deal was committed. The candidate and the
+// range state nothing per deal and have no calibration.
 func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibration {
 	if method == MethodOpenClosure || method == MethodRange {
 		return nil
@@ -147,8 +147,8 @@ func calibrate(method string, vintages []EvaluationVintage, floor int) *Calibrat
 const rangeMissPenalty = 10
 
 // IntervalScore is how the frozen ranges did against what was won: how many
-// outcomes fell inside, and the Gneiting–Raftery interval score, the width
-// plus 2/alpha times every unit outside. Lower is better.
+// outcomes fell inside, and the Gneiting–Raftery interval score. That score
+// is the width plus 2/alpha times every unit outside. Lower is better.
 type IntervalScore struct {
 	Vintages int    `json:"vintages"`
 	Covered  int    `json:"covered"`

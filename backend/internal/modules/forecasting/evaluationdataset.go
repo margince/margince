@@ -101,8 +101,8 @@ type EvaluationVintage struct {
 }
 
 // OpenDeal is one open deal a snapshot froze. StageProbability is the chance
-// in use; TypedProbability the typed chance, nil on a row frozen before it was
-// kept, when the chance in use was the typed one.
+// in use and TypedProbability the typed chance. TypedProbability is nil on a
+// row frozen before it was kept, when the chance in use was the typed one.
 type OpenDeal struct {
 	DealID           string
 	BaseMinor        *int64

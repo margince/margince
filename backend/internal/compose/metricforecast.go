@@ -183,7 +183,7 @@ const (
 )
 
 // forecastRangeFacts adds the two ends of the forecast's range as authored
-// totals beside the landing, so the metric and its evidence state the range
+// totals beside the landing. The metric and its evidence then state the range
 // GET /forecast states.
 func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, drawn *forecasting.Range) ([]reporting.Fact, error) {
 	if drawn == nil {

@@ -23,9 +23,9 @@ import (
 // change to how a range is drawn bumps it.
 const RangeVersion = "forecast_range_v1"
 
-// RangeQuantiles names how the low and high ends are read from the outcomes:
-// the smallest finish whose share of outcomes at or below it reaches the
-// quantile.
+// RangeQuantiles names how the low and high ends are read from the outcomes.
+// Each end is the smallest finish whose share of outcomes at or below it
+// reaches the quantile.
 const RangeQuantiles = "nearest_rank"
 
 const (
@@ -66,17 +66,10 @@ type rangeStage struct {
 }
 
 // ForecastRange draws the range from a reading's contributions. Won money is
-// always in. Each open deal with a base amount is won or lost by its chance in
-// use with its risk effect on the odds.
-//
-// A stage's chance is drawn once per run from its beta posterior, the typed
-// prior of strength PriorStrength plus the recorded outcomes. Deals in one
-// stage share the draw, because one wrong stage chance misjudges all of them.
-// A contribution with no evidence count has no posterior and is decided by its
-// chance alone, as when self-correction is off.
-//
-// Deterministic: the seed is the contributions' InputFingerprint and
-// RangeVersion, and the order of the rows changes nothing.
+// always in; each open deal with a base amount is won or lost by its chance.
+// A stage's chance is drawn once per run from its beta posterior, so deals in
+// one stage share the draw. A row with no evidence count has no posterior.
+// The seed is InputFingerprint and RangeVersion, so row order changes nothing.
 func ForecastRange(rows []Contribution) Range {
 	won, stages := rangeInputs(rows)
 	open := 0
@@ -159,8 +152,8 @@ func withEffect(chance, effect float64) float64 {
 }
 
 // exactRange enumerates every outcome of the open deals, each decided by its
-// chance in use with its effect, rounded to a percent as the weighted figure
-// rounds it. No posterior is drawn on this path.
+// chance in use with its effect. The chance is rounded to a percent as the
+// weighted figure rounds it, and no posterior is drawn on this path.
 func exactRange(stages []rangeStage) Range {
 	var deals []rangeDeal
 	var chances []float64

@@ -43,8 +43,8 @@ const (
 )
 
 // How much recorded evidence a vintage's open deals stood on. Sufficient means
-// at least half of them stood in stages with PriorStrength or more resolved
-// outcomes; thin means some evidence but less; none means no evidence at all.
+// at least half had PriorStrength or more resolved outcomes behind them. Thin
+// means some evidence but less, and none means no evidence at all.
 const (
 	EvidenceSufficient = "sufficient"
 	EvidenceThin       = "thin"
