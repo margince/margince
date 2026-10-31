@@ -14,11 +14,11 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | | |
 |---|---:|
 | Tools | 38 |
-| Resources | 11 |
-| Tool catalog | 140.8 KB |
-| Resource catalog | 4.2 KB |
-| Approx. wire tokens | 37132 |
-| Largest tool | `preview_import` (8.5 KB) |
+| Resources | 13 |
+| Tool catalog | 156.5 KB |
+| Resource catalog | 5.1 KB |
+| Approx. wire tokens | 41383 |
+| Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,18 +32,18 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 31.4 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.9 KB | 24% | Yes, every step |
-| Input schemas | 65.5 KB | 46% | Yes, every step |
-| _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
-| **Description + input schema** | **100.4 KB** | **71%** | **the recurring cost** |
+| Output schemas | 46.7 KB | 29% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
+| Input schemas | 65.5 KB | 41% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
+| **Description + input schema** | **100.5 KB** | **64%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (11)
+### Resources (13)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -55,6 +55,8 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/approval-queue.html`](#approval_queue_view): Waiting for your decision
 - [`ui://margince/attention.html`](#attention_view): What needs attention
+- [`ui://margince/forecast.html`](#forecast_view): The forecast
+- [`ui://margince/context.html`](#context_view): The story so far
 - [`ui://margince/update.html`](#update_view): What changed
 
 ### Tools (38)
@@ -63,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 840 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
@@ -83,8 +85,8 @@ descriptions and input schemas are what each step pays for.
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1066 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
-| [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 875 |
+| [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 875 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -293,6 +295,64 @@ each and a way to ask about it.
 
 </details>
 
+### forecast_view
+
+`ui://margince/forecast.html` · text/html;profile=mcp-app
+
+**The forecast**
+
+```text
+What a period is expected to close, as bars from won to weighted, or what moved the forecast between
+two snapshots.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### context_view
+
+`ui://margince/context.html` · text/html;profile=mcp-app
+
+**The story so far**
+
+```text
+Who is coming to a meeting, the open threads and what was promised, what has been happening on one
+record, or this morning's brief.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
 ### update_view
 
 `ui://margince/update.html` · text/html;profile=mcp-app
@@ -428,6 +488,9 @@ requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -600,6 +663,9 @@ requires passport scope "write".)
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -681,11 +747,12 @@ commitment_needs_the_user. Call mode preview first and show the user what it say
 change, which are left alone and why, and the sample rows. Execute only after they agree. Each
 record is changed only if it still has the version you sent and you may change it. To undo, pass the
 batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
-undone once, and records changed since are left alone. update_record and archive_record change one
-record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
-once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; it cannot be
-undone, so tell the user what the call will change and get their yes before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+undone once, and records changed since are left alone. If your host shows forms, execute and undo
+ask the user in one, so show the preview and call without asking in words as well. update_record and
+archive_record change one record. Above 10 records, execute and undo need the confirm_token their
+preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Runs
+immediately; it cannot be undone, so tell the user what the call will change and get their yes
+before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1047,6 +1114,9 @@ asked for this call themselves; requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -1569,6 +1639,9 @@ and its new version from the answer. (Runs immediately; requires passport scope 
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -1803,6 +1876,9 @@ record's own fields, and create_record with record_type offer to make an offer w
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -2515,6 +2591,9 @@ Availability is checked again when reserving the time.
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -2676,6 +2755,9 @@ unless they asked for this call themselves; requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -3024,6 +3106,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -3336,6 +3421,9 @@ it runs; requires passport scope "enrich".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4148,6 +4236,9 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -4391,6 +4482,9 @@ document register, filtered by category, contract or state. Keep next_cursor to 
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -4984,6 +5078,9 @@ make. (Runs immediately; requires passport scope "write".)
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -5712,6 +5809,9 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -6053,6 +6153,9 @@ Renders its result in [`ui://margince/attention.html`](#attention_view), visible
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -6134,6 +6237,8 @@ fresh one. Use read_attention for what is at risk across the whole pipeline. Kee
 cites to read or change those records next.
 ```
 
+Renders its result in [`ui://margince/context.html`](#context_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -6190,6 +6295,1057 @@ cites to read or change those records next.
 
 </details>
 
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "anchor": {
+          "properties": {
+            "record_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "record_type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ],
+          "type": "object"
+        },
+        "as_of": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "brief": {
+          "properties": {
+            "activity_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "generated_at": {
+              "type": "string"
+            },
+            "generated_by": {
+              "type": "string"
+            },
+            "plan": {
+              "properties": {
+                "advance": {
+                  "properties": {
+                    "best": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "fallback": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "minimum": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "best",
+                    "fallback",
+                    "minimum"
+                  ],
+                  "type": "object"
+                },
+                "company_arc": {
+                  "items": {
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "summary",
+                      "to"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "likely_asks": {
+                  "items": {
+                    "properties": {
+                      "basis": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "nature": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "text"
+                        ],
+                        "type": "object"
+                      },
+                      "prepare": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "relevance": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "basis",
+                      "prepare",
+                      "question",
+                      "relevance"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "manager_coaching": {
+                  "properties": {
+                    "failure_mode": {
+                      "type": "string"
+                    },
+                    "focus": {
+                      "type": "string"
+                    },
+                    "intervene_if": {
+                      "type": "string"
+                    },
+                    "listen_for": {
+                      "type": "string"
+                    },
+                    "paths": {
+                      "items": {
+                        "properties": {
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "record_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "record_type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "record_id",
+                                "record_type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "play": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "evidence",
+                          "label",
+                          "play"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "watch_for": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "failure_mode",
+                    "focus",
+                    "intervene_if",
+                    "listen_for",
+                    "watch_for"
+                  ],
+                  "type": "object"
+                },
+                "meeting_type": {
+                  "type": "string"
+                },
+                "meeting_type_confidence": {
+                  "type": "string"
+                },
+                "objective": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "objective_caveat": {
+                  "type": "string"
+                },
+                "opening": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "record_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "record_type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "record_id",
+                          "record_type"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nature": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "questions": {
+                  "items": {
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "listen_for": {
+                        "type": "string"
+                      },
+                      "why": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "evidence",
+                      "listen_for",
+                      "why"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "readiness": {
+                  "type": "string"
+                },
+                "scenarios": {
+                  "items": {
+                    "properties": {
+                      "evidence": {
+                        "items": {
+                          "properties": {
+                            "record_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "record_type": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "record_id",
+                            "record_type"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "play": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "evidence",
+                      "label",
+                      "play"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "top_risk": {
+                  "properties": {
+                    "avoid": {
+                      "type": "string"
+                    },
+                    "say": {
+                      "type": "string"
+                    },
+                    "show": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "avoid",
+                    "say",
+                    "show",
+                    "text"
+                  ],
+                  "type": "object"
+                },
+                "unknowns": {
+                  "items": {
+                    "properties": {
+                      "kind": {
+                        "type": "string"
+                      },
+                      "question": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "question"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "advance",
+                "meeting_type",
+                "meeting_type_confidence",
+                "readiness"
+              ],
+              "type": "object"
+            },
+            "project_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "sections": {
+              "items": {
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "sentences": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "record_id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "record_type": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "record_id",
+                              "record_type"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "nature": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "sentences"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "activity_id",
+            "generated_at",
+            "generated_by",
+            "sections"
+          ],
+          "type": "object"
+        },
+        "brief_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "briefing": {
+          "properties": {
+            "anchor": {
+              "properties": {
+                "record_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "record_type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "record_id",
+                "record_type"
+              ],
+              "type": "object"
+            },
+            "sections": {
+              "items": {
+                "properties": {
+                  "items": {
+                    "items": {
+                      "properties": {
+                        "evidence": {
+                          "items": {
+                            "properties": {
+                              "snippet": {
+                                "type": "string"
+                              },
+                              "source": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "snippet",
+                              "source"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "occurred_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "occurred_precision": {
+                          "type": "string"
+                        },
+                        "record_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "record_type": {
+                          "type": "string"
+                        },
+                        "summary": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "evidence",
+                        "record_id",
+                        "record_type",
+                        "summary"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "items",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "anchor",
+            "sections"
+          ],
+          "type": "object"
+        },
+        "candidate_count": {
+          "type": "integer"
+        },
+        "factors_omitted": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "properties": {
+              "composite": {
+                "type": "number"
+              },
+              "deal_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "evidence_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "factors": {
+                "properties": {
+                  "momentum": {
+                    "type": "number"
+                  },
+                  "revenue": {
+                    "type": "number"
+                  },
+                  "timing": {
+                    "type": "number"
+                  },
+                  "warmth": {
+                    "type": "number"
+                  },
+                  "winnability": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "momentum",
+                  "revenue",
+                  "timing",
+                  "warmth",
+                  "winnability"
+                ],
+                "type": "object"
+              },
+              "item_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "lineage": {
+                "properties": {
+                  "dismissed_on": {
+                    "type": "string"
+                  },
+                  "returned_with_activity_at": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dismissed_on",
+                  "returned_with_activity_at"
+                ],
+                "type": "object"
+              },
+              "previous_rank": {
+                "type": "integer"
+              },
+              "rank": {
+                "type": "integer"
+              },
+              "reopen_on": {
+                "type": "string"
+              },
+              "reopen_ref": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "snoozed_until": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "state_at": {
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "composite",
+              "deal_id",
+              "evidence_ids",
+              "factors",
+              "item_id",
+              "rank",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "local_day": {
+          "type": "string"
+        },
+        "meeting_focus": {
+          "items": {
+            "properties": {
+              "record_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "record_id",
+              "summary"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "preparation": {
+          "properties": {
+            "activity_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "changed": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "revision": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "activity_id",
+            "changed",
+            "revision",
+            "state"
+          ],
+          "type": "object"
+        },
+        "previous_local_day": {
+          "type": "string"
+        },
+        "sections": {
+          "items": {
+            "properties": {
+              "items": {
+                "items": {
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "properties": {
+                          "snippet": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "snippet",
+                          "source"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "occurred_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "occurred_precision": {
+                      "type": "string"
+                    },
+                    "record_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "record_type": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "evidence",
+                    "record_id",
+                    "record_type",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "items",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "web_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### read_forecast
 
 **Read the forecast and how it moved**
@@ -6215,6 +7371,8 @@ section, use read_analytics: query with save, then compose. Quote `as_of`, `time
 `base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000
 in EUR is EUR 31,000.
 ```
+
+Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -6287,6 +7445,523 @@ in EUR is EUR 31,000.
   },
   "required": [
     "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "base_currency": {
+          "type": "string"
+        },
+        "best_case_minor": {
+          "type": "integer"
+        },
+        "buckets": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "deal_count": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "deal_count",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "closing_minor": {
+          "type": "integer"
+        },
+        "confirmed_date_count": {
+          "type": "integer"
+        },
+        "contributions": {
+          "items": {
+            "properties": {
+              "applied_probability": {
+                "type": "integer"
+              },
+              "base_minor": {
+                "type": "integer"
+              },
+              "category": {
+                "type": "string"
+              },
+              "chance_in_use": {
+                "type": "integer"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "deal_name": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "number"
+              },
+              "evidence_n": {
+                "type": "integer"
+              },
+              "exclusion_reason": {
+                "type": "string"
+              },
+              "in_best_case": {
+                "type": "boolean"
+              },
+              "in_evidence": {
+                "type": "boolean"
+              },
+              "in_open": {
+                "type": "boolean"
+              },
+              "in_won": {
+                "type": "boolean"
+              },
+              "owner_id": {
+                "type": "string"
+              },
+              "signals": {
+                "items": {
+                  "properties": {
+                    "close_passed": {
+                      "type": "boolean"
+                    },
+                    "closes_in_days": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "days": {
+                      "type": "integer"
+                    },
+                    "stage_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "typed_probability": {
+                "type": "integer"
+              },
+              "weighted_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "applied_probability",
+              "chance_in_use",
+              "deal_id",
+              "deal_name",
+              "in_best_case",
+              "in_evidence",
+              "in_open",
+              "in_won",
+              "signals",
+              "weighted_minor"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "contributions_limited": {
+          "type": "boolean"
+        },
+        "coverage_note": {
+          "type": "string"
+        },
+        "current_call": {
+          "type": "object"
+        },
+        "data": {
+          "items": {
+            "properties": {
+              "affected_minor": {
+                "type": "integer"
+              },
+              "claim": {
+                "type": "object"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "first_seen_at": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "inputs_changed": {
+                "type": "boolean"
+              },
+              "last_seen_at": {
+                "type": "string"
+              },
+              "observed": {
+                "type": "object"
+              },
+              "severity": {
+                "type": "string"
+              },
+              "subject_id": {
+                "type": "string"
+              },
+              "subject_kind": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "claim",
+              "first_seen_at",
+              "id",
+              "last_seen_at",
+              "observed",
+              "severity",
+              "subject_id",
+              "subject_kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "approval_id": {
+                "type": "string"
+              },
+              "audit_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "from_minor": {
+                "type": "integer"
+              },
+              "to_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "amount_minor",
+              "bucket",
+              "deal_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "eligible_count": {
+          "type": "integer"
+        },
+        "eligible_deals": {
+          "type": "integer"
+        },
+        "eligible_signals": {
+          "type": "integer"
+        },
+        "evidence_minor": {
+          "type": "integer"
+        },
+        "freshness": {
+          "properties": {
+            "changed_deals": {
+              "type": "integer"
+            },
+            "changed_signals": {
+              "type": "integer"
+            },
+            "changed_since": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "workspace_changed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "changed_deals",
+            "changed_signals",
+            "state",
+            "workspace_changed"
+          ],
+          "type": "object"
+        },
+        "fx_missing_count": {
+          "type": "integer"
+        },
+        "open_minor": {
+          "type": "integer"
+        },
+        "opening_minor": {
+          "type": "integer"
+        },
+        "period_end": {
+          "type": "string"
+        },
+        "period_start": {
+          "type": "string"
+        },
+        "priced_count": {
+          "type": "integer"
+        },
+        "qualified": {
+          "properties": {
+            "amounts_partial": {
+              "type": "boolean"
+            },
+            "best_case_minor": {
+              "type": "integer"
+            },
+            "evidence_minor": {
+              "type": "integer"
+            },
+            "excluded_count": {
+              "type": "integer"
+            },
+            "excluded_minor": {
+              "type": "integer"
+            },
+            "unknown_count": {
+              "type": "integer"
+            },
+            "unknown_minor": {
+              "type": "integer"
+            },
+            "unsupported_count": {
+              "type": "integer"
+            },
+            "unsupported_minor": {
+              "type": "integer"
+            },
+            "weighted_minor": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "amounts_partial",
+            "best_case_minor",
+            "evidence_minor",
+            "excluded_count",
+            "excluded_minor",
+            "unknown_count",
+            "unknown_minor",
+            "unsupported_count",
+            "unsupported_minor",
+            "weighted_minor"
+          ],
+          "type": "object"
+        },
+        "range_high_minor": {
+          "type": "integer"
+        },
+        "range_low_minor": {
+          "type": "integer"
+        },
+        "readiness": {
+          "type": "string"
+        },
+        "reading": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "scope_id": {
+          "type": "string"
+        },
+        "scope_kind": {
+          "type": "string"
+        },
+        "scope_limited": {
+          "type": "boolean"
+        },
+        "self_correcting": {
+          "type": "boolean"
+        },
+        "snapshots": {
+          "items": {
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "taken_at": {
+                "type": "string"
+              },
+              "trigger": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "taken_at",
+              "trigger"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "properties": {
+              "checked_through": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "state"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "weighted_minor": {
+          "type": "integer"
+        },
+        "won_minor": {
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "web_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }
@@ -6541,6 +8216,9 @@ Keep list_id, the version for a later change, and next_cursor to read the next p
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -6773,6 +8451,9 @@ the record were unowned.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
@@ -7661,6 +9342,9 @@ argument it does not take and names the ones it does.
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -8399,6 +10083,9 @@ Renders its result in [`ui://margince/update.html`](#update_view), visible to `m
           },
           "source": {
             "type": "string"
+          },
+          "web_url": {
+            "type": "string"
           }
         },
         "required": [
@@ -8540,6 +10227,9 @@ answered, where locale is absent until this contact chooses one.
             "type": "string"
           },
           "source": {
+            "type": "string"
+          },
+          "web_url": {
             "type": "string"
           }
         },
