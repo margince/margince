@@ -70567,7 +70567,6 @@ components:
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
         acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
-        lead: { $ref: '#/components/schemas/WorklistLeadFacts' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
           readOnly: true
@@ -71506,19 +71505,6 @@ components:
         last_outbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_outbound_at`, from the row it names. Absent when that is null.
-
-    WorklistLeadFacts:
-      type: object
-      description: The lead's contact context, without inventing an inbound request or response deadline.
-      properties:
-        company_name: { type: [string, 'null'] }
-        status: { type: string }
-        source: { type: [string, 'null'], description: 'The administered source label, absent for an unlabelled import or connector key.' }
-        last_activity_at: { type: [string, 'null'], format: date-time }
-        last_activity_precision:
-          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
-        response_target_tracked: { type: boolean }
 
     WorklistDealFacts:
       type: object
