@@ -142,7 +142,10 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 			label += " (partial)"
 		}
 		group := "week:" + key
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &start, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
+		// A copy: start moves on to the next week below, and the point keeps
+		// the start of its own week.
+		weekStart := start
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &weekStart, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
 		start = end
 	}
 	return chart
