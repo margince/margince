@@ -25,7 +25,7 @@ function Host({ record }: Readonly<{ record: Lead }>) {
 
 function backend(
   partners: { id: string; display_name: string }[],
-  allow: Parameters<typeof meFixture>[0]["allow"],
+  allow: NonNullable<Parameters<typeof meFixture>[0]>["allow"],
   calls: string[] = [],
 ) {
   vi.stubGlobal(

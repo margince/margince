@@ -17,6 +17,8 @@ function stage(key: string, active: boolean): PartnerStage {
     meaning: "candidate",
     sort_order: 0,
     active,
+    system: false,
+    version: 1,
     created_at: "2026-10-01T08:00:00Z",
     updated_at: "2026-10-01T08:00:00Z",
   };
