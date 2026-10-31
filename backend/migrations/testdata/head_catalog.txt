@@ -1288,7 +1288,7 @@ public.assurance_exception.assurance_exception_version_js_safe CHECK (((version 
 public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.assurance_exception.currency text gen=- def=-
+public.assurance_exception.currency currency_code gen=- def=-
 public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2151,7 +2151,6 @@ public.commission_entry.commission_entry_amount_minor_js_safe CHECK (((amount_mi
 public.commission_entry.commission_entry_attribution_at_accrual_check CHECK ((attribution_at_accrual = ANY (ARRAY['sourced'::text, 'influenced'::text])))
 public.commission_entry.commission_entry_basis_amount_minor_check CHECK ((basis_amount_minor >= 0))
 public.commission_entry.commission_entry_basis_amount_minor_js_safe CHECK (((basis_amount_minor >= '-9007199254740991'::bigint) AND (basis_amount_minor <= '9007199254740991'::bigint)))
-public.commission_entry.commission_entry_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.commission_entry.commission_entry_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.commission_entry.commission_entry_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE CASCADE
 public.commission_entry.commission_entry_pkey PRIMARY KEY (id)
@@ -2163,7 +2162,7 @@ public.commission_entry.commission_entry_version_js_safe CHECK (((version >= '-9
 public.commission_entry.commission_reversal_is_void CHECK (((reversal_of IS NULL) OR (status = 'void'::text)))
 public.commission_entry.commission_void_has_reason CHECK (((status <> 'void'::text) OR (void_reason IS NOT NULL)))
 public.commission_entry.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.commission_entry.currency text NOT NULL gen=- def=-
+public.commission_entry.currency currency_code NOT NULL gen=- def=-
 public.commission_entry.deal_id uuid NOT NULL gen=- def=-
 public.commission_entry.fx_rate_to_base numeric(20,10) gen=- def=-
 public.commission_entry.id uuid NOT NULL gen=- def=-
@@ -3476,7 +3475,7 @@ public.contract.contract_value_basis_check CHECK ((value_basis = ANY (ARRAY['tot
 public.contract.contract_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint)))
 public.contract.contract_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contract.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.contract.currency character(3) gen=- def=-
+public.contract.currency currency_code gen=- def=-
 public.contract.deal_id uuid gen=- def=-
 public.contract.ends_on date gen=- def=-
 public.contract.fx_rate_date date gen=- def=-
@@ -3536,7 +3535,7 @@ public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix 
 public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
-public.currency_minor_digits.currency character(3) NOT NULL gen=- def=-
+public.currency_minor_digits.currency currency_code NOT NULL gen=- def=-
 public.currency_minor_digits.currency_minor_digits_digits_check CHECK (((digits >= 0) AND (digits <= 4)))
 public.currency_minor_digits.currency_minor_digits_pkey PRIMARY KEY (currency)
 public.currency_minor_digits.digits smallint NOT NULL gen=- def=-
@@ -3546,9 +3545,8 @@ public.custom_field.archived_at timestamp with time zone gen=- def=-
 public.custom_field.column_name text NOT NULL gen=- def=-
 public.custom_field.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.custom_field.created_by uuid NOT NULL gen=- def=-
-public.custom_field.currency character(3) gen=- def=-
+public.custom_field.currency currency_code gen=- def=-
 public.custom_field.custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
-public.custom_field.custom_field_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.custom_field.custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text])))
 public.custom_field.custom_field_pkey PRIMARY KEY (id)
 public.custom_field.custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text])))))
@@ -3665,7 +3663,7 @@ public.deal.closed_at timestamp with time zone gen=- def=-
 public.deal.commercial_motion text gen=- def=-
 public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal.currency character(3) gen=- def=-
+public.deal.currency currency_code gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
@@ -3673,7 +3671,6 @@ public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT 
 public.deal.deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))
 public.deal.deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text]))))
 public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL (company_id)
-public.deal.deal_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
 public.deal.deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))
 public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
@@ -4106,11 +4103,11 @@ public.deal_stage_evidence_pkey CREATE UNIQUE INDEX deal_stage_evidence_pkey ON 
 public.deal_stage_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_stage_history.amount_minor_at_change bigint gen=- def=-
 public.deal_stage_history.approval_id uuid gen=- def=-
-public.deal_stage_history.base_currency_at_change text gen=- def=-
+public.deal_stage_history.base_currency_at_change currency_code gen=- def=-
 public.deal_stage_history.base_minor_at_change bigint gen=- def=-
 public.deal_stage_history.changed_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_stage_history.changed_by text NOT NULL gen=- def=-
-public.deal_stage_history.currency_at_change character(3) gen=- def=-
+public.deal_stage_history.currency_at_change currency_code gen=- def=-
 public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_deal_id_id_key UNIQUE (deal_id, id)
@@ -4158,7 +4155,7 @@ public.deal_suggestion.captured_by text NOT NULL gen=- def=-
 public.deal_suggestion.company_id uuid NOT NULL gen=- def=-
 public.deal_suggestion.confidence numeric(4,3) NOT NULL gen=- def=-
 public.deal_suggestion.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_suggestion.currency text gen=- def=-
+public.deal_suggestion.currency currency_code gen=- def=-
 public.deal_suggestion.deal_suggestion_accepted_deal_id_fkey FOREIGN KEY (accepted_deal_id) REFERENCES deal(id) ON DELETE SET NULL
 public.deal_suggestion.deal_suggestion_accepted_names_deal CHECK (((accepted_deal_id IS NULL) OR (state = 'accepted'::text)))
 public.deal_suggestion.deal_suggestion_amount_nonnegative CHECK (((proposed_amount_minor IS NULL) OR (proposed_amount_minor >= 0)))
@@ -4460,7 +4457,7 @@ public.finance_invoice.connection_id uuid NOT NULL gen=- def=-
 public.finance_invoice.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.finance_invoice.credited_minor bigint NOT NULL gen=- def=0
 public.finance_invoice.credits_invoice_id uuid gen=- def=-
-public.finance_invoice.currency character(3) NOT NULL gen=- def=-
+public.finance_invoice.currency currency_code NOT NULL gen=- def=-
 public.finance_invoice.disputed_at timestamp with time zone gen=- def=-
 public.finance_invoice.due_at date gen=- def=-
 public.finance_invoice.external_id text NOT NULL gen=- def=-
@@ -4469,7 +4466,6 @@ public.finance_invoice.finance_invoice_connection_fk FOREIGN KEY (connection_id)
 public.finance_invoice.finance_invoice_connection_id_external_id_key UNIQUE (connection_id, external_id)
 public.finance_invoice.finance_invoice_credits_fk FOREIGN KEY (credits_invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_invoice.finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))
-public.finance_invoice.finance_invoice_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_invoice.finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))
 public.finance_invoice.finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
 public.finance_invoice.finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
@@ -4511,13 +4507,12 @@ public.finance_payment.captured_by text NOT NULL gen=- def=-
 public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.connection_id uuid NOT NULL gen=- def=-
 public.finance_payment.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.finance_payment.currency character(3) NOT NULL gen=- def=-
+public.finance_payment.currency currency_code NOT NULL gen=- def=-
 public.finance_payment.external_id text NOT NULL gen=- def=-
 public.finance_payment.finance_payment_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.finance_payment.finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES finance_connection(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_connection_id_external_id_key UNIQUE (connection_id, external_id)
-public.finance_payment.finance_payment_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.finance_payment.finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES finance_invoice(id) ON DELETE RESTRICT
 public.finance_payment.finance_payment_pkey PRIMARY KEY (id)
 public.finance_payment.finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -4539,7 +4534,7 @@ public.forecast_call.amount_minor bigint NOT NULL gen=- def=-
 public.forecast_call.author_id uuid NOT NULL gen=- def=-
 public.forecast_call.captured_by text NOT NULL gen=- def=-
 public.forecast_call.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.forecast_call.currency text NOT NULL gen=- def=-
+public.forecast_call.currency currency_code NOT NULL gen=- def=-
 public.forecast_call.forecast_call_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.forecast_call.forecast_call_amount_not_negative CHECK ((amount_minor >= 0))
 public.forecast_call.forecast_call_author_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -4579,7 +4574,7 @@ public.forecast_contribution.captured_by text NOT NULL gen=- def=-
 public.forecast_contribution.category text gen=- def=-
 public.forecast_contribution.close_provisional boolean NOT NULL gen=- def=false
 public.forecast_contribution.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.forecast_contribution.currency text gen=- def=-
+public.forecast_contribution.currency currency_code gen=- def=-
 public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
@@ -4621,7 +4616,7 @@ END
 
 public.forecast_contribution_pkey CREATE UNIQUE INDEX forecast_contribution_pkey ON public.forecast_contribution USING btree (id)
 public.forecast_snapshot acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.forecast_snapshot.base_currency text NOT NULL gen=- def=-
+public.forecast_snapshot.base_currency currency_code NOT NULL gen=- def=-
 public.forecast_snapshot.best_case_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.call_id uuid gen=- def=-
 public.forecast_snapshot.captured_by text NOT NULL gen=- def=-
@@ -4680,13 +4675,13 @@ END
 public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON public.forecast_snapshot USING btree (id)
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.fx_rate.from_currency character(3) NOT NULL gen=- def=-
+public.fx_rate.from_currency currency_code NOT NULL gen=- def=-
 public.fx_rate.fx_rate_pair_day UNIQUE (from_currency, to_currency, rate_date)
 public.fx_rate.fx_rate_pkey PRIMARY KEY (id)
 public.fx_rate.id uuid NOT NULL gen=- def=uuidv7()
 public.fx_rate.rate numeric(20,10) NOT NULL gen=- def=-
 public.fx_rate.rate_date date NOT NULL gen=- def=-
-public.fx_rate.to_currency character(3) NOT NULL gen=- def=-
+public.fx_rate.to_currency currency_code NOT NULL gen=- def=-
 public.fx_rate_pair_day CREATE UNIQUE INDEX fx_rate_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
 public.fx_rate_pkey CREATE UNIQUE INDEX fx_rate_pkey ON public.fx_rate USING btree (id)
 public.geocode_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5719,7 +5714,7 @@ public.legal_review.requested_by uuid gen=- def=-
 public.legal_review.status text NOT NULL gen=- def='requested'::text
 public.legal_review.trg_legal_review_updated CREATE TRIGGER trg_legal_review_updated BEFORE UPDATE ON public.legal_review FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.legal_review.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.legal_review.value_currency character(3) gen=- def=-
+public.legal_review.value_currency currency_code gen=- def=-
 public.legal_review.value_minor bigint gen=- def=-
 public.legal_review.version bigint NOT NULL gen=- def=1
 public.legal_review_pkey CREATE UNIQUE INDEX legal_review_pkey ON public.legal_review USING btree (id)
@@ -6170,7 +6165,7 @@ public.offer.buyer_company_id uuid gen=- def=-
 public.offer.buyer_snapshot jsonb gen=- def=-
 public.offer.captured_by text NOT NULL gen=- def=-
 public.offer.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.offer.currency character(3) NOT NULL gen=- def=-
+public.offer.currency currency_code NOT NULL gen=- def=-
 public.offer.deal_id uuid NOT NULL gen=- def=-
 public.offer.fx_rate_date date gen=- def=-
 public.offer.fx_rate_to_base numeric(20,10) gen=- def=-
@@ -6181,7 +6176,6 @@ public.offer.issuer_snapshot jsonb gen=- def=-
 public.offer.net_minor bigint NOT NULL gen=- def=0
 public.offer.offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted_at IS NOT NULL)))
 public.offer.offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES company(id) ON DELETE SET NULL (buyer_company_id)
-public.offer.offer_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
@@ -6489,7 +6483,7 @@ public.product.billing_interval_months integer gen=- def=-
 public.product.billing_model text gen=- def=-
 public.product.captured_by text NOT NULL gen=- def=-
 public.product.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.product.currency character(3) NOT NULL gen=- def=-
+public.product.currency currency_code NOT NULL gen=- def=-
 public.product.default_tax_rate numeric(5,2) NOT NULL gen=- def=0
 public.product.description text gen=- def=-
 public.product.id uuid NOT NULL gen=- def=uuidv7()
@@ -6497,7 +6491,6 @@ public.product.name text NOT NULL gen=- def=-
 public.product.product_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))
 public.product.product_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text]))))
 public.product.product_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL))))
-public.product.product_currency_check CHECK ((currency ~ '^[A-Z]{3}$'::text))
 public.product.product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric))
 public.product.product_pkey PRIMARY KEY (id)
 public.product.product_unit_price_minor_check CHECK ((unit_price_minor >= 0))
@@ -7967,7 +7960,7 @@ public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
 public.team_weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
 public.team_weekly_review.auto_change_reversals integer gen=- def=-
-public.team_weekly_review.base_currency text gen=- def=-
+public.team_weekly_review.base_currency currency_code gen=- def=-
 public.team_weekly_review.commitments_due integer NOT NULL gen=- def=0
 public.team_weekly_review.commitments_kept integer NOT NULL gen=- def=0
 public.team_weekly_review.deals_lost integer NOT NULL gen=- def=0
@@ -7994,7 +7987,6 @@ public.team_weekly_review.summary_language text gen=- def=-
 public.team_weekly_review.team_id uuid NOT NULL gen=- def=-
 public.team_weekly_review.team_name text NOT NULL gen=- def=-
 public.team_weekly_review.team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (deals_moved >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))
-public.team_weekly_review.team_weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
 public.team_weekly_review.team_weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))
 public.team_weekly_review.team_weekly_review_name_present CHECK ((btrim(team_name) <> ''::text))
 public.team_weekly_review.team_weekly_review_pkey PRIMARY KEY (id)
@@ -8003,7 +7995,7 @@ public.team_weekly_review.team_weekly_review_subsets CHECK (((meetings_with_next
 public.team_weekly_review.uq_team_weekly_review_team_week UNIQUE (team_id, local_week_start)
 public.team_weekly_review_coverage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.team_weekly_review_coverage.absent text gen=- def=-
-public.team_weekly_review_coverage.base_currency text NOT NULL gen=- def=-
+public.team_weekly_review_coverage.base_currency currency_code NOT NULL gen=- def=-
 public.team_weekly_review_coverage.basis text gen=- def=-
 public.team_weekly_review_coverage.coverage_bp bigint gen=- def=-
 public.team_weekly_review_coverage.current_open_minor bigint gen=- def=-
@@ -8019,7 +8011,7 @@ public.team_weekly_review_coverage.team_weekly_review_coverage_basis_check CHECK
 public.team_weekly_review_coverage.team_weekly_review_coverage_basis_or_absent CHECK (((basis IS NULL) <> (absent IS NULL)))
 public.team_weekly_review_coverage.team_weekly_review_coverage_basis_whole CHECK (((basis IS NULL) OR ((reference_landing_minor IS NOT NULL) AND (needed_open_minor IS NOT NULL) AND (current_open_minor IS NOT NULL) AND (remaining_to_support_minor IS NOT NULL) AND (coverage_bp IS NOT NULL))))
 public.team_weekly_review_coverage.team_weekly_review_coverage_coverage_bp_js_safe CHECK (((coverage_bp >= '-9007199254740991'::bigint) AND (coverage_bp <= '9007199254740991'::bigint)))
-public.team_weekly_review_coverage.team_weekly_review_coverage_currency_check CHECK ((base_currency ~ '^[A-Z]{3}$'::text))
+public.team_weekly_review_coverage.team_weekly_review_coverage_currency_check CHECK (((base_currency)::bpchar ~ '^[A-Z]{3}$'::text))
 public.team_weekly_review_coverage.team_weekly_review_coverage_current_open_minor_js_safe CHECK (((current_open_minor >= '-9007199254740991'::bigint) AND (current_open_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_coverage.team_weekly_review_coverage_needed_open_minor_js_safe CHECK (((needed_open_minor >= '-9007199254740991'::bigint) AND (needed_open_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_coverage.team_weekly_review_coverage_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'quarter'::text])))
@@ -8043,7 +8035,7 @@ public.team_weekly_review_member.uq_team_weekly_review_member UNIQUE (team_weekl
 public.team_weekly_review_member.user_id uuid NOT NULL gen=- def=-
 public.team_weekly_review_member_pkey CREATE UNIQUE INDEX team_weekly_review_member_pkey ON public.team_weekly_review_member USING btree (id)
 public.team_weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.team_weekly_review_outlook.base_currency text NOT NULL gen=- def=-
+public.team_weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
 public.team_weekly_review_outlook.best_case_minor bigint gen=- def=-
 public.team_weekly_review_outlook.closing_landing_minor bigint gen=- def=-
 public.team_weekly_review_outlook.closing_snapshot_id uuid gen=- def=-
@@ -8059,7 +8051,7 @@ public.team_weekly_review_outlook.team_weekly_review_id uuid NOT NULL gen=- def=
 public.team_weekly_review_outlook.team_weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.team_weekly_review_outlook.team_weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
-public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim(base_currency) <> ''::text))
+public.team_weekly_review_outlook.team_weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))
 public.team_weekly_review_outlook.team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
 public.team_weekly_review_outlook.team_weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))
@@ -8869,7 +8861,7 @@ public.weekly_plan_commitment_pkey CREATE UNIQUE INDEX weekly_plan_commitment_pk
 public.weekly_plan_pkey CREATE UNIQUE INDEX weekly_plan_pkey ON public.weekly_plan USING btree (id)
 public.weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
-public.weekly_review.base_currency text gen=- def=-
+public.weekly_review.base_currency currency_code gen=- def=-
 public.weekly_review.brief_items_acted integer NOT NULL gen=- def=0
 public.weekly_review.brief_items_dismissed integer NOT NULL gen=- def=0
 public.weekly_review.commitments_due integer NOT NULL gen=- def=0
@@ -8906,7 +8898,6 @@ public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_star
 public.weekly_review.user_id uuid NOT NULL gen=- def=-
 public.weekly_review.weekly_review_commitments_are_tallies CHECK (((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due)))
 public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
-public.weekly_review.weekly_review_currency_check CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$'::text)))
 public.weekly_review.weekly_review_learned_at_matches_state CHECK (((NOT (learnings_state IS DISTINCT FROM 'not_run'::text)) = (learned_at IS NULL)))
 public.weekly_review.weekly_review_learnings_state_check CHECK ((learnings_state = ANY (ARRAY['not_run'::text, 'insufficient_evidence'::text, 'synthesized'::text])))
 public.weekly_review.weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))
@@ -8922,7 +8913,7 @@ public.weekly_review.weekly_review_tasks_completed_check CHECK ((tasks_completed
 public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_deal.amount_minor_at_close bigint gen=- def=-
-public.weekly_review_deal.currency_at_close text gen=- def=-
+public.weekly_review_deal.currency_at_close currency_code gen=- def=-
 public.weekly_review_deal.deal_id uuid NOT NULL gen=- def=-
 public.weekly_review_deal.deal_label text NOT NULL gen=- def=-
 public.weekly_review_deal.id uuid NOT NULL gen=- def=uuidv7()
@@ -8992,7 +8983,7 @@ public.weekly_review_movement.weekly_review_movement_pkey PRIMARY KEY (id)
 public.weekly_review_movement.weekly_review_movement_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
 public.weekly_review_movement_pkey CREATE UNIQUE INDEX weekly_review_movement_pkey ON public.weekly_review_movement USING btree (id)
 public.weekly_review_outlook acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.weekly_review_outlook.base_currency text NOT NULL gen=- def=-
+public.weekly_review_outlook.base_currency currency_code NOT NULL gen=- def=-
 public.weekly_review_outlook.best_case_minor bigint gen=- def=-
 public.weekly_review_outlook.closing_landing_minor bigint gen=- def=-
 public.weekly_review_outlook.closing_snapshot_id uuid gen=- def=-
@@ -9008,7 +8999,7 @@ public.weekly_review_outlook.weekly_review_id uuid NOT NULL gen=- def=-
 public.weekly_review_outlook.weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))
 public.weekly_review_outlook.weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))
-public.weekly_review_outlook.weekly_review_outlook_currency_present CHECK ((btrim(base_currency) <> ''::text))
+public.weekly_review_outlook.weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text))
 public.weekly_review_outlook.weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.weekly_review_outlook.weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))
 public.weekly_review_outlook.weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))

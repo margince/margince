@@ -13,7 +13,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `amount_minor` | `bigint` | yes |  |
 | `author_id` | `uuid` | yes | Points at `app_user.id`. |
-| `currency` | `text` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `note` | `text` |  |  |
 | `period_end` | `date` | yes |  |
 | `period_start` | `date` | yes |  |
@@ -81,7 +81,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `base_minor` | `bigint` |  |  |
 | `category` | `text` |  |  |
 | `close_provisional` | `boolean`, default `false` | yes |  |
-| `currency` | `text` |  |  |
+| `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes |  |
 | `effective_close_date` | `date` |  |  |
 | `exclusion_reason` | `text` |  | One of `unpriced`, `fx_missing`, `out_of_period`, `not_eligible`. |
@@ -141,7 +141,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `base_currency` | `text` | yes |  |
+| `base_currency` | `currency_code` | yes |  |
 | `best_case_minor` | `bigint` | yes |  |
 | `call_id` | `uuid` |  | Points at `forecast_call.id`. |
 | `confirmed_date_count` | `integer` | yes |  |

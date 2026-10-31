@@ -273,6 +273,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `currencycolumndomain_test.go` | H2 | Every currency column carries the `currency\_code` domain. |
 | `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
