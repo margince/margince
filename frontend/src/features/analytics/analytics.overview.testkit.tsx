@@ -10,6 +10,7 @@ import { LocaleProvider } from "../../i18n";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { AnalyticsScreen } from "./analytics";
 import {
+  isMovement,
   overviewRoutes,
   prospectingEvaluation,
   type Seat,
@@ -105,9 +106,6 @@ export function peakInFlight(
     ),
   );
 }
-
-export const isMovement = (url: URL) =>
-  url.searchParams.getAll("blocks").includes("pipeline_movement");
 
 /** Each seat's default answer: its view's evaluation, and no second capture. */
 export function bySeat(seat: Seat) {

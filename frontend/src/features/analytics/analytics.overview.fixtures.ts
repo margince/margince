@@ -299,6 +299,10 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
   };
 }
 
+/** Whether an evaluation request is the movement read below the readings. */
+export const isMovement = (url: URL) =>
+  url.searchParams.getAll("blocks").includes("pipeline_movement");
+
 /** The movement read with no second capture yet. */
 export function startingMovement(): ReportingEvaluation {
   return {
@@ -323,8 +327,8 @@ export function startingMovement(): ReportingEvaluation {
 
 export type Seat = "leader" | "sdr";
 
-// A day with nothing on it, every source read: the Worklist's own shape.
-const QUIET_DAY: components["schemas"]["Worklist"] = {
+/** A day with nothing on it, every source read: the Worklist's own shape. */
+export const QUIET_DAY: components["schemas"]["Worklist"] = {
   as_of: interval.end_at,
   scope: "mine",
   scope_options: ["mine"],
@@ -399,6 +403,8 @@ export function overviewRoutes(
     checks?: () => Response | Promise<Response>;
     framework?: () => Response | Promise<Response>;
     team?: () => Response | Promise<Response>;
+    worklist?: () => Response | Promise<Response>;
+    handoffs?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
   const seat = over.seat ?? "leader";
@@ -443,9 +449,10 @@ export function overviewRoutes(
               : undefined,
           upcoming_meetings: 5,
         })),
-    "GET /analytics/sdr-summary/handoffs": () =>
-      jsonResponse({ as_of: interval.end_at, rows: [] }),
+    "GET /analytics/sdr-summary/handoffs":
+      over.handoffs ??
+      (() => jsonResponse({ as_of: interval.end_at, rows: [] })),
     "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
-    "GET /worklist": () => jsonResponse(QUIET_DAY),
+    "GET /worklist": over.worklist ?? (() => jsonResponse(QUIET_DAY)),
   };
 }
