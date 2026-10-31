@@ -10,7 +10,7 @@ export type { TimelineGroup };
  * five-message thread is five. The reader is left reconstructing conversations
  * from fragments, which is the job the page exists to do for them.
  *
- * Two groupings, and no more:
+ * Three groupings, and no more:
  *
  *  - a THREAD is the provider's own conversation id. Not a subject match —
  *    grouping by subject merges two unrelated "Re: Update" exchanges and splits
@@ -19,6 +19,11 @@ export type { TimelineGroup };
  *    It has no thread of its own, so it is recognised by shape: same subject,
  *    same day, and either the sender's own List-Unsubscribe attestation or
  *    enough copies that no other reading is plausible.
+ *
+ *  - a run of NEWSLETTERS is inbound mail the sender attested as bulk, one
+ *    message after another with nothing else between them, whatever their
+ *    subjects and days. A team's own mailing is something the team did, so an
+ *    outbound one keeps the per-send rule above.
  *
  * Everything else stays a single row. A grouping that guessed would hide a
  * message inside a summary nobody opened, which is worse than the repetition
@@ -34,6 +39,12 @@ function normalizeSubject(title: string): string {
     .replace(/^((re|aw|fwd|fw|wg)\s*:\s*)+/i, "")
     .trim()
     .toLowerCase();
+}
+
+// inboundBulk is a message the sender attested as bulk mail and the team
+// received: a newsletter, or another mailing the account sends us.
+function inboundBulk(entry: TimelineEntry): boolean {
+  return Boolean(entry.bulkAttested) && entry.direction === "inbound";
 }
 
 function dayOf(atIso: string): string {
@@ -58,7 +69,7 @@ function bulkMembership(entries: readonly TimelineEntry[]): Set<string> {
   const copies = new Map<string, number>();
   for (const entry of entries) {
     const key = groupKeyOf(entry);
-    if (key?.kind !== "bulk") {
+    if (key?.kind !== "bulk" || inboundBulk(entry)) {
       continue;
     }
     copies.set(key.value, (copies.get(key.value) ?? 0) + 1);
@@ -84,8 +95,25 @@ export function groupChronology(
   const bulk = bulkMembership(entries);
   const groups: TimelineGroup[] = [];
   const byKey = new Map<string, TimelineGroup>();
+  // The run of newsletters the list is in, until any other entry ends it.
+  let newsletters: TimelineGroup | undefined;
 
   for (const entry of entries) {
+    if (inboundBulk(entry)) {
+      if (newsletters) {
+        newsletters.entries.push(entry);
+      } else {
+        newsletters = {
+          id: entry.id,
+          kind: "newsletters",
+          entries: [entry],
+          partial: false,
+        };
+        groups.push(newsletters);
+      }
+      continue;
+    }
+    newsletters = undefined;
     const key = groupKeyOf(entry);
     // A bulk key folds this entry when the run is large enough to have no
     // other reading, or when THIS message carries the sender's own

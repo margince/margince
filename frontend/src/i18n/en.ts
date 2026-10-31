@@ -3425,6 +3425,8 @@ export const en = {
   "co.suggest.act.addTask": "Add next step",
   // A conversation shown as one event says what it IS before what it
   // says: the reader is scanning for an event, not a sentence.
+  "timeline.group.newsletters_other": "{count} newsletters",
+  "timeline.group.newsletters_one": "{count} newsletter",
   "timeline.group.thread_other": "{count} messages",
   "timeline.group.thread_one": "{count} message",
   "timeline.group.sides": "{theirs} from them, {ours} from your team",
